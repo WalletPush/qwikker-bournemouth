@@ -1,0 +1,2048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QWIKKER Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Layout Structure */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+
+        .sidebar.mobile-hidden {
+            transform: translateX(-100%);
+        }
+
+        /* Mobile overlay */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 90;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
+        /* Logo */
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Navigation */
+        .nav-menu {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            margin: 4px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #ffffff;
+            border: none;
+            background: none;
+            width: calc(100% - 24px);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+            color: #000;
+        }
+
+        .nav-item.locked {
+            color: #888;
+            position: relative;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Professional Icons */
+        .nav-icon i {
+            font-size: 16px;
+        }
+
+        /* Lock icon for premium features */
+        .nav-item.locked .nav-icon::after {
+            content: "\f023";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            font-size: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 0;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.sidebar-collapsed {
+            margin-left: 0;
+        }
+
+        /* Top Header */
+        .top-header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .quick-actions-header {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .quick-action-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .quick-action-btn:hover {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: rgba(0, 255, 136, 0.3);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #000;
+            font-size: 16px;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .business-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: #a0a0a0;
+        }
+
+        /* Mobile header */
+        .mobile-header {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px 20px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mobile-menu-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+
+        .mobile-menu-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Page Content */
+        .page-content {
+            padding: 24px;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        .page-subtitle {
+            color: #a0a0a0;
+            font-size: 16px;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            /* Removed animations */
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #ffffff;
+        }
+
+        .card-subtitle {
+            color: #a0a0a0;
+            font-size: 14px;
+        }
+
+        /* Trial countdown */
+        .trial-countdown {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1));
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+            text-align: center;
+        }
+
+        .countdown-timer {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffc107;
+            margin: 8px 0;
+        }
+
+        /* Loyalty card preview - blurred */
+        .loyalty-preview {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 15px 0;
+            color: white;
+            position: relative;
+            filter: blur(3px);
+        }
+
+        .loyalty-preview-locked {
+            position: relative;
+        }
+
+        .loyalty-preview-locked::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stamp-row {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .stamp {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .stamp.filled {
+            background: rgba(255, 255, 255, 0.9);
+            color: #ff6b6b;
+            border-color: white;
+        }
+
+        /* Buttons */
+        .btn {
+            background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #00ff88;
+            border: 2px solid #00ff88;
+        }
+
+        .btn-outline:hover {
+            background: #00ff88;
+            color: #000;
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: #ff6b6b;
+            border: 2px solid #ff6b6b;
+        }
+
+        .btn-danger:hover {
+            background: #ff6b6b;
+            color: #fff;
+        }
+
+        /* Status indicators */
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00ff88;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Premium locked overlay */
+        .locked-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            z-index: 10;
+        }
+
+        .lock-icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            opacity: 0.7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        /* Analytics stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .stat-block {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #00ff88;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #a0a0a0;
+            margin-top: 4px;
+        }
+
+        /* Referral specific styles */
+        .referral-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .referral-reward {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            margin: 12px 0;
+        }
+
+        .reward-tier {
+            font-weight: 600;
+            color: #00ff88;
+            margin-bottom: 8px;
+        }
+
+        .reward-description {
+            font-size: 14px;
+            color: #a0a0a0;
+        }
+
+        /* Sections */
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section h2 {
+            font-size: 28px;
+            margin-bottom: 24px;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: #ffffff;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #00ff88;
+            box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        /* File upload */
+        .file-upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 16px 0;
+        }
+
+        .file-upload-area:hover {
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        /* Message banners */
+        .message-banner {
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            display: none;
+            font-weight: 500;
+        }
+
+        .message-banner.success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: #00ff88;
+        }
+
+        .message-banner.error {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            color: #ff6b6b;
+        }
+
+        /* Chat */
+        .chat-preview {
+            max-height: 200px;
+            overflow: hidden;
+        }
+
+        .message {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px 16px;
+            border-radius: 16px;
+            margin: 8px 0;
+            max-width: 85%;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .message.user {
+            background: #00ff88;
+            color: #000;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        /* Loading states */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+            position: relative;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid transparent;
+            border-top: 2px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Blur effects for locked content */
+        .blurred {
+            filter: blur(3px);
+        }
+
+        /* Professional improvements */
+        .section-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .upgrade-banner {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 204, 106, 0.1));
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 16px 0;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .feature-list li::before {
+            content: "✓";
+            color: #00ff88;
+            font-weight: bold;
+            width: 16px;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .top-header {
+                display: none;
+            }
+
+            .mobile-header {
+                display: flex;
+            }
+
+            .page-content {
+                padding: 16px;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .stats-grid, .referral-stats {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .page-title {
+                font-size: 24px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .quick-actions-header {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .user-info {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">QWIKKER</div>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-item active" onclick="showSection('dashboard')">
+                    <div class="nav-icon"><i class="fas fa-home"></i></div>
+                    Dashboard
+                </button>
+                <button class="nav-item" onclick="showSection('personal-info')">
+                    <div class="nav-icon"><i class="fas fa-user"></i></div>
+                    Personal Info
+                </button>
+                <button class="nav-item" onclick="showSection('business-info')">
+                    <div class="nav-icon"><i class="fas fa-building"></i></div>
+                    Business Info
+                </button>
+                <button class="nav-item" onclick="showSection('offers')">
+                    <div class="nav-icon"><i class="fas fa-bullhorn"></i></div>
+                    Offers
+                </button>
+                <button class="nav-item locked" onclick="showUpgradeModal()">
+                    <div class="nav-icon"><i class="fas fa-credit-card"></i></div>
+                    Loyalty Cards
+                </button>
+                <button class="nav-item" onclick="showSection('secret-menu')">
+                    <div class="nav-icon"><i class="fas fa-eye-slash"></i></div>
+                    Secret Menu
+                </button>
+                <button class="nav-item" onclick="showSection('refer-business')">
+                    <div class="nav-icon"><i class="fas fa-users"></i></div>
+                    Refer Business
+                </button>
+                <button class="nav-item locked" onclick="showUpgradeModal()">
+                    <div class="nav-icon"><i class="fas fa-chart-line"></i></div>
+                    Analytics
+                </button>
+                <button class="nav-item locked" onclick="showUpgradeModal()">
+                    <div class="nav-icon"><i class="fas fa-bell"></i></div>
+                    Push Notifications
+                </button>
+                <button class="nav-item" onclick="showSection('files')">
+                    <div class="nav-icon"><i class="fas fa-folder"></i></div>
+                    Files
+                </button>
+                <button class="nav-item" onclick="showSection('settings')">
+                    <div class="nav-icon"><i class="fas fa-cog"></i></div>
+                    Settings
+                </button>
+                <button class="nav-item" onclick="showSection('support')">
+                    <div class="nav-icon"><i class="fas fa-headset"></i></div>
+                    Support
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Sidebar Overlay for Mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Top Header -->
+            <div class="top-header">
+                <div class="user-profile">
+                    <div class="user-info">
+                        <div class="business-name">The Green Café</div>
+                        <div class="user-role">Business Owner</div>
+                    </div>
+                    <div class="user-avatar">TG</div>
+                </div>
+            </div>
+
+            <!-- Mobile Header -->
+            <div class="mobile-header">
+                <button class="mobile-menu-btn" onclick="openMobileSidebar()">
+                    &#9776;
+                </button>
+                <div class="logo">QWIKKER</div>
+                <div class="user-avatar">TG</div>
+            </div>
+
+            <div class="page-content">
+                <!-- Dashboard Section -->
+                <div id="dashboard" class="section active">
+                    <div class="page-header">
+                        <h1 class="page-title">Dashboard</h1>
+                        <p class="page-subtitle">Welcome back! Here's your business overview.</p>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <!-- Current Plan Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Current Plan</h3>
+                                    <p class="card-subtitle">Free Trial</p>
+                                </div>
+                            </div>
+                            <div class="trial-countdown">
+                                <div>Trial expires in:</div>
+                                <div class="countdown-timer" id="trialCountdown">Loading...</div>
+                            </div>
+                            <div style="margin: 16px 0;">
+                                <p><strong>Next billing:</strong> N/A</p>
+                            </div>
+                            <button class="btn" onclick="showSection('settings')" style="width: 100%; margin-top: 16px;">
+                                Upgrade to Spotlight
+                            </button>
+                        </div>
+
+                        <!-- Business Profile Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Business Profile</h3>
+                                    <p class="card-subtitle">The Green Café</p>
+                                </div>
+                            </div>
+                            <div style="margin: 16px 0;">
+                                <p><strong>Category:</strong> Restaurant & Café</p>
+                                <p style="margin-top: 8px;"><strong>Location:</strong> London, UK</p>
+                                <div class="status">
+                                    <div class="status-dot"></div>
+                                    <span>Online & Active</span>
+                                </div>
+                            </div>
+                            <button class="btn-outline btn" onclick="showSection('business-info')" style="width: 100%;">
+                                Edit Profile
+                            </button>
+                        </div>
+
+                        <!-- Loyalty Card Preview - Blurred and Locked -->
+                        <div class="card loyalty-preview-locked">
+                            <h3 class="card-title">Loyalty Card Preview</h3>
+                            <div class="loyalty-preview">
+                                <h4>The Green Café</h4>
+                                <p>Collect 10 stamps, get a free coffee!</p>
+                                <div class="stamp-row">
+                                    <div class="stamp filled">✓</div>
+                                    <div class="stamp filled">✓</div>
+                                    <div class="stamp filled">✓</div>
+                                    <div class="stamp filled">✓</div>
+                                    <div class="stamp filled">✓</div>
+                                    <div class="stamp filled">✓</div>
+                                    <div class="stamp"></div>
+                                    <div class="stamp"></div>
+                                    <div class="stamp"></div>
+                                    <div class="stamp"></div>
+                                </div>
+                            </div>
+                            <div class="locked-overlay">
+                                <div class="lock-icon">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <h4 style="margin-bottom: 12px; font-weight: 600;">Premium Feature</h4>
+                                <button class="btn" onclick="showSection('settings')">Unlock Loyalty Cards</button>
+                            </div>
+                        </div>
+
+                        <!-- Referral Overview Card -->
+                        <div class="card">
+                            <h3 class="card-title">Referral Program</h3>
+                            <div class="referral-stats">
+                                <div class="stat-block">
+                                    <div class="stat-number">0</div>
+                                    <div class="stat-label">Businesses Referred</div>
+                                </div>
+                                <div class="stat-block">
+                                    <div class="stat-number">£0</div>
+                                    <div class="stat-label">Credits Earned</div>
+                                </div>
+                            </div>
+                            <button class="btn" onclick="showSection('refer-business')" style="width: 100%; margin-top: 16px;">
+                                Refer a Business
+                            </button>
+                        </div>
+
+                        <!-- Analytics Card (Locked) -->
+                        <div class="card" style="position: relative;">
+                            <h3 class="card-title">Analytics Overview</h3>
+                            <div class="stats-grid blurred">
+                                <div class="stat-block">
+                                    <div class="stat-number">2,547</div>
+                                    <div class="stat-label">Monthly Views</div>
+                                </div>
+                                <div class="stat-block">
+                                    <div class="stat-number">124</div>
+                                    <div class="stat-label">AI Recommendations</div>
+                                </div>
+                                <div class="stat-block">
+                                    <div class="stat-number">89</div>
+                                    <div class="stat-label">Loyalty Members</div>
+                                </div>
+                                <div class="stat-block">
+                                    <div class="stat-number">£1,234</div>
+                                    <div class="stat-label">Revenue</div>
+                                </div>
+                            </div>
+                            <div class="locked-overlay">
+                                <div class="lock-icon">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <h4 style="margin-bottom: 12px; font-weight: 600;">Premium Feature</h4>
+                                <button class="btn" onclick="showSection('settings')">Unlock Analytics</button>
+                            </div>
+                        </div>
+
+                        <!-- Push Notifications Card (Locked) -->
+                        <div class="card" style="position: relative;">
+                            <h3 class="card-title">Push Notifications</h3>
+                            <div class="blurred" style="margin: 16px 0;">
+                                <div style="background: rgba(255,255,255,0.1); padding: 16px; border-radius: 12px; margin-bottom: 12px;">
+                                    <strong>New Customer Alert</strong>
+                                    <p style="margin-top: 8px; font-size: 14px; opacity: 0.9;">Sarah just ordered your Daily Special! Send a personalized thank you message?</p>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.1); padding: 16px; border-radius: 12px;">
+                                    <strong>Loyalty Milestone</strong>
+                                    <p style="margin-top: 8px; font-size: 14px; opacity: 0.9;">Mike reached 10 visits! Time to send a reward notification.</p>
+                                </div>
+                            </div>
+                            <div class="locked-overlay">
+                                <div class="lock-icon">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <h4 style="margin-bottom: 12px; font-weight: 600;">Premium Feature</h4>
+                                <button class="btn" onclick="showSection('settings')">Unlock Push Notifications</button>
+                            </div>
+                        </div>
+
+                        <!-- Support Chat Card -->
+                        <div class="card">
+                            <h3 class="card-title">Support Chat</h3>
+                            <div class="chat-preview">
+                                <div class="message">
+                                    Hi! How can we help you today?
+                                </div>
+                                <div class="message user">
+                                    I need help setting up my loyalty program
+                                </div>
+                                <div class="message">
+                                    I'd be happy to help! Let me guide you through the setup process...
+                                </div>
+                            </div>
+                            <button class="btn" onclick="showSection('support')" style="width: 100%; margin-top: 16px;">
+                                Open Chat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Refer Business Section -->
+                <div id="refer-business" class="section">
+                    <div class="page-header">
+                        <h2>Refer a Business</h2>
+                        <p class="page-subtitle">Refer businesses with 4.4+ Google rating and earn rewards!</p>
+                    </div>
+                    <div class="message-banner" id="referbusinessMessage"></div>
+                    
+                    <!-- Rewards Overview -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 24px;">Referral Rewards</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+                            <div class="referral-reward">
+                                <div class="reward-tier">1 Business</div>
+                                <div class="reward-description">£10 Credit</div>
+                            </div>
+                            <div class="referral-reward">
+                                <div class="reward-tier">3 Businesses</div>
+                                <div class="reward-description">Free Month on Spotlight</div>
+                            </div>
+                            <div class="referral-reward">
+                                <div class="reward-tier">5 Businesses</div>
+                                <div class="reward-description">QWIKKER T-Shirt + £25 Bonus</div>
+                            </div>
+                            <div class="referral-reward">
+                                <div class="reward-tier">10 Businesses</div>
+                                <div class="reward-description">Free Year on QWIKKER</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Your Referral Stats -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 20px;">Your Referral Stats</h3>
+                        <div class="referral-stats">
+                            <div class="stat-block">
+                                <div class="stat-number">0</div>
+                                <div class="stat-label">Total Referrals</div>
+                            </div>
+                            <div class="stat-block">
+                                <div class="stat-number">0</div>
+                                <div class="stat-label">Successful</div>
+                            </div>
+                            <div class="stat-block">
+                                <div class="stat-number">£0</div>
+                                <div class="stat-label">Credits Earned</div>
+                            </div>
+                            <div class="stat-block">
+                                <div class="stat-number">0</div>
+                                <div class="stat-label">Pending</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Refer New Business -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 24px;">Refer New Business</h3>
+                        <form id="referralForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Business Name</label>
+                                    <input type="text" class="form-input" id="referralBusinessName" placeholder="e.g., Pizza Palace" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Business Owner Name</label>
+                                    <input type="text" class="form-input" id="referralOwnerName" placeholder="e.g., John Smith" required>
+                                </div>
+                            </div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Email Address</label>
+                                    <input type="email" class="form-input" id="referralEmail" placeholder="owner@business.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-input" id="referralPhone" placeholder="+44 7700 123456">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Google Maps URL <span style="color: #ff6b6b;">*</span></label>
+                                <input type="url" class="form-input" id="referralGoogleUrl" placeholder="https://maps.google.com/..." required>
+                                <p style="font-size: 12px; color: #a0a0a0; margin-top: 8px;">
+                                    <i class="fas fa-info-circle"></i>
+                                    We'll verify the 4.4+ star rating requirement
+                                </p>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Why should they join QWIKKER?</label>
+                                <textarea class="form-textarea" id="referralReason" placeholder="Tell us what makes this business a great fit for QWIKKER..."></textarea>
+                            </div>
+                            <button type="submit" class="btn">Submit Referral</button>
+                        </form>
+                    </div>
+
+                    <!-- Previous Referrals -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 20px;">Your Referrals</h3>
+                        <div id="referralsList">
+                            <div style="text-align: center; color: #a0a0a0; padding: 40px;">
+                                <i class="fas fa-users" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
+                                <p>No referrals yet. Start referring businesses to earn rewards!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personal Info Section -->
+                <div id="personal-info" class="section">
+                    <div class="page-header">
+                        <h2>Personal Information</h2>
+                        <p class="page-subtitle">Manage your personal details and preferences.</p>
+                    </div>
+                    <div class="message-banner" id="personalMessage"></div>
+                    <div class="section-card">
+                        <form id="personalForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" class="form-input" id="fullName" value="John Smith" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Email Address</label>
+                                    <input type="email" class="form-input" id="email" value="john@example.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-input" id="phone" value="+44 7700 123456">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Profile Photo</label>
+                                <div class="file-upload-area" onclick="document.getElementById('profilePhoto').click()">
+                                    <p>Click to upload or drag & drop</p>
+                                    <p style="color: #a0a0a0; font-size: 14px;">PNG, JPG up to 10MB</p>
+                                </div>
+                                <input type="file" id="profilePhoto" accept="image/*" style="display: none;" onchange="handleFileUpload(this, 'Profile photo')">
+                            </div>
+                            <button type="submit" class="btn">Save Changes</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Business Info Section -->
+                <div id="business-info" class="section">
+                    <div class="page-header">
+                        <h2>Business Information</h2>
+                        <p class="page-subtitle">Update your business details and settings.</p>
+                    </div>
+                    <div class="message-banner" id="businessMessage"></div>
+                    <div class="section-card">
+                        <form id="businessForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Business Name</label>
+                                    <input type="text" class="form-input" id="businessName" value="The Green Café" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Business Category</label>
+                                    <select class="form-select" id="businessCategory" required>
+                                        <option value="">Select Category</option>
+                                        <option value="restaurant" selected>Restaurant & Café</option>
+                                        <option value="retail">Retail Store</option>
+                                        <option value="services">Services</option>
+                                        <option value="beauty">Beauty & Wellness</option>
+                                        <option value="fitness">Fitness & Health</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Address</label>
+                                    <input type="text" class="form-input" id="address" value="123 High Street, London" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">City</label>
+                                    <input type="text" class="form-input" id="city" value="London" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Postal Code</label>
+                                    <input type="text" class="form-input" id="postalCode" value="SW1A 1AA" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Business Description</label>
+                                <textarea class="form-textarea" id="businessDescription" placeholder="Tell customers about your business...">A cozy café serving fresh, locally-sourced coffee and homemade pastries in the heart of London.</textarea>
+                            </div>
+                            <button type="submit" class="btn">Update Business Info</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Offers Section -->
+                <div id="offers" class="section">
+                    <div class="page-header">
+                        <h2>Your Offers</h2>
+                        <p class="page-subtitle">Create and manage special promotions for your customers.</p>
+                    </div>
+                    <div class="message-banner" id="offersMessage"></div>
+                    
+                    <!-- Current Offers -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 20px; color: #ffffff;">Active Offers</h3>
+                        <div class="card" style="margin-bottom: 0;">
+                            <h4>Free Coffee Fridays</h4>
+                            <p style="color: #a0a0a0; margin: 12px 0;">Buy any pastry, get a free coffee every Friday</p>
+                            <p><strong>Valid until:</strong> Dec 31, 2025</p>
+                            <div style="margin-top: 16px; display: flex; gap: 12px;">
+                                <button class="btn-outline btn">Edit</button>
+                                <button class="btn-danger btn">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Create New Offer -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 24px;">Create New Offer</h3>
+                        <form id="offersForm">
+                            <div class="form-group">
+                                <label class="form-label">Offer Title</label>
+                                <input type="text" class="form-input" id="offerTitle" placeholder="e.g., Happy Hour Special" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-textarea" id="offerDescription" placeholder="Describe your offer in detail..." required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Offer Image</label>
+                                <div class="file-upload-area" onclick="document.getElementById('offerImage').click()">
+                                    <p>Click to upload or drag & drop</p>
+                                    <p style="color: #a0a0a0; font-size: 14px;">PNG, JPG up to 10MB</p>
+                                </div>
+                                <input type="file" id="offerImage" accept="image/*" style="display: none;" onchange="handleFileUpload(this, 'Offer image')">
+                            </div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Start Date</label>
+                                    <input type="date" class="form-input" id="offerStartDate" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">End Date</label>
+                                    <input type="date" class="form-input" id="offerEndDate" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn">Create Offer</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Loyalty Cards Section -->
+                <div id="loyalty-cards" class="section">
+                    <div class="page-header">
+                        <h2>Loyalty Cards</h2>
+                        <p class="page-subtitle">Design and manage your customer loyalty programs.</p>
+                    </div>
+                    <div class="message-banner" id="loyaltycardsMessage"></div>
+                    
+                    <!-- Premium Feature Notice -->
+                    <div class="section-card" style="position: relative;">
+                        <div class="locked-overlay">
+                            <div class="lock-icon">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <h3 style="margin-bottom: 16px; font-weight: 600;">Premium Feature</h3>
+                            <p style="margin-bottom: 20px; text-align: center;">Loyalty cards are available with Spotlight subscription</p>
+                            <button class="btn" onclick="showSection('settings')">Upgrade to Unlock</button>
+                        </div>
+                        
+                        <!-- Blurred Content -->
+                        <div class="blurred">
+                            <h3 style="margin-bottom: 20px;">Current Loyalty Card</h3>
+                            <div class="loyalty-preview">
+                                <h4>The Green Café</h4>
+                                <p>Collect 10 stamps, get a free coffee!</p>
+                                <div class="stamp-row">
+                                    <div class="stamp filled">✓</div>
+                                    <div class="stamp filled">✓</div>
+                                    <div class="stamp filled">✓</div>
+                                    <div class="stamp filled">✓</div>
+                                    <div class="stamp filled">✓</div>
+                                    <div class="stamp filled">✓</div>
+                                    <div class="stamp"></div>
+                                    <div class="stamp"></div>
+                                    <div class="stamp"></div>
+                                    <div class="stamp"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secret Menu Section -->
+                <div id="secret-menu" class="section">
+                    <div class="page-header">
+                        <h2>Secret Menu</h2>
+                        <p class="page-subtitle">Create exclusive menu items for your special customers.</p>
+                    </div>
+                    <div class="message-banner" id="secretmenuMessage"></div>
+                    
+                    <!-- Current Secret Items -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 20px;">Current Secret Menu Items</h3>
+                        <div class="card" style="margin-bottom: 16px;">
+                            <h4>Midnight Mocha</h4>
+                            <p style="color: #a0a0a0; margin: 12px 0;">Our special dark chocolate coffee blend, only available to loyalty members</p>
+                            <p><strong>Price:</strong> £4.50</p>
+                            <p style="margin-top: 8px;"><strong>Availability:</strong> After 8 PM</p>
+                            <div style="margin-top: 16px; display: flex; gap: 12px;">
+                                <button class="btn-outline btn">Edit</button>
+                                <button class="btn-danger btn">Remove</button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h4>Hidden Gem Cake</h4>
+                            <p style="color: #a0a0a0; margin: 12px 0;">Seasonal cake flavor known only to our regulars</p>
+                            <p><strong>Price:</strong> £3.75</p>
+                            <p style="margin-top: 8px;"><strong>Availability:</strong> VIP customers only</p>
+                            <div style="margin-top: 16px; display: flex; gap: 12px;">
+                                <button class="btn-outline btn">Edit</button>
+                                <button class="btn-danger btn">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add Secret Menu Item -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 24px;">Add Secret Menu Item</h3>
+                        <form id="secretMenuForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Item Name</label>
+                                    <input type="text" class="form-input" id="secretItemName" placeholder="e.g., Secret Spice Latte" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Price</label>
+                                    <input type="number" class="form-input" id="secretItemPrice" placeholder="0.00" step="0.01" min="0" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-textarea" id="secretItemDescription" placeholder="What makes this item special and exclusive?" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Availability</label>
+                                <select class="form-select" id="secretItemAvailability" required>
+                                    <option value="">Select availability</option>
+                                    <option value="loyalty">Loyalty Members Only</option>
+                                    <option value="vip">VIP Customers Only</option>
+                                    <option value="time">Specific Time Period</option>
+                                    <option value="special">Special Events Only</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn">Add Secret Item</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Files Section -->
+                <div id="files" class="section">
+                    <div class="page-header">
+                        <h2>Business Files</h2>
+                        <p class="page-subtitle">Upload and manage your business documents and images.</p>
+                    </div>
+                    <div class="message-banner" id="filesMessage"></div>
+                    
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 20px;">Upload Files</h3>
+                        <div class="file-upload-area" id="fileDropZone" onclick="document.getElementById('businessFiles').click()">
+                            <p>Click to upload or drag & drop files</p>
+                            <p style="color: #a0a0a0; font-size: 14px;">Images, PDFs, Documents up to 25MB each</p>
+                        </div>
+                        <input type="file" id="businessFiles" multiple accept="image/*,.pdf,.doc,.docx,.txt" style="display: none;" onchange="handleMultipleFileUpload(this)">
+                    </div>
+
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 20px;">Your Files</h3>
+                        <div id="filesList">
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: rgba(255,255,255,0.05); border-radius: 12px; margin: 12px 0;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <i class="fas fa-image" style="font-size: 20px; color: #00ff88;"></i>
+                                    <div>
+                                        <div>menu-photo.jpg</div>
+                                        <div style="font-size: 12px; color: #a0a0a0;">2.4 MB • Uploaded 2 days ago</div>
+                                    </div>
+                                </div>
+                                <button class="btn-outline btn" style="padding: 8px 16px;">View</button>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: rgba(255,255,255,0.05); border-radius: 12px; margin: 12px 0;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <i class="fas fa-file-pdf" style="font-size: 20px; color: #ff6b6b;"></i>
+                                    <div>
+                                        <div>business-license.pdf</div>
+                                        <div style="font-size: 12px; color: #a0a0a0;">1.8 MB • Uploaded 1 week ago</div>
+                                    </div>
+                                </div>
+                                <button class="btn-outline btn" style="padding: 8px 16px;">View</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Section -->
+                <div id="settings" class="section">
+                    <div class="page-header">
+                        <h2>Account Settings</h2>
+                        <p class="page-subtitle">Manage your subscription and account preferences.</p>
+                    </div>
+                    <div class="message-banner" id="settingsMessage"></div>
+                    
+                    <!-- Billing Plan -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 16px;">Current Plan: Free Trial</h3>
+                        <div class="trial-countdown">
+                            <div>Trial expires in:</div>
+                            <div class="countdown-timer" id="settingsTrialCountdown">Loading...</div>
+                        </div>
+                        <div class="upgrade-banner">
+                            <h4 style="color: #00ff88; margin-bottom: 16px; font-size: 20px;">
+                                <i class="fas fa-star"></i> Upgrade to Spotlight
+                            </h4>
+                            <p style="margin-bottom: 16px;">Unlock all premium features:</p>
+                            <ul class="feature-list">
+                                <li>Advanced analytics and insights</li>
+                                <li>Custom loyalty card programs</li>
+                                <li>Push notifications</li>
+                                <li>Secret menu items</li>
+                                <li>Priority support</li>
+                            </ul>
+                            <p style="font-size: 18px; font-weight: 600; margin: 20px 0;"><strong>£29.99/month</strong></p>
+                            <button class="btn" onclick="upgradePlan()">Upgrade Now</button>
+                        </div>
+                    </div>
+
+                    <!-- Account Actions -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 20px;">Account Actions</h3>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <button class="btn-outline btn" onclick="downloadData()">
+                                <i class="fas fa-download"></i>
+                                Download My Data
+                            </button>
+                            <button class="btn-danger btn" onclick="confirmCancellation()">
+                                <i class="fas fa-times-circle"></i>
+                                Cancel Subscription
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Legal Documents -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 20px;">Legal Documents</h3>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <a href="#" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.05); padding: 16px; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; text-decoration: none; color: inherit; border: 1px solid rgba(255, 255, 255, 0.1);" onmouseover="this.style.background='rgba(0, 255, 136, 0.1)'; this.style.borderColor='rgba(0, 255, 136, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.borderColor='rgba(255, 255, 255, 0.1)'">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <i class="fas fa-file-alt" style="color: #00ff88;"></i>
+                                    <div>Terms of Service</div>
+                                </div>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                            <a href="#" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.05); padding: 16px; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; text-decoration: none; color: inherit; border: 1px solid rgba(255, 255, 255, 0.1);" onmouseover="this.style.background='rgba(0, 255, 136, 0.1)'; this.style.borderColor='rgba(0, 255, 136, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.borderColor='rgba(255, 255, 255, 0.1)'">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <i class="fas fa-shield-alt" style="color: #00ff88;"></i>
+                                    <div>Privacy Policy</div>
+                                </div>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Support Section -->
+                <div id="support" class="section">
+                    <div class="page-header">
+                        <h2>Support & Help</h2>
+                        <p class="page-subtitle">Get help and report issues with our support team.</p>
+                    </div>
+                    <div class="message-banner" id="supportMessage"></div>
+
+                    <!-- Live Chat -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 20px;">Chat with Us</h3>
+                        <div id="chatArea" style="min-height: 300px; max-height: 400px; overflow-y: auto; margin: 20px 0; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 12px;">
+                            <div class="message">
+                                Hi! How can we help you today?
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 12px;">
+                            <input type="text" class="form-input" id="chatInput" placeholder="Type your message..." style="flex: 1;" onkeypress="handleChatEnter(event)">
+                            <button class="btn" onclick="sendMessage()">
+                                <i class="fas fa-paper-plane"></i>
+                                Send
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Report an Issue -->
+                    <div class="section-card">
+                        <h3 style="margin-bottom: 24px;">Report an Issue</h3>
+                        <form id="issueForm">
+                            <div class="form-group">
+                                <label class="form-label">Issue Type</label>
+                                <select class="form-select" id="issueType" required>
+                                    <option value="">Select Issue Type</option>
+                                    <option value="technical">Technical Problem</option>
+                                    <option value="billing">Billing Issue</option>
+                                    <option value="feature">Feature Request</option>
+                                    <option value="account">Account Problem</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-textarea" id="issueDescription" placeholder="Please describe the issue in detail..." required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Attach Screenshots (Optional)</label>
+                                <div class="file-upload-area" onclick="document.getElementById('issueFiles').click()">
+                                    <p>Click to upload screenshots</p>
+                                    <p style="color: #a0a0a0; font-size: 14px;">PNG, JPG up to 10MB each</p>
+                                </div>
+                                <input type="file" id="issueFiles" multiple accept="image/*" style="display: none;" onchange="handleFileUpload(this, 'Issue screenshots')">
+                            </div>
+                            <button type="submit" class="btn">
+                                <i class="fas fa-bug"></i>
+                                Submit Report
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Global state
+        let currentSection = 'dashboard';
+
+        // Trial end date (120 days from now)
+        const trialEndDate = new Date();
+        trialEndDate.setDate(trialEndDate.getDate() + 120);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupFileUploadEvents();
+            initializeDateInputs();
+            setupFormSubmissions();
+            startTrialCountdown();
+            updateBusinessNameInitials();
+        });
+
+        // Trial countdown
+        function startTrialCountdown() {
+            function updateCountdown() {
+                const now = new Date();
+                const timeLeft = trialEndDate - now;
+                
+                if (timeLeft > 0) {
+                    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    
+                    const countdownText = `${days} days, ${hours} hours`;
+                    
+                    document.querySelectorAll('#trialCountdown, #settingsTrialCountdown').forEach(el => {
+                        if (el) el.textContent = countdownText;
+                    });
+                } else {
+                    document.querySelectorAll('#trialCountdown, #settingsTrialCountdown').forEach(el => {
+                        if (el) el.textContent = 'Trial Expired';
+                    });
+                }
+            }
+            
+            updateCountdown();
+            setInterval(updateCountdown, 1000 * 60 * 60); // Update every hour
+        }
+
+        // Update business name initials in avatar
+        function updateBusinessNameInitials() {
+            const businessName = document.getElementById('businessName');
+            const avatars = document.querySelectorAll('.user-avatar');
+            
+            function updateInitials() {
+                const name = businessName ? businessName.value : 'The Green Café';
+                const initials = name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+                avatars.forEach(avatar => {
+                    avatar.textContent = initials;
+                });
+            }
+            
+            updateInitials();
+            
+            if (businessName) {
+                businessName.addEventListener('input', updateInitials);
+            }
+        }
+
+        // Navigation functions
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show target section
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+            
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Find and activate the correct nav item
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                const text = item.textContent.toLowerCase().trim();
+                if ((sectionId === 'dashboard' && text.includes('dashboard')) ||
+                    (sectionId === 'personal-info' && text.includes('personal')) ||
+                    (sectionId === 'business-info' && text.includes('business')) ||
+                    (sectionId === 'offers' && text.includes('offers')) ||
+                    (sectionId === 'loyalty-cards' && text.includes('loyalty')) ||
+                    (sectionId === 'secret-menu' && text.includes('secret')) ||
+                    (sectionId === 'refer-business' && text.includes('refer')) ||
+                    (sectionId === 'files' && text.includes('files')) ||
+                    (sectionId === 'settings' && text.includes('settings')) ||
+                    (sectionId === 'support' && text.includes('support'))) {
+                    item.classList.add('active');
+                }
+            });
+            
+            currentSection = sectionId;
+            
+            // Close mobile sidebar if open
+            closeMobileSidebar();
+            
+            // Smooth scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Mobile sidebar functions
+        function openMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            sidebar.classList.add('mobile-open');
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Premium feature modal
+        function showUpgradeModal() {
+            showMessage('info', 'This is a premium feature. Upgrade to Spotlight to unlock all advanced features!');
+            setTimeout(() => {
+                showSection('settings');
+            }, 2000);
+        }
+
+        // File upload functions
+        function setupFileUploadEvents() {
+            document.querySelectorAll('.file-upload-area').forEach(area => {
+                area.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.style.borderColor = '#00ff88';
+                    this.style.background = 'rgba(0, 255, 136, 0.05)';
+                });
+                
+                area.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    this.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                    this.style.background = '';
+                });
+                
+                area.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                    this.style.background = '';
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        const fileInput = this.nextElementSibling;
+                        if (fileInput && fileInput.type === 'file') {
+                            fileInput.files = files;
+                            handleFileUpload(fileInput, 'Dropped files');
+                        }
+                    }
+                });
+            });
+        }
+
+        function handleFileUpload(input, context) {
+            const files = input.files;
+            if (files.length > 0) {
+                showMessage('success', `${context} uploaded successfully! (${files.length} file${files.length > 1 ? 's' : ''})`);
+                
+                const uploadArea = input.previousElementSibling;
+                if (uploadArea) {
+                    const fileNames = Array.from(files).map(f => f.name).join(', ');
+                    uploadArea.innerHTML = `<p style="color: #00ff88;">✅ ${fileNames}</p><p style="color: #00ff88; font-size: 14px;">Upload successful!</p>`;
+                }
+            }
+        }
+
+        function handleMultipleFileUpload(input) {
+            const files = input.files;
+            if (files.length > 0) {
+                showMessage('success', `${files.length} file${files.length > 1 ? 's' : ''} uploaded successfully!`);
+                
+                const filesList = document.getElementById('filesList');
+                Array.from(files).forEach(file => {
+                    const fileItem = document.createElement('div');
+                    fileItem.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 16px; background: rgba(255,255,255,0.05); border-radius: 12px; margin: 12px 0;';
+                    
+                    const iconClass = file.type.startsWith('image/') ? 'fa-image' : 'fa-file';
+                    const iconColor = file.type.startsWith('image/') ? '#00ff88' : '#ffc107';
+                    const size = (file.size / 1024 / 1024).toFixed(1);
+                    
+                    fileItem.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <i class="fas ${iconClass}" style="font-size: 20px; color: ${iconColor};"></i>
+                            <div>
+                                <div>${file.name}</div>
+                                <div style="font-size: 12px; color: #a0a0a0;">${size} MB • Just uploaded</div>
+                            </div>
+                        </div>
+                        <button class="btn-outline btn" style="padding: 8px 16px;">View</button>
+                    `;
+                    
+                    filesList.appendChild(fileItem);
+                });
+            }
+        }
+
+        // Form handling
+        function setupFormSubmissions() {
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    handleFormSubmit(this);
+                });
+            });
+        }
+
+        function handleFormSubmit(form) {
+            const formId = form.id;
+            
+            if (!validateForm(form)) {
+                showMessage('error', 'Please fill in all required fields.');
+                return;
+            }
+            
+            form.classList.add('loading');
+            
+            setTimeout(() => {
+                form.classList.remove('loading');
+                
+                let message = '';
+                switch(formId) {
+                    case 'personalForm':
+                        message = 'Personal information updated successfully!';
+                        updateBusinessNameInitials();
+                        break;
+                    case 'businessForm':
+                        message = 'Business information updated successfully!';
+                        updateBusinessNameInitials();
+                        break;
+                    case 'offersForm':
+                        message = 'New offer created successfully!';
+                        form.reset();
+                        initializeDateInputs();
+                        break;
+                    case 'loyaltyForm':
+                        message = 'Loyalty card created successfully!';
+                        form.reset();
+                        break;
+                    case 'secretMenuForm':
+                        message = 'Secret menu item added successfully!';
+                        form.reset();
+                        break;
+                    case 'referralForm':
+                        message = 'Referral submitted successfully! We\'ll verify the Google rating and contact them.';
+                        addReferralToList(form);
+                        form.reset();
+                        break;
+                    case 'issueForm':
+                        message = 'Issue report submitted successfully! We\'ll get back to you soon.';
+                        form.reset();
+                        break;
+                    default:
+                        message = 'Form submitted successfully!';
+                }
+                
+                showMessage('success', message);
+            }, 1500);
+        }
+
+        function addReferralToList(form) {
+            const businessName = document.getElementById('referralBusinessName').value;
+            const ownerName = document.getElementById('referralOwnerName').value;
+            const email = document.getElementById('referralEmail').value;
+            
+            const referralsList = document.getElementById('referralsList');
+            
+            // Remove empty state if exists
+            const emptyState = referralsList.querySelector('div[style*="text-align: center"]');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
+            const referralItem = document.createElement('div');
+            referralItem.style.cssText = 'background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin: 16px 0; border: 1px solid rgba(255,255,255,0.1);';
+            
+            referralItem.innerHTML = `
+                <div style="display: flex; justify-content: between; align-items: flex-start;">
+                    <div style="flex: 1;">
+                        <h4 style="color: #00ff88; margin-bottom: 8px;">${businessName}</h4>
+                        <p><strong>Owner:</strong> ${ownerName}</p>
+                        <p><strong>Email:</strong> ${email}</p>
+                        <div style="margin-top: 12px;">
+                            <span style="background: rgba(255, 193, 7, 0.2); color: #ffc107; padding: 4px 8px; border-radius: 6px; font-size: 12px;">
+                                <i class="fas fa-clock"></i> Pending Verification
+                            </span>
+                        </div>
+                    </div>
+                    <div style="color: #a0a0a0; font-size: 12px;">
+                        Just now
+                    </div>
+                </div>
+            `;
+            
+            referralsList.appendChild(referralItem);
+            
+            // Update referral stats
+            updateReferralStats();
+        }
+
+        function updateReferralStats() {
+            const referralsList = document.getElementById('referralsList');
+            const referralItems = referralsList.querySelectorAll('div[style*="background: rgba(255,255,255,0.05)"]');
+            const count = referralItems.length;
+            
+            // Update dashboard stats
+            document.querySelectorAll('.stat-number').forEach(stat => {
+                const label = stat.nextElementSibling;
+                if (label && label.textContent === 'Businesses Referred') {
+                    stat.textContent = count.toString();
+                }
+            });
+        }
+
+        function validateForm(form) {
+            const requiredFields = form.querySelectorAll('[required]');
+            let isValid = true;
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.style.borderColor = '#ff6b6b';
+                    isValid = false;
+                } else {
+                    field.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                }
+            });
+            
+            return isValid;
+        }
+
+        // Message display
+        function showMessage(type, message) {
+            const messageId = currentSection.replace('-', '') + 'Message';
+            let messageEl = document.getElementById(messageId);
+            
+            if (!messageEl) {
+                // Create a temporary message element
+                messageEl = document.createElement('div');
+                messageEl.className = 'message-banner';
+                messageEl.style.position = 'fixed';
+                messageEl.style.top = '20px';
+                messageEl.style.right = '20px';
+                messageEl.style.zIndex = '1000';
+                messageEl.style.maxWidth = '400px';
+                document.body.appendChild(messageEl);
+            }
+            
+            messageEl.className = `message-banner ${type}`;
+            messageEl.textContent = message;
+            messageEl.style.display = 'block';
+            
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+                if (messageEl.parentNode === document.body) {
+                    document.body.removeChild(messageEl);
+                }
+            }, 5000);
+        }
+
+        // Chat functionality
+        function sendMessage() {
+            const chatInput = document.getElementById('chatInput');
+            const chatArea = document.getElementById('chatArea');
+            const message = chatInput.value.trim();
+            
+            if (message) {
+                const userMessage = document.createElement('div');
+                userMessage.className = 'message user';
+                userMessage.textContent = message;
+                chatArea.appendChild(userMessage);
+                
+                chatInput.value = '';
+                
+                setTimeout(() => {
+                    const botMessage = document.createElement('div');
+                    botMessage.className = 'message';
+                    botMessage.textContent = generateChatResponse(message);
+                    chatArea.appendChild(botMessage);
+                    
+                    chatArea.scrollTop = chatArea.scrollHeight;
+                }, 1000);
+                
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }
+        }
+
+        function handleChatEnter(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function generateChatResponse(message) {
+            const responses = [
+                "I understand your concern. Let me help you with that.",
+                "That's a great question! Here's what I can tell you...",
+                "I'd be happy to assist you with that issue.",
+                "Thank you for reaching out. Let me provide some guidance.",
+                "I see what you're asking about. Let me explain..."
+            ];
+            
+            return responses[Math.floor(Math.random() * responses.length)];
+        }
+
+        // Utility functions
+        function initializeDateInputs() {
+            const today = new Date().toISOString().split('T')[0];
+            const startDateInput = document.getElementById('offerStartDate');
+            const endDateInput = document.getElementById('offerEndDate');
+            
+            if (startDateInput) {
+                startDateInput.min = today;
+                if (!startDateInput.value) {
+                    startDateInput.value = today;
+                }
+            }
+            
+            if (endDateInput) {
+                endDateInput.min = today;
+            }
+        }
+
+        function upgradePlan() {
+            showMessage('success', 'Redirecting to upgrade page...');
+        }
+
+        function downloadData() {
+            showMessage('success', 'Your data download has been initiated. You\'ll receive an email shortly.');
+        }
+
+        function confirmCancellation() {
+            if (confirm('Are you sure you want to cancel your subscription? You\'ll lose access to all premium features.')) {
+                showMessage('success', 'Cancellation request submitted. You\'ll receive a confirmation email.');
+            }
+        }
+
+        // Close mobile menu when clicking outside or pressing escape
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const mobileBtn = document.querySelector('.mobile-menu-btn');
+            
+            if (sidebar.classList.contains('mobile-open') && 
+                !sidebar.contains(event.target) && 
+                event.target !== mobileBtn) {
+                closeMobileSidebar();
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeMobileSidebar();
+            }
+        });
+
+        // Responsive handling
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                closeMobileSidebar();
+            }
+        });
+    </script>
+</body>
+</html>

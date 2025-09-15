@@ -1,197 +1,146 @@
-**QWIKKER SaaS Dashboard Platform PRD (Product Requirements Document)**
+# QWIKKER Platform – Free Trial Signup & Dashboard PRD
 
-**Last Updated:** 2025-09-15
+## Overview
+QWIKKER is a business onboarding and dashboard system for local merchants. It allows new businesses to register for a **Free Trial**, upload key details, create their first exclusive offers, and immediately access a trial dashboard.  
 
----
-
-## 📄 Product Name
-**QWIKKER** — Local Business Growth Dashboard for Loyalty, Secret Menus, Offers & Customer Engagement
-
-## 🎯 Product Vision
-To become the go-to engagement and growth platform for brick-and-mortar businesses looking to:
-- Increase footfall through AI-driven local exposure
-- Reward loyal customers with gamified loyalty systems
-- Secretly delight superfans with exclusive hidden menu items
-- Push limited-time offers & messages via notifications
-- View performance metrics, referrals, and revenue in one place
-
-This is not just a SaaS tool. QWIKKER is a local marketing revolution.
-
-## 🏠 Target User
-- Independent cafes, restaurants, salons, gyms, and retail stores
-- Business owners/operators with limited marketing budgets
-- Local businesses with a 4.4+ Google rating
-- Primarily UK-based at launch, with expansion to Bali, NYC, and Dubai
-
-## 🤝 Key Goals
-- Onboard 500 businesses by Q4 2025
-- Monetize via self-serve dashboard + Stripe subscription
-- Maintain 90%+ dashboard retention past trial
-- Automate as much onboarding as possible via GHL
+The system should provide:  
+1. A **multi-stage free trial signup flow** (Founding Member form).  
+2. **Automatic free trial handling** with trial countdown.  
+3. **Slack notifications** when a signup is completed.  
+4. A **business dashboard** that reflects user inputs, skipped items, and upsells.  
+5. **Blurred/locked features** that encourage upgrading.  
 
 ---
 
-## ⚙️ Core Features (Dashboard Modules)
+## 1. Free Trial Signup Flow (Founding Member Form)
 
-1. **Dashboard Overview**
-   - 120-day free trial countdown (Featured plan only)
-   - Current plan display
-   - Business profile widget
-   - Referral stats
-   - Locked previews for premium features (blurred with CTA)
-   - Blur overlays for:
-     - Push Notifications Card (locked)
-     - Analytics Card (locked)
-     - Loyalty Card Preview (locked)
+### Structure
+- The form is **multi-step**, with **visual progress tracking** (progress bar + step number).  
+- Steps include:  
+  1. **Personal Information** (first name, last name, email, confirm email, phone).  
+  2. **Business Information** (name, type, category, address, town, postcode, website, social media, logo upload).  
+  3. **Menu & Price List Upload** (PDF files only).  
+  4. **Exclusive Offer Creation** (optional: offer name, type, value, terms, image).  
+  5. **Additional Information** (referral source, goals, notes).  
+  6. **Review Registration** (summary of all info with “Edit” buttons).  
+  7. **Success Screen** (confirmation + next steps).  
 
-2. **Personal Info**
-   - Update user contact and avatar
+### File Uploads
+- **Business logo**: image upload.  
+- **Menu/Price List**: PDF(s) only.  
+- **Offer image**: optional image upload.  
+- Validation: size limits (5MB for images, 10MB for PDFs).  
 
-3. **Business Info**
-   - Logo, address, Google Maps URL, category
-   - Used for in-app placement and search
+### Optional Steps Handling
+- If the user **skips** uploading logo, menu, or creating an offer:  
+  - They continue signup without being blocked.  
+  - These skipped items are automatically shown as **pending tasks on the dashboard**.  
 
-4. **Offers**
-   - Create and manage time-sensitive offers
-   - Offers are **exclusive to QWIKKER users** (not public web)
-   - Add offer images and dates
-   - Only visible via QWIKKER wallet/chat/pass
+### Review Step
+- Shows all collected data in clean summary boxes.  
+- Includes “Edit” buttons to jump back to a step.  
 
-5. **Loyalty Cards** *(Locked unless Spotlight)*
-   - Custom stamp count (e.g., 10 coffees = 1 free)
-   - Trigger push notifications when milestones hit
-   - Preview card in dashboard (blurred + locked overlay)
+### Free Trial & Founding Member Offer
+- A popup appears after a few seconds on page load, offering the **Founding Member Spotlight Plan** (16 months for the price of 10 + lifetime discount).  
+- If declined, user continues to **Free Trial signup**.  
+- Final step button: **“Start Free Trial”**.  
 
-6. **Secret Menu**
-   - Add exclusive hidden items
-   - Visibility controls (Loyalty Only, VIP, Timed, Event-based)
-   - **Secret menus are QWIKKER user-exclusive** (not public)
-
-7. **Referrals**
-   - Refer other qualifying businesses
-   - Track rewards and progress
-   - Earn bonuses per referral tier (starts at £10 per referral)
-
-8. **Analytics** *(Locked unless Spotlight)*
-   - Views, AI engagements, loyalty signups, revenue
-   - Blurred preview card until upgraded
-
-9. **Push Notifications** *(Locked unless Spotlight)*
-   - Businesses can:
-     - Send push to **all QWIKKER users**
-     - Send **targeted push** (e.g. loyalty signups, offer claimers)
-     - Trigger push automatically from loyalty milestones
-   - Example notifications preview (blurred)
-
-10. **Files**
-   - Upload PDFs, menus, licenses, and media
-
-11. **Settings**
-   - Manage subscription, billing, account download, cancellation
-   - Stripe portal integration for plan upgrades
-
-12. **Support**
-   - Live chat simulation
-   - Report an issue form
+### Integrations
+- On successful submission:  
+  - Form data (including file URLs) is sent to **GoHighLevel (LeadConnectorHQ)** webhook to create a new contact.  
+  - A **Slack message** is sent to the QWIKKER team channel with details of the new signup (business name, contact info, plan chosen).  
+  - User is redirected to the **success screen**.  
 
 ---
 
-## 💳 Pricing Tiers
+## 2. Dashboard
 
-**Featured Trial Plan**
-- 120-day free trial with full access to Featured Plan features
-- No credit card required on entry
-- Must upgrade via Stripe through dashboard
+### Layout
+- **Sidebar navigation** with sections:  
+  - Dashboard (home)  
+  - Personal Info  
+  - Business Info  
+  - Offers  
+  - Loyalty (blurred/locked unless on Spotlight plan)  
+  - Analytics (blurred/locked unless on Spotlight plan)  
+  - Push Notifications (blurred/locked unless on Spotlight plan)  
+  - Secret Menu  
+  - Referrals  
+  - Files  
+  - Settings  
+  - Support  
 
-**Starter**
-- £19.99/month or £199/year
-- Access to: Offers, Business Info, Referrals, Files
+- **Main Dashboard Widgets**:  
+  - **Free Trial Countdown** (number of days left, matching signup date).  
+  - **Plan Information** (shows current plan, encourages upgrade).  
+  - **To-Do Notifications** (logo upload, menu upload, create first offer, create secret menu item → appear if skipped during signup).  
+  - **Referral Stats** (basic count of referred signups).  
+  - **Analytics Placeholders** (traffic, customers, revenue, engagement — blurred unless Spotlight plan).  
 
-**Featured**
-- £59.99/month or £599/year
-- Access to: All Starter features + Secret Menu + Priority Search Placement
+### Feature Locking
+- **Loyalty, Analytics, and Push Notifications** are always visible in the nav, but blurred/locked with an upgrade message for Starter and Free Trial plans.  
 
-**Spotlight**
-- £89.99/month or £899/year
-- Access to everything (Analytics, Push, Loyalty, etc.)
-- **Founding Member Deal:** 20% off Spotlight annual plan for life if upgraded before trial ends *(yearly only)*
+### File Management
+- Businesses can:  
+  - Upload/update their **logo**.  
+  - Upload/update **menu PDFs**.  
+  - Manage **offer images**.  
 
----
+### Offers
+- Businesses can:  
+  - Create up to **3 offers simultaneously** during Free Trial.  
+  - Delete existing offers.  
+  - Upgrade to a paid plan for unlimited offers.  
 
-## 🧭 User Flow Overview
+### Secret Menu
+- Businesses can:  
+  - Create and manage secret menu items.  
+  - Delete secret menu items.  
 
-### 1. **Entry via GHL Funnel**
-- Business completes GHL form (logo, name, location, category)
-- Final step button redirects to custom dashboard (React frontend)
-
-### 2. **Authentication**
-- User signs in or is auto-logged in via Supabase Auth
-- Supabase row created with trial plan + plan expiry date
-
-### 3. **Dashboard Access**
-- Trial users are placed on **Featured plan** for 120 days
-- Locked modules (Spotlight-only) show blurred previews with upgrade CTA
-- Current plan + trial days remaining shown at top of dashboard
-
-### 4. **Upgrade Flow**
-- User clicks “Upgrade” from any locked feature or settings
-- Redirected to Stripe Checkout (monthly/yearly options)
-- Stripe webhook updates Supabase row with:
-  - Plan tier
-  - Billing cycle
-  - Trial expired = false
-  - Access unlocked based on tier
-
-### 5. **Billing Portal**
-- Accessible from Settings
-- User can cancel, change plans, view invoices
-- Stripe customer portal embedded or linked
-
----
-
-## 💻 Tech Stack
-- **Frontend:** React + TailwindCSS
-- **Auth + Backend:** Supabase
-- **Database:** Supabase Postgres
-- **Hosting:** Vercel
-- **Billing:** Stripe
-- **GHL:** Lead funnel and form automation only
+### Notifications
+- Notifications section displays:  
+  - Trial expiration reminder.  
+  - Skipped tasks from signup (e.g., “You need to add your menu”).  
+  - Any system updates or support messages.  
 
 ---
 
-## 🔐 Access Control
-- Supabase handles row-level security per user
-- Auth required to view dashboard
-- Plan status checked on login + stored in client state
-- Locked features blurred and disabled for lower tiers
-- Upgrade button visible on locked modules
+## 3. Slack Notifications
+- On successful signup, a **Slack message** is sent automatically.  
+- The message should include:  
+  - Business name.  
+  - Contact details (name, email, phone).  
+  - Town/city and postcode.  
+  - Whether a logo/menu/offer was uploaded.  
+  - Referral source (if provided).  
 
 ---
 
-## 🚀 PWA + Scalability
-- Fully PWA-ready React build
-- Mobile-first responsive design
-- Future potential: convert into downloadable PWA (iOS/Android)
+## 4. Integrations
+- **Cloudinary** is used for file hosting (logos, offers, menus).  
+- **GoHighLevel (LeadConnectorHQ)** webhook is used for syncing new contacts.  
+- **Slack** integration used for internal notifications.  
+- **Supabase** may be used in the future for auth, database, or file storage, but current implementation relies on Cloudinary + GHL.  
 
 ---
 
-## 🧪 Future Features (Roadmap)
-- AI-assisted secret menu suggestions
-- Loyalty automation templates
-- AI-triggered push ideas
-- User-generated content and reviews
-- Branch manager roles
+## 5. Visual Style
+- Dark theme background (`#0a0a0a`) with gradients and neon green (`#00d083`) accents.  
+- Modern, premium branding with:  
+  - Clean progress bars.  
+  - Smooth animations between form steps.  
+  - Blurred/locked areas for upsells.  
+  - Notification cards styled with borders, icons, and gradients.  
 
 ---
 
-## 🖼️ UI Description (Screenshot)
-The attached image is the visual layout of the main dashboard screen. It includes:
-- Side navigation with active module highlights
-- Blurred preview cards for Spotlight-only features (Analytics, Push Notifications, Loyalty)
-- Current plan badge and trial status prominently at the top
-- Dark theme with green neon accents
-- Smooth hover effects, gradients, and rounded cards
-
-This is the user's central dashboard after logging in from the GHL funnel.
-
----
+## ✅ End Goal
+- Businesses can register through the **Free Trial signup form**.  
+- Trial users see a working dashboard immediately.  
+- Skipped steps are tracked as **to-do notifications**.  
+- Slack alerts notify the team of each signup.  
+- Free trial users are **limited to 3 offers**, but can delete and replace them.  
+- Loyalty, Analytics, and Push Notifications stay visible but blurred until they upgrade to Spotlight.  
+- starter users are **limited to 1 offers**, but can delete and replace them.  
+- Featured users are **limited to 3 offers**, but can delete and replace them.  
+- spotlight users have **unlimited offers**, can delete and replace them.  
