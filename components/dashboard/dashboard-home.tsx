@@ -7,7 +7,13 @@ import Link from 'next/link'
 import { getReferralStats } from '@/lib/actions/referral-actions'
 
 interface DashboardHomeProps {
-  profile?: any
+  profile?: {
+    created_at: string
+    user_id: string
+    plan: string
+    is_founder: boolean
+    [key: string]: any
+  }
 }
 
 export function DashboardHome({ profile }: DashboardHomeProps) {
@@ -421,7 +427,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
                   Great job!
                 </h3>
                 <p className="text-gray-400">
-                  You've completed all your action items. Your QWIKKER profile is fully optimized for AI recommendations.
+                  You&apos;ve completed all your action items. Your QWIKKER profile is fully optimized for AI recommendations.
                 </p>
               </div>
             </CardContent>
