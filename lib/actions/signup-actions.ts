@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { uploadToCloudinary } from '@/lib/integrations'
-import { sendWelcomeEmail } from '@/lib/email/send-welcome-email'
+// import { sendWelcomeEmail } from '@/lib/email/send-welcome-email' // Disabled until domain verification
 
 interface SignupData {
   // Personal info
@@ -249,16 +249,16 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       }
     }
 
-    // Send welcome email (non-blocking)
-    sendWelcomeEmail({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      businessName: formData.businessName,
-      profile: profile
-    }).catch(error => {
-      console.error('Welcome email failed (non-blocking):', error)
-    })
+           // Send welcome email (disabled until domain verification)
+           // sendWelcomeEmail({
+           //   firstName: formData.firstName,
+           //   lastName: formData.lastName,
+           //   email: formData.email,
+           //   businessName: formData.businessName,
+           //   profile: profile
+           // }).catch(error => {
+           //   console.error('Welcome email failed (non-blocking):', error)
+           // })
     
     return {
       success: true,

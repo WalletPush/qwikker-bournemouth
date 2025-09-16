@@ -1,10 +1,11 @@
 import { Resend } from 'resend';
 
+// Allow build to succeed without API key, but log warning
 if (!process.env.RESEND_API_KEY) {
-  throw new Error('RESEND_API_KEY is required for email functionality');
+  console.warn('RESEND_API_KEY not found - email functionality will be disabled');
 }
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+export const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Default email configuration
 export const EMAIL_CONFIG = {
