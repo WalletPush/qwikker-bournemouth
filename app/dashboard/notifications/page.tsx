@@ -1,13 +1,40 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
-export default function NotificationsPage() {
+export default async function NotificationsPage() {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase.auth.getClaims()
+  if (error || !data?.claims) {
+    redirect('/auth/login')
+  }
+
+  // Get user profile data
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', data.claims.sub)
+    .single()
+
   return (
+    <DashboardLayout currentSection="notifications" profile={profile}>
     <div className="space-y-6 relative">
       {/* Upgrade Overlay */}
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
-        <Card className="bg-slate-800 border-slate-700 max-w-md mx-4">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <Card className="bg-slate-800 border-slate-700 max-w-md w-full relative">
+          {/* Close Button */}
+          <Link 
+            href="/dashboard"
+            className="absolute top-4 right-4 w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center transition-colors z-10"
+          >
+            <svg className="w-4 h-4 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </Link>
           <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-full flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -306,5 +333,6 @@ export default function NotificationsPage() {
         </Card>
       </div>
     </div>
+    </DashboardLayout>
   )
 }
