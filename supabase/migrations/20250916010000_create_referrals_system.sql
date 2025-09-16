@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.referrals (
   referred_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   referral_code TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'credited', 'rejected')),
-  reward_amount DECIMAL(10,2) DEFAULT 50.00,
+  reward_amount DECIMAL(10,2) DEFAULT 10.00,
   reward_currency TEXT DEFAULT 'GBP',
   conversion_date TIMESTAMPTZ DEFAULT NOW(),
   credited_date TIMESTAMPTZ,
@@ -109,7 +109,7 @@ BEGIN
       new_user_id,
       referral_code_param,
       'pending',
-      50.00
+      10.00
     );
   END IF;
 END;

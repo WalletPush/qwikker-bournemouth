@@ -351,7 +351,7 @@ export function ReferralsPage({ profile }: ReferralsPageProps) {
               </div>
               <h3 className="text-lg font-medium text-white mb-2">No Referrals Yet</h3>
               <p className="text-gray-400 mb-6">
-                Start sharing your referral code to earn £50 for each business that joins QWIKKER
+                Start sharing your referral code to earn £10 for each business that joins QWIKKER
               </p>
             </div>
           ) : (
