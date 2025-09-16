@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
-import { uploadToCloudinary, sendToGoHighLevel, sendSlackNotification } from '@/lib/integrations'
+import { uploadToCloudinary, sendToGoHighLevel } from '@/lib/integrations'
 import { createOrUpdateProfile } from '@/lib/actions/profile-actions'
 
 // Form validation schema
@@ -235,15 +235,10 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
         phone: normalizePhoneNumber(data.phone),
       }
 
-      // Send to GHL and Slack in parallel, but don't block on errors
-      Promise.all([
-        sendToGoHighLevel(externalData).catch(err => 
-          console.error('GHL webhook failed:', err)
-        ),
-        sendSlackNotification(externalData).catch(err => 
-          console.error('Slack notification failed:', err)
-        )
-      ])
+      // Send to GHL (server-side notifications handled in signup-actions.ts)
+      sendToGoHighLevel(externalData).catch(err => 
+        console.error('GHL webhook failed:', err)
+      )
 
       // Redirect to success page with email for auto-fill
       router.push(`/onboarding/success?email=${encodeURIComponent(data.email)}`)

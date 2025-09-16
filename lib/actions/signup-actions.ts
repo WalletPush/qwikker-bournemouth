@@ -47,6 +47,7 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: formData.email,
       password: formData.password,
+      email_confirm: true, // Auto-confirm email so users can login immediately
       user_metadata: {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -89,6 +90,7 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
     }
 
     const mapReferralSource = (source: string) => {
+      if (!source) return null
       const mapping: Record<string, string> = {
         'founding-member': 'partner_referral',
         'business-referral': 'partner_referral', 
@@ -97,22 +99,99 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
         'word-of-mouth': 'word_of_mouth',
         'other': 'other'
       }
-      return mapping[source] || null
+      return mapping[source] || 'other'
+    }
+
+    const mapGoals = (goals: string) => {
+      if (!goals || goals.trim() === '') return null
+      
+      // Map common phrases to database values
+      const lowerGoals = goals.toLowerCase()
+      if (lowerGoals.includes('customer') && (lowerGoals.includes('new') || lowerGoals.includes('more') || lowerGoals.includes('attract'))) {
+        return 'increase_customers'
+      }
+      if (lowerGoals.includes('marketing') || lowerGoals.includes('advertis') || lowerGoals.includes('promot')) {
+        return 'improve_marketing'
+      }
+      if (lowerGoals.includes('sales') || lowerGoals.includes('revenue') || lowerGoals.includes('income')) {
+        return 'boost_sales'
+      }
+      if (lowerGoals.includes('brand') || lowerGoals.includes('awareness') || lowerGoals.includes('recognition')) {
+        return 'build_brand_awareness'
+      }
+      if (lowerGoals.includes('retention') || lowerGoals.includes('keep') || lowerGoals.includes('loyal')) {
+        return 'customer_retention'
+      }
+      if (lowerGoals.includes('expand') || lowerGoals.includes('grow') || lowerGoals.includes('bigger')) {
+        return 'expand_business'
+      }
+      
+      // Default to 'other' for anything that doesn't match
+      return 'other'
     }
 
     const mapBusinessType = (type: string) => {
       const mapping: Record<string, string> = {
         'Restaurant': 'restaurant',
         'Cafe/Coffee Shop': 'cafe',
-        'Bar/Pub': 'bar', 
+        'Bar/Pub': 'bar',
+        'Dessert/Ice Cream': 'restaurant', // closest match
+        'Takeaway/Street Food': 'restaurant',
         'Salon/Spa': 'salon',
         'Hairdresser/Barber': 'salon',
+        'Tattoo/Piercing': 'salon',
+        'Clothing/Fashion': 'retail_shop',
+        'Gift Shop': 'retail_shop',
         'Fitness/Gym': 'gym',
+        'Sports/Outdoors': 'gym',
         'Hotel/BnB': 'hotel',
+        'Venue/Event Space': 'hotel',
+        'Entertainment/Attractions': 'other',
         'Professional Services': 'service_business',
         'Other': 'other'
       }
       return mapping[type] || 'other'
+    }
+
+    const mapBusinessTown = (town: string) => {
+      const cleanTown = town.toLowerCase().trim()
+      const mapping: Record<string, string> = {
+        'bournemouth': 'bournemouth',
+        'poole': 'poole', 
+        'christchurch': 'christchurch',
+        'wimborne': 'wimborne',
+        'ferndown': 'ferndown',
+        'ringwood': 'ringwood',
+        'new milton': 'new_milton',
+        'newmilton': 'new_milton'
+      }
+      return mapping[cleanTown] || 'other'
+    }
+
+    const mapOfferType = (type: string) => {
+      if (!type) return null
+      const mapping: Record<string, string> = {
+        'percentage': 'percentage_off',
+        'fixed': 'fixed_amount_off',
+        'bogo': 'two_for_one',
+        'free-item': 'freebie',
+        'bundle': 'other',
+        'other': 'other'
+      }
+      return mapping[type] || 'other'
+    }
+
+    const mapClaimAmount = (amount: string) => {
+      if (!amount) return null
+      const mapping: Record<string, string> = {
+        'first_10': 'first_10',
+        'first_25': 'first_25', 
+        'first_50': 'first_50',
+        'first_100': 'first_100',
+        'unlimited': 'unlimited',
+        'custom': 'custom'
+      }
+      return mapping[amount] || 'unlimited'
     }
 
     const profileData = {
@@ -125,23 +204,24 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       business_type: mapBusinessType(formData.businessType),
       business_category: formData.businessCategory,
       business_address: formData.businessAddress,
-      business_town: formData.town,
+      business_town: mapBusinessTown(formData.town),
       business_postcode: formData.postcode,
       website_url: formData.website || null,
       instagram_handle: formData.instagram || null,
       facebook_url: formData.facebook || null,
       logo: logoUrl || null,
       offer_name: formData.offerName || null,
-      offer_type: formData.offerType || null,
+      offer_type: mapOfferType(formData.offerType || ''),
       offer_value: formData.offerValue || null,
-      offer_claim_amount: formData.claimAmount || null,
+      offer_claim_amount: mapClaimAmount(formData.claimAmount || ''),
       offer_start_date: formData.startDate || null,
       offer_end_date: formData.endDate || null,
       offer_terms: formData.terms || null,
       offer_image: offerImageUrl || null,
       referral_source: mapReferralSource(formData.referralSource || ''),
+      goals: mapGoals(formData.goals || ''),
       notes: formData.notes || null,
-      plan: 'starter',
+      plan: 'featured', // Free trial users get Featured plan access during 120-day trial
       is_founder: new Date() < new Date('2025-12-31'),
     }
 

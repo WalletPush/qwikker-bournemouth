@@ -1,10 +1,28 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
-export default function SupportPage() {
+export default async function SupportPage() {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase.auth.getClaims()
+  if (error || !data?.claims) {
+    redirect('/auth/login')
+  }
+
+  // Get user profile data
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', data.claims.sub)
+    .single()
+
   return (
-    <div className="space-y-6">
+    <DashboardLayout currentSection="support" profile={profile}>
+      <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-white mb-2">Support Center</h1>
         <p className="text-gray-400">Get help with your QWIKKER account and features</p>
@@ -26,14 +44,24 @@ export default function SupportPage() {
           </p>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-3">
-              <h3 className="font-semibold text-white">📧 Email Support</h3>
+              <h3 className="font-semibold text-white flex items-center gap-2">
+                <svg className="w-4 h-4 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Email Support
+              </h3>
               <p className="text-gray-400 text-sm">Get detailed help via email</p>
               <Button asChild className="w-full bg-[#00d083] hover:bg-[#00b86f] text-black">
                 <a href="mailto:support@qwikker.com">Email Support</a>
               </Button>
             </div>
             <div className="space-y-3">
-              <h3 className="font-semibold text-white">💬 Live Chat</h3>
+              <h3 className="font-semibold text-white flex items-center gap-2">
+                <svg className="w-4 h-4 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.955 8.955 0 01-2.83-.46l-3.17 1.59c-.36.18-.76-.02-.76-.43v-3.7c-1.74-1.93-2.9-4.41-2.9-7.17 0-4.418 3.582-8 8-8s8 3.582 8 8z" />
+                </svg>
+                Live Chat
+              </h3>
               <p className="text-gray-400 text-sm">Chat with us in real-time</p>
               <Button variant="outline" className="w-full border-slate-600 text-white hover:bg-slate-700">
                 Start Live Chat
@@ -182,6 +210,7 @@ export default function SupportPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }

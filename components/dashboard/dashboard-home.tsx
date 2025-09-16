@@ -261,7 +261,10 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     }
   }
   const plan = profile?.plan || 'starter'
-  const planName = plan === 'starter' ? 'Free Trial' : plan.charAt(0).toUpperCase() + plan.slice(1)
+  const isFreeTrial = plan === 'featured' && trialDaysLeft > 0
+  const planName = isFreeTrial ? 'Featured (Free Trial)' : 
+                  plan === 'starter' ? 'Starter' : 
+                  plan.charAt(0).toUpperCase() + plan.slice(1)
 
   return (
     <div className="space-y-6">
@@ -289,11 +292,11 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
               <div>
                 <p className="text-2xl font-bold text-[#00d083]">{planName}</p>
                 <p className="text-sm text-gray-400">
-                  {plan === 'starter' ? `${trialDaysLeft} days remaining` : 'Active subscription'}
+                  {isFreeTrial ? `${trialDaysLeft} days remaining` : 'Active subscription'}
                 </p>
               </div>
               
-              {plan === 'starter' && (
+              {isFreeTrial && (
                 <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-lg p-3">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-orange-300" fill="currentColor" viewBox="0 0 20 20">
@@ -308,7 +311,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
               
               <Button asChild className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
                 <Link href="/dashboard/settings">
-                  {plan === 'starter' ? 'Upgrade Plan' : 'Manage Plan'}
+                  {isFreeTrial ? 'Upgrade Plan' : 'Manage Plan'}
                 </Link>
               </Button>
             </div>
@@ -347,7 +350,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
 
         {/* To-Do Notifications Card */}
         {todoItems.length > 0 ? (
-          <Card className="bg-slate-800/50 border-slate-700">
+          <Card className="bg-slate-800/50 border-slate-700 h-80 flex flex-col overflow-hidden">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -357,31 +360,34 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
                 <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">{todoItems.length}</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="flex-1 flex flex-col overflow-hidden">
+              <div className="space-y-3 flex-1 overflow-y-auto overflow-x-hidden">
                 {todoItems.slice(0, 3).map((item, index) => (
-                  <div key={index} className="relative flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg">
-                    <span className={`absolute -top-1 -right-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium z-10 ${
-                      item.priority === 'HIGH' 
-                        ? 'bg-red-500 text-white' 
-                        : item.priority === 'MEDIUM'
-                        ? 'bg-yellow-500 text-black'
-                        : 'bg-green-500 text-black'
-                    }`}>
-                      {item.priority === 'HIGH' ? 'H' : item.priority === 'MEDIUM' ? 'M' : 'L'}
-                    </span>
-                    <div className="text-[#00d083]">{item.icon}</div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-white">{item.title}</p>
+                  <div key={index} className="relative flex items-start gap-3 p-3 bg-slate-700/50 rounded-lg min-w-0">
+                    {/* Priority tag positioned better */}
+                    <div className="flex-shrink-0 relative">
+                      <span className={`inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${
+                        item.priority === 'HIGH' 
+                          ? 'bg-red-500 text-white' 
+                          : item.priority === 'MEDIUM'
+                          ? 'bg-yellow-500 text-black'
+                          : 'bg-green-500 text-black'
+                      }`}>
+                        {item.priority === 'HIGH' ? 'HIGH' : item.priority === 'MEDIUM' ? 'MED' : 'LOW'}
+                      </span>
                     </div>
-                    <Button asChild size="sm" variant="outline" className="border-[#00d083] text-[#00d083] hover:bg-[#00d083] hover:text-black">
+                    <div className="text-[#00d083] flex-shrink-0 mt-0.5">{item.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{item.title}</p>
+                    </div>
+                    <Button asChild size="sm" variant="outline" className="border-[#00d083] text-[#00d083] hover:bg-[#00d083] hover:text-black flex-shrink-0">
                       <Link href={item.href}>Fix</Link>
                     </Button>
                   </div>
                 ))}
               </div>
               {todoItems.length > 3 && (
-                <div className="mt-4 pt-3 border-t border-slate-700">
+                <div className="mt-4 pt-3 border-t border-slate-700 flex-shrink-0">
                   <Button asChild variant="outline" className="w-full border-slate-600 text-gray-300 hover:bg-slate-700">
                     <Link href="/dashboard/action-items">
                       View {todoItems.length - 3} more action items
@@ -392,7 +398,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
             </CardContent>
           </Card>
         ) : (
-          <Card className="bg-slate-800/50 border-slate-700">
+          <Card className="bg-slate-800/50 border-slate-700 h-80 flex flex-col">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
@@ -401,14 +407,19 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
                 All Up to Date
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-6">
+            <CardContent className="flex-1 flex items-center justify-center">
+              <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-green-500/10 rounded-full flex items-center justify-center">
                   <svg className="w-8 h-8 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-white mb-2">Great job! 🎉</h3>
+                <h3 className="text-lg font-medium text-white mb-2 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Great job!
+                </h3>
                 <p className="text-gray-400">
                   You've completed all your action items. Your QWIKKER profile is fully optimized for AI recommendations.
                 </p>
@@ -429,17 +440,12 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
               </div>
               <button 
                 onClick={() => setShowModal('analytics')}
-                className="p-1 hover:bg-slate-700 rounded-full transition-colors relative group" 
+                className="p-1 hover:bg-slate-700 rounded-full transition-colors" 
                 title="See who's finding you, who's claiming your offers, and how often you appear in search."
               >
                 <svg className="w-4 h-4 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                {/* Tooltip */}
-                <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                  See who's finding you, who's claiming your offers, and how often you appear in search.
-                  <div className="absolute top-full right-4 w-2 h-2 bg-slate-900 transform rotate-45 -mt-1"></div>
-                </div>
               </button>
             </CardTitle>
           </CardHeader>
@@ -490,17 +496,12 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
               </div>
               <button 
                 onClick={() => setShowModal('notifications')}
-                className="p-1 hover:bg-slate-700 rounded-full transition-colors relative group" 
+                className="p-1 hover:bg-slate-700 rounded-full transition-colors" 
                 title="Send targeted push notifications when you publish new offers or secret menu items."
               >
                 <svg className="w-4 h-4 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                {/* Tooltip */}
-                <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                  Send targeted push notifications when you publish new offers or secret menu items.
-                  <div className="absolute top-full right-4 w-2 h-2 bg-slate-900 transform rotate-45 -mt-1"></div>
-                </div>
               </button>
             </CardTitle>
           </CardHeader>
@@ -543,17 +544,12 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
               </div>
               <button 
                 onClick={() => setShowModal('loyalty')}
-                className="p-1 hover:bg-slate-700 rounded-full transition-colors relative group" 
+                className="p-1 hover:bg-slate-700 rounded-full transition-colors" 
                 title="Create a digital loyalty program with stamps, points, or rewards—plus member push and analytics."
               >
                 <svg className="w-4 h-4 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                {/* Tooltip */}
-                <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                  Create a digital loyalty program with stamps, points, or rewards—plus member push and analytics.
-                  <div className="absolute top-full right-4 w-2 h-2 bg-slate-900 transform rotate-45 -mt-1"></div>
-                </div>
               </button>
             </CardTitle>
           </CardHeader>

@@ -233,22 +233,24 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                 <CardContent>
                   <div className="space-y-4">
                     {items.map((item, index) => (
-                      <div key={index} className="relative flex items-start gap-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600/50">
-                        <span className={`absolute -top-1 -right-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium z-10 ${
-                          priority === 'HIGH' 
-                            ? 'bg-red-500 text-white' 
-                            : priority === 'MEDIUM'
-                            ? 'bg-yellow-500 text-black'
-                            : 'bg-green-500 text-black'
-                        }`}>
-                          {priority === 'HIGH' ? 'H' : priority === 'MEDIUM' ? 'M' : 'L'}
-                        </span>
-                        <div className="text-[#00d083] mt-1">{item.icon}</div>
-                        <div className="flex-1">
+                      <div key={index} className="flex items-start gap-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600/50 min-w-0">
+                        <div className="flex-shrink-0">
+                          <span className={`inline-flex items-center text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wide ${
+                            priority === 'HIGH' 
+                              ? 'bg-red-500 text-white' 
+                              : priority === 'MEDIUM'
+                              ? 'bg-yellow-500 text-black'
+                              : 'bg-green-500 text-black'
+                          }`}>
+                            {priority === 'HIGH' ? 'HIGH' : priority === 'MEDIUM' ? 'MED' : 'LOW'}
+                          </span>
+                        </div>
+                        <div className="text-[#00d083] mt-1 flex-shrink-0">{item.icon}</div>
+                        <div className="flex-1 min-w-0">
                           <h4 className="font-medium text-white mb-1">{item.title}</h4>
                           <p className="text-sm text-gray-400 mb-3">{item.description}</p>
                         </div>
-                        <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+                        <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white flex-shrink-0">
                           <Link href={item.href}>Complete</Link>
                         </Button>
                       </div>

@@ -44,12 +44,12 @@ export default async function OnboardingSuccessPage({ searchParams }: Onboarding
               <div className="grid gap-4">
                   <div className="flex items-start gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
                   <div className="w-8 h-8 bg-[#00d083]/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-[#00d083] font-semibold text-sm">2h</span>
+                    <span className="text-[#00d083] font-semibold text-sm">✓</span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white">Email Confirmation Required</h3>
+                    <h3 className="font-semibold text-white">Account Ready</h3>
                     <p className="text-gray-400 text-sm">
-                      Check your email <strong className="text-white">{userEmail}</strong> and click the confirmation link to activate your account
+                      Your account <strong className="text-white">{userEmail}</strong> is ready to use! You can login immediately.
                     </p>
                   </div>
                 </div>
