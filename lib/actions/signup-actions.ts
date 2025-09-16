@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { uploadToCloudinary } from '@/lib/integrations'
+import { sendWelcomeEmail } from '@/lib/email/send-welcome-email'
 
 interface SignupData {
   // Personal info
@@ -46,7 +47,6 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: formData.email,
       password: formData.password,
-      email_confirm: true, // Skip email confirmation for now
       user_metadata: {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -169,6 +169,17 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       }
     }
 
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail({
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      businessName: formData.businessName,
+      profile: profile
+    }).catch(error => {
+      console.error('Welcome email failed (non-blocking):', error)
+    })
+    
     return {
       success: true,
       user: authData.user,

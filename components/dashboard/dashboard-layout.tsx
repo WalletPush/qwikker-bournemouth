@@ -126,27 +126,30 @@ export function DashboardLayout({ children, currentSection, profile }: Dashboard
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-50 ${
+      <div className={`sidebar-locked inset-y-0 left-0 w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0`}>
         
-        {/* Logo */}
-        <div className="p-6 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-lg flex items-center justify-center font-bold text-sm text-black">
-              Q
-            </div>
-            <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent">
-                QWIKKER
-              </h1>
-              <p className="text-xs text-gray-400">Business Dashboard</p>
+          {/* Logo - Fixed at top */}
+          <div className="flex-shrink-0 p-6 border-b border-slate-800">
+            <div className="text-center space-y-2">
+              {/* QWIKKER Logo */}
+              <img 
+                src="/Qwikker Logo web.svg" 
+                alt="QWIKKER Business Dashboard" 
+                className="h-8 w-auto sm:h-10 mx-auto"
+              />
+              {/* Business Dashboard Text */}
+              <p className="text-sm text-gray-400 font-medium">Business Dashboard</p>
             </div>
           </div>
-        </div>
 
-        {/* Navigation */}
-        <nav className="p-4 space-y-2">
+        {/* Navigation - Scrollable */}
+        <nav className="flex-1 overflow-y-scroll overflow-x-hidden scrollbar-hidden p-4 space-y-2"
+        style={{ 
+          touchAction: 'pan-y',
+          overscrollBehavior: 'contain'
+        }}>
           {navItems.map((item) => (
             <div key={item.id}>
               {item.locked ? (
@@ -188,25 +191,36 @@ export function DashboardLayout({ children, currentSection, profile }: Dashboard
         {/* Top header */}
         <header className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 px-6 py-4">
           <div className="flex items-center justify-between">
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+            {/* Left side - Mobile menu button */}
+            <div className="flex items-center">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              {/* Page title or breadcrumb can go here */}
+              <div className="hidden lg:block">
+                <h1 className="text-lg font-semibold text-white">Dashboard</h1>
+              </div>
+            </div>
 
-            {/* User info */}
+            {/* Right side - User info with better spacing */}
             <div className="flex items-center gap-4">
+              {/* Business name and title */}
               <div className="text-right">
-                <p className="font-semibold">{businessName}</p>
+                <p className="font-semibold text-white">{businessName}</p>
                 <p className="text-sm text-gray-400">Business Owner</p>
               </div>
+              
+              {/* Avatar - Perfect circle */}
               <div className="w-10 h-10 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-full flex items-center justify-center font-semibold text-black">
                 {businessInitials}
               </div>
+              
+              {/* Logout button */}
               <LogoutButton />
             </div>
           </div>

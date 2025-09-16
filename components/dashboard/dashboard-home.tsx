@@ -12,6 +12,7 @@ interface DashboardHomeProps {
 
 export function DashboardHome({ profile }: DashboardHomeProps) {
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(0)
+  const [showModal, setShowModal] = useState<string | null>(null)
   const [referralStats, setReferralStats] = useState({
     totalReferrals: 0,
     successfulReferrals: 0,
@@ -220,6 +221,45 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   const todoItems = [...highPriorityTodos, ...mediumPriorityTodos, ...lowPriorityTodos]
 
   const businessName = profile?.business_name || 'Your Business'
+
+  const modalContent = {
+    analytics: {
+      title: '📊 Analytics (Spotlight)',
+      description: 'Unlock deep performance insights across Qwikker:',
+      features: [
+        'Search visibility: how many times you appeared in results, top queries & "near me" impressions',
+        'Offer performance: total views, claims, redemptions, and conversion rate',
+        'Audience breakdown: new vs returning users, locations, device types',
+        'Trends & comparisons: day/week/month charts and offer-to-offer comparisons',
+        'Export & QR tracking: download CSVs; track scans from in-venue QR stands'
+      ],
+      disclaimer: 'Available on Spotlight. Data is anonymized & privacy-friendly.'
+    },
+    notifications: {
+      title: '📣 Push Notifications (Spotlight)',
+      description: 'Reach customers instantly with in-app push:',
+      features: [
+        'Announce offers & secret items the moment they go live',
+        'Targeting: all followers, nearby users, or loyalty members only',
+        'Scheduling: send now or pick a time',
+        'Performance: deliveries, opens, clicks, and redemptions tracked in analytics',
+        'Fair-use limits to keep the feed high-quality (burst limits apply)'
+      ],
+      disclaimer: 'Available on Spotlight. Users can opt in/out at any time.'
+    },
+    loyalty: {
+      title: '🪪 Loyalty Cards (Spotlight)',
+      description: 'Build repeat visits with a white-label loyalty system:',
+      features: [
+        'Program types: stamp cards, points, tiers, or perks',
+        'Smart rewards: auto-unlock free items, upsells, birthday treats',
+        'Member engagement: send push to loyalty members only',
+        'Insights: visits, redemptions, breakage, most-loved rewards',
+        'Easy setup: branded card, QR code for staff, works with your offers'
+      ],
+      disclaimer: 'Available on Spotlight. Fully branded to your business.'
+    }
+  }
   const plan = profile?.plan || 'starter'
   const planName = plan === 'starter' ? 'Free Trial' : plan.charAt(0).toUpperCase() + plan.slice(1)
 
@@ -380,11 +420,27 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
         {/* Analytics Card (Locked) */}
         <Card className="bg-slate-800/50 border-slate-700 relative overflow-hidden">
           <CardHeader className="relative z-30">
-            <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Analytics Overview
+            <CardTitle className="text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Analytics Overview
+              </div>
+              <button 
+                onClick={() => setShowModal('analytics')}
+                className="p-1 hover:bg-slate-700 rounded-full transition-colors relative group" 
+                title="See who's finding you, who's claiming your offers, and how often you appear in search."
+              >
+                <svg className="w-4 h-4 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {/* Tooltip */}
+                <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  See who's finding you, who's claiming your offers, and how often you appear in search.
+                  <div className="absolute top-full right-4 w-2 h-2 bg-slate-900 transform rotate-45 -mt-1"></div>
+                </div>
+              </button>
             </CardTitle>
           </CardHeader>
           <CardContent className="blur-[8px] select-none pointer-events-none">
@@ -425,11 +481,27 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
         {/* Push Notifications Card (Locked) */}
         <Card className="bg-slate-800/50 border-slate-700 relative overflow-hidden">
           <CardHeader className="relative z-30">
-            <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 12a8 8 0 1116 0c0 3-2 5-2 5H6s-2-2-2-5zM9 21h6" />
-              </svg>
-              Push Notifications
+            <CardTitle className="text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 12a8 8 0 1116 0c0 3-2 5-2 5H6s-2-2-2-5zM9 21h6" />
+                </svg>
+                Push Notifications
+              </div>
+              <button 
+                onClick={() => setShowModal('notifications')}
+                className="p-1 hover:bg-slate-700 rounded-full transition-colors relative group" 
+                title="Send targeted push notifications when you publish new offers or secret menu items."
+              >
+                <svg className="w-4 h-4 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {/* Tooltip */}
+                <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  Send targeted push notifications when you publish new offers or secret menu items.
+                  <div className="absolute top-full right-4 w-2 h-2 bg-slate-900 transform rotate-45 -mt-1"></div>
+                </div>
+              </button>
             </CardTitle>
           </CardHeader>
           <CardContent className="blur-[8px] select-none pointer-events-none">
@@ -462,11 +534,27 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
         {/* Loyalty Cards Preview (Locked) */}
         <Card className="bg-slate-800/50 border-slate-700 relative overflow-hidden">
           <CardHeader className="relative z-30">
-            <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-              Loyalty Card Preview
+            <CardTitle className="text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                Loyalty Card Preview
+              </div>
+              <button 
+                onClick={() => setShowModal('loyalty')}
+                className="p-1 hover:bg-slate-700 rounded-full transition-colors relative group" 
+                title="Create a digital loyalty program with stamps, points, or rewards—plus member push and analytics."
+              >
+                <svg className="w-4 h-4 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {/* Tooltip */}
+                <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  Create a digital loyalty program with stamps, points, or rewards—plus member push and analytics.
+                  <div className="absolute top-full right-4 w-2 h-2 bg-slate-900 transform rotate-45 -mt-1"></div>
+                </div>
+              </button>
             </CardTitle>
           </CardHeader>
           <CardContent className="blur-[8px] select-none pointer-events-none">
@@ -563,6 +651,52 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowModal(null)}>
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <svg className="w-6 h-6 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
+                    showModal === 'analytics' ? "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" :
+                    showModal === 'notifications' ? "M15 17h5l-5 5v-5zM4 12a8 8 0 1116 0c0 3-2 5-2 5H6s-2-2-2-5zM9 21h6" :
+                    "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                  } />
+                </svg>
+                {modalContent[showModal as keyof typeof modalContent].title}
+              </h2>
+              <button 
+                onClick={() => setShowModal(null)}
+                className="p-1 hover:bg-slate-700 rounded-full transition-colors"
+              >
+                <svg className="w-5 h-5 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <p className="text-gray-300">{modalContent[showModal as keyof typeof modalContent].description}</p>
+              <ul className="space-y-2 text-gray-300">
+                {modalContent[showModal as keyof typeof modalContent].features.map((feature, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="text-[#00d083] mt-1">•</span>
+                    <span><strong>{feature.split(':')[0]}:</strong> {feature.split(':').slice(1).join(':')}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm text-gray-400 italic">{modalContent[showModal as keyof typeof modalContent].disclaimer}</p>
+              <div className="pt-4">
+                <Button asChild className="bg-[#00d083] hover:bg-[#00b86f] text-black">
+                  <Link href="/dashboard/settings">Upgrade to Spotlight</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

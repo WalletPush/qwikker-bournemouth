@@ -308,9 +308,16 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
 
       {/* Main Form */}
       <div className="space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="text-4xl font-bold text-[#00d083]">QWIKKER</div>
+          {/* Header */}
+          <div className="text-center space-y-4">
+            {/* QWIKKER Logo */}
+            <div className="flex justify-center mb-6">
+              <img 
+                src="/Qwikker Logo web.svg" 
+                alt="QWIKKER" 
+                className="h-12 w-auto sm:h-16"
+              />
+            </div>
           <div className="text-xl text-gray-400">Business Registration</div>
           <div className="inline-block bg-[#00d083] text-black px-4 py-2 rounded-lg text-sm font-semibold uppercase tracking-wide">
             Invitation Only

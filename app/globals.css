@@ -1,6 +1,26 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Custom scrollbar styles */
+.scrollbar-hidden {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
+/* Prevent sidebar movement */
+.sidebar-locked {
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  overflow-x: hidden;
+  position: fixed;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
