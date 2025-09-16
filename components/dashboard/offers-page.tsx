@@ -521,7 +521,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                     id="offerTerms"
                     value={formData.offerTerms}
                     onChange={(e) => handleInputChange('offerTerms', e.target.value)}
-                    className="w-full bg-slate-900 text-white border-slate-600 focus:border-[#00d083] rounded-md p-2 min-h-[100px]"
+                    className="w-full bg-slate-900 text-white border border-slate-600 focus:border-[#00d083] hover:border-slate-500 rounded-md p-3 min-h-[100px] resize-vertical transition-colors"
                     placeholder="Enter any terms and conditions, restrictions, or limitations..."
                   />
                 </div>

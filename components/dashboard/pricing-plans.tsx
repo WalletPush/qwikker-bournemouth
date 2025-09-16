@@ -122,7 +122,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
                       £{plan.yearlyPrice}/year
                     </div>
                     <div className="text-lg font-semibold text-yellow-400">
-                      £{plan.yearlyDiscount}/year (20% off)
+                      £{plan.yearlyDiscount}/year (20% off 12-month plans)
                     </div>
                   </div>
                 ) : (

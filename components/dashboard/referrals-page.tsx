@@ -152,7 +152,7 @@ export function ReferralsPage({ profile }: ReferralsPageProps) {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-white mb-2">Referral Program</h1>
-        <p className="text-gray-400">Earn £10 for every business you refer to QWIKKER (Paid plans only)</p>
+        <p className="text-gray-400">Earn £10 for every business you refer to QWIKKER that stays for 3+ months (Paid plans only)</p>
       </div>
 
       {copyMessage && (
@@ -351,7 +351,7 @@ export function ReferralsPage({ profile }: ReferralsPageProps) {
               </div>
               <h3 className="text-lg font-medium text-white mb-2">No Referrals Yet</h3>
               <p className="text-gray-400 mb-6">
-                Start sharing your referral code to earn £10 for each business that joins QWIKKER!
+                Start sharing your referral code to earn £10 for each business that joins QWIKKER and stays for 3+ months!
               </p>
             </div>
           ) : (

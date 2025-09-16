@@ -50,6 +50,9 @@ export interface Profile {
   referral_code: string | null; // Unique referral code for this user
   referred_by: string | null; // Profile ID of who referred this user
   
+  // QWIKKER status
+  qwikker_status: QwikkerStatus | null;
+  
   // Metadata
   created_at: string;
   updated_at: string;
@@ -110,8 +113,14 @@ export type OfferClaimAmount =
 
 export type SubscriptionPlan = 
   | 'starter'
+  | 'featured'
   | 'spotlight'
   | 'pro';
+
+export type QwikkerStatus = 
+  | 'pending'    // Orange - submitted but not yet reviewed/live
+  | 'live'       // Green - approved and live on QWIKKER database  
+  | 'not_live';  // Red - rejected or removed from database
 
 // Form types for creating/updating profiles
 export interface CreateProfileRequest {
