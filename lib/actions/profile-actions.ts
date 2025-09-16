@@ -6,34 +6,74 @@ export async function createOrUpdateProfile(profileData: any, userId: string) {
   const supabase = createAdminClient()
   
   try {
-    // First, verify the user exists in auth.users
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId)
+    // Retry logic for user verification
+    let authUser = null
+    let retries = 0
+    const maxRetries = 5
     
-    if (authError || !authUser.user) {
-      console.error('Auth user not found:', authError)
-      throw new Error('User account not found. Please try again.')
+    while (retries < maxRetries) {
+      const { data, error } = await supabase.auth.admin.getUserById(userId)
+      
+      if (!error && data.user) {
+        authUser = data.user
+        break
+      }
+      
+      console.log(`Auth user not found, retry ${retries + 1}/${maxRetries}`)
+      retries++
+      await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds between retries
     }
 
-    // Add a small delay to ensure database consistency
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    if (!authUser) {
+      throw new Error('User account not found after multiple attempts. Please try again.')
+    }
 
-    // Use the admin client to upsert the profile (bypasses RLS)
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .upsert({
-        ...profileData,
-        user_id: userId,
-        plan: 'starter',
-        is_founder: new Date() < new Date('2025-12-31')
-      }, {
-        onConflict: 'user_id'
-      })
-      .select()
-      .single()
+    // Retry logic for profile creation
+    let profile = null
+    retries = 0
+    
+    while (retries < maxRetries) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .upsert({
+            ...profileData,
+            user_id: userId,
+            plan: 'starter',
+            is_founder: new Date() < new Date('2025-12-31')
+          }, {
+            onConflict: 'user_id'
+          })
+          .select()
+          .single()
 
-    if (error) {
-      console.error('Profile creation error:', error)
-      throw new Error(`Profile creation failed: ${error.message}`)
+        if (!error && data) {
+          profile = data
+          break
+        }
+        
+        if (error && error.code === '23503') {
+          // Foreign key constraint violation - user not yet available
+          console.log(`Foreign key constraint error, retry ${retries + 1}/${maxRetries}`)
+          retries++
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          continue
+        }
+        
+        // Other errors should be thrown immediately
+        throw error
+        
+      } catch (err) {
+        if (retries === maxRetries - 1) {
+          throw err
+        }
+        retries++
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
+    }
+
+    if (!profile) {
+      throw new Error('Profile creation failed after multiple attempts')
     }
 
     return { success: true, profile }
