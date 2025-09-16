@@ -14,6 +14,7 @@ export interface Profile {
   referral_source: ReferralSource | null;
   goals: UserGoal | null;
   notes: string | null;
+  additional_notes: string | null;
   
   // Business information
   business_name: string | null;
@@ -28,6 +29,7 @@ export interface Profile {
   instagram_handle: string | null;
   facebook_url: string | null;
   logo: string | null; // URL to uploaded logo
+  menu_url: string | null; // URL to uploaded menu/price list PDF
   
   // Offer data
   offer_name: string | null;
@@ -99,12 +101,8 @@ export type OfferType =
   | 'other';
 
 export type OfferClaimAmount = 
-  | 'first_10'
-  | 'first_25'
-  | 'first_50'
-  | 'first_100'
-  | 'unlimited'
-  | 'custom';
+  | 'single'
+  | 'multiple';
 
 export type SubscriptionPlan = 
   | 'starter'
@@ -202,12 +200,8 @@ export const OFFER_TYPE_OPTIONS: DropdownOption<OfferType>[] = [
 ];
 
 export const OFFER_CLAIM_AMOUNT_OPTIONS: DropdownOption<OfferClaimAmount>[] = [
-  { value: 'first_10', label: 'First 10' },
-  { value: 'first_25', label: 'First 25' },
-  { value: 'first_50', label: 'First 50' },
-  { value: 'first_100', label: 'First 100' },
-  { value: 'unlimited', label: 'Unlimited' },
-  { value: 'custom', label: 'Custom' },
+  { value: 'single', label: 'Single Use' },
+  { value: 'multiple', label: 'Multiple Use' },
 ];
 
 export const SUBSCRIPTION_PLAN_OPTIONS: DropdownOption<SubscriptionPlan>[] = [

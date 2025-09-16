@@ -44,6 +44,45 @@ export async function sendToGoHighLevel(formData: any): Promise<void> {
 }
 
 /**
+ * Send file update to GoHighLevel using a separate webhook that doesn't trigger signup notifications
+ * This function updates contact info only, without triggering new signup workflows
+ * 
+ * TO ENABLE: Set NEXT_PUBLIC_GHL_UPDATE_WEBHOOK_URL in your environment variables
+ * with a separate GHL webhook that doesn't send Slack notifications
+ */
+export async function sendFileUpdateToGoHighLevel(formData: any): Promise<void> {
+  // Use a separate webhook URL for updates to avoid signup notifications
+  const updateWebhookUrl = process.env.NEXT_PUBLIC_GHL_UPDATE_WEBHOOK_URL
+  
+  if (!updateWebhookUrl) {
+    console.warn('GHL update webhook not configured - file updates will not sync to GHL')
+    console.warn('To enable GHL sync for file updates, set NEXT_PUBLIC_GHL_UPDATE_WEBHOOK_URL')
+    return
+  }
+  
+  // Add metadata to distinguish this from new signups
+  const updateData = {
+    ...formData,
+    isFileUpdate: true,
+    updateType: 'file_upload',
+    skipSignupNotification: true,
+    // This flag can be used in GHL to filter out signup notifications
+  }
+  
+  const response = await fetch(updateWebhookUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(updateData)
+  })
+
+  if (!response.ok) {
+    throw new Error(`GoHighLevel file update webhook failed: ${response.statusText}`)
+  }
+}
+
+/**
  * Send Slack notification
  */
 export async function sendSlackNotification(formData: any): Promise<void> {
@@ -129,4 +168,203 @@ export async function sendSlackNotification(formData: any): Promise<void> {
   if (!response.ok) {
     throw new Error(`Slack notification failed: ${response.statusText}`)
   }
+}
+
+/**
+ * Send Slack notification for important business updates
+ */
+export async function sendBusinessUpdateNotification(profileData: any, updateType: 'file_upload' | 'secret_menu' | 'offer_created' | 'business_info', details: any): Promise<void> {
+  const slackWebhookUrl = process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL
+  
+  if (!slackWebhookUrl) {
+    console.warn('Slack webhook URL not configured')
+    return
+  }
+
+  const businessName = profileData.business_name || 'Unknown Business'
+  const ownerName = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() || 'Unknown Owner'
+
+  let message: any
+
+  switch (updateType) {
+    case 'file_upload':
+      message = createFileUploadMessage(businessName, ownerName, details.fileType, details.fileUrl)
+      break
+    case 'secret_menu':
+      message = createSecretMenuMessage(businessName, ownerName, details)
+      break
+    case 'offer_created':
+      message = createOfferMessage(businessName, ownerName, details)
+      break
+    case 'business_info':
+      message = createBusinessInfoMessage(businessName, ownerName, details)
+      break
+    default:
+      return // Skip unknown update types
+  }
+
+  // Add channel and thread targeting
+  const payload = {
+    ...message,
+    channel: "#business-file-management", // Specific channel
+    username: "QWIKKER Bot",
+    icon_emoji: ":file_folder:",
+    // thread_ts can be added here if you want to use threads
+  }
+
+  const response = await fetch(slackWebhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  })
+
+  if (!response.ok) {
+    throw new Error(`Slack business update notification failed: ${response.statusText}`)
+  }
+}
+
+function createFileUploadMessage(businessName: string, ownerName: string, fileType: 'logo' | 'menu' | 'offer', fileUrl: string) {
+  const actions = {
+    logo: `${ownerName} (${businessName}) uploaded a new business logo`,
+    menu: `${ownerName} (${businessName}) uploaded a new menu/price list`, 
+    offer: `${ownerName} (${businessName}) uploaded a new offer image`
+  }
+
+  const emojis = {
+    logo: '🏢',
+    menu: '📋', 
+    offer: '🎯'
+  }
+
+  return {
+    text: actions[fileType],
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `${emojis[fileType]} ${actions[fileType]}`
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `<${fileUrl}|View File> • Knowledge base may need updating`
+        }
+      }
+    ]
+  }
+}
+
+function createSecretMenuMessage(businessName: string, ownerName: string, details: any) {
+  return {
+    text: `${ownerName} (${businessName}) added a secret menu item`,
+    blocks: [
+      {
+        type: "section", 
+        text: {
+          type: "mrkdwn",
+          text: `🤫 ${ownerName} (${businessName}) added a secret menu item: *${details.itemName}*`
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn", 
+          text: `${details.description ? `_"${details.description}"_` : ''} • Knowledge base update recommended`
+        }
+      }
+    ]
+  }
+}
+
+function createOfferMessage(businessName: string, ownerName: string, details: any) {
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'Not specified'
+    return new Date(dateStr).toLocaleDateString('en-GB')
+  }
+
+  const claimAmountLabel = details.offerClaimAmount === 'single' ? 'Single Use' : 
+                          details.offerClaimAmount === 'multiple' ? 'Multiple Use' : 
+                          'Not specified'
+
+  const offerImage = details.offerImage ? 
+    `\n*Offer Image:* <${details.offerImage}|View Image>` : 
+    '\n*Offer Image:* Will be designed by QWIKKER team'
+
+  return {
+    text: `${ownerName} (${businessName}) created a new offer: ${details.offerName}`,
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn", 
+          text: `🎯 ${ownerName} (${businessName}) created a new offer: *${details.offerName}*`
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Value:* ${details.offerValue || 'Not specified'}\n*Type:* ${details.offerType || 'Not specified'}\n*Claim Amount:* ${claimAmountLabel}\n*Start Date:* ${formatDate(details.offerStartDate)}\n*End Date:* ${formatDate(details.offerEndDate)}${offerImage}`
+        }
+      },
+      ...(details.offerTerms ? [{
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Terms & Conditions:*\n${details.offerTerms}`
+        }
+      }] : []),
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `Knowledge base update recommended`
+        }
+      }
+    ]
+  }
+}
+
+function createBusinessInfoMessage(businessName: string, ownerName: string, details: any) {
+  const importantFields = details.updatedFields.filter((field: string) => 
+    !['phone', 'email', 'first_name', 'last_name'].includes(field)
+  )
+  
+  if (importantFields.length === 0) {
+    return null // Skip routine contact updates
+  }
+
+  return {
+    text: `${ownerName} (${businessName}) updated business information`,
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `📝 ${ownerName} (${businessName}) updated: ${importantFields.join(', ')}`
+        }
+      },
+      {
+        type: "section", 
+        text: {
+          type: "mrkdwn",
+          text: `Knowledge base may need updating`
+        }
+      }
+    ]
+  }
+}
+
+/**
+ * Legacy function - use sendBusinessUpdateNotification instead
+ * @deprecated
+ */
+export async function sendProfileUpdateSlackNotification(profileData: any, updatedFields: string[]): Promise<void> {
+  // Redirect to new notification system
+  return sendBusinessUpdateNotification(profileData, 'business_info', { updatedFields })
 }
