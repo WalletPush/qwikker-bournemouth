@@ -217,127 +217,21 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
     setIsSubmitting(true)
     
     try {
-      const supabase = createClient()
+      // Use the new server-side signup action
+      const { createUserAndProfile } = await import('@/lib/actions/signup-actions')
       
-      // 1. Create Supabase user account
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
-            first_name: data.firstName,
-            last_name: data.lastName,
-          }
-        }
-      })
-
-      if (signUpError) {
-        throw new Error(`Account creation failed: ${signUpError.message}`)
-      }
-
-      if (!authData.user) {
-        throw new Error('Account creation failed: No user returned')
-      }
-
-      // 2. Upload files to Cloudinary
-      let logoUrl = ''
-      let menuUrls: string[] = []
-      let offerImageUrl = ''
-
-      if (files.logo) {
-        logoUrl = await uploadToCloudinary(files.logo, 'qwikker/logos')
-      }
+      const result = await createUserAndProfile(data, files, referralCode)
       
-      if (files.menu.length > 0) {
-        menuUrls = await Promise.all(
-          files.menu.map(file => uploadToCloudinary(file, 'qwikker/menus'))
-        )
-      }
-      
-      if (files.offer) {
-        offerImageUrl = await uploadToCloudinary(files.offer, 'qwikker/offers')
+      if (!result.success) {
+        throw new Error(result.error || 'Signup failed')
       }
 
-      // 3. Prepare data for Supabase profile update
-      // Map form values to database constraints
-      const mapReferralSource = (source: string) => {
-        const mapping: Record<string, string> = {
-          'founding-member': 'partner_referral',
-          'business-referral': 'partner_referral', 
-          'google-search': 'google_search',
-          'social-media': 'social_media',
-          'word-of-mouth': 'word_of_mouth',
-          'other': 'other'
-        }
-        return mapping[source] || null
-      }
-
-      const mapBusinessType = (type: string) => {
-        const mapping: Record<string, string> = {
-          'Restaurant': 'restaurant',
-          'Cafe/Coffee Shop': 'cafe',
-          'Bar/Pub': 'bar', 
-          'Salon/Spa': 'salon',
-          'Hairdresser/Barber': 'salon',
-          'Fitness/Gym': 'gym',
-          'Hotel/BnB': 'hotel',
-          'Professional Services': 'service_business',
-          'Other': 'other'
-        }
-        return mapping[type] || 'other'
-      }
-
-      const profileData = {
-        first_name: data.firstName,
-        last_name: data.lastName,
-        email: data.email,
-        phone: normalizePhoneNumber(data.phone),
-        business_name: data.businessName,
-        business_type: mapBusinessType(data.businessType),
-        business_category: data.businessCategory,
-        business_address: data.businessAddress,
-        business_town: data.town,
-        business_postcode: data.postcode,
-        website_url: data.website || null,
-        instagram_handle: data.instagram || null,
-        facebook_url: data.facebook || null,
-        logo: logoUrl || null,
-        offer_name: data.offerName || null,
-        offer_type: data.offerType || null,
-        offer_value: data.offerValue || null,
-        offer_claim_amount: data.claimAmount || null,
-        offer_start_date: data.startDate || null,
-        offer_end_date: data.endDate || null,
-        offer_terms: data.terms || null,
-        offer_image: offerImageUrl || null,
-        referral_source: mapReferralSource(data.referralSource || ''),
-        goals: null, // We'll handle this separately since it's not in the form yet
-        notes: data.notes || null,
-      }
-
-      // 4. Create or update profile using server action (bypasses RLS)
-      const profileResult = await createOrUpdateProfile(profileData, authData.user.id)
-      
-      if (!profileResult.success) {
-        throw new Error(`Profile creation failed: ${profileResult.error}`)
-      }
-
-      // 5. Track referral if referral code was provided
-      if (referralCode) {
-        try {
-          const { trackReferral } = await import('@/lib/actions/referral-actions')
-          await trackReferral(referralCode, authData.user.id)
-        } catch (error) {
-          console.error('Referral tracking failed (non-critical):', error)
-        }
-      }
-
-      // 6. Send to external services (non-blocking)
+      // Send to external services (non-blocking)
       const externalData = {
         ...data,
-        logo_url: logoUrl,
-        menuservice_url: menuUrls.join(', '),
-        offer_image_url: offerImageUrl,
+        logo_url: result.profile?.logo || '',
+        menuservice_url: '', // Will be handled in server action
+        offer_image_url: result.profile?.offer_image || '',
         phone: normalizePhoneNumber(data.phone),
       }
 
@@ -351,7 +245,7 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
         )
       ])
 
-      // 7. Redirect to success page with email for auto-fill
+      // Redirect to success page with email for auto-fill
       router.push(`/onboarding/success?email=${encodeURIComponent(data.email)}`)
       
     } catch (error) {
