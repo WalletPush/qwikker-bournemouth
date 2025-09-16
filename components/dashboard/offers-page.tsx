@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { createOffer } from '@/lib/actions/business-actions'
+import { createOffer, deleteOffer } from '@/lib/actions/business-actions'
 import { Profile, OFFER_TYPE_OPTIONS, OFFER_CLAIM_AMOUNT_OPTIONS } from '@/types/profiles'
 
 interface OffersPageProps {
@@ -32,6 +32,8 @@ export function OffersPage({ profile }: OffersPageProps) {
   const [offerImageFile, setOfferImageFile] = useState<File | null>(null)
   const [offerImagePreview, setOfferImagePreview] = useState<string | null>(null)
   const [imageUploadMessage, setImageUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -150,6 +152,35 @@ export function OffersPage({ profile }: OffersPageProps) {
     setMessage(null)
   }
 
+  const handleDeleteOffer = async () => {
+    setIsDeleting(true)
+    setMessage(null)
+
+    try {
+      const result = await deleteOffer(profile.user_id)
+      
+      if (result.success) {
+        setMessage({
+          type: 'success',
+          text: 'Offer deleted successfully!'
+        })
+        setShowDeleteConfirmation(false)
+        router.refresh()
+      } else {
+        throw new Error(result.error || 'Failed to delete offer')
+      }
+    } catch (error) {
+      console.error('Offer deletion error:', error)
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to delete offer. Please try again.'
+      })
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteConfirmation(false)
+    }
+  }
+
   // Check if user has an existing offer
   const hasExistingOffer = profile.offer_name && profile.offer_name.trim() !== ''
 
@@ -258,6 +289,14 @@ export function OffersPage({ profile }: OffersPageProps) {
                     onClick={() => setShowCreateForm(true)}
                   >
                     Edit Offer
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-600 text-red-400 hover:bg-red-600/10"
+                    onClick={() => setShowDeleteConfirmation(true)}
+                  >
+                    Delete
                   </Button>
                   {currentOfferCount < offerLimit && (
                     <Button
@@ -522,6 +561,45 @@ export function OffersPage({ profile }: OffersPageProps) {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirmation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="bg-slate-800 border-slate-700 max-w-md w-full mx-4">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.98-.833-2.75 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                Delete Offer
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-300">
+                Are you sure you want to delete the offer "{profile.offer_name}"? 
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirmation(false)}
+                  disabled={isDeleting}
+                  className="border-slate-600 text-gray-300 hover:bg-slate-700"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteOffer}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete Offer'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   )

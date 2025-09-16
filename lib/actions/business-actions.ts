@@ -157,3 +157,127 @@ export async function updateBusinessInfo(userId: string, updates: any) {
   revalidatePath('/dashboard')
   return { success: true, data: profile }
 }
+
+/**
+ * Delete an offer and notify Slack
+ */
+export async function deleteOffer(userId: string) {
+  const supabaseAdmin = createAdminClient()
+
+  // Get the current offer details for the notification
+  const { data: currentProfile, error: fetchError } = await supabaseAdmin
+    .from('profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+
+  if (fetchError || !currentProfile) {
+    return { success: false, error: 'Profile not found' }
+  }
+
+  // Store offer details before deletion for notification
+  const deletedOffer = {
+    offerName: currentProfile.offer_name,
+    offerType: currentProfile.offer_type,
+    offerValue: currentProfile.offer_value,
+  }
+
+  // Clear offer data from profile
+  const { data: profile, error } = await supabaseAdmin
+    .from('profiles')
+    .update({
+      offer_name: null,
+      offer_type: null,
+      offer_value: null,
+      offer_claim_amount: null,
+      offer_terms: null,
+      offer_start_date: null,
+      offer_end_date: null,
+      offer_image: null
+    })
+    .eq('user_id', userId)
+    .select()
+    .single()
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  // Send Slack notification about deletion
+  try {
+    await sendBusinessUpdateNotification(profile, 'offer_deleted', deletedOffer)
+  } catch (error) {
+    console.error('Slack notification failed (non-critical):', error)
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/offers')
+  return { success: true, data: profile }
+}
+
+/**
+ * Delete a secret menu item and notify Slack
+ */
+export async function deleteSecretMenuItem(userId: string, itemId: string) {
+  const supabaseAdmin = createAdminClient()
+
+  // Get current profile data
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+
+  if (profileError || !profile) {
+    return { success: false, error: 'Profile not found' }
+  }
+
+  // Parse current secret menu items
+  const currentNotes = profile.additional_notes || '{}'
+  let notesData
+  try {
+    notesData = JSON.parse(currentNotes)
+  } catch {
+    notesData = {}
+  }
+
+  if (!notesData.secret_menu_items || !Array.isArray(notesData.secret_menu_items)) {
+    return { success: false, error: 'No secret menu items found' }
+  }
+
+  // Find the item to delete
+  const itemIndex = notesData.secret_menu_items.findIndex((item: any) => 
+    item.created_at === itemId || item.itemName === itemId
+  )
+
+  if (itemIndex === -1) {
+    return { success: false, error: 'Secret menu item not found' }
+  }
+
+  // Store deleted item details for notification
+  const deletedItem = notesData.secret_menu_items[itemIndex]
+
+  // Remove the item
+  notesData.secret_menu_items.splice(itemIndex, 1)
+
+  // Update profile with modified secret menu items
+  const { error: updateError } = await supabaseAdmin
+    .from('profiles')
+    .update({ additional_notes: JSON.stringify(notesData) })
+    .eq('user_id', userId)
+
+  if (updateError) {
+    return { success: false, error: updateError.message }
+  }
+
+  // Send Slack notification about deletion
+  try {
+    await sendBusinessUpdateNotification(profile, 'secret_menu_deleted', deletedItem)
+  } catch (error) {
+    console.error('Slack notification failed (non-critical):', error)
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/secret-menu')
+  return { success: true, data: deletedItem }
+}

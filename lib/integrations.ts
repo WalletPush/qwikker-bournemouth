@@ -173,7 +173,7 @@ export async function sendSlackNotification(formData: any): Promise<void> {
 /**
  * Send Slack notification for important business updates
  */
-export async function sendBusinessUpdateNotification(profileData: any, updateType: 'file_upload' | 'secret_menu' | 'offer_created' | 'business_info', details: any): Promise<void> {
+export async function sendBusinessUpdateNotification(profileData: any, updateType: 'file_upload' | 'secret_menu' | 'offer_created' | 'business_info' | 'offer_deleted' | 'secret_menu_deleted' | 'referral_signup' | 'referral_credited', details: any): Promise<void> {
   const slackWebhookUrl = process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL
   
   if (!slackWebhookUrl) {
@@ -198,6 +198,18 @@ export async function sendBusinessUpdateNotification(profileData: any, updateTyp
       break
     case 'business_info':
       message = createBusinessInfoMessage(businessName, ownerName, details)
+      break
+    case 'offer_deleted':
+      message = createOfferDeleteMessage(businessName, ownerName, details)
+      break
+    case 'secret_menu_deleted':
+      message = createSecretMenuDeleteMessage(businessName, ownerName, details)
+      break
+    case 'referral_signup':
+      message = createReferralSignupMessage(businessName, ownerName, details)
+      break
+    case 'referral_credited':
+      message = createReferralCreditedMessage(businessName, ownerName, details)
       break
     default:
       return // Skip unknown update types
@@ -354,6 +366,122 @@ function createBusinessInfoMessage(businessName: string, ownerName: string, deta
         text: {
           type: "mrkdwn",
           text: `Knowledge base may need updating`
+        }
+      }
+    ]
+  }
+}
+
+function createOfferDeleteMessage(businessName: string, ownerName: string, details: any) {
+  return {
+    text: `${ownerName} (${businessName}) deleted an offer: ${details.offerName}`,
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn", 
+          text: `🗑️ ${ownerName} (${businessName}) deleted offer: *${details.offerName}*`
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Previous Value:* ${details.offerValue || 'Not specified'}\n*Previous Type:* ${details.offerType || 'Not specified'}`
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `Knowledge base update recommended - offer no longer available`
+        }
+      }
+    ]
+  }
+}
+
+function createSecretMenuDeleteMessage(businessName: string, ownerName: string, details: any) {
+  return {
+    text: `${ownerName} (${businessName}) removed secret menu item: ${details.itemName}`,
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn", 
+          text: `🗑️ ${ownerName} (${businessName}) removed secret menu item: *${details.itemName}*`
+        }
+      },
+      ...(details.description ? [{
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Previous Description:* ${details.description}`
+        }
+      }] : []),
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `Knowledge base update recommended - item no longer available`
+        }
+      }
+    ]
+  }
+}
+
+function createReferralSignupMessage(businessName: string, ownerName: string, details: any) {
+  return {
+    text: `${ownerName} (${businessName}) referred a new business: ${details.referredBusinessName}`,
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn", 
+          text: `🎉 ${ownerName} (${businessName}) referred a new business!`
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*New Business:* ${details.referredBusinessName}\n*Owner:* ${details.referredOwnerName}\n*Referral Code:* ${details.referralCode}`
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `Potential £10 reward pending business activation • Monitor for conversion`
+        }
+      }
+    ]
+  }
+}
+
+function createReferralCreditedMessage(businessName: string, ownerName: string, details: any) {
+  return {
+    text: `${ownerName} (${businessName}) earned referral reward for ${details.referredBusinessName}`,
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn", 
+          text: `💰 Referral reward credited to ${ownerName} (${businessName})`
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Referred Business:* ${details.referredBusinessName}\n*Reward Amount:* ${details.currency === 'GBP' ? '£' : '$'}${details.rewardAmount}`
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `Successful referral conversion • Reward processed`
         }
       }
     ]

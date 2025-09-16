@@ -46,6 +46,10 @@ export interface Profile {
   trial_expiry: string | null; // ISO timestamp
   is_founder: boolean;
   
+  // Referral system
+  referral_code: string | null; // Unique referral code for this user
+  referred_by: string | null; // Profile ID of who referred this user
+  
   // Metadata
   created_at: string;
   updated_at: string;

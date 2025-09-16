@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { addSecretMenuItem } from '@/lib/actions/business-actions'
+import { addSecretMenuItem, deleteSecretMenuItem } from '@/lib/actions/business-actions'
 import { Profile } from '@/types/profiles'
 
 interface SecretMenuItem {
@@ -27,6 +27,8 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [secretMenuItems, setSecretMenuItems] = useState<SecretMenuItem[]>([])
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const [formData, setFormData] = useState({
     itemName: '',
@@ -109,6 +111,39 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
     })
     setShowCreateForm(false)
     setMessage(null)
+  }
+
+  const handleDeleteSecretMenuItem = async (itemId: string) => {
+    setIsDeleting(true)
+    setMessage(null)
+
+    try {
+      const result = await deleteSecretMenuItem(profile.user_id, itemId)
+      
+      if (result.success) {
+        setMessage({
+          type: 'success',
+          text: 'Secret menu item deleted successfully!'
+        })
+        setShowDeleteConfirmation(null)
+        // Remove item from local state
+        setSecretMenuItems(prev => prev.filter(item => 
+          item.created_at !== itemId && item.itemName !== itemId
+        ))
+        router.refresh()
+      } else {
+        throw new Error(result.error || 'Failed to delete secret menu item')
+      }
+    } catch (error) {
+      console.error('Secret menu item deletion error:', error)
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to delete item. Please try again.'
+      })
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteConfirmation(null)
+    }
   }
 
   // Plan limits
@@ -200,6 +235,14 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
                     >
                       Edit
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-red-600 text-red-400 hover:bg-red-600/10"
+                      onClick={() => setShowDeleteConfirmation(item.created_at || item.itemName)}
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -264,7 +307,7 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
                     id="description"
                     value={formData.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
-                    className="w-full bg-slate-900 text-white border-slate-600 focus:border-[#00d083] rounded-md p-2 min-h-[100px]"
+                    className="flex w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-white placeholder:text-gray-400 focus:border-[#00d083] focus:ring-[3px] focus:ring-[#00d083]/20 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 min-h-[100px] resize-none"
                     placeholder="Describe what makes this item special, its ingredients, or why it's exclusive..."
                   />
                   <p className="text-xs text-gray-400 mt-1">
@@ -381,6 +424,45 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirmation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="bg-slate-800 border-slate-700 max-w-md w-full mx-4">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.98-.833-2.75 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                Delete Secret Menu Item
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-300">
+                Are you sure you want to delete this secret menu item? 
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirmation(null)}
+                  disabled={isDeleting}
+                  className="border-slate-600 text-gray-300 hover:bg-slate-700"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleDeleteSecretMenuItem(showDeleteConfirmation)}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete Item'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   )

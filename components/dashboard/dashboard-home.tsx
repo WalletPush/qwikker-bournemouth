@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { getReferralStats } from '@/lib/actions/referral-actions'
 
 interface DashboardHomeProps {
   profile?: any
@@ -11,6 +12,11 @@ interface DashboardHomeProps {
 
 export function DashboardHome({ profile }: DashboardHomeProps) {
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(0)
+  const [referralStats, setReferralStats] = useState({
+    totalReferrals: 0,
+    successfulReferrals: 0,
+    totalEarnings: 0
+  })
 
   useEffect(() => {
     if (profile?.created_at) {
@@ -26,6 +32,24 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
       setTrialDaysLeft(daysLeft)
     }
   }, [profile])
+
+  // Load referral stats
+  useEffect(() => {
+    const loadReferralStats = async () => {
+      if (profile?.user_id) {
+        try {
+          const result = await getReferralStats(profile.user_id)
+          if (result.success && result.data) {
+            setReferralStats(result.data)
+          }
+        } catch (error) {
+          console.error('Failed to load referral stats:', error)
+        }
+      }
+    }
+
+    loadReferralStats()
+  }, [profile?.user_id])
 
   // Check for missing items from onboarding form - organized by priority
   const highPriorityTodos = []
@@ -492,11 +516,11 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-[#00d083]">0</p>
+                  <p className="text-2xl font-bold text-[#00d083]">{referralStats.successfulReferrals}</p>
                   <p className="text-xs text-gray-400">Businesses Referred</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-[#00d083]">£0</p>
+                  <p className="text-2xl font-bold text-[#00d083]">£{referralStats.totalEarnings.toFixed(2)}</p>
                   <p className="text-xs text-gray-400">Credits Earned</p>
                 </div>
               </div>
