@@ -31,10 +31,6 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950 text-white`}
       >
-        {/* Demo Banner */}
-        <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black text-center py-2 text-sm font-medium">
-          🚧 DEMO VERSION - Platform in active development
-        </div>
         {children}
       </body>
     </html>
