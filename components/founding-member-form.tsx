@@ -72,7 +72,11 @@ const steps = [
   { id: 9, title: 'Review Registration', subtitle: 'Please review your information before submitting' },
 ]
 
-export function FoundingMemberForm() {
+interface FoundingMemberFormProps {
+  referralCode?: string | null
+}
+
+export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {}) {
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [files, setFiles] = useState<FileUpload>({ logo: null, menu: [], offer: null })
@@ -318,7 +322,17 @@ export function FoundingMemberForm() {
         throw new Error(`Profile creation failed: ${profileResult.error}`)
       }
 
-      // 5. Send to external services (non-blocking)
+      // 5. Track referral if referral code was provided
+      if (referralCode) {
+        try {
+          const { trackReferral } = await import('@/lib/actions/referral-actions')
+          await trackReferral(referralCode, authData.user.id)
+        } catch (error) {
+          console.error('Referral tracking failed (non-critical):', error)
+        }
+      }
+
+      // 6. Send to external services (non-blocking)
       const externalData = {
         ...data,
         logo_url: logoUrl,
@@ -337,7 +351,7 @@ export function FoundingMemberForm() {
         )
       ])
 
-      // 6. Redirect to success page with email for auto-fill
+      // 7. Redirect to success page with email for auto-fill
       router.push(`/onboarding/success?email=${encodeURIComponent(data.email)}`)
       
     } catch (error) {
@@ -957,6 +971,22 @@ export function FoundingMemberForm() {
               {/* Step 8: Additional Information */}
               {currentStep === 8 && (
                 <div className="space-y-6">
+                  {/* Show referral code if provided */}
+                  {referralCode && (
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                        </svg>
+                        <div>
+                          <p className="text-green-400 font-medium">Referral Code Applied!</p>
+                          <p className="text-green-300 text-sm">Code: <span className="font-mono">{referralCode}</span></p>
+                          <p className="text-green-300 text-sm">You're helping another business owner earn rewards!</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="referralSource">How did you hear about QWIKKER?</Label>
                     <select
