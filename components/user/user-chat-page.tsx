@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { mockBusinesses, suggestedPrompts } from '@/lib/mock-data/user-mock-data'
+import { mockBusinesses, suggestedPrompts, enhancedSecretMenus } from '@/lib/mock-data/user-mock-data'
 import { useState } from 'react'
 import React from 'react'
 import Link from 'next/link'
@@ -206,6 +206,63 @@ export function UserChatPage() {
     if (msg.includes('spa') || msg.includes('relax') || msg.includes('wellness')) {
       setConversationContext({ waitingFor: 'spa-details', topic: 'spa' })
       return "Self-care time - love it! 🧘‍♀️ What kind of relaxation are you craving? A massage, facial, full spa day? Are you looking to treat yourself or is this a gift for someone? Any specific treatments you've been wanting to try?"
+    }
+    
+    // Handle specific secret menu item questions
+    if (msg.includes('interested in') && msg.includes('secret menu item')) {
+      // Extract business and item name from the message
+      const businessMatch = msg.match(/at (.+?)\./);
+      const itemMatch = msg.match(/item "(.+?)"/);
+      
+      if (businessMatch && itemMatch) {
+        const businessName = businessMatch[1];
+        const itemName = itemMatch[1];
+        
+        // Find the secret menu item
+        const secretMenu = enhancedSecretMenus.find(menu => 
+          menu.businessName.toLowerCase().includes(businessName.toLowerCase())
+        );
+        
+        if (secretMenu) {
+          const secretItem = secretMenu.items.find(item => 
+            item.name.toLowerCase().includes(itemName.toLowerCase())
+          );
+          
+          if (secretItem) {
+            return `Ah, you've discovered "${secretItem.name}" at ${secretMenu.businessName}! 🕵️‍♂️ You have excellent taste!\n\n🔍 **Here's what I can tell you:**\n${secretItem.hint}\n\n🗝️ **How to unlock the full details:**\n${secretItem.unlockMethods.map(method => {
+              if (method.type === 'visit') return '• Visit the restaurant and scan their secret menu QR code';
+              if (method.type === 'points') return `• Spend ${method.cost} points to unlock remotely`;
+              if (method.type === 'social') return '• Get friends to join Qwikker';
+              return `• ${method.description}`;
+            }).join('\n')}\n\n✨ **Reward:** Unlock this item and earn ${secretItem.pointsReward} points!\n\nThis is definitely worth pursuing - would you like me to help you plan a visit to ${secretMenu.businessName}?`;
+          }
+        }
+      }
+      
+      return "I'd love to help you with that secret menu item! Can you tell me which business and which item you're curious about? I can give you some tantalizing hints! 🤫"
+    }
+    
+    if (msg.includes('secret menu items') && msg.includes('what') && msg.includes('have')) {
+      // Extract business name
+      const businessMatch = msg.match(/does (.+?) have/);
+      
+      if (businessMatch) {
+        const businessName = businessMatch[1];
+        const secretMenu = enhancedSecretMenus.find(menu => 
+          menu.businessName.toLowerCase().includes(businessName.toLowerCase())
+        );
+        
+        if (secretMenu) {
+          const itemsList = secretMenu.items.map(item => {
+            const rarityStars = '⭐'.repeat(item.rarity || 3);
+            return `🔒 **${item.name}** ${rarityStars}\n   *${item.hint.substring(0, 80)}...*`;
+          }).join('\n\n');
+          
+          return `Ooh, ${secretMenu.businessName} has some incredible secret treasures! 🏴‍☠️ Here's what I can whisper about:\n\n${itemsList}\n\n🎯 **Want the full details?** Each item can be unlocked by:\n• Visiting the restaurant and scanning their QR code\n• Using your Qwikker points\n• Social challenges\n\nWhich secret item intrigues you most? I can give you more specific hints! 😉`;
+        }
+      }
+      
+      return "Great question! Which business are you curious about? I can tell you about their secret menu items - some are legendary! 🗝️"
     }
     
     if (msg.includes('secret') || msg.includes('hidden')) {

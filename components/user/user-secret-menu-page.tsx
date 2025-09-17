@@ -2,20 +2,24 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { mockBusinesses, mockSecretMenus } from '@/lib/mock-data/user-mock-data'
+import { mockBusinesses, enhancedSecretMenus, mockUserProfile } from '@/lib/mock-data/user-mock-data'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 export function UserSecretMenuPage() {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [unlockedItems, setUnlockedItems] = useState<Set<string>>(() => {
+  const [unlockedItems, setUnlockedItems] = useState<Set<string>>(new Set())
+
+  // Load from localStorage after component mounts to avoid hydration mismatch
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('qwikker-unlocked-secrets')
-      return saved ? new Set(JSON.parse(saved)) : new Set()
+      if (saved) {
+        setUnlockedItems(new Set(JSON.parse(saved)))
+      }
     }
-    return new Set()
-  })
+  }, [])
   // Remove membership tiers - Qwikker is FREE for everyone!
 
   // Animation state for mysterious effects
@@ -31,9 +35,9 @@ export function UserSecretMenuPage() {
   const categories = ['all', ...Array.from(new Set(businessesWithSecrets.map(b => b.category)))]
 
   const filters = [
-    { id: 'all', label: 'All Secrets', count: mockSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0) },
-    { id: 'unlocked', label: 'My Unlocked', count: unlockedItems.size },
-    { id: 'legendary', label: 'Legendary Items', count: mockSecretMenus.reduce((acc, menu) => acc + menu.items.filter(item => (item.rarity || 0) >= 5).length, 0) },
+    { id: 'all', label: 'All Secrets', count: enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0) },
+    { id: 'unlocked', label: 'My Unlocked', count: Array.from(unlockedItems).length },
+    { id: 'legendary', label: 'Legendary Items', count: enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.filter(item => (item.rarity || 0) >= 5).length, 0) },
   ]
 
   const unlockSecretItem = (businessId: string, itemName: string) => {
@@ -48,7 +52,7 @@ export function UserSecretMenuPage() {
   }
 
   const getFilteredSecretMenus = () => {
-    let filtered = mockSecretMenus
+    let filtered = enhancedSecretMenus
 
     // Filter by category
     if (selectedCategory !== 'all') {
@@ -167,13 +171,16 @@ export function UserSecretMenuPage() {
             {!isUnlocked ? (
               <div className="space-y-2">
                 <Button 
-                  onClick={() => unlockSecretItem(menu.businessId, item.name)}
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold shadow-lg"
+                  onClick={() => {
+                    unlockSecretItem(menu.businessId, item.name)
+                    alert(`🎉 "${item.name}" unlocked! Visit ${business?.name} to try this secret item!`)
+                  }}
+                  className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold shadow-lg"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-3a1 1 0 011-1h2.586l6.414-6.414A6 6 0 0121 9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                   </svg>
-                  Unlock Secret
+                  Unlock Secret Item (Free!)
                 </Button>
                 <Button asChild variant="outline" className="w-full border-purple-500/50 text-purple-400 hover:bg-purple-500/10 text-sm">
                   <Link href={`/user/chat?business=${business?.name}&topic=secret-menu&item=${item.name}`}>
@@ -249,7 +256,7 @@ export function UserSecretMenuPage() {
             <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
-            <p className="text-2xl font-bold text-purple-400">{mockSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)}</p>
+            <p className="text-2xl font-bold text-purple-400">{enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)}</p>
           </div>
           <p className="text-sm text-gray-400">Secret Items</p>
         </Card>
@@ -258,7 +265,7 @@ export function UserSecretMenuPage() {
             <svg className="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-3a1 1 0 011-1h2.586l6.414-6.414A6 6 0 0121 9z" />
             </svg>
-            <p className="text-2xl font-bold text-pink-400">{unlockedItems.size}</p>
+            <p className="text-2xl font-bold text-pink-400">{Array.from(unlockedItems).length}</p>
           </div>
           <p className="text-sm text-gray-400">Unlocked</p>
         </Card>
@@ -277,7 +284,7 @@ export function UserSecretMenuPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-2xl font-bold text-emerald-400">
-              {Math.round((unlockedItems.size / mockSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)) * 100) || 0}%
+              {Math.round((Array.from(unlockedItems).length / enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)) * 100) || 0}%
             </p>
           </div>
           <p className="text-sm text-gray-400">Discovery Rate</p>

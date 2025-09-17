@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { mockBusinesses, mockOffers, mockUserCredits } from '@/lib/mock-data/user-mock-data'
+import { mockBusinesses, mockOffers, mockUserCredits, mockUserProfile } from '@/lib/mock-data/user-mock-data'
 
 export function UserDashboardHome() {
   // Get featured businesses for quick access
@@ -59,10 +59,10 @@ export function UserDashboardHome() {
                   <p className="text-2xl font-bold text-purple-400">{mockBusinesses.filter(b => b.hasSecretMenu).length}</p>
                   <p className="text-xs text-gray-400">Secret Menus</p>
                 </div>
-                <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-orange-400">{mockOffers.length}</p>
-                  <p className="text-xs text-gray-400">Live Offers</p>
-                </div>
+            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
+              <p className="text-2xl font-bold text-purple-400">{mockUserProfile.badges.filter(b => b.unlockedDate && b.reward).length}</p>
+              <p className="text-xs text-gray-400">Rewards Earned</p>
+            </div>
               </div>
             </div>
             

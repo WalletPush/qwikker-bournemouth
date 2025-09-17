@@ -1,5 +1,77 @@
 // Mock data for user dashboard - Phase 1 UI shell
 
+// Gamification System Interfaces
+export interface UserProfile {
+  id: string
+  name: string
+  email: string
+  joinedDate: string
+  totalPoints: number
+  level: number
+  experiencePoints: number
+  nextLevelXP: number
+  tier: 'explorer' | 'insider' | 'legend'
+  badges: Badge[]
+  stats: UserStats
+}
+
+export interface Badge {
+  id: string
+  name: string
+  description: string
+  icon: string
+  rarity: 'common' | 'rare' | 'epic' | 'legendary'
+  unlockedDate?: string
+  progress?: {
+    current: number
+    target: number
+  }
+  reward?: BadgeReward
+}
+
+export interface BadgeReward {
+  type: 'free_item' | 'discount' | 'exclusive_access' | 'special_experience'
+  businessName: string
+  businessId: string
+  title: string
+  description: string
+  value: string
+  terms: string
+  redemptionCode?: string
+}
+
+export interface UserStats {
+  businessesVisited: number
+  secretItemsUnlocked: number
+  offersRedeemed: number
+  friendsReferred: number
+  reviewsWritten: number
+  photosShared: number
+  chatMessages: number
+  streakDays: number
+}
+
+export interface PointsTransaction {
+  id: string
+  type: 'earned' | 'spent'
+  amount: number
+  reason: string
+  description: string
+  timestamp: string
+  relatedItem?: {
+    type: 'business' | 'offer' | 'secret_item' | 'badge'
+    id: string
+    name: string
+  }
+}
+
+export interface UnlockMethod {
+  type: 'points' | 'visit' | 'social' | 'achievement'
+  cost?: number
+  requirement?: string
+  description: string
+}
+
 export interface MockBusiness {
   id: string
   name: string
@@ -42,6 +114,7 @@ export interface MockSecretMenu {
   businessId: string
   businessName: string
   items: {
+    id: string
     name: string
     description: string
     price?: string
@@ -49,6 +122,9 @@ export interface MockSecretMenu {
     isPremium?: boolean
     rarity?: number
     chefNote?: string
+    hint?: string
+    unlockMethods: UnlockMethod[]
+    pointsReward?: number
   }[]
 }
 
@@ -527,3 +603,367 @@ export const mockBusinessAnalytics = {
     repeatCustomerRate: '78%'
   }
 }
+
+// ============================================================================
+// GAMIFICATION SYSTEM MOCK DATA
+// ============================================================================
+
+// Available Badges
+export const mockBadges: Badge[] = [
+  // COMMON BADGES
+  {
+    id: 'first_visit',
+    name: 'First Steps',
+    description: 'Made your first business visit',
+    icon: '👣',
+    rarity: 'common'
+  },
+  {
+    id: 'chat_starter',
+    name: 'Conversation Starter',
+    description: 'Had your first AI chat conversation',
+    icon: '💬',
+    rarity: 'common'
+  },
+  {
+    id: 'offer_collector',
+    name: 'Deal Hunter',
+    description: 'Claimed your first offer',
+    icon: '🎯',
+    rarity: 'common'
+  },
+  
+  // RARE BADGES
+  {
+    id: 'secret_seeker',
+    name: 'Secret Seeker',
+    description: 'Unlocked your first secret menu item',
+    icon: '🔍',
+    rarity: 'rare'
+  },
+  {
+    id: 'social_butterfly',
+    name: 'Social Butterfly',
+    description: 'Referred 3 friends to Qwikker',
+    icon: '🦋',
+    rarity: 'rare'
+  },
+  {
+    id: 'local_expert',
+    name: 'Local Expert',
+    description: 'Visited 10 different businesses',
+    icon: '🏆',
+    rarity: 'rare'
+  },
+  {
+    id: 'streak_master',
+    name: 'Streak Master',
+    description: 'Used Qwikker for 7 days straight',
+    icon: '🔥',
+    rarity: 'rare'
+  },
+  
+  // EPIC BADGES
+  {
+    id: 'secret_master',
+    name: 'Secret Menu Master',
+    description: 'Unlocked 25 secret menu items',
+    icon: '🗝️',
+    rarity: 'epic',
+    reward: {
+      type: 'free_item',
+      businessName: 'The Seaside Bistro',
+      businessId: '1',
+      title: 'Free Signature Cocktail',
+      description: 'Complimentary signature cocktail at The Seaside Bistro',
+      value: '£12',
+      terms: 'Valid any time. One per badge holder. Cannot be combined with other offers.',
+      redemptionCode: 'QWIK-EPIC-001'
+    }
+  },
+  {
+    id: 'influence_master',
+    name: 'Influencer',
+    description: 'Referred 10 friends to Qwikker',
+    icon: '📢',
+    rarity: 'epic',
+    reward: {
+      type: 'discount',
+      businessName: 'Artisan Coffee Co.',
+      businessId: '2',
+      title: '50% Off Any Coffee',
+      description: 'Half price on any coffee drink at Artisan Coffee Co.',
+      value: '50% off',
+      terms: 'Valid Monday-Friday. One use per month. Show badge in app.',
+      redemptionCode: 'QWIK-EPIC-002'
+    }
+  },
+  {
+    id: 'points_collector',
+    name: 'Point Collector',
+    description: 'Earned 5,000 total points',
+    icon: '💎',
+    rarity: 'epic',
+    reward: {
+      type: 'free_item',
+      businessName: 'The Craft Brewery',
+      businessId: '3',
+      title: 'Free Appetizer',
+      description: 'Complimentary appetizer of your choice',
+      value: '£8',
+      terms: 'Valid with any main course purchase. One per badge holder.',
+      redemptionCode: 'QWIK-EPIC-003'
+    }
+  },
+  
+  // LEGENDARY BADGES
+  {
+    id: 'bournemouth_legend',
+    name: 'Bournemouth Legend',
+    description: 'Unlocked ALL secret menus in Bournemouth',
+    icon: '👑',
+    rarity: 'legendary',
+    reward: {
+      type: 'special_experience',
+      businessName: 'The Seaside Bistro',
+      businessId: '1',
+      title: 'Private Chef Table Experience',
+      description: 'Exclusive 3-course meal prepared by head chef with wine pairing',
+      value: '£150',
+      terms: 'By appointment only. 48 hours advance notice required. For 2 people.',
+      redemptionCode: 'QWIK-LEGEND-001'
+    }
+  },
+  {
+    id: 'founding_member',
+    name: 'Founding Member',
+    description: 'One of the first 100 Qwikker users',
+    icon: '⭐',
+    rarity: 'legendary',
+    reward: {
+      type: 'exclusive_access',
+      businessName: 'All Partners',
+      businessId: 'all',
+      title: 'VIP Status at All Partners',
+      description: 'Skip queues, priority reservations, and exclusive member pricing',
+      value: 'Priceless',
+      terms: 'Lifetime benefit. Show badge for access. Subject to availability.',
+      redemptionCode: 'QWIK-LEGEND-VIP'
+    }
+  }
+]
+
+// Current User Profile
+export const mockUserProfile: UserProfile = {
+  id: 'user_david_123',
+  name: 'David',
+  email: 'david@example.com',
+  joinedDate: '2024-01-05T00:00:00Z',
+  totalPoints: 1250,
+  level: 3,
+  experiencePoints: 1250,
+  nextLevelXP: 2000,
+  tier: 'insider',
+  badges: [
+    { ...mockBadges[0], unlockedDate: '2024-01-05T12:00:00Z' }, // First Steps
+    { ...mockBadges[1], unlockedDate: '2024-01-05T14:30:00Z' }, // Conversation Starter
+    { ...mockBadges[2], unlockedDate: '2024-01-06T10:15:00Z' }, // Deal Hunter
+    { ...mockBadges[3], unlockedDate: '2024-01-08T16:45:00Z' }, // Secret Seeker
+    { 
+      ...mockBadges[4], 
+      progress: { current: 1, target: 3 } // Social Butterfly (in progress)
+    },
+    { 
+      ...mockBadges[5], 
+      progress: { current: 4, target: 10 } // Local Expert (in progress)
+    }
+  ],
+  stats: {
+    businessesVisited: 4,
+    secretItemsUnlocked: 2,
+    offersRedeemed: 3,
+    friendsReferred: 1,
+    reviewsWritten: 0,
+    photosShared: 0,
+    chatMessages: 15,
+    streakDays: 3
+  }
+}
+
+// Points Transaction History
+export const mockPointsHistory: PointsTransaction[] = [
+  {
+    id: 'txn_001',
+    type: 'earned',
+    amount: 100,
+    reason: 'business_visit',
+    description: 'Visited The Seaside Bistro',
+    timestamp: '2024-01-15T12:30:00Z',
+    relatedItem: {
+      type: 'business',
+      id: '1',
+      name: 'The Seaside Bistro'
+    }
+  },
+  {
+    id: 'txn_002',
+    type: 'earned',
+    amount: 50,
+    reason: 'secret_unlock',
+    description: 'Unlocked "The Midnight Burger"',
+    timestamp: '2024-01-15T12:45:00Z',
+    relatedItem: {
+      type: 'secret_item',
+      id: 'midnight_burger',
+      name: 'The Midnight Burger'
+    }
+  },
+  {
+    id: 'txn_003',
+    type: 'spent',
+    amount: -75,
+    reason: 'secret_unlock',
+    description: 'Unlocked "Chef\'s Secret Pasta"',
+    timestamp: '2024-01-14T19:20:00Z',
+    relatedItem: {
+      type: 'secret_item',
+      id: 'secret_pasta',
+      name: 'Chef\'s Secret Pasta'
+    }
+  },
+  {
+    id: 'txn_004',
+    type: 'earned',
+    amount: 25,
+    reason: 'offer_redeem',
+    description: 'Redeemed 2-for-1 Fish & Chips',
+    timestamp: '2024-01-12T19:45:00Z',
+    relatedItem: {
+      type: 'offer',
+      id: '1',
+      name: '2-for-1 Fish & Chips'
+    }
+  },
+  {
+    id: 'txn_005',
+    type: 'earned',
+    amount: 75,
+    reason: 'friend_referral',
+    description: 'Friend Sarah joined Qwikker',
+    timestamp: '2024-01-10T14:15:00Z'
+  },
+  {
+    id: 'txn_006',
+    type: 'earned',
+    amount: 100,
+    reason: 'business_visit',
+    description: 'Visited Artisan Coffee Co.',
+    timestamp: '2024-01-08T09:30:00Z',
+    relatedItem: {
+      type: 'business',
+      id: '2',
+      name: 'Artisan Coffee Co.'
+    }
+  }
+]
+
+// Points Earning Rules
+export const pointsEarningRules = {
+  business_visit: { points: 100, description: 'Visit a business and scan QR code' },
+  secret_unlock_visit: { points: 50, description: 'Unlock secret item by visiting' },
+  offer_claim: { points: 10, description: 'Claim an offer' },
+  offer_redeem: { points: 25, description: 'Redeem an offer at business' },
+  friend_referral: { points: 75, description: 'Friend joins using your referral code' },
+  review_write: { points: 20, description: 'Write a business review' },
+  photo_share: { points: 15, description: 'Share a photo of your experience' },
+  chat_engagement: { points: 5, description: 'Have a meaningful AI conversation' },
+  daily_login: { points: 5, description: 'Open the app (once per day)' },
+  streak_bonus: { points: 10, description: 'Additional points for 3+ day streaks' }
+}
+
+// Enhanced Secret Menu Items
+export const enhancedSecretMenus: MockSecretMenu[] = [
+  {
+    id: 'seaside_secrets',
+    businessId: '1',
+    businessName: 'The Seaside Bistro',
+    items: [
+      {
+        id: 'midnight_burger',
+        name: 'The Midnight Burger',
+        description: 'A legendary wagyu beef patty with truffle aioli, caramelized onions, and aged cheddar on a brioche bun baked fresh at 5am',
+        price: '£18',
+        rarity: 5,
+        hint: 'This isn\'t just any burger - it\'s made with ingredients that aren\'t available during regular hours. The chef only makes 10 per day, and regulars know to ask for it by name...',
+        chefNote: 'This recipe took me 3 years to perfect. The secret is in the overnight-marinated patty and our special 5am brioche.',
+        unlockMethods: [
+          { type: 'visit', description: 'Visit restaurant and scan secret menu QR code' },
+          { type: 'points', cost: 75, description: 'Spend 75 points to unlock remotely' },
+          { type: 'social', requirement: '2_referrals', description: 'Get 2 friends to join Qwikker' }
+        ],
+        pointsReward: 50
+      },
+      {
+        id: 'fishermans_secret',
+        name: 'The Fisherman\'s Secret',
+        description: 'Fresh catch of the day with our secret herb crust, known only to the chef and a few loyal customers',
+        price: '£24',
+        rarity: 4,
+        hint: 'Local fishermen bring us their best catch, and we prepare it with a special herb blend that\'s been in the chef\'s family for generations...',
+        chefNote: 'My grandmother\'s recipe from the Dorset coast. The herbs are foraged locally each morning.',
+        unlockMethods: [
+          { type: 'visit', description: 'Visit restaurant and scan secret menu QR code' },
+          { type: 'points', cost: 60, description: 'Spend 60 points to unlock remotely' }
+        ],
+        pointsReward: 40
+      },
+      {
+        id: 'captains_dessert',
+        name: 'Captain\'s Hidden Treasure',
+        description: 'A dessert that changes daily based on the chef\'s inspiration and available ingredients',
+        price: '£12',
+        rarity: 3,
+        hint: 'Every day brings a new treasure - sometimes it\'s a decadent chocolate creation, other times a light fruit masterpiece...',
+        unlockMethods: [
+          { type: 'visit', description: 'Visit restaurant and scan secret menu QR code' },
+          { type: 'points', cost: 45, description: 'Spend 45 points to unlock remotely' }
+        ],
+        pointsReward: 30
+      }
+    ]
+  },
+  {
+    id: 'coffee_secrets',
+    businessId: '2', 
+    businessName: 'Artisan Coffee Co.',
+    items: [
+      {
+        id: 'baristas_blend',
+        name: 'The Barista\'s Personal Blend',
+        description: 'A unique coffee blend created by our head barista, not available to the public',
+        price: '£4.50',
+        rarity: 4,
+        hint: 'Our head barista spent months perfecting this blend using beans from three different continents...',
+        chefNote: 'I roast this blend personally every Monday morning. It\'s my passion project.',
+        unlockMethods: [
+          { type: 'visit', description: 'Visit coffee shop and scan secret menu QR code' },
+          { type: 'points', cost: 50, description: 'Spend 50 points to unlock remotely' }
+        ],
+        pointsReward: 35
+      },
+      {
+        id: 'hidden_latte',
+        name: 'The Underground Latte',
+        description: 'Made with our secret spice blend and served in a special ceramic cup',
+        price: '£5.25',
+        rarity: 3,
+        hint: 'The spice blend includes cardamom, cinnamon, and something special that regular customers rave about...',
+        unlockMethods: [
+          { type: 'visit', description: 'Visit coffee shop and scan secret menu QR code' },
+          { type: 'points', cost: 40, description: 'Spend 40 points to unlock remotely' }
+        ],
+        pointsReward: 25
+      }
+    ]
+  }
+]
