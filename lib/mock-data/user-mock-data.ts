@@ -13,6 +13,8 @@ export interface UserProfile {
   tier: 'explorer' | 'insider' | 'legend'
   badges: Badge[]
   stats: UserStats
+  referralCode: string
+  referredBy?: string
 }
 
 export interface Badge {
@@ -21,6 +23,12 @@ export interface Badge {
   description: string
   icon: string
   rarity: 'common' | 'rare' | 'epic' | 'legendary'
+  pointsRequired?: number
+  alternateRequirement?: {
+    type: 'days' | 'visits' | 'referrals' | 'unlocks'
+    amount: number
+    label: string
+  }
   unlockedDate?: string
   progress?: {
     current: number
@@ -77,6 +85,7 @@ export interface MockBusiness {
   name: string
   slug: string
   tagline: string
+  description: string
   address: string
   town: string
   hours: string
@@ -150,6 +159,7 @@ export const mockBusinesses: MockBusiness[] = [
     name: 'The Seaside Bistro',
     slug: 'seaside-bistro',
     tagline: 'Fresh seafood with ocean views',
+    description: 'Located right on Bournemouth Pier, The Seaside Bistro offers the finest fresh seafood with breathtaking ocean views. Our chefs work closely with local fishermen to bring you the catch of the day, prepared with Mediterranean flair. Whether you\'re enjoying our famous fish & chips on the terrace or indulging in our premium seafood platter, every meal comes with the sound of waves and the salty sea breeze.',
     address: '15 Pier Approach',
     town: 'Bournemouth',
     hours: '12pm - 10pm',
@@ -169,6 +179,7 @@ export const mockBusinesses: MockBusiness[] = [
     name: 'Artisan Coffee Co.',
     slug: 'artisan-coffee',
     tagline: 'Locally roasted, ethically sourced',
+    description: 'A cozy independent coffee shop in the heart of Bournemouth, Artisan Coffee Co. roasts their beans in-house every morning. We source directly from sustainable farms around the world and serve specialty coffee alongside freshly baked pastries. Our warm, welcoming atmosphere makes it the perfect spot for remote work, catching up with friends, or simply enjoying a moment of peace with exceptional coffee.',
     address: '42 Old Christchurch Rd',
     town: 'Bournemouth',
     hours: '7am - 6pm',
@@ -190,6 +201,7 @@ export const mockBusinesses: MockBusiness[] = [
     name: 'Zen Wellness Spa',
     slug: 'zen-wellness',
     tagline: 'Relaxation and rejuvenation',
+    description: 'Escape the hustle and bustle at Zen Wellness Spa, Bournemouth\'s premier destination for holistic wellness. Our expert therapists offer a range of treatments from traditional massages to cutting-edge facial therapies, all in a serene environment designed to restore your mind, body, and spirit. Using only premium organic products, we create a sanctuary where stress melts away and inner peace is rediscovered.',
     address: '8 Westover Rd',
     town: 'Bournemouth',
     hours: '9am - 8pm',
@@ -209,6 +221,7 @@ export const mockBusinesses: MockBusiness[] = [
     name: 'The Craft Brewery',
     slug: 'craft-brewery',
     tagline: 'Local ales and craft beers',
+    description: 'The Craft Brewery is Bournemouth\'s favorite local brewing destination, featuring an impressive selection of house-brewed ales and carefully curated craft beers from around the UK. Our industrial-chic taproom offers the perfect atmosphere to sample our rotating selection of IPAs, stouts, and seasonal brews, paired with artisanal bar snacks. Join us for brewery tours, tasting flights, and live music nights.',
     address: '23 Richmond Hill',
     town: 'Bournemouth',
     hours: '4pm - 11pm',
@@ -230,6 +243,7 @@ export const mockBusinesses: MockBusiness[] = [
     name: 'Fitness First Gym',
     slug: 'fitness-first',
     tagline: 'Your fitness journey starts here',
+    description: 'A state-of-the-art fitness facility in central Bournemouth, Fitness First Gym offers everything you need to achieve your health and fitness goals. With cutting-edge equipment, expert personal trainers, diverse group classes, and a welcoming community atmosphere, we cater to all fitness levels. From strength training and cardio to yoga and HIIT classes, your transformation starts here.',
     address: '156 Holdenhurst Rd',
     town: 'Bournemouth',
     hours: '6am - 10pm',
@@ -646,21 +660,36 @@ export const mockBadges: Badge[] = [
     name: 'Social Butterfly',
     description: 'Referred 3 friends to Qwikker',
     icon: '🦋',
-    rarity: 'rare'
+    rarity: 'rare',
+    alternateRequirement: {
+      type: 'referrals',
+      amount: 3,
+      label: '3 friends referred'
+    }
   },
   {
     id: 'local_expert',
     name: 'Local Expert',
     description: 'Visited 10 different businesses',
     icon: '🏆',
-    rarity: 'rare'
+    rarity: 'rare',
+    alternateRequirement: {
+      type: 'visits',
+      amount: 10,
+      label: '10 businesses visited'
+    }
   },
   {
     id: 'streak_master',
     name: 'Streak Master',
     description: 'Used Qwikker for 7 days straight',
     icon: '🔥',
-    rarity: 'rare'
+    rarity: 'rare',
+    alternateRequirement: {
+      type: 'days',
+      amount: 7,
+      label: '7 days active'
+    }
   },
   
   // EPIC BADGES
@@ -670,15 +699,20 @@ export const mockBadges: Badge[] = [
     description: 'Unlocked 25 secret menu items',
     icon: '🗝️',
     rarity: 'epic',
+    alternateRequirement: {
+      type: 'unlocks',
+      amount: 25,
+      label: '25 secret items unlocked'
+    },
     reward: {
       type: 'free_item',
-      businessName: 'The Seaside Bistro',
-      businessId: '1',
-      title: 'Free Signature Cocktail',
-      description: 'Complimentary signature cocktail at The Seaside Bistro',
-      value: '£12',
-      terms: 'Valid any time. One per badge holder. Cannot be combined with other offers.',
-      redemptionCode: 'QWIK-EPIC-001'
+      businessName: 'Any Partner Venue',
+      businessId: 'all',
+      title: '£5 Qwikker Credit',
+      description: 'Use this credit at any participating Qwikker partner venue',
+      value: '£5',
+      terms: 'Valid at all partner venues. Cannot be combined with other offers. Show badge to redeem.',
+      redemptionCode: 'QWIK-EPIC-CREDIT'
     }
   },
   {
@@ -687,15 +721,20 @@ export const mockBadges: Badge[] = [
     description: 'Referred 10 friends to Qwikker',
     icon: '📢',
     rarity: 'epic',
+    alternateRequirement: {
+      type: 'referrals',
+      amount: 10,
+      label: '10 friends referred'
+    },
     reward: {
-      type: 'discount',
-      businessName: 'Artisan Coffee Co.',
-      businessId: '2',
-      title: '50% Off Any Coffee',
-      description: 'Half price on any coffee drink at Artisan Coffee Co.',
-      value: '50% off',
-      terms: 'Valid Monday-Friday. One use per month. Show badge in app.',
-      redemptionCode: 'QWIK-EPIC-002'
+      type: 'free_item',
+      businessName: 'Any Partner Venue',
+      businessId: 'all',
+      title: '£3 Qwikker Credit',
+      description: 'Use this credit at any participating Qwikker partner venue',
+      value: '£3',
+      terms: 'Valid at all partner venues. Cannot be combined with other offers. Show badge to redeem.',
+      redemptionCode: 'QWIK-EPIC-SOCIAL'
     }
   },
   {
@@ -704,15 +743,16 @@ export const mockBadges: Badge[] = [
     description: 'Earned 5,000 total points',
     icon: '💎',
     rarity: 'epic',
+    pointsRequired: 5000,
     reward: {
       type: 'free_item',
-      businessName: 'The Craft Brewery',
-      businessId: '3',
-      title: 'Free Appetizer',
-      description: 'Complimentary appetizer of your choice',
-      value: '£8',
-      terms: 'Valid with any main course purchase. One per badge holder.',
-      redemptionCode: 'QWIK-EPIC-003'
+      businessName: 'Any Partner Venue',
+      businessId: 'all',
+      title: '£4 Qwikker Credit',
+      description: 'Use this credit at any participating Qwikker partner venue',
+      value: '£4',
+      terms: 'Valid at all partner venues. Cannot be combined with other offers. Show badge to redeem.',
+      redemptionCode: 'QWIK-EPIC-POINTS'
     }
   },
   
@@ -720,18 +760,19 @@ export const mockBadges: Badge[] = [
   {
     id: 'bournemouth_legend',
     name: 'Bournemouth Legend',
-    description: 'Unlocked ALL secret menus in Bournemouth',
+    description: 'Ultimate Bournemouth mastery - complete all achievements',
     icon: '👑',
     rarity: 'legendary',
+    pointsRequired: 15000,
     reward: {
-      type: 'special_experience',
-      businessName: 'The Seaside Bistro',
-      businessId: '1',
-      title: 'Private Chef Table Experience',
-      description: 'Exclusive 3-course meal prepared by head chef with wine pairing',
-      value: '£150',
-      terms: 'By appointment only. 48 hours advance notice required. For 2 people.',
-      redemptionCode: 'QWIK-LEGEND-001'
+      type: 'free_item',
+      businessName: 'Any Partner Venue',
+      businessId: 'all',
+      title: '£20 Qwikker Credit',
+      description: 'Ultimate recognition for true Bournemouth mastery',
+      value: '£20',
+      terms: 'Valid at all partner venues. Cannot be combined with other offers. Show badge to redeem.',
+      redemptionCode: 'QWIK-LEGEND-MASTER'
     }
   },
   {
@@ -740,15 +781,16 @@ export const mockBadges: Badge[] = [
     description: 'One of the first 100 Qwikker users',
     icon: '⭐',
     rarity: 'legendary',
+    pointsRequired: 8000,
     reward: {
-      type: 'exclusive_access',
-      businessName: 'All Partners',
+      type: 'free_item',
+      businessName: 'Any Partner Venue',
       businessId: 'all',
-      title: 'VIP Status at All Partners',
-      description: 'Skip queues, priority reservations, and exclusive member pricing',
-      value: 'Priceless',
-      terms: 'Lifetime benefit. Show badge for access. Subject to availability.',
-      redemptionCode: 'QWIK-LEGEND-VIP'
+      title: '£10 Qwikker Credit',
+      description: 'Special recognition for being an early Qwikker pioneer',
+      value: '£10',
+      terms: 'Valid at all partner venues. Cannot be combined with other offers. Show badge to redeem.',
+      redemptionCode: 'QWIK-LEGEND-FOUNDER'
     }
   }
 ]
@@ -787,7 +829,9 @@ export const mockUserProfile: UserProfile = {
     photosShared: 0,
     chatMessages: 15,
     streakDays: 3
-  }
+  },
+  referralCode: 'DAVID-QWK-2024',
+  referredBy: undefined
 }
 
 // Points Transaction History
@@ -867,18 +911,13 @@ export const mockPointsHistory: PointsTransaction[] = [
   }
 ]
 
-// Points Earning Rules
+// Points Earning Rules (Anti-Abuse System)
 export const pointsEarningRules = {
-  business_visit: { points: 100, description: 'Visit a business and scan QR code' },
-  secret_unlock_visit: { points: 50, description: 'Unlock secret item by visiting' },
-  offer_claim: { points: 10, description: 'Claim an offer' },
-  offer_redeem: { points: 25, description: 'Redeem an offer at business' },
-  friend_referral: { points: 75, description: 'Friend joins using your referral code' },
-  review_write: { points: 20, description: 'Write a business review' },
-  photo_share: { points: 15, description: 'Share a photo of your experience' },
-  chat_engagement: { points: 5, description: 'Have a meaningful AI conversation' },
-  daily_login: { points: 5, description: 'Open the app (once per day)' },
-  streak_bonus: { points: 10, description: 'Additional points for 3+ day streaks' }
+  friend_referral: { points: 500, description: 'Friend joins Qwikker using your referral link' },
+  offer_redeem: { points: 50, description: 'Actually redeem an offer at a business (verified by staff)' },
+  business_visit: { points: 25, description: 'Visit a business (simplified validation coming soon)' },
+  review_write: { points: 20, description: 'Write a review after business visit' },
+  social_share: { points: 10, description: 'Share a business or offer on social media' }
 }
 
 // Enhanced Secret Menu Items

@@ -107,13 +107,13 @@ export function UserSecretMenuPage() {
           <div className="ml-auto">
             {isUnlocked ? (
               <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-slate-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                 </svg>
               </div>
             ) : (
               <div className="p-2 bg-slate-700/80 rounded-full">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
@@ -128,11 +128,11 @@ export function UserSecretMenuPage() {
               <CardTitle className={`text-lg mb-2 transition-all duration-300 ${
                 isUnlocked 
                   ? 'text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text' 
-                  : 'text-gray-300'
+                  : 'text-slate-300'
               }`}>
                 {isUnlocked ? item.name : '• • • • • • • •'}
               </CardTitle>
-              <p className="text-sm text-gray-400 mb-1">{business?.name}</p>
+              <p className="text-sm text-slate-400 mb-1">{business?.name}</p>
               <p className="text-xs text-gray-500">{business?.category}</p>
             </div>
           </div>
@@ -141,7 +141,7 @@ export function UserSecretMenuPage() {
         <CardContent className="space-y-4">
           {/* Item Description */}
           <div className={`transition-all duration-500 ${isUnlocked ? 'opacity-100' : 'opacity-30'}`}>
-            <p className={`text-sm leading-relaxed ${isUnlocked ? 'text-gray-300' : 'text-gray-500 blur-sm'}`}>
+            <p className={`text-sm leading-relaxed ${isUnlocked ? 'text-slate-300' : 'text-gray-500 blur-sm'}`}>
               {isUnlocked ? item.description : 'Unlock this secret to reveal the mysterious description...'}
             </p>
           </div>
@@ -173,7 +173,7 @@ export function UserSecretMenuPage() {
                 <Button 
                   onClick={() => {
                     unlockSecretItem(menu.businessId, item.name)
-                    alert(`🎉 "${item.name}" unlocked! Visit ${business?.name} to try this secret item!`)
+                    alert(`"${item.name}" unlocked! Visit ${business?.name} to try this secret item.`)
                   }}
                   className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold shadow-lg"
                 >
@@ -193,7 +193,7 @@ export function UserSecretMenuPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                <Button asChild className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold">
+                <Button asChild className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100 font-semibold">
                   <Link href={`/user/business/${business?.slug}`}>
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -239,10 +239,10 @@ export function UserSecretMenuPage() {
               Secret Menu Club
             </h1>
           </div>
-          <p className="text-xl text-gray-300 mb-2">
+          <p className="text-xl text-slate-300 mb-2">
             Unlock Bournemouth's most guarded culinary secrets
           </p>
-          <p className="text-gray-400 max-w-2xl mx-auto">
+          <p className="text-slate-400 max-w-2xl mx-auto">
             These exclusive off-menu items are known only to insiders. Each secret tells a story, 
             each dish holds mystery. Start your culinary adventure!
           </p>
@@ -258,7 +258,7 @@ export function UserSecretMenuPage() {
             </svg>
             <p className="text-2xl font-bold text-purple-400">{enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)}</p>
           </div>
-          <p className="text-sm text-gray-400">Secret Items</p>
+          <p className="text-sm text-slate-400">Secret Items</p>
         </Card>
         <Card className="bg-gradient-to-br from-pink-900/20 to-pink-800/20 border-pink-700/30 text-center p-4">
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -267,7 +267,7 @@ export function UserSecretMenuPage() {
             </svg>
             <p className="text-2xl font-bold text-pink-400">{Array.from(unlockedItems).length}</p>
           </div>
-          <p className="text-sm text-gray-400">Unlocked</p>
+          <p className="text-sm text-slate-400">Unlocked</p>
         </Card>
         <Card className="bg-gradient-to-br from-yellow-900/20 to-yellow-800/20 border-yellow-700/30 text-center p-4">
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -276,7 +276,7 @@ export function UserSecretMenuPage() {
             </svg>
             <p className="text-2xl font-bold text-yellow-400">{businessesWithSecrets.length}</p>
           </div>
-          <p className="text-sm text-gray-400">Secret Venues</p>
+          <p className="text-sm text-slate-400">Secret Venues</p>
         </Card>
         <Card className="bg-gradient-to-br from-emerald-900/20 to-emerald-800/20 border-emerald-700/30 text-center p-4">
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -287,7 +287,7 @@ export function UserSecretMenuPage() {
               {Math.round((Array.from(unlockedItems).length / enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)) * 100) || 0}%
             </p>
           </div>
-          <p className="text-sm text-gray-400">Discovery Rate</p>
+          <p className="text-sm text-slate-400">Discovery Rate</p>
         </Card>
       </div>
 
@@ -299,8 +299,8 @@ export function UserSecretMenuPage() {
             onClick={() => setSelectedFilter(filter.id)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
               selectedFilter === filter.id
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                : 'bg-slate-800/50 text-gray-300 hover:bg-slate-700 border border-slate-600'
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-slate-100 shadow-lg'
+                : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700 border border-slate-600'
             }`}
           >
             {filter.label} ({filter.count})
@@ -310,15 +310,15 @@ export function UserSecretMenuPage() {
 
       {/* Category Filter */}
       <div className="flex flex-wrap justify-center gap-2">
-        <span className="text-gray-400 text-sm mr-2">Filter by venue type:</span>
+        <span className="text-slate-400 text-sm mr-2">Filter by venue type:</span>
         {categories.map((category) => (
           <button
             key={category}
             onClick={() => setSelectedCategory(category)}
             className={`px-3 py-1 rounded-full text-xs transition-all duration-200 ${
               selectedCategory === category
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                : 'bg-slate-700/50 text-gray-400 hover:bg-slate-600 border border-slate-600'
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-slate-100'
+                : 'bg-slate-700/50 text-slate-400 hover:bg-slate-600 border border-slate-600'
             }`}
           >
             {category === 'all' ? 'All Venues' : category}
@@ -354,7 +354,7 @@ export function UserSecretMenuPage() {
             </div>
             <h3 className="text-2xl font-bold text-emerald-400">Keep Exploring!</h3>
           </div>
-          <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
+          <p className="text-slate-300 mb-6 max-w-2xl mx-auto">
             Every secret you unlock brings you closer to becoming a true Bournemouth foodie insider. 
             Chat with our AI to discover more hidden gems and get personalized recommendations!
           </p>

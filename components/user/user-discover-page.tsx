@@ -31,7 +31,8 @@ export function UserDiscoverPage() {
   }
 
   const BusinessCard = ({ business }: { business: any }) => (
-    <Card className="bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden">
+    <Link href={`/user/business/${business.slug}`} className="block">
+      <Card className="bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden">
       {/* Business Image */}
       <div className="relative h-48 overflow-hidden">
         <img 
@@ -54,7 +55,7 @@ export function UserDiscoverPage() {
             </span>
           )}
           {business.activeOffers > 0 && (
-            <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full shadow-lg">
+            <span className="bg-orange-500 text-slate-100 text-xs px-2 py-1 rounded-full shadow-lg">
               {business.activeOffers} OFFERS
             </span>
           )}
@@ -62,7 +63,7 @@ export function UserDiscoverPage() {
 
         {/* Distance Badge */}
         <div className="absolute bottom-3 left-3">
-          <span className="bg-black/70 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
+          <span className="bg-black/70 text-slate-100 text-xs px-2 py-1 rounded-full backdrop-blur-sm">
             {business.distance} miles
           </span>
         </div>
@@ -71,10 +72,10 @@ export function UserDiscoverPage() {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-white text-lg mb-1 group-hover:text-[#00d083] transition-colors">
+            <CardTitle className="text-slate-100 text-lg mb-1 group-hover:text-[#00d083] transition-colors">
               {business.name}
             </CardTitle>
-            <p className="text-gray-400 text-sm">{business.category}</p>
+            <p className="text-slate-400 text-sm">{business.category}</p>
             <p className="text-[#00d083] text-sm font-medium mt-1">{business.tagline}</p>
           </div>
         </div>
@@ -96,13 +97,13 @@ export function UserDiscoverPage() {
                 </svg>
               ))}
             </div>
-            <span className="text-white font-semibold">{business.rating}</span>
-            <span className="text-gray-400 text-sm">({business.reviewCount} reviews)</span>
+            <span className="text-slate-100 font-semibold">{business.rating}</span>
+            <span className="text-slate-400 text-sm">({business.reviewCount} reviews)</span>
           </div>
         </div>
 
         {/* Location */}
-        <div className="flex items-center gap-2 text-gray-400">
+        <div className="flex items-center gap-2 text-slate-400">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -111,7 +112,7 @@ export function UserDiscoverPage() {
         </div>
 
         {/* Hours */}
-        <div className="flex items-center gap-2 text-gray-400">
+        <div className="flex items-center gap-2 text-slate-400">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -121,10 +122,10 @@ export function UserDiscoverPage() {
 
         {/* Menu Preview */}
         <div className="bg-slate-700/30 rounded-lg p-3">
-          <p className="text-white text-sm font-medium mb-2">Popular items:</p>
+          <p className="text-slate-100 text-sm font-medium mb-2">Popular items:</p>
           <div className="space-y-1">
             {business.menuPreview.slice(0, 3).map((item: string, index: number) => (
-              <p key={index} className="text-gray-300 text-xs">{item}</p>
+              <p key={index} className="text-slate-300 text-xs">{item}</p>
             ))}
           </div>
         </div>
@@ -141,10 +142,10 @@ export function UserDiscoverPage() {
         {/* Action Buttons */}
         <div className="space-y-2">
           <div className="flex gap-2">
-            <Button asChild className="flex-1 bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold">
-              <Link href={`/user/business/${business.slug}`}>View Details</Link>
-            </Button>
-            <Button variant="outline" className="border-slate-600 text-gray-300 hover:bg-slate-700">
+            <div className="flex-1 bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black font-semibold rounded-md px-4 py-2 text-center text-sm">
+              Click anywhere to view details
+            </div>
+            <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
@@ -152,17 +153,24 @@ export function UserDiscoverPage() {
           </div>
           
           {/* Chat CTA */}
-          <Button asChild variant="outline" className="w-full border-[#00d083]/50 text-[#00d083] hover:bg-[#00d083]/10 text-sm">
-            <Link href={`/user/chat?business=${business.name}`}>
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              Ask AI About This Place
-            </Link>
+          <Button 
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              window.location.href = `/user/chat?business=${business.name}`
+            }}
+            variant="outline" 
+            className="w-full border-[#00d083]/50 text-[#00d083] hover:bg-[#00d083]/10 text-sm"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Ask AI About This Place
           </Button>
         </div>
       </CardContent>
     </Card>
+    </Link>
   )
 
   return (
@@ -172,19 +180,19 @@ export function UserDiscoverPage() {
         <h1 className="text-4xl font-bold bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent mb-2">
           Discover Bournemouth
         </h1>
-        <p className="text-gray-300 text-lg">Find amazing local businesses, exclusive deals, and hidden gems</p>
+        <p className="text-slate-300 text-lg">Find amazing local businesses, exclusive deals, and hidden gems</p>
       </div>
 
       {/* Search Bar */}
       <div className="max-w-2xl mx-auto">
         <div className="relative">
-          <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
             type="text"
             placeholder="Search for restaurants, cafes, bars, or anything..."
-            className="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent"
+            className="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-slate-600 rounded-xl text-slate-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent"
           />
           <Button className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-6">
             Search
@@ -201,7 +209,7 @@ export function UserDiscoverPage() {
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
               selectedFilter === filter.id
                 ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black'
-                : 'bg-slate-800/50 text-gray-300 hover:bg-slate-700 border border-slate-600'
+                : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700 border border-slate-600'
             }`}
           >
             {filter.label} ({filter.count})
@@ -211,12 +219,12 @@ export function UserDiscoverPage() {
 
       {/* Results Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">
+        <h2 className="text-2xl font-bold text-slate-100">
           {selectedFilter === 'all' ? 'All Places' : 
            selectedFilter === 'qwikker_picks' ? 'Qwikker Picks - Staff Favorites' :
            selectedFilter === 'featured' ? 'Featured Businesses' : 'Recommended for You'}
         </h2>
-        <div className="flex items-center gap-2 text-gray-400">
+        <div className="flex items-center gap-2 text-slate-400">
           <span>{getFilteredBusinesses().length} results</span>
           <button className="p-2 bg-slate-800/50 rounded-lg border border-slate-600 hover:bg-slate-700 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -236,7 +244,7 @@ export function UserDiscoverPage() {
       {/* Load More Button */}
       {getFilteredBusinesses().length > 0 && (
         <div className="text-center pt-4">
-          <Button variant="outline" className="border-slate-600 text-gray-300 hover:bg-slate-700 px-8">
+          <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700 px-8">
             Load More Places
           </Button>
         </div>

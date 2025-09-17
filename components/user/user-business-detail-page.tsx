@@ -33,14 +33,14 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
       }
       return newClaimed
     })
-    alert(`🎉 "${offerTitle}" claimed successfully!\n\nYou can now add it to your mobile wallet from "My Claimed" offers.`)
+    alert(`"${offerTitle}" claimed successfully!\n\nYou can now add it to your mobile wallet from "My Claimed" offers.`)
   }
   
   if (!business) {
     return (
       <div className="text-center py-12">
-        <h1 className="text-2xl font-bold text-white mb-4">Business Not Found</h1>
-        <p className="text-gray-400 mb-6">The business you're looking for doesn't exist.</p>
+        <h1 className="text-2xl font-bold text-slate-100 mb-4">Business Not Found</h1>
+        <p className="text-slate-400 mb-6">The business you're looking for doesn't exist.</p>
         <Button asChild>
           <Link href="/user/discover">Back to Discover</Link>
         </Button>
@@ -87,7 +87,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
     <div className="space-y-6">
       {/* Back Button */}
       <div>
-        <Button variant="outline" asChild className="border-slate-600 text-gray-300 hover:bg-slate-700">
+        <Button variant="outline" asChild className="border-slate-600 text-slate-300 hover:bg-slate-700">
           <Link href="/user/discover">
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -119,7 +119,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
             </span>
           )}
           {business.activeOffers > 0 && (
-            <span className="bg-orange-500 text-white text-sm px-3 py-1 rounded-full shadow-lg">
+            <span className="bg-orange-500 text-slate-100 text-sm px-3 py-1 rounded-full shadow-lg">
               {business.activeOffers} ACTIVE OFFERS
             </span>
           )}
@@ -127,7 +127,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
 
         {/* Business Info Overlay */}
         <div className="absolute bottom-4 left-4 right-4">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{business.name}</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-2">{business.name}</h1>
           <p className="text-xl text-[#00d083] mb-3">{business.tagline}</p>
           
           <div className="flex items-center gap-4 mb-4">
@@ -144,11 +144,11 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                   </svg>
                 ))}
               </div>
-              <span className="text-white font-semibold text-lg">{business.rating}</span>
-              <span className="text-gray-300">({business.reviewCount} reviews)</span>
+              <span className="text-slate-100 font-semibold text-lg">{business.rating}</span>
+              <span className="text-slate-300">({business.reviewCount} reviews)</span>
             </div>
-            <span className="text-gray-300">•</span>
-            <span className="text-gray-300">{business.distance} miles away</span>
+            <span className="text-slate-300">•</span>
+            <span className="text-slate-300">{business.distance} miles away</span>
           </div>
         </div>
       </div>
@@ -162,7 +162,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
           Book Now
         </Button>
         
-        <Button variant="outline" className="border-slate-600 text-gray-300 hover:bg-slate-700">
+        <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -170,14 +170,14 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
           Get Directions
         </Button>
         
-        <Button variant="outline" className="border-slate-600 text-gray-300 hover:bg-slate-700">
+        <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
           </svg>
           Call Now
         </Button>
         
-        <Button variant="outline" className="border-slate-600 text-gray-300 hover:bg-slate-700">
+        <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
@@ -194,7 +194,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
             className={`flex-1 px-4 py-3 text-sm font-medium rounded-md transition-all duration-200 ${
               activeTab === tab.id
                 ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black'
-                : 'text-gray-300 hover:text-white hover:bg-slate-700/50'
+                : 'text-slate-300 hover:text-slate-100 hover:bg-slate-700/50'
             }`}
           >
             {tab.label}
@@ -213,10 +213,37 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
       <div className="min-h-[400px]">
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Basic Info */}
+            {/* About Section */}
             <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-white">About {business.name}</CardTitle>
+                <CardTitle className="text-slate-100">About {business.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-300 leading-relaxed mb-4">
+                  {business.description}
+                </p>
+                {business.specialties && business.specialties.length > 0 && (
+                  <div>
+                    <p className="text-slate-100 font-medium mb-2">What makes us special:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {business.specialties.map((specialty, index) => (
+                        <span 
+                          key={index}
+                          className="bg-[#00d083]/10 border border-[#00d083]/20 text-[#00d083] px-3 py-1 rounded-full text-sm"
+                        >
+                          {specialty}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Contact & Location Info */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-slate-100">Location & Contact</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -227,8 +254,8 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                       <div>
-                        <p className="text-white font-medium">Address</p>
-                        <p className="text-gray-400">{business.address}, {business.town}</p>
+                        <p className="text-slate-100 font-medium">Address</p>
+                        <p className="text-slate-400">{business.address}, {business.town}</p>
                       </div>
                     </div>
                     
@@ -237,8 +264,8 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <div>
-                        <p className="text-white font-medium">Hours</p>
-                        <p className="text-gray-400">{business.hours}</p>
+                        <p className="text-slate-100 font-medium">Hours</p>
+                        <p className="text-slate-400">{business.hours}</p>
                         <span className="text-green-400 text-sm font-medium">Open now</span>
                       </div>
                     </div>
@@ -250,8 +277,8 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                       </svg>
                       <div>
-                        <p className="text-white font-medium">Category</p>
-                        <p className="text-gray-400">{business.category}</p>
+                        <p className="text-slate-100 font-medium">Category</p>
+                        <p className="text-slate-400">{business.category}</p>
                       </div>
                     </div>
                     
@@ -260,7 +287,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
                       <div>
-                        <p className="text-white font-medium">Special Features</p>
+                        <p className="text-slate-100 font-medium">Special Features</p>
                         <div className="flex gap-2 mt-1">
                           {business.hasSecretMenu && (
                             <span className="bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs px-2 py-1 rounded-full">
@@ -282,7 +309,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
             {businessOffers.length > 0 && (
               <Card className="bg-gradient-to-br from-orange-900/20 to-amber-900/20 border-orange-700/30">
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
+                  <CardTitle className="text-slate-100 flex items-center gap-2">
                     <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                     </svg>
@@ -299,17 +326,17 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                         <div key={offer.id} className="bg-slate-700/50 rounded-lg p-4">
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
-                              <h4 className="text-white font-semibold mb-1">{offer.title}</h4>
-                              <p className="text-gray-300 text-sm mb-2">{offer.description}</p>
-                              <p className="text-gray-400 text-xs">{offer.terms}</p>
+                              <h4 className="text-slate-100 font-semibold mb-1">{offer.title}</h4>
+                              <p className="text-slate-300 text-sm mb-2">{offer.description}</p>
+                              <p className="text-slate-400 text-xs">{offer.terms}</p>
                             </div>
                             <div className="flex items-center gap-2 ml-4">
                               <button className="p-2 bg-slate-600/50 hover:bg-red-500/20 rounded-full transition-colors duration-200">
-                                <svg className="w-4 h-4 text-gray-400 hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-4 h-4 text-slate-400 hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                                 </svg>
                               </button>
-                              <span className="bg-orange-500 text-white text-sm px-3 py-1 rounded-full font-bold">
+                              <span className="bg-orange-500 text-slate-100 text-sm px-3 py-1 rounded-full font-bold">
                                 {offer.badge}
                               </span>
                             </div>
@@ -325,7 +352,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                                  claimedOfferData?.status === 'wallet_added' ? 'In Your Wallet' : 'Claimed'}
                               </span>
                               {claimedOfferData?.redemptionCode && (
-                                <span className="text-xs text-gray-400 ml-auto">
+                                <span className="text-xs text-slate-400 ml-auto">
                                   Code: {claimedOfferData.redemptionCode}
                                 </span>
                               )}
@@ -336,14 +363,14 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                             {!isClaimed ? (
                               <Button 
                                 onClick={() => claimOffer(offer.id, offer.title, business.name)}
-                                className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold text-sm"
+                                className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-slate-100 font-semibold text-sm"
                               >
                                 Claim Offer
                               </Button>
                             ) : (
                               <Button 
-                                onClick={() => alert(`"${offer.title}" has been added to your mobile wallet! 📱`)}
-                                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold text-sm"
+                                onClick={() => alert(`"${offer.title}" has been added to your mobile wallet!`)}
+                                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-slate-100 font-semibold text-sm"
                                 disabled={claimedOfferData?.status === 'redeemed'}
                               >
                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -386,8 +413,8 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-white mb-2">Discover the Full Menu with AI</h3>
-                    <p className="text-gray-300 mb-4">
+                    <h3 className="text-xl font-bold text-slate-100 mb-2">Discover the Full Menu with AI</h3>
+                    <p className="text-slate-300 mb-4">
                       Chat with your local guide to explore the complete menu, get personalized recommendations, and discover hidden gems!
                     </p>
                     <Button asChild className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold">
@@ -407,8 +434,8 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
             <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-white">Menu Highlights</CardTitle>
-                  <span className="text-gray-400 text-sm">Just a taste of what's available</span>
+                  <CardTitle className="text-slate-100">Menu Highlights</CardTitle>
+                  <span className="text-slate-400 text-sm">Just a taste of what's available</span>
                 </div>
               </CardHeader>
               <CardContent>
@@ -416,8 +443,8 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                   {business.menuPreview.map((item, index) => (
                     <div key={index} className="flex items-center justify-between py-3 border-b border-slate-600 last:border-b-0">
                       <div>
-                        <p className="text-white font-medium">{item.split(' £')[0]}</p>
-                        <p className="text-gray-400 text-sm">Popular choice</p>
+                        <p className="text-slate-100 font-medium">{item.split(' £')[0]}</p>
+                        <p className="text-slate-400 text-sm">Popular choice</p>
                       </div>
                       <span className="text-[#00d083] font-semibold">£{item.split(' £')[1]}</span>
                     </div>
@@ -425,7 +452,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                   
                   {/* See More Prompt */}
                   <div className="mt-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600 text-center">
-                    <p className="text-gray-300 text-sm mb-3">
+                    <p className="text-slate-300 text-sm mb-3">
                       Want to see the full menu, daily specials, and get personalized recommendations?
                     </p>
                     <Button asChild variant="outline" className="border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10">
@@ -448,7 +475,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-slate-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
                     </div>
@@ -462,8 +489,8 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                     {secretMenu.items.slice(0, 2).map((item, index) => (
                       <div key={index} className="flex items-start justify-between bg-slate-800/30 rounded-lg p-3">
                         <div className="flex-1">
-                          <p className="text-white font-medium">{item.name}</p>
-                          <p className="text-gray-300 text-sm">{item.description}</p>
+                          <p className="text-slate-100 font-medium">{item.name}</p>
+                          <p className="text-slate-300 text-sm">{item.description}</p>
                         </div>
                         {item.price && (
                           <span className="text-purple-400 font-semibold ml-4">{item.price}</span>
@@ -475,12 +502,12 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                         <p className="text-purple-300 text-sm font-medium mb-2">
                           + {secretMenu.items.length - 2} more secret items
                         </p>
-                        <p className="text-gray-400 text-xs">Ask your AI guide to unlock them all</p>
+                        <p className="text-slate-400 text-xs">Ask your AI guide to unlock them all</p>
                       </div>
                     )}
                   </div>
 
-                  <Button asChild className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold">
+                  <Button asChild className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-slate-100 font-semibold">
                     <Link href={`/user/chat?business=${business.name}&topic=secret-menu`}>
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -502,15 +529,15 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-white mb-2">{offer.title}</h3>
-                        <p className="text-gray-300 mb-3">{offer.description}</p>
+                        <h3 className="text-xl font-bold text-slate-100 mb-2">{offer.title}</h3>
+                        <p className="text-slate-300 mb-3">{offer.description}</p>
                         <div className="space-y-2">
-                          <p className="text-sm text-gray-400"><strong>Terms:</strong> {offer.terms}</p>
-                          <p className="text-sm text-gray-400"><strong>Valid until:</strong> {offer.expiryDate}</p>
+                          <p className="text-sm text-slate-400"><strong>Terms:</strong> {offer.terms}</p>
+                          <p className="text-sm text-slate-400"><strong>Valid until:</strong> {offer.expiryDate}</p>
                         </div>
                       </div>
                       <div className="text-center ml-6">
-                        <span className="bg-orange-500 text-white text-lg px-4 py-2 rounded-full font-bold block mb-3">
+                        <span className="bg-orange-500 text-slate-100 text-lg px-4 py-2 rounded-full font-bold block mb-3">
                           {offer.badge}
                         </span>
                         <Button className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold">
@@ -524,7 +551,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
             ) : (
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardContent className="p-8 text-center">
-                  <p className="text-gray-400">No active offers at the moment.</p>
+                  <p className="text-slate-400">No active offers at the moment.</p>
                   <p className="text-gray-500 text-sm mt-2">Check back later for exclusive deals!</p>
                 </CardContent>
               </Card>
@@ -539,8 +566,8 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h4 className="text-white font-semibold">{review.author}</h4>
-                      <p className="text-gray-400 text-sm">{review.date}</p>
+                      <h4 className="text-slate-100 font-semibold">{review.author}</h4>
+                      <p className="text-slate-400 text-sm">{review.date}</p>
                     </div>
                     <div className="flex">
                       {[1, 2, 3, 4, 5].map((star) => (
@@ -555,7 +582,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                       ))}
                     </div>
                   </div>
-                  <p className="text-gray-300 leading-relaxed">{review.comment}</p>
+                  <p className="text-slate-300 leading-relaxed">{review.comment}</p>
                 </CardContent>
               </Card>
             ))}

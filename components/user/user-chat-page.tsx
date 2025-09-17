@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { mockBusinesses, suggestedPrompts, enhancedSecretMenus } from '@/lib/mock-data/user-mock-data'
+import { mockBusinesses, suggestedPrompts, enhancedSecretMenus, mockOffers, mockUserProfile, mockBadges, pointsEarningRules } from '@/lib/mock-data/user-mock-data'
 import { useState } from 'react'
 import React from 'react'
 import Link from 'next/link'
@@ -24,14 +24,7 @@ interface ChatMessage {
 }
 
 export function UserChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      type: 'assistant',
-      content: "Hi there! I'm your local guide for Bournemouth. I can help you discover amazing businesses, find deals, and explore hidden gems. What are you in the mood for today?",
-      timestamp: new Date().toISOString()
-    }
-  ])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [conversationContext, setConversationContext] = useState<{
@@ -45,6 +38,7 @@ export function UserChatPage() {
     }
   }>({})
   const [hasAutoSent, setHasAutoSent] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   const handleSendMessage = React.useCallback(async (message: string) => {
     if (!message.trim()) return
@@ -57,7 +51,14 @@ export function UserChatPage() {
       timestamp: new Date().toISOString()
     }
 
-    setMessages(prev => [...prev, userMessage])
+    setMessages(prev => {
+      const newMessages = [...prev, userMessage]
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('qwikker-chat-messages', JSON.stringify(newMessages))
+      }
+      return newMessages
+    })
     setInputValue('')
     setIsTyping(true)
 
@@ -71,14 +72,57 @@ export function UserChatPage() {
         businessCards: getRelevantBusinesses(message)
       }
 
-      setMessages(prev => [...prev, assistantMessage])
+      setMessages(prev => {
+        const newMessages = [...prev, assistantMessage]
+        // Persist to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('qwikker-chat-messages', JSON.stringify(newMessages))
+        }
+        return newMessages
+      })
       setIsTyping(false)
     }, 1500)
-  }, []) // Empty dependency array for useCallback
+  }, []) // Keep empty - getMockResponse and getRelevantBusinesses are stable functions
+
+  // Initialize chat with context awareness but fresh UI
+  React.useEffect(() => {
+    if (isInitialized) return
+    
+    if (typeof window !== 'undefined') {
+      // Load conversation context for AI memory (but don't display history)
+      const savedMessages = localStorage.getItem('qwikker-chat-messages')
+      if (savedMessages) {
+        try {
+          const parsedMessages = JSON.parse(savedMessages)
+          
+          // Store full context for AI memory (invisible to user)
+          setConversationContext({
+            previousTopics: parsedMessages.map((msg: ChatMessage) => msg.content).slice(-10), // Last 10 for context
+            userPreferences: {}, // Could extract preferences from history
+            businessInteractions: {} // Could track business mentions
+          })
+        } catch (error) {
+          console.error('Error parsing saved messages:', error)
+        }
+      }
+      
+      // Always start with ONLY a fresh welcome message (no history shown)
+      const welcomeMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: "Hi there! I'm your local guide for Bournemouth. I can help you discover amazing businesses, find deals, and explore hidden gems. What are you in the mood for today?",
+        timestamp: new Date().toISOString()
+      }
+      
+      setMessages([welcomeMessage]) // Always start with just the welcome message
+    }
+    
+    setIsInitialized(true)
+  }, [isInitialized])
 
   // Handle URL parameters for auto-sending questions
   React.useEffect(() => {
-    if (hasAutoSent) return
+    if (hasAutoSent || !isInitialized) return
     
     const urlParams = new URLSearchParams(window.location.search)
     const business = urlParams.get('business')
@@ -104,7 +148,7 @@ export function UserChatPage() {
         handleSendMessage(autoQuestion)
       }, 500) // Reduced delay
     }
-  }, [handleSendMessage]) // Include handleSendMessage dependency
+  }, [isInitialized]) // Simplified: only depend on isInitialized
 
   const getMockResponse = (userMessage: string): string => {
     const msg = userMessage.toLowerCase()
@@ -124,6 +168,10 @@ export function UserChatPage() {
     
     // Handle follow-up responses based on conversation context
     if (conversationContext.waitingFor === 'coffee-details') {
+      if (msg.includes('trendy') || msg.includes('modern')) {
+        setConversationContext({ topic: 'coffee', lastCategory: 'cafe' })
+        return "Perfect choice! You want the hottest, most Instagram-worthy coffee spots. Here are Bournemouth's trendiest cafes with amazing coffee and killer vibes:"
+      }
       if (msg.includes('cozy') || msg.includes('work')) {
         setConversationContext({ topic: 'coffee', lastCategory: 'cafe' })
         return "Perfect! I know exactly what you mean - a cozy spot to settle in with your laptop. Here are my top picks for coffee shops where you can work comfortably:"
@@ -135,6 +183,10 @@ export function UserChatPage() {
       if (msg.includes('pastries') || msg.includes('food')) {
         setConversationContext({ topic: 'coffee', lastCategory: 'cafe' })
         return "Excellent choice! Coffee and pastries are the perfect combo. Here are places with amazing coffee AND delicious treats:"
+      }
+      if (msg.includes('traditional')) {
+        setConversationContext({ topic: 'coffee', lastCategory: 'cafe' })
+        return "Ah, a classic coffee lover! Here are some traditional, old-school coffee shops with that authentic, timeless atmosphere:"
       }
       // Default response if they don't give specific details
       setConversationContext({ topic: 'coffee', lastCategory: 'cafe' })
@@ -182,7 +234,7 @@ export function UserChatPage() {
         return "Perfect! Based on what you're looking for, I have some amazing coffee spots that would be ideal. Here are my top picks:"
       }
       setConversationContext({ waitingFor: 'coffee-details', topic: 'coffee' })
-      return "Coffee lover, I see! ☕ What kind of coffee experience are you after? Are you looking for a quick grab-and-go spot, somewhere cozy to work, or maybe a place with amazing pastries too? And what's your vibe - modern and trendy or more traditional?"
+      return "Coffee lover, I see! What kind of coffee experience are you after? Are you looking for a quick grab-and-go spot, somewhere cozy to work, or maybe a place with amazing pastries too? And what's your vibe - modern and trendy or more traditional?"
     }
     
     if (msg.includes('dinner') || msg.includes('restaurant') || msg.includes('food')) {
@@ -277,9 +329,40 @@ export function UserChatPage() {
       return "I'd love to help you discover some amazing places! But first, tell me a bit more about what you're in the mood for. What brings you to Bournemouth today? Are you a local exploring or visiting? What sounds good to you right now?"
     }
     
-    // Reset context for new conversations
-    setConversationContext({})
-    return "Hi there! I'm excited to help you explore Bournemouth! 🌊 What are you in the mood for today? Are you looking for food, drinks, activities, or something else? The more you tell me about what sounds good, the better I can help you discover the perfect spots!"
+    // Handle points and rewards questions
+    if (msg.includes('points') || msg.includes('credits') || msg.includes('earn') || msg.includes('badges')) {
+      const userPoints = mockUserProfile.totalPoints
+      const userLevel = mockUserProfile.level
+      const earnedBadges = mockUserProfile.badges.filter(b => b.unlockedDate).length
+      const totalBadges = mockBadges.length
+      
+      return `Great question! Here's your current status:\n\n🏆 **Your Progress:**\n• Current Points: ${userPoints.toLocaleString()}\n• Level: ${userLevel}\n• Badges Earned: ${earnedBadges}/${totalBadges}\n\n💰 **Ways to Earn Points:**\n• Refer Friends: +${pointsEarningRules.friend_referral.points} points (highest earner!)\n• Redeem Offers: +${pointsEarningRules.offer_redeem.points} points\n• Visit Businesses: +${pointsEarningRules.business_visit.points} points\n• Write Reviews: +${pointsEarningRules.review_write.points} points\n• Share on Social: +${pointsEarningRules.social_share.points} points\n\nWant to see what badges you can unlock next or check out current offers?`
+    }
+    
+    // Handle menu questions
+    if (msg.includes('menu') || msg.includes('food options')) {
+      const businessesWithMenus = mockBusinesses.filter(b => b.specialties && b.specialties.length > 0)
+      return `I can show you menus from ${businessesWithMenus.length} amazing restaurants! Each place has their own specialties:\n\n• **${businessesWithMenus[0].name}**: ${businessesWithMenus[0].specialties?.join(', ')}\n• **${businessesWithMenus[1].name}**: ${businessesWithMenus[1].specialties?.join(', ')}\n• **${businessesWithMenus[2].name}**: ${businessesWithMenus[2].specialties?.join(', ')}\n\nPlus, ${mockBusinesses.filter(b => b.hasSecretMenu).length} places have secret menus with hidden items! Which type of cuisine interests you most?`
+    }
+    
+    // Handle offers questions
+    if (msg.includes('offers') || msg.includes('deals') || msg.includes('discounts')) {
+      const totalOffers = mockOffers.length
+      const endingSoon = mockOffers.filter(o => o.badge === 'Ends Soon').length
+      return `Amazing timing! We currently have ${totalOffers} active offers available:\n\n🔥 **Hot Deals:**\n• ${mockOffers[0].title} at ${mockOffers[0].businessName}\n• ${mockOffers[1].title} at ${mockOffers[1].businessName}\n• ${mockOffers[2].title} at ${mockOffers[2].businessName}\n\n⚡ ${endingSoon} offers are ending soon!\n\n💡 **Pro tip:** Add offers to your mobile wallet to claim them easily. Want to see all offers or focus on a specific type of cuisine?`
+    }
+    
+    // Default conversational responses with data awareness (NO welcome message)
+    const totalBusinesses = mockBusinesses.length
+    const secretMenuCount = mockBusinesses.filter(b => b.hasSecretMenu).length
+    const responses = [
+      `I'm here to help you explore Bournemouth! We have ${totalBusinesses} partner venues, ${secretMenuCount} with secret menus, and ${mockOffers.length} active offers. What sounds good?`,
+      `Tell me what you're in the mood for! I can help with restaurants, offers, secret menus, or even show you how to earn more Qwikker Credits (you currently have ${mockUserProfile.totalPoints.toLocaleString()} points!).`,
+      `Great! I can help you discover amazing places. Are you looking for food, drinks, deals, or want to know about earning more points? You're level ${mockUserProfile.level} with ${mockUserProfile.badges.filter(b => b.unlockedDate).length} badges!`,
+      `Perfect! What kind of experience are you after? I know all ${totalBusinesses} partner venues and can show you the best deals and secret menu items!`
+    ]
+    
+    return responses[Math.floor(Math.random() * responses.length)]
   }
 
   const getRelevantBusinesses = (userMessage: string) => {
@@ -354,13 +437,13 @@ export function UserChatPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
         <div className="absolute bottom-2 left-2">
-          <span className="bg-black/70 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
+          <span className="bg-black/70 text-slate-100 text-xs px-2 py-1 rounded-full backdrop-blur-sm">
             {business.distance} miles
           </span>
         </div>
         {business.activeOffers > 0 && (
           <div className="absolute top-2 right-2">
-            <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
+            <span className="bg-orange-500 text-slate-100 text-xs px-2 py-1 rounded-full">
               {business.activeOffers} OFFERS
             </span>
           </div>
@@ -368,7 +451,7 @@ export function UserChatPage() {
       </div>
       
       <CardContent className="p-3">
-        <h4 className="text-white font-semibold text-sm mb-1">{business.name}</h4>
+        <h4 className="text-slate-100 font-semibold text-sm mb-1">{business.name}</h4>
         <p className="text-[#00d083] text-xs mb-2">{business.tagline}</p>
         <div className="flex items-center gap-1 mb-2">
           <div className="flex">
@@ -383,7 +466,7 @@ export function UserChatPage() {
               </svg>
             ))}
           </div>
-          <span className="text-white text-xs font-medium">{business.rating}</span>
+          <span className="text-slate-100 text-xs font-medium">{business.rating}</span>
         </div>
         <Button asChild size="sm" className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-medium">
           <Link href={`/user/business/${mockBusinesses.find(b => b.id === business.id)?.slug}`}>View Details</Link>
@@ -409,12 +492,12 @@ export function UserChatPage() {
             </h1>
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
           </div>
-          <p className="text-xl text-gray-300 mb-2">
-            Discover Bournemouth's best kept secrets through conversation
-          </p>
-          <p className="text-gray-400">
-            Ask about menus, deals, hidden gems, or get personalized recommendations!
-          </p>
+        <p className="text-xl text-slate-300 mb-2">
+          Discover Bournemouth's best kept secrets through conversation
+        </p>
+        <p className="text-slate-400">
+          Ask about menus, deals, hidden gems, or get personalized recommendations
+        </p>
         </div>
       </div>
 
@@ -429,7 +512,7 @@ export function UserChatPage() {
                 <div className={`rounded-2xl px-4 py-3 shadow-lg ${
                   message.type === 'user' 
                     ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black ml-auto shadow-[#00d083]/20' 
-                    : 'bg-gradient-to-r from-slate-700/80 to-slate-600/80 text-white border border-slate-600/50 shadow-slate-900/20'
+                    : 'bg-gradient-to-r from-slate-700/80 to-slate-600/80 text-slate-100 border border-slate-600/50 shadow-slate-900/20'
                 }`}>
                   <p className="text-sm leading-relaxed">{message.content}</p>
                 </div>
@@ -449,9 +532,9 @@ export function UserChatPage() {
                     <Button 
                       onClick={() => {
                         // Simulate adding to wallet
-                        alert(`"${conversationContext.offerInfo?.title}" has been added to your mobile wallet! 📱`)
+                        alert(`"${conversationContext.offerInfo?.title}" has been added to your mobile wallet!`)
                       }}
-                      className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold"
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-slate-100 font-semibold"
                     >
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -461,7 +544,7 @@ export function UserChatPage() {
                   </div>
                 )}
                 
-                <p className="text-xs text-gray-400 mt-1 px-2">
+                <p className="text-xs text-slate-400 mt-1 px-2">
                   {new Date(message.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </p>
               </div>
@@ -478,7 +561,7 @@ export function UserChatPage() {
                     <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                     <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
-                  <span className="text-gray-300 text-sm">AI is thinking...</span>
+                  <span className="text-slate-300 text-sm">AI is thinking...</span>
                 </div>
               </div>
             </div>
@@ -489,25 +572,25 @@ export function UserChatPage() {
         {messages.length === 1 && (
           <div className="p-6 border-t border-slate-600/50 bg-gradient-to-r from-slate-800/30 to-slate-700/30">
             <div className="text-center mb-4">
-              <h3 className="text-white font-semibold mb-2 flex items-center justify-center gap-2">
+              <h3 className="text-slate-100 font-semibold mb-2 flex items-center justify-center gap-2">
                 <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 Quick Starters
               </h3>
-              <p className="text-gray-400 text-sm">Try one of these popular questions:</p>
+              <p className="text-slate-400 text-sm">Try one of these popular questions:</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {suggestedPrompts.slice(0, 6).map((prompt, index) => (
                 <button
                   key={index}
                   onClick={() => handleSuggestedPrompt(prompt)}
-                  className="group bg-gradient-to-r from-slate-700/50 to-slate-600/50 hover:from-[#00d083]/10 hover:to-[#00b86f]/10 text-gray-300 hover:text-white px-4 py-3 rounded-xl text-sm transition-all duration-300 border border-slate-600 hover:border-[#00d083]/50 text-left relative overflow-hidden"
+                  className="group bg-gradient-to-r from-slate-700/50 to-slate-600/50 hover:from-[#00d083]/10 hover:to-[#00b86f]/10 text-slate-300 hover:text-slate-100 px-4 py-3 rounded-xl text-sm transition-all duration-300 border border-slate-600 hover:border-[#00d083]/50 text-left relative overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-[#00d083]/0 to-[#00b86f]/0 group-hover:from-[#00d083]/5 group-hover:to-[#00b86f]/5 transition-all duration-300"></div>
                   <div className="relative flex items-center gap-3">
                     <div className="p-2 bg-slate-600/50 group-hover:bg-[#00d083]/20 rounded-lg transition-all duration-300">
-                      <svg className="w-4 h-4 text-gray-400 group-hover:text-[#00d083] transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-slate-400 group-hover:text-[#00d083] transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                       </svg>
                     </div>
@@ -530,7 +613,7 @@ export function UserChatPage() {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputValue)}
                   placeholder="Ask me about restaurants, deals, secret menus, or anything..."
-                  className="w-full bg-transparent px-4 py-3 text-white placeholder-gray-400 focus:outline-none text-lg"
+                  className="w-full bg-transparent px-4 py-3 text-slate-100 placeholder-gray-400 focus:outline-none text-lg"
                   disabled={isTyping}
                 />
                 {!inputValue && (
@@ -563,7 +646,7 @@ export function UserChatPage() {
             {/* Quick Action Hints */}
             <div className="flex items-center justify-center gap-4 mt-3 text-xs text-gray-500">
               <span className="flex items-center gap-1">
-                <kbd className="bg-slate-700 px-2 py-1 rounded text-gray-400">Enter</kbd>
+                <kbd className="bg-slate-700 px-2 py-1 rounded text-slate-400">Enter</kbd>
                 to send
               </span>
               <span>•</span>
