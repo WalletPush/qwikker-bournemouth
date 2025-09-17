@@ -32,7 +32,8 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth') &&
     !request.nextUrl.pathname.startsWith('/onboarding') &&
-    !request.nextUrl.pathname.startsWith('/user')  // 🎯 ADD USER ROUTES AS PUBLIC FOR PHASE 1
+    !request.nextUrl.pathname.startsWith('/user')  // 🎯 TEMPORARY: Public access for demos
+    // User dashboard temporarily public for family/stakeholder demos
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
