@@ -1,0 +1,35 @@
+{
+  "node": {
+    "4031146448fc1b3b5210594a6f3430382221975d0d": {
+      "workers": {
+        "app/dashboard/referrals/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/referrals/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/generate-referral-code.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/referral-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "generateReferralCodeForUser",
+          "filename": "lib/actions/generate-referral-code.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/referrals/page": "action-browser"
+      },
+      "exportedName": "generateReferralCodeForUser",
+      "filename": "lib/actions/generate-referral-code.ts"
+    },
+    "405cf154efcc0a65b8f3104b9b0b07094cacffa8d7": {
+      "workers": {
+        "app/dashboard/referrals/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/referrals/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/generate-referral-code.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/referral-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getUserReferrals",
+          "filename": "lib/actions/referral-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/referrals/page": "action-browser"
+      },
+      "exportedName": "getUserReferrals",
+      "filename": "lib/actions/referral-actions.ts"
+    }
+  },
+  "edge": {}
+}

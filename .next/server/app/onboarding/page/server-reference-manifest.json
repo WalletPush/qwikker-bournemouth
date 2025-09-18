@@ -1,0 +1,20 @@
+{
+  "node": {
+    "701a993caf5c2806946ebbf615842dcce85c5ee892": {
+      "workers": {
+        "app/onboarding/page": {
+          "moduleId": "[project]/.next-internal/server/app/onboarding/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/signup-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "createUserAndProfile",
+          "filename": "lib/actions/signup-actions.ts"
+        }
+      },
+      "layer": {
+        "app/onboarding/page": "action-browser"
+      },
+      "exportedName": "createUserAndProfile",
+      "filename": "lib/actions/signup-actions.ts"
+    }
+  },
+  "edge": {}
+}

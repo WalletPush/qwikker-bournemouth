@@ -1,0 +1,35 @@
+{
+  "node": {
+    "70b32590eb9874419c584be24a7eb7c88f2cd19de4": {
+      "workers": {
+        "app/dashboard/files/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "updateProfileFile",
+          "filename": "lib/actions/file-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/files/page": "action-browser"
+      },
+      "exportedName": "updateProfileFile",
+      "filename": "lib/actions/file-actions.ts"
+    },
+    "602757d329b55714d71e6711c0b62729f8d08e903b": {
+      "workers": {
+        "app/dashboard/files/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "uploadToCloudinary",
+          "filename": "lib/actions/file-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/files/page": "action-browser"
+      },
+      "exportedName": "uploadToCloudinary",
+      "filename": "lib/actions/file-actions.ts"
+    }
+  },
+  "edge": {}
+}
