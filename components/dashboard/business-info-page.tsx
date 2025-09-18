@@ -25,6 +25,9 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
     business_address: profile.business_address || '',
     business_town: profile.business_town || '',
     business_postcode: profile.business_postcode || '',
+    business_hours: profile.business_hours || '',
+    business_tagline: profile.business_tagline || '',
+    business_description: profile.business_description || '',
     website_url: profile.website_url || '',
     instagram_handle: profile.instagram_handle || '',
     facebook_url: profile.facebook_url || '',
@@ -132,6 +135,59 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
                 className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
                 placeholder="e.g., Fine Dining, Coffee Shop, Hair Salon"
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Business Details & Hours */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Business Details & Hours
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="business_hours" className="text-white">Business Hours <span className="text-red-500">*</span></Label>
+              <Input
+                id="business_hours"
+                value={formData.business_hours}
+                onChange={(e) => handleInputChange('business_hours', e.target.value)}
+                className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
+                placeholder="Mon-Fri 9AM-5PM, Sat-Sun 10AM-4PM"
+              />
+              <p className="text-xs text-gray-400 mt-1">Required for customers to know when you're open</p>
+            </div>
+            
+            <div>
+              <Label htmlFor="business_tagline" className="text-white">Business Tagline</Label>
+              <Input
+                id="business_tagline"
+                value={formData.business_tagline}
+                onChange={(e) => handleInputChange('business_tagline', e.target.value)}
+                className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
+                placeholder="Your catchy one-liner (e.g., 'Best coffee in Bournemouth')"
+                maxLength={50}
+              />
+              <p className="text-xs text-gray-400 mt-1">Short tagline that appears on your business card</p>
+            </div>
+
+            <div>
+              <Label htmlFor="business_description" className="text-white">Business Description <span className="text-red-500">*</span></Label>
+              <textarea
+                id="business_description"
+                value={formData.business_description}
+                onChange={(e) => handleInputChange('business_description', e.target.value)}
+                className="w-full bg-slate-900 text-white border border-slate-600 focus:border-[#00d083] rounded-md p-3 min-h-[100px] resize-y"
+                placeholder="Describe your business, atmosphere, what makes you special, and what customers can expect..."
+                maxLength={500}
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Required for customers to discover you • {formData.business_description.length}/500 characters
+              </p>
             </div>
           </CardContent>
         </Card>
