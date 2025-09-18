@@ -1,0 +1,20 @@
+{
+  "node": {
+    "60dd086945378090aa5100c49572622dd4b6e2e0f2": {
+      "workers": {
+        "app/dashboard/personal/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/personal/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "updateBusinessInfo",
+          "filename": "lib/actions/business-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/personal/page": "action-browser"
+      },
+      "exportedName": "updateBusinessInfo",
+      "filename": "lib/actions/business-actions.ts"
+    }
+  },
+  "edge": {}
+}
