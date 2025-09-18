@@ -6,6 +6,9 @@
 -- (Since this is likely empty or test data, we'll start fresh)
 UPDATE public.profiles SET menu_preview = NULL WHERE menu_preview IS NOT NULL;
 
+-- Drop the view that depends on menu_preview first
+DROP VIEW IF EXISTS public.approved_businesses;
+
 -- Drop the existing TEXT[] column and recreate as JSONB
 ALTER TABLE public.profiles DROP COLUMN IF EXISTS menu_preview;
 
