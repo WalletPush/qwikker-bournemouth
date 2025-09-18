@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { updateBusinessInfo } from '@/lib/actions/business-actions'
-import { Profile, BUSINESS_TYPE_OPTIONS, BUSINESS_TOWN_OPTIONS } from '@/types/profiles'
+import { Profile, BUSINESS_TYPE_OPTIONS, BUSINESS_TOWN_OPTIONS, MenuPreviewItem } from '@/types/profiles'
 
 interface BusinessInfoPageProps {
   profile: Profile
@@ -17,6 +17,11 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [menuItems, setMenuItems] = useState<MenuPreviewItem[]>(
+    profile.menu_preview && profile.menu_preview.length > 0 
+      ? profile.menu_preview 
+      : [{ name: '', price: '', description: '' }]
+  )
 
   const [formData, setFormData] = useState({
     business_name: profile.business_name || '',
@@ -40,13 +45,34 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
     }))
   }
 
+  const addMenuItem = () => {
+    if (menuItems.length < 5) {
+      setMenuItems([...menuItems, { name: '', price: '', description: '' }])
+    }
+  }
+
+  const removeMenuItem = (index: number) => {
+    setMenuItems(menuItems.filter((_, i) => i !== index))
+  }
+
+  const updateMenuItem = (index: number, field: keyof MenuPreviewItem, value: string) => {
+    setMenuItems(menuItems.map((item, i) => 
+      i === index ? { ...item, [field]: value } : item
+    ))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setMessage(null)
 
     try {
-      const result = await updateBusinessInfo(profile.user_id, formData)
+      // Include menu items in the form data
+      const dataWithMenuItems = {
+        ...formData,
+        menu_preview: menuItems.filter(item => item.name && item.price) // Only include completed items
+      }
+      const result = await updateBusinessInfo(profile.user_id, dataWithMenuItems)
       
       if (result.success) {
         setMessage({
@@ -290,6 +316,108 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
                   placeholder="https://facebook.com/yourpage"
                 />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Featured Menu Items */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              Featured Menu Items <span className="text-red-500">*</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-400 mb-4">
+              Add 3-5 of your most popular items. These will be displayed on your business card to attract customers.
+            </p>
+            
+            {menuItems.map((item, index) => (
+              <div key={index} className="bg-slate-900/50 border border-slate-600 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-white font-medium">Menu Item #{index + 1}</h4>
+                  {menuItems.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeMenuItem(index)}
+                      className="border-red-500 text-red-400 hover:bg-red-500 hover:text-white"
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-white">Item Name <span className="text-red-500">*</span></Label>
+                    <Input
+                      value={item.name}
+                      onChange={(e) => updateMenuItem(index, 'name', e.target.value)}
+                      className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
+                      placeholder="e.g., Fish & Chips"
+                      maxLength={50}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-white">Price <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">£</span>
+                      <Input
+                        value={item.price}
+                        onChange={(e) => updateMenuItem(index, 'price', e.target.value)}
+                        className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083] pl-8"
+                        placeholder="12.99"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label className="text-white">Description</Label>
+                  <Input
+                    value={item.description}
+                    onChange={(e) => updateMenuItem(index, 'description', e.target.value)}
+                    className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
+                    placeholder="Brief description of the item"
+                    maxLength={100}
+                  />
+                  <p className="text-xs text-gray-400 mt-1">{item.description.length}/100 characters</p>
+                </div>
+              </div>
+            ))}
+            
+            {menuItems.length < 5 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addMenuItem}
+                className="w-full border-[#00d083] text-[#00d083] hover:bg-[#00d083] hover:text-black"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Menu Item ({menuItems.length}/5)
+              </Button>
+            )}
+            
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mt-4">
+              <div className="flex items-center gap-2 mb-1">
+                <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-blue-300 font-medium text-sm">Tip</span>
+              </div>
+              <p className="text-blue-200 text-xs">
+                Choose your most popular or signature items. These will appear on your business card and help customers discover what you're famous for.
+              </p>
             </div>
           </CardContent>
         </Card>

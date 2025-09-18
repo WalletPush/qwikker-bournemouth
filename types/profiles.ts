@@ -1,5 +1,12 @@
 // Profile-related types for extended user data
 
+// Menu preview item structure for featured menu items
+export interface MenuPreviewItem {
+  name: string;
+  price: string;
+  description: string;
+}
+
 export interface Profile {
   id: string;
   user_id: string;
@@ -57,7 +64,7 @@ export interface Profile {
   business_tagline: string | null;
   business_description: string | null;
   business_images: string[] | null; // Array of image URLs
-  menu_preview: string[] | null; // Array of menu items for quick display
+  menu_preview: MenuPreviewItem[] | null; // Array of featured menu items for quick display
   business_tier: BusinessTier;
   rating: number;
   review_count: number;
