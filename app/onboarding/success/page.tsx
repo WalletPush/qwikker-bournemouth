@@ -26,7 +26,7 @@ export default async function OnboardingSuccessPage({ searchParams }: Onboarding
               Welcome to QWIKKER!
             </h1>
             <p className="text-xl text-gray-400">
-              Your registration is complete and being processed
+              Your account is ready! Complete your profile to go live on Qwikker.
             </p>
           </div>
 
@@ -54,47 +54,43 @@ export default async function OnboardingSuccessPage({ searchParams }: Onboarding
                   </div>
                 </div>
 
-                  <div className="flex items-start gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-                  <div className="w-8 h-8 bg-[#00d083]/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-[#00d083] font-semibold text-xs">48h</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white">Business Verification</h3>
-                    <p className="text-gray-400 text-sm">Our team will verify your business details and review your information</p>
-                  </div>
-                </div>
-
                 <div className="flex items-start gap-4 p-4 bg-gradient-to-r from-[#00d083]/10 to-[#00b86f]/10 border border-[#00d083]/30 rounded-lg">
                   <div className="w-8 h-8 bg-[#00d083] rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
+                    <span className="text-white font-semibold text-sm">1</span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-[#00d083]">Start Promoting!</h3>
-                    <p className="text-gray-300 text-sm">You can now display <strong>table tents and window stickers</strong> to promote your offers and attract customers</p>
+                    <h3 className="font-semibold text-[#00d083]">Complete Your Profile</h3>
+                    <p className="text-gray-300 text-sm">Add business hours, photos, menu items, and create your secret menu in your dashboard</p>
                   </div>
                 </div>
 
-                  <div className="flex items-start gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                <div className="flex items-start gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
                   <div className="w-8 h-8 bg-[#00d083]/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <svg className="w-4 h-4 text-[#00d083]" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                    </svg>
+                    <span className="text-[#00d083] font-semibold text-sm">2</span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white">Go Live</h3>
-                    <p className="text-gray-400 text-sm">Start attracting customers with your first offer and grow your business with QWIKKER</p>
+                    <h3 className="font-semibold text-white">Submit for Review</h3>
+                    <p className="text-gray-400 text-sm">When your profile is complete, submit it for our team to review (usually within 24 hours)</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                  <div className="w-8 h-8 bg-[#00d083]/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-[#00d083] font-semibold text-sm">3</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white">Go Live on Qwikker!</h3>
+                    <p className="text-gray-400 text-sm">Once approved, customers can discover your business, view offers, and visit your location</p>
                   </div>
                 </div>
               </div>
 
               <div className="text-center p-6 bg-[#00d083]/10 border border-[#00d083]/30 rounded-lg">
                 <p className="text-[#00d083] font-semibold text-lg">
-                  📧 Check your email for next steps
+                  🚀 Ready to get started?
                 </p>
                 <p className="text-gray-300 text-sm mt-2">
-                  We'll send you everything you need to get started within the next 2 hours
+                  Log into your dashboard to complete your profile and submit for review
                 </p>
               </div>
             </CardContent>
@@ -104,7 +100,7 @@ export default async function OnboardingSuccessPage({ searchParams }: Onboarding
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] to-[#00a05c] text-white font-semibold">
               <Link href={`/auth/login${userEmail ? `?email=${encodeURIComponent(userEmail)}` : ''}`}>
-                Sign In to Dashboard
+                Complete Your Profile
               </Link>
             </Button>
             <Button asChild variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800">
