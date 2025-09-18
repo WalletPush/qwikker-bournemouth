@@ -80,7 +80,7 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [files, setFiles] = useState<FileUpload>({ logo: null, menu: [], offer: null })
-  const [showFounderPopup, setShowFounderPopup] = useState(false)
+  // Removed founder popup - was annoying
   const [optionalSteps, setOptionalSteps] = useState<{
     wantsMenuUpload: boolean | null
     wantsOfferCreation: boolean | null
@@ -131,13 +131,7 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
     mode: 'onChange',
   })
 
-  // Show founder popup after 3 seconds
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowFounderPopup(true)
-    }, 3000)
-    return () => clearTimeout(timer)
-  }, [])
+  // Founder popup removed - was interrupting user experience
 
   const nextStep = async () => {
     const fieldsToValidate = getFieldsForStep(currentStep)
@@ -264,42 +258,7 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
 
   return (
     <>
-      {/* Founder Popup */}
-      {showFounderPopup && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg bg-slate-800 border-yellow-500/30 shadow-2xl">
-            <CardHeader className="text-center">
-              <div className="inline-block bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wide mb-4">
-                Limited Time Offer
-              </div>
-              <CardTitle className="text-2xl text-yellow-400">Founding Member Exclusive</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <div className="text-gray-300 space-y-2">
-                <p><strong>Get 16 months for the price of 10</strong> + <strong>20% OFF the Spotlight Plan for life</strong></p>
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-sm">
-                  <div className="text-yellow-400 font-semibold">Offer expires: January 20, 2026</div>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button 
-                  className="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-black hover:from-yellow-500 hover:to-orange-600"
-                  onClick={() => setShowFounderPopup(false)}
-                >
-                  Take Me to the Spotlight Plan
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-800"
-                  onClick={() => setShowFounderPopup(false)}
-                >
-                  Continue with Free Trial for Now
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Founder popup removed - was interrupting user experience */}
 
       {/* Main Form */}
       <div className="space-y-8">
