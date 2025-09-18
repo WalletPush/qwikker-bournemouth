@@ -4,6 +4,7 @@ import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { calculateActionItemsCount } from '@/lib/utils/action-items-count'
 
 export default async function AnalyticsPage() {
   const supabase = await createClient()
@@ -20,8 +21,10 @@ export default async function AnalyticsPage() {
     .eq('user_id', data.claims.sub)
     .single()
 
+  const actionItemsCount = calculateActionItemsCount(profile)
+
   return (
-    <DashboardLayout currentSection="analytics" profile={profile}>
+    <DashboardLayout currentSection="analytics" profile={profile} actionItemsCount={actionItemsCount}>
     <div className="space-y-6 relative">
       {/* Upgrade Overlay */}
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">

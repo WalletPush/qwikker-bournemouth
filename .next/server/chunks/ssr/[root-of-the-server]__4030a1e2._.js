@@ -512,7 +512,7 @@ async function sendProfileUpdateSlackNotification(profileData, updatedFields) {
 "[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
 "use strict";
 
-/* __next_internal_action_entry_do_not_use__ [{"408d05e08a002eeb4f7db2d2da1d096d6486b03ce3":"deleteOffer","60018773fd9b11481ffb12600c6032a5613918a812":"addSecretMenuItem","60c810bc0ce80aa166c50eda23642390059c3bda5c":"deleteSecretMenuItem","60d2bd2e7a334d8c2d68641ddd02fee8fbb6bf2baf":"createOffer","60dd086945378090aa5100c49572622dd4b6e2e0f2":"updateBusinessInfo"},"",""] */ __turbopack_context__.s([
+/* __next_internal_action_entry_do_not_use__ [{"408019a566ec2044e161767077c0f78182dde47013":"submitBusinessForReview","408d05e08a002eeb4f7db2d2da1d096d6486b03ce3":"deleteOffer","60018773fd9b11481ffb12600c6032a5613918a812":"addSecretMenuItem","60c810bc0ce80aa166c50eda23642390059c3bda5c":"deleteSecretMenuItem","60d2bd2e7a334d8c2d68641ddd02fee8fbb6bf2baf":"createOffer","60dd086945378090aa5100c49572622dd4b6e2e0f2":"updateBusinessInfo"},"",""] */ __turbopack_context__.s([
     "addSecretMenuItem",
     ()=>addSecretMenuItem,
     "createOffer",
@@ -521,6 +521,8 @@ async function sendProfileUpdateSlackNotification(profileData, updatedFields) {
     ()=>deleteOffer,
     "deleteSecretMenuItem",
     ()=>deleteSecretMenuItem,
+    "submitBusinessForReview",
+    ()=>submitBusinessForReview,
     "updateBusinessInfo",
     ()=>updateBusinessInfo
 ]);
@@ -760,19 +762,72 @@ async function deleteSecretMenuItem(userId, itemId) {
         data: deletedItem
     };
 }
+async function submitBusinessForReview(userId) {
+    const supabaseAdmin = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$admin$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createAdminClient"])();
+    try {
+        // Update status to pending_review
+        const { error: updateError } = await supabaseAdmin.from('profiles').update({
+            status: 'pending_review',
+            submitted_at: new Date().toISOString()
+        }).eq('user_id', userId);
+        if (updateError) {
+            console.error('Error updating profile status:', updateError);
+            return {
+                success: false,
+                error: 'Failed to submit for review'
+            };
+        }
+        // Get profile data for notification
+        const { data: profile, error: profileError } = await supabaseAdmin.from('profiles').select('*').eq('user_id', userId).single();
+        if (profileError || !profile) {
+            console.error('Error fetching profile:', profileError);
+            return {
+                success: false,
+                error: 'Profile not found'
+            };
+        }
+        // Send notification to admin (you can implement this later)
+        try {
+            await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$integrations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["sendBusinessUpdateNotification"])({
+                businessName: profile.business_name || 'New Business',
+                businessType: profile.business_type || 'Business',
+                action: 'SUBMITTED_FOR_REVIEW',
+                userId: userId,
+                email: profile.email || 'No email',
+                town: profile.business_town || 'Unknown location'
+            });
+        } catch (notificationError) {
+            console.error('Notification failed:', notificationError);
+        // Don't fail the whole operation if notification fails
+        }
+        (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])('/dashboard');
+        return {
+            success: true,
+            message: 'Successfully submitted for review!'
+        };
+    } catch (error) {
+        console.error('Submit for review error:', error);
+        return {
+            success: false,
+            error: 'Failed to submit for review'
+        };
+    }
+}
 ;
 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$action$2d$validate$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ensureServerEntryExports"])([
     addSecretMenuItem,
     createOffer,
     updateBusinessInfo,
     deleteOffer,
-    deleteSecretMenuItem
+    deleteSecretMenuItem,
+    submitBusinessForReview
 ]);
 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(addSecretMenuItem, "60018773fd9b11481ffb12600c6032a5613918a812", null);
 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(createOffer, "60d2bd2e7a334d8c2d68641ddd02fee8fbb6bf2baf", null);
 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(updateBusinessInfo, "60dd086945378090aa5100c49572622dd4b6e2e0f2", null);
 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(deleteOffer, "408d05e08a002eeb4f7db2d2da1d096d6486b03ce3", null);
 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(deleteSecretMenuItem, "60c810bc0ce80aa166c50eda23642390059c3bda5c", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(submitBusinessForReview, "408019a566ec2044e161767077c0f78182dde47013", null);
 }),
 "[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
 "use strict";

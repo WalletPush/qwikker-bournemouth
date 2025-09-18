@@ -4,6 +4,7 @@ import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { calculateActionItemsCount } from '@/lib/utils/action-items-count'
 
 export default async function SupportPage() {
   const supabase = await createClient()
@@ -20,8 +21,10 @@ export default async function SupportPage() {
     .eq('user_id', data.claims.sub)
     .single()
 
+  const actionItemsCount = calculateActionItemsCount(profile)
+
   return (
-    <DashboardLayout currentSection="support" profile={profile}>
+    <DashboardLayout currentSection="support" profile={profile} actionItemsCount={actionItemsCount}>
       <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-white mb-2">Support Center</h1>

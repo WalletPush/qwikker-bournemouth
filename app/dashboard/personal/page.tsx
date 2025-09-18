@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { PersonalInfoPage } from '@/components/dashboard/personal-info-page'
 import { Profile } from '@/types/profiles'
+import { calculateActionItemsCount } from '@/lib/utils/action-items-count'
 
 export default async function DashboardPersonalPage() {
   const supabase = await createClient()
@@ -24,9 +25,10 @@ export default async function DashboardPersonalPage() {
   }
 
   const profile: Profile = profileData
+  const actionItemsCount = calculateActionItemsCount(profile)
 
   return (
-    <DashboardLayout currentSection="personal" profile={profile}>
+    <DashboardLayout currentSection="personal" profile={profile} actionItemsCount={actionItemsCount}>
       <PersonalInfoPage profile={profile} />
     </DashboardLayout>
   )
