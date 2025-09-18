@@ -37,7 +37,7 @@ export function UserSecretMenuPage() {
   const filters = [
     { id: 'all', label: 'All Secrets', count: enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0) },
     { id: 'unlocked', label: 'My Unlocked', count: Array.from(unlockedItems).length },
-    { id: 'legendary', label: 'Legendary Items', count: enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.filter(item => (item.rarity || 0) >= 5).length, 0) },
+    { id: 'legendary', label: 'Legendary Items', count: mockUserProfile.plan === 'spotlight' ? enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.filter(item => (item.rarity || 0) >= 5).length, 0) : 0 },
   ]
 
   // Classy badge popup function
@@ -120,10 +120,15 @@ export function UserSecretMenuPage() {
     if (selectedFilter === 'unlocked') {
       // Show only unlocked items
     } else if (selectedFilter === 'legendary') {
-      filtered = filtered.map(menu => ({
-        ...menu,
-        items: menu.items.filter(item => (item.rarity || 0) >= 5)
-      })).filter(menu => menu.items.length > 0)
+      // Only Spotlight subscribers can see legendary items
+      if (mockUserProfile.plan === 'spotlight') {
+        filtered = filtered.map(menu => ({
+          ...menu,
+          items: menu.items.filter(item => (item.rarity || 0) >= 5)
+        })).filter(menu => menu.items.length > 0)
+      } else {
+        filtered = [] // No legendary items for non-Spotlight users
+      }
     }
 
     return filtered
@@ -200,8 +205,8 @@ export function UserSecretMenuPage() {
         
         {/* Top badges row */}
         <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-10">
-          {/* Rarity Badge */}
-          {(item.rarity || 0) >= 5 && (
+          {/* Rarity Badge - Only for Spotlight subscribers */}
+          {(item.rarity || 0) >= 5 && mockUserProfile.plan === 'spotlight' && (
             <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-2 py-1 rounded-full font-bold shadow-lg">
               LEGENDARY
             </span>

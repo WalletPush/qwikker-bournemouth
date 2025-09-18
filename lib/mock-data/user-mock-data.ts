@@ -11,6 +11,7 @@ export interface UserProfile {
   experiencePoints: number
   nextLevelXP: number
   tier: 'explorer' | 'insider' | 'legend'
+  plan: 'starter' | 'featured' | 'spotlight' | 'pro' // User's subscription plan
   badges: Badge[]
   stats: UserStats
   referralCode: string
@@ -828,6 +829,7 @@ export const mockUserProfile: UserProfile = {
   experiencePoints: 1250,
   nextLevelXP: 2000,
   tier: 'insider',
+  plan: 'spotlight', // Premium user with access to legendary items
   badges: [
     { ...mockBadges[0], unlockedDate: '2024-01-05T12:00:00Z' }, // First Steps
     { ...mockBadges[1], unlockedDate: '2024-01-05T14:30:00Z' }, // Conversation Starter
