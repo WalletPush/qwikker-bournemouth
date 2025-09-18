@@ -63,7 +63,20 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   const mediumPriorityTodos = []
   const lowPriorityTodos = []
   
-  // HIGH PRIORITY - Critical for QWIKKER database and AI responses
+  // HIGH PRIORITY - Critical for going live on user dashboard
+  if (!profile?.business_hours) {
+    highPriorityTodos.push({ 
+      title: 'Add your business hours', 
+      href: '/dashboard/business',
+      priority: 'HIGH',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )
+    })
+  }
+
   if (!profile?.logo) {
     highPriorityTodos.push({ 
       title: 'Upload your business logo', 
@@ -72,6 +85,19 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      )
+    })
+  }
+
+  if (!profile?.business_description) {
+    highPriorityTodos.push({ 
+      title: 'Add your business description', 
+      href: '/dashboard/business',
+      priority: 'HIGH',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
         </svg>
       )
     })
@@ -226,6 +252,17 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   // Combine all todos in priority order
   const todoItems = [...highPriorityTodos, ...mediumPriorityTodos, ...lowPriorityTodos]
 
+  // Calculate profile completion percentage
+  const requiredFields = [
+    'business_name', 'business_hours', 'business_description', 'logo', 'menu_url', 'offer_name'
+  ]
+  const completedFields = requiredFields.filter(field => profile?.[field])
+  const completionPercentage = Math.round((completedFields.length / requiredFields.length) * 100)
+  
+  // Check if profile is ready for review (all high priority items completed)
+  const isReadyForReview = highPriorityTodos.length === 0 && profile?.offer_name
+  const currentStatus = profile?.status || 'incomplete'
+
   const businessName = profile?.business_name || 'Your Business'
 
   const modalContent = {
@@ -324,32 +361,60 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
           </CardContent>
         </Card>
 
-        {/* Business Profile Card */}
+        {/* Profile Completion Card */}
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Business Profile
+              Profile Completion
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
-                <p className="font-semibold text-white">{businessName}</p>
-                <p className="text-sm text-gray-400">{profile?.business_type || 'Business Type'}</p>
-                <p className="text-sm text-gray-400">{profile?.town || 'Location'}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-400">Progress</span>
+                  <span className="text-sm font-semibold text-[#00d083]">{completionPercentage}%</span>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-[#00d083] to-[#00b86f] h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${completionPercentage}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    currentStatus === 'approved' ? 'bg-green-400' :
+                    currentStatus === 'pending_review' ? 'bg-yellow-400' :
+                    currentStatus === 'rejected' ? 'bg-red-400' :
+                    'bg-gray-400'
+                  }`}></div>
+                  <span className="text-sm text-gray-300">
+                    {currentStatus === 'approved' ? 'Live on Qwikker!' :
+                     currentStatus === 'pending_review' ? 'Under Review' :
+                     currentStatus === 'rejected' ? 'Needs Changes' :
+                     'Profile Incomplete'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400">
+                  {businessName} • {profile?.business_type || 'Business'} • {profile?.business_town || 'Location'}
+                </p>
               </div>
               
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-[#00d083] rounded-full animate-pulse"></div>
-                <span className="text-sm text-[#00d083]">Online & Active</span>
-              </div>
-              
-              <Button asChild variant="outline" className="w-full border-slate-600 text-gray-300 hover:bg-slate-700">
-                <Link href="/dashboard/business">Edit Profile</Link>
-              </Button>
+              {isReadyForReview && currentStatus === 'incomplete' ? (
+                <Button className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+                  Submit for Review
+                </Button>
+              ) : (
+                <Button asChild variant="outline" className="w-full border-slate-600 text-gray-300 hover:bg-slate-700">
+                  <Link href="/dashboard/business">Complete Profile</Link>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -424,10 +489,15 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
                   <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
-                  Great job!
+                  {currentStatus === 'approved' ? 'You\'re Live!' : 'Profile Complete!'}
                 </h3>
                 <p className="text-gray-400">
-                  You&apos;ve completed all your action items. Your QWIKKER profile is fully optimized for AI recommendations.
+                  {currentStatus === 'approved' 
+                    ? 'Your business is live on Qwikker and customers can discover you!'
+                    : isReadyForReview 
+                    ? 'Your profile is ready! Submit for review to go live on Qwikker.'
+                    : 'All action items complete. Your profile is optimized and ready for review.'
+                  }
                 </p>
               </div>
             </CardContent>
