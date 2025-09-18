@@ -125,6 +125,19 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     })
   }
 
+  if (!profile?.business_tagline) {
+    requiredTodos.push({ 
+      title: 'Add your business tagline', 
+      href: '/dashboard/business',
+      priority: 'REQUIRED',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+        </svg>
+      )
+    })
+  }
+
   if (!profile?.business_address || !profile?.business_town) {
     requiredTodos.push({ 
       title: 'Complete your business address', 
@@ -179,10 +192,10 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     })
   }
 
-  // Menu preview is required for the menu tab on user dashboard
-  if (!profile?.menu_preview || (Array.isArray(profile.menu_preview) && profile.menu_preview.length === 0)) {
+  // Full menu upload is required for AI knowledge base
+  if (!profile?.menu_url) {
     requiredTodos.push({ 
-      title: 'Upload your menu or service list', 
+      title: 'Upload your full menu (PDF)', 
       href: '/dashboard/files',
       priority: 'REQUIRED',
       icon: (
@@ -192,20 +205,22 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
       )
     })
   }
-  
-  // OPTIONAL - Nice to have but not required for user dashboard listing
-  if (!profile?.business_tagline) {
-    optionalTodos.push({ 
-      title: 'Add a catchy business tagline', 
+
+  // Menu preview is required for the menu tab on user dashboard
+  if (!profile?.menu_preview || (Array.isArray(profile.menu_preview) && profile.menu_preview.length === 0)) {
+    requiredTodos.push({ 
+      title: 'Add featured menu items (top 3-5)', 
       href: '/dashboard/business',
-      priority: 'OPTIONAL',
+      priority: 'REQUIRED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
         </svg>
       )
     })
   }
+  
+  // OPTIONAL - Nice to have but not required for user dashboard listing
 
   if (!profile?.offer_name) {
     optionalTodos.push({ 
@@ -291,7 +306,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   const todoItems = [...requiredTodos, ...optionalTodos]
 
   // Calculate profile completion percentage based on REQUIRED fields only
-  const totalRequiredFields = 8 // business_name, business_hours, business_description, business_address, business_town, business_category, logo, business_images, menu_preview
+  const totalRequiredFields = 10 // business_name, business_hours, business_description, business_tagline, business_address, business_town, business_category, logo, business_images, menu_url, menu_preview
   const completedRequiredFields = totalRequiredFields - requiredTodos.length
   const completionPercentage = Math.round((completedRequiredFields / totalRequiredFields) * 100)
   
