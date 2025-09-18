@@ -4,8 +4,8 @@
     "/": {
       "files": [
         "server/edge/chunks/_f6e3e71d._.js",
-        "server/edge/chunks/[root-of-the-server]__4e4490ab._.js",
-        "server/edge/chunks/turbopack-edge-wrapper_17ad3bb3.js"
+        "server/edge/chunks/[root-of-the-server]__f2b15f93._.js",
+        "server/edge/chunks/turbopack-edge-wrapper_45116f66.js"
       ],
       "name": "middleware",
       "page": "/",
