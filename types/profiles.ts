@@ -46,6 +46,23 @@ export interface Profile {
   trial_expiry: string | null; // ISO timestamp
   is_founder: boolean;
   
+  // Admin approval workflow
+  status: ProfileStatus;
+  admin_notes: string | null;
+  approved_by: string | null; // UUID of admin who approved
+  approved_at: string | null; // ISO timestamp
+  
+  // Business display fields for user dashboard
+  business_hours: string | null;
+  business_tagline: string | null;
+  business_description: string | null;
+  business_images: string[] | null; // Array of image URLs
+  menu_preview: string[] | null; // Array of menu items for quick display
+  business_tier: BusinessTier;
+  rating: number;
+  review_count: number;
+  profile_completion_percentage: number;
+  
   // Referral system
   referral_code: string | null; // Unique referral code for this user
   referred_by: string | null; // Profile ID of who referred this user
@@ -221,4 +238,30 @@ export const SUBSCRIPTION_PLAN_OPTIONS: DropdownOption<SubscriptionPlan>[] = [
   { value: 'starter', label: 'Starter' },
   { value: 'spotlight', label: 'Spotlight' },
   { value: 'pro', label: 'Pro' },
+];
+
+export type ProfileStatus = 
+  | 'incomplete'
+  | 'pending_review'
+  | 'approved'
+  | 'rejected'
+;
+
+export type BusinessTier = 
+  | 'qwikker_picks'
+  | 'featured'
+  | 'recommended'
+;
+
+export const PROFILE_STATUS_OPTIONS: DropdownOption<ProfileStatus>[] = [
+  { value: 'incomplete', label: 'Incomplete' },
+  { value: 'pending_review', label: 'Pending Review' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+];
+
+export const BUSINESS_TIER_OPTIONS: DropdownOption<BusinessTier>[] = [
+  { value: 'qwikker_picks', label: 'Qwikker Picks' },
+  { value: 'featured', label: 'Featured' },
+  { value: 'recommended', label: 'Recommended' },
 ];

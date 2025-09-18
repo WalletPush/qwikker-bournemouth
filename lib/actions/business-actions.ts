@@ -281,3 +281,60 @@ export async function deleteSecretMenuItem(userId: string, itemId: string) {
   revalidatePath('/dashboard/secret-menu')
   return { success: true, data: deletedItem }
 }
+
+/**
+ * Submit business listing for admin review
+ */
+export async function submitBusinessForReview(userId: string) {
+  const supabaseAdmin = createAdminClient()
+
+  try {
+    // Update status to pending_review
+    const { error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({ 
+        status: 'pending_review',
+        submitted_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+
+    if (updateError) {
+      console.error('Error updating profile status:', updateError)
+      return { success: false, error: 'Failed to submit for review' }
+    }
+
+    // Get profile data for notification
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+
+    if (profileError || !profile) {
+      console.error('Error fetching profile:', profileError)
+      return { success: false, error: 'Profile not found' }
+    }
+
+    // Send notification to admin (you can implement this later)
+    try {
+      await sendBusinessUpdateNotification({
+        businessName: profile.business_name || 'New Business',
+        businessType: profile.business_type || 'Business',
+        action: 'SUBMITTED_FOR_REVIEW',
+        userId: userId,
+        email: profile.email || 'No email',
+        town: profile.business_town || 'Unknown location'
+      })
+    } catch (notificationError) {
+      console.error('Notification failed:', notificationError)
+      // Don't fail the whole operation if notification fails
+    }
+
+    revalidatePath('/dashboard')
+    return { success: true, message: 'Successfully submitted for review!' }
+
+  } catch (error) {
+    console.error('Submit for review error:', error)
+    return { success: false, error: 'Failed to submit for review' }
+  }
+}
