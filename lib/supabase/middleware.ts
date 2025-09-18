@@ -4,9 +4,14 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
+  // 🎯 TEMPORARY: Allow public access to user dashboard for demos
+  if (request.nextUrl.pathname.startsWith('/user')) {
+    return supabaseResponse
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,   // ✅ fixed here
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
@@ -31,9 +36,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname !== '/' &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/onboarding') &&
-    !request.nextUrl.pathname.startsWith('/user')  // 🎯 TEMPORARY: Public access for demos
-    // User dashboard temporarily public for family/stakeholder demos
+    !request.nextUrl.pathname.startsWith('/onboarding')
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
