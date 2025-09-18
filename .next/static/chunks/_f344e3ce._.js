@@ -778,9 +778,21 @@ const mockBusinesses = [
         reviewCount: 127,
         distance: 0.3,
         menuPreview: [
-            'Fish & Chips £14',
-            'Seafood Platter £22',
-            'Crab Cakes £16'
+            {
+                name: 'Fish & Chips',
+                price: '14.00',
+                description: 'Fresh cod with hand-cut chips'
+            },
+            {
+                name: 'Seafood Platter',
+                price: '22.00',
+                description: 'Mixed fresh seafood selection'
+            },
+            {
+                name: 'Crab Cakes',
+                price: '16.00',
+                description: 'Homemade with local crab'
+            }
         ],
         hasSecretMenu: true,
         activeOffers: 2,
@@ -807,9 +819,21 @@ const mockBusinesses = [
         reviewCount: 89,
         distance: 0.5,
         menuPreview: [
-            'Flat White £3.20',
-            'Avocado Toast £7.50',
-            'Pastries from £2.80'
+            {
+                name: 'Flat White',
+                price: '3.20',
+                description: 'Smooth espresso with steamed milk'
+            },
+            {
+                name: 'Avocado Toast',
+                price: '7.50',
+                description: 'Sourdough with smashed avocado'
+            },
+            {
+                name: 'Fresh Pastries',
+                price: '2.80',
+                description: 'Daily selection of baked goods'
+            }
         ],
         hasSecretMenu: true,
         activeOffers: 2,
@@ -837,9 +861,21 @@ const mockBusinesses = [
         reviewCount: 203,
         distance: 0.8,
         menuPreview: [
-            'Massage £45',
-            'Facial £35',
-            'Full Day Package £120'
+            {
+                name: 'Relaxing Massage',
+                price: '45.00',
+                description: '60-minute therapeutic massage'
+            },
+            {
+                name: 'Rejuvenating Facial',
+                price: '35.00',
+                description: 'Deep cleansing and moisturizing'
+            },
+            {
+                name: 'Full Day Package',
+                price: '120.00',
+                description: 'Complete spa experience'
+            }
         ],
         hasSecretMenu: false,
         activeOffers: 1,
@@ -865,9 +901,21 @@ const mockBusinesses = [
         reviewCount: 156,
         distance: 1.2,
         menuPreview: [
-            'Pint £4.50',
-            'Tasting Flight £12',
-            'Bar Snacks £6-8'
+            {
+                name: 'Craft Pint',
+                price: '4.50',
+                description: 'Local brewery selection'
+            },
+            {
+                name: 'Tasting Flight',
+                price: '12.00',
+                description: '4 different craft beers'
+            },
+            {
+                name: 'Bar Snacks',
+                price: '7.00',
+                description: 'Selection of pub favorites'
+            }
         ],
         hasSecretMenu: true,
         activeOffers: 2,
@@ -895,9 +943,21 @@ const mockBusinesses = [
         reviewCount: 78,
         distance: 1.5,
         menuPreview: [
-            'Day Pass £12',
-            'Monthly £29',
-            'Personal Training £35/hr'
+            {
+                name: 'Day Pass',
+                price: '12.00',
+                description: 'Full gym access for one day'
+            },
+            {
+                name: 'Monthly Membership',
+                price: '29.00',
+                description: 'Unlimited gym access'
+            },
+            {
+                name: 'Personal Training',
+                price: '35.00',
+                description: 'One-hour session with trainer'
+            }
         ],
         hasSecretMenu: false,
         activeOffers: 0,
@@ -920,9 +980,21 @@ const mockBusinesses = [
         reviewCount: 94,
         distance: 2.1,
         menuPreview: [
-            'Pasta £12-16',
-            'Pizza £10-14',
-            'Wine from £18'
+            {
+                name: 'Fresh Pasta',
+                price: '14.00',
+                description: 'Homemade pasta with seasonal sauce'
+            },
+            {
+                name: 'Wood-Fired Pizza',
+                price: '12.00',
+                description: 'Traditional Italian style'
+            },
+            {
+                name: 'Wine Selection',
+                price: '18.00',
+                description: 'Curated Italian wines'
+            }
         ],
         hasSecretMenu: false,
         activeOffers: 1,
@@ -2159,7 +2231,7 @@ function UserDiscoverPage() {
                                 lineNumber: 111,
                                 columnNumber: 9
                             }, this),
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            business.menuPreview && business.menuPreview.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "bg-slate-700/30 rounded-lg p-3",
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2170,53 +2242,77 @@ function UserDiscoverPage() {
                                                 children: "🍽"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                                lineNumber: 122,
-                                                columnNumber: 13
+                                                lineNumber: 123,
+                                                columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                 className: "text-slate-100 text-sm font-medium",
                                                 children: "Popular items:"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                                lineNumber: 123,
-                                                columnNumber: 13
+                                                lineNumber: 124,
+                                                columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 121,
-                                        columnNumber: 11
+                                        lineNumber: 122,
+                                        columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "space-y-1",
                                         children: [
-                                            business.menuPreview.slice(0, 2).map((item, index)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                    className: "text-slate-300 text-xs",
-                                                    children: item
-                                                }, index, false, {
+                                            business.menuPreview.slice(0, 2).map((item, index)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                    className: "flex items-center justify-between",
+                                                    children: [
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                            className: "text-slate-300 text-xs",
+                                                            children: item.name
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/components/user/user-discover-page.tsx",
+                                                            lineNumber: 129,
+                                                            columnNumber: 19
+                                                        }, this),
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                            className: "text-[#00d083] text-xs font-medium",
+                                                            children: [
+                                                                "£",
+                                                                item.price
+                                                            ]
+                                                        }, void 0, true, {
+                                                            fileName: "[project]/components/user/user-discover-page.tsx",
+                                                            lineNumber: 130,
+                                                            columnNumber: 19
+                                                        }, this)
+                                                    ]
+                                                }, index, true, {
                                                     fileName: "[project]/components/user/user-discover-page.tsx",
-                                                    lineNumber: 127,
-                                                    columnNumber: 15
+                                                    lineNumber: 128,
+                                                    columnNumber: 17
                                                 }, this)),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                            business.menuPreview.length > 2 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                 className: "text-slate-400 text-xs",
-                                                children: "See more..."
-                                            }, void 0, false, {
+                                                children: [
+                                                    "+",
+                                                    business.menuPreview.length - 2,
+                                                    " more items..."
+                                                ]
+                                            }, void 0, true, {
                                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                                lineNumber: 129,
-                                                columnNumber: 13
+                                                lineNumber: 134,
+                                                columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 125,
-                                        columnNumber: 11
+                                        lineNumber: 126,
+                                        columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                lineNumber: 120,
-                                columnNumber: 9
+                                lineNumber: 121,
+                                columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "flex items-center justify-between",
@@ -2229,7 +2325,7 @@ function UserDiscoverPage() {
                                                 children: "🔒 Secret Menu"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                                lineNumber: 137,
+                                                lineNumber: 144,
                                                 columnNumber: 15
                                             }, this),
                                             business.activeOffers > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2241,13 +2337,13 @@ function UserDiscoverPage() {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                                lineNumber: 142,
+                                                lineNumber: 149,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 135,
+                                        lineNumber: 142,
                                         columnNumber: 11
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -2266,23 +2362,23 @@ function UserDiscoverPage() {
                                                 d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                                lineNumber: 151,
+                                                lineNumber: 158,
                                                 columnNumber: 15
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-discover-page.tsx",
-                                            lineNumber: 150,
+                                            lineNumber: 157,
                                             columnNumber: 13
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 149,
+                                        lineNumber: 156,
                                         columnNumber: 11
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                lineNumber: 134,
+                                lineNumber: 141,
                                 columnNumber: 9
                             }, this)
                         ]
@@ -2314,7 +2410,7 @@ function UserDiscoverPage() {
                         children: "Discover Bournemouth"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 164,
+                        lineNumber: 171,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2322,13 +2418,13 @@ function UserDiscoverPage() {
                         children: "Find amazing local businesses, exclusive deals, and hidden gems"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 167,
+                        lineNumber: 174,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-discover-page.tsx",
-                lineNumber: 163,
+                lineNumber: 170,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2348,12 +2444,12 @@ function UserDiscoverPage() {
                                 d: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                lineNumber: 174,
+                                lineNumber: 181,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-discover-page.tsx",
-                            lineNumber: 173,
+                            lineNumber: 180,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -2362,7 +2458,7 @@ function UserDiscoverPage() {
                             className: "w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-slate-600 rounded-xl text-slate-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent"
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-discover-page.tsx",
-                            lineNumber: 176,
+                            lineNumber: 183,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -2370,18 +2466,18 @@ function UserDiscoverPage() {
                             children: "Search"
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-discover-page.tsx",
-                            lineNumber: 181,
+                            lineNumber: 188,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/user/user-discover-page.tsx",
-                    lineNumber: 172,
+                    lineNumber: 179,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/user/user-discover-page.tsx",
-                lineNumber: 171,
+                lineNumber: 178,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2397,12 +2493,12 @@ function UserDiscoverPage() {
                         ]
                     }, filter.id, true, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 190,
+                        lineNumber: 197,
                         columnNumber: 11
                     }, this))
             }, void 0, false, {
                 fileName: "[project]/components/user/user-discover-page.tsx",
-                lineNumber: 188,
+                lineNumber: 195,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2413,7 +2509,7 @@ function UserDiscoverPage() {
                         children: selectedFilter === 'all' ? 'All Places' : selectedFilter === 'qwikker_picks' ? 'Qwikker Picks - Staff Favorites' : selectedFilter === 'featured' ? 'Featured Businesses' : 'Recommended for You'
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 206,
+                        lineNumber: 213,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2426,7 +2522,7 @@ function UserDiscoverPage() {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                lineNumber: 212,
+                                lineNumber: 219,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2443,29 +2539,29 @@ function UserDiscoverPage() {
                                         d: "M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 215,
+                                        lineNumber: 222,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-discover-page.tsx",
-                                    lineNumber: 214,
+                                    lineNumber: 221,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                lineNumber: 213,
+                                lineNumber: 220,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 211,
+                        lineNumber: 218,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-discover-page.tsx",
-                lineNumber: 205,
+                lineNumber: 212,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2474,12 +2570,12 @@ function UserDiscoverPage() {
                         business: business
                     }, business.id, false, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 224,
+                        lineNumber: 231,
                         columnNumber: 11
                     }, this))
             }, void 0, false, {
                 fileName: "[project]/components/user/user-discover-page.tsx",
-                lineNumber: 222,
+                lineNumber: 229,
                 columnNumber: 7
             }, this),
             getFilteredBusinesses().length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2490,18 +2586,18 @@ function UserDiscoverPage() {
                     children: "Load More Places"
                 }, void 0, false, {
                     fileName: "[project]/components/user/user-discover-page.tsx",
-                    lineNumber: 231,
+                    lineNumber: 238,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/user/user-discover-page.tsx",
-                lineNumber: 230,
+                lineNumber: 237,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/components/user/user-discover-page.tsx",
-        lineNumber: 161,
+        lineNumber: 168,
         columnNumber: 5
     }, this);
 }

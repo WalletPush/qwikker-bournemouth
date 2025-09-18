@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { ReferralsPage } from '@/components/dashboard/referrals-page'
 import { Profile } from '@/types/profiles'
+import { calculateActionItemsCount } from '@/lib/utils/action-items-count'
 
 export default async function DashboardReferralsPage() {
   const supabase = await createClient()
@@ -24,9 +25,10 @@ export default async function DashboardReferralsPage() {
   }
 
   const profile: Profile = profileData
+  const actionItemsCount = calculateActionItemsCount(profile)
 
   return (
-    <DashboardLayout currentSection="referrals" profile={profile}>
+    <DashboardLayout currentSection="referrals" profile={profile} actionItemsCount={actionItemsCount}>
       <ReferralsPage profile={profile} />
     </DashboardLayout>
   )

@@ -754,9 +754,21 @@ const mockBusinesses = [
         reviewCount: 127,
         distance: 0.3,
         menuPreview: [
-            'Fish & Chips £14',
-            'Seafood Platter £22',
-            'Crab Cakes £16'
+            {
+                name: 'Fish & Chips',
+                price: '14.00',
+                description: 'Fresh cod with hand-cut chips'
+            },
+            {
+                name: 'Seafood Platter',
+                price: '22.00',
+                description: 'Mixed fresh seafood selection'
+            },
+            {
+                name: 'Crab Cakes',
+                price: '16.00',
+                description: 'Homemade with local crab'
+            }
         ],
         hasSecretMenu: true,
         activeOffers: 2,
@@ -783,9 +795,21 @@ const mockBusinesses = [
         reviewCount: 89,
         distance: 0.5,
         menuPreview: [
-            'Flat White £3.20',
-            'Avocado Toast £7.50',
-            'Pastries from £2.80'
+            {
+                name: 'Flat White',
+                price: '3.20',
+                description: 'Smooth espresso with steamed milk'
+            },
+            {
+                name: 'Avocado Toast',
+                price: '7.50',
+                description: 'Sourdough with smashed avocado'
+            },
+            {
+                name: 'Fresh Pastries',
+                price: '2.80',
+                description: 'Daily selection of baked goods'
+            }
         ],
         hasSecretMenu: true,
         activeOffers: 2,
@@ -813,9 +837,21 @@ const mockBusinesses = [
         reviewCount: 203,
         distance: 0.8,
         menuPreview: [
-            'Massage £45',
-            'Facial £35',
-            'Full Day Package £120'
+            {
+                name: 'Relaxing Massage',
+                price: '45.00',
+                description: '60-minute therapeutic massage'
+            },
+            {
+                name: 'Rejuvenating Facial',
+                price: '35.00',
+                description: 'Deep cleansing and moisturizing'
+            },
+            {
+                name: 'Full Day Package',
+                price: '120.00',
+                description: 'Complete spa experience'
+            }
         ],
         hasSecretMenu: false,
         activeOffers: 1,
@@ -841,9 +877,21 @@ const mockBusinesses = [
         reviewCount: 156,
         distance: 1.2,
         menuPreview: [
-            'Pint £4.50',
-            'Tasting Flight £12',
-            'Bar Snacks £6-8'
+            {
+                name: 'Craft Pint',
+                price: '4.50',
+                description: 'Local brewery selection'
+            },
+            {
+                name: 'Tasting Flight',
+                price: '12.00',
+                description: '4 different craft beers'
+            },
+            {
+                name: 'Bar Snacks',
+                price: '7.00',
+                description: 'Selection of pub favorites'
+            }
         ],
         hasSecretMenu: true,
         activeOffers: 2,
@@ -871,9 +919,21 @@ const mockBusinesses = [
         reviewCount: 78,
         distance: 1.5,
         menuPreview: [
-            'Day Pass £12',
-            'Monthly £29',
-            'Personal Training £35/hr'
+            {
+                name: 'Day Pass',
+                price: '12.00',
+                description: 'Full gym access for one day'
+            },
+            {
+                name: 'Monthly Membership',
+                price: '29.00',
+                description: 'Unlimited gym access'
+            },
+            {
+                name: 'Personal Training',
+                price: '35.00',
+                description: 'One-hour session with trainer'
+            }
         ],
         hasSecretMenu: false,
         activeOffers: 0,
@@ -896,9 +956,21 @@ const mockBusinesses = [
         reviewCount: 94,
         distance: 2.1,
         menuPreview: [
-            'Pasta £12-16',
-            'Pizza £10-14',
-            'Wine from £18'
+            {
+                name: 'Fresh Pasta',
+                price: '14.00',
+                description: 'Homemade pasta with seasonal sauce'
+            },
+            {
+                name: 'Wood-Fired Pizza',
+                price: '12.00',
+                description: 'Traditional Italian style'
+            },
+            {
+                name: 'Wine Selection',
+                price: '18.00',
+                description: 'Curated Italian wines'
+            }
         ],
         hasSecretMenu: false,
         activeOffers: 1,
