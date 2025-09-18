@@ -91,7 +91,8 @@ export interface MockBusiness {
   hours: string
   logo?: string
   images: string[]
-  tier: 'qwikker_picks' | 'featured' | 'recommended'
+  tier: 'qwikker_picks' | 'featured' | 'recommended' // Legacy field - now use plan for badges
+  plan: 'starter' | 'featured' | 'spotlight' | 'pro' // Subscription plan - determines badges
   category: string
   rating: number
   reviewCount: number
@@ -165,6 +166,7 @@ export const mockBusinesses: MockBusiness[] = [
     hours: '12pm - 10pm',
     images: ['https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&h=300&fit=crop&crop=center'],
     tier: 'qwikker_picks',
+    plan: 'spotlight', // Spotlight plan = Qwikker Pick badge
     category: 'Restaurant',
     rating: 4.8,
     reviewCount: 127,
@@ -189,6 +191,7 @@ export const mockBusinesses: MockBusiness[] = [
     hours: '7am - 6pm',
     images: ['https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center'],
     tier: 'qwikker_picks',
+    plan: 'spotlight', // Spotlight plan = Qwikker Pick badge
     category: 'Cafe',
     rating: 4.9,
     reviewCount: 89,
@@ -215,6 +218,7 @@ export const mockBusinesses: MockBusiness[] = [
     hours: '9am - 8pm',
     images: ['https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&h=300&fit=crop&crop=center'],
     tier: 'featured',
+    plan: 'featured', // Featured plan = Featured badge
     category: 'Spa',
     rating: 4.6,
     reviewCount: 203,
@@ -239,6 +243,7 @@ export const mockBusinesses: MockBusiness[] = [
     hours: '4pm - 11pm',
     images: ['https://images.unsplash.com/photo-1436076863939-06870fe779c2?w=400&h=300&fit=crop&crop=center'],
     tier: 'featured',
+    plan: 'featured', // Featured plan = Featured badge
     category: 'Bar',
     rating: 4.5,
     reviewCount: 156,
@@ -265,6 +270,7 @@ export const mockBusinesses: MockBusiness[] = [
     hours: '6am - 10pm',
     images: ['https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&crop=center'],
     tier: 'recommended',
+    plan: 'starter', // Starter plan = No special badge
     category: 'Gym',
     rating: 4.5,
     reviewCount: 78,
@@ -288,6 +294,7 @@ export const mockBusinesses: MockBusiness[] = [
     hours: '5pm - 10pm',
     images: ['https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=300&fit=crop&crop=center'],
     tier: 'recommended',
+    plan: 'starter', // Starter plan = No special badge
     category: 'Restaurant',
     rating: 4.6,
     reviewCount: 94,

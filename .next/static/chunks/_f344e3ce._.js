@@ -773,6 +773,7 @@ const mockBusinesses = [
             'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'qwikker_picks',
+        plan: 'spotlight',
         category: 'Restaurant',
         rating: 4.8,
         reviewCount: 127,
@@ -814,6 +815,7 @@ const mockBusinesses = [
             'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'qwikker_picks',
+        plan: 'spotlight',
         category: 'Cafe',
         rating: 4.9,
         reviewCount: 89,
@@ -856,6 +858,7 @@ const mockBusinesses = [
             'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'featured',
+        plan: 'featured',
         category: 'Spa',
         rating: 4.6,
         reviewCount: 203,
@@ -896,6 +899,7 @@ const mockBusinesses = [
             'https://images.unsplash.com/photo-1436076863939-06870fe779c2?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'featured',
+        plan: 'featured',
         category: 'Bar',
         rating: 4.5,
         reviewCount: 156,
@@ -938,6 +942,7 @@ const mockBusinesses = [
             'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'recommended',
+        plan: 'starter',
         category: 'Gym',
         rating: 4.5,
         reviewCount: 78,
@@ -975,6 +980,7 @@ const mockBusinesses = [
             'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'recommended',
+        plan: 'starter',
         category: 'Restaurant',
         rating: 4.6,
         reviewCount: 94,
@@ -1901,10 +1907,10 @@ var _s = __turbopack_context__.k.signature();
 function UserDiscoverPage() {
     _s();
     const [selectedFilter, setSelectedFilter] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('all');
-    // Group businesses by tier
-    const qwikkerPicks = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].filter((b)=>b.tier === 'qwikker_picks');
-    const featured = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].filter((b)=>b.tier === 'featured');
-    const recommended = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].filter((b)=>b.tier === 'recommended');
+    // Group businesses by subscription plan (determines badges)
+    const qwikkerPicks = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].filter((b)=>b.plan === 'spotlight');
+    const featured = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].filter((b)=>b.plan === 'featured');
+    const recommended = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].filter((b)=>b.plan === 'starter');
     const filters = [
         {
             id: 'all',
@@ -1969,7 +1975,7 @@ function UserDiscoverPage() {
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "absolute top-3 right-3",
                                 children: [
-                                    business.tier === 'qwikker_picks' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                    business.plan === 'spotlight' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg animate-pulse",
                                         children: "⭐ QWIKKER PICK"
                                     }, void 0, false, {
@@ -1977,7 +1983,7 @@ function UserDiscoverPage() {
                                         lineNumber: 48,
                                         columnNumber: 13
                                     }, this),
-                                    business.tier === 'featured' && business.tier !== 'qwikker_picks' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                    business.plan === 'featured' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg",
                                         children: "FEATURED"
                                     }, void 0, false, {
