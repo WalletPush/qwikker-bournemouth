@@ -335,6 +335,24 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/user/secret-menu/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/user/secret-menu">> = Specific
+  const handler = {} as typeof import("../../app/user/secret-menu/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/user/settings/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/user/settings">> = Specific
+  const handler = {} as typeof import("../../app/user/settings/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/auth/confirm/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/auth/confirm">> = Specific

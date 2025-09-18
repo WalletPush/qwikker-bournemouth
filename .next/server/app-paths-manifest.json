@@ -1,15 +1,5 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/auth/login/page": "app/auth/login/page.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/page": "app/page.js",
-  "/user/business/[slug]/page": "app/user/business/[slug]/page.js",
-  "/user/chat/page": "app/user/chat/page.js",
-  "/user/credits/page": "app/user/credits/page.js",
-  "/user/dashboard/page": "app/user/dashboard/page.js",
-  "/user/discover/page": "app/user/discover/page.js",
-  "/user/how-it-works/page": "app/user/how-it-works/page.js",
-  "/user/offers/page": "app/user/offers/page.js",
-  "/user/secret-menu/page": "app/user/secret-menu/page.js",
-  "/user/settings/page": "app/user/settings/page.js"
+  "/user/dashboard/page": "app/user/dashboard/page.js"
 }

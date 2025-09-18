@@ -1,0 +1,1554 @@
+FOUNDING MEMBER FORM FINAL!!
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QWIKKER - Business Registration</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 0;
+        }
+
+        .logo {
+            font-size: 36px;
+            font-weight: 700;
+            color: #00d083;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        .tagline {
+            font-size: 18px;
+            color: #888;
+            font-weight: 400;
+            margin-bottom: 12px;
+        }
+
+        .exclusive {
+            display: inline-block;
+            background: #00d083;
+            color: #0a0a0a;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Progress */
+        .progress-container {
+            margin-bottom: 40px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 3px;
+            background: #1a1a1a;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d083, #00b86f);
+            border-radius: 2px;
+            transition: width 0.4s ease;
+            box-shadow: 0 0 10px rgba(0, 208, 131, 0.3);
+        }
+
+        .step-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Form Card */
+        .form-card {
+            background: linear-gradient(145deg, #111, #0f0f0f);
+            border: 1px solid #222;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 32px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .step-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #fff, #ccc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .step-subtitle {
+            font-size: 16px;
+            color: #888;
+            margin-bottom: 32px;
+        }
+
+        /* Form Elements */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            color: #ccc;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        label .required {
+            color: #ff6b6b;
+            margin-left: 2px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 16px 18px;
+            background: #0a0a0a;
+            border: 2px solid #333;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #00d083;
+            box-shadow: 0 0 0 4px rgba(0, 208, 131, 0.1);
+            background: #0f0f0f;
+        }
+
+        input::placeholder, textarea::placeholder {
+            color: #555;
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        select option {
+            background: #111;
+            color: #fff;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        /* File Upload */
+        .file-upload {
+            position: relative;
+            border: 2px dashed #333;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(145deg, #0a0a0a, #111);
+        }
+
+        .file-upload:hover {
+            border-color: #00d083;
+            background: rgba(0, 208, 131, 0.03);
+            transform: translateY(-2px);
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            background: none;
+        }
+
+        .file-upload-content {
+            pointer-events: none;
+        }
+
+        .file-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+            opacity: 0.7;
+        }
+
+        .file-text {
+            color: #888;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .file-subtext {
+            color: #666;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .file-upload.has-file {
+            border-color: #00d083;
+            background: rgba(0, 208, 131, 0.05);
+        }
+
+        .file-upload.has-file .file-text {
+            color: #00d083;
+            font-weight: 600;
+        }
+
+        .uploaded-files {
+            margin-top: 12px;
+        }
+
+        .uploaded-file {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: 4px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .uploaded-file .file-name {
+            color: #00d083;
+            flex: 1;
+        }
+
+        .uploaded-file .file-size {
+            color: #666;
+            margin: 0 8px;
+        }
+
+        .uploaded-file .remove-file {
+            background: #333;
+            border: none;
+            color: #ff6b6b;
+            border-radius: 4px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .add-more-files {
+            color: #00d083;
+            font-size: 12px;
+            margin-top: 8px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        /* Helper text */
+        .helper-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        /* Buttons */
+        .nav-buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 40px;
+        }
+
+        .btn {
+            padding: 16px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            position: relative;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d083, #00b86f);
+            color: #fff;
+            flex: 1;
+            box-shadow: 0 4px 20px rgba(0, 208, 131, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 208, 131, 0.4);
+        }
+
+        .btn-secondary {
+            background: #222;
+            color: #ccc;
+            border: 2px solid #333;
+        }
+
+        .btn-secondary:hover {
+            background: #2a2a2a;
+            color: #fff;
+            border-color: #444;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn.loading {
+            color: transparent;
+        }
+
+        .btn.loading::after {
+            content: "";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            border: 2px solid transparent;
+            border-top: 2px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Premium Gold Popup */
+        .popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .popup-content {
+            background: linear-gradient(145deg, #1a1a1a, #111);
+            border: 2px solid #FFD700;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 520px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(255, 215, 0, 0.2);
+        }
+
+        .popup-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700);
+        }
+
+        .popup-badge {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: inline-block;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .popup-title {
+            color: #FFD700;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
+        }
+
+        .popup-text {
+            color: #ddd;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+
+        .popup-countdown {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid #FFD700;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .popup-countdown .countdown-text {
+            color: #FFD700;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .popup-buttons {
+            display: flex;
+            gap: 16px;
+        }
+
+        .popup-btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .popup-btn.accept {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #000;
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .popup-btn.accept:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255, 215, 0, 0.4);
+        }
+
+        .popup-btn.decline {
+            background: #333;
+            color: #ccc;
+            border: 1px solid #555;
+        }
+
+        .popup-btn.decline:hover {
+            background: #444;
+            color: #fff;
+        }
+
+        /* Error/Success Messages */
+        .message {
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            display: none;
+            border-left: 4px solid;
+        }
+
+        .message.success {
+            background: rgba(0, 208, 131, 0.1);
+            border-color: #00d083;
+            color: #00d083;
+        }
+
+        .message.error {
+            background: rgba(255, 107, 107, 0.1);
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        /* Success Page */
+        .success-container {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .success-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #00d083, #00b86f);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            margin: 0 auto 32px;
+            color: #fff;
+            box-shadow: 0 8px 32px rgba(0, 208, 131, 0.3);
+        }
+
+        .success-title {
+            font-size: 36px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 16px;
+        }
+
+        .success-subtitle {
+            font-size: 18px;
+            color: #888;
+            margin-bottom: 40px;
+        }
+
+        .success-info {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 32px;
+            text-align: left;
+        }
+
+        .success-info h3 {
+            color: #00d083;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .success-info p {
+            color: #ccc;
+            margin-bottom: 12px;
+        }
+
+        .success-info p:last-child {
+            margin-bottom: 0;
+        }
+
+        .highlight {
+            color: #00d083;
+            font-weight: 600;
+        }
+
+        /* Edit button styling */
+        .edit-btn {
+            background: #333;
+            color: #ccc;
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .edit-btn:hover {
+            background: #444;
+            color: #fff;
+            border-color: #666;
+            transform: translateY(-1px);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 16px;
+            }
+
+            .form-card {
+                padding: 24px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+            }
+
+            .popup-content {
+                margin: 20px;
+                padding: 28px;
+            }
+
+            .popup-buttons {
+                flex-direction: column;
+            }
+
+            .step-title {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Premium Gold Popup -->
+    <div class="popup" id="popup">
+        <div class="popup-content">
+            <div class="popup-badge">Limited Time Offer</div>
+            <h2 class="popup-title">Founding Member Exclusive</h2>
+            <div class="popup-text">
+                <strong>Get 16 months for the price of 10</strong> + <strong>20% OFF the Spotlight Plan for life</strong> when you sign up before January 20, 2026.
+                <br><br>
+                <strong>16 months for just 10 months</strong> cost<br>
+                <strong>20% OFF Spotlight Plan</strong> forever<br>
+                Priority support & onboarding<br>
+                Advanced analytics dashboard<br>
+                Custom branding options
+            </div>
+            <div class="popup-countdown">
+                <div class="countdown-text">Offer expires: January 20, 2026</div>
+            </div>
+            <div class="popup-buttons">
+                <button class="popup-btn accept" onclick="closePopup()">Take Me to the Spotlight Plan</button>
+                <button class="popup-btn decline" onclick="closePopup()">Continue with Free Trial for Now</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Clean Header -->
+        <div class="header">
+            <div class="logo">QWIKKER</div>
+            <div class="tagline">Business Registration</div>
+            <div class="exclusive">Invitation Only</div>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 16.67%;"></div>
+            </div>
+            <div class="step-info">
+                <span>Step <span id="stepNumber">1</span> of 6</span>
+                <span id="stepTitle">Personal Information</span>
+            </div>
+        </div>
+
+        <!-- Form Card -->
+        <div class="form-card">
+            <!-- Messages -->
+            <div class="message success" id="successMessage"></div>
+            <div class="message error" id="errorMessage"></div>
+
+            <!-- Step 1: Personal Info -->
+            <div class="step active" id="step1">
+                <h2 class="step-title">Personal Information</h2>
+                <p class="step-subtitle">Let's start with your contact details</p>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">First Name <span class="required">*</span></label>
+                        <input type="text" id="firstName" placeholder="John" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name <span class="required">*</span></label>
+                        <input type="text" id="lastName" placeholder="Smith" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">Email Address <span class="required">*</span></label>
+                        <input type="email" id="email" placeholder="john@company.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmEmail">Confirm Email <span class="required">*</span></label>
+                        <input type="email" id="confirmEmail" placeholder="john@company.com" required>
+                        <div class="helper-text">Please confirm your email address</div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="phone">Phone Number <span class="required">*</span></label>
+                        <input type="tel" id="phone" placeholder="+44 7890 123456" required>
+                    </div>
+                    <div class="form-group">
+                        <!-- Empty for spacing -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Business Info -->
+            <div class="step" id="step2">
+                <h2 class="step-title">Business Information</h2>
+                <p class="step-subtitle">Tell us about your business</p>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="businessName">Business Name <span class="required">*</span></label>
+                        <input type="text" id="businessName" placeholder="Your Business Name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="businessType">Business Type <span class="required">*</span></label>
+                       <select id="businessType" name="businessType" required>
+  <option value="">Select your business type</option>
+  <option value="Restaurant">Restaurant</option>
+  <option value="Cafe/Coffee Shop">Cafe/Coffee Shop</option>
+  <option value="Bar/Pub">Bar/Pub</option>
+  <option value="Dessert/Ice Cream">Dessert/Ice Cream</option>
+  <option value="Takeaway/Street Food">Takeaway/Street Food</option>
+  <option value="Salon/Spa">Salon/Spa</option>
+  <option value="Hairdresser/Barber">Hairdresser/Barber</option>
+  <option value="Tattoo/Piercing">Tattoo/Piercing</option>
+  <option value="Clothing/Fashion">Clothing/Fashion</option>
+  <option value="Gift Shop">Gift Shop</option>
+  <option value="Fitness/Gym">Fitness/Gym</option>
+  <option value="Sports/Outdoors">Sports/Outdoors</option>
+  <option value="Hotel/BnB">Hotel/BnB</option>
+  <option value="Venue/Event Space">Venue/Event Space</option>
+  <option value="Entertainment/Attractions">Entertainment/Attractions</option>
+  <option value="Professional Services">Professional Services</option>
+  <option value="Other">Other</option>
+</select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="businessCategory">What category would you say you fall into? <span class="required">*</span></label>
+                    <input type="text" id="businessCategory" placeholder="e.g. Chinese Restaurant, Burger Bar, Hair Salon, Rock Climbing Centre, Escape Room, Wedding Venue" required>
+                    <div class="helper-text">Be specific - this helps customers find you</div>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label for="businessAddress">Business Address <span class="required">*</span></label>
+                    <input type="text" id="businessAddress" placeholder="123 High Street, Your Town" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="town">Town/City <span class="required">*</span></label>
+                        <select id="town" required>
+                            <option value="">Select town</option>
+                            <option value="bournemouth">Bournemouth</option>
+                            <option value="christchurch">Christchurch</option>
+                            <option value="poole">Poole</option>
+                            <option value="other">Other (please specify in notes)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="postcode">Postcode <span class="required">*</span></label>
+                        <input type="text" id="postcode" placeholder="BH1 2AB" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="website">Website URL</label>
+                        <input type="url" id="website" placeholder="https://yourbusiness.com">
+                        <div class="helper-text">We'll scan your website for business hours and information</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="instagram">Instagram Handle</label>
+                        <input type="text" id="instagram" placeholder="@yourbusiness">
+                        <div class="helper-text">For social media integration and promotion</div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="facebook">Facebook Page</label>
+                        <input type="url" id="facebook" placeholder="https://facebook.com/yourbusiness">
+                    </div>
+                    <div class="form-group">
+                        <label>Business Logo</label>
+                        <div class="file-upload" onclick="handleFileUpload('logoUpload')">
+                            <input type="file" id="logoUpload" accept="image/*" onchange="updateFileUpload('logoUpload', 'logo')">
+                            <div class="file-upload-content">
+                                <div class="file-icon">IMG</div>
+                                <div class="file-text">Upload your logo</div>
+                                <div class="file-subtext">Files accepted: PNG, JPG, SVG up to 5MB</div>
+                            </div>
+                        </div>
+                        <div class="uploaded-files" id="logoFiles"></div>
+                        <div class="helper-text">High resolution logo for best results</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Menu/Price List Upload -->
+            <div class="step" id="step3">
+                <h2 class="step-title">Menu & Price List</h2>
+                <p class="step-subtitle">Upload your menu or service price list (PDF files only)</p>
+                
+                <div class="form-group">
+                    <label>Menu or Service Price List</label>
+                    <div class="file-upload" onclick="handleFileUpload('menuUpload')">
+                        <input type="file" id="menuUpload" accept=".pdf" multiple onchange="updateFileUpload('menuUpload', 'menu')">
+                        <div class="file-upload-content">
+                            <div class="file-icon">PDF</div>
+                            <div class="file-text">Upload PDF files</div>
+                            <div class="file-subtext">PDF files only, up to 10MB each</div>
+                        </div>
+                    </div>
+                    <div class="uploaded-files" id="menuFiles"></div>
+                    <div class="helper-text">This will be added to the QWIKKER database and featured in AI chat responses</div>
+                </div>
+            </div>
+
+            <!-- Step 4: Launch Offer -->
+            <div class="step" id="step4">
+                <h2 class="step-title">QWIKKER Exclusive Offer (Optional)</h2>
+                <p class="step-subtitle">Create your first customer offer - optional but recommended</p>
+                
+                <div class="form-group">
+                    <label for="offerName">Offer Name</label>
+                    <input type="text" id="offerName" placeholder="New Customer Welcome Offer">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="offerType">Offer Type</label>
+                        <select id="offerType">
+                            <option value="">Select offer type</option>
+                            <option value="percentage">Percentage Discount</option>
+                            <option value="fixed">Fixed Amount Off</option>
+                            <option value="bogo">Buy One Get One</option>
+                            <option value="free-item">Free Item/Service</option>
+                            <option value="bundle">Bundle Deal</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="offerValue">Offer Value</label>
+                        <input type="text" id="offerValue" placeholder="20% or £10 or BOGO">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="claimAmount">Claim Amount</label>
+                        <select id="claimAmount">
+                            <option value="">Select claim amount</option>
+                            <option value="one-time">One Time</option>
+                            <option value="multiple">Multiple</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <!-- Empty for spacing -->
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="startDate">Start Date</label>
+                        <input type="date" id="startDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">End Date</label>
+                        <input type="date" id="endDate">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="terms">Terms & Conditions</label>
+                    <textarea id="terms" rows="3" placeholder="Valid for new customers only. Cannot be combined with other offers. Valid ID required..."></textarea>
+                    <div class="helper-text">Clear terms help avoid confusion and disputes</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Offer Image (Optional)</label>
+                    <div class="file-upload" onclick="handleFileUpload('offerImage')">
+                        <input type="file" id="offerImage" accept="image/*" onchange="updateFileUpload('offerImage', 'offer')">
+                        <div class="file-upload-content">
+                            <div class="file-icon">IMG</div>
+                            <div class="file-text">Upload offer image</div>
+                            <div class="file-subtext">Leave blank - we'll create professional artwork</div>
+                        </div>
+                    </div>
+                    <div class="uploaded-files" id="offerFiles"></div>
+                    <div class="helper-text">Our design team will create stunning visuals if you don't upload one</div>
+                </div>
+            </div>
+
+            <!-- Step 5: Additional Details -->
+            <div class="step" id="step5">
+                <h2 class="step-title">Additional Information</h2>
+                <p class="step-subtitle">Help us serve you better</p>
+                
+                <div class="form-group">
+                    <label for="referralSource">How did you hear about QWIKKER?</label>
+                    <select id="referralSource">
+                        <option value="">Please select</option>
+                        <option value="founding-member">Founding Member Invitation</option>
+                        <option value="business-referral">Business Referral</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="goals">Primary Business Goals (Optional)</label>
+                    <textarea id="goals" rows="3" placeholder="Increase foot traffic, attract new customers, improve customer retention, boost revenue..."></textarea>
+                    <div class="helper-text">This helps us customize your QWIKKER experience</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Additional Notes</label>
+                    <textarea id="notes" rows="2" placeholder="Anything else you'd like us to know about your business?"></textarea>
+                </div>
+            </div>
+
+            <!-- Step 6: Review -->
+            <div class="step" id="step6">
+                <h2 class="step-title">Review Registration</h2>
+                <p class="step-subtitle">Please review your information before submitting</p>
+                
+                <div id="reviewContent">
+                    <!-- Review content will be populated here -->
+                </div>
+
+                <div style="background: #111; border: 1px solid #333; border-radius: 10px; padding: 20px; margin: 24px 0;">
+                    <p style="font-size: 12px; color: #888; line-height: 1.5; margin-bottom: 8px;"><strong>By clicking "Start Free Trial" below, you agree to:</strong></p>
+                    <p style="font-size: 12px; color: #888; line-height: 1.5; margin-bottom: 8px;">• Our <a href="#" target="_blank" style="color: #00d083; text-decoration: none;">Terms of Service</a> and <a href="#" target="_blank" style="color: #00d083; text-decoration: none;">Privacy Policy</a></p>
+                    <p style="font-size: 12px; color: #888; line-height: 1.5; margin-bottom: 8px;">• Receive important updates and notifications about your QWIKKER account</p>
+                    <p style="font-size: 12px; color: #888; line-height: 1.5; margin-bottom: 0;">• Our team contacting you to help optimize your business offers</p>
+                </div>
+                
+                <button class="btn btn-primary" onclick="submitRegistration()" style="width: 100%; margin-top: 24px;" id="submitBtn">
+                    Start Free Trial
+                </button>
+            </div>
+
+            <!-- Step 7: Success -->
+            <div class="step" id="step7">
+                <div class="success-container">
+                    <div class="success-icon">✓</div>
+                    <h1 class="success-title">Welcome to QWIKKER!</h1>
+                    <p class="success-subtitle">Your registration is complete and being processed</p>
+                    
+                    <div class="success-info">
+                        <h3>What happens next?</h3>
+                        <p><strong>Within 2 hours:</strong> You'll receive your welcome email</p>
+                        <p><strong>Business verification:</strong> Our team will verify your business details (24-48 hours)</p>
+                        <p><strong>Marketing materials:</strong> You can now display the <span class="highlight">table tents and window sticker</span> to promote your offers</p>
+                        <p><strong>Go live:</strong> Start attracting customers with your first offer!</p>
+                        <br>
+                        <p style="text-align: center; color: #00d083; font-weight: 600;">Check your email for next steps</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="nav-buttons" id="navButtons">
+            <button class="btn btn-secondary" id="prevBtn" onclick="goToPreviousStep()" disabled>← Previous</button>
+            <button class="btn btn-primary" id="nextBtn" onclick="goToNextStep()">Continue →</button>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 6;
+        let uploadedFiles = {
+            logo: [],
+            menu: [],
+            offer: []
+        };
+
+        function closePopup() {
+            document.getElementById('popup').style.display = 'none';
+        }
+
+        function showMessage(message, type) {
+            const messageEl = document.getElementById(type + 'Message');
+            if (messageEl) {
+                messageEl.textContent = message;
+                messageEl.style.display = 'block';
+                setTimeout(() => {
+                    messageEl.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function validateFileSize(file, maxSizeMB) {
+            const maxSize = maxSizeMB * 1024 * 1024; // Convert MB to bytes
+            return file.size <= maxSize;
+        }
+
+        function handleFileUpload(inputId) {
+            document.getElementById(inputId).click();
+        }
+
+        function updateFileUpload(inputId, type) {
+            const input = document.getElementById(inputId);
+            const files = Array.from(input.files);
+            const filesContainer = document.getElementById(type + 'Files');
+            
+            if (files.length === 0) return;
+            
+            // Validate file sizes
+            const maxSize = type === 'menu' ? 10 : 5; // 10MB for menu, 5MB for others
+            for (let file of files) {
+                if (!validateFileSize(file, maxSize)) {
+                    showMessage(`File "${file.name}" is too large. Maximum size is ${maxSize}MB`, 'error');
+                    return;
+                }
+            }
+            
+            // Validate file types for menu (PDF only)
+            if (type === 'menu') {
+                for (let file of files) {
+                    if (file.type !== 'application/pdf') {
+                        showMessage('Menu files must be PDF format only', 'error');
+                        return;
+                    }
+                }
+            }
+            
+            // Add files to the uploaded files array
+            if (type === 'logo' || type === 'offer') {
+                // For logo and offer, replace existing file
+                uploadedFiles[type] = files;
+            } else {
+                // For menu, allow multiple files
+                uploadedFiles[type] = uploadedFiles[type].concat(files);
+            }
+            
+            updateFileDisplay(type, filesContainer);
+            updateUploadAreaDisplay(inputId, type);
+        }
+
+        function updateFileDisplay(type, container) {
+            container.innerHTML = '';
+            
+            uploadedFiles[type].forEach((file, index) => {
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'uploaded-file';
+                fileDiv.innerHTML = `
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-size">${formatFileSize(file.size)}</span>
+                    <button class="remove-file" onclick="removeFile('${type}', ${index})">×</button>
+                `;
+                container.appendChild(fileDiv);
+            });
+            
+            // Add "Add more files" option for menu
+            if (type === 'menu' && uploadedFiles[type].length > 0) {
+                const addMoreDiv = document.createElement('div');
+                addMoreDiv.className = 'add-more-files';
+                addMoreDiv.textContent = '+ Add another PDF file';
+                addMoreDiv.onclick = () => handleFileUpload('menuUpload');
+                container.appendChild(addMoreDiv);
+            }
+        }
+
+        function updateUploadAreaDisplay(inputId, type) {
+            const uploadArea = document.getElementById(inputId).parentElement;
+            const hasFiles = uploadedFiles[type].length > 0;
+            
+            if (hasFiles) {
+                uploadArea.classList.add('has-file');
+                const fileText = uploadArea.querySelector('.file-text');
+                if (type === 'menu') {
+                    fileText.textContent = `${uploadedFiles[type].length} PDF file(s) uploaded`;
+                } else {
+                    fileText.textContent = `${uploadedFiles[type][0].name} uploaded`;
+                }
+            } else {
+                uploadArea.classList.remove('has-file');
+                const fileText = uploadArea.querySelector('.file-text');
+                if (type === 'logo') {
+                    fileText.textContent = 'Upload your logo';
+                } else if (type === 'menu') {
+                    fileText.textContent = 'Upload PDF files';
+                } else if (type === 'offer') {
+                    fileText.textContent = 'Upload offer image';
+                }
+            }
+        }
+
+        function removeFile(type, index) {
+            uploadedFiles[type].splice(index, 1);
+            const container = document.getElementById(type + 'Files');
+            updateFileDisplay(type, container);
+            
+            let inputId;
+            if (type === 'logo') inputId = 'logoUpload';
+            else if (type === 'menu') inputId = 'menuUpload';
+            else if (type === 'offer') inputId = 'offerImage';
+            
+            updateUploadAreaDisplay(inputId, type);
+        }
+
+        function truncateText(text, maxLength = 50) {
+            if (!text) return '';
+            return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+        }
+
+        function normalizePhoneNumber(number) {
+    number = number.trim();
+    if (number.startsWith('0')) {
+        return '+44' + number.slice(1);
+    }
+    return number;
+
+}function collectFormData() {
+            const formData = {
+                // Personal Information
+                firstName: document.getElementById('firstName')?.value || '',
+                lastName: document.getElementById('lastName')?.value || '',
+                email: document.getElementById('email')?.value || '',
+                confirmEmail: document.getElementById('confirmEmail')?.value || '',
+              phone: normalizePhoneNumber(document.getElementById('phone')?.value || ''),
+                
+                // Business Information
+                businessName: document.getElementById('businessName')?.value || '',
+                businessType: document.getElementById('businessType')?.value || '',
+                businessCategory: document.getElementById('businessCategory')?.value || '',
+                businessAddress: document.getElementById('businessAddress')?.value || '',
+                town: document.getElementById('town')?.value || '',
+                postcode: document.getElementById('postcode')?.value || '',
+                website: document.getElementById('website')?.value || '',
+                instagram: document.getElementById('instagram')?.value || '',
+                facebook: document.getElementById('facebook')?.value || '',
+                // Launch Offer
+                offerName: document.getElementById('offerName')?.value || '',
+                offerType: document.getElementById('offerType')?.value || '',
+                offerValue: document.getElementById('offerValue')?.value || '',
+                claimAmount: document.getElementById('claimAmount')?.value || '',
+                startDate: document.getElementById('startDate')?.value || '',
+                endDate: document.getElementById('endDate')?.value || '',
+                terms: document.getElementById('terms')?.value || '',
+              
+                // Additional Information
+                referralSource: document.getElementById('referralSource')?.value || '',
+                goals: document.getElementById('goals')?.value || '',
+                notes: document.getElementById('notes')?.value || ''
+            };
+            
+            return formData;
+        }
+
+        function validateStep(step) {
+            if (step === 1) {
+                const requiredFields = ['firstName', 'lastName', 'email', 'confirmEmail', 'phone'];
+                for (let field of requiredFields) {
+                    const element = document.getElementById(field);
+                    if (!element || !element.value.trim()) {
+                        showMessage(`Please fill in your ${field.replace(/([A-Z])/g, ' $1').toLowerCase().replace('confirm', 'confirm ')}`, 'error');
+                        if (element) element.focus();
+                        return false;
+                    }
+                }
+                
+                const email = document.getElementById('email').value;
+                const confirmEmail = document.getElementById('confirmEmail').value;
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                
+                if (!emailRegex.test(email)) {
+                    showMessage('Please enter a valid email address', 'error');
+                    document.getElementById('email').focus();
+                    return false;
+                }
+                
+                if (email !== confirmEmail) {
+                    showMessage('Email addresses do not match', 'error');
+                    document.getElementById('confirmEmail').focus();
+                    return false;
+                }
+            }
+            
+            if (step === 2) {
+                const requiredFields = ['businessName', 'businessType', 'businessCategory', 'businessAddress', 'town', 'postcode'];
+                for (let field of requiredFields) {
+                    const element = document.getElementById(field);
+                    if (!element || !element.value.trim()) {
+                        showMessage(`Please fill in your ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`, 'error');
+                        if (element) element.focus();
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
+
+        function editStep(stepNumber) {
+            showStep(stepNumber);
+        }
+
+        function showStep(step) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            for (let i = 1; i <= 7; i++) {
+                const stepEl = document.getElementById('step' + i);
+                if (stepEl) stepEl.classList.remove('active');
+            }
+            
+            const currentStepEl = document.getElementById('step' + step);
+            if (currentStepEl) currentStepEl.classList.add('active');
+            
+            if (step <= 6) {
+                const progressBar = document.getElementById('progressBar');
+                const stepNumber = document.getElementById('stepNumber');
+                const stepTitle = document.getElementById('stepTitle');
+                
+                const stepTitles = {
+                    1: "Personal Information",
+                    2: "Business Information", 
+                    3: "Menu & Price List",
+                    4: "Launch Offer",
+                    5: "Additional Information",
+                    6: "Review Registration"
+                };
+                
+                if (progressBar) {
+                    const progress = (step / 6) * 100;
+                    progressBar.style.width = progress + '%';
+                }
+                if (stepNumber) stepNumber.textContent = step;
+                if (stepTitle) stepTitle.textContent = stepTitles[step];
+            }
+            
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const navButtons = document.getElementById('navButtons');
+            
+            if (prevBtn) prevBtn.disabled = step === 1;
+            
+            if (step === 6) {
+                if (nextBtn) nextBtn.style.display = 'none';
+                populateReview();
+            } else if (step === 7) {
+                if (navButtons) navButtons.style.display = 'none';
+                const progressContainer = document.querySelector('.progress-container');
+                if (progressContainer) progressContainer.style.display = 'none';
+            } else {
+                if (nextBtn) nextBtn.style.display = 'block';
+            }
+            
+            currentStep = step;
+        }
+
+        function goToNextStep() {
+            if (validateStep(currentStep) && currentStep < totalSteps) {
+                showStep(currentStep + 1);
+            }
+        }
+
+        function goToPreviousStep() {
+            if (currentStep > 1) {
+                showStep(currentStep - 1);
+            }
+        }
+
+        function populateReview() {
+            const reviewContent = document.getElementById('reviewContent');
+            if (!reviewContent) return;
+            
+            let html = '';
+            
+            // Personal Information
+            html += '<div style="background: #0a0a0a; border: 1px solid #222; border-radius: 12px; padding: 24px; margin-bottom: 24px;">';
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #222;">';
+            html += '<h3 style="color: #00d083; font-size: 16px; font-weight: 600; margin: 0;">Personal Information</h3>';
+            html += '<button onclick="editStep(1)" class="edit-btn">Edit</button>';
+            html += '</div>';
+            
+            const firstName = document.getElementById('firstName');
+            const lastName = document.getElementById('lastName');
+            const email = document.getElementById('email');
+            const phone = document.getElementById('phone');
+            
+            html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Name:</span><span style="color: #fff; font-size: 14px;">${firstName ? firstName.value : 'Not provided'} ${lastName ? lastName.value : ''}</span></div>`;
+            html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Email:</span><span style="color: #fff; font-size: 14px;">${email ? email.value : 'Not provided'}</span></div>`;
+            if (phone && phone.value) {
+                html += `<div style="display: flex; justify-content: space-between; padding: 10px 0;"><span style="color: #888; font-size: 14px;">Phone:</span><span style="color: #fff; font-size: 14px;">${phone.value}</span></div>`;
+            }
+            html += '</div>';
+            
+            // Business Information
+            html += '<div style="background: #0a0a0a; border: 1px solid #222; border-radius: 12px; padding: 24px; margin-bottom: 24px;">';
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #222;">';
+            html += '<h3 style="color: #00d083; font-size: 16px; font-weight: 600; margin: 0;">Business Information</h3>';
+            html += '<button onclick="editStep(2)" class="edit-btn">Edit</button>';
+            html += '</div>';
+            
+            const businessName = document.getElementById('businessName');
+            const businessType = document.getElementById('businessType');
+            const businessCategory = document.getElementById('businessCategory');
+            const businessAddress = document.getElementById('businessAddress');
+            const town = document.getElementById('town');
+            const postcode = document.getElementById('postcode');
+            const website = document.getElementById('website');
+            const instagram = document.getElementById('instagram');
+            const facebook = document.getElementById('facebook');
+            
+            html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Business Name:</span><span style="color: #fff; font-size: 14px;">${businessName ? businessName.value : 'Not provided'}</span></div>`;
+            if (businessType && businessType.value) {
+                html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Type:</span><span style="color: #fff; font-size: 14px;">${businessType.options[businessType.selectedIndex].text}</span></div>`;
+            }
+            if (businessCategory && businessCategory.value) {
+                html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Category:</span><span style="color: #fff; font-size: 14px;">${businessCategory.value}</span></div>`;
+            }
+            html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Address:</span><span style="color: #fff; font-size: 14px;">${businessAddress ? businessAddress.value : 'Not provided'}</span></div>`;
+            if (town && town.value) {
+                html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Town:</span><span style="color: #fff; font-size: 14px;">${town.options[town.selectedIndex].text}</span></div>`;
+            }
+            html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Postcode:</span><span style="color: #fff; font-size: 14px;">${postcode ? postcode.value : 'Not provided'}</span></div>`;
+            if (website && website.value) {
+                html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Website:</span><span style="color: #fff; font-size: 14px;">${website.value}</span></div>`;
+            }
+            if (instagram && instagram.value) {
+                html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Instagram:</span><span style="color: #fff; font-size: 14px;">${instagram.value}</span></div>`;
+            }
+            if (facebook && facebook.value) {
+                html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Facebook:</span><span style="color: #fff; font-size: 14px;">${facebook.value}</span></div>`;
+            }
+            if (uploadedFiles.logo.length > 0) {
+                html += `<div style="display: flex; justify-content: space-between; padding: 10px 0;"><span style="color: #888; font-size: 14px;">Logo:</span><span style="color: #fff; font-size: 14px;">${uploadedFiles.logo[0].name}</span></div>`;
+            }
+            html += '</div>';
+            
+            // Menu/Price List if uploaded
+            if (uploadedFiles.menu.length > 0) {
+                html += '<div style="background: #0a0a0a; border: 1px solid #222; border-radius: 12px; padding: 24px; margin-bottom: 24px;">';
+                html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #222;">';
+                html += '<h3 style="color: #00d083; font-size: 16px; font-weight: 600; margin: 0;">Menu & Price List</h3>';
+                html += '<button onclick="editStep(3)" class="edit-btn">Edit</button>';
+                html += '</div>';
+                html += `<div style="display: flex; justify-content: space-between; padding: 10px 0;"><span style="color: #888; font-size: 14px;">PDF File(s):</span><span style="color: #fff; font-size: 14px;">${uploadedFiles.menu.map(f => f.name).join(', ')}</span></div>`;
+                html += '</div>';
+            }
+            
+            // Launch Offer if provided
+            const offerName = document.getElementById('offerName');
+            const offerType = document.getElementById('offerType');
+            const offerValue = document.getElementById('offerValue');
+            const claimAmount = document.getElementById('claimAmount');
+            const startDate = document.getElementById('startDate');
+            const endDate = document.getElementById('endDate');
+            const terms = document.getElementById('terms');
+            
+            if (offerName && offerName.value) {
+                html += '<div style="background: #0a0a0a; border: 1px solid #222; border-radius: 12px; padding: 24px; margin-bottom: 24px;">';
+                html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #222;">';
+                html += '<h3 style="color: #00d083; font-size: 16px; font-weight: 600; margin: 0;">Launch Offer</h3>';
+                html += '<button onclick="editStep(4)" class="edit-btn">Edit</button>';
+                html += '</div>';
+                html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Offer Name:</span><span style="color: #fff; font-size: 14px;">${offerName.value}</span></div>`;
+                if (offerType && offerType.value) {
+                    html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Type:</span><span style="color: #fff; font-size: 14px;">${offerType.options[offerType.selectedIndex].text}</span></div>`;
+                }
+                if (offerValue && offerValue.value) {
+                    html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Value:</span><span style="color: #fff; font-size: 14px;">${offerValue.value}</span></div>`;
+                }
+                if (claimAmount && claimAmount.value) {
+                    html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Claim Amount:</span><span style="color: #fff; font-size: 14px;">${claimAmount.options[claimAmount.selectedIndex].text}</span></div>`;
+                }
+                if (startDate && startDate.value) {
+                    html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Start Date:</span><span style="color: #fff; font-size: 14px;">${startDate.value}</span></div>`;
+                }
+                if (endDate && endDate.value) {
+                    html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">End Date:</span><span style="color: #fff; font-size: 14px;">${endDate.value}</span></div>`;
+                }
+                if (terms && terms.value) {
+                    html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Terms:</span><span style="color: #fff; font-size: 14px;">${truncateText(terms.value)}</span></div>`;
+                }
+                if (uploadedFiles.offer.length > 0) {
+                    html += `<div style="display: flex; justify-content: space-between; padding: 10px 0;"><span style="color: #888; font-size: 14px;">Image:</span><span style="color: #fff; font-size: 14px;">${uploadedFiles.offer[0].name}</span></div>`;
+                }
+                html += '</div>';
+            }
+            
+            // Additional Information if provided
+            const referralSource = document.getElementById('referralSource');
+            const goals = document.getElementById('goals');
+            const notes = document.getElementById('notes');
+            
+            if ((referralSource && referralSource.value) || (goals && goals.value) || (notes && notes.value)) {
+                html += '<div style="background: #0a0a0a; border: 1px solid #222; border-radius: 12px; padding: 24px; margin-bottom: 24px;">';
+                html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #222;">';
+                html += '<h3 style="color: #00d083; font-size: 16px; font-weight: 600; margin: 0;">Additional Information</h3>';
+                html += '<button onclick="editStep(5)" class="edit-btn">Edit</button>';
+                html += '</div>';
+                if (referralSource && referralSource.value) {
+                    html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">How did you hear about us:</span><span style="color: #fff; font-size: 14px;">${referralSource.options[referralSource.selectedIndex].text}</span></div>`;
+                }
+                if (goals && goals.value) {
+                    html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a;"><span style="color: #888; font-size: 14px;">Business Goals:</span><span style="color: #fff; font-size: 14px;">${truncateText(goals.value)}</span></div>`;
+                }
+                if (notes && notes.value) {
+                    html += `<div style="display: flex; justify-content: space-between; padding: 10px 0;"><span style="color: #888; font-size: 14px;">Additional Notes:</span><span style="color: #fff; font-size: 14px;">${truncateText(notes.value)}</span></div>`;
+                }
+                html += '</div>';
+            }
+            
+            reviewContent.innerHTML = html;
+        }
+async function uploadToCloudinary(file, folder = "qwikker_uploads") {
+  const url = `https://api.cloudinary.com/v1_1/dsh32kke7/${file.type.startsWith('image') ? 'image' : 'raw'}/upload`;
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', 'unsigned_qwikker'); // This preset must be created in Cloudinary
+  formData.append('folder', folder);
+
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData
+  });
+
+  const data = await res.json();
+  return data.secure_url;
+}
+      async function submitRegistration() {
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.classList.add('loading');
+    submitBtn.disabled = true;
+
+    const formData = collectFormData();
+
+// Upload Logo
+if (uploadedFiles.logo.length > 0) {
+  const logoUrl = await uploadToCloudinary(uploadedFiles.logo[0], "qwikker/logo");
+  formData.logo_url = logoUrl;
+}
+
+// Upload Offer Image
+if (uploadedFiles.offer.length > 0) {
+  const offerUrl = await uploadToCloudinary(uploadedFiles.offer[0], "qwikker/offer");
+  formData.offer_image_url = offerUrl;
+}
+
+// Upload Menu PDFs
+if (uploadedFiles.menu.length > 0) {
+  const menuUrls = await Promise.all(
+    uploadedFiles.menu.map(file => uploadToCloudinary(file, "qwikker/menu"))
+  );
+  formData.menuservice_url = menuUrls.join(', ');
+}
+    fetch("https://services.leadconnectorhq.com/hooks/IkBldqzvQG4XkoSxkCq8/webhook-trigger/582275ed-27fe-4374-808b-9f8403f820e3", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error("Network response was not ok");
+        }
+        console.log("✅ Webhook sent successfully!");
+        showStep(7); // This assumes showStep(7) takes the user to your success screen
+    })
+    .catch(error => {
+        console.error("❌ Error sending webhook:", error);
+        alert("There was a problem submitting your form. Please try again.");
+        submitBtn.classList.remove('loading');
+        submitBtn.disabled = false;
+    });
+}
+        // Set minimum dates for start and end date inputs
+        function setMinDates() {
+            const today = new Date().toISOString().split('T')[0];
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            
+            if (startDateInput) {
+                startDateInput.min = today;
+                startDateInput.addEventListener('change', function() {
+                    if (endDateInput) {
+                        endDateInput.min = this.value;
+                        if (endDateInput.value && endDateInput.value < this.value) {
+                            endDateInput.value = '';
+                        }
+                    }
+                });
+            }
+            
+            if (endDateInput) {
+                endDateInput.min = today;
+            }
+        }
+
+        // Initialize date constraints when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setMinDates();
+        });
+
+        // Show popup after page loads
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                document.getElementById('popup').style.display = 'flex';
+            }, 3000);
+        });
+    </script>
+</body>
+</html>

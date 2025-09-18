@@ -1,5 +1,21 @@
 {
-  "node": {},
+  "node": {
+    "401b91e7b1ba2c77de00f9768c8d56453e124a03cb": {
+      "workers": {
+        "app/dashboard/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/referral-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getReferralStats",
+          "filename": "lib/actions/referral-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/page": "action-browser"
+      },
+      "filename": "lib/actions/referral-actions.ts",
+      "exportedName": "getReferralStats"
+    }
+  },
   "edge": {},
-  "encryptionKey": "V5d6uQM9hj8PLhfRqj5alZ+owRPMRupBRNe2QwrBlKE="
+  "encryptionKey": "JVGE3ngxVKATWFtNzDJg0Xzb+NurNvPF1PxkfzQOuB8="
 }
