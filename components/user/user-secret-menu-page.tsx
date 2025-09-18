@@ -40,8 +40,53 @@ export function UserSecretMenuPage() {
     { id: 'legendary', label: 'Legendary Items', count: enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.filter(item => (item.rarity || 0) >= 5).length, 0) },
   ]
 
+  // Classy badge popup function
+  const showBadgeEarnedPopup = (badgeName: string, reward?: string) => {
+    const popup = document.createElement('div')
+    popup.className = 'fixed top-4 right-4 z-50 bg-gradient-to-r from-slate-800 to-slate-700 border border-[#00d083]/50 rounded-xl p-4 shadow-2xl max-w-sm animate-slide-in'
+    popup.innerHTML = `
+      <div class="flex items-start gap-3">
+        <div class="p-2 bg-gradient-to-r from-[#00d083] to-[#00b86f] rounded-lg">
+          <svg class="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+          </svg>
+        </div>
+        <div class="flex-1">
+          <h4 class="text-slate-100 font-semibold text-sm">Badge Earned!</h4>
+          <p class="text-slate-300 text-xs">${badgeName}</p>
+          ${reward ? `<p class="text-[#00d083] text-xs font-medium mt-1">${reward}</p>` : ''}
+          <a href="/user/credits" class="text-[#00d083] text-xs hover:underline">View Credits →</a>
+        </div>
+        <button onclick="this.parentElement.parentElement.remove()" class="text-slate-400 hover:text-slate-300">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    `
+    document.body.appendChild(popup)
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      if (popup.parentElement) {
+        popup.remove()
+      }
+    }, 5000)
+    
+    // Add ESC key listener
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        popup.remove()
+        document.removeEventListener('keydown', handleEsc)
+      }
+    }
+    document.addEventListener('keydown', handleEsc)
+  }
+
   const unlockSecretItem = (businessId: string, itemName: string) => {
     const itemKey = `${businessId}-${itemName}`
+    const newCount = unlockedItems.size + 1
+    
     setUnlockedItems(prev => {
       const newUnlocked = new Set([...prev, itemKey])
       if (typeof window !== 'undefined') {
@@ -49,6 +94,15 @@ export function UserSecretMenuPage() {
       }
       return newUnlocked
     })
+    
+    // Check if this unlock triggers a badge (Secret Seeker badges are NOT paid rewards)
+    if (newCount === 5) {
+      showBadgeEarnedPopup('Secret Seeker', undefined) // No reward for secret menu badges
+    } else if (newCount === 15) {
+      showBadgeEarnedPopup('Secret Menu Explorer', undefined)
+    } else if (newCount === 25) {
+      showBadgeEarnedPopup('Secret Menu Master', undefined) // No paid reward
+    }
   }
 
   const getFilteredSecretMenus = () => {
@@ -80,14 +134,64 @@ export function UserSecretMenuPage() {
   const SecretMenuItem = ({ menu, item, business }: { menu: any, item: any, business: any }) => {
     const itemKey = `${menu.businessId}-${item.name}`
     const isUnlocked = unlockedItems.has(itemKey)
-    // Everyone can unlock everything - Qwikker is FREE!
+    
+    // Check if item requires specific badge
+    const requiredBadge = item.requiredBadge // e.g., "secret_seeker", "deal_hunter"
+    const userBadges = mockUserProfile.badges.filter(b => b.unlockedDate).map(b => b.id)
+    const canUnlock = !requiredBadge || userBadges.includes(requiredBadge)
+    const isLocked = !canUnlock && !isUnlocked
     
     return (
-      <Card className={`relative overflow-hidden transition-all duration-500 hover:scale-105 ${
-        isUnlocked 
-          ? 'bg-gradient-to-br from-purple-900/40 to-pink-900/40 border-purple-500/50 shadow-purple-500/20' 
-          : 'bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-slate-700/50'
-      } ${showSecrets ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+      <Card 
+        className={`relative overflow-hidden transition-all duration-500 hover:scale-105 cursor-pointer ${
+          isUnlocked 
+            ? 'bg-gradient-to-br from-purple-900/40 to-pink-900/40 border-purple-500/50 shadow-purple-500/20' 
+            : isLocked
+            ? 'bg-gradient-to-br from-red-900/20 to-red-800/20 border-red-700/50'
+            : 'bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-slate-700/50'
+        } ${showSecrets ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+        onClick={() => {
+          if (!isLocked) {
+            // Show smart popup instead of full screen
+            const popup = document.createElement('div')
+            popup.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4'
+            popup.innerHTML = `
+              <div class="bg-slate-800 rounded-xl p-6 max-w-md w-full border border-slate-700 shadow-2xl">
+                <div class="text-center space-y-4">
+                  <h3 class="text-xl font-bold text-slate-100">${item.name}</h3>
+                  <p class="text-slate-300">${item.description}</p>
+                  <div class="bg-slate-700/50 rounded-lg p-4">
+                    <h4 class="text-slate-100 font-semibold mb-2">How to order:</h4>
+                    <p class="text-slate-300 text-sm">Simply ask your server for "${item.name}" or show them this screen!</p>
+                  </div>
+                  <div class="flex gap-3">
+                    <button onclick="window.open('https://maps.google.com/search/${business?.name} ${business?.address}', '_blank')" 
+                            class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">
+                      Get Directions
+                    </button>
+                    <button onclick="window.open('tel:${business?.phone}', '_blank')" 
+                            class="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold">
+                      Call Now
+                    </button>
+                  </div>
+                  <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                          class="text-slate-400 hover:text-slate-300 text-sm">
+                    Close
+                  </button>
+                </div>
+              </div>
+            `
+            document.body.appendChild(popup)
+            
+            // Close on backdrop click
+            popup.addEventListener('click', (e) => {
+              if (e.target === popup) {
+                popup.remove()
+              }
+            })
+          }
+        }}
+      >
         
         {/* Mysterious Glow Effect */}
         {isUnlocked && (
@@ -166,50 +270,43 @@ export function UserSecretMenuPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Status and Action */}
           <div className="space-y-2">
-            {!isUnlocked ? (
-              <div className="space-y-2">
-                <Button 
-                  onClick={() => {
-                    unlockSecretItem(menu.businessId, item.name)
-                    alert(`"${item.name}" unlocked! Visit ${business?.name} to try this secret item.`)
-                  }}
-                  className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold shadow-lg"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+            {isLocked ? (
+              <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
-                  Unlock Secret Item (Free!)
-                </Button>
-                <Button asChild variant="outline" className="w-full border-purple-500/50 text-purple-400 hover:bg-purple-500/10 text-sm">
-                  <Link href={`/user/chat?business=${business?.name}&topic=secret-menu&item=${item.name}`}>
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    Ask AI for Hints
-                  </Link>
-                </Button>
+                  <span className="text-red-300 font-semibold">Badge Required</span>
+                </div>
+                <p className="text-red-200 text-sm">
+                  Earn the "{requiredBadge?.replace('_', ' ')}" badge to unlock this secret
+                </p>
               </div>
+            ) : !isUnlocked ? (
+              <Button 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  unlockSecretItem(menu.businessId, item.name)
+                  alert(`"${item.name}" unlocked! Click the card to see how to order it.`)
+                }}
+                className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold shadow-lg"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                </svg>
+                Unlock Secret Item (Free!)
+              </Button>
             ) : (
-              <div className="space-y-2">
-                <Button asChild className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100 font-semibold">
-                  <Link href={`/user/business/${business?.slug}`}>
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Order This Secret
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full border-purple-500/50 text-purple-400 hover:bg-purple-500/10 text-sm">
-                  <Link href={`/user/chat?business=${business?.name}&topic=secret-menu&item=${item.name}`}>
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    Ask AI About This Item
-                  </Link>
-                </Button>
+              <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-lg p-3 text-center">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-purple-300 font-semibold">Unlocked!</span>
+                </div>
+                <p className="text-purple-200 text-sm">Click card for ordering info</p>
               </div>
             )}
           </div>
@@ -284,10 +381,10 @@ export function UserSecretMenuPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-2xl font-bold text-emerald-400">
-              {Math.round((Array.from(unlockedItems).length / enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)) * 100) || 0}%
+              {Array.from(unlockedItems).length} / {enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)}
             </p>
           </div>
-          <p className="text-sm text-slate-400">Discovery Rate</p>
+          <p className="text-sm text-slate-400">Secrets Unlocked</p>
         </Card>
       </div>
 

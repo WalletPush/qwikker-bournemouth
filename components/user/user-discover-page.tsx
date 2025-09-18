@@ -42,31 +42,27 @@ export function UserDiscoverPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
         
-        {/* Badges on Image */}
-        <div className="absolute top-3 right-3 flex flex-col gap-2">
+        {/* Hero Badge - Only One */}
+        <div className="absolute top-3 right-3">
           {business.tier === 'qwikker_picks' && (
-            <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-2 py-1 rounded-full font-bold shadow-lg">
-              QWIKKER PICK
+            <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg animate-pulse">
+              ⭐ QWIKKER PICK
             </span>
           )}
-          {business.tier === 'featured' && (
-            <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-xs px-2 py-1 rounded-full font-bold shadow-lg">
+          {business.tier === 'featured' && business.tier !== 'qwikker_picks' && (
+            <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg">
               FEATURED
-            </span>
-          )}
-          {business.activeOffers > 0 && (
-            <span className="bg-orange-500 text-slate-100 text-xs px-2 py-1 rounded-full shadow-lg">
-              {business.activeOffers} OFFERS
             </span>
           )}
         </div>
 
-        {/* Distance Badge */}
+        {/* Actionable Distance Badge */}
         <div className="absolute bottom-3 left-3">
-          <span className="bg-black/70 text-slate-100 text-xs px-2 py-1 rounded-full backdrop-blur-sm">
-            {business.distance} miles
+          <span className="bg-black/70 text-slate-100 text-xs px-3 py-2 rounded-full backdrop-blur-sm flex items-center gap-1">
+            🚶 {Math.round(parseFloat(business.distance) * 20)} min walk • {business.distance} miles
           </span>
         </div>
+
       </div>
 
       <CardHeader className="pb-3">
@@ -120,52 +116,40 @@ export function UserDiscoverPage() {
           <span className="text-green-400 text-sm font-medium">• Open now</span>
         </div>
 
-        {/* Menu Preview */}
+        {/* Compact Menu Preview */}
         <div className="bg-slate-700/30 rounded-lg p-3">
-          <p className="text-slate-100 text-sm font-medium mb-2">Popular items:</p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-sm">🍽</span>
+            <p className="text-slate-100 text-sm font-medium">Popular items:</p>
+          </div>
           <div className="space-y-1">
-            {business.menuPreview.slice(0, 3).map((item: string, index: number) => (
+            {business.menuPreview.slice(0, 2).map((item: string, index: number) => (
               <p key={index} className="text-slate-300 text-xs">{item}</p>
             ))}
+            <p className="text-slate-400 text-xs">See more...</p>
           </div>
         </div>
 
-        {/* Special Features */}
-        <div className="flex flex-wrap gap-2">
-          {business.hasSecretMenu && (
-            <span className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 text-xs px-2 py-1 rounded-full">
-              Secret Menu
-            </span>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <div className="flex-1 bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black font-semibold rounded-md px-4 py-2 text-center text-sm">
-              Click anywhere to view details
-            </div>
-            <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-            </Button>
+        {/* Special Features with Better Visual */}
+        <div className="flex items-center justify-between">
+          <div className="flex flex-wrap gap-2">
+            {business.hasSecretMenu && (
+              <span className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 text-xs px-2 py-1 rounded-full">
+                🔒 Secret Menu
+              </span>
+            )}
+            {business.activeOffers > 0 && (
+              <span className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 text-orange-300 text-xs px-2 py-1 rounded-full">
+                🔥 {business.activeOffers} Offers
+              </span>
+            )}
           </div>
           
-          {/* Chat CTA */}
-          <Button 
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              window.location.href = `/user/chat?business=${business.name}`
-            }}
-            variant="outline" 
-            className="w-full border-[#00d083]/50 text-[#00d083] hover:bg-[#00d083]/10 text-sm"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          {/* Save Button */}
+          <Button variant="outline" size="sm" className="border-slate-600 text-slate-300 hover:bg-slate-700 p-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
-            Ask AI About This Place
           </Button>
         </div>
       </CardContent>

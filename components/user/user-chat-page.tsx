@@ -227,37 +227,30 @@ export function UserChatPage() {
       return "Great! Here are some excellent spots for drinks:"
     }
     
-    // Initial category detection
+    // Direct category detection - simplified
     if (msg.includes('coffee') || msg.includes('cafe')) {
-      if (msg.includes('cozy') || msg.includes('work') || msg.includes('pastries') || msg.includes('show me') || msg.includes('recommend')) {
-        setConversationContext({ topic: 'coffee', lastCategory: 'cafe' })
-        return "Perfect! Based on what you're looking for, I have some amazing coffee spots that would be ideal. Here are my top picks:"
-      }
-      setConversationContext({ waitingFor: 'coffee-details', topic: 'coffee' })
-      return "Coffee lover, I see! What kind of coffee experience are you after? Are you looking for a quick grab-and-go spot, somewhere cozy to work, or maybe a place with amazing pastries too? And what's your vibe - modern and trendy or more traditional?"
+      setConversationContext({ topic: 'coffee', lastCategory: 'cafe' })
+      return "Here are the best coffee spots in Bournemouth:"
     }
     
     if (msg.includes('dinner') || msg.includes('restaurant') || msg.includes('food')) {
-      if (msg.includes('fancy') || msg.includes('casual') || msg.includes('italian') || msg.includes('seafood') || msg.includes('romantic') || msg.includes('show me') || msg.includes('recommend')) {
-        setConversationContext({ topic: 'restaurant', lastCategory: 'restaurant' })
-        return "Excellent choice! I know exactly the kind of place you're looking for. Here are some fantastic restaurants that match what you want:"
-      }
-      setConversationContext({ waitingFor: 'restaurant-details', topic: 'restaurant' })
-      return "Ooh, dinner plans! 🍽️ Tell me more - are you thinking casual or fancy? Any cuisine preferences? Are you celebrating something special, or just want a great meal? And how many people are you planning for?"
+      setConversationContext({ topic: 'restaurant', lastCategory: 'restaurant' })
+      return "Here are the best restaurants in Bournemouth:"
     }
     
     if (msg.includes('drink') || msg.includes('bar') || msg.includes('beer')) {
-      if (msg.includes('craft beer') || msg.includes('cocktails') || msg.includes('date night') || msg.includes('friends') || msg.includes('show me') || msg.includes('recommend')) {
-        setConversationContext({ topic: 'drinks', lastCategory: 'bar' })
-        return "Great choice! I know some perfect spots for what you're looking for. Here are my recommendations:"
-      }
-      setConversationContext({ waitingFor: 'drinks-details', topic: 'drinks' })
-      return "Time for drinks! 🍺 What's the occasion? Are you looking for craft beer, cocktails, or maybe a wine bar? Quiet spot for conversation or somewhere with a lively atmosphere? Date night or hanging with friends?"
+      setConversationContext({ topic: 'drinks', lastCategory: 'bar' })
+      return "Here are the best bars and pubs in Bournemouth:"
     }
     
     if (msg.includes('spa') || msg.includes('relax') || msg.includes('wellness')) {
-      setConversationContext({ waitingFor: 'spa-details', topic: 'spa' })
-      return "Self-care time - love it! 🧘‍♀️ What kind of relaxation are you craving? A massage, facial, full spa day? Are you looking to treat yourself or is this a gift for someone? Any specific treatments you've been wanting to try?"
+      setConversationContext({ topic: 'spa', lastCategory: 'spa' })
+      return "Here are the best wellness and spa options in Bournemouth:"
+    }
+    
+    if (msg.includes('offer') || msg.includes('deal') || msg.includes('discount')) {
+      setConversationContext({ topic: 'offers', showOffers: true })
+      return "Here are the best current offers in Bournemouth:"
     }
     
     // Handle specific secret menu item questions
@@ -568,42 +561,27 @@ export function UserChatPage() {
           )}
         </div>
 
-        {/* Suggested Prompts (only show when chat is empty) */}
-        {messages.length === 1 && (
-          <div className="p-6 border-t border-slate-600/50 bg-gradient-to-r from-slate-800/30 to-slate-700/30">
-            <div className="text-center mb-4">
-              <h3 className="text-slate-100 font-semibold mb-2 flex items-center justify-center gap-2">
-                <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Quick Starters
-              </h3>
-              <p className="text-slate-400 text-sm">Try one of these popular questions:</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {suggestedPrompts.slice(0, 6).map((prompt, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleSuggestedPrompt(prompt)}
-                  className="group bg-gradient-to-r from-slate-700/50 to-slate-600/50 hover:from-[#00d083]/10 hover:to-[#00b86f]/10 text-slate-300 hover:text-slate-100 px-4 py-3 rounded-xl text-sm transition-all duration-300 border border-slate-600 hover:border-[#00d083]/50 text-left relative overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#00d083]/0 to-[#00b86f]/0 group-hover:from-[#00d083]/5 group-hover:to-[#00b86f]/5 transition-all duration-300"></div>
-                  <div className="relative flex items-center gap-3">
-                    <div className="p-2 bg-slate-600/50 group-hover:bg-[#00d083]/20 rounded-lg transition-all duration-300">
-                      <svg className="w-4 h-4 text-slate-400 group-hover:text-[#00d083] transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                    </div>
-                    <span className="font-medium">{prompt}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Input Area - Enhanced */}
         <div className="p-4 border-t border-slate-600/50 bg-gradient-to-r from-slate-800/50 to-slate-700/50">
+          {/* Compact Suggested Prompts (only show when chat is empty) */}
+          {messages.length === 1 && (
+            <div className="mb-4">
+              <p className="text-slate-400 text-xs mb-2 text-center">Try one of these:</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {suggestedPrompts.slice(0, 6).map((prompt, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSuggestedPrompt(prompt)}
+                    className="bg-slate-700/50 hover:bg-[#00d083]/20 text-slate-300 hover:text-[#00d083] px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border border-slate-600/50 hover:border-[#00d083]/50"
+                  >
+                    {prompt.length > 25 ? `${prompt.substring(0, 22)}...` : prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
           <div className="relative">
             <div className="flex gap-3 bg-slate-800/50 rounded-2xl p-2 border border-slate-600/50 focus-within:border-[#00d083]/50 transition-all duration-300 focus-within:shadow-lg focus-within:shadow-[#00d083]/10">
               <div className="flex-1 relative">

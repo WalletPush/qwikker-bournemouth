@@ -10,11 +10,12 @@ import {
   pointsEarningRules, 
   mockBadges, 
   Badge,
-  PointsTransaction 
+  PointsTransaction,
+  levelSystem
 } from '@/lib/mock-data/user-mock-data'
 
 export function UserCreditsPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'badges' | 'rewards'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'spend' | 'history' | 'badges' | 'rewards'>('overview')
   const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null)
 
   const getRarityColor = (rarity: string) => {
@@ -49,15 +50,15 @@ export function UserCreditsPage() {
 
   const getTransactionIcon = (reason: string) => {
     switch (reason) {
-      case 'business_visit': return '🏪'
-      case 'secret_unlock': return '🗝️'
-      case 'offer_redeem': return '🎯'
-      case 'friend_referral': return '👥'
-      case 'review_write': return '⭐'
-      case 'photo_share': return '📸'
-      case 'chat_engagement': return '💬'
-      case 'daily_login': return '📱'
-      default: return '💎'
+      case 'business_visit': return '+'
+      case 'secret_unlock': return '+'
+      case 'offer_redeem': return '+'
+      case 'friend_referral': return '+'
+      case 'review_write': return '+'
+      case 'photo_share': return '+'
+      case 'chat_engagement': return '+'
+      case 'daily_login': return '+'
+      default: return '+'
     }
   }
 
@@ -66,157 +67,69 @@ export function UserCreditsPage() {
       {/* Header */}
       <div className="text-center">
         <h1 className="text-4xl font-bold text-slate-100 mb-2">
-          Your <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent">Credits & Rewards</span>
+          Your <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent">Qwikker Credits</span>
         </h1>
-        <p className="text-xl text-slate-300 mb-1">Earn real money off your bills at Bournemouth businesses</p>
-        <p className="text-slate-400">Visit, engage, unlock badges, get rewards!</p>
+        <p className="text-slate-400">Earn real money off your bills at Bournemouth businesses</p>
       </div>
 
-      {/* AMAZING How It Works Section - Always Visible */}
-      <Card className="bg-gradient-to-br from-[#00d083]/20 via-blue-500/10 to-purple-500/20 border-[#00d083]/50 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#00d083]/5 via-transparent to-purple-500/5 animate-pulse"></div>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#00d083]/30 to-transparent rounded-bl-full"></div>
-        <CardHeader className="text-center pb-2">
-        <CardTitle className="text-3xl font-bold text-slate-100 flex items-center justify-center gap-3">
-          How Qwikker Rewards Work
-        </CardTitle>
-        <p className="text-slate-300 text-lg">Real rewards for real experiences — no gimmicks</p>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Step by Step Process */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl p-4 text-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-transparent animate-pulse"></div>
-              <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-slate-100 font-bold text-xl mx-auto mb-3">1</div>
-                <div className="mb-2"></div>
-                <h3 className="text-slate-100 font-bold mb-1">Refer Friends</h3>
-                <p className="text-slate-300 text-sm">Share your referral link</p>
-                <div className="text-purple-400 font-bold text-lg mt-2">+500 Points</div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-xl p-4 text-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-              <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-slate-100 font-bold text-xl mx-auto mb-3">2</div>
-                <div className="mb-2"></div>
-                <h3 className="text-slate-100 font-bold mb-1">Redeem Offers</h3>
-                <p className="text-slate-300 text-sm">Actually use offers at businesses</p>
-                <div className="text-blue-400 font-bold text-lg mt-2">+50 Points</div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-[#00d083]/20 to-[#00b86f]/20 border border-[#00d083]/30 rounded-xl p-4 text-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#00d083]/10 to-transparent animate-pulse" style={{ animationDelay: '1s' }}></div>
-              <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-r from-[#00d083] to-[#00b86f] rounded-full flex items-center justify-center text-black font-bold text-xl mx-auto mb-3">3</div>
-                <div className="mb-2"></div>
-                <h3 className="text-slate-100 font-bold mb-1">Visit Businesses</h3>
-                <p className="text-slate-300 text-sm">Simple validation coming soon</p>
-                <div className="text-[#00d083] font-bold text-lg mt-2">+25 Points</div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-xl p-4 text-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-transparent animate-pulse" style={{ animationDelay: '1.5s' }}></div>
-              <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-slate-100 font-bold text-xl mx-auto mb-3">4</div>
-                <div className="mb-2"></div>
-                <h3 className="text-slate-100 font-bold mb-1">Get Credits</h3>
-                <p className="text-slate-300 text-sm">Money off at ANY partner venue</p>
-                <div className="text-orange-400 font-bold text-lg mt-2">£3-£20 Credits</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Badge Rewards Preview */}
-          <div className="bg-gradient-to-r from-slate-700/30 to-slate-600/30 border border-slate-500/50 rounded-xl p-6">
-            <h3 className="text-2xl font-bold text-slate-100 text-center mb-4">Badge Rewards</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-gradient-to-r from-purple-900/40 to-purple-800/40 border border-purple-500/40 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <h4 className="text-purple-300 font-bold">Epic Badges</h4>
-                </div>
-                <div className="space-y-1 text-sm text-slate-300 mb-3">
-                  <div>Secret Menu Master (25+ unlocks)</div>
-                  <div>Influencer (10+ referrals)</div>
-                  <div>Point Collector (5,000+ points)</div>
-                </div>
-                <div className="text-[#00d083] font-bold text-lg">£5 Qwikker Credit</div>
-              </div>
-
-              <div className="bg-gradient-to-r from-yellow-900/40 to-orange-900/40 border border-yellow-500/40 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <h4 className="text-yellow-300 font-bold">Legendary Badges</h4>
-                </div>
-                <div className="space-y-1 text-sm text-slate-300 mb-3">
-                  <div>Bournemouth Legend (Ultimate mastery)</div>
-                  <div>Founding Member (First 100 users)</div>
-                </div>
-                <div className="text-[#00d083] font-bold text-lg">£10-£20 Qwikker Credit</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Call to Action */}
-          <div className="text-center">
-            <Button asChild className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold text-lg px-8 py-4">
-              <Link href="/user/discover">
-                Start Earning Credits Now
-              </Link>
-            </Button>
-            <p className="text-slate-400 text-sm mt-2">Find partner businesses and start your reward journey</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Current Points Overview */}
+      {/* Hero Metric - Simplified */}
       <Card className="bg-gradient-to-br from-[#00d083]/10 to-[#00b86f]/10 border-[#00d083]/30 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#00d083]/20 to-transparent rounded-bl-full"></div>
-        <CardContent className="p-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-[#00d083] mb-2">{mockUserProfile.totalPoints.toLocaleString()}</div>
-              <div className="text-slate-300 font-medium">Total Points</div>
+        <CardContent className="p-8 text-center">
+          <div className="space-y-4">
+            <div>
+              <div className="text-5xl font-bold text-[#00d083] mb-2">{mockUserProfile.totalPoints.toLocaleString()}</div>
+              <div className="text-slate-300 text-lg">Qwikker Points</div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-blue-400 mb-2">Level {mockUserProfile.level}</div>
-              <div className="text-slate-300 font-medium">{mockUserProfile.tier.charAt(0).toUpperCase() + mockUserProfile.tier.slice(1)}</div>
+            
+            <div className="bg-slate-800/50 rounded-xl p-4 max-w-md mx-auto">
+              <div className="text-slate-100 font-semibold mb-2">Level {(() => {
+                const currentLevel = levelSystem.getLevelFromPoints(mockUserProfile.totalPoints)
+                return `${currentLevel.level} - ${currentLevel.title}`
+              })()}</div>
+              <div className="text-slate-300 text-sm mb-3">{(() => {
+                const currentLevel = levelSystem.getLevelFromPoints(mockUserProfile.totalPoints)
+                const nextLevel = levelSystem.getNextLevel(currentLevel.level)
+                return nextLevel ? `${nextLevel.pointsRequired - mockUserProfile.totalPoints} points until ${nextLevel.title}` : 'Max level reached!'
+              })()}</div>
+              <div className="w-full bg-slate-700 rounded-full h-2">
+                <div 
+                  className="bg-gradient-to-r from-[#00d083] to-[#00b86f] h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(() => {
+                    const currentLevel = levelSystem.getLevelFromPoints(mockUserProfile.totalPoints)
+                    const nextLevel = levelSystem.getNextLevel(currentLevel.level)
+                    if (!nextLevel) return 100
+                    return ((mockUserProfile.totalPoints - currentLevel.pointsRequired) / (nextLevel.pointsRequired - currentLevel.pointsRequired)) * 100
+                  })()}%` }}
+                ></div>
+              </div>
+              <div className="text-amber-400 text-sm mt-2 font-medium">{(() => {
+                const currentLevel = levelSystem.getLevelFromPoints(mockUserProfile.totalPoints)
+                const nextLevel = levelSystem.getNextLevel(currentLevel.level)
+                return nextLevel ? `Next: ${nextLevel.title}` : 'Maximum level achieved!'
+              })()}</div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-purple-400 mb-2">{mockUserProfile.badges.filter(b => b.unlockedDate).length}</div>
-              <div className="text-slate-300 font-medium">Badges Earned</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-orange-400 mb-2">{mockUserProfile.stats.streakDays}</div>
-              <div className="text-slate-300 font-medium">Day Streak</div>
-            </div>
-          </div>
-          
-          {/* Level Progress */}
-          <div className="mt-6">
-            <div className="flex justify-between text-sm text-slate-300 mb-2">
-              <span>Progress to Level {mockUserProfile.level + 1}</span>
-              <span>{mockUserProfile.experiencePoints} / {mockUserProfile.nextLevelXP} XP</span>
-            </div>
-            <div className="w-full bg-slate-700 rounded-full h-3">
-              <div 
-                className="bg-gradient-to-r from-[#00d083] to-[#00b86f] h-3 rounded-full transition-all duration-300"
-                style={{ width: `${(mockUserProfile.experiencePoints / mockUserProfile.nextLevelXP) * 100}%` }}
-              ></div>
+
+            {/* Streak Emphasis */}
+            <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-lg p-3 max-w-sm mx-auto">
+              <div className="text-2xl">🔥</div>
+              <div>
+                <div className="text-orange-400 font-bold">{mockUserProfile.stats.streakDays} Day Streak</div>
+                <div className="text-slate-400 text-xs">Keep it alive!</div>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation - Moved to Top */}
       <div className="flex flex-wrap gap-2 justify-center">
         {[
-          { key: 'overview', label: 'Overview', icon: '📊' },
-          { key: 'history', label: 'Transaction History', icon: '📜' },
-          { key: 'badges', label: 'Badges & Achievements', icon: '🏆' },
-          { key: 'rewards', label: 'Earning Guide', icon: '💡' }
+          { key: 'overview', label: 'Overview' },
+          { key: 'spend', label: 'Spend Credits' },
+          { key: 'history', label: 'History' },
+          { key: 'badges', label: 'Badges' },
+          { key: 'rewards', label: 'How It Works' }
         ].map((tab) => (
           <Button
             key={tab.key}
@@ -228,11 +141,136 @@ export function UserCreditsPage() {
                 : 'border-slate-600 text-slate-300 hover:bg-slate-700'
             } font-semibold`}
           >
-            <span className="mr-2">{tab.icon}</span>
             {tab.label}
           </Button>
         ))}
       </div>
+
+      {/* Tab Content */}
+      {activeTab === 'spend' && (
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-slate-100">Spend Your Credits</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-gradient-to-r from-[#00d083]/10 to-[#00b86f]/10 border border-[#00d083]/30 rounded-lg p-4">
+              <div className="text-center mb-4">
+                <div className="text-3xl font-bold text-[#00d083] mb-2">£{(() => {
+                  // Calculate actual earned credits from badge rewards only
+                  const earnedCredits = mockUserProfile.badges
+                    .filter(badge => badge.unlockedDate && badge.reward)
+                    .reduce((total, badge) => {
+                      const value = badge.reward?.value?.replace('£', '') || '0'
+                      return total + parseFloat(value)
+                    }, 0)
+                  return earnedCredits.toFixed(2)
+                })()}</div>
+                <div className="text-slate-300">Available to spend</div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                  <div>
+                    <div className="text-slate-100 font-medium">Apply to any bill</div>
+                    <div className="text-slate-400 text-sm">Use at checkout with partner businesses</div>
+                  </div>
+                  <Button className="bg-[#00d083] hover:bg-[#00b86f] text-black">Apply Credit</Button>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                  <div>
+                    <div className="text-slate-100 font-medium">Gift to a friend</div>
+                    <div className="text-slate-400 text-sm">Share the love, spread the word</div>
+                  </div>
+                  <Button variant="outline" className="border-[#00d083]/30 text-[#00d083]">Send Gift</Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === 'rewards' && (
+        <Card className="bg-gradient-to-br from-[#00d083]/20 via-blue-500/10 to-purple-500/20 border-[#00d083]/50 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#00d083]/5 via-transparent to-purple-500/5"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#00d083]/30 to-transparent rounded-bl-full"></div>
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="text-3xl font-bold text-slate-100">How Qwikker Rewards Work</CardTitle>
+            <p className="text-slate-300 text-lg">Real rewards for real experiences</p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl p-4 text-center relative overflow-hidden">
+                <div className="relative">
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-slate-100 font-bold text-xl mx-auto mb-3">1</div>
+                  <h3 className="text-slate-100 font-bold mb-1">Refer Friends</h3>
+                  <p className="text-slate-300 text-sm">Share your referral link</p>
+                  <div className="text-purple-400 font-bold text-lg mt-2">+500 Points</div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-xl p-4 text-center relative overflow-hidden">
+                <div className="relative">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-slate-100 font-bold text-xl mx-auto mb-3">2</div>
+                  <h3 className="text-slate-100 font-bold mb-1">Redeem Offers</h3>
+                  <p className="text-slate-300 text-sm">Actually use offers at businesses</p>
+                  <div className="text-blue-400 font-bold text-lg mt-2">+50 Points</div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-[#00d083]/20 to-[#00b86f]/20 border border-[#00d083]/30 rounded-xl p-4 text-center relative overflow-hidden">
+                <div className="relative">
+                  <div className="w-12 h-12 bg-gradient-to-r from-[#00d083] to-[#00b86f] rounded-full flex items-center justify-center text-black font-bold text-xl mx-auto mb-3">3</div>
+                  <h3 className="text-slate-100 font-bold mb-1">Visit Businesses</h3>
+                  <p className="text-slate-300 text-sm">Simple validation coming soon</p>
+                  <div className="text-[#00d083] font-bold text-lg mt-2">+25 Points</div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-xl p-4 text-center relative overflow-hidden">
+                <div className="relative">
+                  <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-slate-100 font-bold text-xl mx-auto mb-3">4</div>
+                  <h3 className="text-slate-100 font-bold mb-1">Get Credits</h3>
+                  <p className="text-slate-300 text-sm">Money off at ANY partner venue</p>
+                  <div className="text-orange-400 font-bold text-lg mt-2">Up to £20 Credit</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-slate-700/30 to-slate-600/30 border border-slate-500/50 rounded-xl p-6">
+              <h3 className="text-2xl font-bold text-slate-100 text-center mb-4">Badge Rewards</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gradient-to-r from-purple-900/40 to-purple-800/40 border border-purple-500/40 rounded-lg p-4">
+                  <h4 className="text-purple-300 font-bold mb-2">Epic Badges</h4>
+                  <div className="space-y-1 text-sm text-slate-300 mb-3">
+                    <div>Hype Lord (10+ referrals)</div>
+                    <div>Treasure Hoarder (5,000+ points)</div>
+                  </div>
+                  <div className="text-[#00d083] font-bold text-lg">£5 Qwikker Credit</div>
+                  <div className="text-slate-400 text-xs mt-1">Hype Lord: +50p per additional referral</div>
+                </div>
+
+                <div className="bg-gradient-to-r from-yellow-900/40 to-orange-900/40 border border-yellow-500/40 rounded-lg p-4">
+                  <h4 className="text-yellow-300 font-bold mb-2">Legendary Badges</h4>
+                  <div className="space-y-1 text-sm text-slate-300 mb-3">
+                    <div>Bournemouth Legend (Ultimate mastery)</div>
+                    <div>Founding Member (First 100 users)</div>
+                  </div>
+                  <div className="text-[#00d083] font-bold text-lg">£15-£20 Qwikker Credit</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <Button asChild className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold text-lg px-8 py-4">
+                <Link href="/user/discover">Start Earning Credits Now</Link>
+              </Button>
+              <p className="text-slate-400 text-sm mt-2">Find partner businesses and start your reward journey</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
@@ -529,11 +567,11 @@ export function UserCreditsPage() {
                     <h3 className="text-yellow-300 font-bold">Legendary Badges</h3>
                   </div>
                   <div className="space-y-2 text-sm">
-                    <div className="text-slate-100">👑 Bournemouth Legend → £15 credit</div>
+                    <div className="text-slate-100">👑 Bournemouth Legend → £10 credit</div>
                     <div className="text-slate-100">⭐ Founding Member → £10 credit</div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-yellow-500/20">
-                    <div className="text-[#00d083] font-bold">Rewards: £10-£15 Qwikker Credit</div>
+                    <div className="text-[#00d083] font-bold">Rewards: £10 Qwikker Credit</div>
                     <div className="text-slate-400 text-xs">Premium credits for ultimate achievements</div>
                   </div>
                 </div>

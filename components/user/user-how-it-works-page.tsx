@@ -11,7 +11,7 @@ export function UserHowItWorksPage() {
   useEffect(() => {
     const timer = setInterval(() => {
       setVisibleStep(prev => (prev + 1) % 4)
-    }, 4000)
+    }, 3000) // Slightly faster timing
 
     return () => clearInterval(timer)
   }, [])
@@ -108,49 +108,63 @@ export function UserHowItWorksPage() {
           <p className="text-lg text-slate-300">Four simple steps to unlock Bournemouth's culinary secrets</p>
         </div>
 
-        {/* Interactive Steps */}
+        {/* Interactive Steps - Fixed Animation */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {steps.map((step, index) => (
             <Card 
               key={index}
-              className={`relative overflow-hidden transition-all duration-700 cursor-pointer shadow-lg ${
+              className={`relative overflow-hidden transition-all duration-700 cursor-pointer ${
                 visibleStep === index 
-                  ? `bg-gradient-to-br ${step.bgColor} border ${step.borderColor} shadow-emerald-500/20` 
-                  : 'bg-slate-800/50 border-slate-600/50 hover:border-slate-500/50 shadow-slate-900/50'
+                  ? `bg-gradient-to-br ${step.bgColor} border ${step.borderColor}` 
+                  : 'bg-slate-800/50 border-slate-600/50 hover:border-slate-500/50'
               }`}
+              style={{ 
+                height: '380px', // Fixed height for all cards
+                boxShadow: visibleStep === index 
+                  ? '0 25px 50px -12px rgba(0, 208, 131, 0.15)' 
+                  : '0 10px 25px -3px rgba(0, 0, 0, 0.3)'
+              }}
               onClick={() => setVisibleStep(index)}
             >
-              <div className={`absolute inset-0 bg-gradient-to-r ${step.color} opacity-5`}></div>
+              <div className={`absolute inset-0 bg-gradient-to-r ${step.color} transition-opacity duration-700 ${
+                visibleStep === index ? 'opacity-10' : 'opacity-0'
+              }`}></div>
               
-              <CardContent className="relative p-8 text-center">
-                <div className="space-y-6">
-                  {/* Step Number */}
-                  <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full font-bold text-lg transition-all duration-500 ${
+              <CardContent className="relative p-6 text-center h-full">
+                {/* Step Number - Absolutely Positioned - NO TRANSITIONS */}
+                <div className="absolute top-6 left-1/2 transform -translate-x-1/2">
+                  <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full font-bold text-lg ${
                     visibleStep === index 
-                      ? `bg-gradient-to-r ${step.color} text-black shadow-lg` 
+                      ? `bg-gradient-to-r ${step.color} text-black` 
                       : 'bg-slate-700 text-slate-400'
                   }`}>
                     {step.number}
                   </div>
+                </div>
 
-                  {/* Icon */}
-                  <div className={`transition-all duration-500 ${visibleStep === index ? 'opacity-100' : 'opacity-60'}`}>
+                {/* Icon - Absolutely Positioned - NO TRANSITIONS */}
+                <div className="absolute top-24 left-1/2 transform -translate-x-1/2">
+                  <div className={`${visibleStep === index ? 'opacity-100' : 'opacity-60'}`}>
                     {step.icon}
                   </div>
+                </div>
 
-                  {/* Content */}
-                  <div className="space-y-3">
-                    <h3 className={`text-xl font-bold transition-colors duration-500 ${
-                      visibleStep === index ? 'text-slate-100' : 'text-slate-300'
-                    }`}>
-                      {step.title}
-                    </h3>
-                    <p className={`text-sm leading-relaxed transition-colors duration-500 ${
-                      visibleStep === index ? 'text-slate-200' : 'text-slate-400'
-                    }`}>
-                      {step.description}
-                    </p>
-                  </div>
+                {/* Title - Absolutely Positioned - NO TRANSITIONS */}
+                <div className="absolute top-44 left-6 right-6">
+                  <h3 className={`text-lg font-bold ${
+                    visibleStep === index ? 'text-slate-100' : 'text-slate-300'
+                  }`}>
+                    {step.title}
+                  </h3>
+                </div>
+
+                {/* Description - Absolutely Positioned - NO TRANSITIONS */}
+                <div className="absolute top-56 left-6 right-6 bottom-6">
+                  <p className={`text-sm leading-relaxed ${
+                    visibleStep === index ? 'text-slate-200' : 'text-slate-400'
+                  }`}>
+                    {step.description}
+                  </p>
                 </div>
               </CardContent>
             </Card>

@@ -703,21 +703,12 @@ export const mockBadges: Badge[] = [
       type: 'unlocks',
       amount: 25,
       label: '25 secret items unlocked'
-    },
-    reward: {
-      type: 'free_item',
-      businessName: 'Any Partner Venue',
-      businessId: 'all',
-      title: '£5 Qwikker Credit',
-      description: 'Use this credit at any participating Qwikker partner venue',
-      value: '£5',
-      terms: 'Valid at all partner venues. Cannot be combined with other offers. Show badge to redeem.',
-      redemptionCode: 'QWIK-EPIC-CREDIT'
     }
+    // No paid reward - secret menu unlocking is free and unlimited
   },
   {
     id: 'influence_master',
-    name: 'Influencer',
+    name: 'Hype Lord',
     description: 'Referred 10 friends to Qwikker',
     icon: '📢',
     rarity: 'epic',
@@ -730,9 +721,9 @@ export const mockBadges: Badge[] = [
       type: 'free_item',
       businessName: 'Any Partner Venue',
       businessId: 'all',
-      title: '£3 Qwikker Credit',
-      description: 'Use this credit at any participating Qwikker partner venue',
-      value: '£3',
+      title: '£5 Qwikker Credit',
+      description: 'Refer 10 friends reward + 50p for each additional referral',
+      value: '£5',
       terms: 'Valid at all partner venues. Cannot be combined with other offers. Show badge to redeem.',
       redemptionCode: 'QWIK-EPIC-SOCIAL'
     }
@@ -786,9 +777,9 @@ export const mockBadges: Badge[] = [
       type: 'free_item',
       businessName: 'Any Partner Venue',
       businessId: 'all',
-      title: '£10 Qwikker Credit',
+      title: '£15 Qwikker Credit',
       description: 'Special recognition for being an early Qwikker pioneer',
-      value: '£10',
+      value: '£15',
       terms: 'Valid at all partner venues. Cannot be combined with other offers. Show badge to redeem.',
       redemptionCode: 'QWIK-LEGEND-FOUNDER'
     }
@@ -839,7 +830,7 @@ export const mockPointsHistory: PointsTransaction[] = [
   {
     id: 'txn_001',
     type: 'earned',
-    amount: 100,
+    amount: 25,
     reason: 'business_visit',
     description: 'Visited The Seaside Bistro',
     timestamp: '2024-01-15T12:30:00Z',
@@ -864,21 +855,21 @@ export const mockPointsHistory: PointsTransaction[] = [
   },
   {
     id: 'txn_003',
-    type: 'spent',
-    amount: -75,
+    type: 'earned',
+    amount: 30,
     reason: 'secret_unlock',
-    description: 'Unlocked "Chef\'s Secret Pasta"',
+    description: 'Unlocked "Captain\'s Hidden Treasure"',
     timestamp: '2024-01-14T19:20:00Z',
     relatedItem: {
       type: 'secret_item',
-      id: 'secret_pasta',
-      name: 'Chef\'s Secret Pasta'
+      id: 'captains_dessert',
+      name: 'Captain\'s Hidden Treasure'
     }
   },
   {
     id: 'txn_004',
     type: 'earned',
-    amount: 25,
+    amount: 50,
     reason: 'offer_redeem',
     description: 'Redeemed 2-for-1 Fish & Chips',
     timestamp: '2024-01-12T19:45:00Z',
@@ -891,7 +882,7 @@ export const mockPointsHistory: PointsTransaction[] = [
   {
     id: 'txn_005',
     type: 'earned',
-    amount: 75,
+    amount: 500,
     reason: 'friend_referral',
     description: 'Friend Sarah joined Qwikker',
     timestamp: '2024-01-10T14:15:00Z'
@@ -918,6 +909,33 @@ export const pointsEarningRules = {
   business_visit: { points: 25, description: 'Visit a business (simplified validation coming soon)' },
   review_write: { points: 20, description: 'Write a review after business visit' },
   social_share: { points: 10, description: 'Share a business or offer on social media' }
+}
+
+// Level System Definition
+export const levelSystem = {
+  levels: [
+    { level: 1, pointsRequired: 0, tier: 'explorer', title: 'Qwikker Explorer', benefits: ['Access to basic features', 'Earn points for activities'] },
+    { level: 2, pointsRequired: 250, tier: 'explorer', title: 'Local Explorer', benefits: ['Unlock secret menu hints', 'Basic badge rewards'] },
+    { level: 3, pointsRequired: 750, tier: 'insider', title: 'Qwikker Insider', benefits: ['Enhanced AI recommendations', 'Priority support'] },
+    { level: 4, pointsRequired: 2000, tier: 'insider', title: 'Bournemouth Insider', benefits: ['Exclusive offers', 'Early access to new features'] },
+    { level: 5, pointsRequired: 4000, tier: 'legend', title: 'Local Legend', benefits: ['VIP treatment at partners', 'Custom recommendations'] },
+    { level: 6, pointsRequired: 8000, tier: 'legend', title: 'Qwikker Legend', benefits: ['Ultimate rewards', 'Influence on new features'] }
+  ],
+  
+  // Calculate level from points
+  getLevelFromPoints: (points: number) => {
+    for (let i = levelSystem.levels.length - 1; i >= 0; i--) {
+      if (points >= levelSystem.levels[i].pointsRequired) {
+        return levelSystem.levels[i]
+      }
+    }
+    return levelSystem.levels[0]
+  },
+  
+  // Get next level info
+  getNextLevel: (currentLevel: number) => {
+    return levelSystem.levels.find(l => l.level === currentLevel + 1) || null
+  }
 }
 
 // Enhanced Secret Menu Items
