@@ -24,11 +24,13 @@ export default async function DashboardPage() {
     if (!profile.business_name) actionItemsCount++
     if (!profile.business_hours) actionItemsCount++
     if (!profile.business_description) actionItemsCount++
+    if (!profile.business_tagline) actionItemsCount++
     if (!profile.business_address || !profile.business_town) actionItemsCount++
     if (!profile.business_category) actionItemsCount++
     if (!profile.logo) actionItemsCount++
     if (!profile.business_images || (Array.isArray(profile.business_images) && profile.business_images.length === 0)) actionItemsCount++
-    if (!profile.menu_preview || (Array.isArray(profile.menu_preview) && profile.menu_preview.length === 0)) actionItemsCount++
+    if (!profile.menu_url) actionItemsCount++ // Full menu upload (for AI)
+    if (!profile.menu_preview || (Array.isArray(profile.menu_preview) && profile.menu_preview.length === 0)) actionItemsCount++ // Featured items (for display)
   }
 
   return (

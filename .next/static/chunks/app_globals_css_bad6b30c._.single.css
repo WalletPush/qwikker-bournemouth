@@ -1525,6 +1525,10 @@
     min-width: calc(var(--spacing) * 0);
   }
 
+  .min-w-\[20px\] {
+    min-width: 20px;
+  }
+
   .flex-1 {
     flex: 1;
   }
@@ -1630,6 +1634,10 @@
 
   .resize-none {
     resize: none;
+  }
+
+  .resize-y {
+    resize: vertical;
   }
 
   .list-disc {
@@ -2759,6 +2767,10 @@
     }
   }
 
+  .bg-red-400 {
+    background-color: var(--color-red-400);
+  }
+
   .bg-red-500 {
     background-color: var(--color-red-500);
   }
@@ -2991,6 +3003,10 @@
     .bg-white\/90 {
       background-color: color-mix(in oklab, var(--color-white) 90%, transparent);
     }
+  }
+
+  .bg-yellow-400 {
+    background-color: var(--color-yellow-400);
   }
 
   .bg-yellow-500 {

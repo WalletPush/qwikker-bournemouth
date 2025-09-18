@@ -1,3 +1,9 @@
 {
-  "/page": "app/page.js"
+  "/page": "app/page.js",
+  "/user/chat/page": "app/user/chat/page.js",
+  "/user/credits/page": "app/user/credits/page.js",
+  "/user/dashboard/page": "app/user/dashboard/page.js",
+  "/user/discover/page": "app/user/discover/page.js",
+  "/user/offers/page": "app/user/offers/page.js",
+  "/user/secret-menu/page": "app/user/secret-menu/page.js"
 }
