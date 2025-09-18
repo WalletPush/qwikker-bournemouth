@@ -117,18 +117,25 @@ export function UserDiscoverPage() {
         </div>
 
         {/* Compact Menu Preview */}
-        <div className="bg-slate-700/30 rounded-lg p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-sm">🍽</span>
-            <p className="text-slate-100 text-sm font-medium">Popular items:</p>
+        {business.menuPreview && business.menuPreview.length > 0 && (
+          <div className="bg-slate-700/30 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm">🍽</span>
+              <p className="text-slate-100 text-sm font-medium">Popular items:</p>
+            </div>
+            <div className="space-y-1">
+              {business.menuPreview.slice(0, 2).map((item: any, index: number) => (
+                <div key={index} className="flex items-center justify-between">
+                  <p className="text-slate-300 text-xs">{item.name}</p>
+                  <p className="text-[#00d083] text-xs font-medium">£{item.price}</p>
+                </div>
+              ))}
+              {business.menuPreview.length > 2 && (
+                <p className="text-slate-400 text-xs">+{business.menuPreview.length - 2} more items...</p>
+              )}
+            </div>
           </div>
-          <div className="space-y-1">
-            {business.menuPreview.slice(0, 2).map((item: string, index: number) => (
-              <p key={index} className="text-slate-300 text-xs">{item}</p>
-            ))}
-            <p className="text-slate-400 text-xs">See more...</p>
-          </div>
-        </div>
+        )}
 
         {/* Special Features with Better Visual */}
         <div className="flex items-center justify-between">

@@ -442,23 +442,33 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
               </CardContent>
             </Card>
 
-            {/* Menu Highlights - Secondary */}
-            <Card className="bg-slate-800/50 border-slate-700">
+            {/* Featured Menu Items - Secondary */}
+            {business.menuPreview && business.menuPreview.length > 0 && (
+              <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-slate-100">Menu Highlights</CardTitle>
-                  <span className="text-slate-400 text-sm">Just a taste of what's available</span>
+                  <CardTitle className="text-slate-100">Featured Menu Items</CardTitle>
+                  <span className="text-slate-400 text-sm">Our most popular dishes</span>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4">
-                  {business.menuPreview.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between py-3 border-b border-slate-600 last:border-b-0">
-                      <div>
-                        <p className="text-slate-100 font-medium">{item.split(' £')[0]}</p>
-                        <p className="text-slate-400 text-sm">Popular choice</p>
+                  {business.menuPreview && business.menuPreview.map((item: any, index: number) => (
+                    <div key={index} className="flex items-start justify-between py-4 border-b border-slate-600 last:border-b-0">
+                      <div className="flex-1">
+                        <p className="text-slate-100 font-medium text-lg">{item.name}</p>
+                        {item.description && (
+                          <p className="text-slate-400 text-sm mt-1">{item.description}</p>
+                        )}
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="bg-[#00d083]/10 text-[#00d083] text-xs px-2 py-1 rounded-full">
+                            Popular Choice
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-[#00d083] font-semibold">£{item.split(' £')[1]}</span>
+                      <div className="text-right ml-4">
+                        <span className="text-[#00d083] font-bold text-xl">£{item.price}</span>
+                      </div>
                     </div>
                   ))}
                   
@@ -479,6 +489,7 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                 </div>
               </CardContent>
             </Card>
+            )}
                 
             {/* Secret Menu - Enhanced with Chat CTA */}
             {secretMenu && (
