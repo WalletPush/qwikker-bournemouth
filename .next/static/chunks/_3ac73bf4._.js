@@ -1536,6 +1536,7 @@ const mockUserProfile = {
     experiencePoints: 1250,
     nextLevelXP: 2000,
     tier: 'insider',
+    plan: 'spotlight',
     badges: [
         {
             ...mockBadges[0],
