@@ -9,6 +9,7 @@ interface DashboardLayoutProps {
   children: React.ReactNode
   currentSection: string
   profile?: any
+  actionItemsCount?: number
 }
 
 interface NavItem {
@@ -103,7 +104,7 @@ const navItems: NavItem[] = [
   },
 ]
 
-export function DashboardLayout({ children, currentSection, profile }: DashboardLayoutProps) {
+export function DashboardLayout({ children, currentSection, profile, actionItemsCount = 0 }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const router = useRouter()
 
@@ -175,14 +176,19 @@ export function DashboardLayout({ children, currentSection, profile }: Dashboard
               ) : (
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors relative ${
                     currentSection === item.id
                       ? 'bg-gradient-to-r from-[#00d083]/20 to-[#00b86f]/20 border border-[#00d083]/30 text-[#00d083]'
                       : 'text-gray-300 hover:bg-slate-800/50 hover:text-white'
                   }`}
                 >
                   <div className={currentSection === item.id ? "text-[#00d083]" : "text-gray-400"}>{item.icon}</div>
-                  <span>{item.title}</span>
+                  <span className="flex-1">{item.title}</span>
+                  {item.id === 'action-items' && actionItemsCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold min-w-[20px] text-center">
+                      {actionItemsCount}
+                    </span>
+                  )}
                 </Link>
               )}
             </div>

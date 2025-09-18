@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { getReferralStats } from '@/lib/actions/referral-actions'
+import { submitBusinessForReview } from '@/lib/actions/business-actions'
 
 interface DashboardHomeProps {
   profile?: {
@@ -19,6 +20,7 @@ interface DashboardHomeProps {
 export function DashboardHome({ profile }: DashboardHomeProps) {
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(0)
   const [showModal, setShowModal] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [referralStats, setReferralStats] = useState({
     totalReferrals: 0,
     successfulReferrals: 0,
@@ -58,17 +60,50 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     loadReferralStats()
   }, [profile?.user_id])
 
-  // Check for missing items from onboarding form - organized by priority
-  const highPriorityTodos = []
-  const mediumPriorityTodos = []
-  const lowPriorityTodos = []
+  const handleSubmitForReview = async () => {
+    if (!profile?.user_id || isSubmitting) return
+    
+    setIsSubmitting(true)
+    try {
+      const result = await submitBusinessForReview(profile.user_id)
+      if (result.success) {
+        alert('🎉 Successfully submitted for review!\n\nYour business listing is now being reviewed by our team. You\'ll receive an email notification once it\'s approved and live on Qwikker!')
+        // Refresh the page to show updated status
+        window.location.reload()
+      } else {
+        alert('Failed to submit for review: ' + (result.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Submit error:', error)
+      alert('Failed to submit for review. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Check for missing items required for USER dashboard listing
+  const requiredTodos = []
+  const optionalTodos = []
   
-  // HIGH PRIORITY - Critical for going live on user dashboard
+  // REQUIRED - Critical fields that MUST be completed for user dashboard listing
+  if (!profile?.business_name) {
+    requiredTodos.push({ 
+      title: 'Add your business name', 
+      href: '/dashboard/business',
+      priority: 'REQUIRED',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      )
+    })
+  }
+
   if (!profile?.business_hours) {
-    highPriorityTodos.push({ 
+    requiredTodos.push({ 
       title: 'Add your business hours', 
       href: '/dashboard/business',
-      priority: 'HIGH',
+      priority: 'REQUIRED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -77,24 +112,11 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     })
   }
 
-  if (!profile?.logo) {
-    highPriorityTodos.push({ 
-      title: 'Upload your business logo', 
-      href: '/dashboard/files',
-      priority: 'HIGH',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      )
-    })
-  }
-
   if (!profile?.business_description) {
-    highPriorityTodos.push({ 
+    requiredTodos.push({ 
       title: 'Add your business description', 
       href: '/dashboard/business',
-      priority: 'HIGH',
+      priority: 'REQUIRED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
@@ -102,27 +124,26 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
       )
     })
   }
-  
-        // Check for menu/service list upload (critical for AI responses)
-        if (!profile?.menu_url) {
-          highPriorityTodos.push({ 
-            title: 'Upload your menu or service price list', 
-            href: '/dashboard/files',
-            priority: 'HIGH',
-            icon: (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            )
-          })
-        }
-  
-  // MEDIUM PRIORITY - Important for customer engagement
-  if (!profile?.offer_name) {
-    mediumPriorityTodos.push({ 
-      title: 'Create your first exclusive offer', 
-      href: '/dashboard/offers',
-      priority: 'MEDIUM',
+
+  if (!profile?.business_address || !profile?.business_town) {
+    requiredTodos.push({ 
+      title: 'Complete your business address', 
+      href: '/dashboard/business',
+      priority: 'REQUIRED',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      )
+    })
+  }
+
+  if (!profile?.business_category) {
+    requiredTodos.push({ 
+      title: 'Select your business category', 
+      href: '/dashboard/business',
+      priority: 'REQUIRED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -131,7 +152,75 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     })
   }
 
-  // Check for secret menu items
+  if (!profile?.logo) {
+    requiredTodos.push({ 
+      title: 'Upload your business logo', 
+      href: '/dashboard/files',
+      priority: 'REQUIRED',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      )
+    })
+  }
+
+  // Check for business images (required for hero image on user dashboard)
+  if (!profile?.business_images || (Array.isArray(profile.business_images) && profile.business_images.length === 0)) {
+    requiredTodos.push({ 
+      title: 'Upload business photos', 
+      href: '/dashboard/files',
+      priority: 'REQUIRED',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      )
+    })
+  }
+
+  // Menu preview is required for the menu tab on user dashboard
+  if (!profile?.menu_preview || (Array.isArray(profile.menu_preview) && profile.menu_preview.length === 0)) {
+    requiredTodos.push({ 
+      title: 'Upload your menu or service list', 
+      href: '/dashboard/files',
+      priority: 'REQUIRED',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      )
+    })
+  }
+  
+  // OPTIONAL - Nice to have but not required for user dashboard listing
+  if (!profile?.business_tagline) {
+    optionalTodos.push({ 
+      title: 'Add a catchy business tagline', 
+      href: '/dashboard/business',
+      priority: 'OPTIONAL',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+        </svg>
+      )
+    })
+  }
+
+  if (!profile?.offer_name) {
+    optionalTodos.push({ 
+      title: 'Create your first exclusive offer', 
+      href: '/dashboard/offers',
+      priority: 'OPTIONAL',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+      )
+    })
+  }
+
+  // Check for secret menu items (optional)
   const hasSecretMenuItems = profile?.additional_notes ? 
     (() => {
       try {
@@ -143,10 +232,10 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     })() : false
 
   if (!hasSecretMenuItems) {
-    mediumPriorityTodos.push({ 
+    optionalTodos.push({ 
       title: 'Add a secret menu item', 
       href: '/dashboard/secret-menu',
-      priority: 'MEDIUM',
+      priority: 'OPTIONAL',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -157,10 +246,10 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   
   
   if (!profile?.instagram_handle) {
-    mediumPriorityTodos.push({ 
+    optionalTodos.push({ 
       title: 'Add your Instagram handle', 
       href: '/dashboard/business',
-      priority: 'MEDIUM',
+      priority: 'OPTIONAL',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -170,12 +259,11 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     })
   }
   
-  // LOW PRIORITY - Nice to have but not critical
   if (!profile?.website_url) {
-    lowPriorityTodos.push({ 
+    optionalTodos.push({ 
       title: 'Add your website URL', 
       href: '/dashboard/business',
-      priority: 'LOW',
+      priority: 'OPTIONAL',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
@@ -185,10 +273,10 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   }
   
   if (!profile?.facebook_url) {
-    lowPriorityTodos.push({ 
+    optionalTodos.push({ 
       title: 'Add your Facebook page', 
       href: '/dashboard/business',
-      priority: 'LOW',
+      priority: 'OPTIONAL',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -197,70 +285,18 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     })
   }
   
-  if (!profile?.phone) {
-    lowPriorityTodos.push({ 
-      title: 'Add your phone number', 
-      href: '/dashboard/personal',
-      priority: 'LOW',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-        </svg>
-      )
-    })
-  }
+  // Removed additional_notes - not required for user dashboard listing
   
-  if (!profile?.business_category) {
-    lowPriorityTodos.push({ 
-      title: 'Complete your business category', 
-      href: '/dashboard/business',
-      priority: 'LOW',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-        </svg>
-      )
-    })
-  }
-  
-  if (!profile?.goals) {
-    lowPriorityTodos.push({ 
-      title: 'Set your business goals', 
-      href: '/dashboard/business',
-      priority: 'LOW',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-        </svg>
-      )
-    })
-  }
-  
-  if (!profile?.additional_notes) {
-    lowPriorityTodos.push({ 
-      title: 'Add additional notes about your business', 
-      href: '/dashboard/business',
-      priority: 'LOW',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      )
-    })
-  }
-  
-  // Combine all todos in priority order
-  const todoItems = [...highPriorityTodos, ...mediumPriorityTodos, ...lowPriorityTodos]
+  // Combine all todos in priority order (required items first)
+  const todoItems = [...requiredTodos, ...optionalTodos]
 
-  // Calculate profile completion percentage
-  const requiredFields = [
-    'business_name', 'business_hours', 'business_description', 'logo', 'menu_url', 'offer_name'
-  ]
-  const completedFields = requiredFields.filter(field => profile?.[field])
-  const completionPercentage = Math.round((completedFields.length / requiredFields.length) * 100)
+  // Calculate profile completion percentage based on REQUIRED fields only
+  const totalRequiredFields = 8 // business_name, business_hours, business_description, business_address, business_town, business_category, logo, business_images, menu_preview
+  const completedRequiredFields = totalRequiredFields - requiredTodos.length
+  const completionPercentage = Math.round((completedRequiredFields / totalRequiredFields) * 100)
   
-  // Check if profile is ready for review (all high priority items completed)
-  const isReadyForReview = highPriorityTodos.length === 0 && profile?.offer_name
+  // Check if profile is ready for review (all REQUIRED items completed)
+  const isReadyForReview = requiredTodos.length === 0
   const currentStatus = profile?.status || 'incomplete'
 
   const businessName = profile?.business_name || 'Your Business'
@@ -407,8 +443,12 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
               </div>
               
               {isReadyForReview && currentStatus === 'incomplete' ? (
-                <Button className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
-                  Submit for Review
+                <Button 
+                  onClick={handleSubmitForReview}
+                  disabled={isSubmitting}
+                  className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit for Review'}
                 </Button>
               ) : (
                 <Button asChild variant="outline" className="w-full border-slate-600 text-gray-300 hover:bg-slate-700">
@@ -438,13 +478,11 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
                     {/* Priority tag positioned better */}
                     <div className="flex-shrink-0 relative">
                       <span className={`inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${
-                        item.priority === 'HIGH' 
+                        item.priority === 'REQUIRED' 
                           ? 'bg-red-500 text-white' 
-                          : item.priority === 'MEDIUM'
-                          ? 'bg-yellow-500 text-black'
-                          : 'bg-green-500 text-black'
+                          : 'bg-blue-500 text-white'
                       }`}>
-                        {item.priority === 'HIGH' ? 'HIGH' : item.priority === 'MEDIUM' ? 'MED' : 'LOW'}
+                        {item.priority === 'REQUIRED' ? 'REQ' : 'OPT'}
                       </span>
                     </div>
                     <div className="text-[#00d083] flex-shrink-0 mt-0.5">{item.icon}</div>
