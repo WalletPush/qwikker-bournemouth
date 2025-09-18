@@ -6,5 +6,9 @@
   "/dashboard/personal/page": "app/dashboard/personal/page.js",
   "/dashboard/secret-menu/page": "app/dashboard/secret-menu/page.js",
   "/page": "app/page.js",
-  "/protected/page": "app/protected/page.js"
+  "/protected/page": "app/protected/page.js",
+  "/user/business/[slug]/page": "app/user/business/[slug]/page.js",
+  "/user/dashboard/page": "app/user/dashboard/page.js",
+  "/user/discover/page": "app/user/discover/page.js",
+  "/user/secret-menu/page": "app/user/secret-menu/page.js"
 }

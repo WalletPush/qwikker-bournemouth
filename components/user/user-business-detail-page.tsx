@@ -106,14 +106,14 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
         
-        {/* Badges */}
+        {/* Badges - Based on Subscription Plan */}
         <div className="absolute top-4 right-4 flex flex-col gap-2">
-          {business.tier === 'qwikker_picks' && (
+          {business.plan === 'spotlight' && (
             <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-sm px-3 py-1 rounded-full font-bold shadow-lg">
               QWIKKER PICK
             </span>
           )}
-          {business.tier === 'featured' && (
+          {business.plan === 'featured' && (
             <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-sm px-3 py-1 rounded-full font-bold shadow-lg">
               FEATURED
             </span>

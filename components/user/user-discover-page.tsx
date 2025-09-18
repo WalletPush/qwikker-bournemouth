@@ -9,10 +9,10 @@ import Link from 'next/link'
 export function UserDiscoverPage() {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   
-  // Group businesses by tier
-  const qwikkerPicks = mockBusinesses.filter(b => b.tier === 'qwikker_picks')
-  const featured = mockBusinesses.filter(b => b.tier === 'featured')
-  const recommended = mockBusinesses.filter(b => b.tier === 'recommended')
+  // Group businesses by subscription plan (determines badges)
+  const qwikkerPicks = mockBusinesses.filter(b => b.plan === 'spotlight')
+  const featured = mockBusinesses.filter(b => b.plan === 'featured')
+  const recommended = mockBusinesses.filter(b => b.plan === 'starter')
 
   const filters = [
     { id: 'all', label: 'All Places', count: mockBusinesses.length },
@@ -42,14 +42,14 @@ export function UserDiscoverPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
         
-        {/* Hero Badge - Only One */}
+        {/* Hero Badge - Based on Subscription Plan */}
         <div className="absolute top-3 right-3">
-          {business.tier === 'qwikker_picks' && (
+          {business.plan === 'spotlight' && (
             <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg animate-pulse">
               ⭐ QWIKKER PICK
             </span>
           )}
-          {business.tier === 'featured' && business.tier !== 'qwikker_picks' && (
+          {business.plan === 'featured' && (
             <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg">
               FEATURED
             </span>
