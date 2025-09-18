@@ -60,10 +60,10 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700 shadow-2xl">
         <CardHeader className="text-center pb-4">
-          <CardTitle className="text-2xl text-white font-bold">Sign In</CardTitle>
-          <CardDescription className="text-slate-400">
-            Enter your credentials to access your dashboard
-          </CardDescription>
+        <CardTitle className="text-2xl text-white font-bold">Sign In</CardTitle>
+        <CardDescription className="text-slate-400">
+          Log in to your business dashboard
+        </CardDescription>
           {isFromOnboarding && (
             <div className="mt-4 p-4 bg-gradient-to-r from-[#00d083]/10 to-[#00b86f]/10 border border-[#00d083]/30 rounded-lg">
               <div className="flex items-center gap-2 text-sm text-[#00d083]">
