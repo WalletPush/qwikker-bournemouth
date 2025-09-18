@@ -125,7 +125,7 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="business_name" className="text-white">Business Name</Label>
+                <Label htmlFor="business_name" className="text-white">Business Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="business_name"
                   value={formData.business_name}
@@ -153,7 +153,7 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
             </div>
 
             <div>
-              <Label htmlFor="business_category" className="text-white">Business Category</Label>
+              <Label htmlFor="business_category" className="text-white">Business Category <span className="text-red-500">*</span></Label>
               <Input
                 id="business_category"
                 value={formData.business_category}
@@ -189,7 +189,7 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
             </div>
             
             <div>
-              <Label htmlFor="business_tagline" className="text-white">Business Tagline</Label>
+              <Label htmlFor="business_tagline" className="text-white">Business Tagline <span className="text-red-500">*</span></Label>
               <Input
                 id="business_tagline"
                 value={formData.business_tagline}
@@ -231,7 +231,7 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="business_address" className="text-white">Business Address</Label>
+              <Label htmlFor="business_address" className="text-white">Business Address <span className="text-red-500">*</span></Label>
               <Input
                 id="business_address"
                 value={formData.business_address}
@@ -242,7 +242,7 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="business_town" className="text-white">Town</Label>
+                <Label htmlFor="business_town" className="text-white">Town <span className="text-red-500">*</span></Label>
                 <select
                   id="business_town"
                   value={formData.business_town}
