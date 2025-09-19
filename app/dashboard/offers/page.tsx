@@ -14,7 +14,7 @@ export default async function DashboardOffersPage() {
   }
 
   const { data: profileData, error: profileError } = await supabase
-    .from('profiles')
+    .from('business_profiles')
     .select('*')
     .eq('user_id', data.claims.sub)
     .single()

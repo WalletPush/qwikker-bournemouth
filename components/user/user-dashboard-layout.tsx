@@ -6,6 +6,7 @@ import Link from 'next/link'
 interface UserDashboardLayoutProps {
   children: React.ReactNode
   currentSection: string
+  currentUser?: any
 }
 
 interface NavItem {
@@ -66,7 +67,7 @@ const navItems: NavItem[] = [
   },
 ]
 
-export function UserDashboardLayout({ children, currentSection }: UserDashboardLayoutProps) {
+export function UserDashboardLayout({ children, currentSection, currentUser }: UserDashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -127,8 +128,10 @@ export function UserDashboardLayout({ children, currentSection }: UserDashboardL
               D
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-slate-100">David</p>
-              <p className="text-sm text-slate-400">Bournemouth Explorer</p>
+              <p className="font-semibold text-slate-100">{currentUser?.name || 'David'}</p>
+              <p className="text-sm text-slate-400">
+                {currentUser?.tier ? `${currentUser.tier.charAt(0).toUpperCase() + currentUser.tier.slice(1)} • Level ${currentUser.level}` : 'Bournemouth Explorer'}
+              </p>
             </div>
           </div>
         </div>

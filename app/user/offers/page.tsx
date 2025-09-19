@@ -7,7 +7,7 @@ export default async function OffersPage() {
   
   // Fetch approved businesses with offers
   const { data: approvedBusinesses, error } = await supabase
-    .from('profiles')
+    .from('business_profiles')
     .select(`
       id,
       business_name,

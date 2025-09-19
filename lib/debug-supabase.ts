@@ -139,7 +139,7 @@ export async function testSupabaseConnection(supabase: any) {
     console.log('🔍 Testing connection with profiles table query...');
     
     const result = await supabase
-      .from('profiles')
+      .from('business_profiles')
       .select('id')
       .limit(1);
     

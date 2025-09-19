@@ -39,7 +39,7 @@ export default async function AdminPage() {
   
   // Fetch business profiles for this city only
   const { data: allBusinesses, error: businessError } = await supabase
-    .from('profiles')
+    .from('business_profiles')
     .select(`
       id,
       user_id,

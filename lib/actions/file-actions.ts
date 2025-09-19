@@ -23,7 +23,7 @@ export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu
     case 'business_images':
       // Get existing business images
       const { data: existingProfile } = await supabaseAdmin
-        .from('profiles')
+        .from('business_profiles')
         .select('business_images')
         .eq('user_id', userId)
         .single()
@@ -35,7 +35,7 @@ export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu
   }
 
   const { data, error } = await supabaseAdmin
-    .from('profiles')
+    .from('business_profiles')
     .update(updateData)
     .eq('user_id', userId)
     .select()

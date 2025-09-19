@@ -13,7 +13,7 @@ export default async function AdminDebugPage() {
   
   // Fetch ALL profiles to debug
   const { data: allProfiles, error: profileError } = await supabase
-    .from('profiles')
+    .from('business_profiles')
     .select(`
       id,
       user_id,

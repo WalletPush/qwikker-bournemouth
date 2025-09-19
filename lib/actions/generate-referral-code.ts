@@ -12,7 +12,7 @@ export async function generateReferralCodeForUser(userId: string) {
   try {
     // First check if user already has a referral code
     const { data: profile } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .select('referral_code')
       .eq('user_id', userId)
       .single()
@@ -31,7 +31,7 @@ export async function generateReferralCodeForUser(userId: string) {
 
     // Update the profile with the new referral code
     const { error: updateError } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .update({ referral_code: codeResult })
       .eq('user_id', userId)
 

@@ -23,7 +23,7 @@ interface ChatMessage {
   }[]
 }
 
-export function UserChatPage() {
+export function UserChatPage({ currentUser }: { currentUser?: any }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -107,10 +107,14 @@ export function UserChatPage() {
       }
       
       // Always start with ONLY a fresh welcome message (no history shown)
+      const userName = currentUser?.name || 'Explorer'
+      const userLevel = currentUser?.level || 1
+      const userTier = currentUser?.tier || 'explorer'
+      
       const welcomeMessage: ChatMessage = {
         id: Date.now().toString(),
         type: 'assistant',
-        content: "Hi there! I'm your local guide for Bournemouth. I can help you discover amazing businesses, find deals, and explore hidden gems. What are you in the mood for today?",
+        content: `Hey ${userName}! 👋 Welcome back, Level ${userLevel} ${userTier.charAt(0).toUpperCase() + userTier.slice(1)}! I'm your local guide for Bournemouth. I can help you discover amazing businesses, find deals, and explore hidden gems. What are you in the mood for today?`,
         timestamp: new Date().toISOString()
       }
       

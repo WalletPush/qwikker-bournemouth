@@ -54,7 +54,7 @@ export default function DebugSupabasePage() {
       addResult('🔒 Testing RLS policies...')
       try {
         const { error } = await supabase
-          .from('profiles')
+          .from('business_profiles')
           .select('count')
           .limit(1)
         
@@ -117,7 +117,7 @@ export default function DebugSupabasePage() {
           setTimeout(async () => {
             try {
               const { data: profileData, error: profileError } = await supabase
-                .from('profiles')
+                .from('business_profiles')
                 .select('*')
                 .eq('user_id', data.user!.id)
                 .single()

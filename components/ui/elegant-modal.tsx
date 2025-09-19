@@ -64,55 +64,55 @@ export function ElegantModal({
     switch (type) {
       case 'success':
         return {
-          backdrop: 'bg-green-900/20',
-          border: 'border-green-500/30',
-          gradient: 'from-green-900/40 to-green-800/40',
+          iconBg: 'bg-green-500',
+          iconColor: 'text-white',
+          border: 'border-slate-700/50',
           icon: (
-            <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           )
         }
       case 'error':
         return {
-          backdrop: 'bg-red-900/20',
-          border: 'border-red-500/30',
-          gradient: 'from-red-900/40 to-red-800/40',
+          iconBg: 'bg-red-500',
+          iconColor: 'text-white',
+          border: 'border-slate-700/50',
           icon: (
-            <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           )
         }
       case 'warning':
         return {
-          backdrop: 'bg-yellow-900/20',
-          border: 'border-yellow-500/30',
-          gradient: 'from-yellow-900/40 to-yellow-800/40',
+          iconBg: 'bg-yellow-500',
+          iconColor: 'text-white',
+          border: 'border-slate-700/50',
           icon: (
-            <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           )
         }
       case 'secret':
         return {
-          backdrop: 'bg-purple-900/20',
-          border: 'border-purple-500/30',
-          gradient: 'from-purple-900/40 to-pink-900/40',
+          iconBg: 'bg-purple-500',
+          iconColor: 'text-white',
+          border: 'border-slate-700/50',
           icon: (
-            <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           )
         }
       default:
         return {
-          backdrop: 'bg-slate-900/20',
-          border: 'border-slate-500/30',
-          gradient: 'from-slate-900/40 to-slate-800/40',
+          iconBg: 'bg-slate-600',
+          iconColor: 'text-white',
+          border: 'border-slate-700/50',
           icon: (
-            <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           )
@@ -134,7 +134,7 @@ export function ElegantModal({
 
   return (
     <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm ${typeStyles.backdrop} transition-all duration-300 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md transition-all duration-300 ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
       onClick={(e) => {
@@ -142,7 +142,7 @@ export function ElegantModal({
       }}
     >
       <Card 
-        className={`${getSizeClasses()} w-full bg-gradient-to-br ${typeStyles.gradient} border ${typeStyles.border} shadow-2xl transition-all duration-300 ${
+        className={`${getSizeClasses()} w-full bg-slate-800/95 border ${typeStyles.border} shadow-2xl transition-all duration-300 ${
           isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
       >
@@ -150,7 +150,7 @@ export function ElegantModal({
           <div className="space-y-4">
             {/* Header */}
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
+              <div className={`flex-shrink-0 w-10 h-10 ${typeStyles.iconBg} rounded-full flex items-center justify-center`}>
                 {typeStyles.icon}
               </div>
               <div className="flex-1">
@@ -162,9 +162,9 @@ export function ElegantModal({
               {showCloseButton && (
                 <button 
                   onClick={onClose}
-                  className="flex-shrink-0 text-slate-400 hover:text-slate-300 transition-colors"
+                  className="flex-shrink-0 text-slate-400 hover:text-white transition-colors p-1 rounded-full hover:bg-slate-700/50"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -187,6 +187,7 @@ export function ElegantModal({
                     variant={action.variant || 'default'}
                     onClick={action.onClick}
                     className={action.className}
+                    size="sm"
                   >
                     {action.label}
                   </Button>

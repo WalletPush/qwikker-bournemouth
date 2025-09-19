@@ -14,7 +14,7 @@ export default async function DashboardPage() {
 
   // Get user profile data
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('business_profiles')
     .select('*')
     .eq('user_id', data.claims.sub)
     .single()

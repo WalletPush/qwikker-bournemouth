@@ -35,7 +35,7 @@ export async function createOrUpdateProfile(profileData: any, userId: string) {
     while (retries < maxRetries) {
       try {
         const { data, error } = await supabase
-          .from('profiles')
+          .from('business_profiles')
           .upsert({
             ...profileData,
             user_id: userId,

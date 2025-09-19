@@ -9,12 +9,37 @@ export const metadata: Metadata = {
   description: "Discover amazing local businesses, exclusive offers, and secret menus in Bournemouth",
 }
 
-export default async function UserDashboardPage() {
+interface UserDashboardPageProps {
+  searchParams: Promise<{
+    wallet_pass_id?: string
+  }>
+}
+
+export default async function UserDashboardPage({ searchParams }: UserDashboardPageProps) {
   const supabase = await createClient()
+  
+  // 🎯 WALLET PASS AUTHENTICATION FLOW
+  // Get wallet pass ID from URL param or default to David for demo
+  const resolvedSearchParams = await searchParams
+  const walletPassId = resolvedSearchParams.wallet_pass_id || 'QWIK-BOURNEMOUTH-DAVID-2024'
+  let currentUser = null
+  
+  // Try to get user by wallet pass ID
+  try {
+    const { data: user } = await supabase
+      .from('app_users')
+      .select('*')
+      .eq('wallet_pass_id', walletPassId)
+      .single()
+    currentUser = user
+    console.log('✅ Found user by wallet pass ID:', user?.name, 'ID:', walletPassId)
+  } catch (error) {
+    console.log('No user found with wallet pass ID:', walletPassId, 'using static mock data')
+  }
   
   // Fetch approved businesses from database
   const { data: approvedBusinesses, error } = await supabase
-    .from('profiles')
+    .from('business_profiles')
     .select(`
       id,
       business_name,
@@ -64,8 +89,8 @@ export default async function UserDashboardPage() {
   }
   
   return (
-    <UserDashboardLayout currentSection="dashboard">
-      <UserDashboardHome stats={stats} />
+    <UserDashboardLayout currentSection="dashboard" currentUser={currentUser}>
+      <UserDashboardHome stats={stats} currentUser={currentUser} />
     </UserDashboardLayout>
   )
 }
