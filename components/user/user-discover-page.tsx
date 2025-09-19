@@ -6,16 +6,43 @@ import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { useState } from 'react'
 import Link from 'next/link'
 
-export function UserDiscoverPage() {
+interface Business {
+  id: string
+  name: string
+  category: string
+  location: string
+  address: string
+  tagline: string
+  description: string
+  images: string[]
+  logo: string
+  offers: Array<{
+    id: string
+    title: string
+    type: string
+    value: string
+    image?: string
+  }>
+  plan: string
+  rating: number
+  reviewCount: number
+  tags: string[]
+}
+
+interface UserDiscoverPageProps {
+  businesses?: Business[]
+}
+
+export function UserDiscoverPage({ businesses = mockBusinesses }: UserDiscoverPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   
   // Group businesses by subscription plan (determines badges)
-  const qwikkerPicks = mockBusinesses.filter(b => b.plan === 'spotlight')
-  const featured = mockBusinesses.filter(b => b.plan === 'featured')
-  const recommended = mockBusinesses.filter(b => b.plan === 'starter')
+  const qwikkerPicks = businesses.filter(b => b.plan === 'spotlight')
+  const featured = businesses.filter(b => b.plan === 'featured')
+  const recommended = businesses.filter(b => b.plan === 'starter')
 
   const filters = [
-    { id: 'all', label: 'All Places', count: mockBusinesses.length },
+    { id: 'all', label: 'All Places', count: businesses.length },
     { id: 'qwikker_picks', label: 'Qwikker Picks', count: qwikkerPicks.length },
     { id: 'featured', label: 'Featured', count: featured.length },
     { id: 'recommended', label: 'Recommended', count: recommended.length },
@@ -26,7 +53,7 @@ export function UserDiscoverPage() {
       case 'qwikker_picks': return qwikkerPicks
       case 'featured': return featured
       case 'recommended': return recommended
-      default: return mockBusinesses
+      default: return businesses
     }
   }
 
