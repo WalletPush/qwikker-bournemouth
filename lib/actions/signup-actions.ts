@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { uploadToCloudinary } from '@/lib/integrations'
+import { getCurrentLocation, mapTownToCity } from '@/lib/utils/location-detection'
+import { headers } from 'next/headers'
 // import { sendWelcomeEmail } from '@/lib/email/send-welcome-email' // Disabled until domain verification
 
 interface SignupData {
@@ -36,13 +38,21 @@ interface SignupData {
   
   // Other
   referralSource?: string
+  goals?: string
   notes?: string
 }
 
-export async function createUserAndProfile(formData: SignupData, files: { logo?: File, menu?: File[], offer?: File }, referralCode?: string) {
+export async function createUserAndProfile(formData: SignupData, files: { logo?: File, menu?: File[], offer?: File }, referralCode?: string, urlLocation?: string) {
   const supabaseAdmin = createAdminClient()
   
   try {
+    // 0. Detect current location from subdomain/IP
+    const headersList = await headers()
+    const hostname = headersList.get('host') || 'localhost:3000'
+    const devLocationOverride = process.env.DEV_LOCATION_OVERRIDE // e.g., 'london', 'manchester'
+    const locationInfo = await getCurrentLocation(hostname, devLocationOverride, urlLocation)
+    
+    console.log(`🌍 Detected location: ${locationInfo.displayName} (${locationInfo.city}) from hostname: ${hostname}${devLocationOverride ? ` [ENV: ${devLocationOverride}]` : ''}${urlLocation ? ` [URL: ${urlLocation}]` : ''}`)
     // 1. Create user in auth.users using admin client
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: formData.email,
@@ -210,6 +220,7 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       instagram_handle: formData.instagram || null,
       facebook_url: formData.facebook || null,
       logo: logoUrl || null,
+      menu_url: menuUrls.length > 0 ? menuUrls[0] : null, // Fix: Use first menu URL
       offer_name: formData.offerName || null,
       offer_type: mapOfferType(formData.offerType || ''),
       offer_value: formData.offerValue || null,
@@ -223,6 +234,12 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       notes: formData.notes || null,
       plan: 'featured', // Free trial users get Featured plan access during 120-day trial
       is_founder: new Date() < new Date('2025-12-31'),
+      city: mapTownToCity(formData.town, locationInfo), // Fix: Use dynamic location-aware city mapping
+      status: 'incomplete', // Fix: Add default status
+      profile_completion_percentage: 25, // Fix: Add default completion percentage
+      business_tier: 'standard', // Fix: Add default business tier
+      rating: 0, // Fix: Add default rating
+      review_count: 0, // Fix: Add default review count
     }
 
     // 4. Create profile

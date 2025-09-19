@@ -1,49 +1,19 @@
 {
   "node": {
-    "4093f5894ab7335cd297a64d4d9e947d45edbfafdf": {
+    "781a993caf5c2806946ebbf615842dcce85c5ee892": {
       "workers": {
-        "app/admin/page": {
-          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+        "app/onboarding/page": {
+          "moduleId": "[project]/.next-internal/server/app/onboarding/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/signup-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "getBusinessCRMData",
-          "filename": "lib/actions/admin-crm-actions.ts"
+          "exportedName": "createUserAndProfile",
+          "filename": "lib/actions/signup-actions.ts"
         }
       },
       "layer": {
-        "app/admin/page": "rsc"
+        "app/onboarding/page": "action-browser"
       },
-      "filename": "lib/actions/admin-crm-actions.ts",
-      "exportedName": "getBusinessCRMData"
-    },
-    "70460133abf8134760e58dc97bc75a0f42ccffefad": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "updateBusinessSubscription",
-          "filename": "lib/actions/admin-crm-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "rsc"
-      },
-      "filename": "lib/actions/admin-crm-actions.ts",
-      "exportedName": "updateBusinessSubscription"
-    },
-    "7872c59f340b81ec4dafcf750c3ce8eaf40410ed25": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "recordPayment",
-          "filename": "lib/actions/admin-crm-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "rsc"
-      },
-      "filename": "lib/actions/admin-crm-actions.ts",
-      "exportedName": "recordPayment"
+      "filename": "lib/actions/signup-actions.ts",
+      "exportedName": "createUserAndProfile"
     }
   },
   "edge": {},

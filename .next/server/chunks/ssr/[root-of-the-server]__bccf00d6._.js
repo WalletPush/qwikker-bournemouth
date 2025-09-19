@@ -434,6 +434,12 @@ async function sendBusinessUpdateNotification(profileData, updateType, details) 
         case 'referral_credited':
             message = createReferralCreditedMessage(businessName, ownerName, details);
             break;
+        case 'offer_pending_approval':
+            message = createOfferPendingApprovalMessage(businessName, ownerName, details);
+            break;
+        case 'secret_menu_pending_approval':
+            message = createSecretMenuPendingApprovalMessage(businessName, ownerName, details);
+            break;
         default:
             return; // Skip unknown update types
     }
@@ -691,6 +697,98 @@ function createReferralCreditedMessage(businessName, ownerName, details) {
                     type: "mrkdwn",
                     text: `Successful referral conversion • Reward processed`
                 }
+            }
+        ]
+    };
+}
+function createOfferPendingApprovalMessage(businessName, ownerName, details) {
+    const formatDate = (dateStr)=>{
+        if (!dateStr) return 'Not specified';
+        return new Date(dateStr).toLocaleDateString('en-GB');
+    };
+    const claimAmountLabel = details.offerClaimAmount === 'single' ? 'Single Use' : details.offerClaimAmount === 'multiple' ? 'Multiple Use' : 'Not specified';
+    const offerImage = details.offerImage ? `\n*Offer Image:* <${details.offerImage}|View Image>` : '\n*Offer Image:* Will be designed by QWIKKER team';
+    return {
+        text: `🚨 ADMIN APPROVAL NEEDED: ${ownerName} (${businessName}) submitted new offer: ${details.offerName}`,
+        blocks: [
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `🚨 *ADMIN APPROVAL NEEDED*\n🎯 ${ownerName} (${businessName}) submitted new offer: *${details.offerName}*`
+                }
+            },
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `*Value:* ${details.offerValue || 'Not specified'}\n*Type:* ${details.offerType || 'Not specified'}\n*Claim Amount:* ${claimAmountLabel}\n*Start Date:* ${formatDate(details.offerStartDate)}\n*End Date:* ${formatDate(details.offerEndDate)}${offerImage}`
+                }
+            },
+            ...details.offerTerms ? [
+                {
+                    type: "section",
+                    text: {
+                        type: "mrkdwn",
+                        text: `*Terms & Conditions:*\n${details.offerTerms}`
+                    }
+                }
+            ] : [],
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `⚠️ *This offer is PENDING APPROVAL* - it will NOT appear on user dashboard until approved by admin`
+                }
+            },
+            {
+                type: "actions",
+                elements: [
+                    {
+                        type: "button",
+                        text: {
+                            type: "plain_text",
+                            text: "Review in Admin Dashboard"
+                        },
+                        url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin?tab=updates`,
+                        style: "primary"
+                    }
+                ]
+            }
+        ]
+    };
+}
+function createSecretMenuPendingApprovalMessage(businessName, ownerName, details) {
+    return {
+        text: `🚨 ADMIN APPROVAL NEEDED: ${ownerName} (${businessName}) submitted secret menu item: ${details.itemName}`,
+        blocks: [
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `🚨 *ADMIN APPROVAL NEEDED*\n🤫 ${ownerName} (${businessName}) submitted secret menu item: *${details.itemName}*`
+                }
+            },
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `${details.description ? `*Description:* ${details.description}\n` : ''}${details.price ? `*Price:* ${details.price}\n` : ''}⚠️ *This item is PENDING APPROVAL* - it will NOT appear until approved by admin`
+                }
+            },
+            {
+                type: "actions",
+                elements: [
+                    {
+                        type: "button",
+                        text: {
+                            type: "plain_text",
+                            text: "Review in Admin Dashboard"
+                        },
+                        url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin?tab=updates`,
+                        style: "primary"
+                    }
+                ]
             }
         ]
     };
@@ -972,7 +1070,10 @@ function FoundingMemberForm({ referralCode } = {}) {
         try {
             // Use the new server-side signup action
             const { createUserAndProfile } = await __turbopack_context__.A("[project]/lib/actions/signup-actions.ts [app-ssr] (ecmascript, async loader)");
-            const result = await createUserAndProfile(data, files, referralCode);
+            // Check for location URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlLocation = urlParams.get('location');
+            const result = await createUserAndProfile(data, files, referralCode, urlLocation || undefined);
             if (!result.success) {
                 throw new Error(result.error || 'Signup failed');
             }
@@ -1019,12 +1120,12 @@ function FoundingMemberForm({ referralCode } = {}) {
                                 className: "h-12 w-auto sm:h-16"
                             }, void 0, false, {
                                 fileName: "[project]/components/founding-member-form.tsx",
-                                lineNumber: 269,
+                                lineNumber: 273,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/founding-member-form.tsx",
-                            lineNumber: 268,
+                            lineNumber: 272,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1032,7 +1133,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                             children: "Business Registration"
                         }, void 0, false, {
                             fileName: "[project]/components/founding-member-form.tsx",
-                            lineNumber: 275,
+                            lineNumber: 279,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1040,13 +1141,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                             children: "Invitation Only"
                         }, void 0, false, {
                             fileName: "[project]/components/founding-member-form.tsx",
-                            lineNumber: 276,
+                            lineNumber: 280,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/founding-member-form.tsx",
-                    lineNumber: 266,
+                    lineNumber: 270,
                     columnNumber: 11
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1061,12 +1162,12 @@ function FoundingMemberForm({ referralCode } = {}) {
                                 }
                             }, void 0, false, {
                                 fileName: "[project]/components/founding-member-form.tsx",
-                                lineNumber: 284,
+                                lineNumber: 288,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/founding-member-form.tsx",
-                            lineNumber: 283,
+                            lineNumber: 287,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1081,26 +1182,26 @@ function FoundingMemberForm({ referralCode } = {}) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/founding-member-form.tsx",
-                                    lineNumber: 290,
+                                    lineNumber: 294,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                     children: steps[currentStep - 1]?.title
                                 }, void 0, false, {
                                     fileName: "[project]/components/founding-member-form.tsx",
-                                    lineNumber: 291,
+                                    lineNumber: 295,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/founding-member-form.tsx",
-                            lineNumber: 289,
+                            lineNumber: 293,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/founding-member-form.tsx",
-                    lineNumber: 282,
+                    lineNumber: 286,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
@@ -1113,7 +1214,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                     children: steps[currentStep - 1]?.title
                                 }, void 0, false, {
                                     fileName: "[project]/components/founding-member-form.tsx",
-                                    lineNumber: 298,
+                                    lineNumber: 302,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1121,13 +1222,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                     children: steps[currentStep - 1]?.subtitle
                                 }, void 0, false, {
                                     fileName: "[project]/components/founding-member-form.tsx",
-                                    lineNumber: 301,
+                                    lineNumber: 305,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/founding-member-form.tsx",
-                            lineNumber: 297,
+                            lineNumber: 301,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -1153,13 +1254,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "*"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 310,
+                                                                        lineNumber: 314,
                                                                         columnNumber: 61
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 310,
+                                                                lineNumber: 314,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -1169,7 +1270,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ...form.register('firstName')
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 311,
+                                                                lineNumber: 315,
                                                                 columnNumber: 23
                                                             }, this),
                                                             form.formState.errors.firstName && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1177,13 +1278,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: form.formState.errors.firstName.message
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 318,
+                                                                lineNumber: 322,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 309,
+                                                        lineNumber: 313,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1198,13 +1299,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "*"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 322,
+                                                                        lineNumber: 326,
                                                                         columnNumber: 59
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 322,
+                                                                lineNumber: 326,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -1214,7 +1315,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ...form.register('lastName')
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 323,
+                                                                lineNumber: 327,
                                                                 columnNumber: 23
                                                             }, this),
                                                             form.formState.errors.lastName && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1222,19 +1323,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: form.formState.errors.lastName.message
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 330,
+                                                                lineNumber: 334,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 321,
+                                                        lineNumber: 325,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 308,
+                                                lineNumber: 312,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1251,13 +1352,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                     children: "*"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 336,
+                                                                    lineNumber: 340,
                                                                     columnNumber: 60
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 336,
+                                                            lineNumber: 340,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -1268,7 +1369,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                             ...form.register('email')
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 337,
+                                                            lineNumber: 341,
                                                             columnNumber: 23
                                                         }, this),
                                                         form.formState.errors.email && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1276,18 +1377,18 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                             children: form.formState.errors.email.message
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 345,
+                                                            lineNumber: 349,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                    lineNumber: 335,
+                                                    lineNumber: 339,
                                                     columnNumber: 21
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 334,
+                                                lineNumber: 338,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1304,13 +1405,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                     children: "*"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 351,
+                                                                    lineNumber: 355,
                                                                     columnNumber: 59
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 351,
+                                                            lineNumber: 355,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -1321,7 +1422,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                             ...form.register('phone')
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 352,
+                                                            lineNumber: 356,
                                                             columnNumber: 23
                                                         }, this),
                                                         form.formState.errors.phone && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1329,24 +1430,24 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                             children: form.formState.errors.phone.message
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 360,
+                                                            lineNumber: 364,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                    lineNumber: 350,
+                                                    lineNumber: 354,
                                                     columnNumber: 21
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 349,
+                                                lineNumber: 353,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/founding-member-form.tsx",
-                                        lineNumber: 307,
+                                        lineNumber: 311,
                                         columnNumber: 17
                                     }, this),
                                     currentStep === 2 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1368,12 +1469,12 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                     clipRule: "evenodd"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 373,
+                                                                    lineNumber: 377,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 372,
+                                                                lineNumber: 376,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -1381,13 +1482,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Account Security"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 375,
+                                                                lineNumber: 379,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 371,
+                                                        lineNumber: 375,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1395,13 +1496,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Create a secure password to protect your QWIKKER dashboard and business data."
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 377,
+                                                        lineNumber: 381,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 370,
+                                                lineNumber: 374,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1419,13 +1520,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "*"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 382,
+                                                                        lineNumber: 386,
                                                                         columnNumber: 65
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 382,
+                                                                lineNumber: 386,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -1436,7 +1537,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ...form.register('password')
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 383,
+                                                                lineNumber: 387,
                                                                 columnNumber: 23
                                                             }, this),
                                                             form.formState.errors.password && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1444,7 +1545,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: form.formState.errors.password.message
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 391,
+                                                                lineNumber: 395,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1452,13 +1553,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Minimum 8 characters required"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 393,
+                                                                lineNumber: 397,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 381,
+                                                        lineNumber: 385,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1473,13 +1574,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "*"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 396,
+                                                                        lineNumber: 400,
                                                                         columnNumber: 73
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 396,
+                                                                lineNumber: 400,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -1490,7 +1591,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ...form.register('confirmPassword')
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 397,
+                                                                lineNumber: 401,
                                                                 columnNumber: 23
                                                             }, this),
                                                             form.formState.errors.confirmPassword && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1498,19 +1599,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: form.formState.errors.confirmPassword.message
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 405,
+                                                                lineNumber: 409,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 395,
+                                                        lineNumber: 399,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 380,
+                                                lineNumber: 384,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1521,7 +1622,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Password Requirements:"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 411,
+                                                        lineNumber: 415,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("ul", {
@@ -1534,27 +1635,10 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         className: `w-2 h-2 rounded-full ${form.watch('password')?.length >= 8 ? 'bg-green-500' : 'bg-gray-600'}`
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 414,
-                                                                        columnNumber: 25
-                                                                    }, this),
-                                                                    "At least 8 characters long"
-                                                                ]
-                                                            }, void 0, true, {
-                                                                fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 413,
-                                                                columnNumber: 23
-                                                            }, this),
-                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("li", {
-                                                                className: "flex items-center gap-2",
-                                                                children: [
-                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                        className: `w-2 h-2 rounded-full ${/[A-Z]/.test(form.watch('password') || '') ? 'bg-green-500' : 'bg-gray-600'}`
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/components/founding-member-form.tsx",
                                                                         lineNumber: 418,
                                                                         columnNumber: 25
                                                                     }, this),
-                                                                    "Contains uppercase letter (recommended)"
+                                                                    "At least 8 characters long"
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
@@ -1565,13 +1649,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 className: "flex items-center gap-2",
                                                                 children: [
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                        className: `w-2 h-2 rounded-full ${/[0-9]/.test(form.watch('password') || '') ? 'bg-green-500' : 'bg-gray-600'}`
+                                                                        className: `w-2 h-2 rounded-full ${/[A-Z]/.test(form.watch('password') || '') ? 'bg-green-500' : 'bg-gray-600'}`
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
                                                                         lineNumber: 422,
                                                                         columnNumber: 25
                                                                     }, this),
-                                                                    "Contains number (recommended)"
+                                                                    "Contains uppercase letter (recommended)"
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
@@ -1582,35 +1666,52 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 className: "flex items-center gap-2",
                                                                 children: [
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                        className: `w-2 h-2 rounded-full ${/[^A-Za-z0-9]/.test(form.watch('password') || '') ? 'bg-green-500' : 'bg-gray-600'}`
+                                                                        className: `w-2 h-2 rounded-full ${/[0-9]/.test(form.watch('password') || '') ? 'bg-green-500' : 'bg-gray-600'}`
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
                                                                         lineNumber: 426,
+                                                                        columnNumber: 25
+                                                                    }, this),
+                                                                    "Contains number (recommended)"
+                                                                ]
+                                                            }, void 0, true, {
+                                                                fileName: "[project]/components/founding-member-form.tsx",
+                                                                lineNumber: 425,
+                                                                columnNumber: 23
+                                                            }, this),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("li", {
+                                                                className: "flex items-center gap-2",
+                                                                children: [
+                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                        className: `w-2 h-2 rounded-full ${/[^A-Za-z0-9]/.test(form.watch('password') || '') ? 'bg-green-500' : 'bg-gray-600'}`
+                                                                    }, void 0, false, {
+                                                                        fileName: "[project]/components/founding-member-form.tsx",
+                                                                        lineNumber: 430,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     "Contains special character (recommended)"
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 425,
+                                                                lineNumber: 429,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 412,
+                                                        lineNumber: 416,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 410,
+                                                lineNumber: 414,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/founding-member-form.tsx",
-                                        lineNumber: 369,
+                                        lineNumber: 373,
                                         columnNumber: 17
                                     }, this),
                                     currentStep === 3 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1631,13 +1732,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "*"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 439,
+                                                                        lineNumber: 443,
                                                                         columnNumber: 67
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 439,
+                                                                lineNumber: 443,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -1647,7 +1748,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ...form.register('businessName')
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 440,
+                                                                lineNumber: 444,
                                                                 columnNumber: 23
                                                             }, this),
                                                             form.formState.errors.businessName && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1655,13 +1756,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: form.formState.errors.businessName.message
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 447,
+                                                                lineNumber: 451,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 438,
+                                                        lineNumber: 442,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1676,13 +1777,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "*"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 451,
+                                                                        lineNumber: 455,
                                                                         columnNumber: 67
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 451,
+                                                                lineNumber: 455,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
@@ -1695,7 +1796,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Select your business type"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 457,
+                                                                        lineNumber: 461,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1703,7 +1804,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Restaurant"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 458,
+                                                                        lineNumber: 462,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1711,7 +1812,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Cafe/Coffee Shop"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 459,
+                                                                        lineNumber: 463,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1719,7 +1820,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Bar/Pub"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 460,
+                                                                        lineNumber: 464,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1727,7 +1828,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Dessert/Ice Cream"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 461,
+                                                                        lineNumber: 465,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1735,7 +1836,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Takeaway/Street Food"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 462,
+                                                                        lineNumber: 466,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1743,7 +1844,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Salon/Spa"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 463,
+                                                                        lineNumber: 467,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1751,7 +1852,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Hairdresser/Barber"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 464,
+                                                                        lineNumber: 468,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1759,7 +1860,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Tattoo/Piercing"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 465,
+                                                                        lineNumber: 469,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1767,7 +1868,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Clothing/Fashion"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 466,
+                                                                        lineNumber: 470,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1775,7 +1876,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Gift Shop"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 467,
+                                                                        lineNumber: 471,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1783,7 +1884,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Fitness/Gym"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 468,
+                                                                        lineNumber: 472,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1791,7 +1892,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Sports/Outdoors"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 469,
+                                                                        lineNumber: 473,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1799,7 +1900,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Hotel/BnB"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 470,
+                                                                        lineNumber: 474,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1807,7 +1908,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Venue/Event Space"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 471,
+                                                                        lineNumber: 475,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1815,7 +1916,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Entertainment/Attractions"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 472,
+                                                                        lineNumber: 476,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1823,7 +1924,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Professional Services"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 473,
+                                                                        lineNumber: 477,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1831,13 +1932,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Other"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 474,
+                                                                        lineNumber: 478,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 452,
+                                                                lineNumber: 456,
                                                                 columnNumber: 23
                                                             }, this),
                                                             form.formState.errors.businessType && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1845,19 +1946,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: form.formState.errors.businessType.message
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 477,
+                                                                lineNumber: 481,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 450,
+                                                        lineNumber: 454,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 437,
+                                                lineNumber: 441,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1872,13 +1973,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "*"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 482,
+                                                                lineNumber: 486,
                                                                 columnNumber: 98
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 482,
+                                                        lineNumber: 486,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -1888,7 +1989,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         ...form.register('businessCategory')
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 483,
+                                                        lineNumber: 487,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1896,7 +1997,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Be specific - this helps customers find you"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 489,
+                                                        lineNumber: 493,
                                                         columnNumber: 21
                                                     }, this),
                                                     form.formState.errors.businessCategory && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1904,13 +2005,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: form.formState.errors.businessCategory.message
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 491,
+                                                        lineNumber: 495,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 481,
+                                                lineNumber: 485,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1925,13 +2026,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "*"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 495,
+                                                                lineNumber: 499,
                                                                 columnNumber: 71
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 495,
+                                                        lineNumber: 499,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -1941,7 +2042,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         ...form.register('businessAddress')
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 496,
+                                                        lineNumber: 500,
                                                         columnNumber: 21
                                                     }, this),
                                                     form.formState.errors.businessAddress && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1949,13 +2050,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: form.formState.errors.businessAddress.message
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 503,
+                                                        lineNumber: 507,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 494,
+                                                lineNumber: 498,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1973,13 +2074,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "*"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 508,
+                                                                        lineNumber: 512,
                                                                         columnNumber: 55
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 508,
+                                                                lineNumber: 512,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
@@ -1992,7 +2093,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Select town"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 514,
+                                                                        lineNumber: 518,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2000,7 +2101,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Bournemouth"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 515,
+                                                                        lineNumber: 519,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2008,7 +2109,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Christchurch"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 516,
+                                                                        lineNumber: 520,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2016,7 +2117,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Poole"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 517,
+                                                                        lineNumber: 521,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2024,13 +2125,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Other (please specify in notes)"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 518,
+                                                                        lineNumber: 522,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 509,
+                                                                lineNumber: 513,
                                                                 columnNumber: 23
                                                             }, this),
                                                             form.formState.errors.town && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2038,13 +2139,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: form.formState.errors.town.message
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 521,
+                                                                lineNumber: 525,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 507,
+                                                        lineNumber: 511,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2059,13 +2160,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "*"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 525,
+                                                                        lineNumber: 529,
                                                                         columnNumber: 58
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 525,
+                                                                lineNumber: 529,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -2075,7 +2176,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ...form.register('postcode')
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 526,
+                                                                lineNumber: 530,
                                                                 columnNumber: 23
                                                             }, this),
                                                             form.formState.errors.postcode && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2083,19 +2184,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: form.formState.errors.postcode.message
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 533,
+                                                                lineNumber: 537,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 524,
+                                                        lineNumber: 528,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 506,
+                                                lineNumber: 510,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2109,7 +2210,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Website URL"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 539,
+                                                                lineNumber: 543,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -2120,7 +2221,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ...form.register('website')
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 540,
+                                                                lineNumber: 544,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2128,13 +2229,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "We'll scan your website for business hours and information"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 547,
+                                                                lineNumber: 551,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 538,
+                                                        lineNumber: 542,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2145,7 +2246,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Instagram Handle"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 550,
+                                                                lineNumber: 554,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -2155,7 +2256,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ...form.register('instagram')
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 551,
+                                                                lineNumber: 555,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2163,19 +2264,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "For social media integration and promotion"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 557,
+                                                                lineNumber: 561,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 549,
+                                                        lineNumber: 553,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 537,
+                                                lineNumber: 541,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2189,7 +2290,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Facebook Page"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 562,
+                                                                lineNumber: 566,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -2200,13 +2301,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ...form.register('facebook')
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 563,
+                                                                lineNumber: 567,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 561,
+                                                        lineNumber: 565,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2216,7 +2317,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Business Logo"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 572,
+                                                                lineNumber: 576,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2230,7 +2331,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                             children: "IMG"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                                            lineNumber: 578,
+                                                                            lineNumber: 582,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2238,7 +2339,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                             children: "Upload your logo"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                                            lineNumber: 579,
+                                                                            lineNumber: 583,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2246,18 +2347,18 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                             children: "PNG, JPG, SVG up to 5MB"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                                            lineNumber: 580,
+                                                                            lineNumber: 584,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 577,
+                                                                    lineNumber: 581,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 573,
+                                                                lineNumber: 577,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -2268,7 +2369,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 onChange: (e)=>e.target.files?.[0] && handleFileUpload('logo', e.target.files[0])
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 583,
+                                                                lineNumber: 587,
                                                                 columnNumber: 23
                                                             }, this),
                                                             files.logo && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2284,19 +2385,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                             clipRule: "evenodd"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                                            lineNumber: 593,
+                                                                            lineNumber: 597,
                                                                             columnNumber: 29
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 592,
+                                                                        lineNumber: 596,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     files.logo.name
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 591,
+                                                                lineNumber: 595,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2304,25 +2405,25 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "High resolution logo for best results"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 598,
+                                                                lineNumber: 602,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 571,
+                                                        lineNumber: 575,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 560,
+                                                lineNumber: 564,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/founding-member-form.tsx",
-                                        lineNumber: 436,
+                                        lineNumber: 440,
                                         columnNumber: 17
                                     }, this),
                                     currentStep === 4 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2346,17 +2447,17 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 611,
+                                                                lineNumber: 615,
                                                                 columnNumber: 27
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 610,
+                                                            lineNumber: 614,
                                                             columnNumber: 25
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 609,
+                                                        lineNumber: 613,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -2364,7 +2465,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Upload your menu?"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 614,
+                                                        lineNumber: 618,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2372,7 +2473,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Would you like to upload your menu or price list now? This helps customers discover your offerings through AI recommendations."
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 615,
+                                                        lineNumber: 619,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2380,7 +2481,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Don't worry - you can always upload it later in your dashboard"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 618,
+                                                        lineNumber: 622,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2393,7 +2494,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Yes, upload now"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 622,
+                                                                lineNumber: 626,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -2404,29 +2505,29 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Skip for now"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 629,
+                                                                lineNumber: 633,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 621,
+                                                        lineNumber: 625,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 608,
+                                                lineNumber: 612,
                                                 columnNumber: 21
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/components/founding-member-form.tsx",
-                                            lineNumber: 607,
+                                            lineNumber: 611,
                                             columnNumber: 19
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/founding-member-form.tsx",
-                                        lineNumber: 606,
+                                        lineNumber: 610,
                                         columnNumber: 17
                                     }, this),
                                     currentStep === 5 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2438,7 +2539,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                     children: "Menu or Service Price List"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                    lineNumber: 647,
+                                                    lineNumber: 651,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2452,7 +2553,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "PDF"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 653,
+                                                                lineNumber: 657,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2460,7 +2561,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Upload PDF files"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 654,
+                                                                lineNumber: 658,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2468,18 +2569,18 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "PDF files only, up to 10MB each"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 655,
+                                                                lineNumber: 659,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 652,
+                                                        lineNumber: 656,
                                                         columnNumber: 23
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                    lineNumber: 648,
+                                                    lineNumber: 652,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -2491,7 +2592,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                     onChange: (e)=>e.target.files && handleFileUpload('menu', Array.from(e.target.files))
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                    lineNumber: 658,
+                                                    lineNumber: 662,
                                                     columnNumber: 21
                                                 }, this),
                                                 files.menu.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2511,12 +2612,12 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                             clipRule: "evenodd"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                                            lineNumber: 672,
+                                                                            lineNumber: 676,
                                                                             columnNumber: 33
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 671,
+                                                                        lineNumber: 675,
                                                                         columnNumber: 31
                                                                     }, this),
                                                                     file.name,
@@ -2526,17 +2627,17 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 670,
+                                                                lineNumber: 674,
                                                                 columnNumber: 29
                                                             }, this)
                                                         }, index, false, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 669,
+                                                            lineNumber: 673,
                                                             columnNumber: 27
                                                         }, this))
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                    lineNumber: 667,
+                                                    lineNumber: 671,
                                                     columnNumber: 23
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2544,18 +2645,18 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                     children: "This will be added to the QWIKKER database and featured in AI chat responses"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                    lineNumber: 680,
+                                                    lineNumber: 684,
                                                     columnNumber: 21
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/founding-member-form.tsx",
-                                            lineNumber: 646,
+                                            lineNumber: 650,
                                             columnNumber: 19
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/founding-member-form.tsx",
-                                        lineNumber: 645,
+                                        lineNumber: 649,
                                         columnNumber: 17
                                     }, this),
                                     currentStep === 6 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2579,17 +2680,17 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 d: "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 692,
+                                                                lineNumber: 696,
                                                                 columnNumber: 27
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 691,
+                                                            lineNumber: 695,
                                                             columnNumber: 25
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 690,
+                                                        lineNumber: 694,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -2597,7 +2698,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Create your first offer?"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 695,
+                                                        lineNumber: 699,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2605,7 +2706,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Would you like to create an exclusive offer for your customers? This helps attract new customers and boost sales."
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 696,
+                                                        lineNumber: 700,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2613,7 +2714,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Don't worry - you can always create offers later in your dashboard"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 699,
+                                                        lineNumber: 703,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2626,7 +2727,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Yes, create offer"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 703,
+                                                                lineNumber: 707,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -2637,29 +2738,29 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Skip for now"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 710,
+                                                                lineNumber: 714,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 702,
+                                                        lineNumber: 706,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 689,
+                                                lineNumber: 693,
                                                 columnNumber: 21
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/components/founding-member-form.tsx",
-                                            lineNumber: 688,
+                                            lineNumber: 692,
                                             columnNumber: 19
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/founding-member-form.tsx",
-                                        lineNumber: 687,
+                                        lineNumber: 691,
                                         columnNumber: 17
                                     }, this),
                                     currentStep === 7 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2673,7 +2774,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Offer Name"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 728,
+                                                        lineNumber: 732,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -2683,13 +2784,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         ...form.register('offerName')
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 729,
+                                                        lineNumber: 733,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 727,
+                                                lineNumber: 731,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2703,7 +2804,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Offer Type"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 738,
+                                                                lineNumber: 742,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
@@ -2716,7 +2817,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Select offer type"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 744,
+                                                                        lineNumber: 748,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2724,7 +2825,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Percentage Discount"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 745,
+                                                                        lineNumber: 749,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2732,7 +2833,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Fixed Amount Off"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 746,
+                                                                        lineNumber: 750,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2740,7 +2841,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Buy One Get One"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 747,
+                                                                        lineNumber: 751,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2748,7 +2849,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Free Item/Service"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 748,
+                                                                        lineNumber: 752,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2756,7 +2857,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Bundle Deal"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 749,
+                                                                        lineNumber: 753,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -2764,19 +2865,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Other"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 750,
+                                                                        lineNumber: 754,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 739,
+                                                                lineNumber: 743,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 737,
+                                                        lineNumber: 741,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2787,7 +2888,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Offer Value"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 754,
+                                                                lineNumber: 758,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -2797,19 +2898,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ...form.register('offerValue')
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 755,
+                                                                lineNumber: 759,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 753,
+                                                        lineNumber: 757,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 736,
+                                                lineNumber: 740,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2823,7 +2924,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Start Date"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 765,
+                                                                lineNumber: 769,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -2833,13 +2934,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ...form.register('startDate')
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 766,
+                                                                lineNumber: 770,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 764,
+                                                        lineNumber: 768,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2850,7 +2951,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "End Date"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 774,
+                                                                lineNumber: 778,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -2860,19 +2961,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ...form.register('endDate')
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 775,
+                                                                lineNumber: 779,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 773,
+                                                        lineNumber: 777,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 763,
+                                                lineNumber: 767,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2883,7 +2984,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Terms & Conditions"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 784,
+                                                        lineNumber: 788,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
@@ -2894,7 +2995,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         ...form.register('terms')
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 785,
+                                                        lineNumber: 789,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2902,13 +3003,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Clear terms help avoid confusion and disputes"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 792,
+                                                        lineNumber: 796,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 783,
+                                                lineNumber: 787,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2918,7 +3019,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Offer Image (Optional)"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 795,
+                                                        lineNumber: 799,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2932,7 +3033,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                     children: "IMG"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 801,
+                                                                    lineNumber: 805,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2940,7 +3041,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                     children: "Upload offer image"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 802,
+                                                                    lineNumber: 806,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2948,18 +3049,18 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                     children: "Leave blank - we'll create professional artwork"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 803,
+                                                                    lineNumber: 807,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 800,
+                                                            lineNumber: 804,
                                                             columnNumber: 23
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 796,
+                                                        lineNumber: 800,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -2970,7 +3071,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         onChange: (e)=>e.target.files?.[0] && handleFileUpload('offer', e.target.files[0])
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 806,
+                                                        lineNumber: 810,
                                                         columnNumber: 21
                                                     }, this),
                                                     files.offer && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2986,19 +3087,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                     clipRule: "evenodd"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 816,
+                                                                    lineNumber: 820,
                                                                     columnNumber: 27
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 815,
+                                                                lineNumber: 819,
                                                                 columnNumber: 25
                                                             }, this),
                                                             files.offer.name
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 814,
+                                                        lineNumber: 818,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3006,19 +3107,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Our design team will create stunning visuals if you don't upload one"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 821,
+                                                        lineNumber: 825,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 794,
+                                                lineNumber: 798,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/founding-member-form.tsx",
-                                        lineNumber: 726,
+                                        lineNumber: 730,
                                         columnNumber: 17
                                     }, this),
                                     currentStep === 8 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3041,12 +3142,12 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 d: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 834,
+                                                                lineNumber: 838,
                                                                 columnNumber: 27
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 833,
+                                                            lineNumber: 837,
                                                             columnNumber: 25
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3056,7 +3157,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                     children: "Referral Code Applied!"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 837,
+                                                                    lineNumber: 841,
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3068,13 +3169,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                             children: referralCode
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                                            lineNumber: 838,
+                                                                            lineNumber: 842,
                                                                             columnNumber: 71
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 838,
+                                                                    lineNumber: 842,
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3082,24 +3183,24 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                     children: "You're helping another business owner earn rewards!"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 839,
+                                                                    lineNumber: 843,
                                                                     columnNumber: 27
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 836,
+                                                            lineNumber: 840,
                                                             columnNumber: 25
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                    lineNumber: 832,
+                                                    lineNumber: 836,
                                                     columnNumber: 23
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 831,
+                                                lineNumber: 835,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3110,7 +3211,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "How did you hear about QWIKKER?"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 846,
+                                                        lineNumber: 850,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
@@ -3123,7 +3224,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Please select"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 852,
+                                                                lineNumber: 856,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -3131,7 +3232,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Founding Member Invitation"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 853,
+                                                                lineNumber: 857,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -3139,7 +3240,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Business Referral"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 854,
+                                                                lineNumber: 858,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -3147,7 +3248,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Google Search"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 855,
+                                                                lineNumber: 859,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -3155,7 +3256,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Social Media"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 856,
+                                                                lineNumber: 860,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -3163,7 +3264,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Word of Mouth"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 857,
+                                                                lineNumber: 861,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -3171,19 +3272,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Other"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 858,
+                                                                lineNumber: 862,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 847,
+                                                        lineNumber: 851,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 845,
+                                                lineNumber: 849,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3194,7 +3295,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Primary Business Goals (Optional)"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 862,
+                                                        lineNumber: 866,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
@@ -3205,7 +3306,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         ...form.register('goals')
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 863,
+                                                        lineNumber: 867,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3213,13 +3314,13 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "This helps us customize your QWIKKER experience"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 870,
+                                                        lineNumber: 874,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 861,
+                                                lineNumber: 865,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3230,7 +3331,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         children: "Additional Notes"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 873,
+                                                        lineNumber: 877,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
@@ -3241,19 +3342,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                         ...form.register('notes')
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 874,
+                                                        lineNumber: 878,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 872,
+                                                lineNumber: 876,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/founding-member-form.tsx",
-                                        lineNumber: 828,
+                                        lineNumber: 832,
                                         columnNumber: 17
                                     }, this),
                                     currentStep === 9 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3270,7 +3371,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Personal Information"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 890,
+                                                                lineNumber: 894,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -3292,25 +3393,25 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                             d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                                            lineNumber: 899,
+                                                                            lineNumber: 903,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 898,
+                                                                        lineNumber: 902,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     "Edit"
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 891,
+                                                                lineNumber: 895,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 889,
+                                                        lineNumber: 893,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3323,7 +3424,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Name:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 905,
+                                                                        lineNumber: 909,
                                                                         columnNumber: 28
                                                                     }, this),
                                                                     " ",
@@ -3333,7 +3434,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 905,
+                                                                lineNumber: 909,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3343,7 +3444,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Email:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 906,
+                                                                        lineNumber: 910,
                                                                         columnNumber: 28
                                                                     }, this),
                                                                     " ",
@@ -3351,7 +3452,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 906,
+                                                                lineNumber: 910,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3361,7 +3462,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Phone:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 907,
+                                                                        lineNumber: 911,
                                                                         columnNumber: 28
                                                                     }, this),
                                                                     " ",
@@ -3369,19 +3470,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 907,
+                                                                lineNumber: 911,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 904,
+                                                        lineNumber: 908,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 888,
+                                                lineNumber: 892,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3395,7 +3496,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Business Information"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 913,
+                                                                lineNumber: 917,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -3417,25 +3518,25 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                             d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                                            lineNumber: 922,
+                                                                            lineNumber: 926,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 921,
+                                                                        lineNumber: 925,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     "Edit"
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 914,
+                                                                lineNumber: 918,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 912,
+                                                        lineNumber: 916,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3448,7 +3549,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Business:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 928,
+                                                                        lineNumber: 932,
                                                                         columnNumber: 28
                                                                     }, this),
                                                                     " ",
@@ -3456,7 +3557,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 928,
+                                                                lineNumber: 932,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3466,7 +3567,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Type:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 929,
+                                                                        lineNumber: 933,
                                                                         columnNumber: 28
                                                                     }, this),
                                                                     " ",
@@ -3474,7 +3575,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 929,
+                                                                lineNumber: 933,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3484,7 +3585,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Category:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 930,
+                                                                        lineNumber: 934,
                                                                         columnNumber: 28
                                                                     }, this),
                                                                     " ",
@@ -3492,7 +3593,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 930,
+                                                                lineNumber: 934,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3502,7 +3603,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Location:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 931,
+                                                                        lineNumber: 935,
                                                                         columnNumber: 28
                                                                     }, this),
                                                                     " ",
@@ -3512,7 +3613,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 931,
+                                                                lineNumber: 935,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3523,7 +3624,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Logo:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 933,
+                                                                        lineNumber: 937,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     files.logo ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3539,19 +3640,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                                     clipRule: "evenodd"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                                    lineNumber: 937,
+                                                                                    lineNumber: 941,
                                                                                     columnNumber: 31
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                                lineNumber: 936,
+                                                                                lineNumber: 940,
                                                                                 columnNumber: 29
                                                                             }, this),
                                                                             "Uploaded"
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 935,
+                                                                        lineNumber: 939,
                                                                         columnNumber: 27
                                                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                         className: "flex items-center text-gray-500",
@@ -3566,25 +3667,25 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                                     clipRule: "evenodd"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                                    lineNumber: 944,
+                                                                                    lineNumber: 948,
                                                                                     columnNumber: 31
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                                lineNumber: 943,
+                                                                                lineNumber: 947,
                                                                                 columnNumber: 29
                                                                             }, this),
                                                                             "Not uploaded"
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 942,
+                                                                        lineNumber: 946,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 932,
+                                                                lineNumber: 936,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3595,7 +3696,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Menu:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 951,
+                                                                        lineNumber: 955,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     files.menu.length > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3611,12 +3712,12 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                                     clipRule: "evenodd"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                                    lineNumber: 955,
+                                                                                    lineNumber: 959,
                                                                                     columnNumber: 31
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                                lineNumber: 954,
+                                                                                lineNumber: 958,
                                                                                 columnNumber: 29
                                                                             }, this),
                                                                             files.menu.length,
@@ -3624,7 +3725,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 953,
+                                                                        lineNumber: 957,
                                                                         columnNumber: 27
                                                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                         className: "flex items-center text-gray-500",
@@ -3639,37 +3740,37 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                                     clipRule: "evenodd"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                                    lineNumber: 962,
+                                                                                    lineNumber: 966,
                                                                                     columnNumber: 31
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                                lineNumber: 961,
+                                                                                lineNumber: 965,
                                                                                 columnNumber: 29
                                                                             }, this),
                                                                             "Not uploaded"
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 960,
+                                                                        lineNumber: 964,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 950,
+                                                                lineNumber: 954,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 927,
+                                                        lineNumber: 931,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 911,
+                                                lineNumber: 915,
                                                 columnNumber: 19
                                             }, this),
                                             optionalSteps.wantsMenuUpload && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3683,7 +3784,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Menu Upload"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 975,
+                                                                lineNumber: 979,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -3705,25 +3806,25 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                             d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                                            lineNumber: 984,
+                                                                            lineNumber: 988,
                                                                             columnNumber: 29
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 983,
+                                                                        lineNumber: 987,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     "Edit"
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 976,
+                                                                lineNumber: 980,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 974,
+                                                        lineNumber: 978,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3736,7 +3837,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                     children: "Files:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 991,
+                                                                    lineNumber: 995,
                                                                     columnNumber: 27
                                                                 }, this),
                                                                 files.menu.length > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3752,43 +3853,43 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                                 clipRule: "evenodd"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                                lineNumber: 995,
+                                                                                lineNumber: 999,
                                                                                 columnNumber: 33
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                                            lineNumber: 994,
+                                                                            lineNumber: 998,
                                                                             columnNumber: 31
                                                                         }, this),
                                                                         files.menu.map((f)=>f.name).join(', ')
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 993,
+                                                                    lineNumber: 997,
                                                                     columnNumber: 29
                                                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                     className: "text-gray-500",
                                                                     children: "No files uploaded"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                    lineNumber: 1000,
+                                                                    lineNumber: 1004,
                                                                     columnNumber: 29
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 990,
+                                                            lineNumber: 994,
                                                             columnNumber: 25
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 989,
+                                                        lineNumber: 993,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 973,
+                                                lineNumber: 977,
                                                 columnNumber: 21
                                             }, this),
                                             form.watch('offerName') && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3802,7 +3903,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Launch Offer"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1010,
+                                                                lineNumber: 1014,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -3824,25 +3925,25 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                             d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                                            lineNumber: 1019,
+                                                                            lineNumber: 1023,
                                                                             columnNumber: 29
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 1018,
+                                                                        lineNumber: 1022,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     "Edit"
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1011,
+                                                                lineNumber: 1015,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 1009,
+                                                        lineNumber: 1013,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3855,7 +3956,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Offer:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 1025,
+                                                                        lineNumber: 1029,
                                                                         columnNumber: 30
                                                                     }, this),
                                                                     " ",
@@ -3863,7 +3964,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1025,
+                                                                lineNumber: 1029,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3873,7 +3974,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Type:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 1026,
+                                                                        lineNumber: 1030,
                                                                         columnNumber: 30
                                                                     }, this),
                                                                     " ",
@@ -3881,7 +3982,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1026,
+                                                                lineNumber: 1030,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3891,7 +3992,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Value:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 1027,
+                                                                        lineNumber: 1031,
                                                                         columnNumber: 30
                                                                     }, this),
                                                                     " ",
@@ -3899,7 +4000,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1027,
+                                                                lineNumber: 1031,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3910,7 +4011,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Image:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 1029,
+                                                                        lineNumber: 1033,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     files.offer ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3926,19 +4027,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                                     clipRule: "evenodd"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                                    lineNumber: 1033,
+                                                                                    lineNumber: 1037,
                                                                                     columnNumber: 33
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                                lineNumber: 1032,
+                                                                                lineNumber: 1036,
                                                                                 columnNumber: 31
                                                                             }, this),
                                                                             "Uploaded"
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 1031,
+                                                                        lineNumber: 1035,
                                                                         columnNumber: 29
                                                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                         className: "flex items-center text-gray-500",
@@ -3953,37 +4054,37 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                                     clipRule: "evenodd"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/founding-member-form.tsx",
-                                                                                    lineNumber: 1040,
+                                                                                    lineNumber: 1044,
                                                                                     columnNumber: 33
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                                lineNumber: 1039,
+                                                                                lineNumber: 1043,
                                                                                 columnNumber: 31
                                                                             }, this),
                                                                             "Not uploaded"
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 1038,
+                                                                        lineNumber: 1042,
                                                                         columnNumber: 29
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1028,
+                                                                lineNumber: 1032,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 1024,
+                                                        lineNumber: 1028,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 1008,
+                                                lineNumber: 1012,
                                                 columnNumber: 21
                                             }, this),
                                             (form.watch('referralSource') || form.watch('notes')) && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3997,7 +4098,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "Additional Information"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1053,
+                                                                lineNumber: 1057,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -4019,25 +4120,25 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                             d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                                            lineNumber: 1062,
+                                                                            lineNumber: 1066,
                                                                             columnNumber: 29
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 1061,
+                                                                        lineNumber: 1065,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     "Edit"
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1054,
+                                                                lineNumber: 1058,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 1052,
+                                                        lineNumber: 1056,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4050,7 +4151,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Referral Source:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 1069,
+                                                                        lineNumber: 1073,
                                                                         columnNumber: 32
                                                                     }, this),
                                                                     " ",
@@ -4058,7 +4159,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1069,
+                                                                lineNumber: 1073,
                                                                 columnNumber: 27
                                                             }, this),
                                                             form.watch('notes') && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4068,7 +4169,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                         children: "Notes:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                                        lineNumber: 1072,
+                                                                        lineNumber: 1076,
                                                                         columnNumber: 32
                                                                     }, this),
                                                                     " ",
@@ -4076,19 +4177,19 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1072,
+                                                                lineNumber: 1076,
                                                                 columnNumber: 27
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 1067,
+                                                        lineNumber: 1071,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 1051,
+                                                lineNumber: 1055,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4100,12 +4201,12 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                             children: 'By clicking "Start Free Trial" below, you agree to:'
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/founding-member-form.tsx",
-                                                            lineNumber: 1079,
+                                                            lineNumber: 1083,
                                                             columnNumber: 63
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 1079,
+                                                        lineNumber: 1083,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4115,39 +4216,39 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                                 children: "• Our Terms of Service and Privacy Policy"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1081,
+                                                                lineNumber: 1085,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                 children: "• Receive important updates and notifications about your QWIKKER account"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1082,
+                                                                lineNumber: 1086,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                 children: "• Our team contacting you to help optimize your business offers"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                                lineNumber: 1083,
+                                                                lineNumber: 1087,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/founding-member-form.tsx",
-                                                        lineNumber: 1080,
+                                                        lineNumber: 1084,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 1078,
+                                                lineNumber: 1082,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/founding-member-form.tsx",
-                                        lineNumber: 887,
+                                        lineNumber: 891,
                                         columnNumber: 17
                                     }, this),
                                     currentStep !== 4 && currentStep !== 6 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4162,7 +4263,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                 children: "← Previous"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 1093,
+                                                lineNumber: 1097,
                                                 columnNumber: 19
                                             }, this),
                                             currentStep < 9 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -4172,7 +4273,7 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                 children: "Continue →"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 1103,
+                                                lineNumber: 1107,
                                                 columnNumber: 21
                                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
                                                 type: "submit",
@@ -4181,36 +4282,36 @@ function FoundingMemberForm({ referralCode } = {}) {
                                                 children: isSubmitting ? 'Starting Free Trial...' : 'Start Free Trial'
                                             }, void 0, false, {
                                                 fileName: "[project]/components/founding-member-form.tsx",
-                                                lineNumber: 1111,
+                                                lineNumber: 1115,
                                                 columnNumber: 21
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/founding-member-form.tsx",
-                                        lineNumber: 1092,
+                                        lineNumber: 1096,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/founding-member-form.tsx",
-                                lineNumber: 304,
+                                lineNumber: 308,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/founding-member-form.tsx",
-                            lineNumber: 303,
+                            lineNumber: 307,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/founding-member-form.tsx",
-                    lineNumber: 296,
+                    lineNumber: 300,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/components/founding-member-form.tsx",
-            lineNumber: 264,
+            lineNumber: 268,
             columnNumber: 7
         }, this)
     }, void 0, false);

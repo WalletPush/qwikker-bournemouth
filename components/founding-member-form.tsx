@@ -214,7 +214,11 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
       // Use the new server-side signup action
       const { createUserAndProfile } = await import('@/lib/actions/signup-actions')
       
-      const result = await createUserAndProfile(data, files, referralCode)
+      // Check for location URL parameter
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlLocation = urlParams.get('location')
+      
+      const result = await createUserAndProfile(data, files, referralCode, urlLocation || undefined)
       
       if (!result.success) {
         throw new Error(result.error || 'Signup failed')
