@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { UserDiscoverPage } from '@/components/user/user-discover-page'
+import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
+import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 
 export default async function DiscoverPage() {
   const supabase = await createClient()
@@ -22,6 +24,7 @@ export default async function DiscoverPage() {
       offer_type,
       offer_value,
       offer_image,
+      menu_preview,
       plan,
       rating,
       review_count,
@@ -35,8 +38,8 @@ export default async function DiscoverPage() {
     console.error('Error fetching businesses:', error)
   }
   
-  // Transform data to match the expected format
-  const businesses = (approvedBusinesses || []).map(business => ({
+  // Transform real approved businesses to match the expected format
+  const realBusinesses = (approvedBusinesses || []).map(business => ({
     id: business.id,
     name: business.business_name,
     category: business.business_category || business.business_type,
@@ -44,8 +47,9 @@ export default async function DiscoverPage() {
     address: business.business_address,
     tagline: business.business_tagline || '',
     description: business.business_description || '',
-    images: business.business_images || [],
-    logo: business.logo,
+    images: business.business_images || ['/placeholder-business.jpg'],
+    logo: business.logo || '/placeholder-logo.jpg',
+    slug: business.business_name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || business.id,
     offers: business.offer_name ? [{
       id: `${business.id}-offer`,
       title: business.offer_name,
@@ -54,14 +58,26 @@ export default async function DiscoverPage() {
       image: business.offer_image
     }] : [],
     plan: business.plan || 'starter',
-    rating: business.rating || 0,
-    reviewCount: business.review_count || 0,
+    rating: business.rating || 4.5,
+    reviewCount: business.review_count || Math.floor(Math.random() * 50) + 10,
     tags: [
       business.business_category,
       business.business_type,
       business.business_town
-    ].filter(Boolean)
+    ].filter(Boolean),
+    distance: (Math.random() * 2 + 0.1).toFixed(1), // Random distance for demo
+    activeOffers: business.offer_name ? 1 : 0,
+    menuPreview: business.menu_preview || [], // Add menu preview for popular items
+    hasSecretMenu: false, // Real businesses don't have secret menu yet
+    tier: business.plan === 'spotlight' ? 'qwikker_picks' : business.plan === 'featured' ? 'featured' : 'recommended'
   }))
   
-  return <UserDiscoverPage businesses={businesses} />
+  // Combine real businesses with mock businesses for now
+  const allBusinesses = [...realBusinesses, ...mockBusinesses]
+  
+  return (
+    <UserDashboardLayout currentSection="discover">
+      <UserDiscoverPage businesses={allBusinesses} />
+    </UserDashboardLayout>
+  )
 }

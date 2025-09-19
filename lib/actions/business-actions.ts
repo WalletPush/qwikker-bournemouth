@@ -293,8 +293,7 @@ export async function submitBusinessForReview(userId: string) {
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({ 
-        status: 'pending_review',
-        submitted_at: new Date().toISOString()
+        status: 'pending_review'
       })
       .eq('user_id', userId)
 

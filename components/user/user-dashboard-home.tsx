@@ -5,7 +5,22 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { mockBusinesses, mockOffers, mockUserCredits, mockUserProfile, levelSystem } from '@/lib/mock-data/user-mock-data'
 
-export function UserDashboardHome() {
+interface UserDashboardHomeProps {
+  stats?: {
+    totalBusinesses: number
+    totalOffers: number
+    totalSecretMenus: number
+    realBusinesses: number
+    realOffers: number
+  }
+}
+
+export function UserDashboardHome({ stats }: UserDashboardHomeProps) {
+  // Use real stats or fallback to mock data
+  const businessCount = stats?.totalBusinesses ?? mockBusinesses.length
+  const offerCount = stats?.totalOffers ?? mockOffers.length
+  const secretMenuCount = stats?.totalSecretMenus ?? mockBusinesses.filter(b => b.hasSecretMenu).length
+  
   // Calculate level info using proper level system
   const userPoints = mockUserProfile.totalPoints // 1250 points
   const currentLevelInfo = levelSystem.getLevelFromPoints(userPoints)
@@ -53,15 +68,15 @@ export function UserDashboardHome() {
       {/* Slim Stats Row */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3 text-center">
-          <p className="text-2xl font-bold text-emerald-400">{mockBusinesses.length}</p>
+          <p className="text-2xl font-bold text-emerald-400">{businessCount}</p>
           <p className="text-xs text-slate-400">Places</p>
         </div>
         <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3 text-center">
-          <p className="text-2xl font-bold text-orange-400">{mockOffers.length}</p>
+          <p className="text-2xl font-bold text-orange-400">{offerCount}</p>
           <p className="text-xs text-slate-400">Offers</p>
         </div>
         <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3 text-center">
-          <p className="text-2xl font-bold text-purple-400">{mockBusinesses.filter(b => b.hasSecretMenu).length}</p>
+          <p className="text-2xl font-bold text-purple-400">{secretMenuCount}</p>
           <p className="text-xs text-slate-400">Secrets</p>
         </div>
       </div>
@@ -86,7 +101,7 @@ export function UserDashboardHome() {
               </div>
               
               <div className="text-center py-4">
-                <p className="text-5xl font-bold text-emerald-400 mb-2">{mockBusinesses.length}</p>
+                <p className="text-5xl font-bold text-emerald-400 mb-2">{businessCount}</p>
                 <p className="text-slate-400">places to discover</p>
               </div>
 
@@ -114,7 +129,7 @@ export function UserDashboardHome() {
               </div>
               
               <div className="text-center py-4">
-                <p className="text-5xl font-bold text-orange-400 mb-2">{mockOffers.length}</p>
+                <p className="text-5xl font-bold text-orange-400 mb-2">{offerCount}</p>
                 <p className="text-slate-400">offers available</p>
               </div>
 
@@ -201,7 +216,7 @@ export function UserDashboardHome() {
               
               <div className="text-center py-4 relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-purple-500/10 to-purple-500/5 rounded-lg border border-purple-500/20"></div>
-                <p className="relative text-5xl font-bold text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text mb-2">{mockBusinesses.filter(b => b.hasSecretMenu).length}</p>
+                <p className="relative text-5xl font-bold text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text mb-2">{secretMenuCount}</p>
                 <p className="relative text-slate-300">hidden secrets await</p>
                 <div className="flex justify-center gap-1 mt-3">
                   {[...Array(3)].map((_, i) => (

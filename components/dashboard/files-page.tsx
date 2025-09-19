@@ -15,14 +15,15 @@ export function FilesPage({ profile }: FilesPageProps) {
   const [uploading, setUploading] = useState<string | null>(null)
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-  const handleFileUpload = async (file: File, type: 'logo' | 'menu' | 'offer') => {
+  const handleFileUpload = async (file: File, type: 'logo' | 'menu' | 'offer' | 'business_images') => {
     if (!file) return
 
     // Validate file type
     const validTypes = {
       logo: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
       menu: ['application/pdf'],
-      offer: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+      offer: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+      business_images: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
     }
 
     if (!validTypes[type].includes(file.type)) {
@@ -33,12 +34,12 @@ export function FilesPage({ profile }: FilesPageProps) {
       return
     }
 
-    // Validate file size (5MB for images, 10MB for PDFs)
-    const maxSize = type === 'menu' ? 10 * 1024 * 1024 : 5 * 1024 * 1024
+    // Validate file size (5MB for regular images, 10MB for PDFs and business images)
+    const maxSize = (type === 'menu' || type === 'business_images') ? 10 * 1024 * 1024 : 5 * 1024 * 1024
     if (file.size > maxSize) {
       setUploadMessage({
         type: 'error',
-        text: `File too large. Maximum size is ${type === 'menu' ? '10MB' : '5MB'}.`
+        text: `File too large. Maximum size is ${(type === 'menu' || type === 'business_images') ? '10MB' : '5MB'}.`
       })
       return
     }
@@ -330,6 +331,88 @@ export function FilesPage({ profile }: FilesPageProps) {
               onChange={(e) => {
                 const file = e.target.files?.[0]
                 if (file) handleFileUpload(file, 'offer')
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Business Photos */}
+      <Card className="bg-slate-800/50 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Business Photos
+            <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full">HIGH PRIORITY</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {profile?.business_images && Array.isArray(profile.business_images) && profile.business_images.length > 0 ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-white font-medium">Business Photos Uploaded ({profile.business_images.length})</p>
+                  <p className="text-green-400 text-sm">HIGH PRIORITY COMPLETE</p>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {profile.business_images.map((imageUrl: string, index: number) => (
+                    <div key={index} className="relative group">
+                      <img 
+                        src={imageUrl} 
+                        alt={`Business Photo ${index + 1}`} 
+                        className="w-full h-32 object-cover rounded-lg border border-slate-600"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => triggerFileInput('businessImagesUpload')}
+                  disabled={uploading === 'business_images'}
+                  className="border-slate-600 text-gray-300 hover:bg-slate-700"
+                >
+                  {uploading === 'business_images' ? 'Uploading...' : 'Add More Photos'}
+                </Button>
+              </div>
+            ) : (
+              <div 
+                className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-[#00d083] transition-colors"
+                onClick={() => triggerFileInput('businessImagesUpload')}
+              >
+                <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-white mb-2">Upload Business Photos</h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  Upload high-quality photos of your business. These will be the hero images customers see on your business card.
+                </p>
+                <p className="text-xs text-gray-500 mb-2">
+                  Recommended: 1200x800px or larger
+                </p>
+                <p className="text-xs text-gray-500">
+                  PNG, JPG, WEBP up to 5MB
+                </p>
+              </div>
+            )}
+            <input
+              id="businessImagesUpload"
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files || [])
+                files.forEach(file => {
+                  if (file) handleFileUpload(file, 'business_images')
+                })
               }}
             />
           </div>

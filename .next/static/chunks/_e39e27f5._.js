@@ -215,15 +215,32 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 "use strict";
 
 // Mock data for user dashboard - Phase 1 UI shell
+// Gamification System Interfaces
 __turbopack_context__.s([
+    "enhancedSecretMenus",
+    ()=>enhancedSecretMenus,
+    "levelSystem",
+    ()=>levelSystem,
+    "mockBadges",
+    ()=>mockBadges,
+    "mockBusinessAnalytics",
+    ()=>mockBusinessAnalytics,
     "mockBusinesses",
     ()=>mockBusinesses,
+    "mockClaimedOffers",
+    ()=>mockClaimedOffers,
     "mockOffers",
     ()=>mockOffers,
+    "mockPointsHistory",
+    ()=>mockPointsHistory,
     "mockSecretMenus",
     ()=>mockSecretMenus,
     "mockUserCredits",
     ()=>mockUserCredits,
+    "mockUserProfile",
+    ()=>mockUserProfile,
+    "pointsEarningRules",
+    ()=>pointsEarningRules,
     "suggestedPrompts",
     ()=>suggestedPrompts
 ]);
@@ -234,48 +251,84 @@ const mockBusinesses = [
         name: 'The Seaside Bistro',
         slug: 'seaside-bistro',
         tagline: 'Fresh seafood with ocean views',
+        description: 'Located right on Bournemouth Pier, The Seaside Bistro offers the finest fresh seafood with breathtaking ocean views. Our chefs work closely with local fishermen to bring you the catch of the day, prepared with Mediterranean flair. Whether you\'re enjoying our famous fish & chips on the terrace or indulging in our premium seafood platter, every meal comes with the sound of waves and the salty sea breeze.',
         address: '15 Pier Approach',
         town: 'Bournemouth',
         hours: '12pm - 10pm',
         images: [
-            '/mock-business-1.jpg'
+            'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'qwikker_picks',
+        plan: 'spotlight',
         category: 'Restaurant',
         rating: 4.8,
         reviewCount: 127,
         distance: 0.3,
         menuPreview: [
-            'Fish & Chips £14',
-            'Seafood Platter £22',
-            'Crab Cakes £16'
+            {
+                name: 'Fish & Chips',
+                price: '14.00',
+                description: 'Fresh cod with hand-cut chips'
+            },
+            {
+                name: 'Seafood Platter',
+                price: '22.00',
+                description: 'Mixed fresh seafood selection'
+            },
+            {
+                name: 'Crab Cakes',
+                price: '16.00',
+                description: 'Homemade with local crab'
+            }
         ],
         hasSecretMenu: true,
-        activeOffers: 2
+        activeOffers: 2,
+        offerIds: [
+            '1',
+            '4'
+        ] // 2-for-1 Fish & Chips, Free Dessert with Main Course
     },
     {
         id: '2',
         name: 'Artisan Coffee Co.',
         slug: 'artisan-coffee',
         tagline: 'Locally roasted, ethically sourced',
+        description: 'A cozy independent coffee shop in the heart of Bournemouth, Artisan Coffee Co. roasts their beans in-house every morning. We source directly from sustainable farms around the world and serve specialty coffee alongside freshly baked pastries. Our warm, welcoming atmosphere makes it the perfect spot for remote work, catching up with friends, or simply enjoying a moment of peace with exceptional coffee.',
         address: '42 Old Christchurch Rd',
         town: 'Bournemouth',
         hours: '7am - 6pm',
         images: [
-            '/mock-business-2.jpg'
+            'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'qwikker_picks',
+        plan: 'spotlight',
         category: 'Cafe',
         rating: 4.9,
         reviewCount: 89,
         distance: 0.5,
         menuPreview: [
-            'Flat White £3.20',
-            'Avocado Toast £7.50',
-            'Pastries from £2.80'
+            {
+                name: 'Flat White',
+                price: '3.20',
+                description: 'Smooth espresso with steamed milk'
+            },
+            {
+                name: 'Avocado Toast',
+                price: '7.50',
+                description: 'Sourdough with smashed avocado'
+            },
+            {
+                name: 'Fresh Pastries',
+                price: '2.80',
+                description: 'Daily selection of baked goods'
+            }
         ],
         hasSecretMenu: true,
-        activeOffers: 1
+        activeOffers: 2,
+        offerIds: [
+            '2',
+            '6'
+        ] // Free Pastry with Coffee, 25% off Coffee Beans
     },
     // FEATURED (mid tier)
     {
@@ -283,48 +336,83 @@ const mockBusinesses = [
         name: 'Zen Wellness Spa',
         slug: 'zen-wellness',
         tagline: 'Relaxation and rejuvenation',
+        description: 'Escape the hustle and bustle at Zen Wellness Spa, Bournemouth\'s premier destination for holistic wellness. Our expert therapists offer a range of treatments from traditional massages to cutting-edge facial therapies, all in a serene environment designed to restore your mind, body, and spirit. Using only premium organic products, we create a sanctuary where stress melts away and inner peace is rediscovered.',
         address: '8 Westover Rd',
         town: 'Bournemouth',
         hours: '9am - 8pm',
         images: [
-            '/mock-business-3.jpg'
+            'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'featured',
+        plan: 'featured',
         category: 'Spa',
         rating: 4.6,
         reviewCount: 203,
         distance: 0.8,
         menuPreview: [
-            'Massage £45',
-            'Facial £35',
-            'Full Day Package £120'
+            {
+                name: 'Relaxing Massage',
+                price: '45.00',
+                description: '60-minute therapeutic massage'
+            },
+            {
+                name: 'Rejuvenating Facial',
+                price: '35.00',
+                description: 'Deep cleansing and moisturizing'
+            },
+            {
+                name: 'Full Day Package',
+                price: '120.00',
+                description: 'Complete spa experience'
+            }
         ],
         hasSecretMenu: false,
-        activeOffers: 1
+        activeOffers: 1,
+        offerIds: [
+            '5'
+        ] // Buy 2 Get 1 Free Treatments
     },
     {
         id: '4',
         name: 'The Craft Brewery',
         slug: 'craft-brewery',
         tagline: 'Local ales and craft beers',
+        description: 'The Craft Brewery is Bournemouth\'s favorite local brewing destination, featuring an impressive selection of house-brewed ales and carefully curated craft beers from around the UK. Our industrial-chic taproom offers the perfect atmosphere to sample our rotating selection of IPAs, stouts, and seasonal brews, paired with artisanal bar snacks. Join us for brewery tours, tasting flights, and live music nights.',
         address: '23 Richmond Hill',
         town: 'Bournemouth',
         hours: '4pm - 11pm',
         images: [
-            '/mock-business-4.jpg'
+            'https://images.unsplash.com/photo-1436076863939-06870fe779c2?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'featured',
+        plan: 'featured',
         category: 'Bar',
         rating: 4.5,
         reviewCount: 156,
         distance: 1.2,
         menuPreview: [
-            'Pint £4.50',
-            'Tasting Flight £12',
-            'Bar Snacks £6-8'
+            {
+                name: 'Craft Pint',
+                price: '4.50',
+                description: 'Local brewery selection'
+            },
+            {
+                name: 'Tasting Flight',
+                price: '12.00',
+                description: '4 different craft beers'
+            },
+            {
+                name: 'Bar Snacks',
+                price: '7.00',
+                description: 'Selection of pub favorites'
+            }
         ],
         hasSecretMenu: true,
-        activeOffers: 3
+        activeOffers: 2,
+        offerIds: [
+            '3',
+            '7'
+        ] // 20% off Tasting Flights, Happy Hour: 2-for-1 Pints
     },
     // RECOMMENDED (base tier)
     {
@@ -332,24 +420,39 @@ const mockBusinesses = [
         name: 'Fitness First Gym',
         slug: 'fitness-first',
         tagline: 'Your fitness journey starts here',
+        description: 'A state-of-the-art fitness facility in central Bournemouth, Fitness First Gym offers everything you need to achieve your health and fitness goals. With cutting-edge equipment, expert personal trainers, diverse group classes, and a welcoming community atmosphere, we cater to all fitness levels. From strength training and cardio to yoga and HIIT classes, your transformation starts here.',
         address: '156 Holdenhurst Rd',
         town: 'Bournemouth',
         hours: '6am - 10pm',
         images: [
-            '/mock-business-5.jpg'
+            'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'recommended',
+        plan: 'starter',
         category: 'Gym',
-        rating: 4.2,
+        rating: 4.5,
         reviewCount: 78,
         distance: 1.5,
         menuPreview: [
-            'Day Pass £12',
-            'Monthly £29',
-            'Personal Training £35/hr'
+            {
+                name: 'Day Pass',
+                price: '12.00',
+                description: 'Full gym access for one day'
+            },
+            {
+                name: 'Monthly Membership',
+                price: '29.00',
+                description: 'Unlimited gym access'
+            },
+            {
+                name: 'Personal Training',
+                price: '35.00',
+                description: 'One-hour session with trainer'
+            }
         ],
         hasSecretMenu: false,
-        activeOffers: 1
+        activeOffers: 0,
+        offerIds: [] // No current offers
     },
     {
         id: '6',
@@ -360,20 +463,36 @@ const mockBusinesses = [
         town: 'Bournemouth',
         hours: '5pm - 10pm',
         images: [
-            '/mock-business-6.jpg'
+            'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'recommended',
+        plan: 'starter',
         category: 'Restaurant',
-        rating: 4.3,
+        rating: 4.6,
         reviewCount: 94,
         distance: 2.1,
         menuPreview: [
-            'Pasta £12-16',
-            'Pizza £10-14',
-            'Wine from £18'
+            {
+                name: 'Fresh Pasta',
+                price: '14.00',
+                description: 'Homemade pasta with seasonal sauce'
+            },
+            {
+                name: 'Wood-Fired Pizza',
+                price: '12.00',
+                description: 'Traditional Italian style'
+            },
+            {
+                name: 'Wine Selection',
+                price: '18.00',
+                description: 'Curated Italian wines'
+            }
         ],
         hasSecretMenu: false,
-        activeOffers: 2
+        activeOffers: 1,
+        offerIds: [
+            '8'
+        ] // 30% off Wine Selection
     }
 ];
 const mockOffers = [
@@ -418,6 +537,76 @@ const mockOffers = [
         expiryDate: '2024-12-15',
         isPopular: true,
         isEndingSoon: false
+    },
+    {
+        id: '4',
+        businessId: '1',
+        businessName: 'The Seaside Bistro',
+        title: 'Free Dessert with Main Course',
+        description: 'Choose any dessert from our menu when you order a main course',
+        value: 'Save up to £8',
+        type: 'freebie',
+        badge: 'FREE DESSERT',
+        terms: 'Valid for dinner service only. One per person.',
+        expiryDate: '2024-12-20',
+        isPopular: true,
+        isEndingSoon: false
+    },
+    {
+        id: '5',
+        businessId: '3',
+        businessName: 'Zen Wellness Spa',
+        title: 'Buy 2 Get 1 Free Treatments',
+        description: 'Book any 2 treatments and get the 3rd one absolutely free',
+        value: 'Save up to £45',
+        type: 'buy_x_get_y',
+        badge: 'BUY 2 GET 1',
+        terms: 'Must be booked in advance. Same day appointments.',
+        expiryDate: '2024-11-25',
+        isPopular: false,
+        isEndingSoon: true
+    },
+    {
+        id: '6',
+        businessId: '2',
+        businessName: 'Artisan Coffee Co.',
+        title: '25% off Coffee Beans',
+        description: 'Take home our premium coffee beans at a special price',
+        value: '25% OFF',
+        type: 'percentage_off',
+        badge: '25% OFF',
+        terms: 'In-store purchases only. While stocks last.',
+        expiryDate: '2024-12-10',
+        isPopular: false,
+        isEndingSoon: false
+    },
+    {
+        id: '7',
+        businessId: '4',
+        businessName: 'The Craft Brewery',
+        title: 'Happy Hour: 2-for-1 Pints',
+        description: 'Buy one pint and get another one free during happy hour',
+        value: 'Save up to £6',
+        type: 'two_for_one',
+        badge: '2-FOR-1',
+        terms: 'Monday to Friday 4-6pm only.',
+        expiryDate: '2024-12-31',
+        isPopular: true,
+        isEndingSoon: false
+    },
+    {
+        id: '8',
+        businessId: '6',
+        businessName: 'Bella Vista Restaurant',
+        title: '30% off Wine Selection',
+        description: 'Enjoy our premium wine selection at a discounted price',
+        value: '30% OFF',
+        type: 'percentage_off',
+        badge: '30% OFF',
+        terms: 'Dine-in only. Excludes vintage wines.',
+        expiryDate: '2024-11-30',
+        isPopular: true,
+        isEndingSoon: true
     }
 ];
 const mockSecretMenus = [
@@ -428,14 +617,30 @@ const mockSecretMenus = [
         items: [
             {
                 name: 'The Captain\'s Special',
-                description: 'Pan-seared scallops with black pudding and pea puree',
-                price: '£18',
-                isSignature: true
+                description: 'Pan-seared scallops with black pudding and pea puree, finished with sea foam and caviar pearls. A dish inspired by Bournemouth\'s maritime heritage.',
+                price: '£28',
+                isSignature: true,
+                isPremium: true,
+                rarity: 5,
+                chefNote: 'Only available when the tide is high'
             },
             {
-                name: 'Fisherman\'s Breakfast',
-                description: 'Available all day - smoked haddock, poached egg, hollandaise',
-                price: '£12'
+                name: 'Fisherman\'s Dawn',
+                description: 'Smoked haddock caught at sunrise, poached egg, hollandaise infused with sea salt, served on toasted brioche',
+                price: '£16',
+                isSignature: false,
+                isPremium: false,
+                rarity: 3,
+                chefNote: 'Available all day, but best before noon'
+            },
+            {
+                name: 'The Smuggler\'s Pie',
+                description: 'Traditional steak and kidney pie with a secret ingredient known only to the chef\'s family for three generations',
+                price: '£22',
+                isSignature: true,
+                isPremium: true,
+                rarity: 4,
+                chefNote: 'Recipe dates back to 1847'
             }
         ]
     },
@@ -445,15 +650,65 @@ const mockSecretMenus = [
         businessName: 'Artisan Coffee Co.',
         items: [
             {
-                name: 'The Roaster\'s Choice',
-                description: 'Single origin pour-over, changes weekly',
-                price: '£4.50',
-                isSignature: true
+                name: 'The Roaster\'s Vault',
+                description: 'Ultra-rare single origin beans from a secret farm in Ethiopia, roasted in small batches of 10kg only. Changes based on harvest seasons.',
+                price: '£12',
+                isSignature: true,
+                isPremium: true,
+                rarity: 5,
+                chefNote: 'Only 20 cups available per week'
             },
             {
-                name: 'Dirty Chai Latte',
-                description: 'Chai latte with an espresso shot',
-                price: '£3.80'
+                name: 'Midnight Conspiracy',
+                description: 'Dark chocolate from Madagascar, triple espresso shot, hint of smoked chili, topped with gold leaf',
+                price: '£8.50',
+                isSignature: false,
+                isPremium: true,
+                rarity: 4,
+                chefNote: 'Only served after 8pm'
+            },
+            {
+                name: 'The Barista\'s Secret',
+                description: 'A coffee blend that changes daily based on the barista\'s mood and the weather. No two cups are ever the same.',
+                price: '£6',
+                isSignature: true,
+                isPremium: false,
+                rarity: 3,
+                chefNote: 'Ask the barista to surprise you'
+            }
+        ]
+    },
+    {
+        id: '3',
+        businessId: '4',
+        businessName: 'The Craft Brewery',
+        items: [
+            {
+                name: 'The Brewmaster\'s Ghost',
+                description: 'Imperial stout aged in whiskey barrels for 18 months, infused with vanilla and oak. Only brewed during the winter solstice.',
+                price: '£15',
+                isSignature: true,
+                isPremium: true,
+                rarity: 5,
+                chefNote: 'Limited to 100 bottles per year'
+            },
+            {
+                name: 'Hop Thief\'s Escape',
+                description: 'IPA with hops stolen from seven different breweries (legally, of course). Each sip tells a different story.',
+                price: '£7.50',
+                isSignature: false,
+                isPremium: false,
+                rarity: 3,
+                chefNote: 'Recipe changes every month'
+            },
+            {
+                name: 'The Underground',
+                description: 'A beer so secret, it\'s not even on this menu. Ask the bartender if you dare.',
+                price: '£??',
+                isSignature: true,
+                isPremium: true,
+                rarity: 5,
+                chefNote: 'Speak the password: "Bournemouth Depths"'
             }
         ]
     }
@@ -515,6 +770,602 @@ const mockUserCredits = {
         }
     ]
 };
+const mockClaimedOffers = [
+    {
+        id: '1',
+        offerId: '1',
+        status: 'redeemed',
+        claimedAt: '2024-01-10T10:30:00Z',
+        walletAddedAt: '2024-01-10T10:35:00Z',
+        redeemedAt: '2024-01-12T19:45:00Z',
+        businessName: 'The Seaside Bistro',
+        offerTitle: '2-for-1 Fish & Chips',
+        value: '£24.99',
+        redemptionCode: 'QWK-FSH-001'
+    },
+    {
+        id: '2',
+        offerId: '2',
+        status: 'wallet_added',
+        claimedAt: '2024-01-14T14:20:00Z',
+        walletAddedAt: '2024-01-14T14:22:00Z',
+        redeemedAt: null,
+        businessName: 'Artisan Coffee Co.',
+        offerTitle: 'Free Pastry with Coffee',
+        value: '£4.50',
+        redemptionCode: 'QWK-PST-002'
+    },
+    {
+        id: '3',
+        offerId: '3',
+        status: 'claimed',
+        claimedAt: '2024-01-15T09:15:00Z',
+        walletAddedAt: null,
+        redeemedAt: null,
+        businessName: 'The Craft Brewery',
+        offerTitle: '20% off Tasting Flights',
+        value: '20% off',
+        redemptionCode: 'QWK-DIN-003'
+    }
+];
+const mockBusinessAnalytics = {
+    'the-seaside-bistro': {
+        offers: {
+            '1': {
+                views: 1247,
+                claims: 89,
+                walletAdds: 76,
+                redemptions: 34,
+                revenue: '£843.66',
+                conversionRate: {
+                    viewToClaim: '7.1%',
+                    claimToWallet: '85.4%',
+                    walletToRedemption: '44.7%',
+                    overallConversion: '2.7%'
+                }
+            }
+        },
+        totalOfferViews: 2891,
+        totalClaims: 203,
+        totalRedemptions: 78,
+        newCustomersFromOffers: 45,
+        repeatCustomerRate: '67%'
+    },
+    'artisan-coffee-co': {
+        offers: {
+            '2': {
+                views: 892,
+                claims: 156,
+                walletAdds: 134,
+                redemptions: 89,
+                revenue: '£623.50',
+                conversionRate: {
+                    viewToClaim: '17.5%',
+                    claimToWallet: '85.9%',
+                    walletToRedemption: '66.4%',
+                    overallConversion: '10.0%'
+                }
+            }
+        },
+        totalOfferViews: 1456,
+        totalClaims: 298,
+        totalRedemptions: 156,
+        newCustomersFromOffers: 89,
+        repeatCustomerRate: '78%'
+    }
+};
+const mockBadges = [
+    // COMMON BADGES
+    {
+        id: 'first_visit',
+        name: 'First Steps',
+        description: 'Made your first business visit',
+        icon: '👣',
+        rarity: 'common'
+    },
+    {
+        id: 'chat_starter',
+        name: 'Conversation Starter',
+        description: 'Had your first AI chat conversation',
+        icon: '💬',
+        rarity: 'common'
+    },
+    {
+        id: 'offer_collector',
+        name: 'Deal Hunter',
+        description: 'Claimed your first offer',
+        icon: '🎯',
+        rarity: 'common'
+    },
+    // RARE BADGES
+    {
+        id: 'secret_seeker',
+        name: 'Secret Seeker',
+        description: 'Unlocked your first secret menu item',
+        icon: '🔍',
+        rarity: 'rare'
+    },
+    {
+        id: 'social_butterfly',
+        name: 'Social Butterfly',
+        description: 'Referred 3 friends to Qwikker',
+        icon: '🦋',
+        rarity: 'rare',
+        alternateRequirement: {
+            type: 'referrals',
+            amount: 3,
+            label: '3 friends referred'
+        }
+    },
+    {
+        id: 'local_expert',
+        name: 'Local Expert',
+        description: 'Visited 10 different businesses',
+        icon: '🏆',
+        rarity: 'rare',
+        alternateRequirement: {
+            type: 'visits',
+            amount: 10,
+            label: '10 businesses visited'
+        }
+    },
+    {
+        id: 'streak_master',
+        name: 'Streak Master',
+        description: 'Used Qwikker for 7 days straight',
+        icon: '🔥',
+        rarity: 'rare',
+        alternateRequirement: {
+            type: 'days',
+            amount: 7,
+            label: '7 days active'
+        }
+    },
+    // EPIC BADGES
+    {
+        id: 'secret_master',
+        name: 'Secret Menu Master',
+        description: 'Unlocked 25 secret menu items',
+        icon: '🗝️',
+        rarity: 'epic',
+        alternateRequirement: {
+            type: 'unlocks',
+            amount: 25,
+            label: '25 secret items unlocked'
+        }
+    },
+    {
+        id: 'influence_master',
+        name: 'Hype Lord',
+        description: 'Referred 10 friends to Qwikker',
+        icon: '📢',
+        rarity: 'epic',
+        alternateRequirement: {
+            type: 'referrals',
+            amount: 10,
+            label: '10 friends referred'
+        },
+        reward: {
+            type: 'free_item',
+            businessName: 'Any Partner Venue',
+            businessId: 'all',
+            title: '£5 Qwikker Credit',
+            description: 'Refer 10 friends reward + 50p for each additional referral',
+            value: '£5',
+            terms: 'Valid at all partner venues. Cannot be combined with other offers. Show badge to redeem.',
+            redemptionCode: 'QWIK-EPIC-SOCIAL'
+        }
+    },
+    {
+        id: 'points_collector',
+        name: 'Point Collector',
+        description: 'Earned 5,000 total points',
+        icon: '💎',
+        rarity: 'epic',
+        pointsRequired: 5000,
+        reward: {
+            type: 'free_item',
+            businessName: 'Any Partner Venue',
+            businessId: 'all',
+            title: '£4 Qwikker Credit',
+            description: 'Use this credit at any participating Qwikker partner venue',
+            value: '£4',
+            terms: 'Valid at all partner venues. Cannot be combined with other offers. Show badge to redeem.',
+            redemptionCode: 'QWIK-EPIC-POINTS'
+        }
+    },
+    // LEGENDARY BADGES
+    {
+        id: 'bournemouth_legend',
+        name: 'Bournemouth Legend',
+        description: 'Ultimate Bournemouth mastery - complete all achievements',
+        icon: '👑',
+        rarity: 'legendary',
+        pointsRequired: 15000,
+        reward: {
+            type: 'free_item',
+            businessName: 'Any Partner Venue',
+            businessId: 'all',
+            title: '£20 Qwikker Credit',
+            description: 'Ultimate recognition for true Bournemouth mastery',
+            value: '£20',
+            terms: 'Valid at all partner venues. Cannot be combined with other offers. Show badge to redeem.',
+            redemptionCode: 'QWIK-LEGEND-MASTER'
+        }
+    },
+    {
+        id: 'founding_member',
+        name: 'Founding Member',
+        description: 'One of the first 100 Qwikker users',
+        icon: '⭐',
+        rarity: 'legendary',
+        pointsRequired: 8000,
+        reward: {
+            type: 'free_item',
+            businessName: 'Any Partner Venue',
+            businessId: 'all',
+            title: '£15 Qwikker Credit',
+            description: 'Special recognition for being an early Qwikker pioneer',
+            value: '£15',
+            terms: 'Valid at all partner venues. Cannot be combined with other offers. Show badge to redeem.',
+            redemptionCode: 'QWIK-LEGEND-FOUNDER'
+        }
+    }
+];
+const mockUserProfile = {
+    id: 'user_david_123',
+    name: 'David',
+    email: 'david@example.com',
+    joinedDate: '2024-01-05T00:00:00Z',
+    totalPoints: 1250,
+    level: 3,
+    experiencePoints: 1250,
+    nextLevelXP: 2000,
+    tier: 'insider',
+    plan: 'spotlight',
+    badges: [
+        {
+            ...mockBadges[0],
+            unlockedDate: '2024-01-05T12:00:00Z'
+        },
+        {
+            ...mockBadges[1],
+            unlockedDate: '2024-01-05T14:30:00Z'
+        },
+        {
+            ...mockBadges[2],
+            unlockedDate: '2024-01-06T10:15:00Z'
+        },
+        {
+            ...mockBadges[3],
+            unlockedDate: '2024-01-08T16:45:00Z'
+        },
+        {
+            ...mockBadges[4],
+            progress: {
+                current: 1,
+                target: 3
+            } // Social Butterfly (in progress)
+        },
+        {
+            ...mockBadges[5],
+            progress: {
+                current: 4,
+                target: 10
+            } // Local Expert (in progress)
+        }
+    ],
+    stats: {
+        businessesVisited: 4,
+        secretItemsUnlocked: 2,
+        offersRedeemed: 3,
+        friendsReferred: 1,
+        reviewsWritten: 0,
+        photosShared: 0,
+        chatMessages: 15,
+        streakDays: 3
+    },
+    referralCode: 'DAVID-QWK-2024',
+    referredBy: undefined
+};
+const mockPointsHistory = [
+    {
+        id: 'txn_001',
+        type: 'earned',
+        amount: 25,
+        reason: 'business_visit',
+        description: 'Visited The Seaside Bistro',
+        timestamp: '2024-01-15T12:30:00Z',
+        relatedItem: {
+            type: 'business',
+            id: '1',
+            name: 'The Seaside Bistro'
+        }
+    },
+    {
+        id: 'txn_002',
+        type: 'earned',
+        amount: 50,
+        reason: 'secret_unlock',
+        description: 'Unlocked "The Midnight Burger"',
+        timestamp: '2024-01-15T12:45:00Z',
+        relatedItem: {
+            type: 'secret_item',
+            id: 'midnight_burger',
+            name: 'The Midnight Burger'
+        }
+    },
+    {
+        id: 'txn_003',
+        type: 'earned',
+        amount: 30,
+        reason: 'secret_unlock',
+        description: 'Unlocked "Captain\'s Hidden Treasure"',
+        timestamp: '2024-01-14T19:20:00Z',
+        relatedItem: {
+            type: 'secret_item',
+            id: 'captains_dessert',
+            name: 'Captain\'s Hidden Treasure'
+        }
+    },
+    {
+        id: 'txn_004',
+        type: 'earned',
+        amount: 50,
+        reason: 'offer_redeem',
+        description: 'Redeemed 2-for-1 Fish & Chips',
+        timestamp: '2024-01-12T19:45:00Z',
+        relatedItem: {
+            type: 'offer',
+            id: '1',
+            name: '2-for-1 Fish & Chips'
+        }
+    },
+    {
+        id: 'txn_005',
+        type: 'earned',
+        amount: 500,
+        reason: 'friend_referral',
+        description: 'Friend Sarah joined Qwikker',
+        timestamp: '2024-01-10T14:15:00Z'
+    },
+    {
+        id: 'txn_006',
+        type: 'earned',
+        amount: 100,
+        reason: 'business_visit',
+        description: 'Visited Artisan Coffee Co.',
+        timestamp: '2024-01-08T09:30:00Z',
+        relatedItem: {
+            type: 'business',
+            id: '2',
+            name: 'Artisan Coffee Co.'
+        }
+    }
+];
+const pointsEarningRules = {
+    friend_referral: {
+        points: 500,
+        description: 'Friend joins Qwikker using your referral link'
+    },
+    offer_redeem: {
+        points: 50,
+        description: 'Actually redeem an offer at a business (verified by staff)'
+    },
+    business_visit: {
+        points: 25,
+        description: 'Visit a business (simplified validation coming soon)'
+    },
+    review_write: {
+        points: 20,
+        description: 'Write a review after business visit'
+    },
+    social_share: {
+        points: 10,
+        description: 'Share a business or offer on social media'
+    }
+};
+const levelSystem = {
+    levels: [
+        {
+            level: 1,
+            pointsRequired: 0,
+            tier: 'explorer',
+            title: 'Qwikker Explorer',
+            benefits: [
+                'Access to basic features',
+                'Earn points for activities'
+            ]
+        },
+        {
+            level: 2,
+            pointsRequired: 250,
+            tier: 'explorer',
+            title: 'Local Explorer',
+            benefits: [
+                'Unlock secret menu hints',
+                'Basic badge rewards'
+            ]
+        },
+        {
+            level: 3,
+            pointsRequired: 750,
+            tier: 'insider',
+            title: 'Qwikker Insider',
+            benefits: [
+                'Enhanced AI recommendations',
+                'Priority support'
+            ]
+        },
+        {
+            level: 4,
+            pointsRequired: 2000,
+            tier: 'insider',
+            title: 'Bournemouth Insider',
+            benefits: [
+                'Exclusive offers',
+                'Early access to new features'
+            ]
+        },
+        {
+            level: 5,
+            pointsRequired: 4000,
+            tier: 'legend',
+            title: 'Local Legend',
+            benefits: [
+                'VIP treatment at partners',
+                'Custom recommendations'
+            ]
+        },
+        {
+            level: 6,
+            pointsRequired: 8000,
+            tier: 'legend',
+            title: 'Qwikker Legend',
+            benefits: [
+                'Ultimate rewards',
+                'Influence on new features'
+            ]
+        }
+    ],
+    // Calculate level from points
+    getLevelFromPoints: (points)=>{
+        for(let i = levelSystem.levels.length - 1; i >= 0; i--){
+            if (points >= levelSystem.levels[i].pointsRequired) {
+                return levelSystem.levels[i];
+            }
+        }
+        return levelSystem.levels[0];
+    },
+    // Get next level info
+    getNextLevel: (currentLevel)=>{
+        return levelSystem.levels.find((l)=>l.level === currentLevel + 1) || null;
+    }
+};
+const enhancedSecretMenus = [
+    {
+        id: 'seaside_secrets',
+        businessId: '1',
+        businessName: 'The Seaside Bistro',
+        items: [
+            {
+                id: 'midnight_burger',
+                name: 'The Midnight Burger',
+                description: 'A legendary wagyu beef patty with truffle aioli, caramelized onions, and aged cheddar on a brioche bun baked fresh at 5am',
+                price: '£18',
+                rarity: 5,
+                hint: 'This isn\'t just any burger - it\'s made with ingredients that aren\'t available during regular hours. The chef only makes 10 per day, and regulars know to ask for it by name...',
+                chefNote: 'This recipe took me 3 years to perfect. The secret is in the overnight-marinated patty and our special 5am brioche.',
+                unlockMethods: [
+                    {
+                        type: 'visit',
+                        description: 'Visit restaurant and scan secret menu QR code'
+                    },
+                    {
+                        type: 'points',
+                        cost: 75,
+                        description: 'Spend 75 points to unlock remotely'
+                    },
+                    {
+                        type: 'social',
+                        requirement: '2_referrals',
+                        description: 'Get 2 friends to join Qwikker'
+                    }
+                ],
+                pointsReward: 50
+            },
+            {
+                id: 'fishermans_secret',
+                name: 'The Fisherman\'s Secret',
+                description: 'Fresh catch of the day with our secret herb crust, known only to the chef and a few loyal customers',
+                price: '£24',
+                rarity: 4,
+                hint: 'Local fishermen bring us their best catch, and we prepare it with a special herb blend that\'s been in the chef\'s family for generations...',
+                chefNote: 'My grandmother\'s recipe from the Dorset coast. The herbs are foraged locally each morning.',
+                unlockMethods: [
+                    {
+                        type: 'visit',
+                        description: 'Visit restaurant and scan secret menu QR code'
+                    },
+                    {
+                        type: 'points',
+                        cost: 60,
+                        description: 'Spend 60 points to unlock remotely'
+                    }
+                ],
+                pointsReward: 40
+            },
+            {
+                id: 'captains_dessert',
+                name: 'Captain\'s Hidden Treasure',
+                description: 'A dessert that changes daily based on the chef\'s inspiration and available ingredients',
+                price: '£12',
+                rarity: 3,
+                hint: 'Every day brings a new treasure - sometimes it\'s a decadent chocolate creation, other times a light fruit masterpiece...',
+                unlockMethods: [
+                    {
+                        type: 'visit',
+                        description: 'Visit restaurant and scan secret menu QR code'
+                    },
+                    {
+                        type: 'points',
+                        cost: 45,
+                        description: 'Spend 45 points to unlock remotely'
+                    }
+                ],
+                pointsReward: 30
+            }
+        ]
+    },
+    {
+        id: 'coffee_secrets',
+        businessId: '2',
+        businessName: 'Artisan Coffee Co.',
+        items: [
+            {
+                id: 'baristas_blend',
+                name: 'The Barista\'s Personal Blend',
+                description: 'A unique coffee blend created by our head barista, not available to the public',
+                price: '£4.50',
+                rarity: 4,
+                hint: 'Our head barista spent months perfecting this blend using beans from three different continents...',
+                chefNote: 'I roast this blend personally every Monday morning. It\'s my passion project.',
+                unlockMethods: [
+                    {
+                        type: 'visit',
+                        description: 'Visit coffee shop and scan secret menu QR code'
+                    },
+                    {
+                        type: 'points',
+                        cost: 50,
+                        description: 'Spend 50 points to unlock remotely'
+                    }
+                ],
+                pointsReward: 35
+            },
+            {
+                id: 'hidden_latte',
+                name: 'The Underground Latte',
+                description: 'Made with our secret spice blend and served in a special ceramic cup',
+                price: '£5.25',
+                rarity: 3,
+                hint: 'The spice blend includes cardamom, cinnamon, and something special that regular customers rave about...',
+                unlockMethods: [
+                    {
+                        type: 'visit',
+                        description: 'Visit coffee shop and scan secret menu QR code'
+                    },
+                    {
+                        type: 'points',
+                        cost: 40,
+                        description: 'Spend 40 points to unlock remotely'
+                    }
+                ],
+                pointsReward: 25
+            }
+        ]
+    }
+];
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
     __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
 }
@@ -531,6 +1382,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$
 var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/components/ui/button.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/mock-data/user-mock-data.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/next@15.5.3_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/next@15.5.3_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/client/app-dir/link.js [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
 'use client';
@@ -538,18 +1390,20 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 ;
-function UserDiscoverPage() {
+;
+function UserDiscoverPage(param) {
+    let { businesses = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"] } = param;
     _s();
     const [selectedFilter, setSelectedFilter] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('all');
-    // Group businesses by tier
-    const qwikkerPicks = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].filter((b)=>b.tier === 'qwikker_picks');
-    const featured = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].filter((b)=>b.tier === 'featured');
-    const recommended = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].filter((b)=>b.tier === 'recommended');
+    // Group businesses by subscription plan (determines badges)
+    const qwikkerPicks = businesses.filter((b)=>b.plan === 'spotlight');
+    const featured = businesses.filter((b)=>b.plan === 'featured');
+    const recommended = businesses.filter((b)=>b.plan === 'starter');
     const filters = [
         {
             id: 'all',
             label: 'All Places',
-            count: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].length
+            count: businesses.length
         },
         {
             id: 'qwikker_picks',
@@ -576,275 +1430,261 @@ function UserDiscoverPage() {
             case 'recommended':
                 return recommended;
             default:
-                return __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"];
+                return businesses;
         }
     };
     const BusinessCard = (param)=>{
         let { business } = param;
-        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
-            className: "bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer",
-            children: [
-                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardHeader"], {
-                    className: "pb-3",
-                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "flex items-start justify-between",
+        var _business_menuPreview, _business_menuPreview1, _business_menuPreview2;
+        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
+            href: "/user/business/".concat(business.slug),
+            className: "block",
+            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
+                className: "bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden",
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "relative h-48 overflow-hidden",
                         children: [
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "flex-1",
-                                children: [
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardTitle"], {
-                                        className: "text-white text-lg mb-1 group-hover:text-[#00d083] transition-colors",
-                                        children: business.name
-                                    }, void 0, false, {
-                                        fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 37,
-                                        columnNumber: 13
-                                    }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                        className: "text-gray-400 text-sm",
-                                        children: business.category
-                                    }, void 0, false, {
-                                        fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 40,
-                                        columnNumber: 13
-                                    }, this)
-                                ]
-                            }, void 0, true, {
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
+                                src: business.images[0],
+                                alt: business.name,
+                                className: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            }, void 0, false, {
                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                lineNumber: 36,
-                                columnNumber: 11
+                                lineNumber: 66,
+                                columnNumber: 9
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "flex flex-col items-end gap-1",
+                                className: "absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"
+                            }, void 0, false, {
+                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                lineNumber: 71,
+                                columnNumber: 9
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "absolute top-3 right-3",
                                 children: [
-                                    business.tier === 'qwikker_picks' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                        className: "bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-2 py-1 rounded-full font-bold",
-                                        children: "QWIKKER PICK"
+                                    business.plan === 'spotlight' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: "bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg animate-pulse",
+                                        children: "⭐ QWIKKER PICK"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 44,
-                                        columnNumber: 15
+                                        lineNumber: 76,
+                                        columnNumber: 13
                                     }, this),
-                                    business.tier === 'featured' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                        className: "bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-xs px-2 py-1 rounded-full font-bold",
+                                    business.plan === 'featured' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: "bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg",
                                         children: "FEATURED"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 49,
-                                        columnNumber: 15
-                                    }, this),
-                                    business.activeOffers > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                        className: "bg-orange-500 text-white text-xs px-2 py-1 rounded-full",
-                                        children: [
-                                            business.activeOffers,
-                                            " OFFERS"
-                                        ]
-                                    }, void 0, true, {
-                                        fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 54,
-                                        columnNumber: 15
+                                        lineNumber: 81,
+                                        columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                lineNumber: 42,
-                                columnNumber: 11
+                                lineNumber: 74,
+                                columnNumber: 9
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "absolute bottom-3 left-3",
+                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                    className: "bg-black/70 text-slate-100 text-xs px-3 py-2 rounded-full backdrop-blur-sm flex items-center gap-1",
+                                    children: [
+                                        "🚶 ",
+                                        Math.round(parseFloat(business.distance) * 20),
+                                        " min walk • ",
+                                        business.distance,
+                                        " miles"
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/components/user/user-discover-page.tsx",
+                                    lineNumber: 89,
+                                    columnNumber: 11
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                lineNumber: 88,
+                                columnNumber: 9
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 35,
-                        columnNumber: 9
-                    }, this)
-                }, void 0, false, {
-                    fileName: "[project]/components/user/user-discover-page.tsx",
-                    lineNumber: 34,
-                    columnNumber: 7
-                }, this),
-                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardContent"], {
-                    className: "space-y-4",
-                    children: [
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "flex items-center gap-4",
+                        lineNumber: 65,
+                        columnNumber: 7
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardHeader"], {
+                        className: "pb-3",
+                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "flex items-start justify-between",
                             children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "flex items-center gap-1",
+                                className: "flex-1",
                                 children: [
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                        className: "flex",
-                                        children: [
-                                            1,
-                                            2,
-                                            3,
-                                            4,
-                                            5
-                                        ].map((star)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
-                                                className: "w-4 h-4 ".concat(star <= business.rating ? 'text-yellow-400' : 'text-gray-600'),
-                                                fill: "currentColor",
-                                                viewBox: "0 0 20 20",
-                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
-                                                    d: "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
-                                                }, void 0, false, {
-                                                    fileName: "[project]/components/user/user-discover-page.tsx",
-                                                    lineNumber: 74,
-                                                    columnNumber: 19
-                                                }, this)
-                                            }, star, false, {
-                                                fileName: "[project]/components/user/user-discover-page.tsx",
-                                                lineNumber: 68,
-                                                columnNumber: 17
-                                            }, this))
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardTitle"], {
+                                        className: "text-slate-100 text-lg mb-1 group-hover:text-[#00d083] transition-colors",
+                                        children: business.name
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 66,
+                                        lineNumber: 99,
                                         columnNumber: 13
                                     }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                        className: "text-white font-semibold",
-                                        children: business.rating
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                        className: "text-slate-400 text-sm",
+                                        children: business.category
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 78,
+                                        lineNumber: 102,
                                         columnNumber: 13
                                     }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                        className: "text-gray-400 text-sm",
-                                        children: [
-                                            "(",
-                                            business.reviewCount,
-                                            " reviews)"
-                                        ]
-                                    }, void 0, true, {
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                        className: "text-[#00d083] text-sm font-medium mt-1",
+                                        children: business.tagline
+                                    }, void 0, false, {
                                         fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 79,
+                                        lineNumber: 103,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                lineNumber: 65,
+                                lineNumber: 98,
                                 columnNumber: 11
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-discover-page.tsx",
-                            lineNumber: 64,
+                            lineNumber: 97,
                             columnNumber: 9
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "flex items-center gap-2 text-gray-400",
-                            children: [
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
-                                    className: "w-4 h-4",
-                                    fill: "none",
-                                    stroke: "currentColor",
-                                    viewBox: "0 0 24 24",
+                        }, this)
+                    }, void 0, false, {
+                        fileName: "[project]/components/user/user-discover-page.tsx",
+                        lineNumber: 96,
+                        columnNumber: 7
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardContent"], {
+                        className: "space-y-4",
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "flex items-center gap-4",
+                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "flex items-center gap-1",
                                     children: [
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
-                                            strokeLinecap: "round",
-                                            strokeLinejoin: "round",
-                                            strokeWidth: 2,
-                                            d: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                            className: "flex",
+                                            children: [
+                                                1,
+                                                2,
+                                                3,
+                                                4,
+                                                5
+                                            ].map((star)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
+                                                    className: "w-4 h-4 ".concat(star <= business.rating ? 'text-yellow-400' : 'text-gray-600'),
+                                                    fill: "currentColor",
+                                                    viewBox: "0 0 20 20",
+                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
+                                                        d: "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/components/user/user-discover-page.tsx",
+                                                        lineNumber: 120,
+                                                        columnNumber: 19
+                                                    }, this)
+                                                }, star, false, {
+                                                    fileName: "[project]/components/user/user-discover-page.tsx",
+                                                    lineNumber: 114,
+                                                    columnNumber: 17
+                                                }, this))
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-discover-page.tsx",
-                                            lineNumber: 86,
+                                            lineNumber: 112,
                                             columnNumber: 13
                                         }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
-                                            strokeLinecap: "round",
-                                            strokeLinejoin: "round",
-                                            strokeWidth: 2,
-                                            d: "M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                            className: "text-slate-100 font-semibold",
+                                            children: business.rating
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-discover-page.tsx",
-                                            lineNumber: 87,
+                                            lineNumber: 124,
+                                            columnNumber: 13
+                                        }, this),
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                            className: "text-slate-400 text-sm",
+                                            children: [
+                                                "(",
+                                                business.reviewCount,
+                                                " reviews)"
+                                            ]
+                                        }, void 0, true, {
+                                            fileName: "[project]/components/user/user-discover-page.tsx",
+                                            lineNumber: 125,
                                             columnNumber: 13
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/user/user-discover-page.tsx",
-                                    lineNumber: 85,
-                                    columnNumber: 11
-                                }, this),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                    className: "text-sm",
-                                    children: business.location
-                                }, void 0, false, {
-                                    fileName: "[project]/components/user/user-discover-page.tsx",
-                                    lineNumber: 89,
-                                    columnNumber: 11
-                                }, this),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                    className: "text-[#00d083] text-sm font-medium",
-                                    children: [
-                                        "• ",
-                                        business.distance
-                                    ]
-                                }, void 0, true, {
-                                    fileName: "[project]/components/user/user-discover-page.tsx",
-                                    lineNumber: 90,
+                                    lineNumber: 111,
                                     columnNumber: 11
                                 }, this)
-                            ]
-                        }, void 0, true, {
-                            fileName: "[project]/components/user/user-discover-page.tsx",
-                            lineNumber: 84,
-                            columnNumber: 9
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                            className: "text-gray-300 text-sm leading-relaxed",
-                            children: business.description
-                        }, void 0, false, {
-                            fileName: "[project]/components/user/user-discover-page.tsx",
-                            lineNumber: 94,
-                            columnNumber: 9
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "flex flex-wrap gap-2",
-                            children: [
-                                business.hasSecretMenu && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                    className: "bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 text-xs px-2 py-1 rounded-full",
-                                    children: "Secret Menu"
-                                }, void 0, false, {
-                                    fileName: "[project]/components/user/user-discover-page.tsx",
-                                    lineNumber: 99,
-                                    columnNumber: 13
-                                }, this),
-                                business.isNew && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                    className: "bg-blue-500/20 border border-blue-500/30 text-blue-300 text-xs px-2 py-1 rounded-full",
-                                    children: "New"
-                                }, void 0, false, {
-                                    fileName: "[project]/components/user/user-discover-page.tsx",
-                                    lineNumber: 104,
-                                    columnNumber: 13
-                                }, this),
-                                business.isPopular && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                    className: "bg-green-500/20 border border-green-500/30 text-green-300 text-xs px-2 py-1 rounded-full",
-                                    children: "Popular"
-                                }, void 0, false, {
-                                    fileName: "[project]/components/user/user-discover-page.tsx",
-                                    lineNumber: 109,
-                                    columnNumber: 13
-                                }, this)
-                            ]
-                        }, void 0, true, {
-                            fileName: "[project]/components/user/user-discover-page.tsx",
-                            lineNumber: 97,
-                            columnNumber: 9
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "flex gap-2 pt-2",
-                            children: [
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
-                                    className: "flex-1 bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold",
-                                    children: "View Details"
-                                }, void 0, false, {
-                                    fileName: "[project]/components/user/user-discover-page.tsx",
-                                    lineNumber: 117,
-                                    columnNumber: 11
-                                }, this),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
-                                    variant: "outline",
-                                    className: "border-slate-600 text-gray-300 hover:bg-slate-700",
-                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
+                            }, void 0, false, {
+                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                lineNumber: 110,
+                                columnNumber: 9
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "flex items-center gap-2 text-slate-400",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
+                                        className: "w-4 h-4",
+                                        fill: "none",
+                                        stroke: "currentColor",
+                                        viewBox: "0 0 24 24",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
+                                                strokeLinecap: "round",
+                                                strokeLinejoin: "round",
+                                                strokeWidth: 2,
+                                                d: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                            }, void 0, false, {
+                                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                                lineNumber: 132,
+                                                columnNumber: 13
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
+                                                strokeLinecap: "round",
+                                                strokeLinejoin: "round",
+                                                strokeWidth: 2,
+                                                d: "M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                            }, void 0, false, {
+                                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                                lineNumber: 133,
+                                                columnNumber: 13
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/components/user/user-discover-page.tsx",
+                                        lineNumber: 131,
+                                        columnNumber: 11
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: "text-sm",
+                                        children: [
+                                            business.address,
+                                            ", ",
+                                            business.town
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/components/user/user-discover-page.tsx",
+                                        lineNumber: 135,
+                                        columnNumber: 11
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                lineNumber: 130,
+                                columnNumber: 9
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "flex items-center gap-2 text-slate-400",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
                                         className: "w-4 h-4",
                                         fill: "none",
                                         stroke: "currentColor",
@@ -853,38 +1693,204 @@ function UserDiscoverPage() {
                                             strokeLinecap: "round",
                                             strokeLinejoin: "round",
                                             strokeWidth: 2,
-                                            d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                            d: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-discover-page.tsx",
-                                            lineNumber: 122,
-                                            columnNumber: 15
+                                            lineNumber: 141,
+                                            columnNumber: 13
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 121,
+                                        lineNumber: 140,
+                                        columnNumber: 11
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: "text-sm",
+                                        children: business.hours
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/user/user-discover-page.tsx",
+                                        lineNumber: 143,
+                                        columnNumber: 11
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                        className: "text-green-400 text-sm font-medium",
+                                        children: "• Open now"
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/user/user-discover-page.tsx",
+                                        lineNumber: 144,
+                                        columnNumber: 11
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                lineNumber: 139,
+                                columnNumber: 9
+                            }, this),
+                            business.menuPreview && business.menuPreview.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "bg-slate-700/30 rounded-lg p-3",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "flex items-center gap-2 mb-2",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-sm",
+                                                children: "🍽"
+                                            }, void 0, false, {
+                                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                                lineNumber: 151,
+                                                columnNumber: 15
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                className: "text-slate-100 text-sm font-medium",
+                                                children: "Popular items:"
+                                            }, void 0, false, {
+                                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                                lineNumber: 152,
+                                                columnNumber: 15
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/components/user/user-discover-page.tsx",
+                                        lineNumber: 150,
+                                        columnNumber: 13
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "space-y-1",
+                                        children: [
+                                            (_business_menuPreview = business.menuPreview) === null || _business_menuPreview === void 0 ? void 0 : _business_menuPreview.slice(0, 2).map((item, index)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                    className: "flex items-center justify-between",
+                                                    children: [
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                            className: "text-slate-300 text-xs",
+                                                            children: item.name
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/components/user/user-discover-page.tsx",
+                                                            lineNumber: 157,
+                                                            columnNumber: 19
+                                                        }, this),
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                            className: "text-[#00d083] text-xs font-medium",
+                                                            children: [
+                                                                "£",
+                                                                item.price
+                                                            ]
+                                                        }, void 0, true, {
+                                                            fileName: "[project]/components/user/user-discover-page.tsx",
+                                                            lineNumber: 158,
+                                                            columnNumber: 19
+                                                        }, this)
+                                                    ]
+                                                }, index, true, {
+                                                    fileName: "[project]/components/user/user-discover-page.tsx",
+                                                    lineNumber: 156,
+                                                    columnNumber: 17
+                                                }, this)),
+                                            (((_business_menuPreview1 = business.menuPreview) === null || _business_menuPreview1 === void 0 ? void 0 : _business_menuPreview1.length) || 0) > 2 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                className: "text-slate-400 text-xs",
+                                                children: [
+                                                    "+",
+                                                    (((_business_menuPreview2 = business.menuPreview) === null || _business_menuPreview2 === void 0 ? void 0 : _business_menuPreview2.length) || 0) - 2,
+                                                    " more items..."
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                                lineNumber: 162,
+                                                columnNumber: 17
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/components/user/user-discover-page.tsx",
+                                        lineNumber: 154,
                                         columnNumber: 13
                                     }, this)
-                                }, void 0, false, {
-                                    fileName: "[project]/components/user/user-discover-page.tsx",
-                                    lineNumber: 120,
-                                    columnNumber: 11
-                                }, this)
-                            ]
-                        }, void 0, true, {
-                            fileName: "[project]/components/user/user-discover-page.tsx",
-                            lineNumber: 116,
-                            columnNumber: 9
-                        }, this)
-                    ]
-                }, void 0, true, {
-                    fileName: "[project]/components/user/user-discover-page.tsx",
-                    lineNumber: 62,
-                    columnNumber: 7
-                }, this)
-            ]
-        }, void 0, true, {
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                lineNumber: 149,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "flex items-center justify-between",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "flex flex-wrap gap-2",
+                                        children: [
+                                            business.hasSecretMenu && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 text-xs px-2 py-1 rounded-full",
+                                                children: "🔒 Secret Menu"
+                                            }, void 0, false, {
+                                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                                lineNumber: 172,
+                                                columnNumber: 15
+                                            }, this),
+                                            business.activeOffers > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 text-orange-300 text-xs px-2 py-1 rounded-full",
+                                                children: [
+                                                    "🔥 ",
+                                                    business.activeOffers,
+                                                    " Offers"
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                                lineNumber: 177,
+                                                columnNumber: 15
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/components/user/user-discover-page.tsx",
+                                        lineNumber: 170,
+                                        columnNumber: 11
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
+                                        variant: "outline",
+                                        size: "sm",
+                                        className: "border-slate-600 text-slate-300 hover:bg-slate-700 p-2",
+                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
+                                            className: "w-4 h-4",
+                                            fill: "none",
+                                            stroke: "currentColor",
+                                            viewBox: "0 0 24 24",
+                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
+                                                strokeLinecap: "round",
+                                                strokeLinejoin: "round",
+                                                strokeWidth: 2,
+                                                d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                            }, void 0, false, {
+                                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                                lineNumber: 186,
+                                                columnNumber: 15
+                                            }, this)
+                                        }, void 0, false, {
+                                            fileName: "[project]/components/user/user-discover-page.tsx",
+                                            lineNumber: 185,
+                                            columnNumber: 13
+                                        }, this)
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/user/user-discover-page.tsx",
+                                        lineNumber: 184,
+                                        columnNumber: 11
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/components/user/user-discover-page.tsx",
+                                lineNumber: 169,
+                                columnNumber: 9
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/components/user/user-discover-page.tsx",
+                        lineNumber: 108,
+                        columnNumber: 7
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/components/user/user-discover-page.tsx",
+                lineNumber: 63,
+                columnNumber: 7
+            }, this)
+        }, void 0, false, {
             fileName: "[project]/components/user/user-discover-page.tsx",
-            lineNumber: 33,
+            lineNumber: 62,
             columnNumber: 5
         }, this);
     };
@@ -899,21 +1905,21 @@ function UserDiscoverPage() {
                         children: "Discover Bournemouth"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 134,
+                        lineNumber: 199,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                        className: "text-gray-300 text-lg",
+                        className: "text-slate-300 text-lg",
                         children: "Find amazing local businesses, exclusive deals, and hidden gems"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 137,
+                        lineNumber: 202,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-discover-page.tsx",
-                lineNumber: 133,
+                lineNumber: 198,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -922,7 +1928,7 @@ function UserDiscoverPage() {
                     className: "relative",
                     children: [
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
-                            className: "absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400",
+                            className: "absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400",
                             fill: "none",
                             stroke: "currentColor",
                             viewBox: "0 0 24 24",
@@ -933,21 +1939,21 @@ function UserDiscoverPage() {
                                 d: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                lineNumber: 144,
+                                lineNumber: 209,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-discover-page.tsx",
-                            lineNumber: 143,
+                            lineNumber: 208,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                             type: "text",
                             placeholder: "Search for restaurants, cafes, bars, or anything...",
-                            className: "w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent"
+                            className: "w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-slate-600 rounded-xl text-slate-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent"
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-discover-page.tsx",
-                            lineNumber: 146,
+                            lineNumber: 211,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -955,25 +1961,25 @@ function UserDiscoverPage() {
                             children: "Search"
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-discover-page.tsx",
-                            lineNumber: 151,
+                            lineNumber: 216,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/user/user-discover-page.tsx",
-                    lineNumber: 142,
+                    lineNumber: 207,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/user/user-discover-page.tsx",
-                lineNumber: 141,
+                lineNumber: 206,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "flex flex-wrap justify-center gap-2",
                 children: filters.map((filter)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                         onClick: ()=>setSelectedFilter(filter.id),
-                        className: "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ".concat(selectedFilter === filter.id ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black' : 'bg-slate-800/50 text-gray-300 hover:bg-slate-700 border border-slate-600'),
+                        className: "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ".concat(selectedFilter === filter.id ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black' : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700 border border-slate-600'),
                         children: [
                             filter.label,
                             " (",
@@ -982,27 +1988,27 @@ function UserDiscoverPage() {
                         ]
                     }, filter.id, true, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 160,
+                        lineNumber: 225,
                         columnNumber: 11
                     }, this))
             }, void 0, false, {
                 fileName: "[project]/components/user/user-discover-page.tsx",
-                lineNumber: 158,
+                lineNumber: 223,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "flex items-center justify-between",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
-                        className: "text-2xl font-bold text-white",
+                        className: "text-2xl font-bold text-slate-100",
                         children: selectedFilter === 'all' ? 'All Places' : selectedFilter === 'qwikker_picks' ? 'Qwikker Picks - Staff Favorites' : selectedFilter === 'featured' ? 'Featured Businesses' : 'Recommended for You'
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 176,
+                        lineNumber: 241,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "flex items-center gap-2 text-gray-400",
+                        className: "flex items-center gap-2 text-slate-400",
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 children: [
@@ -1011,7 +2017,7 @@ function UserDiscoverPage() {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                lineNumber: 182,
+                                lineNumber: 247,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -1028,29 +2034,29 @@ function UserDiscoverPage() {
                                         d: "M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-discover-page.tsx",
-                                        lineNumber: 185,
+                                        lineNumber: 250,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-discover-page.tsx",
-                                    lineNumber: 184,
+                                    lineNumber: 249,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-discover-page.tsx",
-                                lineNumber: 183,
+                                lineNumber: 248,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 181,
+                        lineNumber: 246,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-discover-page.tsx",
-                lineNumber: 175,
+                lineNumber: 240,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1059,34 +2065,34 @@ function UserDiscoverPage() {
                         business: business
                     }, business.id, false, {
                         fileName: "[project]/components/user/user-discover-page.tsx",
-                        lineNumber: 194,
+                        lineNumber: 259,
                         columnNumber: 11
                     }, this))
             }, void 0, false, {
                 fileName: "[project]/components/user/user-discover-page.tsx",
-                lineNumber: 192,
+                lineNumber: 257,
                 columnNumber: 7
             }, this),
             getFilteredBusinesses().length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "text-center pt-4",
                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
                     variant: "outline",
-                    className: "border-slate-600 text-gray-300 hover:bg-slate-700 px-8",
+                    className: "border-slate-600 text-slate-300 hover:bg-slate-700 px-8",
                     children: "Load More Places"
                 }, void 0, false, {
                     fileName: "[project]/components/user/user-discover-page.tsx",
-                    lineNumber: 201,
+                    lineNumber: 266,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/user/user-discover-page.tsx",
-                lineNumber: 200,
+                lineNumber: 265,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/components/user/user-discover-page.tsx",
-        lineNumber: 131,
+        lineNumber: 196,
         columnNumber: 5
     }, this);
 }

@@ -32,6 +32,14 @@ async function updateSession(request) {
     if (request.nextUrl.pathname.startsWith('/user')) {
         return supabaseResponse;
     }
+    // 🔐 Allow admin routes to handle their own authentication
+    if (request.nextUrl.pathname.startsWith('/admin')) {
+        return supabaseResponse;
+    }
+    // 🔐 Allow API routes to handle their own authentication
+    if (request.nextUrl.pathname.startsWith('/api')) {
+        return supabaseResponse;
+    }
     const supabase = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f40$supabase$2b$ssr$40$0$2e$7$2e$0_$40$supabase$2b$supabase$2d$js$40$2$2e$57$2e$4$2f$node_modules$2f40$supabase$2f$ssr$2f$dist$2f$module$2f$createServerClient$2e$js__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__["createServerClient"])(("TURBOPACK compile-time value", "https://iiiciapavjonpmldytxf.supabase.co"), ("TURBOPACK compile-time value", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpaWNpYXBhdmpvbnBtbGR5dHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MzA1ODksImV4cCI6MjA3MzUwNjU4OX0.-3jyL2wuM7dHMZlgBhuP4FRhn_F6V0GAS1ZHCXqrJyU"), {
         cookies: {
             getAll () {
