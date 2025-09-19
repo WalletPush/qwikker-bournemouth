@@ -5,7 +5,7 @@ import { sendBusinessUpdateNotification } from '@/lib/integrations'
 import { revalidatePath } from 'next/cache'
 
 /**
- * Add a secret menu item and notify Slack
+ * Add a secret menu item - now submits for admin approval instead of going live immediately
  */
 export async function addSecretMenuItem(userId: string, itemData: {
   itemName: string
@@ -25,49 +25,48 @@ export async function addSecretMenuItem(userId: string, itemData: {
     return { success: false, error: 'Profile not found' }
   }
 
-  // For now, store secret menu items in additional_notes or create a separate table
-  // This is a placeholder - you might want a dedicated secret_menu_items table
   const secretMenuData = {
     ...itemData,
     created_at: new Date().toISOString()
   }
 
-  // Update profile with secret menu item (stored as JSON in additional_notes for now)
-  const currentNotes = profile.additional_notes || '{}'
-  let notesData
+  // Create pending change record instead of updating profile directly
+  const { data: changeRecord, error: changeError } = await supabaseAdmin
+    .from('business_changes')
+    .insert({
+      business_id: profile.id,
+      change_type: 'secret_menu',
+      change_data: secretMenuData,
+      status: 'pending'
+    })
+    .select()
+    .single()
+
+  if (changeError) {
+    console.error('Error creating secret menu change record:', changeError)
+    return { success: false, error: 'Failed to submit secret menu item for review' }
+  }
+
+  // Send Slack notification for ADMIN APPROVAL
   try {
-    notesData = JSON.parse(currentNotes)
-  } catch {
-    notesData = {}
-  }
-
-  if (!notesData.secret_menu_items) {
-    notesData.secret_menu_items = []
-  }
-  notesData.secret_menu_items.push(secretMenuData)
-
-  const { error: updateError } = await supabaseAdmin
-    .from('profiles')
-    .update({ additional_notes: JSON.stringify(notesData) })
-    .eq('user_id', userId)
-
-  if (updateError) {
-    return { success: false, error: updateError.message }
-  }
-
-  // Send Slack notification
-  try {
-    await sendBusinessUpdateNotification(profile, 'secret_menu', itemData)
+    await sendBusinessUpdateNotification(profile, 'secret_menu_pending_approval', {
+      ...itemData,
+      changeId: changeRecord.id
+    })
   } catch (error) {
     console.error('Slack notification failed (non-critical):', error)
   }
 
   revalidatePath('/dashboard')
-  return { success: true, data: secretMenuData }
+  return { 
+    success: true, 
+    data: secretMenuData,
+    message: 'Secret menu item submitted for admin approval. You will be notified once it is reviewed.'
+  }
 }
 
 /**
- * Create a new offer and notify Slack
+ * Create a new offer - now submits for admin approval instead of going live immediately
  */
 export async function createOffer(userId: string, offerData: {
   offerName: string
@@ -79,32 +78,54 @@ export async function createOffer(userId: string, offerData: {
   endDate?: string
   offerImage?: string | null
 }) {
-  const supabaseAdmin = createAdminClient()
+  try {
+    // Use regular client for user operations, admin client for admin operations
+    const { createClient } = await import('@/lib/supabase/server')
+    const supabase = await createClient()
+    const supabaseAdmin = createAdminClient()
 
-  // Update profile with offer data
-  const { data: profile, error } = await supabaseAdmin
-    .from('profiles')
-    .update({
-      offer_name: offerData.offerName,
-      offer_type: offerData.offerType,
-      offer_value: offerData.offerValue,
-      offer_claim_amount: offerData.offerClaimAmount,
-      offer_terms: offerData.offerTerms,
-      offer_start_date: offerData.startDate,
-      offer_end_date: offerData.endDate,
-      offer_image: offerData.offerImage
-    })
-    .eq('user_id', userId)
-    .select()
-    .single()
+    // Get user profile using admin client
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
 
-  if (error) {
-    return { success: false, error: error.message }
+    if (profileError || !profile) {
+      console.error('Profile lookup error for createOffer:', profileError)
+      return { success: false, error: `Profile not found: ${profileError?.message || 'Unknown error'}` }
+    }
+
+    // Create pending change record using admin client (bypasses RLS)
+    const { data: changeRecord, error: changeError } = await supabaseAdmin
+      .from('business_changes')
+      .insert({
+        business_id: profile.id,
+        change_type: 'offer',
+        change_data: {
+          offer_name: offerData.offerName,
+          offer_type: offerData.offerType,
+          offer_value: offerData.offerValue,
+          offer_claim_amount: offerData.offerClaimAmount,
+          offer_terms: offerData.offerTerms,
+          offer_start_date: offerData.startDate,
+          offer_end_date: offerData.endDate,
+          offer_image: offerData.offerImage
+        },
+        status: 'pending'
+      })
+      .select()
+      .single()
+
+  if (changeError) {
+    console.error('Error creating change record:', changeError)
+    console.error('Change error details:', JSON.stringify(changeError, null, 2))
+    return { success: false, error: `Failed to submit offer for review: ${changeError.message || changeError.code || 'Unknown error'}` }
   }
 
-  // Send Slack notification with all offer details
+  // Send Slack notification for ADMIN APPROVAL (not live offer)
   try {
-    await sendBusinessUpdateNotification(profile, 'offer_created', {
+    await sendBusinessUpdateNotification(profile, 'offer_pending_approval', {
       offerName: offerData.offerName,
       offerType: offerData.offerType,
       offerValue: offerData.offerValue,
@@ -112,14 +133,26 @@ export async function createOffer(userId: string, offerData: {
       offerStartDate: offerData.startDate,
       offerEndDate: offerData.endDate,
       offerTerms: offerData.offerTerms,
-      offerImage: offerData.offerImage
+      offerImage: offerData.offerImage,
+      changeId: changeRecord.id
     })
   } catch (error) {
     console.error('Slack notification failed (non-critical):', error)
   }
 
-  revalidatePath('/dashboard')
-  return { success: true, data: profile }
+    revalidatePath('/dashboard')
+    return { 
+      success: true, 
+      data: changeRecord,
+      message: 'Offer submitted for admin approval. You will be notified once it is reviewed.'
+    }
+  } catch (error) {
+    console.error('Unexpected error in createOffer:', error)
+    return { 
+      success: false, 
+      error: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }
+  }
 }
 
 /**

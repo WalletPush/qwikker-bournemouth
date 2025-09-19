@@ -173,7 +173,7 @@ export async function sendSlackNotification(formData: any): Promise<void> {
 /**
  * Send Slack notification for important business updates
  */
-export async function sendBusinessUpdateNotification(profileData: any, updateType: 'file_upload' | 'secret_menu' | 'offer_created' | 'business_info' | 'offer_deleted' | 'secret_menu_deleted' | 'referral_signup' | 'referral_credited', details: any): Promise<void> {
+export async function sendBusinessUpdateNotification(profileData: any, updateType: 'file_upload' | 'secret_menu' | 'offer_created' | 'business_info' | 'offer_deleted' | 'secret_menu_deleted' | 'referral_signup' | 'referral_credited' | 'offer_pending_approval' | 'secret_menu_pending_approval', details: any): Promise<void> {
   const slackWebhookUrl = process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL
   
   if (!slackWebhookUrl) {
@@ -210,6 +210,12 @@ export async function sendBusinessUpdateNotification(profileData: any, updateTyp
       break
     case 'referral_credited':
       message = createReferralCreditedMessage(businessName, ownerName, details)
+      break
+    case 'offer_pending_approval':
+      message = createOfferPendingApprovalMessage(businessName, ownerName, details)
+      break
+    case 'secret_menu_pending_approval':
+      message = createSecretMenuPendingApprovalMessage(businessName, ownerName, details)
       break
     default:
       return // Skip unknown update types
@@ -483,6 +489,105 @@ function createReferralCreditedMessage(businessName: string, ownerName: string, 
           type: "mrkdwn",
           text: `Successful referral conversion • Reward processed`
         }
+      }
+    ]
+  }
+}
+
+function createOfferPendingApprovalMessage(businessName: string, ownerName: string, details: any) {
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'Not specified'
+    return new Date(dateStr).toLocaleDateString('en-GB')
+  }
+
+  const claimAmountLabel = details.offerClaimAmount === 'single' ? 'Single Use' : 
+                          details.offerClaimAmount === 'multiple' ? 'Multiple Use' : 
+                          'Not specified'
+
+  const offerImage = details.offerImage ? 
+    `\n*Offer Image:* <${details.offerImage}|View Image>` : 
+    '\n*Offer Image:* Will be designed by QWIKKER team'
+
+  return {
+    text: `🚨 ADMIN APPROVAL NEEDED: ${ownerName} (${businessName}) submitted new offer: ${details.offerName}`,
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn", 
+          text: `🚨 *ADMIN APPROVAL NEEDED*\n🎯 ${ownerName} (${businessName}) submitted new offer: *${details.offerName}*`
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Value:* ${details.offerValue || 'Not specified'}\n*Type:* ${details.offerType || 'Not specified'}\n*Claim Amount:* ${claimAmountLabel}\n*Start Date:* ${formatDate(details.offerStartDate)}\n*End Date:* ${formatDate(details.offerEndDate)}${offerImage}`
+        }
+      },
+      ...(details.offerTerms ? [{
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Terms & Conditions:*\n${details.offerTerms}`
+        }
+      }] : []),
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `⚠️ *This offer is PENDING APPROVAL* - it will NOT appear on user dashboard until approved by admin`
+        }
+      },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: {
+              type: "plain_text",
+              text: "Review in Admin Dashboard"
+            },
+            url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin?tab=updates`,
+            style: "primary"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+function createSecretMenuPendingApprovalMessage(businessName: string, ownerName: string, details: any) {
+  return {
+    text: `🚨 ADMIN APPROVAL NEEDED: ${ownerName} (${businessName}) submitted secret menu item: ${details.itemName}`,
+    blocks: [
+      {
+        type: "section", 
+        text: {
+          type: "mrkdwn",
+          text: `🚨 *ADMIN APPROVAL NEEDED*\n🤫 ${ownerName} (${businessName}) submitted secret menu item: *${details.itemName}*`
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn", 
+          text: `${details.description ? `*Description:* ${details.description}\n` : ''}${details.price ? `*Price:* ${details.price}\n` : ''}⚠️ *This item is PENDING APPROVAL* - it will NOT appear until approved by admin`
+        }
+      },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: {
+              type: "plain_text",
+              text: "Review in Admin Dashboard"
+            },
+            url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin?tab=updates`,
+            style: "primary"
+          }
+        ]
       }
     ]
   }

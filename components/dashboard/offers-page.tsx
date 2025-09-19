@@ -105,7 +105,7 @@ export function OffersPage({ profile }: OffersPageProps) {
       if (result.success) {
         setMessage({
           type: 'success',
-          text: 'Offer created successfully!'
+          text: result.message || 'Offer submitted for admin approval!'
         })
         setShowCreateForm(false)
         setFormData({
