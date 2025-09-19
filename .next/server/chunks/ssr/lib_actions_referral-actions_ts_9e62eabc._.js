@@ -43,9 +43,9 @@ async function trackReferral(referralCode, newUserId) {
             };
         }
         // Get referrer profile for notification
-        const { data: referrerProfile } = await supabaseAdmin.from('profiles').select('*').eq('referral_code', referralCode).single();
+        const { data: referrerProfile } = await supabaseAdmin.from('business_profiles').select('*').eq('referral_code', referralCode).single();
         // Get new user profile
-        const { data: newUserProfile } = await supabaseAdmin.from('profiles').select('*').eq('user_id', newUserId).single();
+        const { data: newUserProfile } = await supabaseAdmin.from('business_profiles').select('*').eq('user_id', newUserId).single();
         // Send Slack notification about new referral
         if (referrerProfile && newUserProfile) {
             try {
@@ -75,7 +75,7 @@ async function getReferralStats(userId) {
     const supabaseAdmin = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$admin$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createAdminClient"])();
     try {
         // Get user's profile ID
-        const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('user_id', userId).single();
+        const { data: profile } = await supabaseAdmin.from('business_profiles').select('id').eq('user_id', userId).single();
         if (!profile) {
             return {
                 success: false,
@@ -113,7 +113,7 @@ async function getUserReferrals(userId) {
     const supabaseAdmin = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$admin$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createAdminClient"])();
     try {
         // Get user's profile ID
-        const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('user_id', userId).single();
+        const { data: profile } = await supabaseAdmin.from('business_profiles').select('id').eq('user_id', userId).single();
         if (!profile) {
             return {
                 success: false,

@@ -1,11 +1,5 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/admin/page": "app/admin/page.js",
-  "/auth/login/page": "app/auth/login/page.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/page": "app/page.js",
-  "/user/dashboard/page": "app/user/dashboard/page.js",
-  "/user/discover/page": "app/user/discover/page.js",
-  "/user/page": "app/user/page.js",
-  "/user/secret-menu/page": "app/user/secret-menu/page.js"
+  "/admin/utils/cleanup-auth/page": "app/admin/utils/cleanup-auth/page.js",
+  "/admin/utils/delete-orphaned-users/page": "app/admin/utils/delete-orphaned-users/page.js",
+  "/onboarding/page": "app/onboarding/page.js"
 }
