@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const newStatus = action === 'approve' ? 'approved' : 'rejected'
     
     const { data, error } = await supabase
-      .from('profiles')
+      .from('business_profiles')
       .update({
         status: newStatus,
         approved_by: user.id,

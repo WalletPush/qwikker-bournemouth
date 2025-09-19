@@ -28,14 +28,14 @@ export async function trackReferral(referralCode: string, newUserId: string) {
 
     // Get referrer profile for notification
     const { data: referrerProfile } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .select('*')
       .eq('referral_code', referralCode)
       .single()
 
     // Get new user profile
     const { data: newUserProfile } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .select('*')
       .eq('user_id', newUserId)
       .single()
@@ -72,7 +72,7 @@ export async function getReferralStats(userId: string) {
   try {
     // Get user's profile ID
     const { data: profile } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .select('id')
       .eq('user_id', userId)
       .single()
@@ -119,7 +119,7 @@ export async function getUserReferrals(userId: string) {
   try {
     // Get user's profile ID
     const { data: profile } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .select('id')
       .eq('user_id', userId)
       .single()

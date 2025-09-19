@@ -13,16 +13,22 @@ interface UserDashboardHomeProps {
     realBusinesses: number
     realOffers: number
   }
+  currentUser?: any
 }
 
-export function UserDashboardHome({ stats }: UserDashboardHomeProps) {
+export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps) {
   // Use real stats or fallback to mock data
   const businessCount = stats?.totalBusinesses ?? mockBusinesses.length
   const offerCount = stats?.totalOffers ?? mockOffers.length
   const secretMenuCount = stats?.totalSecretMenus ?? mockBusinesses.filter(b => b.hasSecretMenu).length
   
+  // Use real user data or fallback to mock
+  const userProfile = currentUser || mockUserProfile
+  const userName = userProfile.name || mockUserProfile.name
+  const userPoints = userProfile.total_points || mockUserProfile.totalPoints
+  const userLevel = userProfile.level || mockUserProfile.level
+  
   // Calculate level info using proper level system
-  const userPoints = mockUserProfile.totalPoints // 1250 points
   const currentLevelInfo = levelSystem.getLevelFromPoints(userPoints)
   const nextLevelInfo = levelSystem.getNextLevel(currentLevelInfo.level)
   const pointsToNext = nextLevelInfo ? nextLevelInfo.pointsRequired - userPoints : 0
@@ -32,7 +38,7 @@ export function UserDashboardHome({ stats }: UserDashboardHomeProps) {
       {/* Simple Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-slate-100 mb-2">
-          Welcome back, <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent">David</span>
+          Welcome back, <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent">{userName}</span>
         </h1>
         <p className="text-slate-400">Your AI companion is ready to help you discover Bournemouth</p>
       </div>

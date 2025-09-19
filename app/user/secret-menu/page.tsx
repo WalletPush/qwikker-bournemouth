@@ -7,7 +7,7 @@ export default async function SecretMenuPage() {
   
   // Fetch approved businesses (we'll filter for secret menus after parsing)
   const { data: approvedBusinesses, error } = await supabase
-    .from('profiles')
+    .from('business_profiles')
     .select(`
       id,
       business_name,

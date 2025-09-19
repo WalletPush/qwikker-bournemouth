@@ -83,7 +83,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     try {
       const result = await submitBusinessForReview(profile.user_id)
       if (result.success) {
-        alert('🎉 Successfully submitted for review!\n\nYour business listing is now being reviewed by our team. You\'ll receive an email notification once it\'s approved and live on Qwikker!')
+        alert('Successfully submitted for review!\n\nYour business listing is now being reviewed by our team. You\'ll receive an email notification once it\'s approved and live on Qwikker!')
         // Refresh the page to show updated status
         window.location.reload()
       } else {
@@ -478,7 +478,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
                 ) : (
                   <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
                     <p className="text-sm text-green-200">
-                      🎉 Your business is approved and live! Keep your listing fresh with updates.
+                      Your business is approved and live! Keep your listing fresh with updates.
                     </p>
                   </div>
                 )}

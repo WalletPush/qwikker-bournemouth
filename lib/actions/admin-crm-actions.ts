@@ -13,7 +13,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
   try {
     // Fetch businesses with basic data first (billing tables might not exist yet)
     const { data: businesses, error } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .select(`
         id,
         business_name,
@@ -307,7 +307,7 @@ export async function recordPayment(
       .eq('id', subscription.id)
 
     await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .update({
         last_payment_date: now.toISOString(),
         next_billing_date: periodEnd.toISOString()

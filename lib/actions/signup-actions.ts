@@ -227,7 +227,7 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
 
     // 4. Create profile
     const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .insert(profileData)
       .select()
       .single()

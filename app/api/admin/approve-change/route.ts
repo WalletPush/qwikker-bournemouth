@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       } else if (change.change_type === 'secret_menu') {
         // For secret menu, we need to append to existing additional_notes
         const { data: currentProfile } = await supabaseAdmin
-          .from('profiles')
+          .from('business_profiles')
           .select('additional_notes')
           .eq('id', change.business_id)
           .single()
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       
       // Update the business profile
       const { error: updateError } = await supabaseAdmin
-        .from('profiles')
+        .from('business_profiles')
         .update(updateData)
         .eq('id', change.business_id)
       

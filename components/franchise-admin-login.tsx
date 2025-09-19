@@ -59,7 +59,7 @@ export default function FranchiseAdminLogin({ city, cityDisplayName }: Franchise
       console.log('✅ Response data:', data)
 
       if (data.success) {
-        console.log('🎉 Login successful, redirecting to /admin')
+        console.log('Login successful, redirecting to /admin')
         router.push('/admin')
         router.refresh()
       } else {

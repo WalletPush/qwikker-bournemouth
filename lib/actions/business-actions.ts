@@ -16,7 +16,7 @@ export async function addSecretMenuItem(userId: string, itemData: {
 
   // Get user profile for notification context
   const { data: profile, error: profileError } = await supabaseAdmin
-    .from('profiles')
+    .from('business_profiles')
     .select('*')
     .eq('user_id', userId)
     .single()
@@ -86,7 +86,7 @@ export async function createOffer(userId: string, offerData: {
 
     // Get user profile using admin client
     const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .select('*')
       .eq('user_id', userId)
       .single()
@@ -166,7 +166,7 @@ export async function updateBusinessInfo(userId: string, updates: any) {
   const importantUpdates = Object.keys(updates).filter(key => !routineFields.includes(key))
 
   const { data: profile, error } = await supabaseAdmin
-    .from('profiles')
+    .from('business_profiles')
     .update(updates)
     .eq('user_id', userId)
     .select()
@@ -199,7 +199,7 @@ export async function deleteOffer(userId: string) {
 
   // Get the current offer details for the notification
   const { data: currentProfile, error: fetchError } = await supabaseAdmin
-    .from('profiles')
+    .from('business_profiles')
     .select('*')
     .eq('user_id', userId)
     .single()
@@ -217,7 +217,7 @@ export async function deleteOffer(userId: string) {
 
   // Clear offer data from profile
   const { data: profile, error } = await supabaseAdmin
-    .from('profiles')
+    .from('business_profiles')
     .update({
       offer_name: null,
       offer_type: null,
@@ -256,7 +256,7 @@ export async function deleteSecretMenuItem(userId: string, itemId: string) {
 
   // Get current profile data
   const { data: profile, error: profileError } = await supabaseAdmin
-    .from('profiles')
+    .from('business_profiles')
     .select('*')
     .eq('user_id', userId)
     .single()
@@ -295,7 +295,7 @@ export async function deleteSecretMenuItem(userId: string, itemId: string) {
 
   // Update profile with modified secret menu items
   const { error: updateError } = await supabaseAdmin
-    .from('profiles')
+    .from('business_profiles')
     .update({ additional_notes: JSON.stringify(notesData) })
     .eq('user_id', userId)
 
@@ -324,7 +324,7 @@ export async function submitBusinessForReview(userId: string) {
   try {
     // Update status to pending_review
     const { error: updateError } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .update({ 
         status: 'pending_review'
       })
@@ -337,7 +337,7 @@ export async function submitBusinessForReview(userId: string) {
 
     // Get profile data for notification
     const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .select('*')
       .eq('user_id', userId)
       .single()

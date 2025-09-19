@@ -11,7 +11,7 @@ export async function addBasicBusinessKnowledge(businessId: string, adminId: str
   try {
     // Get business details
     const { data: business, error: businessError } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .select('*')
       .eq('id', businessId)
       .single()
@@ -163,7 +163,7 @@ export async function getKnowledgeEnhancementSuggestions(businessId: string) {
 
   try {
     const { data: business, error: businessError } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .select('website_url, menu_url, business_images')
       .eq('id', businessId)
       .single()

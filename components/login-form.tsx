@@ -73,7 +73,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                 <span className="font-semibold">Account Created Successfully!</span>
               </div>
               <p className="text-xs text-slate-300 mt-2">
-                🎉 Welcome to Qwikker! Your account is ready - just sign in to get started.
+                Welcome to Qwikker! Your account is ready - just sign in to get started.
               </p>
             </div>
           )}

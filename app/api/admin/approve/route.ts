@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
     
     const { data, error } = await supabaseAdmin
-      .from('profiles')
+      .from('business_profiles')
       .update(updateData)
       .eq('id', businessId)
       .eq('city', requestCity) // Only allow updating businesses in admin's city

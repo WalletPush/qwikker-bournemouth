@@ -36,7 +36,7 @@ export function DashboardFileManager({ userId, currentFiles }: FileManagerProps)
       }
       
       const { error } = await supabase
-        .from('profiles')
+        .from('business_profiles')
         .update(updateData)
         .eq('user_id', userId)
       

@@ -10,7 +10,7 @@ export async function getPendingChanges(userId: string) {
 
   // Get user profile first
   const { data: profile, error: profileError } = await supabaseAdmin
-    .from('profiles')
+    .from('business_profiles')
     .select('id, status')
     .eq('user_id', userId)
     .single()
@@ -47,7 +47,7 @@ export async function getApprovedChangesCount(userId: string) {
 
   // Get user profile first
   const { data: profile, error: profileError } = await supabaseAdmin
-    .from('profiles')
+    .from('business_profiles')
     .select('id')
     .eq('user_id', userId)
     .single()
