@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { getReferralStats } from '@/lib/actions/referral-actions'
 import { submitBusinessForReview } from '@/lib/actions/business-actions'
+import { getPendingChanges } from '@/lib/actions/pending-changes'
 
 interface DashboardHomeProps {
   profile?: {
@@ -21,6 +22,8 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(0)
   const [showModal, setShowModal] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [pendingChanges, setPendingChanges] = useState<any[]>([])
+  const [loadingPendingChanges, setLoadingPendingChanges] = useState(false)
   const [referralStats, setReferralStats] = useState({
     totalReferrals: 0,
     successfulReferrals: 0,
@@ -59,6 +62,19 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
 
     loadReferralStats()
   }, [profile?.user_id])
+
+  // Load pending changes for approved businesses
+  useEffect(() => {
+    if (profile?.user_id && profile?.status === 'approved') {
+      setLoadingPendingChanges(true)
+      getPendingChanges(profile.user_id).then((result) => {
+        if (result.success) {
+          setPendingChanges(result.pendingChanges)
+        }
+        setLoadingPendingChanges(false)
+      })
+    }
+  }, [profile?.user_id, profile?.status])
 
   const handleSubmitForReview = async () => {
     if (!profile?.user_id || isSubmitting) return
@@ -412,67 +428,140 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
           </CardContent>
         </Card>
 
-        {/* Profile Completion Card */}
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Profile Completion
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">Progress</span>
-                  <span className="text-sm font-semibold text-[#00d083]">{completionPercentage}%</span>
+        {/* Business Status Card - Changes based on approval status */}
+        {currentStatus === 'approved' ? (
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Business Updates
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                    <span className="text-sm text-green-300">Live on Qwikker!</span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {businessName} • {profile?.business_type || 'Business'} • {profile?.business_town || 'Location'}
+                  </p>
                 </div>
-                <div className="w-full bg-slate-700 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-[#00d083] to-[#00b86f] h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${completionPercentage}%` }}
-                  ></div>
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${
-                    currentStatus === 'approved' ? 'bg-green-400' :
-                    currentStatus === 'pending_review' ? 'bg-yellow-400' :
-                    currentStatus === 'rejected' ? 'bg-red-400' :
-                    'bg-gray-400'
-                  }`}></div>
-                  <span className="text-sm text-gray-300">
-                    {currentStatus === 'approved' ? 'Live on Qwikker!' :
-                     currentStatus === 'pending_review' ? 'Under Review' :
-                     currentStatus === 'rejected' ? 'Needs Changes' :
-                     'Profile Incomplete'}
-                  </span>
+                {/* Pending Changes Section */}
+                {loadingPendingChanges ? (
+                  <div className="p-3 bg-slate-700/50 rounded-lg">
+                    <p className="text-sm text-gray-400">Loading pending changes...</p>
+                  </div>
+                ) : pendingChanges.length > 0 ? (
+                  <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <p className="text-sm text-yellow-200 mb-2">
+                      ⏳ Pending approval: {pendingChanges.length} update{pendingChanges.length !== 1 ? 's' : ''}
+                    </p>
+                    <div className="text-xs text-yellow-300">
+                      {pendingChanges.slice(0, 2).map((change, index) => (
+                        <div key={change.id}>
+                          • {change.change_type === 'offer' && 'New Offer'}
+                          {change.change_type === 'secret_menu' && 'Secret Menu Item'}
+                          {change.change_type === 'business_images' && 'Business Photos'}
+                          {change.change_type === 'business_info' && 'Business Info Update'}
+                        </div>
+                      ))}
+                      {pendingChanges.length > 2 && (
+                        <div>• +{pendingChanges.length - 2} more...</div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <p className="text-sm text-green-200">
+                      🎉 Your business is approved and live! Keep your listing fresh with updates.
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button asChild size="sm" variant="outline" className="border-slate-600 text-gray-300 hover:bg-slate-700">
+                    <Link href="/dashboard/offers">Add Offer</Link>
+                  </Button>
+                  <Button asChild size="sm" variant="outline" className="border-slate-600 text-gray-300 hover:bg-slate-700">
+                    <Link href="/dashboard/secret-menu">Secret Menu</Link>
+                  </Button>
+                  <Button asChild size="sm" variant="outline" className="border-slate-600 text-gray-300 hover:bg-slate-700">
+                    <Link href="/dashboard/files">Upload Photos</Link>
+                  </Button>
+                  <Button asChild size="sm" variant="outline" className="border-slate-600 text-gray-300 hover:bg-slate-700">
+                    <Link href="/dashboard/business">Update Info</Link>
+                  </Button>
                 </div>
-                <p className="text-xs text-gray-400">
-                  {businessName} • {profile?.business_type || 'Business'} • {profile?.business_town || 'Location'}
-                </p>
               </div>
-              
-              {isReadyForReview && currentStatus === 'incomplete' ? (
-                <Button 
-                  onClick={handleSubmitForReview}
-                  disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
-                >
-                  {isSubmitting ? 'Submitting...' : 'Submit for Review'}
-                </Button>
-              ) : (
-                <Button asChild variant="outline" className="w-full border-slate-600 text-gray-300 hover:bg-slate-700">
-                  <Link href="/dashboard/business">Complete Profile</Link>
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Profile Completion
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-400">Progress</span>
+                    <span className="text-sm font-semibold text-[#00d083]">{completionPercentage}%</span>
+                  </div>
+                  <div className="w-full bg-slate-700 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-[#00d083] to-[#00b86f] h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${completionPercentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      currentStatus === 'approved' ? 'bg-green-400' :
+                      currentStatus === 'pending_review' ? 'bg-yellow-400' :
+                      currentStatus === 'rejected' ? 'bg-red-400' :
+                      'bg-gray-400'
+                    }`}></div>
+                    <span className="text-sm text-gray-300">
+                      {currentStatus === 'approved' ? 'Live on Qwikker!' :
+                       currentStatus === 'pending_review' ? 'Under Review' :
+                       currentStatus === 'rejected' ? 'Needs Changes' :
+                       'Profile Incomplete'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {businessName} • {profile?.business_type || 'Business'} • {profile?.business_town || 'Location'}
+                  </p>
+                </div>
+                
+                {isReadyForReview && currentStatus === 'incomplete' ? (
+                  <Button 
+                    onClick={handleSubmitForReview}
+                    disabled={isSubmitting}
+                    className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit for Review'}
+                  </Button>
+                ) : (
+                  <Button asChild variant="outline" className="w-full border-slate-600 text-gray-300 hover:bg-slate-700">
+                    <Link href="/dashboard/business">Complete Profile</Link>
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* To-Do Notifications Card */}
         {todoItems.length > 0 ? (

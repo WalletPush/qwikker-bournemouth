@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { submitBusinessForReview } from '@/lib/actions/business-actions'
-import { useState } from 'react'
+import { getPendingChanges } from '@/lib/actions/pending-changes'
+import { useState, useEffect } from 'react'
 
 interface ActionItemsPageProps {
   profile?: any
@@ -12,6 +13,21 @@ interface ActionItemsPageProps {
 
 export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [pendingChanges, setPendingChanges] = useState<any[]>([])
+  const [loadingPendingChanges, setLoadingPendingChanges] = useState(false)
+
+  // Fetch pending changes on component mount
+  useEffect(() => {
+    if (profile?.user_id && profile?.status === 'approved') {
+      setLoadingPendingChanges(true)
+      getPendingChanges(profile.user_id).then((result) => {
+        if (result.success) {
+          setPendingChanges(result.pendingChanges)
+        }
+        setLoadingPendingChanges(false)
+      })
+    }
+  }, [profile?.user_id, profile?.status])
   
   // Updated logic to match dashboard-home.tsx - REQUIRED fields for user dashboard listing
   const requiredTodos = []
@@ -274,6 +290,151 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     }
   }
 
+  // Show different content based on business status
+  if (profile?.status === 'approved') {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-2">Business Updates</h1>
+          <p className="text-gray-400">
+            Your business is live on Qwikker! Keep your listing fresh with new offers, photos, and updates.
+          </p>
+        </div>
+
+        {/* Approved Business - Pending Changes & Update Options */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Your Business is Live!
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-green-200 mb-4">
+              Congratulations! Your business is approved and live on the Qwikker platform. 
+              You can now make updates to keep your listing fresh and engaging.
+            </p>
+
+            {/* Pending Changes Section */}
+            {loadingPendingChanges ? (
+              <div className="p-4 bg-slate-700/50 rounded-lg mb-6">
+                <p className="text-gray-400">Loading pending changes...</p>
+              </div>
+            ) : pendingChanges.length > 0 ? (
+              <div className="mb-6">
+                <h3 className="text-yellow-400 font-semibold mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Pending Approval ({pendingChanges.length})
+                </h3>
+                <div className="space-y-3">
+                  {pendingChanges.map((change) => (
+                    <div key={change.id} className="p-4 bg-slate-700/50 rounded-lg border border-slate-600">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-white font-medium">
+                            {change.change_type === 'offer' && 'New Offer'}
+                            {change.change_type === 'secret_menu' && 'Secret Menu Item'}
+                            {change.change_type === 'business_images' && 'Business Photos'}
+                            {change.change_type === 'business_info' && 'Business Info Update'}
+                          </h4>
+                          <p className="text-gray-300 text-sm">
+                            {change.change_type === 'offer' && `"${change.change_data.offer_name}"`}
+                            {change.change_type === 'secret_menu' && `"${change.change_data.itemName}"`}
+                            {change.change_type === 'business_images' && 'New photos uploaded'}
+                            {change.change_type === 'business_info' && 'Business information updated'}
+                          </p>
+                          <p className="text-gray-400 text-xs">
+                            Submitted: {new Date(change.submitted_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="text-yellow-400 text-sm font-medium">
+                          Under Review
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Update Options for Approved Businesses */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Link href="/dashboard/offers" className="block">
+                <div className="p-4 bg-slate-700/50 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 713 12V7a4 4 0 714-4z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-white font-medium">Create New Offer</h4>
+                  </div>
+                  <p className="text-gray-400 text-sm">Add special promotions to attract more customers</p>
+                </div>
+              </Link>
+
+              <Link href="/dashboard/secret-menu" className="block">
+                <div className="p-4 bg-slate-700/50 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-white font-medium">Add Secret Menu Item</h4>
+                  </div>
+                  <p className="text-gray-400 text-sm">Create exclusive items for special customers</p>
+                </div>
+              </Link>
+
+              <Link href="/dashboard/files" className="block">
+                <div className="p-4 bg-slate-700/50 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 bg-pink-500/20 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 712.828 0L16 16m-2-2l1.586-1.586a2 2 0 712.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-white font-medium">Upload New Photos</h4>
+                  </div>
+                  <p className="text-gray-400 text-sm">Add fresh photos to showcase your business</p>
+                </div>
+              </Link>
+
+              <Link href="/dashboard/business" className="block">
+                <div className="p-4 bg-slate-700/50 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-white font-medium">Update Business Info</h4>
+                  </div>
+                  <p className="text-gray-400 text-sm">Keep your business details current</p>
+                </div>
+              </Link>
+            </div>
+
+            {pendingChanges.length === 0 && (
+              <div className="mt-4 p-4 bg-slate-700/50 border border-slate-600 rounded-lg">
+                <p className="text-gray-300 text-sm">
+                  <strong>Tip:</strong> Regular updates keep your business engaging! 
+                  Consider adding seasonal offers or updating your photos monthly.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Original logic for incomplete/pending businesses
   return (
     <div className="space-y-6">
       <div>

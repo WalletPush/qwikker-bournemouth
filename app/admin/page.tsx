@@ -75,6 +75,38 @@ export default async function AdminPage() {
   if (businessError) {
     console.error('Error fetching businesses:', businessError)
   }
+
+  // Fetch pending changes count for navigation
+  const { count: pendingChangesCount, error: changesError } = await supabase
+    .from('business_changes')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'pending')
+    .in('business_id', (allBusinesses || []).map(b => b.id))
+
+  if (changesError) {
+    console.error('Error fetching pending changes count:', changesError)
+  }
+
+  // Fetch actual pending changes for the updates tab
+  const { data: pendingChanges, error: changesDataError } = await supabase
+    .from('business_changes')
+    .select(`
+      *,
+      business:business_id (
+        business_name,
+        first_name,
+        last_name,
+        email,
+        logo
+      )
+    `)
+    .eq('status', 'pending')
+    .in('business_id', (allBusinesses || []).map(b => b.id))
+    .order('submitted_at', { ascending: false })
+
+  if (changesDataError) {
+    console.error('Error fetching pending changes data:', changesDataError)
+  }
   
   return (
     <AdminDashboard 
@@ -82,6 +114,8 @@ export default async function AdminPage() {
       adminEmail={admin.email || admin.username} 
       city={currentCity}
       cityDisplayName={getCityDisplayName(currentCity)}
+      pendingChangesCount={pendingChangesCount || 0}
+      pendingChanges={pendingChanges || []}
     />
   )
 }

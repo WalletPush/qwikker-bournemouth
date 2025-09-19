@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
+import { addBasicBusinessKnowledge } from '@/lib/actions/knowledge-base-actions'
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,17 +51,43 @@ export async function POST(request: NextRequest) {
     
     // Update business status using admin client
     const supabaseAdmin = createAdminClient()
-    const newStatus = action === 'approve' ? 'approved' : 'rejected'
+    let newStatus: string
+    let updateData: any = {}
+    
+    switch (action) {
+      case 'approve':
+        newStatus = 'approved'
+        updateData = {
+          status: newStatus,
+          approved_at: new Date().toISOString()
+        }
+        break
+      case 'reject':
+        newStatus = 'rejected'
+        updateData = {
+          status: newStatus,
+          approved_at: new Date().toISOString()
+        }
+        break
+      case 'restore':
+        newStatus = 'pending_review'
+        updateData = {
+          status: newStatus,
+          approved_at: null // Clear the approval timestamp
+        }
+        break
+      default:
+        return NextResponse.json(
+          { error: 'Invalid action' },
+          { status: 400 }
+        )
+    }
     
     const { data, error } = await supabaseAdmin
       .from('profiles')
-      .update({
-        status: newStatus,
-        approved_by: admin.id,
-        approved_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', businessId)
-      .eq('city', requestCity) // Only allow approving businesses in admin's city
+      .eq('city', requestCity) // Only allow updating businesses in admin's city
       .select()
       .single()
     
@@ -72,7 +99,22 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    console.log(`✅ Business ${data.business_name} ${action}d by ${admin.username} in ${requestCity}`)
+    const actionPastTense = action === 'restore' ? 'restored' : `${action}d`
+    console.log(`✅ Business ${data.business_name} ${actionPastTense} by ${admin.username} in ${requestCity}`)
+    
+    // 🧠 HYBRID KNOWLEDGE BASE: Auto-add basic info when approved
+    if (action === 'approve') {
+      try {
+        const knowledgeResult = await addBasicBusinessKnowledge(businessId, admin.id)
+        if (knowledgeResult.success) {
+          console.log(`🧠 Basic knowledge added for ${data.business_name}`)
+        } else {
+          console.error(`⚠️ Failed to add knowledge for ${data.business_name}:`, knowledgeResult.error)
+        }
+      } catch (error) {
+        console.error('⚠️ Knowledge base integration error (non-critical):', error)
+      }
+    }
     
     return NextResponse.json({
       success: true,

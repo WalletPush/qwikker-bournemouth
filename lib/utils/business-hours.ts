@@ -59,24 +59,32 @@ export function parseBusinessHours(hoursString: string | null | undefined): Pars
     
     // Convert to 24-hour format
     let openTime = parseInt(openHour)
-    if (openPeriod.toLowerCase() === 'pm' && openTime !== 12) openTime += 12
-    if (openPeriod.toLowerCase() === 'am' && openTime === 12) openTime = 0
+    if (openPeriod.toLowerCase() === 'pm' && openTime !== 12) {
+      openTime += 12
+    } else if (openPeriod.toLowerCase() === 'am' && openTime === 12) {
+      openTime = 0
+    }
     
     let closeTime = parseInt(closeHour)
-    if (closePeriod.toLowerCase() === 'pm' && closeTime !== 12) closeTime += 12
-    if (closePeriod.toLowerCase() === 'am' && closeTime === 12) closeTime = 0
-    
-    // Handle overnight hours (e.g., 10pm - 2am)
-    if (closeTime < openTime) {
-      closeTime += 24
+    if (closePeriod.toLowerCase() === 'pm' && closeTime !== 12) {
+      closeTime += 12
+    } else if (closePeriod.toLowerCase() === 'am' && closeTime === 12) {
+      closeTime = 0
     }
     
     // Convert to minutes
     const openMinutes = openTime * 60
-    const closeMinutes = closeTime * 60
+    let closeMinutes = closeTime * 60
     
-    // Check if currently open
-    const isOpen = currentTime >= openMinutes && currentTime < closeMinutes
+    // Handle overnight hours (e.g., 10pm - 2am)
+    let isOpen = false
+    if (closeTime < openTime) {
+      // Overnight hours: open if current time is after opening OR before closing
+      isOpen = (currentTime >= openMinutes) || (currentTime < closeMinutes)
+    } else {
+      // Same day hours: open if current time is between opening and closing
+      isOpen = (currentTime >= openMinutes) && (currentTime < closeMinutes)
+    }
     
     // Calculate next change
     let nextChange = null

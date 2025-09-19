@@ -60,23 +60,44 @@ export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu
 }
 
 export async function uploadToCloudinary(file: File, folder: string = 'qwikker_uploads') {
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('upload_preset', 'unsigned_qwikker') // This preset must be created in Cloudinary
-  formData.append('folder', folder)
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('upload_preset', 'unsigned_qwikker') // This preset must be created in Cloudinary
+    formData.append('folder', folder)
 
-  const url = `https://api.cloudinary.com/v1_1/dsh32kke7/${file.type.startsWith('image') ? 'image' : 'raw'}/upload`
+    const url = `https://api.cloudinary.com/v1_1/dsh32kke7/${file.type.startsWith('image') ? 'image' : 'raw'}/upload`
 
-  const response = await fetch(url, {
-    method: 'POST',
-    body: formData
-  })
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData
+    })
 
-  if (!response.ok) {
-    throw new Error('Upload failed')
+    if (!response.ok) {
+      const errorData = await response.text()
+      console.error('Cloudinary upload error:', errorData)
+      return {
+        success: false,
+        error: `Upload failed: ${response.status} ${response.statusText}`,
+        data: null
+      }
+    }
+
+    const data = await response.json()
+    
+    return {
+      success: true,
+      error: null,
+      data: data
+    }
+  } catch (error) {
+    console.error('Cloudinary upload exception:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown upload error',
+      data: null
+    }
   }
-
-  const data = await response.json()
   
   // Optional: Also backup to Supabase Storage for redundancy
   // Note: This requires the userId to be passed, for now we'll skip the backup

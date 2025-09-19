@@ -3,43 +3,54 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { mockOffers, mockBusinesses, mockClaimedOffers } from '@/lib/mock-data/user-mock-data'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-export function UserOffersPage() {
+interface UserOffersPageProps {
+  realOffers?: any[]
+}
+
+export function UserOffersPage({ realOffers = [] }: UserOffersPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   
-  // Initialize from localStorage or empty sets for fresh users
-  const [favoriteOffers, setFavoriteOffers] = useState<Set<string>>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('qwikker-favorites')
-      return saved ? new Set(JSON.parse(saved)) : new Set()
-    }
-    return new Set()
-  })
+  // Initialize with empty sets to avoid hydration mismatch
+  const [favoriteOffers, setFavoriteOffers] = useState<Set<string>>(new Set())
+  const [claimedOffers, setClaimedOffers] = useState<Set<string>>(new Set())
   
-  const [claimedOffers, setClaimedOffers] = useState<Set<string>>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('qwikker-claimed')
-      return saved ? new Set(JSON.parse(saved)) : new Set()
+  // Load from localStorage after component mounts
+  useEffect(() => {
+    const savedFavorites = localStorage.getItem('qwikker-favorites')
+    const savedClaimed = localStorage.getItem('qwikker-claimed')
+    
+    if (savedFavorites) {
+      setFavoriteOffers(new Set(JSON.parse(savedFavorites)))
     }
-    // For development, start with mock data, but real users start fresh
-    return new Set(mockClaimedOffers.map(co => co.offerId))
-  })
+    if (savedClaimed) {
+      setClaimedOffers(new Set(JSON.parse(savedClaimed)))
+    } else {
+      // For development, start with mock data if no saved data
+      setClaimedOffers(new Set(mockClaimedOffers.map(co => co.offerId)))
+    }
+  }, [])
   
-  // Get unique categories from businesses
-  const categories = ['all', ...Array.from(new Set(mockBusinesses.map(b => b.category)))]
+  // Combine real offers with mock offers
+  const allOffers = [...realOffers, ...mockOffers]
+  
+  // Get unique categories from all businesses
+  const realCategories = realOffers.map(o => o.businessCategory).filter(Boolean)
+  const mockCategories = mockBusinesses.map(b => b.category)
+  const categories = ['all', ...Array.from(new Set([...realCategories, ...mockCategories]))]
   
   // Dynamic filter counts that update with state changes
   const getFilters = () => [
-    { id: 'all', label: 'All Offers', count: mockOffers.length },
+    { id: 'all', label: 'All Offers', count: allOffers.length },
     { id: 'claimed', label: 'My Claimed', count: claimedOffers.size },
     { id: 'favorites', label: 'My Favorites', count: favoriteOffers.size },
-    { id: 'popular', label: 'Popular', count: mockOffers.filter(o => o.isPopular).length },
-    { id: 'ending_soon', label: 'Ending Soon', count: mockOffers.filter(o => o.isEndingSoon).length },
-    { id: 'two_for_one', label: '2-for-1', count: mockOffers.filter(o => o.type === 'two_for_one').length },
-    { id: 'percentage_off', label: 'Percentage Off', count: mockOffers.filter(o => o.type === 'percentage_off').length },
+    { id: 'popular', label: 'Popular', count: allOffers.filter(o => o.isPopular).length },
+    { id: 'ending_soon', label: 'Ending Soon', count: allOffers.filter(o => o.isEndingSoon).length },
+    { id: 'two_for_one', label: '2-for-1', count: allOffers.filter(o => o.type === 'two_for_one').length },
+    { id: 'percentage_off', label: 'Percentage Off', count: allOffers.filter(o => o.type === 'percentage_off').length },
   ]
 
   const toggleFavorite = (offerId: string) => {
@@ -71,7 +82,7 @@ export function UserOffersPage() {
   }
 
   const getFilteredOffers = () => {
-    let filtered = mockOffers
+    let filtered = allOffers
 
     // Filter by type
     if (selectedFilter === 'claimed') {
@@ -90,8 +101,18 @@ export function UserOffersPage() {
 
     // Filter by category
     if (selectedCategory !== 'all') {
-      const businessesInCategory = mockBusinesses.filter(b => b.category === selectedCategory).map(b => b.id)
-      filtered = filtered.filter(o => businessesInCategory.includes(o.businessId))
+      // For real offers, filter by businessCategory
+      // For mock offers, filter by business category from mockBusinesses
+      filtered = filtered.filter(o => {
+        if (o.businessCategory) {
+          // Real offer
+          return o.businessCategory === selectedCategory
+        } else {
+          // Mock offer - find business in mockBusinesses
+          const business = mockBusinesses.find(b => b.id === o.businessId)
+          return business?.category === selectedCategory
+        }
+      })
     }
 
     return filtered
@@ -108,7 +129,32 @@ export function UserOffersPage() {
   }
 
   const OfferCard = ({ offer }: { offer: any }) => {
-    const business = mockBusinesses.find(b => b.id === offer.businessId)
+    // Distinguish real vs mock offers: real offers have businessCategory, mock offers don't
+    const isRealOffer = !!offer.businessCategory
+    const business = isRealOffer ? null : mockBusinesses.find(b => b.id === offer.businessId)
+    const businessName = offer.businessName || business?.name || 'Unknown Business'
+    
+    // Fix image selection: for real offers use offer.image, for mock offers use business.images[0]
+    const businessImage = isRealOffer
+      ? (offer.image || '/placeholder-business.jpg') 
+      : (business?.images?.[0] || '/placeholder-business.jpg')
+    
+    const businessRating = offer.businessRating || business?.rating || 4.5
+    
+    // Generate badge for real offers based on type, use existing badge for mock offers
+    const getBadgeText = () => {
+      if (!isRealOffer && offer.badge) return offer.badge // Mock offers have badge
+      
+      // Generate badge for real offers based on type
+      switch (offer.type) {
+        case 'two_for_one': return '2-FOR-1'
+        case 'percentage_off': return `${offer.value}`
+        case 'freebie': return 'FREE ITEM'
+        case 'discount': return 'DISCOUNT'
+        default: return 'OFFER'
+      }
+    }
+    
     const isFavorite = favoriteOffers.has(offer.id)
     const isClaimed = claimedOffers.has(offer.id)
     const claimedOfferData = mockClaimedOffers.find(co => co.offerId === offer.id)
@@ -118,8 +164,8 @@ export function UserOffersPage() {
         {/* Header with Image */}
         <div className="relative h-40 overflow-hidden">
           <img 
-            src={business?.images[0] || '/placeholder-business.jpg'} 
-            alt={business?.name || 'Business'}
+            src={businessImage} 
+            alt={businessName}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
           
@@ -129,7 +175,7 @@ export function UserOffersPage() {
           {/* Offer type badge (top right) */}
           <div className="absolute top-3 right-3">
             <span className={`${getBadgeColor(offer.type)} text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg`}>
-              {offer.badge}
+              {getBadgeText()}
             </span>
           </div>
 
@@ -169,8 +215,8 @@ export function UserOffersPage() {
 
           {/* Business name in bottom corner */}
           <div className="absolute bottom-2 left-3 right-12">
-            <p className="text-white font-semibold text-sm drop-shadow-lg truncate">{business?.name}</p>
-            <p className="text-white/80 text-xs drop-shadow-md truncate">{business?.category}</p>
+            <p className="text-white font-semibold text-sm drop-shadow-lg truncate">{businessName}</p>
+            <p className="text-white/80 text-xs drop-shadow-md truncate">{isRealOffer ? offer.businessCategory : business?.category}</p>
           </div>
         </div>
 
@@ -191,15 +237,15 @@ export function UserOffersPage() {
 
           {/* Clean Terms & Expiry */}
           <div className="mb-4 text-xs text-slate-400 space-y-1">
-            <p><span className="font-medium">Terms:</span> {offer.terms}</p>
-            <p><span className="font-medium">Valid until:</span> {offer.expiryDate}</p>
+            <p><span className="font-medium">Terms:</span> {isRealOffer ? (offer.termsAndConditions || 'Standard terms apply') : (offer.terms || 'Standard terms apply')}</p>
+            <p><span className="font-medium">Valid until:</span> {isRealOffer ? (offer.validUntil || 'No expiry date') : (offer.expiryDate || 'No expiry date')}</p>
           </div>
 
           {/* Action buttons */}
           <div className="space-y-2">
             {!isClaimed ? (
               <Button 
-                onClick={() => claimOffer(offer.id, offer.title, offer.businessName)}
+                onClick={() => claimOffer(offer.id, offer.title, businessName)}
                 className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold"
               >
                 Claim Offer
