@@ -1,5 +1,1 @@
-{
-  "/admin/utils/cleanup-auth/page": "app/admin/utils/cleanup-auth/page.js",
-  "/admin/utils/delete-orphaned-users/page": "app/admin/utils/delete-orphaned-users/page.js",
-  "/onboarding/page": "app/onboarding/page.js"
-}
+{}
