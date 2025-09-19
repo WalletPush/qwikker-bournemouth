@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { useState } from 'react'
 import Link from 'next/link'
+import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 
 interface Business {
   id: string
@@ -35,6 +36,7 @@ interface UserDiscoverPageProps {
 
 export function UserDiscoverPage({ businesses = mockBusinesses }: UserDiscoverPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState<string>('')
   
   // Group businesses by subscription plan (determines badges)
   const qwikkerPicks = businesses.filter(b => b.plan === 'spotlight')
@@ -49,12 +51,37 @@ export function UserDiscoverPage({ businesses = mockBusinesses }: UserDiscoverPa
   ]
 
   const getFilteredBusinesses = () => {
+    // First filter by selected category
+    let filtered = businesses
     switch (selectedFilter) {
-      case 'qwikker_picks': return qwikkerPicks
-      case 'featured': return featured
-      case 'recommended': return recommended
-      default: return businesses
+      case 'qwikker_picks': 
+        filtered = qwikkerPicks
+        break
+      case 'featured': 
+        filtered = featured
+        break
+      case 'recommended': 
+        filtered = recommended
+        break
+      default: 
+        filtered = businesses
     }
+
+    // Then filter by search query if present
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter(business => 
+        business.name?.toLowerCase().includes(query) ||
+        business.category?.toLowerCase().includes(query) ||
+        business.tagline?.toLowerCase().includes(query) ||
+        business.description?.toLowerCase().includes(query) ||
+        business.location?.toLowerCase().includes(query) ||
+        business.address?.toLowerCase().includes(query) ||
+        business.tags?.some(tag => tag?.toLowerCase().includes(query))
+      )
+    }
+
+    return filtered
   }
 
   const BusinessCard = ({ business }: { business: any }) => (
@@ -140,7 +167,14 @@ export function UserDiscoverPage({ businesses = mockBusinesses }: UserDiscoverPa
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span className="text-sm">{business.hours}</span>
-          <span className="text-green-400 text-sm font-medium">• Open now</span>
+          {(() => {
+            const status = getBusinessStatusProps(business.hours)
+            return (
+              <span className={`${status.statusColor} text-sm font-medium`}>
+                • {status.statusText}
+              </span>
+            )
+          })()}
         </div>
 
         {/* Compact Menu Preview */}
@@ -151,14 +185,14 @@ export function UserDiscoverPage({ businesses = mockBusinesses }: UserDiscoverPa
               <p className="text-slate-100 text-sm font-medium">Popular items:</p>
             </div>
             <div className="space-y-1">
-              {business.menuPreview.slice(0, 2).map((item: any, index: number) => (
+              {business.menuPreview?.slice(0, 2).map((item: any, index: number) => (
                 <div key={index} className="flex items-center justify-between">
                   <p className="text-slate-300 text-xs">{item.name}</p>
                   <p className="text-[#00d083] text-xs font-medium">£{item.price}</p>
                 </div>
               ))}
-              {business.menuPreview.length > 2 && (
-                <p className="text-slate-400 text-xs">+{business.menuPreview.length - 2} more items...</p>
+              {(business.menuPreview?.length || 0) > 2 && (
+                <p className="text-slate-400 text-xs">+{(business.menuPreview?.length || 0) - 2} more items...</p>
               )}
             </div>
           </div>
@@ -209,10 +243,35 @@ export function UserDiscoverPage({ businesses = mockBusinesses }: UserDiscoverPa
           </svg>
           <input
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search for restaurants, cafes, bars, or anything..."
             className="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-slate-600 rounded-xl text-slate-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                // Search happens automatically via getFilteredBusinesses
+              }
+            }}
           />
-          <Button className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-6">
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-20 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300 p-1"
+              title="Clear search"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+          <Button 
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-6"
+            onClick={() => {
+              // Search happens automatically via getFilteredBusinesses
+              // This button is mainly for visual consistency
+            }}
+          >
             Search
           </Button>
         </div>
@@ -238,12 +297,25 @@ export function UserDiscoverPage({ businesses = mockBusinesses }: UserDiscoverPa
       {/* Results Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-slate-100">
-          {selectedFilter === 'all' ? 'All Places' : 
-           selectedFilter === 'qwikker_picks' ? 'Qwikker Picks - Staff Favorites' :
-           selectedFilter === 'featured' ? 'Featured Businesses' : 'Recommended for You'}
+          {searchQuery ? (
+            <>Search results for "<span className="text-[#00d083]">{searchQuery}</span>"</>
+          ) : (
+            selectedFilter === 'all' ? 'All Places' : 
+            selectedFilter === 'qwikker_picks' ? 'Qwikker Picks - Staff Favorites' :
+            selectedFilter === 'featured' ? 'Featured Businesses' : 'Recommended for You'
+          )}
         </h2>
         <div className="flex items-center gap-2 text-slate-400">
           <span>{getFilteredBusinesses().length} results</span>
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="p-2 bg-slate-800/50 rounded-lg border border-slate-600 hover:bg-slate-700 transition-colors text-xs px-3"
+              title="Clear search"
+            >
+              Clear
+            </button>
+          )}
           <button className="p-2 bg-slate-800/50 rounded-lg border border-slate-600 hover:bg-slate-700 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
@@ -253,11 +325,38 @@ export function UserDiscoverPage({ businesses = mockBusinesses }: UserDiscoverPa
       </div>
 
       {/* Business Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {getFilteredBusinesses().map((business) => (
-          <BusinessCard key={business.id} business={business} />
-        ))}
-      </div>
+      {getFilteredBusinesses().length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {getFilteredBusinesses().map((business) => (
+            <BusinessCard key={business.id} business={business} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <div className="max-w-md mx-auto">
+            <svg className="w-16 h-16 text-slate-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <h3 className="text-xl font-semibold text-slate-300 mb-2">
+              {searchQuery ? 'No businesses found' : 'No businesses in this category'}
+            </h3>
+            <p className="text-slate-400 mb-4">
+              {searchQuery 
+                ? `Try searching for something else or check your spelling.`
+                : 'Try selecting a different category or check back later.'
+              }
+            </p>
+            {searchQuery && (
+              <Button 
+                onClick={() => setSearchQuery('')}
+                className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black"
+              >
+                Clear Search
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Load More Button */}
       {getFilteredBusinesses().length > 0 && (

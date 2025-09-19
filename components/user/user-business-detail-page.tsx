@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button'
 import { mockBusinesses, mockOffers, mockSecretMenus, mockClaimedOffers } from '@/lib/mock-data/user-mock-data'
 import { useState } from 'react'
 import Link from 'next/link'
+import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 
 interface UserBusinessDetailPageProps {
   slug: string
+  businesses?: any[]
 }
 
-export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
+export function UserBusinessDetailPage({ slug, businesses = mockBusinesses }: UserBusinessDetailPageProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'menu' | 'offers' | 'reviews'>('overview')
   const [claimedOffers, setClaimedOffers] = useState<Set<string>>(() => {
     if (typeof window !== 'undefined') {
@@ -21,8 +23,23 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
     return new Set(mockClaimedOffers.map(co => co.offerId))
   })
   
-  // Find business by slug
-  const business = mockBusinesses.find(b => b.slug === slug)
+  // Find business by slug in the combined businesses list
+  const business = businesses.find(b => b.slug === slug)
+  
+  // Handle case where business is not found
+  if (!business) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+        <h1 className="text-2xl font-bold text-white mb-4">Business Not Found</h1>
+        <p className="text-gray-400 mb-6">The business you're looking for doesn't exist.</p>
+        <Link href="/user/discover">
+          <Button className="bg-[#00d083] hover:bg-[#00b86f] text-black">
+            Back to Discover
+          </Button>
+        </Link>
+      </div>
+    )
+  }
   
   const claimOffer = (offerId: string, offerTitle: string, businessName: string) => {
     setClaimedOffers(prev => {
@@ -54,9 +71,9 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
   
   const tabs = [
     { id: 'overview', label: 'Overview', count: null },
-    { id: 'menu', label: 'Menu', count: business.menuPreview.length },
+    { id: 'menu', label: 'Menu', count: business.menuPreview?.length || 0 },
     { id: 'offers', label: 'Offers', count: businessOffers.length },
-    { id: 'reviews', label: 'Reviews', count: business.reviewCount },
+    { id: 'reviews', label: 'Reviews', count: business.reviewCount || 0 },
   ]
 
   const mockReviews = [
@@ -278,7 +295,17 @@ export function UserBusinessDetailPage({ slug }: UserBusinessDetailPageProps) {
                       <div>
                         <p className="text-slate-100 font-medium">Hours</p>
                         <p className="text-slate-400">{business.hours}</p>
-                        <span className="text-green-400 text-sm font-medium">Open now</span>
+                        {(() => {
+                          const status = getBusinessStatusProps(business.hours)
+                          return (
+                            <span className={`${status.statusColor} text-sm font-medium`}>
+                              {status.statusText}
+                              {status.nextChange && (
+                                <span className="text-slate-500 ml-2">• {status.nextChange}</span>
+                              )}
+                            </span>
+                          )
+                        })()}
                       </div>
                     </div>
                   </div>

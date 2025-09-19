@@ -1877,7 +1877,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$ne
 ;
 ;
 ;
-function UserBusinessDetailPage({ slug }) {
+function UserBusinessDetailPage({ slug, businesses = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["mockBusinesses"] }) {
     const [activeTab, setActiveTab] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])('overview');
     const [claimedOffers, setClaimedOffers] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(()=>{
         if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
@@ -1885,8 +1885,51 @@ function UserBusinessDetailPage({ slug }) {
         // For development, start with mock data, but real users start fresh
         return new Set(__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["mockClaimedOffers"].map((co)=>co.offerId));
     });
-    // Find business by slug
-    const business = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["mockBusinesses"].find((b)=>b.slug === slug);
+    // Find business by slug in the combined businesses list
+    const business = businesses.find((b)=>b.slug === slug);
+    // Handle case where business is not found
+    if (!business) {
+        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+            className: "flex flex-col items-center justify-center min-h-[400px] text-center",
+            children: [
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
+                    className: "text-2xl font-bold text-white mb-4",
+                    children: "Business Not Found"
+                }, void 0, false, {
+                    fileName: "[project]/components/user/user-business-detail-page.tsx",
+                    lineNumber: 32,
+                    columnNumber: 9
+                }, this),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                    className: "text-gray-400 mb-6",
+                    children: "The business you're looking for doesn't exist."
+                }, void 0, false, {
+                    fileName: "[project]/components/user/user-business-detail-page.tsx",
+                    lineNumber: 33,
+                    columnNumber: 9
+                }, this),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
+                    href: "/user/discover",
+                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
+                        className: "bg-[#00d083] hover:bg-[#00b86f] text-black",
+                        children: "Back to Discover"
+                    }, void 0, false, {
+                        fileName: "[project]/components/user/user-business-detail-page.tsx",
+                        lineNumber: 35,
+                        columnNumber: 11
+                    }, this)
+                }, void 0, false, {
+                    fileName: "[project]/components/user/user-business-detail-page.tsx",
+                    lineNumber: 34,
+                    columnNumber: 9
+                }, this)
+            ]
+        }, void 0, true, {
+            fileName: "[project]/components/user/user-business-detail-page.tsx",
+            lineNumber: 31,
+            columnNumber: 7
+        }, this);
+    }
     const claimOffer = (offerId, offerTitle, businessName)=>{
         setClaimedOffers((prev)=>{
             const newClaimed = new Set([
@@ -1909,7 +1952,7 @@ function UserBusinessDetailPage({ slug }) {
                     children: "Business Not Found"
                 }, void 0, false, {
                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                    lineNumber: 42,
+                    lineNumber: 58,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1917,7 +1960,7 @@ function UserBusinessDetailPage({ slug }) {
                     children: "The business you're looking for doesn't exist."
                 }, void 0, false, {
                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                    lineNumber: 43,
+                    lineNumber: 59,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -1927,18 +1970,18 @@ function UserBusinessDetailPage({ slug }) {
                         children: "Back to Discover"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 45,
+                        lineNumber: 61,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                    lineNumber: 44,
+                    lineNumber: 60,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/components/user/user-business-detail-page.tsx",
-            lineNumber: 41,
+            lineNumber: 57,
             columnNumber: 7
         }, this);
     }
@@ -1954,7 +1997,7 @@ function UserBusinessDetailPage({ slug }) {
         {
             id: 'menu',
             label: 'Menu',
-            count: business.menuPreview.length
+            count: business.menuPreview?.length || 0
         },
         {
             id: 'offers',
@@ -1964,7 +2007,7 @@ function UserBusinessDetailPage({ slug }) {
         {
             id: 'reviews',
             label: 'Reviews',
-            count: business.reviewCount
+            count: business.reviewCount || 0
         }
     ];
     const mockReviews = [
@@ -2013,29 +2056,29 @@ function UserBusinessDetailPage({ slug }) {
                                     d: "M15 19l-7-7 7-7"
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                    lineNumber: 93,
+                                    lineNumber: 109,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 92,
+                                lineNumber: 108,
                                 columnNumber: 13
                             }, this),
                             "Back to Discover"
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 91,
+                        lineNumber: 107,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                    lineNumber: 90,
+                    lineNumber: 106,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                lineNumber: 89,
+                lineNumber: 105,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2047,14 +2090,14 @@ function UserBusinessDetailPage({ slug }) {
                         className: "w-full h-full object-cover"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 102,
+                        lineNumber: 118,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 107,
+                        lineNumber: 123,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2065,7 +2108,7 @@ function UserBusinessDetailPage({ slug }) {
                                 children: "QWIKKER PICK"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 112,
+                                lineNumber: 128,
                                 columnNumber: 13
                             }, this),
                             business.plan === 'featured' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2073,7 +2116,7 @@ function UserBusinessDetailPage({ slug }) {
                                 children: "FEATURED"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 117,
+                                lineNumber: 133,
                                 columnNumber: 13
                             }, this),
                             business.activeOffers > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2084,13 +2127,13 @@ function UserBusinessDetailPage({ slug }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 122,
+                                lineNumber: 138,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 110,
+                        lineNumber: 126,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2101,7 +2144,7 @@ function UserBusinessDetailPage({ slug }) {
                                 children: business.name
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 130,
+                                lineNumber: 146,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2109,7 +2152,7 @@ function UserBusinessDetailPage({ slug }) {
                                 children: business.tagline
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 131,
+                                lineNumber: 147,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2134,17 +2177,17 @@ function UserBusinessDetailPage({ slug }) {
                                                             d: "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 143,
+                                                            lineNumber: 159,
                                                             columnNumber: 21
                                                         }, this)
                                                     }, star, false, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 137,
+                                                        lineNumber: 153,
                                                         columnNumber: 19
                                                     }, this))
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                lineNumber: 135,
+                                                lineNumber: 151,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2152,7 +2195,7 @@ function UserBusinessDetailPage({ slug }) {
                                                 children: business.rating
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                lineNumber: 147,
+                                                lineNumber: 163,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2164,13 +2207,13 @@ function UserBusinessDetailPage({ slug }) {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                lineNumber: 148,
+                                                lineNumber: 164,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 134,
+                                        lineNumber: 150,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2178,7 +2221,7 @@ function UserBusinessDetailPage({ slug }) {
                                         children: "•"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 150,
+                                        lineNumber: 166,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2189,25 +2232,25 @@ function UserBusinessDetailPage({ slug }) {
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 151,
+                                        lineNumber: 167,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 133,
+                                lineNumber: 149,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 129,
+                        lineNumber: 145,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                lineNumber: 101,
+                lineNumber: 117,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2228,19 +2271,19 @@ function UserBusinessDetailPage({ slug }) {
                                     d: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                    lineNumber: 160,
+                                    lineNumber: 176,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 159,
+                                lineNumber: 175,
                                 columnNumber: 11
                             }, this),
                             "Book Now"
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 158,
+                        lineNumber: 174,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -2260,7 +2303,7 @@ function UserBusinessDetailPage({ slug }) {
                                         d: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 167,
+                                        lineNumber: 183,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -2270,20 +2313,20 @@ function UserBusinessDetailPage({ slug }) {
                                         d: "M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 168,
+                                        lineNumber: 184,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 166,
+                                lineNumber: 182,
                                 columnNumber: 11
                             }, this),
                             "Get Directions"
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 165,
+                        lineNumber: 181,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -2302,19 +2345,19 @@ function UserBusinessDetailPage({ slug }) {
                                     d: "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                    lineNumber: 175,
+                                    lineNumber: 191,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 174,
+                                lineNumber: 190,
                                 columnNumber: 11
                             }, this),
                             "Call Now"
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 173,
+                        lineNumber: 189,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -2333,25 +2376,25 @@ function UserBusinessDetailPage({ slug }) {
                                     d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                    lineNumber: 182,
+                                    lineNumber: 198,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 181,
+                                lineNumber: 197,
                                 columnNumber: 11
                             }, this),
                             "Save"
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 180,
+                        lineNumber: 196,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                lineNumber: 157,
+                lineNumber: 173,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2366,18 +2409,18 @@ function UserBusinessDetailPage({ slug }) {
                                 children: tab.count
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 202,
+                                lineNumber: 218,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, tab.id, true, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 191,
+                        lineNumber: 207,
                         columnNumber: 11
                     }, this))
             }, void 0, false, {
                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                lineNumber: 189,
+                lineNumber: 205,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2398,12 +2441,12 @@ function UserBusinessDetailPage({ slug }) {
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                            lineNumber: 219,
+                                            lineNumber: 235,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 218,
+                                        lineNumber: 234,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -2413,7 +2456,7 @@ function UserBusinessDetailPage({ slug }) {
                                                 children: business.description
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                lineNumber: 222,
+                                                lineNumber: 238,
                                                 columnNumber: 13
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2434,12 +2477,12 @@ function UserBusinessDetailPage({ slug }) {
                                                                     d: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 230,
+                                                                    lineNumber: 246,
                                                                     columnNumber: 19
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 229,
+                                                                lineNumber: 245,
                                                                 columnNumber: 17
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2447,13 +2490,13 @@ function UserBusinessDetailPage({ slug }) {
                                                                 children: "Earn 25 Qwikker Points when you visit!"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 232,
+                                                                lineNumber: 248,
                                                                 columnNumber: 17
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 228,
+                                                        lineNumber: 244,
                                                         columnNumber: 15
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2461,13 +2504,13 @@ function UserBusinessDetailPage({ slug }) {
                                                         children: "Visit this business to earn points towards badges and rewards"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 234,
+                                                        lineNumber: 250,
                                                         columnNumber: 15
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                lineNumber: 227,
+                                                lineNumber: 243,
                                                 columnNumber: 13
                                             }, this),
                                             business.specialties && business.specialties.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2477,7 +2520,7 @@ function UserBusinessDetailPage({ slug }) {
                                                         children: "What makes us special:"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 239,
+                                                        lineNumber: 255,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2487,30 +2530,30 @@ function UserBusinessDetailPage({ slug }) {
                                                                 children: specialty
                                                             }, index, false, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 242,
+                                                                lineNumber: 258,
                                                                 columnNumber: 21
                                                             }, this))
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 240,
+                                                        lineNumber: 256,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                lineNumber: 238,
+                                                lineNumber: 254,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 221,
+                                        lineNumber: 237,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 217,
+                                lineNumber: 233,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
@@ -2522,12 +2565,12 @@ function UserBusinessDetailPage({ slug }) {
                                             children: "Location & Contact"
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                            lineNumber: 258,
+                                            lineNumber: 274,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 257,
+                                        lineNumber: 273,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -2554,7 +2597,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                             d: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 265,
+                                                                            lineNumber: 281,
                                                                             columnNumber: 25
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -2564,13 +2607,13 @@ function UserBusinessDetailPage({ slug }) {
                                                                             d: "M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 266,
+                                                                            lineNumber: 282,
                                                                             columnNumber: 25
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 264,
+                                                                    lineNumber: 280,
                                                                     columnNumber: 23
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2580,7 +2623,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: "Address"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 269,
+                                                                            lineNumber: 285,
                                                                             columnNumber: 25
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2592,19 +2635,19 @@ function UserBusinessDetailPage({ slug }) {
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 270,
+                                                                            lineNumber: 286,
                                                                             columnNumber: 25
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 268,
+                                                                    lineNumber: 284,
                                                                     columnNumber: 23
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 263,
+                                                            lineNumber: 279,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2622,12 +2665,12 @@ function UserBusinessDetailPage({ slug }) {
                                                                         d: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                        lineNumber: 276,
+                                                                        lineNumber: 292,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 275,
+                                                                    lineNumber: 291,
                                                                     columnNumber: 23
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2637,7 +2680,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: "Hours"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 279,
+                                                                            lineNumber: 295,
                                                                             columnNumber: 25
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2645,7 +2688,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: business.hours
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 280,
+                                                                            lineNumber: 296,
                                                                             columnNumber: 25
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2653,25 +2696,25 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: "Open now"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 281,
+                                                                            lineNumber: 297,
                                                                             columnNumber: 25
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 278,
+                                                                    lineNumber: 294,
                                                                     columnNumber: 23
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 274,
+                                                            lineNumber: 290,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                    lineNumber: 262,
+                                                    lineNumber: 278,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2692,12 +2735,12 @@ function UserBusinessDetailPage({ slug }) {
                                                                         d: "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                        lineNumber: 289,
+                                                                        lineNumber: 305,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 288,
+                                                                    lineNumber: 304,
                                                                     columnNumber: 23
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2707,7 +2750,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: "Category"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 292,
+                                                                            lineNumber: 308,
                                                                             columnNumber: 25
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2715,19 +2758,19 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: business.category
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 293,
+                                                                            lineNumber: 309,
                                                                             columnNumber: 25
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 291,
+                                                                    lineNumber: 307,
                                                                     columnNumber: 23
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 287,
+                                                            lineNumber: 303,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2745,12 +2788,12 @@ function UserBusinessDetailPage({ slug }) {
                                                                         d: "M13 10V3L4 14h7v7l9-11h-7z"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                        lineNumber: 299,
+                                                                        lineNumber: 315,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 298,
+                                                                    lineNumber: 314,
                                                                     columnNumber: 23
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2760,7 +2803,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: "Special Features"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 302,
+                                                                            lineNumber: 318,
                                                                             columnNumber: 25
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2771,7 +2814,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                                     children: "Secret Menu"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                                    lineNumber: 305,
+                                                                                    lineNumber: 321,
                                                                                     columnNumber: 29
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2779,48 +2822,48 @@ function UserBusinessDetailPage({ slug }) {
                                                                                     children: "Highly Rated"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                                    lineNumber: 309,
+                                                                                    lineNumber: 325,
                                                                                     columnNumber: 27
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 303,
+                                                                            lineNumber: 319,
                                                                             columnNumber: 25
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 301,
+                                                                    lineNumber: 317,
                                                                     columnNumber: 23
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 297,
+                                                            lineNumber: 313,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                    lineNumber: 286,
+                                                    lineNumber: 302,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                            lineNumber: 261,
+                                            lineNumber: 277,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 260,
+                                        lineNumber: 276,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 256,
+                                lineNumber: 272,
                                 columnNumber: 13
                             }, this),
                             businessOffers.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
@@ -2842,24 +2885,24 @@ function UserBusinessDetailPage({ slug }) {
                                                         d: "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 326,
+                                                        lineNumber: 342,
                                                         columnNumber: 23
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                    lineNumber: 325,
+                                                    lineNumber: 341,
                                                     columnNumber: 21
                                                 }, this),
                                                 "Active Offers"
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                            lineNumber: 324,
+                                            lineNumber: 340,
                                             columnNumber: 19
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 323,
+                                        lineNumber: 339,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -2882,7 +2925,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: offer.title
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 341,
+                                                                            lineNumber: 357,
                                                                             columnNumber: 31
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2890,7 +2933,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: offer.description
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 342,
+                                                                            lineNumber: 358,
                                                                             columnNumber: 31
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2898,13 +2941,13 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: offer.terms
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 343,
+                                                                            lineNumber: 359,
                                                                             columnNumber: 31
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 340,
+                                                                    lineNumber: 356,
                                                                     columnNumber: 29
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2924,17 +2967,17 @@ function UserBusinessDetailPage({ slug }) {
                                                                                     d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                                    lineNumber: 348,
+                                                                                    lineNumber: 364,
                                                                                     columnNumber: 35
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                                lineNumber: 347,
+                                                                                lineNumber: 363,
                                                                                 columnNumber: 33
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 346,
+                                                                            lineNumber: 362,
                                                                             columnNumber: 31
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2942,19 +2985,19 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: offer.badge
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 351,
+                                                                            lineNumber: 367,
                                                                             columnNumber: 31
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 345,
+                                                                    lineNumber: 361,
                                                                     columnNumber: 29
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 339,
+                                                            lineNumber: 355,
                                                             columnNumber: 27
                                                         }, this),
                                                         isClaimed && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2972,12 +3015,12 @@ function UserBusinessDetailPage({ slug }) {
                                                                         d: "M5 13l4 4L19 7"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                        lineNumber: 360,
+                                                                        lineNumber: 376,
                                                                         columnNumber: 33
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 359,
+                                                                    lineNumber: 375,
                                                                     columnNumber: 31
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2985,7 +3028,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                     children: claimedOfferData?.status === 'redeemed' ? 'Redeemed' : claimedOfferData?.status === 'wallet_added' ? 'In Your Wallet' : 'Claimed'
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 362,
+                                                                    lineNumber: 378,
                                                                     columnNumber: 31
                                                                 }, this),
                                                                 claimedOfferData?.redemptionCode && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2996,13 +3039,13 @@ function UserBusinessDetailPage({ slug }) {
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 367,
+                                                                    lineNumber: 383,
                                                                     columnNumber: 33
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 358,
+                                                            lineNumber: 374,
                                                             columnNumber: 29
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3014,7 +3057,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                     children: "Claim Offer"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 376,
+                                                                    lineNumber: 392,
                                                                     columnNumber: 31
                                                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
                                                                     onClick: ()=>alert(`"${offer.title}" has been added to your mobile wallet!`),
@@ -3033,19 +3076,19 @@ function UserBusinessDetailPage({ slug }) {
                                                                                 d: "M12 4v16m8-8H4"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                                lineNumber: 389,
+                                                                                lineNumber: 405,
                                                                                 columnNumber: 35
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 388,
+                                                                            lineNumber: 404,
                                                                             columnNumber: 33
                                                                         }, this),
                                                                         claimedOfferData?.status === 'redeemed' ? 'Redeemed' : claimedOfferData?.status === 'wallet_added' ? 'In Wallet' : 'Add to Wallet'
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 383,
+                                                                    lineNumber: 399,
                                                                     columnNumber: 31
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -3057,47 +3100,47 @@ function UserBusinessDetailPage({ slug }) {
                                                                         children: "Ask AI"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                        lineNumber: 400,
+                                                                        lineNumber: 416,
                                                                         columnNumber: 31
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 395,
+                                                                    lineNumber: 411,
                                                                     columnNumber: 29
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 374,
+                                                            lineNumber: 390,
                                                             columnNumber: 27
                                                         }, this)
                                                     ]
                                                 }, offer.id, true, {
                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                    lineNumber: 338,
+                                                    lineNumber: 354,
                                                     columnNumber: 25
                                                 }, this);
                                             })
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                            lineNumber: 332,
+                                            lineNumber: 348,
                                             columnNumber: 19
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 331,
+                                        lineNumber: 347,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 322,
+                                lineNumber: 338,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 215,
+                        lineNumber: 231,
                         columnNumber: 11
                     }, this),
                     activeTab === 'menu' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3110,7 +3153,7 @@ function UserBusinessDetailPage({ slug }) {
                                         className: "absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#00d083]/20 to-transparent rounded-bl-full"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 419,
+                                        lineNumber: 435,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -3132,17 +3175,17 @@ function UserBusinessDetailPage({ slug }) {
                                                             d: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 424,
+                                                            lineNumber: 440,
                                                             columnNumber: 23
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 423,
+                                                        lineNumber: 439,
                                                         columnNumber: 21
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                    lineNumber: 422,
+                                                    lineNumber: 438,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3153,7 +3196,7 @@ function UserBusinessDetailPage({ slug }) {
                                                             children: "Discover the Full Menu with AI"
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 428,
+                                                            lineNumber: 444,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3161,7 +3204,7 @@ function UserBusinessDetailPage({ slug }) {
                                                             children: "Chat with your local guide to explore the complete menu, get personalized recommendations, and discover hidden gems!"
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 429,
+                                                            lineNumber: 445,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -3182,12 +3225,12 @@ function UserBusinessDetailPage({ slug }) {
                                                                             d: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 435,
+                                                                            lineNumber: 451,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                        lineNumber: 434,
+                                                                        lineNumber: 450,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     "Ask About ",
@@ -3196,35 +3239,35 @@ function UserBusinessDetailPage({ slug }) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 433,
+                                                                lineNumber: 449,
                                                                 columnNumber: 23
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 432,
+                                                            lineNumber: 448,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                    lineNumber: 427,
+                                                    lineNumber: 443,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                            lineNumber: 421,
+                                            lineNumber: 437,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 420,
+                                        lineNumber: 436,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 418,
+                                lineNumber: 434,
                                 columnNumber: 13
                             }, this),
                             business.menuPreview && business.menuPreview.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
@@ -3239,7 +3282,7 @@ function UserBusinessDetailPage({ slug }) {
                                                     children: "Featured Menu Items"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                    lineNumber: 450,
+                                                    lineNumber: 466,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3247,18 +3290,18 @@ function UserBusinessDetailPage({ slug }) {
                                                     children: "Our most popular dishes"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                    lineNumber: 451,
+                                                    lineNumber: 467,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                            lineNumber: 449,
+                                            lineNumber: 465,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 448,
+                                        lineNumber: 464,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -3276,7 +3319,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                         children: item.name
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                        lineNumber: 459,
+                                                                        lineNumber: 475,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     item.description && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3284,7 +3327,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                         children: item.description
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                        lineNumber: 461,
+                                                                        lineNumber: 477,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3294,18 +3337,18 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: "Popular Choice"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 464,
+                                                                            lineNumber: 480,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                        lineNumber: 463,
+                                                                        lineNumber: 479,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 458,
+                                                                lineNumber: 474,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3318,18 +3361,18 @@ function UserBusinessDetailPage({ slug }) {
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 470,
+                                                                    lineNumber: 486,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 469,
+                                                                lineNumber: 485,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, index, true, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 457,
+                                                        lineNumber: 473,
                                                         columnNumber: 21
                                                     }, this)),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3340,7 +3383,7 @@ function UserBusinessDetailPage({ slug }) {
                                                             children: "Want to see the full menu, daily specials, and get personalized recommendations?"
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 477,
+                                                            lineNumber: 493,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -3362,47 +3405,47 @@ function UserBusinessDetailPage({ slug }) {
                                                                             d: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 483,
+                                                                            lineNumber: 499,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                        lineNumber: 482,
+                                                                        lineNumber: 498,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     "Chat for Full Menu"
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 481,
+                                                                lineNumber: 497,
                                                                 columnNumber: 23
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 480,
+                                                            lineNumber: 496,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                    lineNumber: 476,
+                                                    lineNumber: 492,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                            lineNumber: 455,
+                                            lineNumber: 471,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 454,
+                                        lineNumber: 470,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 447,
+                                lineNumber: 463,
                                 columnNumber: 15
                             }, this),
                             secretMenu && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
@@ -3412,7 +3455,7 @@ function UserBusinessDetailPage({ slug }) {
                                         className: "absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-purple-500/20 to-transparent rounded-bl-full"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 497,
+                                        lineNumber: 513,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -3435,17 +3478,17 @@ function UserBusinessDetailPage({ slug }) {
                                                                 d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 502,
+                                                                lineNumber: 518,
                                                                 columnNumber: 25
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 501,
+                                                            lineNumber: 517,
                                                             columnNumber: 23
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 500,
+                                                        lineNumber: 516,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3455,7 +3498,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                 children: "Secret Menu Preview"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 506,
+                                                                lineNumber: 522,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3463,19 +3506,19 @@ function UserBusinessDetailPage({ slug }) {
                                                                 children: "Exclusive off-menu items"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 507,
+                                                                lineNumber: 523,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 505,
+                                                        lineNumber: 521,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                lineNumber: 499,
+                                                lineNumber: 515,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3492,7 +3535,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: item.name
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 515,
+                                                                            lineNumber: 531,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3500,13 +3543,13 @@ function UserBusinessDetailPage({ slug }) {
                                                                             children: item.description
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                            lineNumber: 516,
+                                                                            lineNumber: 532,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 514,
+                                                                    lineNumber: 530,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 item.price && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3514,13 +3557,13 @@ function UserBusinessDetailPage({ slug }) {
                                                                     children: item.price
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                    lineNumber: 519,
+                                                                    lineNumber: 535,
                                                                     columnNumber: 27
                                                                 }, this)
                                                             ]
                                                         }, index, true, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 513,
+                                                            lineNumber: 529,
                                                             columnNumber: 23
                                                         }, this)),
                                                     secretMenu.items.length > 2 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3535,7 +3578,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 525,
+                                                                lineNumber: 541,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3543,19 +3586,19 @@ function UserBusinessDetailPage({ slug }) {
                                                                 children: "Ask your AI guide to unlock them all"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 528,
+                                                                lineNumber: 544,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 524,
+                                                        lineNumber: 540,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                lineNumber: 511,
+                                                lineNumber: 527,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -3576,42 +3619,42 @@ function UserBusinessDetailPage({ slug }) {
                                                                 d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 536,
+                                                                lineNumber: 552,
                                                                 columnNumber: 25
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 535,
+                                                            lineNumber: 551,
                                                             columnNumber: 23
                                                         }, this),
                                                         "Unlock All Secret Items"
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                    lineNumber: 534,
+                                                    lineNumber: 550,
                                                     columnNumber: 21
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                lineNumber: 533,
+                                                lineNumber: 549,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 498,
+                                        lineNumber: 514,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 496,
+                                lineNumber: 512,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 416,
+                        lineNumber: 432,
                         columnNumber: 11
                     }, this),
                     activeTab === 'offers' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3631,7 +3674,7 @@ function UserBusinessDetailPage({ slug }) {
                                                         children: offer.title
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 555,
+                                                        lineNumber: 571,
                                                         columnNumber: 25
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3639,7 +3682,7 @@ function UserBusinessDetailPage({ slug }) {
                                                         children: offer.description
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 556,
+                                                        lineNumber: 572,
                                                         columnNumber: 25
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3652,7 +3695,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                         children: "Terms:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                        lineNumber: 558,
+                                                                        lineNumber: 574,
                                                                         columnNumber: 65
                                                                     }, this),
                                                                     " ",
@@ -3660,7 +3703,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 558,
+                                                                lineNumber: 574,
                                                                 columnNumber: 27
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3670,7 +3713,7 @@ function UserBusinessDetailPage({ slug }) {
                                                                         children: "Valid until:"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                        lineNumber: 559,
+                                                                        lineNumber: 575,
                                                                         columnNumber: 65
                                                                     }, this),
                                                                     " ",
@@ -3678,19 +3721,19 @@ function UserBusinessDetailPage({ slug }) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 559,
+                                                                lineNumber: 575,
                                                                 columnNumber: 27
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 557,
+                                                        lineNumber: 573,
                                                         columnNumber: 25
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                lineNumber: 554,
+                                                lineNumber: 570,
                                                 columnNumber: 23
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3701,7 +3744,7 @@ function UserBusinessDetailPage({ slug }) {
                                                         children: offer.badge
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 563,
+                                                        lineNumber: 579,
                                                         columnNumber: 25
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -3709,29 +3752,29 @@ function UserBusinessDetailPage({ slug }) {
                                                         children: "Claim Offer"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                        lineNumber: 566,
+                                                        lineNumber: 582,
                                                         columnNumber: 25
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                lineNumber: 562,
+                                                lineNumber: 578,
                                                 columnNumber: 23
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 553,
+                                        lineNumber: 569,
                                         columnNumber: 21
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                    lineNumber: 552,
+                                    lineNumber: 568,
                                     columnNumber: 19
                                 }, this)
                             }, offer.id, false, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 551,
+                                lineNumber: 567,
                                 columnNumber: 17
                             }, this)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
                             className: "bg-slate-800/50 border-slate-700",
@@ -3743,7 +3786,7 @@ function UserBusinessDetailPage({ slug }) {
                                         children: "No active offers at the moment."
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 577,
+                                        lineNumber: 593,
                                         columnNumber: 19
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3751,23 +3794,23 @@ function UserBusinessDetailPage({ slug }) {
                                         children: "Check back later for exclusive deals!"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                        lineNumber: 578,
+                                        lineNumber: 594,
                                         columnNumber: 19
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 576,
+                                lineNumber: 592,
                                 columnNumber: 17
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                            lineNumber: 575,
+                            lineNumber: 591,
                             columnNumber: 15
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 548,
+                        lineNumber: 564,
                         columnNumber: 11
                     }, this),
                     activeTab === 'reviews' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3787,7 +3830,7 @@ function UserBusinessDetailPage({ slug }) {
                                                             children: review.author
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 592,
+                                                            lineNumber: 608,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3795,13 +3838,13 @@ function UserBusinessDetailPage({ slug }) {
                                                             children: review.date
                                                         }, void 0, false, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 593,
+                                                            lineNumber: 609,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                    lineNumber: 591,
+                                                    lineNumber: 607,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3820,23 +3863,23 @@ function UserBusinessDetailPage({ slug }) {
                                                                 d: "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                                lineNumber: 603,
+                                                                lineNumber: 619,
                                                                 columnNumber: 27
                                                             }, this)
                                                         }, star, false, {
                                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                            lineNumber: 597,
+                                                            lineNumber: 613,
                                                             columnNumber: 25
                                                         }, this))
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                                    lineNumber: 595,
+                                                    lineNumber: 611,
                                                     columnNumber: 21
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                            lineNumber: 590,
+                                            lineNumber: 606,
                                             columnNumber: 19
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3844,35 +3887,35 @@ function UserBusinessDetailPage({ slug }) {
                                             children: review.comment
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                            lineNumber: 608,
+                                            lineNumber: 624,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                    lineNumber: 589,
+                                    lineNumber: 605,
                                     columnNumber: 17
                                 }, this)
                             }, review.id, false, {
                                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                                lineNumber: 588,
+                                lineNumber: 604,
                                 columnNumber: 15
                             }, this))
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-business-detail-page.tsx",
-                        lineNumber: 586,
+                        lineNumber: 602,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-business-detail-page.tsx",
-                lineNumber: 213,
+                lineNumber: 229,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/components/user/user-business-detail-page.tsx",
-        lineNumber: 87,
+        lineNumber: 103,
         columnNumber: 5
     }, this);
 }

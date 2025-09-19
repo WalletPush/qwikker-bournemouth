@@ -147,10 +147,10 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
               <p className="text-slate-400 text-sm">
                 Don't have an account?{' '}
                 <Link 
-                  href="/auth/sign-up" 
+                  href="/onboarding" 
                   className="text-[#00d083] hover:text-[#00b86f] font-medium transition-colors underline-offset-4 hover:underline"
                 >
-                  Create one here
+                  Start business onboarding
                 </Link>
               </p>
             </div>

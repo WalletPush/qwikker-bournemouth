@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { sendFileUpdateToGoHighLevel, sendBusinessUpdateNotification } from '@/lib/integrations'
 
-export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu' | 'offer', fileUrl: string) {
+export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu' | 'offer' | 'business_images', fileUrl: string) {
   const supabaseAdmin = createAdminClient()
 
   const updateData: any = {}
@@ -19,6 +19,18 @@ export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu
       break
     case 'offer':
       updateData.offer_image = fileUrl
+      break
+    case 'business_images':
+      // Get existing business images
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('business_images')
+        .eq('user_id', userId)
+        .single()
+      
+      const existingImages = existingProfile?.business_images || []
+      const newImages = Array.isArray(existingImages) ? [...existingImages, fileUrl] : [fileUrl]
+      updateData.business_images = newImages
       break
   }
 

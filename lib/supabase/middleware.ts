@@ -9,6 +9,16 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
+  // 🔐 Allow admin routes to handle their own authentication
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    return supabaseResponse
+  }
+
+  // 🔐 Allow API routes to handle their own authentication
+  if (request.nextUrl.pathname.startsWith('/api')) {
+    return supabaseResponse
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

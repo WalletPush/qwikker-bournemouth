@@ -102,12 +102,12 @@ async function BusinessDetailPage({ params }) {
             slug: slug
         }, void 0, false, {
             fileName: "[project]/app/user/business/[slug]/page.tsx",
-            lineNumber: 15,
+            lineNumber: 17,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/app/user/business/[slug]/page.tsx",
-        lineNumber: 14,
+        lineNumber: 16,
         columnNumber: 5
     }, this);
 }
