@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { AdminLogoutButton } from '@/components/admin-logout-button'
 import AdminInspectionModal from './admin-inspection-modal'
+import { BusinessCRMCard } from './business-crm-card'
+import { BusinessCRMData } from '@/types/billing'
 
 interface Business {
   id: string
@@ -35,14 +37,16 @@ interface Business {
 }
 
 interface AdminDashboardProps {
-  businesses: Business[]
+  businesses: Business[] // Legacy - keep for compatibility
+  crmData: BusinessCRMData[] // New comprehensive CRM data
+  adminEmail: string
   city: string
   cityDisplayName: string
   pendingChangesCount: number
   pendingChanges: any[]
 }
 
-export function AdminDashboard({ businesses, city, cityDisplayName, pendingChangesCount, pendingChanges }: AdminDashboardProps) {
+export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisplayName, pendingChangesCount, pendingChanges }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge'>('pending')
   const [businessList, setBusinessList] = useState<Business[]>(businesses)
   const [isLoading, setIsLoading] = useState<string | null>(null)
@@ -66,7 +70,7 @@ export function AdminDashboard({ businesses, city, cityDisplayName, pendingChang
     return `${day}/${month}/${year}, ${hours}:${minutes}`
   }
 
-  const handleApproval = async (businessId: string, action: 'approve' | 'reject') => {
+  const handleApproval = async (businessId: string, action: 'approve' | 'reject' | 'restore') => {
     setIsLoading(businessId)
     
     try {
@@ -77,7 +81,8 @@ export function AdminDashboard({ businesses, city, cityDisplayName, pendingChang
       })
 
       if (response.ok) {
-        const newStatus = action === 'approve' ? 'approved' : 'rejected'
+        const newStatus = action === 'approve' ? 'approved' : 
+                         action === 'restore' ? 'pending_review' : 'rejected'
         setBusinessList(prev => prev.map(business => 
           business.id === businessId 
             ? { ...business, status: newStatus }
@@ -89,6 +94,9 @@ export function AdminDashboard({ businesses, city, cityDisplayName, pendingChang
         }
         
         alert(`✅ Business ${action}d successfully!`)
+        
+        // Refresh the page to update CRM data
+        window.location.reload()
       } else {
         alert(`❌ Failed to ${action} business. Please try again.`)
       }
@@ -136,32 +144,28 @@ export function AdminDashboard({ businesses, city, cityDisplayName, pendingChang
     try {
       const response = await fetch('/api/admin/approve-change', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          changeId,
-          action
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ changeId, action }),
       })
 
-      const result = await response.json()
-
       if (response.ok) {
-        console.log(`✅ Change ${action}d successfully`)
-        // Refresh the page to update the pending changes list
+        const result = await response.json()
+        alert(`✅ Change ${action}d successfully!`)
+        
+        // Refresh the page to update all data including CRM data and pending changes
         window.location.reload()
       } else {
-        console.error(`Failed to ${action} change:`, result.error)
-        alert(`Failed to ${action} change: ${result.error}`)
+        const errorData = await response.json()
+        alert(`❌ Failed to ${action} change: ${errorData.error || 'Please try again.'}`)
       }
     } catch (error) {
       console.error(`Error ${action}ing change:`, error)
-      alert(`Error ${action}ing change. Please try again.`)
+      alert(`❌ Failed to ${action} change. Please try again.`)
     } finally {
       setProcessingChangeId(null)
     }
   }
+
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -597,7 +601,7 @@ Qwikker Admin Team`
 
               {activeTab === 'live' && (
                 <div className="grid gap-6">
-                  {liveBusinesses.length === 0 ? (
+                  {crmData.filter(business => business.status === 'approved').length === 0 ? (
                     <div className="text-center py-12">
                       <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -608,7 +612,47 @@ Qwikker Admin Team`
                       <p className="text-slate-400">No businesses are currently live on the platform.</p>
                     </div>
                   ) : (
-                    liveBusinesses.map((business) => renderBusinessCard(business, false))
+                    crmData
+                      .filter(business => business.status === 'approved')
+                      .map((business) => (
+                        <BusinessCRMCard
+                          key={business.id}
+                          business={business}
+                          onApprove={handleApproval}
+                          onInspect={(business) => {
+                            // Convert CRM data to legacy Business format for inspection modal
+                            const legacyBusiness = {
+                              id: business.id,
+                              user_id: '', // Not needed for inspection
+                              business_name: business.business_name,
+                              email: business.email,
+                              first_name: '', // Not available in CRM data
+                              last_name: '',
+                              business_type: '', // Not available in CRM data
+                              business_category: business.business_category,
+                              business_town: business.business_town,
+                              business_address: business.business_address,
+                              business_postcode: business.business_postcode,
+                              phone: business.phone,
+                              logo: '', // Not available in CRM data
+                              business_tagline: '', // Not available in CRM data
+                              business_description: '', // Not available in CRM data
+                              business_hours: '', // Not available in CRM data
+                              offer_name: business.offer_name || '',
+                              offer_type: business.offer_type || '',
+                              offer_value: '', // Not available in CRM data
+                              offer_terms: '', // Not available in CRM data
+                              menu_url: business.menu_url || '',
+                              business_images: business.business_images || [],
+                              menu_preview: '', // Not available in CRM data
+                              status: business.status,
+                              created_at: '', // Not available in CRM data
+                              updated_at: business.last_updated
+                            }
+                            setInspectionModal({ open: true, business: legacyBusiness })
+                          }}
+                        />
+                      ))
                   )}
                 </div>
               )}

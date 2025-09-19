@@ -68,7 +68,7 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
       if (result.success) {
         setMessage({
           type: 'success',
-          text: 'Secret menu item added successfully!'
+          text: result.message || 'Secret menu item submitted for review!'
         })
         setShowCreateForm(false)
         setFormData({

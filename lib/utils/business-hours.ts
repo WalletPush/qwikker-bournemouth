@@ -1,7 +1,10 @@
 /**
  * Business Hours Utility Functions
  * Handles parsing business hours and determining if a business is currently open
+ * Supports both legacy text format and new structured format
  */
+
+import { BusinessHoursStructured, DAYS_OF_WEEK } from '@/types/business-hours'
 
 export interface ParsedHours {
   isOpen: boolean
@@ -135,17 +138,125 @@ export function formatBusinessHours(hoursString: string | null | undefined, show
   return hoursString
 }
 
+
 /**
- * Get business status indicator component props
+ * Parse structured business hours and determine if currently open
+ * This is the new, more accurate method for structured hours data
  */
-export function getBusinessStatusProps(hoursString: string | null | undefined) {
-  const parsed = parseBusinessHours(hoursString)
-  
-  return {
-    isOpen: parsed.isOpen,
-    statusText: parsed.displayText,
-    statusColor: parsed.isOpen ? 'text-green-400' : 'text-red-400',
-    nextChange: parsed.nextChange
+export function parseStructuredBusinessHours(structured: BusinessHoursStructured | null | undefined): ParsedHours {
+  if (!structured) {
+    return {
+      isOpen: false,
+      nextChange: null,
+      displayText: 'Hours not available'
+    }
   }
+
+  const now = new Date()
+  const currentDay = DAYS_OF_WEEK[now.getDay() === 0 ? 6 : now.getDay() - 1] // Convert JS day to our format
+  const currentTime = now.toTimeString().slice(0, 5) // "HH:MM" format
+  
+  const todayHours = structured[currentDay]
+  
+  if (!todayHours || todayHours.closed || !todayHours.open || !todayHours.close) {
+    // Business is closed today, check when it opens next
+    let nextOpenDay = null
+    let nextOpenTime = null
+    
+    // Look for next opening day (starting from tomorrow)
+    for (let i = 1; i <= 7; i++) {
+      const dayIndex = (DAYS_OF_WEEK.indexOf(currentDay) + i) % 7
+      const checkDay = DAYS_OF_WEEK[dayIndex]
+      const dayHours = structured[checkDay]
+      
+      if (dayHours && !dayHours.closed && dayHours.open) {
+        nextOpenDay = checkDay
+        nextOpenTime = dayHours.open
+        break
+      }
+    }
+    
+    const nextChange = nextOpenDay && nextOpenTime 
+      ? `Opens ${nextOpenDay === DAYS_OF_WEEK[(DAYS_OF_WEEK.indexOf(currentDay) + 1) % 7] ? 'tomorrow' : nextOpenDay} at ${formatTime(nextOpenTime)}`
+      : null
+    
+    return {
+      isOpen: false,
+      nextChange,
+      displayText: 'Closed now'
+    }
+  }
+  
+  // Check if currently within opening hours
+  const isCurrentlyOpen = currentTime >= todayHours.open && currentTime <= todayHours.close
+  
+  if (isCurrentlyOpen) {
+    return {
+      isOpen: true,
+      nextChange: `Closes at ${formatTime(todayHours.close)}`,
+      displayText: 'Open now'
+    }
+  } else if (currentTime < todayHours.open) {
+    // Before opening today
+    return {
+      isOpen: false,
+      nextChange: `Opens at ${formatTime(todayHours.open)}`,
+      displayText: 'Closed now'
+    }
+  } else {
+    // After closing today, find next opening
+    let nextOpenDay = null
+    let nextOpenTime = null
+    
+    // Look for next opening day (starting from tomorrow)
+    for (let i = 1; i <= 7; i++) {
+      const dayIndex = (DAYS_OF_WEEK.indexOf(currentDay) + i) % 7
+      const checkDay = DAYS_OF_WEEK[dayIndex]
+      const dayHours = structured[checkDay]
+      
+      if (dayHours && !dayHours.closed && dayHours.open) {
+        nextOpenDay = checkDay
+        nextOpenTime = dayHours.open
+        break
+      }
+    }
+    
+    const nextChange = nextOpenDay && nextOpenTime 
+      ? `Opens ${nextOpenDay === DAYS_OF_WEEK[(DAYS_OF_WEEK.indexOf(currentDay) + 1) % 7] ? 'tomorrow' : nextOpenDay} at ${formatTime(nextOpenTime)}`
+      : null
+    
+    return {
+      isOpen: false,
+      nextChange,
+      displayText: 'Closed now'
+    }
+  }
+}
+
+/**
+ * Format 24-hour time to 12-hour format for display
+ */
+function formatTime(time24: string): string {
+  const [hours, minutes] = time24.split(':').map(Number)
+  const period = hours >= 12 ? 'PM' : 'AM'
+  const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+  return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`
+}
+
+/**
+ * Get business status properties for display components
+ * Handles both legacy text and new structured formats
+ */
+export function getBusinessStatusProps(
+  hoursText: string | null | undefined, 
+  hoursStructured: BusinessHoursStructured | null | undefined
+) {
+  // Prefer structured hours if available
+  if (hoursStructured && !hoursStructured.needs_conversion) {
+    return parseStructuredBusinessHours(hoursStructured)
+  }
+  
+  // Fallback to legacy text parsing
+  return parseBusinessHours(hoursText)
 }
 

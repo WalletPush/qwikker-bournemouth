@@ -4,6 +4,7 @@ import { headers, cookies } from 'next/headers'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
 import { getCityFromRequest, getCityDisplayName } from '@/lib/utils/city-detection'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
+import { getBusinessCRMData } from '@/lib/actions/admin-crm-actions'
 
 export default async function AdminPage() {
   // Get city from URL subdomain
@@ -108,9 +109,13 @@ export default async function AdminPage() {
     console.error('Error fetching pending changes data:', changesDataError)
   }
   
+  // Fetch comprehensive CRM data
+  const crmData = await getBusinessCRMData(currentCity)
+  
   return (
     <AdminDashboard 
       businesses={allBusinesses || []} 
+      crmData={crmData}
       adminEmail={admin.email || admin.username} 
       city={currentCity}
       cityDisplayName={getCityDisplayName(currentCity)}
