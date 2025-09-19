@@ -27,8 +27,7 @@ export async function POST(request: NextRequest) {
     // Check if user is admin - must be specific admin emails only
     const adminEmails = [
       'admin@qwikker.com',
-      'admin@walletpush.io',
-      'freespiritfamilies@gmail.com' // TEMPORARY: For testing
+      'admin@walletpush.io'
     ]
     
     const isAdmin = user.email && adminEmails.includes(user.email)
