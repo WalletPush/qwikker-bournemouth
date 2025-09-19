@@ -23,7 +23,8 @@ export default async function UserDashboardPage() {
       offer_value,
       menu_preview,
       plan,
-      status
+      status,
+      additional_notes
     `)
     .eq('status', 'approved')
     .not('business_name', 'is', null)
@@ -40,16 +41,26 @@ export default async function UserDashboardPage() {
   const realOffers = realBusinesses.filter(b => b.offer_name).length
   const totalOffers = realOffers + mockOffers.length
   
-  // Count businesses with secret menus (real businesses don't have secret menus yet)
+  // Count businesses with secret menus (both real and mock)
+  const realSecretMenus = realBusinesses.filter(b => {
+    if (!b.additional_notes) return false
+    try {
+      const notes = JSON.parse(b.additional_notes)
+      return notes.secret_menu_items && notes.secret_menu_items.length > 0
+    } catch (e) {
+      return false
+    }
+  }).length
   const mockSecretMenus = mockBusinesses.filter(b => b.hasSecretMenu).length
-  const totalSecretMenus = mockSecretMenus // Real businesses don't have secret menus yet
+  const totalSecretMenus = realSecretMenus + mockSecretMenus
   
   const stats = {
     totalBusinesses,
     totalOffers,
     totalSecretMenus,
     realBusinesses: realBusinesses.length,
-    realOffers
+    realOffers,
+    realSecretMenus
   }
   
   return (

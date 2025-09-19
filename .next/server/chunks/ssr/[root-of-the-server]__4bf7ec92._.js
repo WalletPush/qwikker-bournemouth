@@ -265,7 +265,7 @@ function UserDashboardLayout({ children, currentSection }) {
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: `sidebar-locked inset-y-0 left-0 w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`,
+                className: `fixed inset-y-0 left-0 w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`,
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "flex-shrink-0 p-6 border-b border-slate-800",
@@ -749,6 +749,7 @@ const mockBusinesses = [
             'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'qwikker_picks',
+        plan: 'spotlight',
         category: 'Restaurant',
         rating: 4.8,
         reviewCount: 127,
@@ -790,6 +791,7 @@ const mockBusinesses = [
             'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'qwikker_picks',
+        plan: 'spotlight',
         category: 'Cafe',
         rating: 4.9,
         reviewCount: 89,
@@ -832,6 +834,7 @@ const mockBusinesses = [
             'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'featured',
+        plan: 'featured',
         category: 'Spa',
         rating: 4.6,
         reviewCount: 203,
@@ -872,6 +875,7 @@ const mockBusinesses = [
             'https://images.unsplash.com/photo-1436076863939-06870fe779c2?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'featured',
+        plan: 'featured',
         category: 'Bar',
         rating: 4.5,
         reviewCount: 156,
@@ -914,6 +918,7 @@ const mockBusinesses = [
             'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'recommended',
+        plan: 'starter',
         category: 'Gym',
         rating: 4.5,
         reviewCount: 78,
@@ -951,6 +956,7 @@ const mockBusinesses = [
             'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=300&fit=crop&crop=center'
         ],
         tier: 'recommended',
+        plan: 'starter',
         category: 'Restaurant',
         rating: 4.6,
         reviewCount: 94,
@@ -1506,6 +1512,7 @@ const mockUserProfile = {
     experiencePoints: 1250,
     nextLevelXP: 2000,
     tier: 'insider',
+    plan: 'spotlight',
     badges: [
         {
             ...mockBadges[0],

@@ -6,6 +6,7 @@ import { AdminLogoutButton } from '@/components/admin-logout-button'
 import AdminInspectionModal from './admin-inspection-modal'
 import { BusinessCRMCard } from './business-crm-card'
 import { BusinessCRMData } from '@/types/billing'
+import { useElegantModal } from '@/components/ui/elegant-modal'
 
 interface Business {
   id: string
@@ -31,6 +32,7 @@ interface Business {
   menu_url: string
   business_images: string[]
   menu_preview: string
+  additional_notes: string
   status: string
   created_at: string
   updated_at: string
@@ -53,6 +55,8 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [inspectionModal, setInspectionModal] = useState<{ open: boolean; business: Business | null }>({ open: false, business: null })
   const [inspectedBusinesses, setInspectedBusinesses] = useState<Set<string>>(new Set())
   const [processingChangeId, setProcessingChangeId] = useState<string | null>(null)
+  
+  const { showSuccess, showError, showConfirm, ModalComponent } = useElegantModal()
 
   // Filter businesses by status
   const pendingBusinesses = businessList.filter(b => b.status === 'pending_review')
@@ -93,16 +97,25 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
           setActiveTab('live')
         }
         
-        alert(`✅ Business ${action}d successfully!`)
+        showSuccess(
+          'Success!', 
+          `Business ${action}d successfully! The page will refresh to show the updated status.`
+        )
         
         // Refresh the page to update CRM data
         window.location.reload()
       } else {
-        alert(`❌ Failed to ${action} business. Please try again.`)
+        showError(
+          'Action Failed', 
+          `Failed to ${action} business. Please try again or contact support if the issue persists.`
+        )
       }
     } catch (error) {
       console.error(`Error ${action}ing business:`, error)
-      alert(`❌ Failed to ${action} business. Please try again.`)
+      showError(
+        'Unexpected Error', 
+        `An unexpected error occurred while trying to ${action} the business. Please try again.`
+      )
     } finally {
       setIsLoading(null)
     }
@@ -126,13 +139,22 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
         ))
         
         setActiveTab('pending')
-        alert('✅ Business restored to pending review successfully!')
+        showSuccess(
+          'Business Restored!', 
+          'Business has been successfully restored to pending review status.'
+        )
       } else {
-        alert('❌ Failed to restore business. Please try again.')
+        showError(
+          'Restore Failed', 
+          'Failed to restore business. Please try again or contact support.'
+        )
       }
     } catch (error) {
       console.error('Error restoring business:', error)
-      alert('❌ Failed to restore business. Please try again.')
+      showError(
+        'Unexpected Error', 
+        'An unexpected error occurred while restoring the business. Please try again.'
+      )
     } finally {
       setIsLoading(null)
     }
@@ -150,17 +172,26 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
 
       if (response.ok) {
         const result = await response.json()
-        alert(`✅ Change ${action}d successfully!`)
+        showSuccess(
+          'Success!', 
+          `Change ${action}d successfully! The page will refresh to show updated data.`
+        )
         
         // Refresh the page to update all data including CRM data and pending changes
         window.location.reload()
       } else {
         const errorData = await response.json()
-        alert(`❌ Failed to ${action} change: ${errorData.error || 'Please try again.'}`)
+        showError(
+          'Action Failed', 
+          `Failed to ${action} change: ${errorData.error || 'Please try again or contact support.'}`
+        )
       }
     } catch (error) {
       console.error(`Error ${action}ing change:`, error)
-      alert(`❌ Failed to ${action} change. Please try again.`)
+      showError(
+        'Unexpected Error', 
+        `An unexpected error occurred while trying to ${action} the change. Please try again.`
+      )
     } finally {
       setProcessingChangeId(null)
     }
@@ -645,6 +676,7 @@ Qwikker Admin Team`
                               menu_url: business.menu_url || '',
                               business_images: business.business_images || [],
                               menu_preview: '', // Not available in CRM data
+                              additional_notes: business.secret_menu_items ? JSON.stringify({ secret_menu_items: business.secret_menu_items }) : '',
                               status: business.status,
                               created_at: '', // Not available in CRM data
                               updated_at: business.last_updated
@@ -1055,6 +1087,9 @@ Qwikker Admin Team`
           }
         }}
       />
+      
+      {/* Elegant Modal System */}
+      <ModalComponent />
     </div>
   )
 }

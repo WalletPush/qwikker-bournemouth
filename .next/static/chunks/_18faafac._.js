@@ -244,7 +244,7 @@ function UserDashboardLayout(param) {
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "sidebar-locked inset-y-0 left-0 w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ".concat(sidebarOpen ? 'translate-x-0' : '-translate-x-full', " lg:translate-x-0"),
+                className: "fixed inset-y-0 left-0 w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ".concat(sidebarOpen ? 'translate-x-0' : '-translate-x-full', " lg:translate-x-0"),
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "flex-shrink-0 p-6 border-b border-slate-800",
@@ -1905,7 +1905,8 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 ;
-function UserSecretMenuPage() {
+function UserSecretMenuPage(param) {
+    let { realSecretMenus = [] } = param;
     _s();
     const [selectedFilter, setSelectedFilter] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('all');
     const [selectedCategory, setSelectedCategory] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('all');
@@ -1934,17 +1935,30 @@ function UserSecretMenuPage() {
             })["UserSecretMenuPage.useEffect"];
         }
     }["UserSecretMenuPage.useEffect"], []);
-    // Get unique categories from businesses with secret menus
+    // Combine real and mock secret menus
+    const allSecretMenus = [
+        ...realSecretMenus,
+        ...__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["enhancedSecretMenus"]
+    ];
+    // Get unique categories from all businesses with secret menus
     const businessesWithSecrets = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].filter((b)=>b.hasSecretMenu);
+    const realCategories = realSecretMenus.map((menu)=>menu.businessCategory);
+    const allCategories = [
+        ...businessesWithSecrets.map((b)=>b.category),
+        ...realCategories
+    ];
     const categories = [
         'all',
-        ...Array.from(new Set(businessesWithSecrets.map((b)=>b.category)))
+        ...Array.from(new Set(allCategories))
     ];
+    // Calculate counts including real secret menu items
+    const totalSecretItems = allSecretMenus.reduce((acc, menu)=>acc + menu.items.length, 0);
+    const legendaryCount = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockUserProfile"].plan === 'spotlight' ? allSecretMenus.reduce((acc, menu)=>acc + menu.items.filter((item)=>(item.rarity || 0) >= 5).length, 0) : 0;
     const filters = [
         {
             id: 'all',
             label: 'All Secrets',
-            count: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["enhancedSecretMenus"].reduce((acc, menu)=>acc + menu.items.length, 0)
+            count: totalSecretItems
         },
         {
             id: 'unlocked',
@@ -1954,7 +1968,7 @@ function UserSecretMenuPage() {
         {
             id: 'legendary',
             label: 'Legendary Items',
-            count: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockUserProfile"].plan === 'spotlight' ? __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["enhancedSecretMenus"].reduce((acc, menu)=>acc + menu.items.filter((item)=>(item.rarity || 0) >= 5).length, 0) : 0
+            count: legendaryCount
         }
     ];
     // Classy badge popup function
@@ -2003,15 +2017,32 @@ function UserSecretMenuPage() {
         }
     };
     const getFilteredSecretMenus = ()=>{
-        let filtered = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["enhancedSecretMenus"];
+        let filtered = allSecretMenus;
         // Filter by category
         if (selectedCategory !== 'all') {
-            const businessIds = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].filter((b)=>b.category === selectedCategory).map((b)=>b.id);
-            filtered = filtered.filter((menu)=>businessIds.includes(menu.businessId));
+            // For real menus, filter by businessCategory
+            // For mock menus, filter by business category
+            filtered = filtered.filter((menu)=>{
+                // Check if it's a real menu (has businessCategory) or mock menu
+                if ('businessCategory' in menu) {
+                    return menu.businessCategory === selectedCategory;
+                } else {
+                    // For mock menus, find the business and check its category
+                    const business = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].find((b)=>b.id === menu.businessId);
+                    return (business === null || business === void 0 ? void 0 : business.category) === selectedCategory;
+                }
+            });
         }
         // Filter by type
         if (selectedFilter === 'unlocked') {
-        // Show only unlocked items
+            // Show only unlocked items - filter items within each menu
+            filtered = filtered.map((menu)=>({
+                    ...menu,
+                    items: menu.items.filter((item)=>{
+                        const itemKey = "".concat(menu.businessId, "-").concat(item.name);
+                        return unlockedItems.has(itemKey);
+                    })
+                })).filter((menu)=>menu.items.length > 0);
         } else if (selectedFilter === 'legendary') {
             // Only Spotlight subscribers can see legendary items
             if (__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockUserProfile"].plan === 'spotlight') {
@@ -2036,6 +2067,8 @@ function UserSecretMenuPage() {
         const userBadges = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockUserProfile"].badges.filter((b)=>b.unlockedDate).map((b)=>b.id);
         const canUnlock = !requiredBadge || userBadges.includes(requiredBadge);
         const isLocked = !canUnlock && !isUnlocked;
+        // Determine if this is a real business item
+        const isRealItem = item.isReal || false;
         return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
             className: "relative overflow-hidden transition-all duration-500 hover:scale-105 cursor-pointer ".concat(isUnlocked ? 'bg-gradient-to-br from-purple-900/40 to-pink-900/40 border-purple-500/50 shadow-purple-500/20' : isLocked ? 'bg-gradient-to-br from-red-900/20 to-red-800/20 border-red-700/50' : 'bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-slate-700/50', " ").concat(showSecrets ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'),
             onClick: ()=>{
@@ -2058,7 +2091,7 @@ function UserSecretMenuPage() {
                     className: "absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 animate-pulse"
                 }, void 0, false, {
                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                    lineNumber: 203,
+                    lineNumber: 261,
                     columnNumber: 11
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2069,7 +2102,7 @@ function UserSecretMenuPage() {
                             children: "LEGENDARY"
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                            lineNumber: 210,
+                            lineNumber: 268,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2088,17 +2121,17 @@ function UserSecretMenuPage() {
                                         d: "M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 220,
+                                        lineNumber: 278,
                                         columnNumber: 19
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                    lineNumber: 219,
+                                    lineNumber: 277,
                                     columnNumber: 17
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 218,
+                                lineNumber: 276,
                                 columnNumber: 15
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "p-2 bg-slate-700/80 rounded-full",
@@ -2114,28 +2147,28 @@ function UserSecretMenuPage() {
                                         d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 226,
+                                        lineNumber: 284,
                                         columnNumber: 19
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                    lineNumber: 225,
+                                    lineNumber: 283,
                                     columnNumber: 17
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 224,
+                                lineNumber: 282,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                            lineNumber: 216,
+                            lineNumber: 274,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                    lineNumber: 207,
+                    lineNumber: 265,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardHeader"], {
@@ -2150,7 +2183,7 @@ function UserSecretMenuPage() {
                                     children: isUnlocked ? item.name : '• • • • • • • •'
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                    lineNumber: 237,
+                                    lineNumber: 295,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2158,7 +2191,7 @@ function UserSecretMenuPage() {
                                     children: business === null || business === void 0 ? void 0 : business.name
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                    lineNumber: 244,
+                                    lineNumber: 302,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2166,23 +2199,23 @@ function UserSecretMenuPage() {
                                     children: business === null || business === void 0 ? void 0 : business.category
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                    lineNumber: 245,
+                                    lineNumber: 303,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                            lineNumber: 236,
+                            lineNumber: 294,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                        lineNumber: 235,
+                        lineNumber: 293,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                    lineNumber: 234,
+                    lineNumber: 292,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -2195,12 +2228,12 @@ function UserSecretMenuPage() {
                                 children: isUnlocked ? item.description : 'Unlock this secret to reveal the mysterious description...'
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 253,
+                                lineNumber: 311,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                            lineNumber: 252,
+                            lineNumber: 310,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2211,7 +2244,7 @@ function UserSecretMenuPage() {
                                     children: isUnlocked ? item.price : '£??'
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                    lineNumber: 260,
+                                    lineNumber: 318,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2226,23 +2259,23 @@ function UserSecretMenuPage() {
                                                 d: "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.381-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                lineNumber: 272,
+                                                lineNumber: 330,
                                                 columnNumber: 19
                                             }, this)
                                         }, i, false, {
                                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                            lineNumber: 271,
+                                            lineNumber: 329,
                                             columnNumber: 17
                                         }, this))
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                    lineNumber: 269,
+                                    lineNumber: 327,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                            lineNumber: 259,
+                            lineNumber: 317,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2265,12 +2298,12 @@ function UserSecretMenuPage() {
                                                     d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                    lineNumber: 284,
+                                                    lineNumber: 342,
                                                     columnNumber: 21
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                lineNumber: 283,
+                                                lineNumber: 341,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2278,13 +2311,13 @@ function UserSecretMenuPage() {
                                                 children: "Badge Required"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                lineNumber: 286,
+                                                lineNumber: 344,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 282,
+                                        lineNumber: 340,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2296,13 +2329,13 @@ function UserSecretMenuPage() {
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 288,
+                                        lineNumber: 346,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 281,
+                                lineNumber: 339,
                                 columnNumber: 15
                             }, this) : !isUnlocked ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
                                 onClick: (e)=>{
@@ -2324,19 +2357,19 @@ function UserSecretMenuPage() {
                                             d: "M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                            lineNumber: 302,
+                                            lineNumber: 360,
                                             columnNumber: 19
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 301,
+                                        lineNumber: 359,
                                         columnNumber: 17
                                     }, this),
                                     "Unlock Secret Item (Free!)"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 293,
+                                lineNumber: 351,
                                 columnNumber: 15
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-lg p-3 text-center",
@@ -2356,12 +2389,12 @@ function UserSecretMenuPage() {
                                                     d: "M5 13l4 4L19 7"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                    lineNumber: 310,
+                                                    lineNumber: 368,
                                                     columnNumber: 21
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                lineNumber: 309,
+                                                lineNumber: 367,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2369,13 +2402,13 @@ function UserSecretMenuPage() {
                                                 children: "Unlocked!"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                lineNumber: 312,
+                                                lineNumber: 370,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 308,
+                                        lineNumber: 366,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2383,30 +2416,30 @@ function UserSecretMenuPage() {
                                         children: "Click card for ordering info"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 314,
+                                        lineNumber: 372,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 307,
+                                lineNumber: 365,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                            lineNumber: 279,
+                            lineNumber: 337,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                    lineNumber: 250,
+                    lineNumber: 308,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-            lineNumber: 150,
+            lineNumber: 208,
             columnNumber: 7
         }, this);
     };
@@ -2417,21 +2450,21 @@ function UserSecretMenuPage() {
                 className: "fixed inset-0 bg-gradient-to-br from-purple-900/5 via-transparent to-pink-900/5 pointer-events-none"
             }, void 0, false, {
                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                lineNumber: 326,
+                lineNumber: 384,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "fixed top-20 left-10 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-pulse pointer-events-none"
             }, void 0, false, {
                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                lineNumber: 327,
+                lineNumber: 385,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "fixed bottom-20 right-10 w-96 h-96 bg-pink-500/5 rounded-full blur-3xl animate-pulse pointer-events-none"
             }, void 0, false, {
                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                lineNumber: 328,
+                lineNumber: 386,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2441,7 +2474,7 @@ function UserSecretMenuPage() {
                         className: "absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 rounded-3xl blur-3xl"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                        lineNumber: 332,
+                        lineNumber: 390,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2464,17 +2497,17 @@ function UserSecretMenuPage() {
                                                 d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                lineNumber: 337,
+                                                lineNumber: 395,
                                                 columnNumber: 17
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                            lineNumber: 336,
+                                            lineNumber: 394,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 335,
+                                        lineNumber: 393,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
@@ -2482,13 +2515,13 @@ function UserSecretMenuPage() {
                                         children: "Secret Menu Club"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 340,
+                                        lineNumber: 398,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 334,
+                                lineNumber: 392,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2496,7 +2529,7 @@ function UserSecretMenuPage() {
                                 children: "Unlock Bournemouth's most guarded culinary secrets"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 344,
+                                lineNumber: 402,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2504,19 +2537,19 @@ function UserSecretMenuPage() {
                                 children: "These exclusive off-menu items are known only to insiders. Each secret tells a story, each dish holds mystery. Start your culinary adventure!"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 347,
+                                lineNumber: 405,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                        lineNumber: 333,
+                        lineNumber: 391,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                lineNumber: 331,
+                lineNumber: 389,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2540,26 +2573,26 @@ function UserSecretMenuPage() {
                                             d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                            lineNumber: 359,
+                                            lineNumber: 417,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 358,
+                                        lineNumber: 416,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                         className: "text-2xl font-bold text-purple-400",
-                                        children: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["enhancedSecretMenus"].reduce((acc, menu)=>acc + menu.items.length, 0)
+                                        children: totalSecretItems
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 361,
+                                        lineNumber: 419,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 357,
+                                lineNumber: 415,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2567,13 +2600,13 @@ function UserSecretMenuPage() {
                                 children: "Secret Items"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 363,
+                                lineNumber: 421,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                        lineNumber: 356,
+                        lineNumber: 414,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2594,12 +2627,12 @@ function UserSecretMenuPage() {
                                             d: "M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-3a1 1 0 011-1h2.586l6.414-6.414A6 6 0 0121 9z"
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                            lineNumber: 368,
+                                            lineNumber: 426,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 367,
+                                        lineNumber: 425,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2607,13 +2640,13 @@ function UserSecretMenuPage() {
                                         children: Array.from(unlockedItems).length
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 370,
+                                        lineNumber: 428,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 366,
+                                lineNumber: 424,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2621,13 +2654,13 @@ function UserSecretMenuPage() {
                                 children: "Unlocked"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 372,
+                                lineNumber: 430,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                        lineNumber: 365,
+                        lineNumber: 423,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2648,26 +2681,26 @@ function UserSecretMenuPage() {
                                             d: "M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                            lineNumber: 377,
+                                            lineNumber: 435,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 376,
+                                        lineNumber: 434,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                         className: "text-2xl font-bold text-yellow-400",
-                                        children: businessesWithSecrets.length
+                                        children: allSecretMenus.length
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 379,
+                                        lineNumber: 437,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 375,
+                                lineNumber: 433,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2675,13 +2708,13 @@ function UserSecretMenuPage() {
                                 children: "Secret Venues"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 381,
+                                lineNumber: 439,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                        lineNumber: 374,
+                        lineNumber: 432,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2702,12 +2735,12 @@ function UserSecretMenuPage() {
                                             d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                            lineNumber: 386,
+                                            lineNumber: 444,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 385,
+                                        lineNumber: 443,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2715,17 +2748,17 @@ function UserSecretMenuPage() {
                                         children: [
                                             Array.from(unlockedItems).length,
                                             " / ",
-                                            __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["enhancedSecretMenus"].reduce((acc, menu)=>acc + menu.items.length, 0)
+                                            totalSecretItems
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 388,
+                                        lineNumber: 446,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 384,
+                                lineNumber: 442,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2733,19 +2766,19 @@ function UserSecretMenuPage() {
                                 children: "Secrets Unlocked"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 392,
+                                lineNumber: 450,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                        lineNumber: 383,
+                        lineNumber: 441,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                lineNumber: 355,
+                lineNumber: 413,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2761,12 +2794,12 @@ function UserSecretMenuPage() {
                         ]
                     }, filter.id, true, {
                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                        lineNumber: 399,
+                        lineNumber: 457,
                         columnNumber: 11
                     }, this))
             }, void 0, false, {
                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                lineNumber: 397,
+                lineNumber: 455,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2777,7 +2810,7 @@ function UserSecretMenuPage() {
                         children: "Filter by venue type:"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                        lineNumber: 415,
+                        lineNumber: 473,
                         columnNumber: 9
                     }, this),
                     categories.map((category)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2786,32 +2819,41 @@ function UserSecretMenuPage() {
                             children: category === 'all' ? 'All Venues' : category
                         }, category, false, {
                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                            lineNumber: 417,
+                            lineNumber: 475,
                             columnNumber: 11
                         }, this))
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                lineNumber: 414,
+                lineNumber: 472,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6",
                 children: getFilteredSecretMenus().map((menu)=>{
-                    const business = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].find((b)=>b.id === menu.businessId);
+                    // For real menus, create business object from menu data
+                    // For mock menus, find in mockBusinesses
+                    const business = 'businessCategory' in menu ? {
+                        id: menu.businessId,
+                        name: menu.businessName,
+                        category: menu.businessCategory,
+                        address: menu.businessAddress,
+                        phone: menu.businessPhone,
+                        image: menu.businessImage
+                    } : __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].find((b)=>b.id === menu.businessId);
                     return menu.items.map((item, index)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SecretMenuItem, {
                             menu: menu,
                             item: item,
                             business: business
-                        }, "".concat(menu.id, "-").concat(index), false, {
+                        }, "".concat(menu.businessId, "-").concat(item.name, "-").concat(index), false, {
                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                            lineNumber: 437,
+                            lineNumber: 506,
                             columnNumber: 13
                         }, this));
                 })
             }, void 0, false, {
                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                lineNumber: 432,
+                lineNumber: 490,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2821,7 +2863,7 @@ function UserSecretMenuPage() {
                         className: "absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-teal-500/5 animate-pulse"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                        lineNumber: 449,
+                        lineNumber: 518,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2844,17 +2886,17 @@ function UserSecretMenuPage() {
                                                 d: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                lineNumber: 454,
+                                                lineNumber: 523,
                                                 columnNumber: 17
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                            lineNumber: 453,
+                                            lineNumber: 522,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 452,
+                                        lineNumber: 521,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -2862,13 +2904,13 @@ function UserSecretMenuPage() {
                                         children: "Keep Exploring!"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 457,
+                                        lineNumber: 526,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 451,
+                                lineNumber: 520,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2876,7 +2918,7 @@ function UserSecretMenuPage() {
                                 children: "Every secret you unlock brings you closer to becoming a true Bournemouth foodie insider. Chat with our AI to discover more hidden gems and get personalized recommendations!"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 459,
+                                lineNumber: 528,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2900,24 +2942,24 @@ function UserSecretMenuPage() {
                                                         d: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                        lineNumber: 467,
+                                                        lineNumber: 536,
                                                         columnNumber: 19
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                    lineNumber: 466,
+                                                    lineNumber: 535,
                                                     columnNumber: 17
                                                 }, this),
                                                 "Chat with AI Guide"
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                            lineNumber: 465,
+                                            lineNumber: 534,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 464,
+                                        lineNumber: 533,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -2939,48 +2981,48 @@ function UserSecretMenuPage() {
                                                         d: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                                                     }, void 0, false, {
                                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                        lineNumber: 475,
+                                                        lineNumber: 544,
                                                         columnNumber: 19
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                                    lineNumber: 474,
+                                                    lineNumber: 543,
                                                     columnNumber: 17
                                                 }, this),
                                                 "Discover More Places"
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                            lineNumber: 473,
+                                            lineNumber: 542,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                        lineNumber: 472,
+                                        lineNumber: 541,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                                lineNumber: 463,
+                                lineNumber: 532,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                        lineNumber: 450,
+                        lineNumber: 519,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-secret-menu-page.tsx",
-                lineNumber: 448,
+                lineNumber: 517,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/components/user/user-secret-menu-page.tsx",
-        lineNumber: 324,
+        lineNumber: 382,
         columnNumber: 5
     }, this);
 }
