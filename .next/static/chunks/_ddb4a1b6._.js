@@ -244,7 +244,7 @@ function UserDashboardLayout(param) {
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "sidebar-locked inset-y-0 left-0 w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ".concat(sidebarOpen ? 'translate-x-0' : '-translate-x-full', " lg:translate-x-0"),
+                className: "fixed inset-y-0 left-0 w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ".concat(sidebarOpen ? 'translate-x-0' : '-translate-x-full', " lg:translate-x-0"),
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "flex-shrink-0 p-6 border-b border-slate-800",
@@ -1903,42 +1903,53 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 ;
-function UserOffersPage() {
+function UserOffersPage(param) {
+    let { realOffers = [] } = param;
     _s();
     const [selectedFilter, setSelectedFilter] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('all');
     const [selectedCategory, setSelectedCategory] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('all');
-    // Initialize from localStorage or empty sets for fresh users
-    const [favoriteOffers, setFavoriteOffers] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])({
-        "UserOffersPage.useState": ()=>{
-            if ("TURBOPACK compile-time truthy", 1) {
-                const saved = localStorage.getItem('qwikker-favorites');
-                return saved ? new Set(JSON.parse(saved)) : new Set();
+    // Initialize with empty sets to avoid hydration mismatch
+    const [favoriteOffers, setFavoriteOffers] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(new Set());
+    const [claimedOffers, setClaimedOffers] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(new Set());
+    // Load from localStorage after component mounts
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "UserOffersPage.useEffect": ()=>{
+            const savedFavorites = localStorage.getItem('qwikker-favorites');
+            const savedClaimed = localStorage.getItem('qwikker-claimed');
+            if (savedFavorites) {
+                setFavoriteOffers(new Set(JSON.parse(savedFavorites)));
             }
-            //TURBOPACK unreachable
-            ;
-        }
-    }["UserOffersPage.useState"]);
-    const [claimedOffers, setClaimedOffers] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])({
-        "UserOffersPage.useState": ()=>{
-            if ("TURBOPACK compile-time truthy", 1) {
-                const saved = localStorage.getItem('qwikker-claimed');
-                return saved ? new Set(JSON.parse(saved)) : new Set();
+            if (savedClaimed) {
+                setClaimedOffers(new Set(JSON.parse(savedClaimed)));
+            } else {
+                // For development, start with mock data if no saved data
+                setClaimedOffers(new Set(__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockClaimedOffers"].map({
+                    "UserOffersPage.useEffect": (co)=>co.offerId
+                }["UserOffersPage.useEffect"])));
             }
-            //TURBOPACK unreachable
-            ;
         }
-    }["UserOffersPage.useState"]);
-    // Get unique categories from businesses
+    }["UserOffersPage.useEffect"], []);
+    // Combine real offers with mock offers
+    const allOffers = [
+        ...realOffers,
+        ...__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockOffers"]
+    ];
+    // Get unique categories from all businesses
+    const realCategories = realOffers.map((o)=>o.businessCategory).filter(Boolean);
+    const mockCategories = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].map((b)=>b.category);
     const categories = [
         'all',
-        ...Array.from(new Set(__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].map((b)=>b.category)))
+        ...Array.from(new Set([
+            ...realCategories,
+            ...mockCategories
+        ]))
     ];
     // Dynamic filter counts that update with state changes
     const getFilters = ()=>[
             {
                 id: 'all',
                 label: 'All Offers',
-                count: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockOffers"].length
+                count: allOffers.length
             },
             {
                 id: 'claimed',
@@ -1953,22 +1964,22 @@ function UserOffersPage() {
             {
                 id: 'popular',
                 label: 'Popular',
-                count: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockOffers"].filter((o)=>o.isPopular).length
+                count: allOffers.filter((o)=>o.isPopular).length
             },
             {
                 id: 'ending_soon',
                 label: 'Ending Soon',
-                count: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockOffers"].filter((o)=>o.isEndingSoon).length
+                count: allOffers.filter((o)=>o.isEndingSoon).length
             },
             {
                 id: 'two_for_one',
                 label: '2-for-1',
-                count: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockOffers"].filter((o)=>o.type === 'two_for_one').length
+                count: allOffers.filter((o)=>o.type === 'two_for_one').length
             },
             {
                 id: 'percentage_off',
                 label: 'Percentage Off',
-                count: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockOffers"].filter((o)=>o.type === 'percentage_off').length
+                count: allOffers.filter((o)=>o.type === 'percentage_off').length
             }
         ];
     const toggleFavorite = (offerId)=>{
@@ -2005,7 +2016,7 @@ function UserOffersPage() {
         alert('"'.concat(offerTitle, '" claimed successfully!\n\nYou can now add it to your mobile wallet from "My Claimed" offers.'));
     };
     const getFilteredOffers = ()=>{
-        let filtered = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockOffers"];
+        let filtered = allOffers;
         // Filter by type
         if (selectedFilter === 'claimed') {
             filtered = filtered.filter((o)=>claimedOffers.has(o.id));
@@ -2022,8 +2033,18 @@ function UserOffersPage() {
         }
         // Filter by category
         if (selectedCategory !== 'all') {
-            const businessesInCategory = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].filter((b)=>b.category === selectedCategory).map((b)=>b.id);
-            filtered = filtered.filter((o)=>businessesInCategory.includes(o.businessId));
+            // For real offers, filter by businessCategory
+            // For mock offers, filter by business category from mockBusinesses
+            filtered = filtered.filter((o)=>{
+                if (o.businessCategory) {
+                    // Real offer
+                    return o.businessCategory === selectedCategory;
+                } else {
+                    // Mock offer - find business in mockBusinesses
+                    const business = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].find((b)=>b.id === o.businessId);
+                    return (business === null || business === void 0 ? void 0 : business.category) === selectedCategory;
+                }
+            });
         }
         return filtered;
     };
@@ -2043,7 +2064,32 @@ function UserOffersPage() {
     };
     const OfferCard = (param)=>{
         let { offer } = param;
-        const business = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].find((b)=>b.id === offer.businessId);
+        var _business_images;
+        // Distinguish real vs mock offers: real offers have businessCategory, mock offers don't
+        const isRealOffer = !!offer.businessCategory;
+        const business = isRealOffer ? null : __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockBusinesses"].find((b)=>b.id === offer.businessId);
+        const businessName = offer.businessName || (business === null || business === void 0 ? void 0 : business.name) || 'Unknown Business';
+        // Fix image selection: for real offers use offer.image, for mock offers use business.images[0]
+        const businessImage = isRealOffer ? offer.image || '/placeholder-business.jpg' : (business === null || business === void 0 ? void 0 : (_business_images = business.images) === null || _business_images === void 0 ? void 0 : _business_images[0]) || '/placeholder-business.jpg';
+        const businessRating = offer.businessRating || (business === null || business === void 0 ? void 0 : business.rating) || 4.5;
+        // Generate badge for real offers based on type, use existing badge for mock offers
+        const getBadgeText = ()=>{
+            if (!isRealOffer && offer.badge) return offer.badge // Mock offers have badge
+            ;
+            // Generate badge for real offers based on type
+            switch(offer.type){
+                case 'two_for_one':
+                    return '2-FOR-1';
+                case 'percentage_off':
+                    return "".concat(offer.value);
+                case 'freebie':
+                    return 'FREE ITEM';
+                case 'discount':
+                    return 'DISCOUNT';
+                default:
+                    return 'OFFER';
+            }
+        };
         const isFavorite = favoriteOffers.has(offer.id);
         const isClaimed = claimedOffers.has(offer.id);
         const claimedOfferData = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockClaimedOffers"].find((co)=>co.offerId === offer.id);
@@ -2054,34 +2100,34 @@ function UserOffersPage() {
                     className: "relative h-40 overflow-hidden",
                     children: [
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
-                            src: (business === null || business === void 0 ? void 0 : business.images[0]) || '/placeholder-business.jpg',
-                            alt: (business === null || business === void 0 ? void 0 : business.name) || 'Business',
+                            src: businessImage,
+                            alt: businessName,
                             className: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-offers-page.tsx",
-                            lineNumber: 120,
+                            lineNumber: 166,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-offers-page.tsx",
-                            lineNumber: 127,
+                            lineNumber: 173,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "absolute top-3 right-3",
                             children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 className: "".concat(getBadgeColor(offer.type), " text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg"),
-                                children: offer.badge
+                                children: getBadgeText()
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 131,
+                                lineNumber: 177,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-offers-page.tsx",
-                            lineNumber: 130,
+                            lineNumber: 176,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2092,7 +2138,7 @@ function UserOffersPage() {
                                     children: "POPULAR"
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                    lineNumber: 139,
+                                    lineNumber: 185,
                                     columnNumber: 15
                                 }, this),
                                 offer.isEndingSoon && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2100,13 +2146,13 @@ function UserOffersPage() {
                                     children: "ENDING SOON"
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                    lineNumber: 144,
+                                    lineNumber: 190,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/user/user-offers-page.tsx",
-                            lineNumber: 137,
+                            lineNumber: 183,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2127,17 +2173,17 @@ function UserOffersPage() {
                                     d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                    lineNumber: 166,
+                                    lineNumber: 212,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 158,
+                                lineNumber: 204,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-offers-page.tsx",
-                            lineNumber: 151,
+                            lineNumber: 197,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2145,30 +2191,30 @@ function UserOffersPage() {
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     className: "text-white font-semibold text-sm drop-shadow-lg truncate",
-                                    children: business === null || business === void 0 ? void 0 : business.name
+                                    children: businessName
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                    lineNumber: 172,
+                                    lineNumber: 218,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     className: "text-white/80 text-xs drop-shadow-md truncate",
-                                    children: business === null || business === void 0 ? void 0 : business.category
+                                    children: isRealOffer ? offer.businessCategory : business === null || business === void 0 ? void 0 : business.category
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                    lineNumber: 173,
+                                    lineNumber: 219,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/user/user-offers-page.tsx",
-                            lineNumber: 171,
+                            lineNumber: 217,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/user/user-offers-page.tsx",
-                    lineNumber: 119,
+                    lineNumber: 165,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -2182,7 +2228,7 @@ function UserOffersPage() {
                                     children: offer.title
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                    lineNumber: 180,
+                                    lineNumber: 226,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2190,7 +2236,7 @@ function UserOffersPage() {
                                     children: offer.description
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                    lineNumber: 181,
+                                    lineNumber: 227,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2203,7 +2249,7 @@ function UserOffersPage() {
                                                 children: "You Save:"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                                lineNumber: 186,
+                                                lineNumber: 232,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2211,24 +2257,24 @@ function UserOffersPage() {
                                                 children: offer.value
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                                lineNumber: 187,
+                                                lineNumber: 233,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-offers-page.tsx",
-                                        lineNumber: 185,
+                                        lineNumber: 231,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                    lineNumber: 184,
+                                    lineNumber: 230,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/user/user-offers-page.tsx",
-                            lineNumber: 179,
+                            lineNumber: 225,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2241,15 +2287,15 @@ function UserOffersPage() {
                                             children: "Terms:"
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-offers-page.tsx",
-                                            lineNumber: 194,
+                                            lineNumber: 240,
                                             columnNumber: 16
                                         }, this),
                                         " ",
-                                        offer.terms
+                                        isRealOffer ? offer.termsAndConditions || 'Standard terms apply' : offer.terms || 'Standard terms apply'
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                    lineNumber: 194,
+                                    lineNumber: 240,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2259,32 +2305,32 @@ function UserOffersPage() {
                                             children: "Valid until:"
                                         }, void 0, false, {
                                             fileName: "[project]/components/user/user-offers-page.tsx",
-                                            lineNumber: 195,
+                                            lineNumber: 241,
                                             columnNumber: 16
                                         }, this),
                                         " ",
-                                        offer.expiryDate
+                                        isRealOffer ? offer.validUntil || 'No expiry date' : offer.expiryDate || 'No expiry date'
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                    lineNumber: 195,
+                                    lineNumber: 241,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/user/user-offers-page.tsx",
-                            lineNumber: 193,
+                            lineNumber: 239,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "space-y-2",
                             children: !isClaimed ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
-                                onClick: ()=>claimOffer(offer.id, offer.title, offer.businessName),
+                                onClick: ()=>claimOffer(offer.id, offer.title, businessName),
                                 className: "w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold",
                                 children: "Claim Offer"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 201,
+                                lineNumber: 247,
                                 columnNumber: 15
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "space-y-2",
@@ -2304,12 +2350,12 @@ function UserOffersPage() {
                                                     d: "M5 13l4 4L19 7"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                                    lineNumber: 211,
+                                                    lineNumber: 257,
                                                     columnNumber: 21
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                                lineNumber: 210,
+                                                lineNumber: 256,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2317,7 +2363,7 @@ function UserOffersPage() {
                                                 children: (claimedOfferData === null || claimedOfferData === void 0 ? void 0 : claimedOfferData.status) === 'redeemed' ? 'Redeemed' : (claimedOfferData === null || claimedOfferData === void 0 ? void 0 : claimedOfferData.status) === 'wallet_added' ? 'In Your Wallet' : 'Claimed'
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                                lineNumber: 213,
+                                                lineNumber: 259,
                                                 columnNumber: 19
                                             }, this),
                                             (claimedOfferData === null || claimedOfferData === void 0 ? void 0 : claimedOfferData.redemptionCode) && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2328,13 +2374,13 @@ function UserOffersPage() {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                                lineNumber: 218,
+                                                lineNumber: 264,
                                                 columnNumber: 21
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-offers-page.tsx",
-                                        lineNumber: 209,
+                                        lineNumber: 255,
                                         columnNumber: 17
                                     }, this),
                                     (claimedOfferData === null || claimedOfferData === void 0 ? void 0 : claimedOfferData.status) !== 'redeemed' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -2353,42 +2399,42 @@ function UserOffersPage() {
                                                     d: "M12 4v16m8-8H4"
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                                    lineNumber: 230,
+                                                    lineNumber: 276,
                                                     columnNumber: 23
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                                lineNumber: 229,
+                                                lineNumber: 275,
                                                 columnNumber: 21
                                             }, this),
                                             (claimedOfferData === null || claimedOfferData === void 0 ? void 0 : claimedOfferData.status) === 'wallet_added' ? 'In Wallet' : 'Add to Wallet'
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/user/user-offers-page.tsx",
-                                        lineNumber: 225,
+                                        lineNumber: 271,
                                         columnNumber: 19
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 208,
+                                lineNumber: 254,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/components/user/user-offers-page.tsx",
-                            lineNumber: 199,
+                            lineNumber: 245,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/user/user-offers-page.tsx",
-                    lineNumber: 177,
+                    lineNumber: 223,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/components/user/user-offers-page.tsx",
-            lineNumber: 117,
+            lineNumber: 163,
             columnNumber: 7
         }, this);
     };
@@ -2403,7 +2449,7 @@ function UserOffersPage() {
                         children: "Exclusive Offers"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 247,
+                        lineNumber: 293,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2411,7 +2457,7 @@ function UserOffersPage() {
                         children: "Save money while discovering amazing local businesses"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 250,
+                        lineNumber: 296,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2419,13 +2465,13 @@ function UserOffersPage() {
                         children: "All offers are verified and ready to claim instantly"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 251,
+                        lineNumber: 297,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-offers-page.tsx",
-                lineNumber: 246,
+                lineNumber: 292,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2439,7 +2485,7 @@ function UserOffersPage() {
                                 children: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockOffers"].length
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 257,
+                                lineNumber: 303,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2447,13 +2493,13 @@ function UserOffersPage() {
                                 children: "Total Offers"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 258,
+                                lineNumber: 304,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 256,
+                        lineNumber: 302,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2464,7 +2510,7 @@ function UserOffersPage() {
                                 children: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockOffers"].filter((o)=>o.type === 'percentage_off').length
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 261,
+                                lineNumber: 307,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2472,13 +2518,13 @@ function UserOffersPage() {
                                 children: "% Off Deals"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 262,
+                                lineNumber: 308,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 260,
+                        lineNumber: 306,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2489,7 +2535,7 @@ function UserOffersPage() {
                                 children: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockOffers"].filter((o)=>o.type === 'two_for_one').length
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 265,
+                                lineNumber: 311,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2497,13 +2543,13 @@ function UserOffersPage() {
                                 children: "2-for-1 Deals"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 266,
+                                lineNumber: 312,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 264,
+                        lineNumber: 310,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2514,7 +2560,7 @@ function UserOffersPage() {
                                 children: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$mock$2d$data$2f$user$2d$mock$2d$data$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mockOffers"].filter((o)=>o.isEndingSoon).length
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 269,
+                                lineNumber: 315,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2522,19 +2568,19 @@ function UserOffersPage() {
                                 children: "Ending Soon"
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 270,
+                                lineNumber: 316,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 268,
+                        lineNumber: 314,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-offers-page.tsx",
-                lineNumber: 255,
+                lineNumber: 301,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2550,12 +2596,12 @@ function UserOffersPage() {
                         ]
                     }, filter.id, true, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 277,
+                        lineNumber: 323,
                         columnNumber: 11
                     }, this))
             }, void 0, false, {
                 fileName: "[project]/components/user/user-offers-page.tsx",
-                lineNumber: 275,
+                lineNumber: 321,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2566,7 +2612,7 @@ function UserOffersPage() {
                         children: "Filter by category:"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 293,
+                        lineNumber: 339,
                         columnNumber: 9
                     }, this),
                     categories.map((category)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2575,13 +2621,13 @@ function UserOffersPage() {
                             children: category === 'all' ? 'All Categories' : category
                         }, category, false, {
                             fileName: "[project]/components/user/user-offers-page.tsx",
-                            lineNumber: 295,
+                            lineNumber: 341,
                             columnNumber: 11
                         }, this))
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-offers-page.tsx",
-                lineNumber: 292,
+                lineNumber: 338,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2592,7 +2638,7 @@ function UserOffersPage() {
                         children: selectedFilter === 'all' ? 'All Offers' : selectedFilter === 'popular' ? 'Popular Offers' : selectedFilter === 'ending_soon' ? 'Ending Soon' : selectedFilter === 'two_for_one' ? '2-for-1 Deals' : 'Percentage Off Deals'
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 311,
+                        lineNumber: 357,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2605,7 +2651,7 @@ function UserOffersPage() {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 319,
+                                lineNumber: 365,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2622,29 +2668,29 @@ function UserOffersPage() {
                                         d: "M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z"
                                     }, void 0, false, {
                                         fileName: "[project]/components/user/user-offers-page.tsx",
-                                        lineNumber: 322,
+                                        lineNumber: 368,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/components/user/user-offers-page.tsx",
-                                    lineNumber: 321,
+                                    lineNumber: 367,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/components/user/user-offers-page.tsx",
-                                lineNumber: 320,
+                                lineNumber: 366,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 318,
+                        lineNumber: 364,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-offers-page.tsx",
-                lineNumber: 310,
+                lineNumber: 356,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2653,12 +2699,12 @@ function UserOffersPage() {
                         offer: offer
                     }, offer.id, false, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 331,
+                        lineNumber: 377,
                         columnNumber: 11
                     }, this))
             }, void 0, false, {
                 fileName: "[project]/components/user/user-offers-page.tsx",
-                lineNumber: 329,
+                lineNumber: 375,
                 columnNumber: 7
             }, this),
             getFilteredOffers().length === 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -2668,7 +2714,7 @@ function UserOffersPage() {
                         className: "text-6xl mb-4"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 338,
+                        lineNumber: 384,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -2676,7 +2722,7 @@ function UserOffersPage() {
                         children: "No offers match your filters"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 339,
+                        lineNumber: 385,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2684,7 +2730,7 @@ function UserOffersPage() {
                         children: "Try adjusting your filters or check back later for new deals!"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 340,
+                        lineNumber: 386,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -2696,13 +2742,13 @@ function UserOffersPage() {
                         children: "Show All Offers"
                     }, void 0, false, {
                         fileName: "[project]/components/user/user-offers-page.tsx",
-                        lineNumber: 341,
+                        lineNumber: 387,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/user/user-offers-page.tsx",
-                lineNumber: 337,
+                lineNumber: 383,
                 columnNumber: 9
             }, this),
             getFilteredOffers().length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$15$2e$5$2e$3_react$2d$dom$40$19$2e$1$2e$0_react$40$19$2e$1$2e$0_$5f$react$40$19$2e$1$2e$0$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2713,22 +2759,22 @@ function UserOffersPage() {
                     children: "Load More Offers"
                 }, void 0, false, {
                     fileName: "[project]/components/user/user-offers-page.tsx",
-                    lineNumber: 350,
+                    lineNumber: 396,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/user/user-offers-page.tsx",
-                lineNumber: 349,
+                lineNumber: 395,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/components/user/user-offers-page.tsx",
-        lineNumber: 244,
+        lineNumber: 290,
         columnNumber: 5
     }, this);
 }
-_s(UserOffersPage, "7fEBpBHCtw99pp9NzgUEz6A6RZA=");
+_s(UserOffersPage, "Jydf8YdYeJT2gLkYlrcZkxvwSVI=");
 _c = UserOffersPage;
 var _c;
 __turbopack_context__.k.register(_c, "UserOffersPage");

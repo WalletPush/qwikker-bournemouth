@@ -218,6 +218,38 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
               </div>
             )}
 
+            {/* Secret Menu Items */}
+            {business.secret_menu_items && business.secret_menu_items.length > 0 && (
+              <div>
+                <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Secret Menu Items ({business.secret_menu_items.length})
+                </h4>
+                <div className="space-y-2">
+                  {business.secret_menu_items.map((item, index) => (
+                    <div key={index} className="bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-700/30 rounded-lg p-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-white font-medium">{item.itemName}</p>
+                          {item.description && (
+                            <p className="text-slate-300 text-sm mt-1">{item.description}</p>
+                          )}
+                          <p className="text-slate-400 text-xs mt-2">
+                            Added: {new Date(item.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        {item.price && (
+                          <span className="text-purple-400 font-semibold ml-3">{item.price}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Billing & Subscription Details */}
             {business.subscription && (
               <div>

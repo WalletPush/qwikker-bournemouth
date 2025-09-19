@@ -29,6 +29,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         business_images,
         offer_name,
         offer_type,
+        additional_notes,
         updated_at,
         created_at
       `)
@@ -68,6 +69,30 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
     // Transform data into CRM format
     const crmData: BusinessCRMData[] = businesses.map(business => {
       const pendingChangesCount = pendingChangesByBusiness.get(business.id) || 0
+
+      // Parse secret menu items from additional_notes
+      let secretMenuItems: Array<{
+        itemName: string
+        description?: string
+        price?: string
+        created_at: string
+      }> | null = null
+
+      if (business.additional_notes) {
+        try {
+          const notes = JSON.parse(business.additional_notes)
+          if (notes.secret_menu_items && Array.isArray(notes.secret_menu_items)) {
+            secretMenuItems = notes.secret_menu_items.map((item: any) => ({
+              itemName: item.itemName || item.name || 'Unnamed Item',
+              description: item.description || '',
+              price: item.price || '',
+              created_at: item.created_at || new Date().toISOString()
+            }))
+          }
+        } catch (e) {
+          console.error(`Error parsing additional_notes for business ${business.business_name}:`, e)
+        }
+      }
 
       // For now, default trial values (billing system not implemented yet)
       let trial_days_remaining: number | null = null
@@ -112,6 +137,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         business_images: business.business_images as string[] | null,
         offer_name: business.offer_name,
         offer_type: business.offer_type,
+        secret_menu_items: secretMenuItems,
         
         trial_days_remaining,
         trial_status,

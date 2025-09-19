@@ -65,6 +65,7 @@ export default async function AdminPage() {
       menu_url,
       business_images,
       menu_preview,
+      additional_notes,
       status,
       created_at,
       updated_at

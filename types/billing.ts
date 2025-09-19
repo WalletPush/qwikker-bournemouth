@@ -124,6 +124,12 @@ export interface BusinessCRMData {
   business_images: string[] | null
   offer_name: string | null
   offer_type: string | null
+  secret_menu_items: Array<{
+    itemName: string
+    description?: string
+    price?: string
+    created_at: string
+  }> | null
   
   // Trial calculations
   trial_days_remaining: number | null

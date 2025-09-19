@@ -5,11 +5,47 @@ import { Button } from '@/components/ui/button'
 import { mockBusinesses, enhancedSecretMenus, mockUserProfile } from '@/lib/mock-data/user-mock-data'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { SecretUnlockModal } from '@/components/ui/secret-unlock-modal'
+import { useElegantModal } from '@/components/ui/elegant-modal'
 
-export function UserSecretMenuPage() {
+interface RealSecretMenu {
+  businessId: string
+  businessName: string
+  businessCategory: string
+  businessAddress?: string
+  businessPhone?: string
+  businessImage?: string
+  items: Array<{
+    name: string
+    description: string
+    price?: string
+    hint: string
+    rarity: number
+    pointsReward: number
+    unlockMethods: Array<{
+      type: string
+      cost?: number
+      description: string
+    }>
+    isReal: boolean
+  }>
+}
+
+interface UserSecretMenuPageProps {
+  realSecretMenus?: RealSecretMenu[]
+}
+
+export function UserSecretMenuPage({ realSecretMenus = [] }: UserSecretMenuPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [unlockedItems, setUnlockedItems] = useState<Set<string>>(new Set())
+  const [secretModal, setSecretModal] = useState<{
+    isOpen: boolean
+    item: any
+    business: any
+  }>({ isOpen: false, item: null, business: null })
+  
+  const { showSuccess, ModalComponent } = useElegantModal()
 
   // Load from localStorage after component mounts to avoid hydration mismatch
   useEffect(() => {
@@ -30,14 +66,25 @@ export function UserSecretMenuPage() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Get unique categories from businesses with secret menus
+  // Combine real and mock secret menus
+  const allSecretMenus = [...realSecretMenus, ...enhancedSecretMenus]
+  
+  // Get unique categories from all businesses with secret menus
   const businessesWithSecrets = mockBusinesses.filter(b => b.hasSecretMenu)
-  const categories = ['all', ...Array.from(new Set(businessesWithSecrets.map(b => b.category)))]
+  const realCategories = realSecretMenus.map(menu => menu.businessCategory)
+  const allCategories = [...businessesWithSecrets.map(b => b.category), ...realCategories]
+  const categories = ['all', ...Array.from(new Set(allCategories))]
+
+  // Calculate counts including real secret menu items
+  const totalSecretItems = allSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)
+  const legendaryCount = mockUserProfile.plan === 'spotlight' 
+    ? allSecretMenus.reduce((acc, menu) => acc + menu.items.filter(item => (item.rarity || 0) >= 5).length, 0) 
+    : 0
 
   const filters = [
-    { id: 'all', label: 'All Secrets', count: enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0) },
+    { id: 'all', label: 'All Secrets', count: totalSecretItems },
     { id: 'unlocked', label: 'My Unlocked', count: Array.from(unlockedItems).length },
-    { id: 'legendary', label: 'Legendary Items', count: mockUserProfile.plan === 'spotlight' ? enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.filter(item => (item.rarity || 0) >= 5).length, 0) : 0 },
+    { id: 'legendary', label: 'Legendary Items', count: legendaryCount },
   ]
 
   // Classy badge popup function
@@ -106,19 +153,34 @@ export function UserSecretMenuPage() {
   }
 
   const getFilteredSecretMenus = () => {
-    let filtered = enhancedSecretMenus
+    let filtered = allSecretMenus
 
     // Filter by category
     if (selectedCategory !== 'all') {
-      const businessIds = mockBusinesses
-        .filter(b => b.category === selectedCategory)
-        .map(b => b.id)
-      filtered = filtered.filter(menu => businessIds.includes(menu.businessId))
+      // For real menus, filter by businessCategory
+      // For mock menus, filter by business category
+      filtered = filtered.filter(menu => {
+        // Check if it's a real menu (has businessCategory) or mock menu
+        if ('businessCategory' in menu) {
+          return menu.businessCategory === selectedCategory
+        } else {
+          // For mock menus, find the business and check its category
+          const business = mockBusinesses.find(b => b.id === menu.businessId)
+          return business?.category === selectedCategory
+        }
+      })
     }
 
     // Filter by type
     if (selectedFilter === 'unlocked') {
-      // Show only unlocked items
+      // Show only unlocked items - filter items within each menu
+      filtered = filtered.map(menu => ({
+        ...menu,
+        items: menu.items.filter(item => {
+          const itemKey = `${menu.businessId}-${item.name}`
+          return unlockedItems.has(itemKey)
+        })
+      })).filter(menu => menu.items.length > 0)
     } else if (selectedFilter === 'legendary') {
       // Only Spotlight subscribers can see legendary items
       if (mockUserProfile.plan === 'spotlight') {
@@ -146,6 +208,9 @@ export function UserSecretMenuPage() {
     const canUnlock = !requiredBadge || userBadges.includes(requiredBadge)
     const isLocked = !canUnlock && !isUnlocked
     
+    // Determine if this is a real business item
+    const isRealItem = item.isReal || false
+    
     return (
       <Card 
         className={`relative overflow-hidden transition-all duration-500 hover:scale-105 cursor-pointer ${
@@ -157,42 +222,10 @@ export function UserSecretMenuPage() {
         } ${showSecrets ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
         onClick={() => {
           if (!isLocked) {
-            // Show smart popup instead of full screen
-            const popup = document.createElement('div')
-            popup.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4'
-            popup.innerHTML = `
-              <div class="bg-slate-800 rounded-xl p-6 max-w-md w-full border border-slate-700 shadow-2xl">
-                <div class="text-center space-y-4">
-                  <h3 class="text-xl font-bold text-slate-100">${item.name}</h3>
-                  <p class="text-slate-300">${item.description}</p>
-                  <div class="bg-slate-700/50 rounded-lg p-4">
-                    <h4 class="text-slate-100 font-semibold mb-2">How to order:</h4>
-                    <p class="text-slate-300 text-sm">Simply ask your server for "${item.name}" or show them this screen!</p>
-                  </div>
-                  <div class="flex gap-3">
-                    <button onclick="window.open('https://maps.google.com/search/${business?.name} ${business?.address}', '_blank')" 
-                            class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">
-                      Get Directions
-                    </button>
-                    <button onclick="window.open('tel:${business?.phone}', '_blank')" 
-                            class="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold">
-                      Call Now
-                    </button>
-                  </div>
-                  <button onclick="this.parentElement.parentElement.parentElement.remove()" 
-                          class="text-slate-400 hover:text-slate-300 text-sm">
-                    Close
-                  </button>
-                </div>
-              </div>
-            `
-            document.body.appendChild(popup)
-            
-            // Close on backdrop click
-            popup.addEventListener('click', (e) => {
-              if (e.target === popup) {
-                popup.remove()
-              }
+            setSecretModal({
+              isOpen: true,
+              item,
+              business
             })
           }
         }}
@@ -294,7 +327,10 @@ export function UserSecretMenuPage() {
                 onClick={(e) => {
                   e.stopPropagation()
                   unlockSecretItem(menu.businessId, item.name)
-                  alert(`"${item.name}" unlocked! Click the card to see how to order it.`)
+                  showSuccess(
+                    'Secret Unlocked!',
+                    `"${item.name}" has been added to your collection. Click the card to see how to order it.`
+                  )
                 }}
                 className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold shadow-lg"
               >
@@ -358,7 +394,7 @@ export function UserSecretMenuPage() {
             <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
-            <p className="text-2xl font-bold text-purple-400">{enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)}</p>
+            <p className="text-2xl font-bold text-purple-400">{totalSecretItems}</p>
           </div>
           <p className="text-sm text-slate-400">Secret Items</p>
         </Card>
@@ -376,7 +412,7 @@ export function UserSecretMenuPage() {
             <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
             </svg>
-            <p className="text-2xl font-bold text-yellow-400">{businessesWithSecrets.length}</p>
+            <p className="text-2xl font-bold text-yellow-400">{allSecretMenus.length}</p>
           </div>
           <p className="text-sm text-slate-400">Secret Venues</p>
         </Card>
@@ -386,7 +422,7 @@ export function UserSecretMenuPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-2xl font-bold text-emerald-400">
-              {Array.from(unlockedItems).length} / {enhancedSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)}
+              {Array.from(unlockedItems).length} / {totalSecretItems}
             </p>
           </div>
           <p className="text-sm text-slate-400">Secrets Unlocked</p>
@@ -431,11 +467,22 @@ export function UserSecretMenuPage() {
       {/* Secret Menu Items Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {getFilteredSecretMenus().map((menu) => {
-          const business = mockBusinesses.find(b => b.id === menu.businessId)
+          // For real menus, create business object from menu data
+          // For mock menus, find in mockBusinesses
+          const business = 'businessCategory' in menu 
+            ? {
+                id: menu.businessId,
+                name: menu.businessName,
+                category: menu.businessCategory,
+                address: menu.businessAddress,
+                phone: menu.businessPhone,
+                image: menu.businessImage
+              }
+            : mockBusinesses.find(b => b.id === menu.businessId)
           
           return menu.items.map((item: any, index: number) => (
             <SecretMenuItem 
-              key={`${menu.id}-${index}`} 
+              key={`${menu.businessId}-${item.name}-${index}`} 
               menu={menu} 
               item={item} 
               business={business}
@@ -480,6 +527,16 @@ export function UserSecretMenuPage() {
           </div>
         </div>
       </Card>
+
+      {/* Elegant Modals */}
+      <ModalComponent />
+      
+      <SecretUnlockModal
+        isOpen={secretModal.isOpen}
+        onClose={() => setSecretModal({ isOpen: false, item: null, business: null })}
+        item={secretModal.item || { name: '', description: '' }}
+        business={secretModal.business || { name: '', address: '', phone: '' }}
+      />
     </div>
   )
 }
