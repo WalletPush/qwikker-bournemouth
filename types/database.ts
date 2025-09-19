@@ -21,6 +21,7 @@ export type Database = {
           business_category: string | null
           business_description: string | null
           business_hours: string | null
+          business_hours_structured: Json | null
           business_images: Json | null
           business_name: string | null
           business_postcode: string | null
@@ -67,6 +68,7 @@ export type Database = {
           business_category?: string | null
           business_description?: string | null
           business_hours?: string | null
+          business_hours_structured?: Json | null
           business_images?: Json | null
           business_name?: string | null
           business_postcode?: string | null
@@ -113,6 +115,7 @@ export type Database = {
           business_category?: string | null
           business_description?: string | null
           business_hours?: string | null
+          business_hours_structured?: Json | null
           business_images?: Json | null
           business_name?: string | null
           business_postcode?: string | null

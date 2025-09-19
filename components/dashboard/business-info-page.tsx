@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { updateBusinessInfo } from '@/lib/actions/business-actions'
 import { Profile, BUSINESS_TYPE_OPTIONS, BUSINESS_TOWN_OPTIONS, MenuPreviewItem } from '@/types/profiles'
+import { BusinessHoursInput } from '@/components/business-hours-input'
+import { BusinessHoursStructured } from '@/types/business-hours'
 
 interface BusinessInfoPageProps {
   profile: Profile
@@ -38,6 +40,11 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
     facebook_url: profile.facebook_url || '',
   })
 
+  const [businessHours, setBusinessHours] = useState<BusinessHoursStructured | null>(
+    // Try to parse existing structured hours, fallback to null for new input
+    profile.business_hours_structured as BusinessHoursStructured || null
+  )
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -67,10 +74,11 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
     setMessage(null)
 
     try {
-      // Include menu items in the form data
+      // Include menu items and structured business hours in the form data
       const dataWithMenuItems = {
         ...formData,
-        menu_preview: menuItems.filter(item => item.name && item.price) // Only include completed items
+        menu_preview: menuItems.filter(item => item.name && item.price), // Only include completed items
+        business_hours_structured: businessHours
       }
       const result = await updateBusinessInfo(profile.user_id, dataWithMenuItems)
       
@@ -176,17 +184,10 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="business_hours" className="text-white">Business Hours <span className="text-red-500">*</span></Label>
-              <Input
-                id="business_hours"
-                value={formData.business_hours}
-                onChange={(e) => handleInputChange('business_hours', e.target.value)}
-                className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
-                placeholder="Mon-Fri 9AM-5PM, Sat-Sun 10AM-4PM"
-              />
-              <p className="text-xs text-gray-400 mt-1">Required for customers to know when you're open</p>
-            </div>
+            <BusinessHoursInput
+              value={businessHours}
+              onChange={setBusinessHours}
+            />
             
             <div>
               <Label htmlFor="business_tagline" className="text-white">Business Tagline <span className="text-red-500">*</span></Label>
