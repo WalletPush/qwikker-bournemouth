@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { LogoutButton } from '@/components/logout-button'
 import { BusinessTypeIcon } from '@/lib/utils/business-icons'
@@ -33,10 +34,28 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ businesses, adminEmail }: AdminDashboardProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const [businessList, setBusinessList] = useState(businesses)
-  const [activeTab, setActiveTab] = useState<'pending' | 'live' | 'changes'>('pending')
+  
+  // Get initial tab from URL or default to 'pending'
+  const [activeTab, setActiveTab] = useState<'pending' | 'live' | 'changes'>(() => {
+    const urlTab = searchParams.get('tab')
+    const validTabs = ['pending', 'live', 'changes']
+    return validTabs.includes(urlTab || '') ? (urlTab as any) : 'pending'
+  })
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  
+  // Function to update tab and URL
+  const updateActiveTab = (newTab: 'pending' | 'live' | 'changes') => {
+    setActiveTab(newTab)
+    // Update URL without page refresh
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', newTab)
+    router.replace(url.pathname + url.search, { scroll: false })
+  }
 
   const handleApproval = async (businessId: string, action: 'approve' | 'reject') => {
     setIsLoading(businessId)
@@ -329,7 +348,7 @@ export function AdminDashboard({ businesses, adminEmail }: AdminDashboardProps) 
           {adminNavItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id as 'pending' | 'live' | 'changes')}
+              onClick={() => updateActiveTab(item.id as 'pending' | 'live' | 'changes')}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left group ${
                 activeTab === item.id
                   ? 'bg-gradient-to-r from-emerald-600/20 to-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10'

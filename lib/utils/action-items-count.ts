@@ -9,15 +9,14 @@ export function calculateActionItemsCount(profile: any): number {
 
   // REQUIRED fields for user dashboard listing
   if (!profile.business_name) count++
-  if (!profile.business_hours) count++
+  if (!profile.business_hours && !profile.business_hours_structured) count++ // Check both old and new hours format
   if (!profile.business_description) count++
   if (!profile.business_tagline) count++
   if (!profile.business_address || !profile.business_town) count++
   if (!profile.business_category) count++
   if (!profile.logo) count++
   if (!profile.business_images || (Array.isArray(profile.business_images) && profile.business_images.length === 0)) count++
-  if (!profile.menu_url) count++ // Full menu upload (for AI)
-  if (!profile.menu_preview || (Array.isArray(profile.menu_preview) && profile.menu_preview.length === 0)) count++ // Featured items (for display)
+  // Note: menu_url and menu_preview are now OPTIONAL for universal business types
 
   return count
 }

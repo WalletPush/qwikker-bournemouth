@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { AdminLogoutButton } from '@/components/admin-logout-button'
 import AdminInspectionModal from './admin-inspection-modal'
@@ -53,7 +54,15 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisplayName, pendingChangesCount, pendingChanges }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts'>('pending')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
+  // Get initial tab from URL or default to 'pending'
+  const [activeTab, setActiveTab] = useState<'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts'>(() => {
+    const urlTab = searchParams.get('tab')
+    const validTabs = ['pending', 'updates', 'live', 'incomplete', 'rejected', 'knowledge', 'analytics', 'contacts']
+    return validTabs.includes(urlTab || '') ? (urlTab as any) : 'pending'
+  })
   const [businessList, setBusinessList] = useState<Business[]>(businesses)
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const [inspectionModal, setInspectionModal] = useState<{ open: boolean; business: Business | null }>({ open: false, business: null })
@@ -67,6 +76,15 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [filterTier, setFilterTier] = useState('all')
   
   const { showSuccess, showError, showConfirm, ModalComponent } = useElegantModal()
+  
+  // Function to update tab and URL
+  const updateActiveTab = (newTab: 'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts') => {
+    setActiveTab(newTab)
+    // Update URL without page refresh
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', newTab)
+    router.replace(url.pathname + url.search, { scroll: false })
+  }
 
 
   // 🔍 FILTER FUNCTION
@@ -137,7 +155,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
         ))
         
         if (action === 'approve') {
-          setActiveTab('live')
+          updateActiveTab('live')
         }
         
         showSuccess(
@@ -181,7 +199,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
             : business
         ))
         
-        setActiveTab('pending')
+        updateActiveTab('pending')
         showSuccess(
           'Business Restored!', 
           'Business has been successfully restored to pending review status.'
@@ -600,19 +618,20 @@ Qwikker Admin Team`
     if (!business.business_description) missingFields.push('Business Description') 
     else providedFields.push('Business Description')
     
-    if (!business.business_hours) missingFields.push('Opening Hours')
+    if (!business.business_hours && !business.business_hours_structured) missingFields.push('Opening Hours')
     else providedFields.push('Opening Hours')
     
     if (!business.logo) missingFields.push('Business Logo')
     else providedFields.push('Business Logo')
     
-    if (!business.menu_url) missingFields.push('Menu/Price List')
-    else providedFields.push('Menu/Price List')
-    
     if (!business.business_images || business.business_images.length === 0) missingFields.push('Business Photos')
     else providedFields.push('Business Photos')
     
-    if (!business.offer_name) missingFields.push('First Offer')
+    // Optional fields (moved from required)
+    if (!business.menu_url) missingFields.push('Services/Menu (Optional)')
+    else providedFields.push('Services/Menu')
+    
+    if (!business.offer_name) missingFields.push('First Offer (Optional)')
     else providedFields.push('First Offer')
     
     const totalFields = providedFields.length + missingFields.length
@@ -816,7 +835,7 @@ Qwikker Admin Team`
               {adminNavItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id as any)}
+                  onClick={() => updateActiveTab(item.id as any)}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                     activeTab === item.id
                       ? 'bg-gradient-to-r from-[#00d083]/20 to-[#00b86f]/20 border border-[#00d083]/30 text-[#00d083]'

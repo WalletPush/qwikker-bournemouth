@@ -44,12 +44,112 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
     // Try to parse existing structured hours, fallback to null for new input
     profile.business_hours_structured as BusinessHoursStructured || null
   )
+  
+  // Individual section loading states
+  const [isSavingHours, setIsSavingHours] = useState(false)
+  const [isSavingBasicInfo, setIsSavingBasicInfo] = useState(false)
+  const [isSavingMenuItems, setIsSavingMenuItems] = useState(false)
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
+  }
+
+  // Individual save functions
+  const saveBusinessHours = async (hours: BusinessHoursStructured) => {
+    setIsSavingHours(true)
+    try {
+      const result = await updateBusinessInfo(profile.user_id, {
+        business_hours_structured: hours
+      })
+      
+      if (result.success) {
+        setMessage({
+          type: 'success',
+          text: 'Business hours saved successfully!'
+        })
+        setBusinessHours(hours)
+        router.refresh()
+      } else {
+        throw new Error(result.error || 'Failed to save business hours')
+      }
+    } catch (error) {
+      console.error('Business hours save error:', error)
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to save business hours'
+      })
+    } finally {
+      setIsSavingHours(false)
+    }
+  }
+
+  const saveBasicInfo = async () => {
+    setIsSavingBasicInfo(true)
+    try {
+      const basicInfoData = {
+        business_name: formData.business_name,
+        business_type: formData.business_type,
+        business_category: formData.business_category,
+        business_address: formData.business_address,
+        business_town: formData.business_town,
+        business_postcode: formData.business_postcode,
+        business_tagline: formData.business_tagline,
+        business_description: formData.business_description,
+        website_url: formData.website_url,
+        instagram_handle: formData.instagram_handle,
+        facebook_url: formData.facebook_url,
+      }
+      
+      const result = await updateBusinessInfo(profile.user_id, basicInfoData)
+      
+      if (result.success) {
+        setMessage({
+          type: 'success',
+          text: 'Business information saved successfully!'
+        })
+        router.refresh()
+      } else {
+        throw new Error(result.error || 'Failed to save business information')
+      }
+    } catch (error) {
+      console.error('Basic info save error:', error)
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to save business information'
+      })
+    } finally {
+      setIsSavingBasicInfo(false)
+    }
+  }
+
+  const saveMenuItems = async () => {
+    setIsSavingMenuItems(true)
+    try {
+      const result = await updateBusinessInfo(profile.user_id, {
+        menu_preview: menuItems.filter(item => item.name && item.price)
+      })
+      
+      if (result.success) {
+        setMessage({
+          type: 'success',
+          text: 'Featured services/items saved successfully!'
+        })
+        router.refresh()
+      } else {
+        throw new Error(result.error || 'Failed to save featured services/items')
+      }
+    } catch (error) {
+      console.error('Menu items save error:', error)
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to save featured services/items'
+      })
+    } finally {
+      setIsSavingMenuItems(false)
+    }
   }
 
   const addMenuItem = () => {
@@ -170,6 +270,32 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
                 placeholder="e.g., Fine Dining, Coffee Shop, Hair Salon"
               />
             </div>
+            
+            {/* Save Button for Basic Info */}
+            <div className="flex justify-end pt-4 border-t border-slate-600">
+              <Button
+                type="button"
+                onClick={saveBasicInfo}
+                disabled={isSavingBasicInfo}
+                className="bg-[#00d083] hover:bg-[#00b86f] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingBasicInfo ? (
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Saving...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Save Business Details
+                  </div>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -187,6 +313,8 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
             <BusinessHoursInput
               value={businessHours}
               onChange={setBusinessHours}
+              onSave={saveBusinessHours}
+              isSaving={isSavingHours}
             />
             
             <div>
@@ -419,6 +547,32 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
               <p className="text-blue-200 text-xs">
                 Choose your most popular or signature items. These will appear on your business card and help customers discover what you're famous for.
               </p>
+            </div>
+            
+            {/* Save Button for Menu Items */}
+            <div className="flex justify-end pt-4 border-t border-slate-600">
+              <Button
+                type="button"
+                onClick={saveMenuItems}
+                disabled={isSavingMenuItems}
+                className="bg-[#00d083] hover:bg-[#00b86f] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingMenuItems ? (
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Saving...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Save Featured Items
+                  </div>
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
