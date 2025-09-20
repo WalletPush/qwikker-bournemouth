@@ -184,7 +184,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   if (!profile?.logo) {
     requiredTodos.push({ 
       title: 'Upload your business logo', 
-      href: '/dashboard/files',
+      href: '/dashboard/files#logo',
       priority: 'REQUIRED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,7 +198,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   if (!profile?.business_images || (Array.isArray(profile.business_images) && profile.business_images.length === 0)) {
     requiredTodos.push({ 
       title: 'Upload business photo', 
-      href: '/dashboard/files',
+      href: '/dashboard/files#business-images',
       priority: 'REQUIRED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,7 +212,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   if (!profile?.menu_url) {
     optionalTodos.push({ 
       title: 'Upload full menu/service list (PDF)', 
-      href: '/dashboard/files',
+      href: '/dashboard/files#menu',
       priority: 'RECOMMENDED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

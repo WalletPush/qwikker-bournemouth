@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
-import { updateProfileFile, uploadToCloudinary } from '@/lib/actions/file-actions'
+import { updateProfileFile } from '@/lib/actions/file-actions'
+import { uploadToCloudinary } from '@/lib/integrations'
 
 interface FilesPageProps {
   profile?: any
@@ -14,6 +15,29 @@ export function FilesPage({ profile }: FilesPageProps) {
   const router = useRouter()
   const [uploading, setUploading] = useState<string | null>(null)
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+
+  // Scroll to specific section if hash is present in URL
+  useEffect(() => {
+    const hash = window.location.hash.substring(1) // Remove the # symbol
+    if (hash) {
+      // Small delay to ensure the page has rendered
+      setTimeout(() => {
+        const element = document.getElementById(hash)
+        if (element) {
+          element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          })
+          // Add a subtle highlight effect
+          element.style.boxShadow = '0 0 0 3px rgba(0, 208, 131, 0.3)'
+          setTimeout(() => {
+            element.style.boxShadow = ''
+          }, 2000)
+        }
+      }, 100)
+    }
+  }, [])
 
   const handleFileUpload = async (file: File, type: 'logo' | 'menu' | 'offer' | 'business_images') => {
     if (!file) return
@@ -116,7 +140,7 @@ export function FilesPage({ profile }: FilesPageProps) {
       )}
 
       {/* Business Logo */}
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card id="logo" className="bg-slate-800/50 border-slate-700">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,7 +210,7 @@ export function FilesPage({ profile }: FilesPageProps) {
       </Card>
 
       {/* Menu/Price List */}
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card id="menu" className="bg-slate-800/50 border-slate-700">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,7 +362,7 @@ export function FilesPage({ profile }: FilesPageProps) {
       </Card>
 
       {/* Business Photos */}
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card id="business-images" className="bg-slate-800/50 border-slate-700">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">

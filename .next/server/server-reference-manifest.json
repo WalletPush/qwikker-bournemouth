@@ -89,20 +89,35 @@
       "filename": "lib/actions/file-actions.ts",
       "exportedName": "updateProfileFile"
     },
-    "60c456b3dbf38208703f752f054201b3962b0bcf4c": {
+    "6072039bfb74c90e0e325d06b5340a76745607c250": {
       "workers": {
-        "app/dashboard/files/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+        "app/dashboard/offers/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/offers/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "uploadToCloudinary",
-          "filename": "lib/actions/file-actions.ts"
+          "exportedName": "createOffer",
+          "filename": "lib/actions/business-actions.ts"
         }
       },
       "layer": {
-        "app/dashboard/files/page": "action-browser"
+        "app/dashboard/offers/page": "action-browser"
       },
-      "filename": "lib/actions/file-actions.ts",
-      "exportedName": "uploadToCloudinary"
+      "filename": "lib/actions/business-actions.ts",
+      "exportedName": "createOffer"
+    },
+    "4056ab8539146858e4d96a8db3e675641bce7c0dc7": {
+      "workers": {
+        "app/dashboard/offers/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/offers/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "deleteOffer",
+          "filename": "lib/actions/business-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/offers/page": "action-browser"
+      },
+      "filename": "lib/actions/business-actions.ts",
+      "exportedName": "deleteOffer"
     }
   },
   "edge": {},
