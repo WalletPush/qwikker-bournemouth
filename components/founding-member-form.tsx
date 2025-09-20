@@ -581,7 +581,7 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
                         <div className="text-gray-400">
                           <div className="text-2xl mb-2">IMG</div>
                           <div className="font-medium">Upload your logo</div>
-                          <div className="text-sm mt-1">PNG, JPG, SVG up to 5MB</div>
+                          <div className="text-sm mt-1">PNG, JPG, SVG up to 10MB</div>
                         </div>
                       </div>
                       <input

@@ -103,7 +103,7 @@ export function DashboardFileManager({ userId, currentFiles }: FileManagerProps)
               }}
             />
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              PNG, JPG, SVG up to 5MB. Will be optimized and served via CDN.
+              PNG, JPG, SVG up to 10MB. Will be optimized and served via CDN.
             </p>
           </div>
         </CardContent>
