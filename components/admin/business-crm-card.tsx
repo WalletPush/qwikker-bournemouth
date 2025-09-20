@@ -14,7 +14,7 @@ import {
   getSubscriptionStatusColor,
   calculateTrialStatus
 } from '@/types/billing'
-import { BusinessTypeIcon } from '@/lib/utils/business-icons'
+import { InitialAvatar } from '@/components/admin/initial-avatar'
 
 interface BusinessCRMCardProps {
   business: BusinessCRMData
@@ -111,19 +111,19 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
     )
   }
 
-  // Get header color based on business type
+  // Get header color based on business type - PROFESSIONAL COLORS
   const getHeaderColor = () => {
     const colors = {
-      'restaurant': 'from-orange-600/80 to-orange-700/80',
-      'cafe': 'from-amber-600/80 to-amber-700/80', 
-      'bar': 'from-purple-600/80 to-purple-700/80',
-      'salon': 'from-pink-600/80 to-pink-700/80',
-      'spa': 'from-green-600/80 to-green-700/80',
-      'gym': 'from-blue-600/80 to-blue-700/80',
-      'retail_shop': 'from-indigo-600/80 to-indigo-700/80',
-      'hotel': 'from-teal-600/80 to-teal-700/80',
-      'service_business': 'from-gray-600/80 to-gray-700/80',
-      'other': 'from-slate-600/80 to-slate-700/80'
+      'restaurant': 'from-slate-700/90 to-slate-800/90',
+      'cafe': 'from-slate-700/90 to-slate-800/90', 
+      'bar': 'from-slate-700/90 to-slate-800/90',
+      'salon': 'from-slate-700/90 to-slate-800/90',
+      'spa': 'from-slate-700/90 to-slate-800/90',
+      'gym': 'from-slate-700/90 to-slate-800/90',
+      'retail_shop': 'from-slate-700/90 to-slate-800/90',
+      'hotel': 'from-slate-700/90 to-slate-800/90',
+      'service_business': 'from-slate-700/90 to-slate-800/90',
+      'other': 'from-slate-700/90 to-slate-800/90'
     }
     return colors[business.business_type as keyof typeof colors] || colors['other']
   }
@@ -136,9 +136,9 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
           <div className="flex items-center gap-4">
             {/* Business Type Icon */}
             <div className="flex-shrink-0">
-              <BusinessTypeIcon 
-                businessType={business.business_type} 
-                className="w-14 h-14 p-3.5 rounded-lg bg-white/10 border-2 border-white/20 text-white flex items-center justify-center"
+              <InitialAvatar 
+                businessName={business.business_name} 
+                className="w-14 h-14 rounded-lg border-2 border-white/20 text-lg font-bold"
               />
             </div>
             

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { getReferralStats } from '@/lib/actions/referral-actions'
 import { submitBusinessForReview } from '@/lib/actions/business-actions'
 import { getPendingChanges } from '@/lib/actions/pending-changes'
+import { SuccessModal, ErrorModal } from '@/components/ui/success-modal'
 
 interface DashboardHomeProps {
   profile?: {
@@ -20,6 +21,29 @@ interface DashboardHomeProps {
 
 export function DashboardHome({ profile }: DashboardHomeProps) {
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(0)
+  // Modal states
+  const [successModal, setSuccessModal] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    buttonText?: string
+    onButtonClick?: () => void
+  }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  })
+  
+  const [errorModal, setErrorModal] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+  }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  })
+  
   const [showModal, setShowModal] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingChanges, setPendingChanges] = useState<any[]>([])
@@ -83,15 +107,30 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     try {
       const result = await submitBusinessForReview(profile.user_id)
       if (result.success) {
-        alert('Successfully submitted for review!\n\nYour business listing is now being reviewed by our team. You\'ll receive an email notification once it\'s approved and live on Qwikker!')
-        // Refresh the page to show updated status
-        window.location.reload()
+        setSuccessModal({
+          isOpen: true,
+          title: 'Successfully Submitted!',
+          message: 'Your business listing is now being reviewed by our team.\n\nYou\'ll receive an email notification once it\'s approved and live on Qwikker!',
+          buttonText: 'Continue',
+          onButtonClick: () => {
+            setSuccessModal({ isOpen: false, title: '', message: '' })
+            window.location.reload()
+          }
+        })
       } else {
-        alert('Failed to submit for review: ' + (result.error || 'Unknown error'))
+        setErrorModal({
+          isOpen: true,
+          title: 'Submission Failed',
+          message: result.error || 'Unknown error occurred. Please try again.'
+        })
       }
     } catch (error) {
       console.error('Submit error:', error)
-      alert('Failed to submit for review. Please try again.')
+      setErrorModal({
+        isOpen: true,
+        title: 'Submission Failed',
+        message: 'Failed to submit for review. Please try again.'
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -563,6 +602,43 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
           </Card>
         )}
 
+        {/* Profile Complete - Ready to Submit Banner */}
+        {isReadyForReview && currentStatus === 'incomplete' && (
+          <Card className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500/30 h-80 flex flex-col overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Profile Complete!
+                <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">100%</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col justify-center text-center">
+              <div className="space-y-4">
+                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+                  <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">Ready to Submit!</h3>
+                  <p className="text-green-100 text-sm leading-relaxed mb-6">
+                    Congratulations! You've completed all required fields. Your business profile is ready for admin review.
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleSubmitForReview}
+                  disabled={isSubmitting}
+                  className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold py-3 px-8"
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit for Review'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* To-Do Notifications Card */}
         {todoItems.length > 0 ? (
           <Card className="bg-slate-800/50 border-slate-700 h-80 flex flex-col overflow-hidden">
@@ -911,6 +987,24 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
           </div>
         </div>
       )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={() => setSuccessModal({ isOpen: false, title: '', message: '' })}
+        title={successModal.title}
+        message={successModal.message}
+        buttonText={successModal.buttonText}
+        onButtonClick={successModal.onButtonClick}
+      />
+
+      {/* Error Modal */}
+      <ErrorModal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ isOpen: false, title: '', message: '' })}
+        title={errorModal.title}
+        message={errorModal.message}
+      />
     </div>
   )
 }

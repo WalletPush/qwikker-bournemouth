@@ -118,6 +118,13 @@ export interface BusinessCRMData {
   approved_at: string | null
   admin_notes: string | null
   
+  // GHL sync tracking
+  last_ghl_sync: string | null
+  ghl_contact_id: string | null
+  
+  // Business assets
+  logo: string | null
+  
   // Subscription & billing
   subscription: BusinessSubscription | null
   tier: SubscriptionTier | null

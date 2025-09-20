@@ -18,66 +18,117 @@ export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu
     return { success: false, error: 'Profile not found' }
   }
 
-  // 🚨 NEW LOGIC: ALL FILES REQUIRE ADMIN APPROVAL
-  let changeData: any = {}
-  let changeType: string = ''
-  
-  switch (fileType) {
-    case 'logo':
-      changeType = 'logo'
-      changeData = { logo_url: fileUrl }
-      break
-    case 'menu':
-      changeType = 'menu_url'
-      changeData = { menu_url: fileUrl }
-      break
-    case 'offer':
-      changeType = 'offer'
-      changeData = { offer_image: fileUrl }
-      break
-    case 'business_images':
-      changeType = 'business_images'
-      // For business images, we'll store the new image URL to be added
-      changeData = { new_business_image: fileUrl }
-      break
-  }
+  // 🎯 CORRECT LOGIC: Different behavior based on business status
+  if (profile.status === 'incomplete' || profile.status === 'pending_review') {
+    // INCOMPLETE/PENDING BUSINESSES: Update profile directly (no admin approval needed)
+    let updateData: any = {}
+    
+    switch (fileType) {
+      case 'logo':
+        updateData = { logo: fileUrl }
+        break
+      case 'menu':
+        updateData = { menu_url: fileUrl }
+        break
+      case 'offer':
+        updateData = { offer_image: fileUrl }
+        break
+      case 'business_images':
+        // For business images, replace or add to existing images
+        const existingImages = profile.business_images || []
+        const newImages = Array.isArray(existingImages) 
+          ? [...existingImages, fileUrl] 
+          : [fileUrl]
+        updateData = { business_images: newImages }
+        break
+    }
 
-  // Create pending change record instead of updating profile directly
-  const { data: changeRecord, error: changeError } = await supabaseAdmin
-    .from('business_changes')
-    .insert({
-      business_id: profile.id,
-      change_type: changeType,
-      change_data: changeData,
-      status: 'pending'
-    })
-    .select()
-    .single()
+    // Update the business profile directly
+    const { error: updateError } = await supabaseAdmin
+      .from('business_profiles')
+      .update(updateData)
+      .eq('id', profile.id)
 
-  if (changeError) {
-    console.error('Error creating file change record:', changeError)
-    return { success: false, error: 'Failed to submit file for admin approval' }
-  }
+    if (updateError) {
+      console.error('Error updating business profile:', updateError)
+      return { success: false, error: 'Failed to update profile' }
+    }
 
-  // Revalidate the dashboard and files pages
-  revalidatePath('/dashboard')
-  revalidatePath('/dashboard/files')
+    // Revalidate the dashboard and files pages
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/files')
+    revalidatePath('/dashboard/action-items')
 
-  // Send Slack notification for ADMIN APPROVAL (not live file)
-  try {
-    await sendBusinessUpdateNotification(profile, 'file_pending_approval', {
-      fileType,
-      fileUrl,
-      changeId: changeRecord.id
-    })
-  } catch (error) {
-    console.error('Slack notification failed (non-critical):', error)
-  }
+    return { 
+      success: true, 
+      data: updateData,
+      message: `${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully!`
+    }
 
-  return { 
-    success: true, 
-    data: changeRecord,
-    message: `${fileType.charAt(0).toUpperCase() + fileType.slice(1)} submitted for admin approval. You will be notified once it is reviewed.`
+  } else if (profile.status === 'approved') {
+    // APPROVED BUSINESSES: Create pending change for admin approval
+    let changeData: any = {}
+    let changeType: string = ''
+    
+    switch (fileType) {
+      case 'logo':
+        changeType = 'logo'
+        changeData = { logo_url: fileUrl }
+        break
+      case 'menu':
+        changeType = 'menu_url'
+        changeData = { menu_url: fileUrl }
+        break
+      case 'offer':
+        changeType = 'offer'
+        changeData = { offer_image: fileUrl }
+        break
+      case 'business_images':
+        changeType = 'business_images'
+        changeData = { new_business_image: fileUrl }
+        break
+    }
+
+    // Create pending change record for admin approval
+    const { data: changeRecord, error: changeError } = await supabaseAdmin
+      .from('business_changes')
+      .insert({
+        business_id: profile.id,
+        change_type: changeType,
+        change_data: changeData,
+        status: 'pending'
+      })
+      .select()
+      .single()
+
+    if (changeError) {
+      console.error('Error creating file change record:', changeError)
+      return { success: false, error: 'Failed to submit file for admin approval' }
+    }
+
+    // Send Slack notification for ADMIN APPROVAL
+    try {
+      await sendBusinessUpdateNotification(profile, 'file_pending_approval', {
+        fileType,
+        fileUrl,
+        changeId: changeRecord.id
+      })
+    } catch (error) {
+      console.error('Slack notification failed (non-critical):', error)
+    }
+
+    // Revalidate the dashboard and files pages
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/files')
+
+    return { 
+      success: true, 
+      data: changeRecord,
+      message: `${fileType.charAt(0).toUpperCase() + fileType.slice(1)} submitted for admin approval. You will be notified once it is reviewed.`
+    }
+
+  } else {
+    return { success: false, error: 'Invalid business status for file upload' }
   }
 }
 

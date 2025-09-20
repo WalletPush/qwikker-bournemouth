@@ -18,6 +18,7 @@ interface Business {
   business_town?: string
   business_postcode?: string
   business_hours?: string
+  business_hours_structured?: any
   offer_name?: string
   offer_type?: string
   offer_value?: string
@@ -50,6 +51,13 @@ export default function AdminInspectionModal({
   isInspected,
   onMarkInspected,
 }: AdminInspectionModalProps) {
+  // Debug: Check early return conditions
+  console.log('🔍 Modal Early Return Check:', {
+    isOpen,
+    business: business ? 'EXISTS' : 'NULL/UNDEFINED',
+    willReturn: !isOpen || !business
+  })
+  
   if (!isOpen || !business) return null
 
   const formatDate = (dateString: string) => {
@@ -78,6 +86,16 @@ Qwikker Admin Team`
     window.open(`mailto:${business.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank')
   }
 
+  // Debug: Log the business data to see what's being passed
+  console.log('🔍 Admin Inspection Modal - Business data:', {
+    id: business?.id,
+    business_name: business?.business_name,
+    logo: business?.logo,
+    hasLogo: !!business?.logo,
+    logoTrimmed: business?.logo?.trim(),
+    logoCondition: business?.logo && business?.logo.trim() !== ''
+  })
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50">
       <div className="h-full w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden flex flex-col">
@@ -86,7 +104,7 @@ Qwikker Admin Team`
         <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 backdrop-blur-xl border-b border-slate-600/30 p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {business.logo ? (
+              {business.logo && business.logo.trim() !== '' ? (
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-700 flex-shrink-0 ring-2 ring-slate-600/50">
                   <Image
                     src={business.logo}
@@ -288,9 +306,25 @@ Qwikker Admin Team`
                     </div>
                     <div className="bg-orange-950/30 rounded-lg p-4">
                       <div className="text-orange-300 text-sm font-medium mb-2">Opening Hours</div>
-                      {business.business_hours ? (
+                      {business.business_hours || business.business_hours_structured ? (
                         <div className="bg-green-500/20 border border-green-500/30 rounded-lg px-3 py-2 text-green-300 font-medium">
-                          {business.business_hours}
+                          {business.business_hours || (
+                            business.business_hours_structured ? (
+                              <div className="space-y-1">
+                                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+                                  .filter(day => business.business_hours_structured[day]) // Only show days that exist
+                                  .map(day => {
+                                    const hours = business.business_hours_structured[day]
+                                    return (
+                                      <div key={day} className="flex justify-between text-sm">
+                                        <span className="capitalize">{day}:</span>
+                                        <span>{hours.closed ? 'Closed' : `${hours.open} - ${hours.close}`}</span>
+                                      </div>
+                                    )
+                                  })}
+                              </div>
+                            ) : 'Not provided'
+                          )}
                         </div>
                       ) : (
                         <div className="text-gray-400">Not provided</div>
@@ -309,7 +343,7 @@ Qwikker Admin Team`
                     <div className="flex items-center gap-3 mb-5">
                       <div className="w-10 h-10 bg-purple-500/30 rounded-xl flex items-center justify-center">
                         <svg className="w-5 h-5 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 713 12V7a4 4 0 714-4z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 01 3 12V7a4 4 0 01 4-4z" />
                         </svg>
                       </div>
                       <h3 className="text-xl font-bold text-purple-200">Special Offers</h3>
@@ -342,7 +376,7 @@ Qwikker Admin Team`
                     <div className="flex items-center gap-3 mb-5">
                       <div className="w-10 h-10 bg-gray-500/30 rounded-xl flex items-center justify-center">
                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 713 12V7a4 4 0 714-4z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 01 3 12V7a4 4 0 01 4-4z" />
                         </svg>
                       </div>
                       <h3 className="text-xl font-bold text-gray-300">Special Offers</h3>
@@ -358,7 +392,7 @@ Qwikker Admin Team`
                   <div className="flex items-center gap-3 mb-5">
                     <div className="w-10 h-10 bg-yellow-500/30 rounded-xl flex items-center justify-center">
                       <svg className="w-5 h-5 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 712-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01 2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
                     <h3 className="text-xl font-bold text-yellow-200">Menu</h3>
@@ -438,12 +472,53 @@ Qwikker Admin Team`
                   )
                 })()}
 
+                {/* Business Logo Card */}
+                <div className="bg-gradient-to-br from-blue-900/20 to-blue-800/20 rounded-2xl p-6 border border-blue-500/20">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 bg-blue-500/30 rounded-xl flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h4M9 7h6m-6 4h6m-6 4h6" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-blue-200">Business Logo</h3>
+                  </div>
+                  {business.logo && business.logo.trim() !== '' ? (
+                    <div className="flex justify-center">
+                      <div className="relative group">
+                        <div className="w-32 h-32 bg-blue-950/30 rounded-xl overflow-hidden border border-blue-500/20">
+                          <Image
+                            src={business.logo}
+                            alt={`${business.business_name} logo`}
+                            width={128}
+                            height={128}
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                        <button
+                          onClick={() => window.open(business.logo, '_blank')}
+                          className="absolute inset-0 bg-black/0 hover:bg-black/20 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        >
+                          <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="text-gray-500 text-lg">No logo provided</div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Business Photos Card */}
                 <div className="bg-gradient-to-br from-pink-900/20 to-pink-800/20 rounded-2xl p-6 border border-pink-500/20">
                   <div className="flex items-center gap-3 mb-5">
                     <div className="w-10 h-10 bg-pink-500/30 rounded-xl flex items-center justify-center">
                       <svg className="w-5 h-5 text-pink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 712.828 0L16 16m-2-2l1.586-1.586a2 2 0 712.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 01 2.828 0L16 16m-2-2l1.586-1.586a2 2 0 01 2.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </div>
                     <h3 className="text-xl font-bold text-pink-200">Business Photos</h3>

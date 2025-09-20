@@ -234,9 +234,12 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
       }
 
       // Send to franchise-specific GHL (server-side notifications handled in signup-actions.ts)
-      sendToGoHighLevel(externalData, result.profile?.city).catch(err => 
-        console.error('GHL webhook failed:', err)
-      )
+      sendToGoHighLevel(externalData, result.profile?.city).then(() => {
+        console.log('✅ GHL webhook successful for:', result.profile?.city)
+      }).catch(err => {
+        console.error('❌ GHL webhook failed for:', result.profile?.city, err)
+        // Don't block the user flow, but log the error
+      })
 
       // Redirect to success page with email for auto-fill
       router.push(`/onboarding/success?email=${encodeURIComponent(data.email)}`)
