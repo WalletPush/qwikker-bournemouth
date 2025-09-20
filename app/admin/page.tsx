@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { headers, cookies } from 'next/headers'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
@@ -34,8 +34,8 @@ export default async function AdminPage() {
     redirect('/admin/login')
   }
   
-  // Create Supabase client for data fetching
-  const supabase = await createClient()
+  // 🔥 ADMIN: Use admin client to see ALL businesses (bypasses RLS)
+  const supabase = createAdminClient()
   
   // Fetch business profiles for this city only
   const { data: allBusinesses, error: businessError } = await supabase
