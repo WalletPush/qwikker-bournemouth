@@ -122,7 +122,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.logo) {
     requiredTodos.push({ 
       title: 'Upload your business logo', 
-      href: '/dashboard/files',
+      href: '/dashboard/files#logo',
       priority: 'REQUIRED',
       description: 'Essential for branding and customer recognition.',
       icon: (
@@ -137,7 +137,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.business_images || (Array.isArray(profile.business_images) && profile.business_images.length === 0)) {
     requiredTodos.push({ 
       title: 'Upload business photo', 
-      href: '/dashboard/files',
+      href: '/dashboard/files#business-images',
       priority: 'REQUIRED',
       description: 'Required for the hero image on your business listing.',
       icon: (
@@ -169,7 +169,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.menu_url) {
     optionalTodos.push({ 
       title: 'Upload full menu/service list (PDF)', 
-      href: '/dashboard/files',
+      href: '/dashboard/files#menu',
       priority: 'RECOMMENDED',
       description: 'Critical for AI responses. Allows QWIKKER to recommend your business accurately.',
       icon: (

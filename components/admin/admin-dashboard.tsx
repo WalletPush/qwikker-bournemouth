@@ -896,10 +896,12 @@ Qwikker Admin Team`
               </p>
             </div>
 
-            {/* Sync Health Overview */}
-            <div className="mb-6">
-              <SyncHealthOverview />
-            </div>
+            {/* Sync Health Overview - Only show on contacts tab */}
+            {activeTab === 'contacts' && (
+              <div className="mb-6">
+                <SyncHealthOverview />
+              </div>
+            )}
 
             {/* 🔍 MINIMAL SEARCH */}
             {activeTab !== 'knowledge' && activeTab !== 'analytics' && activeTab !== 'contacts' && (
@@ -1191,6 +1193,22 @@ Qwikker Admin Team`
                                     <p><strong>Type:</strong> {change.change_data.offer_type}</p>
                                     <p><strong>Value:</strong> {change.change_data.offer_value}</p>
                                     {change.change_data.offer_terms && <p><strong>Terms:</strong> {change.change_data.offer_terms}</p>}
+                                    {change.change_data.offer_image && (
+                                      <div className="mt-3">
+                                        <p><strong>Offer Image:</strong></p>
+                                        <a 
+                                          href={change.change_data.offer_image} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-2 text-[#00d083] hover:text-[#00b86f] transition-colors"
+                                        >
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                          </svg>
+                                          View Offer Image
+                                        </a>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                                 {change.change_type === 'secret_menu' && (
@@ -1198,6 +1216,54 @@ Qwikker Admin Team`
                                     <p><strong>Item Name:</strong> {change.change_data.itemName}</p>
                                     {change.change_data.description && <p><strong>Description:</strong> {change.change_data.description}</p>}
                                     {change.change_data.price && <p><strong>Price:</strong> {change.change_data.price}</p>}
+                                  </div>
+                                )}
+                                {change.change_type === 'logo' && (
+                                  <div>
+                                    <p><strong>New Business Logo:</strong></p>
+                                    <a 
+                                      href={change.change_data.logo_url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 text-[#00d083] hover:text-[#00b86f] transition-colors"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                      </svg>
+                                      View New Logo
+                                    </a>
+                                  </div>
+                                )}
+                                {change.change_type === 'menu_url' && (
+                                  <div>
+                                    <p><strong>New Menu/Service List:</strong></p>
+                                    <a 
+                                      href={change.change_data.menu_url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 text-[#00d083] hover:text-[#00b86f] transition-colors"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                      </svg>
+                                      View Menu PDF
+                                    </a>
+                                  </div>
+                                )}
+                                {change.change_type === 'business_images' && (
+                                  <div>
+                                    <p><strong>New Business Photo:</strong></p>
+                                    <a 
+                                      href={change.change_data.new_business_image} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 text-[#00d083] hover:text-[#00b86f] transition-colors"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                      </svg>
+                                      View Business Photo
+                                    </a>
                                   </div>
                                 )}
                               </div>

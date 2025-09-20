@@ -85,14 +85,8 @@ export function OffersPage({ profile }: OffersPageProps) {
       // Upload image if provided
       let offerImageUrl = null
       if (offerImageFile) {
-        const { uploadToCloudinary } = await import('@/lib/actions/file-actions')
-        const uploadResult = await uploadToCloudinary(offerImageFile, 'offer')
-        
-        if (!uploadResult.success) {
-          throw new Error(uploadResult.error || 'Image upload failed')
-        }
-        
-        offerImageUrl = uploadResult.data?.secure_url || null
+        const { uploadToCloudinary } = await import('@/lib/integrations')
+        offerImageUrl = await uploadToCloudinary(offerImageFile, 'qwikker/offers')
       }
 
       const offerData = {

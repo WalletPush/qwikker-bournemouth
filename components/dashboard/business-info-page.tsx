@@ -456,12 +456,12 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
               <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
-              Featured Menu Items <span className="text-red-500">*</span>
+              Featured Services/Items
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-400 mb-4">
-              Add 3-5 of your most popular items. These will be displayed on your business card to attract customers.
+              <span className="text-green-400 font-medium">RECOMMENDED:</span> Add 3-5 of your most popular services/items. These will be displayed on your business card to attract customers.
             </p>
             
             {menuItems.map((item, index) => (
@@ -483,7 +483,7 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-white">Item Name <span className="text-red-500">*</span></Label>
+                    <Label className="text-white">Item Name</Label>
                     <Input
                       value={item.name}
                       onChange={(e) => updateMenuItem(index, 'name', e.target.value)}
@@ -493,7 +493,7 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
                     />
                   </div>
                   <div>
-                    <Label className="text-white">Price <span className="text-red-500">*</span></Label>
+                    <Label className="text-white">Price</Label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">£</span>
                       <Input
