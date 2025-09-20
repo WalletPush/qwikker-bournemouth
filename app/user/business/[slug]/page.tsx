@@ -2,6 +2,7 @@ import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserBusinessDetailPage } from '@/components/user/user-business-detail-page'
 import { createClient } from '@/lib/supabase/server'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
+import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 
 interface BusinessDetailPageProps {
   params: Promise<{
@@ -26,6 +27,7 @@ export default async function BusinessDetailPage({ params }: BusinessDetailPageP
       business_tagline,
       business_description,
       business_hours,
+      business_hours_structured,
       business_images,
       logo,
       offer_name,
@@ -64,7 +66,8 @@ export default async function BusinessDetailPage({ params }: BusinessDetailPageP
       address: business.business_address,
       tagline: business.business_tagline || '',
       description: business.business_description || '',
-      hours: business.business_hours || 'Hours not available',
+      hours: formatBusinessHours(business.business_hours, business.business_hours_structured), // For cards
+      fullSchedule: formatBusinessHours(business.business_hours, business.business_hours_structured, true), // For hero view
       images: business.business_images || ['/placeholder-business.jpg'],
       logo: business.logo || '/placeholder-logo.jpg',
       slug: business.business_name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || business.id,

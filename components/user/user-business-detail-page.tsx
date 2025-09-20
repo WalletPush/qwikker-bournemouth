@@ -294,7 +294,19 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses }: Us
                       </svg>
                       <div>
                         <p className="text-slate-100 font-medium">Hours</p>
-                        <p className="text-slate-400">{business.hours}</p>
+                        <div className="text-slate-400">
+                          {business.fullSchedule ? (
+                            <div className="space-y-1">
+                              {business.fullSchedule.split('\n').map((line: string, index: number) => (
+                                <div key={index} className="text-sm">
+                                  {line}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p>{business.hours}</p>
+                          )}
+                        </div>
                         {(() => {
                           const status = getBusinessStatusProps(business.hours)
                           return (

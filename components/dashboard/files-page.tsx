@@ -84,7 +84,7 @@ export function FilesPage({ profile }: FilesPageProps) {
       
       setUploadMessage({
         type: 'success',
-        text: `${type.charAt(0).toUpperCase() + type.slice(1)} uploaded successfully!`
+        text: result.message || `${type.charAt(0).toUpperCase() + type.slice(1)} submitted for admin approval!`
       })
 
       // Refresh the page to show updated profile
@@ -217,7 +217,7 @@ export function FilesPage({ profile }: FilesPageProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             Menu & Price List
-            <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full">HIGH PRIORITY</span>
+            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">RECOMMENDED</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -236,7 +236,7 @@ export function FilesPage({ profile }: FilesPageProps) {
                     </svg>
                     <p className="text-white font-medium">Menu/Price List Uploaded</p>
                   </div>
-                  <p className="text-green-400 text-sm">HIGH PRIORITY COMPLETE</p>
+                  <p className="text-green-400 text-sm">RECOMMENDED COMPLETE</p>
                 </div>
                 <div className="flex gap-2">
                   <Button 

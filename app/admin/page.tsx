@@ -58,6 +58,7 @@ export default async function AdminPage() {
       business_tagline,
       business_description,
       business_hours,
+      business_hours_structured,
       offer_name,
       offer_type,
       offer_value,

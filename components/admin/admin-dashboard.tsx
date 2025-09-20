@@ -11,7 +11,7 @@ import { useElegantModal } from '@/components/ui/elegant-modal'
 import { AdminAnalytics } from './admin-analytics'
 import { ContactsTab } from './contacts-tab'
 import { SyncHealthOverview } from './sync-health-overview'
-import { BusinessTypeIcon } from '@/lib/utils/business-icons'
+import { InitialAvatar } from '@/components/admin/initial-avatar'
 
 interface Business {
   id: string
@@ -351,9 +351,9 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       <div className="p-6">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-4">
-            <BusinessTypeIcon 
-              businessType={business.business_type} 
-              className="w-16 h-16 p-3 rounded-xl bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border-2 border-indigo-400/30 text-indigo-300 flex items-center justify-center"
+            <InitialAvatar 
+              businessName={business.business_name} 
+              className="w-16 h-16 rounded-xl border-2 border-indigo-400/30 text-lg font-bold"
             />
             
             <div className="flex-1">
@@ -656,9 +656,9 @@ Qwikker Admin Team`
           {/* Compact Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <BusinessTypeIcon 
-                businessType={business.business_type} 
-                className="w-12 h-12 p-2.5 rounded-lg bg-gradient-to-br from-orange-600/30 to-orange-700/30 border border-orange-400/40 text-orange-300 flex items-center justify-center"
+              <InitialAvatar 
+                businessName={business.business_name} 
+                className="w-12 h-12 rounded-lg border border-orange-400/40 text-sm font-bold"
               />
               <div>
                 <h3 className="text-lg font-bold text-white">
@@ -1059,34 +1059,36 @@ Qwikker Admin Team`
                           business={crmBusiness}
                           onApprove={handleApproval}
                           onInspect={(business) => {
-                            // Convert CRM data to legacy Business format for inspection modal
+                            // Find the original business data from allBusinesses to get complete info
+                            const originalBusiness = allBusinesses.find(b => b.id === business.id)
                             const legacyBusiness = {
                               id: business.id,
-                              user_id: '', // Not needed for inspection
+                              user_id: originalBusiness?.user_id || '',
                               business_name: business.business_name,
                               email: business.email,
-                              first_name: '', // Not available in CRM data
-                              last_name: '',
-                              business_type: '', // Not available in CRM data
+                              first_name: originalBusiness?.first_name || '',
+                              last_name: originalBusiness?.last_name || '',
+                              business_type: originalBusiness?.business_type || '',
                               business_category: business.business_category,
                               business_town: business.business_town,
                               business_address: business.business_address,
                               business_postcode: business.business_postcode,
                               phone: business.phone,
-                              logo: '', // Not available in CRM data
-                              business_tagline: '', // Not available in CRM data
-                              business_description: '', // Not available in CRM data
-                              business_hours: '', // Not available in CRM data
+                              logo: originalBusiness?.logo || '',
+                              business_tagline: originalBusiness?.business_tagline || '',
+                              business_description: originalBusiness?.business_description || '',
+                              business_hours: originalBusiness?.business_hours || '',
+                              business_hours_structured: originalBusiness?.business_hours_structured || null,
                               offer_name: business.offer_name || '',
                               offer_type: business.offer_type || '',
-                              offer_value: '', // Not available in CRM data
-                              offer_terms: '', // Not available in CRM data
+                              offer_value: originalBusiness?.offer_value || '',
+                              offer_terms: originalBusiness?.offer_terms || '',
                               menu_url: business.menu_url || '',
                               business_images: business.business_images || [],
-                              menu_preview: '', // Not available in CRM data
+                              menu_preview: originalBusiness?.menu_preview || '',
                               additional_notes: business.secret_menu_items ? JSON.stringify({ secret_menu_items: business.secret_menu_items }) : '',
                               status: business.status,
-                              created_at: '', // Not available in CRM data
+                              created_at: originalBusiness?.created_at || '',
                               updated_at: business.last_updated
                             }
                             setInspectionModal({ open: true, business: legacyBusiness })
@@ -1403,34 +1405,36 @@ Qwikker Admin Team`
                           business={crmBusiness}
                           onApprove={handleApproval}
                           onInspect={(business) => {
-                            // Convert CRM data to legacy Business format for inspection modal
+                            // Find the original business data from allBusinesses to get complete info
+                            const originalBusiness = allBusinesses.find(b => b.id === business.id)
                             const legacyBusiness = {
                               id: business.id,
-                              user_id: '',
+                              user_id: originalBusiness?.user_id || '',
                               business_name: business.business_name,
                               email: business.email,
-                              first_name: '',
-                              last_name: '',
-                              business_type: '',
+                              first_name: originalBusiness?.first_name || '',
+                              last_name: originalBusiness?.last_name || '',
+                              business_type: originalBusiness?.business_type || '',
                               business_category: business.business_category,
                               business_town: business.business_town,
                               business_address: business.business_address,
                               business_postcode: business.business_postcode,
                               phone: business.phone,
-                              logo: '',
-                              business_tagline: '',
-                              business_description: '',
-                              business_hours: '',
+                              logo: originalBusiness?.logo || '',
+                              business_tagline: originalBusiness?.business_tagline || '',
+                              business_description: originalBusiness?.business_description || '',
+                              business_hours: originalBusiness?.business_hours || '',
+                              business_hours_structured: originalBusiness?.business_hours_structured || null,
                               offer_name: business.offer_name || '',
                               offer_type: business.offer_type || '',
-                              offer_value: '',
-                              offer_terms: '',
+                              offer_value: originalBusiness?.offer_value || '',
+                              offer_terms: originalBusiness?.offer_terms || '',
                               menu_url: business.menu_url || '',
                               business_images: business.business_images || [],
-                              menu_preview: '',
+                              menu_preview: originalBusiness?.menu_preview || '',
                               additional_notes: business.secret_menu_items ? JSON.stringify({ secret_menu_items: business.secret_menu_items }) : '',
                               status: business.status,
-                              created_at: '',
+                              created_at: originalBusiness?.created_at || '',
                               updated_at: business.last_updated
                             }
                             setInspectionModal({ open: true, business: legacyBusiness })

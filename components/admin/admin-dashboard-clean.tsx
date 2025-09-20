@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { LogoutButton } from '@/components/logout-button'
-import { BusinessTypeIcon } from '@/lib/utils/business-icons'
+import { InitialAvatar } from '@/components/admin/initial-avatar'
 
 interface Business {
   id: string
@@ -179,9 +179,9 @@ export function AdminDashboard({ businesses, adminEmail }: AdminDashboardProps) 
       <div className="p-6">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-4">
-            <BusinessTypeIcon 
-              businessType={business.business_type} 
-              className="w-16 h-16 p-3 rounded-xl bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border-2 border-indigo-400/30 text-indigo-300 flex items-center justify-center"
+            <InitialAvatar 
+              businessName={business.business_name} 
+              className="w-16 h-16 rounded-xl border-2 border-indigo-400/30 text-lg font-bold"
             />
             <div>
               <h3 className="text-xl font-bold text-white mb-1">
