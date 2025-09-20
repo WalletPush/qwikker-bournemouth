@@ -600,43 +600,41 @@ Qwikker Admin Team`
 
   const renderIncompleteBusinessCard = (business: Business, expanded: boolean = false) => {
     // Calculate missing fields for completion tracking using REAL database field names
-    const missingFields = []
-    const providedFields = []
+    const missingRequiredFields = []
+    const providedRequiredFields = []
+    const optionalFields = []
 
     // Core business info (already have from onboarding)
-    if (business.business_name) providedFields.push('Business Name')
-    if (business.business_type) providedFields.push('Business Type') 
-    if (business.business_category) providedFields.push('Business Category')
-    if (business.business_address) providedFields.push('Business Address')
-    if (business.phone) providedFields.push('Phone Number')
-    if (business.email) providedFields.push('Email')
+    if (business.business_name) providedRequiredFields.push('Business Name')
+    if (business.business_type) providedRequiredFields.push('Business Type') 
+    if (business.business_category) providedRequiredFields.push('Business Category')
+    if (business.business_address) providedRequiredFields.push('Business Address')
+    if (business.phone) providedRequiredFields.push('Phone Number')
+    if (business.email) providedRequiredFields.push('Email')
 
-    // Required completion fields
-    if (!business.business_tagline) missingFields.push('Business Tagline')
-    else providedFields.push('Business Tagline')
+    // Required completion fields for approval
+    if (!business.business_tagline) missingRequiredFields.push('Business Tagline')
+    else providedRequiredFields.push('Business Tagline')
     
-    if (!business.business_description) missingFields.push('Business Description') 
-    else providedFields.push('Business Description')
+    if (!business.business_description) missingRequiredFields.push('Business Description') 
+    else providedRequiredFields.push('Business Description')
     
-    if (!business.business_hours && !business.business_hours_structured) missingFields.push('Opening Hours')
-    else providedFields.push('Opening Hours')
+    if (!business.business_hours && !business.business_hours_structured) missingRequiredFields.push('Opening Hours')
+    else providedRequiredFields.push('Opening Hours')
     
-    if (!business.logo) missingFields.push('Business Logo')
-    else providedFields.push('Business Logo')
+    if (!business.logo) missingRequiredFields.push('Business Logo')
+    else providedRequiredFields.push('Business Logo')
     
-    if (!business.business_images || business.business_images.length === 0) missingFields.push('Business Photos')
-    else providedFields.push('Business Photos')
+    if (!business.business_images || business.business_images.length === 0) missingRequiredFields.push('Business Photos')
+    else providedRequiredFields.push('Business Photos')
     
-    // Optional fields (moved from required)
-    if (!business.menu_url) missingFields.push('Services/Menu (Optional)')
-    else providedFields.push('Services/Menu')
+    // Optional fields (NOT counted in completion percentage)
+    if (business.menu_url) optionalFields.push('Services/Menu')
+    if (business.offer_name) optionalFields.push('First Offer')
     
-    if (!business.offer_name) missingFields.push('First Offer (Optional)')
-    else providedFields.push('First Offer')
-    
-    const totalFields = providedFields.length + missingFields.length
-    const completedFields = providedFields.length
-    const completionPercentage = totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0
+    const totalRequiredFields = providedRequiredFields.length + missingRequiredFields.length
+    const completedRequiredFields = providedRequiredFields.length
+    const completionPercentage = totalRequiredFields > 0 ? Math.round((completedRequiredFields / totalRequiredFields) * 100) : 0
     
     const isExpanded = expandedCards.has(business.id)
     
@@ -742,10 +740,10 @@ Qwikker Admin Team`
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Information Provided ({providedFields.length} items)
+                    Information Provided ({providedRequiredFields.length} items)
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
-                    {providedFields.map((field, index) => (
+                    {providedRequiredFields.map((field, index) => (
                       <div key={index} className="flex items-center gap-2 text-sm text-green-200 bg-green-500/10 rounded-lg px-3 py-2 border border-green-500/20">
                         <div className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0" />
                         {field}
@@ -756,18 +754,38 @@ Qwikker Admin Team`
               )}
 
               {/* What's MISSING (Orange) */}
-              {missingFields.length > 0 && (
+              {missingRequiredFields.length > 0 && (
                 <div className="mb-6">
                   <h4 className="text-orange-400 font-semibold mb-3 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                     </svg>
-                    Missing Information ({missingFields.length} items needed)
+                    Missing Information ({missingRequiredFields.length} items needed)
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
-                    {missingFields.map((field, index) => (
+                    {missingRequiredFields.map((field, index) => (
                       <div key={index} className="flex items-center gap-2 text-sm text-orange-200 bg-orange-500/10 rounded-lg px-3 py-2 border border-orange-500/20">
                         <div className="w-2 h-2 bg-orange-400 rounded-full flex-shrink-0" />
+                        {field}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Optional Information (Blue) */}
+              {optionalFields.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-blue-400 font-semibold mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Optional Information ({optionalFields.length} items provided)
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {optionalFields.map((field, index) => (
+                      <div key={index} className="flex items-center gap-2 text-sm text-blue-200 bg-blue-500/10 rounded-lg px-3 py-2 border border-blue-500/20">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0" />
                         {field}
                       </div>
                     ))}
@@ -778,7 +796,7 @@ Qwikker Admin Team`
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-slate-600">
                 <button
-                  onClick={() => window.open(`mailto:${business.email}?subject=Complete Your Qwikker Profile - ${business.business_name}&body=Hi ${business.first_name},\n\nYour Qwikker business profile for ${business.business_name} is ${completionPercentage}% complete.\n\nTo get your business live on Qwikker, please complete these missing items:\n${missingFields.map(field => `• ${field}`).join('\n')}\n\nLog into your dashboard to finish your profile: https://qwikkerdashboard-theta.vercel.app/dashboard\n\nBest regards,\nThe Qwikker Team`)}
+                  onClick={() => window.open(`mailto:${business.email}?subject=Complete Your Qwikker Profile - ${business.business_name}&body=Hi ${business.first_name},\n\nYour Qwikker business profile for ${business.business_name} is ${completionPercentage}% complete.\n\nTo get your business live on Qwikker, please complete these missing items:\n${missingRequiredFields.map(field => `• ${field}`).join('\n')}\n\nLog into your dashboard to finish your profile: https://qwikkerdashboard-theta.vercel.app/dashboard\n\nBest regards,\nThe Qwikker Team`)}
                   className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 flex items-center justify-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
