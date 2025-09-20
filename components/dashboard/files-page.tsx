@@ -34,12 +34,12 @@ export function FilesPage({ profile }: FilesPageProps) {
       return
     }
 
-    // Validate file size (5MB for regular images, 10MB for PDFs and business images)
-    const maxSize = (type === 'menu' || type === 'business_images') ? 10 * 1024 * 1024 : 5 * 1024 * 1024
+    // Validate file size (10MB for all file types)
+    const maxSize = 10 * 1024 * 1024 // 10MB for all files
     if (file.size > maxSize) {
       setUploadMessage({
         type: 'error',
-        text: `File too large. Maximum size is ${(type === 'menu' || type === 'business_images') ? '10MB' : '5MB'}.`
+        text: `File too large. Maximum size is 10MB.`
       })
       return
     }
@@ -167,7 +167,7 @@ export function FilesPage({ profile }: FilesPageProps) {
                   Click to upload your business logo. This will appear in customer recommendations.
                 </p>
                 <p className="text-xs text-gray-500">
-                  PNG, JPG, WEBP up to 5MB
+                  PNG, JPG, WEBP up to 10MB
                 </p>
               </div>
             )}
@@ -319,7 +319,7 @@ export function FilesPage({ profile }: FilesPageProps) {
                   Upload images for your special offers and promotions.
                 </p>
                 <p className="text-xs text-gray-500">
-                  PNG, JPG, WEBP up to 5MB
+                  PNG, JPG, WEBP up to 10MB
                 </p>
               </div>
             )}
@@ -398,7 +398,7 @@ export function FilesPage({ profile }: FilesPageProps) {
                   Recommended: 1200x800px or larger
                 </p>
                 <p className="text-xs text-gray-500">
-                  PNG, JPG, WEBP up to 5MB
+                  PNG, JPG, WEBP up to 10MB
                 </p>
               </div>
             )}
