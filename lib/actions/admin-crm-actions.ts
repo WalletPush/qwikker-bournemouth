@@ -17,7 +17,10 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       .select(`
         id,
         business_name,
+        first_name,
+        last_name,
         business_category,
+        business_type,
         business_address,
         business_town,
         business_postcode,
@@ -25,6 +28,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         phone,
         status,
         approved_at,
+        admin_notes,
         menu_url,
         business_images,
         offer_name,
@@ -99,7 +103,9 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       let trial_status: 'active' | 'expired' | 'upgraded' | 'not_applicable' = 'not_applicable'
       let billing_starts_date: string | null = null
 
-      // Calculate trial status based on creation date (120 days from approval)
+      // Calculate trial status based on approval date (120 days free trial)
+      // NOTE: When trial expires, business status changes to 'trial_expired' and gets hidden from user dashboards/chat
+      // Business data stays in database for potential reactivation
       if (business.approved_at) {
         const approvalDate = new Date(business.approved_at)
         const trialEndDate = new Date(approvalDate.getTime() + (120 * 24 * 60 * 60 * 1000))
@@ -109,10 +115,10 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         if (daysRemaining > 0) {
           trial_days_remaining = daysRemaining
           trial_status = 'active'
-          billing_starts_date = trialEndDate.toISOString()
+          billing_starts_date = trialEndDate.toISOString() // This is actually trial END date
         } else {
           trial_days_remaining = 0
-          trial_status = 'expired'
+          trial_status = 'expired' // Business becomes hidden from users but data preserved
           billing_starts_date = trialEndDate.toISOString()
         }
       }
@@ -120,7 +126,10 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       return {
         id: business.id,
         business_name: business.business_name || 'Unnamed Business',
+        first_name: business.first_name,
+        last_name: business.last_name,
         business_category: business.business_category || 'Uncategorized',
+        business_type: business.business_type,
         business_address: business.business_address || '',
         business_town: business.business_town || '',
         business_postcode: business.business_postcode || '',
@@ -128,6 +137,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         phone: business.phone || '',
         status: business.status as 'incomplete' | 'pending_review' | 'approved' | 'rejected',
         approved_at: business.approved_at,
+        admin_notes: business.admin_notes,
         
         subscription: null, // Will be populated when billing system is implemented
         tier: null,

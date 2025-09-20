@@ -105,7 +105,10 @@ export interface BusinessCRMData {
   // Basic business info
   id: string
   business_name: string
+  first_name: string | null
+  last_name: string | null
   business_category: string
+  business_type: string | null
   business_address: string
   business_town: string
   business_postcode: string
@@ -113,6 +116,7 @@ export interface BusinessCRMData {
   phone: string
   status: 'incomplete' | 'pending_review' | 'approved' | 'rejected'
   approved_at: string | null
+  admin_notes: string | null
   
   // Subscription & billing
   subscription: BusinessSubscription | null
@@ -124,6 +128,10 @@ export interface BusinessCRMData {
   business_images: string[] | null
   offer_name: string | null
   offer_type: string | null
+  offer_image: string | null
+  offer_start_date: string | null
+  offer_end_date: string | null
+  offer_terms: string | null
   secret_menu_items: Array<{
     itemName: string
     description?: string
@@ -134,7 +142,7 @@ export interface BusinessCRMData {
   // Trial calculations
   trial_days_remaining: number | null
   trial_status: 'active' | 'expired' | 'upgraded' | 'not_applicable'
-  billing_starts_date: string | null
+  billing_starts_date: string | null // NOTE: This is actually trial END date (when they get hidden from users if no signup)
   
   // Recent activity
   last_updated: string

@@ -233,8 +233,8 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
         phone: normalizePhoneNumber(data.phone),
       }
 
-      // Send to GHL (server-side notifications handled in signup-actions.ts)
-      sendToGoHighLevel(externalData).catch(err => 
+      // Send to franchise-specific GHL (server-side notifications handled in signup-actions.ts)
+      sendToGoHighLevel(externalData, result.profile?.city).catch(err => 
         console.error('GHL webhook failed:', err)
       )
 

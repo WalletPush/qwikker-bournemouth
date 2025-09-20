@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { LogoutButton } from '@/components/logout-button'
+import { BusinessTypeIcon } from '@/lib/utils/business-icons'
 
 interface Business {
   id: string
@@ -159,23 +160,10 @@ export function AdminDashboard({ businesses, adminEmail }: AdminDashboardProps) 
       <div className="p-6">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-4">
-            {business.logo ? (
-              <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-700 flex-shrink-0 ring-2 ring-slate-600">
-                <Image
-                  src={business.logo}
-                  alt={business.business_name}
-                  width={64}
-                  height={64}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-slate-600 to-slate-700 flex-shrink-0 flex items-center justify-center">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h4M9 7h6m-6 4h6m-6 4h6" />
-                </svg>
-              </div>
-            )}
+            <BusinessTypeIcon 
+              businessType={business.business_type} 
+              className="w-16 h-16 p-3 rounded-xl bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border-2 border-indigo-400/30 text-indigo-300 flex items-center justify-center"
+            />
             <div>
               <h3 className="text-xl font-bold text-white mb-1">
                 {business.business_name || 'Unnamed Business'}
