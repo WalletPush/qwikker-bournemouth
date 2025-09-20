@@ -48,7 +48,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     })
   }
 
-  if (!profile?.business_hours) {
+  if (!profile?.business_hours && !profile?.business_hours_structured) {
     requiredTodos.push({ 
       title: 'Add your business hours', 
       href: '/dashboard/business',
@@ -136,7 +136,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   // Check for business images (required for hero image on user dashboard)
   if (!profile?.business_images || (Array.isArray(profile.business_images) && profile.business_images.length === 0)) {
     requiredTodos.push({ 
-      title: 'Upload business photos', 
+      title: 'Upload business photo', 
       href: '/dashboard/files',
       priority: 'REQUIRED',
       description: 'Required for the hero image on your business listing.',
@@ -148,28 +148,15 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     })
   }
 
-  // Full menu upload is required for AI knowledge base
-  if (!profile?.menu_url) {
-    requiredTodos.push({ 
-      title: 'Upload your full menu (PDF)', 
-      href: '/dashboard/files',
-      priority: 'REQUIRED',
-      description: 'Critical for AI responses. Allows QWIKKER to recommend your business accurately.',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      )
-    })
-  }
+  // Menu upload is now RECOMMENDED (moved to optionalTodos section below)
 
-  // Menu preview is required for the menu tab on user dashboard
+  // Featured services/items are recommended - helps with customer attraction
   if (!profile?.menu_preview || (Array.isArray(profile.menu_preview) && profile.menu_preview.length === 0)) {
-    requiredTodos.push({ 
-      title: 'Add featured menu items (top 3-5)', 
+    optionalTodos.push({ 
+      title: 'Add featured services/items (top 3-5)', 
       href: '/dashboard/business',
-      priority: 'REQUIRED',
-      description: 'Required for display on your business card to attract customers.',
+      priority: 'RECOMMENDED',
+      description: 'Helps attract customers by showcasing your best services/offerings.',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -178,12 +165,27 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     })
   }
   
-  // OPTIONAL - Nice to have but not required for user dashboard listing
+  // Recommended menu/service list upload
+  if (!profile?.menu_url) {
+    optionalTodos.push({ 
+      title: 'Upload full menu/service list (PDF)', 
+      href: '/dashboard/files',
+      priority: 'RECOMMENDED',
+      description: 'Critical for AI responses. Allows QWIKKER to recommend your business accurately.',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      )
+    })
+  }
+  
+  // RECOMMENDED - Nice to have but not required for user dashboard listing
   if (!profile?.offer_name) {
     optionalTodos.push({ 
       title: 'Create your first exclusive offer', 
       href: '/dashboard/offers',
-      priority: 'OPTIONAL',
+      priority: 'RECOMMENDED',
       description: 'Drives customer acquisition and engagement. Special offers help attract new customers.',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,7 +210,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     optionalTodos.push({ 
       title: 'Add a secret menu item', 
       href: '/dashboard/secret-menu',
-      priority: 'OPTIONAL',
+      priority: 'RECOMMENDED',
       description: 'Create exclusive items that only special customers know about. Builds loyalty and word-of-mouth marketing.',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,7 +224,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     optionalTodos.push({ 
       title: 'Add your Instagram handle', 
       href: '/dashboard/business',
-      priority: 'OPTIONAL',
+      priority: 'RECOMMENDED',
       description: 'Social media integration for promotion and customer engagement.',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,7 +239,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     optionalTodos.push({ 
       title: 'Add your website URL', 
       href: '/dashboard/business',
-      priority: 'OPTIONAL',
+      priority: 'RECOMMENDED',
       description: 'Additional business information for customer reference.',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,7 +253,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     optionalTodos.push({ 
       title: 'Add your Facebook page', 
       href: '/dashboard/business',
-      priority: 'OPTIONAL',
+      priority: 'RECOMMENDED',
       description: 'Secondary social media presence for broader customer reach.',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -263,7 +265,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
 
   const allTodos = [
     { priority: 'REQUIRED', items: requiredTodos },
-    { priority: 'OPTIONAL', items: optionalTodos }
+    { priority: 'RECOMMENDED', items: optionalTodos }
   ]
 
   const totalRequiredItems = requiredTodos.length
@@ -469,7 +471,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                     <span className={`text-xs px-3 py-1 rounded-full font-medium ${
                       priority === 'REQUIRED' 
                         ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                        : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                        : 'bg-green-500/20 text-green-400 border border-green-500/30'
                     }`}>
                       {priority}
                     </span>
@@ -484,9 +486,9 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                           <span className={`inline-flex items-center text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wide ${
                             priority === 'REQUIRED' 
                               ? 'bg-red-500 text-white' 
-                              : 'bg-blue-500 text-white'
+                              : 'bg-green-500 text-white'
                           }`}>
-                            {priority === 'REQUIRED' ? 'REQ' : 'OPT'}
+                            {priority === 'REQUIRED' ? 'REQ' : 'REC'}
                           </span>
                         </div>
                         <div className="text-[#00d083] mt-1 flex-shrink-0">{item.icon}</div>

@@ -115,7 +115,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     })
   }
 
-  if (!profile?.business_hours) {
+  if (!profile?.business_hours && !profile?.business_hours_structured) {
     requiredTodos.push({ 
       title: 'Add your business hours', 
       href: '/dashboard/business',
@@ -197,7 +197,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   // Check for business images (required for hero image on user dashboard)
   if (!profile?.business_images || (Array.isArray(profile.business_images) && profile.business_images.length === 0)) {
     requiredTodos.push({ 
-      title: 'Upload business photos', 
+      title: 'Upload business photo', 
       href: '/dashboard/files',
       priority: 'REQUIRED',
       icon: (
@@ -208,12 +208,12 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     })
   }
 
-  // Full menu upload is required for AI knowledge base
+  // Services/Menu info is recommended - not all business types need traditional menus
   if (!profile?.menu_url) {
-    requiredTodos.push({ 
-      title: 'Upload your full menu (PDF)', 
+    optionalTodos.push({ 
+      title: 'Upload full menu/service list (PDF)', 
       href: '/dashboard/files',
-      priority: 'REQUIRED',
+      priority: 'RECOMMENDED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -222,12 +222,12 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     })
   }
 
-  // Menu preview is required for the menu tab on user dashboard
+  // Featured services/items are recommended - helps with customer attraction
   if (!profile?.menu_preview || (Array.isArray(profile.menu_preview) && profile.menu_preview.length === 0)) {
-    requiredTodos.push({ 
-      title: 'Add featured menu items (top 3-5)', 
+    optionalTodos.push({ 
+      title: 'Add featured services/items (top 3-5)', 
       href: '/dashboard/business',
-      priority: 'REQUIRED',
+      priority: 'RECOMMENDED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -236,13 +236,13 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     })
   }
   
-  // OPTIONAL - Nice to have but not required for user dashboard listing
+  // RECOMMENDED - Nice to have but not required for user dashboard listing
 
   if (!profile?.offer_name) {
     optionalTodos.push({ 
       title: 'Create your first exclusive offer', 
       href: '/dashboard/offers',
-      priority: 'OPTIONAL',
+      priority: 'RECOMMENDED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -266,7 +266,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     optionalTodos.push({ 
       title: 'Add a secret menu item', 
       href: '/dashboard/secret-menu',
-      priority: 'OPTIONAL',
+      priority: 'RECOMMENDED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -280,7 +280,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     optionalTodos.push({ 
       title: 'Add your Instagram handle', 
       href: '/dashboard/business',
-      priority: 'OPTIONAL',
+      priority: 'RECOMMENDED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -294,7 +294,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     optionalTodos.push({ 
       title: 'Add your website URL', 
       href: '/dashboard/business',
-      priority: 'OPTIONAL',
+      priority: 'RECOMMENDED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
@@ -307,7 +307,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     optionalTodos.push({ 
       title: 'Add your Facebook page', 
       href: '/dashboard/business',
-      priority: 'OPTIONAL',
+      priority: 'RECOMMENDED',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -584,9 +584,9 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
                       <span className={`inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${
                         item.priority === 'REQUIRED' 
                           ? 'bg-red-500 text-white' 
-                          : 'bg-blue-500 text-white'
+                          : 'bg-green-500 text-white'
                       }`}>
-                        {item.priority === 'REQUIRED' ? 'REQ' : 'OPT'}
+                        {item.priority === 'REQUIRED' ? 'REQ' : 'REC'}
                       </span>
                     </div>
                     <div className="text-[#00d083] flex-shrink-0 mt-0.5">{item.icon}</div>

@@ -18,10 +18,12 @@ import {
 interface BusinessHoursInputProps {
   value?: BusinessHoursStructured | null
   onChange: (hours: BusinessHoursStructured) => void
+  onSave?: (hours: BusinessHoursStructured) => Promise<void>
+  isSaving?: boolean
   className?: string
 }
 
-export function BusinessHoursInput({ value, onChange, className }: BusinessHoursInputProps) {
+export function BusinessHoursInput({ value, onChange, onSave, isSaving, className }: BusinessHoursInputProps) {
   const [pattern, setPattern] = useState<'weekdays_same' | 'weekdays_weekend' | 'custom'>('weekdays_weekend')
   const [formData, setFormData] = useState<BusinessHoursFormData>({
     pattern: 'weekdays_weekend',
@@ -346,6 +348,34 @@ export function BusinessHoursInput({ value, onChange, className }: BusinessHours
             {convertStructuredToText(convertFormDataToStructured(formData))}
           </pre>
         </div>
+
+        {/* Save Button */}
+        {onSave && (
+          <div className="flex justify-end pt-4 border-t border-slate-600">
+            <Button
+              type="button"
+              onClick={() => onSave(convertFormDataToStructured(formData))}
+              disabled={isSaving}
+              className="bg-[#00d083] hover:bg-[#00b86f] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? (
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Saving Hours...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Save Business Hours
+                </div>
+              )}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   )
