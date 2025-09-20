@@ -7,6 +7,10 @@ import AdminInspectionModal from './admin-inspection-modal'
 import { BusinessCRMCard } from './business-crm-card'
 import { BusinessCRMData } from '@/types/billing'
 import { useElegantModal } from '@/components/ui/elegant-modal'
+import { AdminAnalytics } from './admin-analytics'
+import { ContactsTab } from './contacts-tab'
+import { SyncHealthOverview } from './sync-health-overview'
+import { BusinessTypeIcon } from '@/lib/utils/business-icons'
 
 interface Business {
   id: string
@@ -49,20 +53,59 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisplayName, pendingChangesCount, pendingChanges }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge'>('pending')
+  const [activeTab, setActiveTab] = useState<'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts'>('pending')
   const [businessList, setBusinessList] = useState<Business[]>(businesses)
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const [inspectionModal, setInspectionModal] = useState<{ open: boolean; business: Business | null }>({ open: false, business: null })
   const [inspectedBusinesses, setInspectedBusinesses] = useState<Set<string>>(new Set())
   const [processingChangeId, setProcessingChangeId] = useState<string | null>(null)
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
+  
+  // 🔍 SEARCH & FILTER STATE
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterCategory, setFilterCategory] = useState('all')
+  const [filterTier, setFilterTier] = useState('all')
   
   const { showSuccess, showError, showConfirm, ModalComponent } = useElegantModal()
 
-  // Filter businesses by status
-  const pendingBusinesses = businessList.filter(b => b.status === 'pending_review')
-  const liveBusinesses = businessList.filter(b => b.status === 'approved')
-  const incompleteBusinesses = businessList.filter(b => b.status === 'incomplete')
-  const rejectedBusinesses = businessList.filter(b => b.status === 'rejected')
+
+  // 🔍 FILTER FUNCTION
+  const filterBusinesses = (businesses: Business[]) => {
+
+    
+    return businesses.filter(business => {
+      const matchesSearch = !searchTerm || 
+        business.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        business.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        business.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        business.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        business.business_category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        business.business_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        business.business_town?.toLowerCase().includes(searchTerm.toLowerCase())
+      
+      // Filter by business_type ONLY (clean standardized values)
+      const matchesCategory = filterCategory === 'all' || business.business_type === filterCategory
+      
+      const matchesTier = filterTier === 'all' || business.business_tier === filterTier
+
+      
+      return matchesSearch && matchesCategory && matchesTier
+    })
+  }
+
+  // ORIGINAL counts for sidebar (NEVER filtered)
+  const allPendingBusinesses = businessList.filter(b => b.status === 'pending_review')
+  const allLiveBusinesses = businessList.filter(b => b.status === 'approved')
+  const allIncompleteBusinesses = businessList.filter(b => b.status === 'incomplete')
+  const allRejectedBusinesses = businessList.filter(b => b.status === 'rejected')
+  const allExpiredTrialBusinesses = businessList.filter(b => b.status === 'trial_expired' || b.status === 'inactive')
+
+  // FILTERED businesses for display content only
+  const pendingBusinesses = filterBusinesses(allPendingBusinesses)
+  const liveBusinesses = filterBusinesses(allLiveBusinesses)
+  const incompleteBusinesses = filterBusinesses(allIncompleteBusinesses)
+  const rejectedBusinesses = filterBusinesses(allRejectedBusinesses)
+  const expiredTrialBusinesses = filterBusinesses(allExpiredTrialBusinesses)
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -236,7 +279,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       id: 'pending', 
       label: 'Pending Reviews', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, 
-      count: pendingBusinesses.length 
+      count: allPendingBusinesses.length 
     },
     { 
       id: 'updates', 
@@ -248,25 +291,40 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       id: 'live', 
       label: 'Live Listings', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, 
-      count: liveBusinesses.length 
+      count: allLiveBusinesses.length 
     },
     { 
       id: 'incomplete', 
       label: 'Incomplete Listings', 
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 712-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>, 
-      count: incompleteBusinesses.length 
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>, 
+      count: allIncompleteBusinesses.length 
+    },
+    { 
+      id: 'expired', 
+      label: 'Expired Trials', 
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, 
+      count: allExpiredTrialBusinesses.length 
     },
     { 
       id: 'rejected', 
       label: 'Rejected Applications', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>, 
-      count: rejectedBusinesses.length 
+      count: allRejectedBusinesses.length 
     },
     { 
       id: 'knowledge', 
       label: 'Knowledge Base', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>, 
-      count: 0 
+    },
+    { 
+      id: 'analytics', 
+      label: 'Analytics', 
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>, 
+    },
+    { 
+      id: 'contacts', 
+      label: 'Contacts', 
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>, 
     },
   ]
 
@@ -275,23 +333,10 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       <div className="p-6">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-4">
-            {business.logo ? (
-              <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-700 border-2 border-slate-600">
-                <Image
-                  src={business.logo}
-                  alt={business.business_name || 'Business'}
-                  width={64}
-                  height={64}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-slate-600 to-slate-700 border-2 border-slate-600 flex items-center justify-center">
-                <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h4M9 7h6m-6 4h6m-6 4h6" />
-                </svg>
-              </div>
-            )}
+            <BusinessTypeIcon 
+              businessType={business.business_type} 
+              className="w-16 h-16 p-3 rounded-xl bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border-2 border-indigo-400/30 text-indigo-300 flex items-center justify-center"
+            />
             
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
@@ -535,11 +580,218 @@ Qwikker Admin Team`
     </div>
   )
 
+  const renderIncompleteBusinessCard = (business: Business, expanded: boolean = false) => {
+    // Calculate missing fields for completion tracking using REAL database field names
+    const missingFields = []
+    const providedFields = []
+
+    // Core business info (already have from onboarding)
+    if (business.business_name) providedFields.push('Business Name')
+    if (business.business_type) providedFields.push('Business Type') 
+    if (business.business_category) providedFields.push('Business Category')
+    if (business.business_address) providedFields.push('Business Address')
+    if (business.phone) providedFields.push('Phone Number')
+    if (business.email) providedFields.push('Email')
+
+    // Required completion fields
+    if (!business.business_tagline) missingFields.push('Business Tagline')
+    else providedFields.push('Business Tagline')
+    
+    if (!business.business_description) missingFields.push('Business Description') 
+    else providedFields.push('Business Description')
+    
+    if (!business.business_hours) missingFields.push('Opening Hours')
+    else providedFields.push('Opening Hours')
+    
+    if (!business.logo) missingFields.push('Business Logo')
+    else providedFields.push('Business Logo')
+    
+    if (!business.menu_url) missingFields.push('Menu/Price List')
+    else providedFields.push('Menu/Price List')
+    
+    if (!business.business_images || business.business_images.length === 0) missingFields.push('Business Photos')
+    else providedFields.push('Business Photos')
+    
+    if (!business.offer_name) missingFields.push('First Offer')
+    else providedFields.push('First Offer')
+    
+    const totalFields = providedFields.length + missingFields.length
+    const completedFields = providedFields.length
+    const completionPercentage = totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0
+    
+    const isExpanded = expandedCards.has(business.id)
+    
+    const toggleExpanded = () => {
+      const newExpanded = new Set(expandedCards)
+      if (isExpanded) {
+        newExpanded.delete(business.id)
+      } else {
+        newExpanded.add(business.id)
+      }
+      setExpandedCards(newExpanded)
+    }
+
+    return (
+      <div key={business.id} className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl overflow-hidden hover:border-slate-600 transition-all duration-300">
+        <div className={isExpanded ? "p-6" : "p-4"}>
+          {/* Compact Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <BusinessTypeIcon 
+                businessType={business.business_type} 
+                className="w-12 h-12 p-2.5 rounded-lg bg-gradient-to-br from-orange-600/30 to-orange-700/30 border border-orange-400/40 text-orange-300 flex items-center justify-center"
+              />
+              <div>
+                <h3 className="text-lg font-bold text-white">
+                  {business.business_name || 'Unnamed Business'}
+                </h3>
+                <p className="text-slate-400 text-sm">
+                  {business.first_name && business.last_name ? `${business.first_name} ${business.last_name}` : 'Owner name not provided'}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="px-2 py-1 text-xs font-medium text-white rounded-full bg-orange-500">
+                    INCOMPLETE
+                  </span>
+                  <span className="text-orange-400 font-semibold text-sm">{completionPercentage}%</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Compact completion status and expand button */}
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="w-16 h-2 bg-slate-700 rounded-full">
+                  <div 
+                    className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all duration-300"
+                    style={{ width: `${completionPercentage}%` }}
+                  />
+                </div>
+                <div className="text-xs text-slate-400 mt-1">{completedFields}/{totalFields}</div>
+              </div>
+              
+              <button
+                onClick={toggleExpanded}
+                className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+              >
+                <svg 
+                  className={`w-4 h-4 text-slate-300 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Expanded Content */}
+          {isExpanded && (
+            <>
+              {/* Contact & Business Info Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-sm">
+                <div>
+                  <p className="text-slate-400">Email</p>
+                  <p className="text-white font-medium text-xs break-all">
+                    {business.email || 'Not provided'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Phone</p>
+                  <p className="text-white font-medium">
+                    {business.phone || 'Not provided'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Location</p>
+                  <p className="text-white font-medium">
+                    {business.business_town || 'Not provided'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Applied</p>
+                  <p className="text-white font-medium">
+                    {new Date(business.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+
+              {/* What's PROVIDED (Green) */}
+              {providedFields.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-green-400 font-semibold mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Information Provided ({providedFields.length} items)
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {providedFields.map((field, index) => (
+                      <div key={index} className="flex items-center gap-2 text-sm text-green-200 bg-green-500/10 rounded-lg px-3 py-2 border border-green-500/20">
+                        <div className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0" />
+                        {field}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* What's MISSING (Orange) */}
+              {missingFields.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-orange-400 font-semibold mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    Missing Information ({missingFields.length} items needed)
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {missingFields.map((field, index) => (
+                      <div key={index} className="flex items-center gap-2 text-sm text-orange-200 bg-orange-500/10 rounded-lg px-3 py-2 border border-orange-500/20">
+                        <div className="w-2 h-2 bg-orange-400 rounded-full flex-shrink-0" />
+                        {field}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-slate-600">
+                <button
+                  onClick={() => window.open(`mailto:${business.email}?subject=Complete Your Qwikker Profile - ${business.business_name}&body=Hi ${business.first_name},\n\nYour Qwikker business profile for ${business.business_name} is ${completionPercentage}% complete.\n\nTo get your business live on Qwikker, please complete these missing items:\n${missingFields.map(field => `• ${field}`).join('\n')}\n\nLog into your dashboard to finish your profile: https://qwikkerdashboard-theta.vercel.app/dashboard\n\nBest regards,\nThe Qwikker Team`)}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Send Completion Reminder
+                </button>
+                
+                {business.phone && (
+                  <button
+                    onClick={() => window.open(`tel:${business.phone}`)}
+                    className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    Call
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950/40 to-slate-950">
       <div className="flex">
         {/* Sidebar */}
-        <div className="w-80 bg-slate-900/95 backdrop-blur-sm border-r border-slate-700/50 min-h-screen">
+        <div className="w-80 bg-slate-900/95 backdrop-blur-sm border-r border-indigo-500/30 min-h-screen shadow-2xl shadow-indigo-900/20">
           <div className="p-6">
             <div className="text-center space-y-4 mb-8 border-b border-slate-700/50 pb-6">
               {/* QWIKKER Logo */}
@@ -550,8 +802,13 @@ Qwikker Admin Team`
               />
               {/* Admin Dashboard Text */}
               <div>
-                <p className="text-lg font-bold text-white">Admin Dashboard</p>
-                <p className="text-sm text-slate-400">{cityDisplayName}</p>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <p className="text-lg font-bold text-white">Admin Dashboard</p>
+                  <div className="px-2 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-bold rounded-full border border-indigo-400/50">
+                    ADMIN
+                  </div>
+                </div>
+                <p className="text-sm text-indigo-300">{cityDisplayName}</p>
               </div>
             </div>
 
@@ -570,13 +827,19 @@ Qwikker Admin Team`
                     {item.icon}
                     <span>{item.label}</span>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                    activeTab === item.id
-                      ? 'bg-[#00d083]/20 text-[#00d083]'
-                      : 'bg-slate-700 text-slate-300'
-                  }`}>
-                    {item.count}
-                  </span>
+                  {item.count !== undefined && (
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                      activeTab === item.id
+                        ? 'bg-[#00d083]/20 text-[#00d083]'
+                        : item.count > 0 && (item.id === 'incomplete' || item.id === 'pending' || item.id === 'updates')
+                          ? 'bg-red-500/20 text-red-400 border border-red-500/30' // Red ONLY when count > 0 AND needs attention
+                          : item.count > 0 && item.id === 'live'
+                          ? 'bg-green-500/20 text-green-400 border border-green-500/30' // Green ONLY when count > 0 AND live
+                          : 'bg-slate-700 text-slate-300' // Default gray when count is 0 or other tabs
+                    }`}>
+                      {item.count}
+                    </span>
+                  )}
                 </button>
               ))}
             </nav>
@@ -599,6 +862,8 @@ Qwikker Admin Team`
                 {activeTab === 'incomplete' && 'Incomplete Listings'}
                 {activeTab === 'rejected' && 'Rejected Applications'}
                 {activeTab === 'knowledge' && 'Knowledge Base'}
+                {activeTab === 'analytics' && 'City Analytics'}
+                {activeTab === 'contacts' && 'Business Contacts'}
               </h2>
               <p className="text-slate-400">
                 {activeTab === 'pending' && 'Businesses awaiting your review and approval'}
@@ -607,8 +872,71 @@ Qwikker Admin Team`
                 {activeTab === 'incomplete' && 'Businesses that need to complete their profiles'}
                 {activeTab === 'rejected' && 'Previously rejected business applications'}
                 {activeTab === 'knowledge' && 'AI knowledge base management for businesses and city information'}
+                {activeTab === 'analytics' && `Performance metrics and user analytics for ${cityDisplayName}`}
+                {activeTab === 'contacts' && `CRM contact management with GHL sync for ${cityDisplayName}`}
               </p>
             </div>
+
+            {/* Sync Health Overview */}
+            <div className="mb-6">
+              <SyncHealthOverview />
+            </div>
+
+            {/* 🔍 MINIMAL SEARCH */}
+            {activeTab !== 'knowledge' && activeTab !== 'analytics' && activeTab !== 'contacts' && (
+              <div className="mb-3 flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="px-2 py-1 w-48 bg-slate-700/30 border border-slate-600/50 rounded text-white text-xs placeholder-slate-500 focus:outline-none focus:border-[#00d083]/50"
+                />
+
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="px-2 py-1 bg-slate-700/30 border border-slate-600/50 rounded text-white text-xs focus:outline-none"
+                >
+                  <option value="all">All Types</option>
+                  <option value="bar">Bar</option>
+                  <option value="cafe">Café</option>
+                  <option value="restaurant">Restaurant</option>
+                  <option value="salon">Salon</option>
+                  <option value="spa">Spa</option>
+                  <option value="gym">Gym</option>
+                  <option value="retail_shop">Retail Shop</option>
+                  <option value="hotel">Hotel</option>
+                  <option value="service_business">Service Business</option>
+                  <option value="other">Other</option>
+                </select>
+
+                <select
+                  value={filterTier}
+                  onChange={(e) => setFilterTier(e.target.value)}
+                  className="px-2 py-1 bg-slate-700/30 border border-slate-600/50 rounded text-white text-xs focus:outline-none"
+                >
+                  <option value="all">All Tiers</option>
+                  <option value="free_trial">Trial</option>
+                  <option value="starter">Starter</option>
+                  <option value="featured">Featured</option>
+                  <option value="spotlight">Spotlight</option>
+                </select>
+
+                {(searchTerm || filterCategory !== 'all' || filterTier !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm('')
+                      setFilterCategory('all')
+                      setFilterTier('all')
+                    }}
+                    className="text-slate-500 hover:text-white text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Content */}
             <div className="space-y-6">
@@ -632,7 +960,7 @@ Qwikker Admin Team`
 
               {activeTab === 'live' && (
                 <div className="grid gap-6">
-                  {crmData.filter(business => business.status === 'approved').length === 0 ? (
+                  {allLiveBusinesses.length === 0 ? (
                     <div className="text-center py-12">
                       <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -643,12 +971,71 @@ Qwikker Admin Team`
                       <p className="text-slate-400">No businesses are currently live on the platform.</p>
                     </div>
                   ) : (
-                    crmData
-                      .filter(business => business.status === 'approved')
-                      .map((business) => (
+                    liveBusinesses.map((business) => {
+                      // Convert business data to CRM format
+                      const crmBusiness = {
+                        id: business.id,
+                        business_name: business.business_name || 'Unnamed Business',
+                        first_name: business.first_name,
+                        last_name: business.last_name,
+                        business_category: business.business_category || 'Uncategorized',
+                        business_type: business.business_type,
+                        business_address: business.business_address || '',
+                        business_town: business.business_town || '',
+                        business_postcode: business.business_postcode || '',
+                        email: business.email || '',
+                        phone: business.phone || '',
+                        status: business.status as 'incomplete' | 'pending_review' | 'approved' | 'rejected',
+                        approved_at: business.approved_at,
+                        admin_notes: business.admin_notes,
+                        subscription: null,
+                        tier: null,
+                        recent_payments: [],
+                        menu_url: business.menu_url,
+                        business_images: business.business_images as string[] | null,
+                        offer_name: business.offer_name,
+                        offer_type: business.offer_type,
+                        offer_image: business.offer_image,
+                        offer_start_date: business.offer_start_date,
+                        offer_end_date: business.offer_end_date,
+                        offer_terms: business.offer_terms,
+                        secret_menu_items: business.additional_notes ? 
+                          (() => {
+                            try {
+                              const parsed = JSON.parse(business.additional_notes)
+                              return parsed.secret_menu_items || []
+                            } catch {
+                              return []
+                            }
+                          })() : [],
+                        // Calculate trial info for live businesses
+                        trial_days_remaining: business.approved_at ? 
+                          (() => {
+                            const approvalDate = new Date(business.approved_at)
+                            const trialEndDate = new Date(approvalDate.getTime() + (120 * 24 * 60 * 60 * 1000))
+                            const now = new Date()
+                            const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                            return daysRemaining > 0 ? daysRemaining : 0
+                          })() : null,
+                        trial_status: business.approved_at ? 
+                          (() => {
+                            const approvalDate = new Date(business.approved_at)
+                            const trialEndDate = new Date(approvalDate.getTime() + (120 * 24 * 60 * 60 * 1000))
+                            const now = new Date()
+                            const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                            return daysRemaining > 0 ? 'active' : 'expired'
+                          })() as 'active' | 'expired' | 'upgraded' | 'not_applicable' : 'not_applicable',
+                        billing_starts_date: business.approved_at ? 
+                          new Date(new Date(business.approved_at).getTime() + (120 * 24 * 60 * 60 * 1000)).toISOString() : null,
+                        last_updated: business.updated_at || business.created_at,
+                        has_pending_changes: false,
+                        pending_changes_count: 0
+                      }
+                      
+                      return (
                         <BusinessCRMCard
                           key={business.id}
-                          business={business}
+                          business={crmBusiness}
                           onApprove={handleApproval}
                           onInspect={(business) => {
                             // Convert CRM data to legacy Business format for inspection modal
@@ -684,7 +1071,8 @@ Qwikker Admin Team`
                             setInspectionModal({ open: true, business: legacyBusiness })
                           }}
                         />
-                      ))
+                      )
+                    })
                   )}
                 </div>
               )}
@@ -695,14 +1083,14 @@ Qwikker Admin Team`
                     <div className="text-center py-12">
                       <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 712-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
                       <h3 className="text-xl font-semibold text-white mb-2">No incomplete listings</h3>
                       <p className="text-slate-400">All businesses have completed their profiles.</p>
                     </div>
                   ) : (
-                    incompleteBusinesses.map((business) => renderBusinessCard(business, false))
+                    incompleteBusinesses.map((business) => renderIncompleteBusinessCard(business))
                   )}
                 </div>
               )}
@@ -854,6 +1242,117 @@ Qwikker Admin Team`
                     </div>
                   ) : (
                     rejectedBusinesses.map((business) => renderRejectedBusinessCard(business))
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'expired' && (
+                <div className="grid gap-6">
+                  {expiredTrialBusinesses.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-semibold text-white mb-2">No expired trials</h3>
+                      <p className="text-slate-400">All businesses are either active or haven't reached trial expiration yet.</p>
+                    </div>
+                  ) : (
+                    expiredTrialBusinesses.map((business) => {
+                      // Convert business data to CRM format (same as live businesses)
+                      const crmBusiness = {
+                        id: business.id,
+                        business_name: business.business_name || 'Unnamed Business',
+                        first_name: business.first_name,
+                        last_name: business.last_name,
+                        business_category: business.business_category || 'Uncategorized',
+                        business_type: business.business_type,
+                        business_address: business.business_address || '',
+                        business_town: business.business_town || '',
+                        business_postcode: business.business_postcode || '',
+                        email: business.email || '',
+                        phone: business.phone || '',
+                        status: business.status as 'incomplete' | 'pending_review' | 'approved' | 'rejected' | 'trial_expired' | 'inactive',
+                        approved_at: business.approved_at,
+                        admin_notes: business.admin_notes,
+                        subscription: null,
+                        tier: null,
+                        recent_payments: [],
+                        menu_url: business.menu_url,
+                        business_images: business.business_images as string[] | null,
+                        offer_name: business.offer_name,
+                        offer_type: business.offer_type,
+                        offer_image: business.offer_image,
+                        offer_start_date: business.offer_start_date,
+                        offer_end_date: business.offer_end_date,
+                        offer_terms: business.offer_terms,
+                        secret_menu_items: business.additional_notes ? 
+                          (() => {
+                            try {
+                              const parsed = JSON.parse(business.additional_notes)
+                              return parsed.secret_menu_items || []
+                            } catch {
+                              return []
+                            }
+                          })() : [],
+                        // Calculate trial info for expired businesses
+                        trial_days_remaining: business.approved_at ? 
+                          (() => {
+                            const approvalDate = new Date(business.approved_at)
+                            const trialEndDate = new Date(approvalDate.getTime() + (120 * 24 * 60 * 60 * 1000))
+                            const now = new Date()
+                            return Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                          })() : null,
+                        trial_status: 'expired' as const,
+                        billing_starts_date: business.approved_at ? 
+                          new Date(new Date(business.approved_at).getTime() + (120 * 24 * 60 * 60 * 1000)).toISOString() : null,
+                        last_updated: business.updated_at || business.created_at,
+                        has_pending_changes: false,
+                        pending_changes_count: 0
+                      }
+                      
+                      return (
+                        <BusinessCRMCard
+                          key={business.id}
+                          business={crmBusiness}
+                          onApprove={handleApproval}
+                          onInspect={(business) => {
+                            // Convert CRM data to legacy Business format for inspection modal
+                            const legacyBusiness = {
+                              id: business.id,
+                              user_id: '',
+                              business_name: business.business_name,
+                              email: business.email,
+                              first_name: '',
+                              last_name: '',
+                              business_type: '',
+                              business_category: business.business_category,
+                              business_town: business.business_town,
+                              business_address: business.business_address,
+                              business_postcode: business.business_postcode,
+                              phone: business.phone,
+                              logo: '',
+                              business_tagline: '',
+                              business_description: '',
+                              business_hours: '',
+                              offer_name: business.offer_name || '',
+                              offer_type: business.offer_type || '',
+                              offer_value: '',
+                              offer_terms: '',
+                              menu_url: business.menu_url || '',
+                              business_images: business.business_images || [],
+                              menu_preview: '',
+                              additional_notes: business.secret_menu_items ? JSON.stringify({ secret_menu_items: business.secret_menu_items }) : '',
+                              status: business.status,
+                              created_at: '',
+                              updated_at: business.last_updated
+                            }
+                            setInspectionModal({ open: true, business: legacyBusiness })
+                          }}
+                        />
+                      )
+                    })
                   )}
                 </div>
               )}
@@ -1061,6 +1560,17 @@ Qwikker Admin Team`
                   </div>
                 </div>
               )}
+
+              {/* Analytics Tab */}
+              {activeTab === 'analytics' && (
+                <AdminAnalytics city={city} />
+              )}
+
+              {/* Contacts Tab */}
+              {activeTab === 'contacts' && (
+                <ContactsTab city={city} cityDisplayName={cityDisplayName} />
+              )}
+
             </div>
           </div>
         </div>

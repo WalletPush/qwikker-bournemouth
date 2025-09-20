@@ -156,18 +156,25 @@ export async function createOffer(userId: string, offerData: {
 }
 
 /**
- * Update important business information and notify Slack
+ * Update business information with automatic GHL sync and notifications
  */
 export async function updateBusinessInfo(userId: string, updates: any) {
   const supabaseAdmin = createAdminClient()
 
-  // Filter out routine contact updates that don't need notifications
+  // Filter out routine contact updates that don't need Slack notifications
   const routineFields = ['phone', 'email', 'first_name', 'last_name']
   const importantUpdates = Object.keys(updates).filter(key => !routineFields.includes(key))
 
+  // Update the profile with timestamp (skip GHL sync fields if they don't exist)
+  const updateData = {
+    ...updates,
+    updated_at: new Date().toISOString()
+    // Note: last_ghl_sync field might not exist yet in database
+  }
+
   const { data: profile, error } = await supabaseAdmin
     .from('business_profiles')
-    .update(updates)
+    .update(updateData)
     .eq('user_id', userId)
     .select()
     .single()
@@ -176,7 +183,72 @@ export async function updateBusinessInfo(userId: string, updates: any) {
     return { success: false, error: error.message }
   }
 
-  // Only send notification if important fields were updated
+  // 🔥 ALWAYS SYNC TO GHL FOR CONTACT UPDATES
+  try {
+    const { sendContactUpdateToGoHighLevel } = await import('@/lib/integrations')
+    
+    // Prepare GHL data with updated information
+    const ghlData = {
+      // Personal info
+      firstName: profile.first_name || '',
+      lastName: profile.last_name || '',
+      email: profile.email || '',
+      phone: profile.phone || '',
+      
+      // Business info
+      businessName: profile.business_name || '',
+      businessType: profile.business_type || '',
+      businessCategory: profile.business_category || '',
+      businessAddress: profile.business_address || '',
+      town: profile.business_town || '',
+      postcode: profile.business_postcode || '',
+      
+      // Optional fields
+      website: profile.website || '',
+      instagram: profile.instagram || '',
+      facebook: profile.facebook || '',
+      
+      // File URLs
+      logo_url: profile.logo || '',
+      menu_url: profile.menu_url || '',
+      offer_image_url: profile.offer_image || '',
+      
+      // Offer data
+      offerName: profile.offer_name || '',
+      offerType: profile.offer_type || '',
+      offerValue: profile.offer_value || '',
+      offerTerms: profile.offer_terms || '',
+      offerStartDate: profile.offer_start_date || '',
+      offerEndDate: profile.offer_end_date || '',
+      
+      // Additional data
+      referralSource: profile.referral_source || '',
+      goals: profile.goals || '',
+      notes: profile.additional_notes || '',
+      
+      // Update metadata
+      contactSync: true,
+      syncType: 'business_dashboard_update',
+      updatedAt: new Date().toISOString(),
+      qwikkerContactId: profile.id,
+      city: profile.city,
+      status: profile.status,
+      
+      // Track what fields were updated
+      updatedFields: Object.keys(updates),
+      isUpdate: true,
+      updateSource: 'business_dashboard'
+    }
+    
+    await sendContactUpdateToGoHighLevel(ghlData, profile.city)
+    console.log(`✅ Business info updated and synced to ${profile.city} GHL: ${profile.business_name}`)
+    
+  } catch (ghlError) {
+    console.error('GHL sync failed after business update:', ghlError)
+    // Don't fail the request, but log the error
+  }
+
+  // Only send Slack notification if important fields were updated (not routine contact changes)
   if (importantUpdates.length > 0) {
     try {
       await sendBusinessUpdateNotification(profile, 'business_info', { 
@@ -187,7 +259,16 @@ export async function updateBusinessInfo(userId: string, updates: any) {
     }
   }
 
+  // 🔥 REFRESH ALL AFFECTED SYSTEMS IMMEDIATELY
   revalidatePath('/dashboard')
+  revalidatePath('/dashboard/personal') 
+  revalidatePath('/dashboard/business')
+  revalidatePath('/admin')
+  revalidatePath('/admin/contacts')
+  revalidatePath('/admin/live')
+  
+  console.log(`🔄 All systems refreshed for business: ${profile.business_name}`)
+  
   return { success: true, data: profile }
 }
 

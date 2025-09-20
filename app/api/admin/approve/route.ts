@@ -4,6 +4,7 @@ import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { addBasicBusinessKnowledge } from '@/lib/actions/knowledge-base-actions'
+import { sendContactUpdateToGoHighLevel } from '@/lib/integrations'
 
 export async function POST(request: NextRequest) {
   try {
@@ -114,6 +115,64 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error('⚠️ Knowledge base integration error (non-critical):', error)
       }
+    }
+    
+    // 📞 SYNC STATUS CHANGES TO GHL (for all actions)
+    try {
+      const ghlData = {
+        // Personal info
+        firstName: data.first_name || '',
+        lastName: data.last_name || '',
+        email: data.email || '',
+        phone: data.phone || '',
+        
+        // Business info
+        businessName: data.business_name || '',
+        businessType: data.business_type || '',
+        businessCategory: data.business_category || '',
+        businessAddress: data.business_address || '',
+        town: data.business_town || '',
+        postcode: data.business_postcode || '',
+        
+        // Optional fields
+        website: data.website || '',
+        instagram: data.instagram || '',
+        facebook: data.facebook || '',
+        
+        // File URLs
+        logo_url: data.logo || '',
+        menu_url: data.menu_url || '',
+        
+        // Offer data (if exists)
+        offerName: data.offer_name || '',
+        offerType: data.offer_type || '',
+        offerValue: data.offer_value || '',
+        offerTerms: data.offer_terms || '',
+        offerStartDate: data.offer_start_date || '',
+        offerEndDate: data.offer_end_date || '',
+        
+        // Status and metadata
+        status: newStatus,
+        approvedAt: data.approved_at,
+        city: data.city,
+        qwikkerContactId: data.id,
+        
+        // Sync metadata
+        contactSync: true,
+        syncType: `business_${action}`,
+        isUpdate: true,
+        updateSource: 'admin_approval',
+        adminAction: action,
+        adminName: admin.username,
+        updatedAt: new Date().toISOString()
+      }
+      
+      await sendContactUpdateToGoHighLevel(ghlData, data.city)
+      console.log(`📞 Business ${action} synced to ${data.city} GHL: ${data.business_name}`)
+      
+    } catch (ghlError) {
+      console.error(`⚠️ GHL sync failed after business ${action} (non-critical):`, ghlError)
+      // Don't fail the approval if GHL sync fails
     }
     
     return NextResponse.json({

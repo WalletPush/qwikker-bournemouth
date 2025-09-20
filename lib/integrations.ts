@@ -1,4 +1,6 @@
 // Integration utilities for external services
+import { getCityFromRequest } from './utils/city-detection'
+import { getFranchiseCRMConfig, getFranchiseCRMConfigSync, hasCRMConfig } from './utils/franchise-crm-config'
 
 /**
  * Upload file to Cloudinary
@@ -25,49 +27,91 @@ export async function uploadToCloudinary(file: File, folder = "qwikker_uploads")
 }
 
 /**
- * Send data to GoHighLevel webhook
+ * Send data to GoHighLevel webhook (franchise-aware)
+ * Automatically detects city and uses appropriate franchise CRM
  */
-export async function sendToGoHighLevel(formData: any): Promise<void> {
-  const webhookUrl = "https://services.leadconnectorhq.com/hooks/IkBldqzvQG4XkoSxkCq8/webhook-trigger/582275ed-27fe-4374-808b-9f8403f820e3"
+export async function sendToGoHighLevel(formData: any, city?: string): Promise<void> {
+  // Detect city if not provided
+  let targetCity = city
+  if (!targetCity && typeof window === 'undefined') {
+    // Server-side: try to get from request headers or form data
+    targetCity = formData.city || 'bournemouth'
+  }
+  if (!targetCity) {
+    targetCity = 'bournemouth' // fallback
+  }
+  
+  const crmConfig = getFranchiseCRMConfigSync(targetCity as any)
+  
+  if (!hasCRMConfig(targetCity as any)) {
+    console.warn(`⚠️ No valid CRM config for ${targetCity} - using Bournemouth fallback`)
+  }
+  
+  const webhookUrl = crmConfig.ghl_webhook_url
+  
+  // Add franchise metadata
+  const franchiseFormData = {
+    ...formData,
+    franchise_city: targetCity,
+    franchise_owner: crmConfig.franchise_owner,
+    timezone: crmConfig.timezone
+  }
+  
+  console.log(`📞 Sending to ${crmConfig.displayName} GHL:`, webhookUrl)
   
   const response = await fetch(webhookUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(formData)
+    body: JSON.stringify(franchiseFormData)
   })
 
   if (!response.ok) {
-    throw new Error(`GoHighLevel webhook failed: ${response.statusText}`)
+    throw new Error(`GoHighLevel webhook failed for ${crmConfig.displayName}: ${response.statusText}`)
   }
 }
 
 /**
- * Send file update to GoHighLevel using a separate webhook that doesn't trigger signup notifications
- * This function updates contact info only, without triggering new signup workflows
+ * Send contact update to GoHighLevel using franchise-specific webhooks
+ * This function handles both file updates and contact information changes
  * 
- * TO ENABLE: Set NEXT_PUBLIC_GHL_UPDATE_WEBHOOK_URL in your environment variables
- * with a separate GHL webhook that doesn't send Slack notifications
+ * Each franchise can have their own update webhook or use the main one
  */
-export async function sendFileUpdateToGoHighLevel(formData: any): Promise<void> {
-  // Use a separate webhook URL for updates to avoid signup notifications
-  const updateWebhookUrl = process.env.NEXT_PUBLIC_GHL_UPDATE_WEBHOOK_URL
+export async function sendContactUpdateToGoHighLevel(formData: any, city?: string): Promise<void> {
+  // Detect city if not provided
+  let targetCity = city
+  if (!targetCity && typeof window === 'undefined') {
+    // Server-side: try to get from request headers or form data
+    targetCity = formData.city || 'bournemouth'
+  }
+  if (!targetCity) {
+    targetCity = 'bournemouth' // fallback
+  }
+  
+  const crmConfig = getFranchiseCRMConfigSync(targetCity as any)
+  
+  // Use update webhook if available, otherwise use main webhook
+  const updateWebhookUrl = crmConfig.ghl_update_webhook_url || crmConfig.ghl_webhook_url
   
   if (!updateWebhookUrl) {
-    console.warn('GHL update webhook not configured - file updates will not sync to GHL')
-    console.warn('To enable GHL sync for file updates, set NEXT_PUBLIC_GHL_UPDATE_WEBHOOK_URL')
-    return
+    console.error(`❌ No GHL webhook configured for ${crmConfig.displayName}`)
+    throw new Error(`No GHL webhook configured for ${crmConfig.displayName}`)
   }
   
-  // Add metadata to distinguish this from new signups
+  // Add franchise metadata and update flags
   const updateData = {
     ...formData,
-    isFileUpdate: true,
-    updateType: 'file_upload',
+    isContactUpdate: true,
+    updateType: formData.updateType || 'contact_update',
     skipSignupNotification: true,
+    franchise_city: targetCity,
+    franchise_owner: crmConfig.franchise_owner,
+    timezone: crmConfig.timezone,
     // This flag can be used in GHL to filter out signup notifications
   }
+  
+  console.log(`🔄 Updating contact in ${crmConfig.displayName} GHL:`, updateWebhookUrl)
   
   const response = await fetch(updateWebhookUrl, {
     method: "POST",
@@ -78,8 +122,21 @@ export async function sendFileUpdateToGoHighLevel(formData: any): Promise<void> 
   })
 
   if (!response.ok) {
-    throw new Error(`GoHighLevel file update webhook failed: ${response.statusText}`)
+    throw new Error(`GoHighLevel contact update webhook failed for ${crmConfig.displayName}: ${response.statusText}`)
   }
+  
+  console.log(`✅ Contact updated successfully in ${crmConfig.displayName} GHL`)
+}
+
+/**
+ * Legacy function for backward compatibility - redirects to sendContactUpdateToGoHighLevel
+ * @deprecated Use sendContactUpdateToGoHighLevel instead
+ */
+export async function sendFileUpdateToGoHighLevel(formData: any): Promise<void> {
+  return sendContactUpdateToGoHighLevel({
+    ...formData,
+    updateType: 'file_upload'
+  })
 }
 
 /**
@@ -173,7 +230,7 @@ export async function sendSlackNotification(formData: any): Promise<void> {
 /**
  * Send Slack notification for important business updates
  */
-export async function sendBusinessUpdateNotification(profileData: any, updateType: 'file_upload' | 'secret_menu' | 'offer_created' | 'business_info' | 'offer_deleted' | 'secret_menu_deleted' | 'referral_signup' | 'referral_credited' | 'offer_pending_approval' | 'secret_menu_pending_approval', details: any): Promise<void> {
+export async function sendBusinessUpdateNotification(profileData: any, updateType: 'file_upload' | 'secret_menu' | 'offer_created' | 'business_info' | 'offer_deleted' | 'secret_menu_deleted' | 'referral_signup' | 'referral_credited' | 'offer_pending_approval' | 'secret_menu_pending_approval' | 'file_pending_approval', details: any): Promise<void> {
   const slackWebhookUrl = process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL
   
   if (!slackWebhookUrl) {
@@ -216,6 +273,9 @@ export async function sendBusinessUpdateNotification(profileData: any, updateTyp
       break
     case 'secret_menu_pending_approval':
       message = createSecretMenuPendingApprovalMessage(businessName, ownerName, details)
+      break
+    case 'file_pending_approval':
+      message = createFilePendingApprovalMessage(businessName, ownerName, details)
       break
     default:
       return // Skip unknown update types
@@ -586,6 +646,78 @@ function createSecretMenuPendingApprovalMessage(businessName: string, ownerName:
             },
             url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin?tab=updates`,
             style: "primary"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+function createFilePendingApprovalMessage(businessName: string, ownerName: string, details: any) {
+  const fileTypeEmoji = {
+    'logo': '🏢',
+    'menu': '📄',
+    'offer': '🎯',
+    'business_images': '📸'
+  }
+  
+  const emoji = fileTypeEmoji[details.fileType as keyof typeof fileTypeEmoji] || '📎'
+  
+  return {
+    text: `${emoji} File Pending Admin Approval`,
+    blocks: [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: `${emoji} File Pending Admin Approval`,
+          emoji: true
+        }
+      },
+      {
+        type: "section",
+        fields: [
+          {
+            type: "mrkdwn",
+            text: `*Business:*\n${businessName}`
+          },
+          {
+            type: "mrkdwn",
+            text: `*Owner:*\n${ownerName}`
+          },
+          {
+            type: "mrkdwn",
+            text: `*File Type:*\n${details.fileType.charAt(0).toUpperCase() + details.fileType.slice(1)}`
+          },
+          {
+            type: "mrkdwn",
+            text: `*Status:*\nPending Admin Review`
+          }
+        ]
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `📋 *Admin Action Required*\n\nA new ${details.fileType} has been uploaded and requires your approval before going live on the user dashboard.`
+        },
+        accessory: {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "View File",
+            emoji: true
+          },
+          url: details.fileUrl,
+          action_id: "view_file"
+        }
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `📝 Change ID: ${details.changeId} | 🕐 ${new Date().toLocaleString()}`
           }
         ]
       }

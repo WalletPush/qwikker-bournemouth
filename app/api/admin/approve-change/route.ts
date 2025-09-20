@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
+import { sendContactUpdateToGoHighLevel } from '@/lib/integrations'
 
 export async function POST(request: NextRequest) {
   try {
@@ -127,6 +128,32 @@ export async function POST(request: NextRequest) {
             secret_menu_items: secretMenuItems
           })
         }
+      } else if (change.change_type === 'logo') {
+        // Approve logo upload
+        updateData = {
+          logo: change.change_data.logo_url
+        }
+      } else if (change.change_type === 'menu_url') {
+        // Approve menu PDF upload
+        updateData = {
+          menu_url: change.change_data.menu_url
+        }
+      } else if (change.change_type === 'business_images') {
+        // Approve business image - add to existing images
+        const { data: currentProfile } = await supabaseAdmin
+          .from('business_profiles')
+          .select('business_images')
+          .eq('id', change.business_id)
+          .single()
+        
+        const existingImages = currentProfile?.business_images || []
+        const newImages = Array.isArray(existingImages) 
+          ? [...existingImages, change.change_data.new_business_image] 
+          : [change.change_data.new_business_image]
+        
+        updateData = {
+          business_images: newImages
+        }
       }
       
       // Update the business profile
@@ -162,6 +189,74 @@ export async function POST(request: NextRequest) {
       }
       
       console.log(`✅ Change ${changeId} approved by ${admin.username} - ${change.change_type} for ${change.business?.business_name}`)
+      
+      // 📞 SYNC APPROVALS TO GHL (offers and files, skip secret menu items)
+      if (change.change_type === 'offer' || change.change_type === 'logo' || change.change_type === 'menu_url' || change.change_type === 'business_images') {
+        try {
+          // Get the updated business profile for GHL sync
+          const { data: updatedBusiness } = await supabaseAdmin
+            .from('business_profiles')
+            .select('*')
+            .eq('id', change.business_id)
+            .single()
+          
+          if (updatedBusiness) {
+            const ghlData = {
+              // Personal info
+              firstName: updatedBusiness.first_name || '',
+              lastName: updatedBusiness.last_name || '',
+              email: updatedBusiness.email || '',
+              phone: updatedBusiness.phone || '',
+              
+              // Business info
+              businessName: updatedBusiness.business_name || '',
+              businessType: updatedBusiness.business_type || '',
+              businessCategory: updatedBusiness.business_category || '',
+              businessAddress: updatedBusiness.business_address || '',
+              town: updatedBusiness.business_town || '',
+              postcode: updatedBusiness.business_postcode || '',
+              
+              // Optional fields
+              website: updatedBusiness.website || '',
+              instagram: updatedBusiness.instagram || '',
+              facebook: updatedBusiness.facebook || '',
+              
+              // File URLs
+              logo_url: updatedBusiness.logo || '',
+              menu_url: updatedBusiness.menu_url || '',
+              offer_image_url: updatedBusiness.offer_image || '',
+              
+              // 🎯 NEWLY APPROVED OFFER DATA
+              offerName: updatedBusiness.offer_name || '',
+              offerType: updatedBusiness.offer_type || '',
+              offerValue: updatedBusiness.offer_value || '',
+              offerClaimAmount: updatedBusiness.offer_claim_amount || '',
+              offerTerms: updatedBusiness.offer_terms || '',
+              offerStartDate: updatedBusiness.offer_start_date || '',
+              offerEndDate: updatedBusiness.offer_end_date || '',
+              
+              // Sync metadata
+              contactSync: true,
+              syncType: `${change.change_type}_approval`,
+              isUpdate: true,
+              updateSource: 'admin_change_approval',
+              adminAction: `approve_${change.change_type}`,
+              adminName: admin.username,
+              changeId: changeId,
+              qwikkerContactId: updatedBusiness.id,
+              city: updatedBusiness.city,
+              updatedAt: new Date().toISOString()
+            }
+            
+            await sendContactUpdateToGoHighLevel(ghlData, updatedBusiness.city)
+            console.log(`📞 Approved ${change.change_type} synced to ${updatedBusiness.city} GHL: ${updatedBusiness.business_name}`)
+          }
+          
+        } catch (ghlError) {
+          console.error(`⚠️ GHL sync failed after ${change.change_type} approval (non-critical):`, ghlError)
+          // Don't fail the approval if GHL sync fails
+        }
+      }
       
     } else if (action === 'reject') {
       // Mark the change as rejected

@@ -237,7 +237,7 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       city: mapTownToCity(formData.town, locationInfo), // Fix: Use dynamic location-aware city mapping
       status: 'incomplete', // Fix: Add default status
       profile_completion_percentage: 25, // Fix: Add default completion percentage
-      business_tier: 'standard', // Fix: Add default business tier
+      business_tier: 'free_trial', // Fix: Add correct business tier for onboarding
       rating: 0, // Fix: Add default rating
       review_count: 0, // Fix: Add default review count
     }

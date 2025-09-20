@@ -40,6 +40,7 @@ export async function addBasicBusinessKnowledge(businessId: string, adminId: str
         instagram: business.instagram_handle,
         facebook: business.facebook_url,
         hours: business.business_hours,
+        hours_structured: business.business_hours_structured,
         rating: business.rating,
         tier: business.business_tier
       },
@@ -122,8 +123,11 @@ function generateBasicBusinessContent(business: any): string {
     sections.push(`Facebook: ${business.facebook_url}`)
   }
 
-  // Operating Information
-  if (business.business_hours) {
+  // Operating Information - Use structured hours if available, fallback to text
+  if (business.business_hours_structured) {
+    const structuredHours = formatStructuredHoursForAI(business.business_hours_structured)
+    sections.push(`Hours:\n${structuredHours}`)
+  } else if (business.business_hours) {
     sections.push(`Hours: ${business.business_hours}`)
   }
 
@@ -296,6 +300,34 @@ export async function createEventKnowledge(
     console.error('Exception creating event knowledge:', error)
     return { success: false, error: 'Unexpected error occurred' }
   }
+}
+
+/**
+ * Format structured business hours for AI consumption
+ */
+function formatStructuredHoursForAI(hoursStructured: any): string {
+  if (!hoursStructured) return "Business hours not available."
+  
+  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+  const hoursLines = []
+  
+  days.forEach(day => {
+    const dayData = hoursStructured[day]
+    if (dayData) {
+      const dayName = day.charAt(0).toUpperCase() + day.slice(1)
+      if (dayData.closed) {
+        hoursLines.push(`${dayName}: Closed`)
+      } else {
+        hoursLines.push(`${dayName}: ${dayData.open} - ${dayData.close}`)
+      }
+    }
+  })
+  
+  if (hoursStructured.timezone) {
+    hoursLines.push(`Timezone: ${hoursStructured.timezone}`)
+  }
+  
+  return hoursLines.join('\n')
 }
 
 function generateEventContent(eventData: any): string {

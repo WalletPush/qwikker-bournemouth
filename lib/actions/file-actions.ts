@@ -7,56 +7,78 @@ import { sendFileUpdateToGoHighLevel, sendBusinessUpdateNotification } from '@/l
 export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu' | 'offer' | 'business_images', fileUrl: string) {
   const supabaseAdmin = createAdminClient()
 
-  const updateData: any = {}
+  // Get user profile for notification context
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from('business_profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+
+  if (profileError || !profile) {
+    return { success: false, error: 'Profile not found' }
+  }
+
+  // 🚨 NEW LOGIC: ALL FILES REQUIRE ADMIN APPROVAL
+  let changeData: any = {}
+  let changeType: string = ''
   
-  // Map file types to profile fields
   switch (fileType) {
     case 'logo':
-      updateData.logo = fileUrl
+      changeType = 'logo'
+      changeData = { logo_url: fileUrl }
       break
     case 'menu':
-      updateData.menu_url = fileUrl
+      changeType = 'menu_url'
+      changeData = { menu_url: fileUrl }
       break
     case 'offer':
-      updateData.offer_image = fileUrl
+      changeType = 'offer'
+      changeData = { offer_image: fileUrl }
       break
     case 'business_images':
-      // Get existing business images
-      const { data: existingProfile } = await supabaseAdmin
-        .from('business_profiles')
-        .select('business_images')
-        .eq('user_id', userId)
-        .single()
-      
-      const existingImages = existingProfile?.business_images || []
-      const newImages = Array.isArray(existingImages) ? [...existingImages, fileUrl] : [fileUrl]
-      updateData.business_images = newImages
+      changeType = 'business_images'
+      // For business images, we'll store the new image URL to be added
+      changeData = { new_business_image: fileUrl }
       break
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('business_profiles')
-    .update(updateData)
-    .eq('user_id', userId)
+  // Create pending change record instead of updating profile directly
+  const { data: changeRecord, error: changeError } = await supabaseAdmin
+    .from('business_changes')
+    .insert({
+      business_id: profile.id,
+      change_type: changeType,
+      change_data: changeData,
+      status: 'pending'
+    })
     .select()
     .single()
 
-  if (error) {
-    console.error('Error updating profile file:', error)
-    return { success: false, error: error.message }
+  if (changeError) {
+    console.error('Error creating file change record:', changeError)
+    return { success: false, error: 'Failed to submit file for admin approval' }
   }
 
-  // Revalidate the dashboard and files pages to show updated data
+  // Revalidate the dashboard and files pages
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/files')
 
-  // Send Slack notification for knowledge base updates (non-blocking)
-  // Note: GHL sync temporarily disabled to prevent false signup notifications
-  sendBusinessUpdateNotification(data, 'file_upload', { fileType, fileUrl }).catch(error => 
+  // Send Slack notification for ADMIN APPROVAL (not live file)
+  try {
+    await sendBusinessUpdateNotification(profile, 'file_pending_approval', {
+      fileType,
+      fileUrl,
+      changeId: changeRecord.id
+    })
+  } catch (error) {
     console.error('Slack notification failed (non-critical):', error)
-  )
+  }
 
-  return { success: true, data }
+  return { 
+    success: true, 
+    data: changeRecord,
+    message: `${fileType.charAt(0).toUpperCase() + fileType.slice(1)} submitted for admin approval. You will be notified once it is reviewed.`
+  }
 }
 
 export async function uploadToCloudinary(file: File, folder: string = 'qwikker_uploads') {
