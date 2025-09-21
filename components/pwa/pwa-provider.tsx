@@ -82,40 +82,36 @@ export function PWAProvider({
       
       {/* PWA Install Banner */}
       {showInstallBanner && !isInstalled && (
-        <div className="fixed bottom-4 left-4 right-4 z-50 md:left-auto md:right-4 md:max-w-sm">
-          <div className="bg-gradient-to-r from-[#00d083] to-[#00b86f] rounded-2xl p-4 shadow-2xl border border-white/10">
-            <div className="flex items-start gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-xl font-bold text-white">Q</span>
+        <div className="fixed top-4 left-4 right-4 z-40 md:left-auto md:right-4 md:max-w-sm">
+          <div className="bg-slate-800/95 backdrop-blur border border-slate-700 rounded-xl p-3 shadow-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-[#00d083]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-bold text-[#00d083]">Q</span>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-white font-bold text-sm mb-1">Install Qwikker App</h3>
-                <p className="text-white/90 text-xs mb-3">
-                  Get faster access and offline features
+                <p className="text-white text-sm font-medium mb-1">
+                  Add Qwikker to your home screen for an app-like experience
                 </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleInstallPWA}
-                    className="bg-white/20 hover:bg-white/30 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                  >
-                    Install
-                  </button>
-                  <button
-                    onClick={() => setShowInstallBanner(false)}
-                    className="text-white/80 hover:text-white text-xs font-medium px-3 py-1.5 transition-colors"
-                  >
-                    Later
-                  </button>
-                </div>
+                <p className="text-slate-400 text-xs">
+                  No downloads needed
+                </p>
               </div>
-              <button
-                onClick={() => setShowInstallBanner(false)}
-                className="text-white/60 hover:text-white/80 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex gap-1">
+                <button
+                  onClick={handleInstallPWA}
+                  className="bg-[#00d083] hover:bg-[#00b86f] text-black text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => setShowInstallBanner(false)}
+                  className="text-slate-400 hover:text-slate-300 transition-colors p-1.5"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -123,7 +119,7 @@ export function PWAProvider({
 
       {/* Notification Permission Banner */}
       {enablePushNotifications && isSupported && notificationPermission === 'default' && userId && (
-        <div className="fixed top-4 left-4 right-4 z-50 md:left-auto md:right-4 md:max-w-sm">
+        <div className={`fixed left-4 right-4 z-50 md:left-auto md:right-4 md:max-w-sm ${showInstallBanner ? 'top-20' : 'top-4'}`}>
           <div className="bg-slate-800/95 backdrop-blur border border-slate-700 rounded-2xl p-4 shadow-2xl">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center flex-shrink-0">

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LogoutButton } from '@/components/logout-button'
+import { PWAProvider } from '@/components/pwa/pwa-provider'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -117,11 +118,12 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+    <PWAProvider userId={profile?.user_id} enablePushNotifications={true} enableInstallPrompt={true}>
+      <div className="min-h-screen bg-slate-950 text-white">
+        {/* Mobile sidebar overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -242,5 +244,6 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
         </main>
       </div>
     </div>
+    </PWAProvider>
   )
 }

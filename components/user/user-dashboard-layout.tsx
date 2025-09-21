@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { PWAProvider } from '@/components/pwa/pwa-provider'
 
 interface UserDashboardLayoutProps {
   children: React.ReactNode
@@ -71,14 +72,15 @@ export function UserDashboardLayout({ children, currentSection, currentUser }: U
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <PWAProvider userId={currentUser?.wallet_pass_id} enablePushNotifications={true} enableInstallPrompt={true}>
+      <div className="min-h-screen bg-slate-950 text-slate-100">
+        {/* Mobile sidebar overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
       {/* Sidebar */}
       <div className={`fixed inset-y-0 left-0 w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ${
@@ -183,5 +185,6 @@ export function UserDashboardLayout({ children, currentSection, currentUser }: U
         </main>
       </div>
     </div>
+    </PWAProvider>
   )
 }
