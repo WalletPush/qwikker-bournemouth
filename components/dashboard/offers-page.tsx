@@ -243,60 +243,83 @@ export function OffersPage({ profile }: OffersPageProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-slate-700/30 rounded-lg p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-2">{profile.offer_name}</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-400">Type:</span>
-                      <span className="text-white ml-2">{profile.offer_type || 'Not specified'}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400">Value:</span>
-                      <span className="text-white ml-2">{profile.offer_value || 'Not specified'}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400">Claim Amount:</span>
-                      <span className="text-white ml-2">
-                        {profile.offer_claim_amount === 'single' ? 'Single Use' : 
-                         profile.offer_claim_amount === 'multiple' ? 'Multiple Use' : 
-                         'Not specified'}
-                      </span>
-                    </div>
-                    {profile.offer_image && (
-                      <div>
-                        <span className="text-gray-400">Offer Image:</span>
-                        <a href={profile.offer_image} target="_blank" rel="noopener noreferrer" className="text-[#00d083] hover:text-[#00b86f] ml-2 underline">
-                          View Image
-                        </a>
-                      </div>
-                    )}
-                    {profile.offer_start_date && (
-                      <div>
-                        <span className="text-gray-400">Start Date:</span>
-                        <span className="text-white ml-2">{new Date(profile.offer_start_date).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                    {profile.offer_end_date && (
-                      <div>
-                        <span className="text-gray-400">End Date:</span>
-                        <span className="text-white ml-2">{new Date(profile.offer_end_date).toLocaleDateString()}</span>
-                      </div>
-                    )}
+            <div className="bg-slate-700/30 rounded-lg p-4 sm:p-6">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <h3 className="text-lg font-semibold text-white flex-1 min-w-0">{profile.offer_name}</h3>
+                  {/* Action buttons - only show on larger screens */}
+                  <div className="hidden sm:flex gap-2 flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-slate-600 text-gray-300 hover:bg-slate-700 text-xs"
+                      onClick={() => setShowCreateForm(true)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-red-600 text-red-400 hover:bg-red-600/10 text-xs"
+                      onClick={() => setShowDeleteConfirmation(true)}
+                    >
+                      Delete
+                    </Button>
                   </div>
-                  {profile.offer_terms && (
-                    <div className="mt-4">
-                      <span className="text-gray-400 text-sm">Terms & Conditions:</span>
-                      <p className="text-white text-sm mt-1">{profile.offer_terms}</p>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-400">Type:</span>
+                    <span className="text-white ml-2">{profile.offer_type || 'Not specified'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Value:</span>
+                    <span className="text-white ml-2">{profile.offer_value || 'Not specified'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Claim Amount:</span>
+                    <span className="text-white ml-2">
+                      {profile.offer_claim_amount === 'single' ? 'Single Use' : 
+                       profile.offer_claim_amount === 'multiple' ? 'Multiple Use' : 
+                       'Not specified'}
+                    </span>
+                  </div>
+                  {profile.offer_image && (
+                    <div>
+                      <span className="text-gray-400">Offer Image:</span>
+                      <a href={profile.offer_image} target="_blank" rel="noopener noreferrer" className="text-[#00d083] hover:text-[#00b86f] ml-2 underline">
+                        View Image
+                      </a>
+                    </div>
+                  )}
+                  {profile.offer_start_date && (
+                    <div>
+                      <span className="text-gray-400">Start Date:</span>
+                      <span className="text-white ml-2">{new Date(profile.offer_start_date).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {profile.offer_end_date && (
+                    <div>
+                      <span className="text-gray-400">End Date:</span>
+                      <span className="text-white ml-2">{new Date(profile.offer_end_date).toLocaleDateString()}</span>
                     </div>
                   )}
                 </div>
-                <div className="flex gap-2">
+                
+                {profile.offer_terms && (
+                  <div className="mt-4 pt-4 border-t border-slate-600">
+                    <span className="text-gray-400 text-sm">Terms & Conditions:</span>
+                    <p className="text-white text-sm mt-1 leading-relaxed">{profile.offer_terms}</p>
+                  </div>
+                )}
+                
+                {/* Mobile action buttons */}
+                <div className="sm:hidden flex flex-wrap gap-2 pt-4 border-t border-slate-600">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-slate-600 text-gray-300 hover:bg-slate-700"
+                    className="border-slate-600 text-gray-300 hover:bg-slate-700 flex-1 touch-manipulation min-h-[44px]"
                     onClick={() => setShowCreateForm(true)}
                   >
                     Edit Offer
@@ -304,7 +327,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-red-600 text-red-400 hover:bg-red-600/10"
+                    className="border-red-600 text-red-400 hover:bg-red-600/10 flex-1 touch-manipulation min-h-[44px]"
                     onClick={() => setShowDeleteConfirmation(true)}
                   >
                     Delete
@@ -312,13 +335,26 @@ export function OffersPage({ profile }: OffersPageProps) {
                   {currentOfferCount < offerLimit && (
                     <Button
                       size="sm"
-                      className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
+                      className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white w-full touch-manipulation min-h-[44px]"
                       onClick={() => setShowCreateForm(true)}
                     >
-                      Create Another
+                      Create Another Offer
                     </Button>
                   )}
                 </div>
+                
+                {/* Desktop "Create Another" button */}
+                {currentOfferCount < offerLimit && (
+                  <div className="hidden sm:block pt-4 border-t border-slate-600">
+                    <Button
+                      size="sm"
+                      className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
+                      onClick={() => setShowCreateForm(true)}
+                    >
+                      Create Another Offer
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

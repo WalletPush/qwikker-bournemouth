@@ -129,27 +129,35 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
     dayHours: DayHours, 
     onChange: (hours: DayHours) => void 
   }) => (
-    <div className="grid grid-cols-4 gap-4 items-center py-2">
-      <Label className="text-white font-medium capitalize">{day}</Label>
+    <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-4 sm:gap-4 sm:items-center py-3 border-b border-slate-700/50 last:border-b-0">
+      <Label className="text-white font-medium capitalize text-base">{day}</Label>
       <div className="flex items-center gap-2">
         <input
           type="checkbox"
           checked={dayHours.closed}
           onChange={(e) => onChange({ ...dayHours, closed: e.target.checked })}
-          className="w-4 h-4 text-green-500 bg-slate-700 border-slate-600 rounded focus:ring-green-500"
+          className="w-4 h-4 text-green-500 bg-slate-700 border-slate-600 rounded focus:ring-green-500 touch-manipulation"
         />
         <span className="text-sm text-slate-300">Closed</span>
       </div>
-      <TimeDropdown
-        value={dayHours.open || undefined}
-        onChange={(open) => onChange({ ...dayHours, open })}
-        disabled={dayHours.closed}
-      />
-      <TimeDropdown
-        value={dayHours.close || undefined}
-        onChange={(close) => onChange({ ...dayHours, close })}
-        disabled={dayHours.closed}
-      />
+      <div className="grid grid-cols-2 gap-3 sm:contents">
+        <div className="space-y-1">
+          <label className="text-xs text-slate-400 sm:hidden">Opens</label>
+          <TimeDropdown
+            value={dayHours.open || undefined}
+            onChange={(open) => onChange({ ...dayHours, open })}
+            disabled={dayHours.closed}
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-slate-400 sm:hidden">Closes</label>
+          <TimeDropdown
+            value={dayHours.close || undefined}
+            onChange={(close) => onChange({ ...dayHours, close })}
+            disabled={dayHours.closed}
+          />
+        </div>
+      </div>
     </div>
   )
 
@@ -165,44 +173,44 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
         {/* Pattern Selection */}
         <div className="space-y-3">
           <Label className="text-white font-medium">Hours Pattern</Label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <button
               type="button"
               onClick={() => handlePatternChange('weekdays_same')}
-              className={`p-4 rounded-lg border text-left transition-colors ${
+              className={`p-3 sm:p-4 rounded-lg border text-left transition-colors touch-manipulation min-h-[60px] ${
                 pattern === 'weekdays_same'
                   ? 'border-green-500 bg-green-500/10 text-green-300'
-                  : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
+                  : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500 active:bg-slate-600/50'
               }`}
             >
-              <div className="font-medium">Same Every Day</div>
-              <div className="text-sm opacity-75">Mon-Sun identical hours</div>
+              <div className="font-medium text-sm sm:text-base">Same Every Day</div>
+              <div className="text-xs sm:text-sm opacity-75">Mon-Sun identical hours</div>
             </button>
             
             <button
               type="button"
               onClick={() => handlePatternChange('weekdays_weekend')}
-              className={`p-4 rounded-lg border text-left transition-colors ${
+              className={`p-3 sm:p-4 rounded-lg border text-left transition-colors touch-manipulation min-h-[60px] ${
                 pattern === 'weekdays_weekend'
                   ? 'border-green-500 bg-green-500/10 text-green-300'
-                  : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
+                  : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500 active:bg-slate-600/50'
               }`}
             >
-              <div className="font-medium">Weekdays + Weekend</div>
-              <div className="text-sm opacity-75">Different weekend hours</div>
+              <div className="font-medium text-sm sm:text-base">Weekdays + Weekend</div>
+              <div className="text-xs sm:text-sm opacity-75">Different weekend hours</div>
             </button>
             
             <button
               type="button"
               onClick={() => handlePatternChange('custom')}
-              className={`p-4 rounded-lg border text-left transition-colors ${
+              className={`p-3 sm:p-4 rounded-lg border text-left transition-colors touch-manipulation min-h-[60px] sm:col-span-2 lg:col-span-1 ${
                 pattern === 'custom'
                   ? 'border-green-500 bg-green-500/10 text-green-300'
-                  : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
+                  : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500 active:bg-slate-600/50'
               }`}
             >
-              <div className="font-medium">Custom</div>
-              <div className="text-sm opacity-75">Set each day individually</div>
+              <div className="font-medium text-sm sm:text-base">Custom</div>
+              <div className="text-xs sm:text-sm opacity-75">Set each day individually</div>
             </button>
           </div>
         </div>

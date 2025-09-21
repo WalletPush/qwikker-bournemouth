@@ -131,20 +131,20 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
   return (
     <div className={`bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl overflow-hidden hover:border-slate-600 transition-all duration-300 ${className}`}>
       {/* Header Section */}
-      <div className={`bg-gradient-to-r ${getHeaderColor()} px-6 py-4`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className={`bg-gradient-to-r ${getHeaderColor()} px-4 sm:px-6 py-4`}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             {/* Business Type Icon */}
             <div className="flex-shrink-0">
               <InitialAvatar 
                 businessName={business.business_name} 
-                className="w-14 h-14 rounded-lg border-2 border-white/20 text-lg font-bold"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg border-2 border-white/20 text-base sm:text-lg font-bold"
               />
             </div>
             
             {/* Business Info */}
-            <div className="flex-1">
-              <h3 className="text-xl font-bold text-white mb-1">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-1 truncate">
                 {business.business_name}
               </h3>
               {(business.first_name || business.last_name) && (
@@ -258,12 +258,12 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
           </div>
           
           {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            {/* Contact Buttons */}
-            <div className="flex gap-1">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Contact Buttons - Hidden on very small screens */}
+            <div className="hidden sm:flex gap-1">
               <button
                 onClick={() => window.open(`mailto:${business.email}`)}
-                className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors touch-manipulation min-h-[40px] min-w-[40px]"
                 title="Send Email"
               >
                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -272,7 +272,7 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
               </button>
               <button
                 onClick={() => window.open(`tel:${business.phone}`)}
-                className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors touch-manipulation min-h-[40px] min-w-[40px]"
                 title="Call Phone"
               >
                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -285,9 +285,9 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
               variant="outline"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-white border-white/30 hover:bg-white/10 hover:border-white/50"
+              className="text-white border-white/30 hover:bg-white/10 hover:border-white/50 touch-manipulation min-h-[40px] text-xs sm:text-sm"
             >
-              {isExpanded ? 'Collapse' : 'Expand'}
+              {isExpanded ? 'Less' : 'More'}
             </Button>
             
             {business.status === 'pending_review' && onInspect && (
@@ -388,16 +388,16 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
 
       {/* Expanded Details */}
       {isExpanded && (
-        <div className="px-6 py-6 space-y-6">
+        <div className="px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
           {/* Contact Details */}
-          <div className="bg-slate-700/30 rounded-lg border border-slate-600 p-4">
-            <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-slate-700/30 rounded-lg border border-slate-600 p-3 sm:p-4">
+            <h4 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               Contact Information
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="text-sm font-medium text-slate-400">Email Address</label>
                 <div className="flex items-center gap-2 mt-1">
