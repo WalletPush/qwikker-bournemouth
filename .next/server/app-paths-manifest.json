@@ -1,14 +1,9 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
   "/auth/login/page": "app/auth/login/page.js",
-  "/dashboard/notifications/page": "app/dashboard/notifications/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
+  "/debug-pwa/page": "app/debug-pwa/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/page": "app/page.js",
-  "/protected/page": "app/protected/page.js",
-  "/user/business/[slug]/page": "app/user/business/[slug]/page.js",
   "/user/dashboard/page": "app/user/dashboard/page.js",
-  "/user/discover/page": "app/user/discover/page.js",
-  "/user/page": "app/user/page.js",
-  "/user/secret-menu/page": "app/user/secret-menu/page.js"
+  "/user/page": "app/user/page.js"
 }

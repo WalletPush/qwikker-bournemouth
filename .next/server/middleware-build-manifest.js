@@ -1,6 +1,33 @@
 globalThis.__BUILD_MANIFEST = {
   "pages": {
-    "/_app": []
+    "/_app": [
+      "static/chunks/d6132_next_dist_compiled_next-devtools_index_a1a8d74b.js",
+      "static/chunks/d6132_next_dist_compiled_f832b452._.js",
+      "static/chunks/d6132_next_dist_shared_lib_35340aef._.js",
+      "static/chunks/d6132_next_dist_client_834a32ef._.js",
+      "static/chunks/d6132_next_dist_14dbe49f._.js",
+      "static/chunks/d6132_next_app_6078aab3.js",
+      "static/chunks/[next]_entry_page-loader_ts_36304b83._.js",
+      "static/chunks/c046a_react-dom_812c9f31._.js",
+      "static/chunks/node_modules__pnpm_f012a4b7._.js",
+      "static/chunks/[root-of-the-server]__45f039c3._.js",
+      "static/chunks/pages__app_2da965e7._.js",
+      "static/chunks/turbopack-pages__app_61b8d191._.js"
+    ],
+    "/_error": [
+      "static/chunks/d6132_next_dist_compiled_next-devtools_index_a1a8d74b.js",
+      "static/chunks/d6132_next_dist_compiled_f832b452._.js",
+      "static/chunks/d6132_next_dist_shared_lib_c858f923._.js",
+      "static/chunks/d6132_next_dist_client_834a32ef._.js",
+      "static/chunks/d6132_next_dist_abf0fe97._.js",
+      "static/chunks/d6132_next_error_9e15cf91.js",
+      "static/chunks/[next]_entry_page-loader_ts_a8d5d788._.js",
+      "static/chunks/c046a_react-dom_812c9f31._.js",
+      "static/chunks/node_modules__pnpm_f012a4b7._.js",
+      "static/chunks/[root-of-the-server]__092393de._.js",
+      "static/chunks/pages__error_2da965e7._.js",
+      "static/chunks/turbopack-pages__error_3ed3d30c._.js"
+    ]
   },
   "devFiles": [],
   "ampDevFiles": [],

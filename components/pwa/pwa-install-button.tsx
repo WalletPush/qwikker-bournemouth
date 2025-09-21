@@ -10,19 +10,10 @@ interface PWAInstallButtonProps {
 export function PWAInstallButton({ className = "", variant = 'button' }: PWAInstallButtonProps) {
   const { installPWA, isInstalled, isSupported } = usePWA();
 
-  console.log('🎯 PWA Install Button:', { isInstalled, isSupported, variant });
-
-  if (isInstalled || !isSupported) {
-    console.log('❌ PWA Install Button hidden:', { isInstalled, isSupported });
+  // Only hide if actually installed (ignore support check for now)
+  if (isInstalled) {
     return null;
   }
-
-  console.log('✅ PWA Install Button showing');
-
-  // Always show for debugging
-  // if (isInstalled || !isSupported) {
-  //   return null;
-  // }
 
   if (variant === 'card') {
     return (
@@ -39,8 +30,17 @@ export function PWAInstallButton({ className = "", variant = 'button' }: PWAInst
               Get app-like access to your Qwikker dashboard
             </p>
             <button
-              onClick={installPWA}
-              className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-medium px-4 py-2 rounded-lg transition-all duration-200 text-sm"
+              onClick={() => {
+                console.log('🎯 PWA Install Button clicked!');
+                console.log('🎯 installPWA function:', installPWA);
+                try {
+                  installPWA();
+                } catch (error) {
+                  console.error('❌ Error calling installPWA:', error);
+                  alert('Error: ' + error);
+                }
+              }}
+              className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-medium px-4 py-3 rounded-lg transition-all duration-200 text-sm touch-manipulation min-h-[44px] w-full sm:w-auto"
             >
               Click here to add Qwikker to your home screen
             </button>
@@ -52,8 +52,17 @@ export function PWAInstallButton({ className = "", variant = 'button' }: PWAInst
 
   return (
     <button
-      onClick={installPWA}
-      className={`bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-medium px-4 py-2 rounded-lg transition-all duration-200 ${className}`}
+      onClick={() => {
+        console.log('🎯 PWA Install Button clicked! (regular variant)');
+        console.log('🎯 installPWA function:', installPWA);
+        try {
+          installPWA();
+        } catch (error) {
+          console.error('❌ Error calling installPWA:', error);
+          alert('Error: ' + error);
+        }
+      }}
+      className={`bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-medium px-4 py-3 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] ${className}`}
     >
       Add to Home Screen
     </button>

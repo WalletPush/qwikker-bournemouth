@@ -335,6 +335,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/debug-pwa/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/debug-pwa">> = Specific
+  const handler = {} as typeof import("../../app/debug-pwa/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/debug-supabase/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/debug-supabase">> = Specific

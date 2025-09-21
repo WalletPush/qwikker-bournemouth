@@ -1,130 +1,69 @@
 {
-  "name": "Qwikker - Discover Local Businesses",
-  "short_name": "Qwikker",
-  "description": "Discover local businesses, unlock secret menus, and get exclusive offers in your city",
+  "name": "Qwikker",
+  "short_name": "Qwikker", 
+  "description": "Discover local businesses and exclusive offers",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#0f172a",
   "theme_color": "#00d083",
-  "orientation": "portrait-primary",
-  "categories": ["business", "food", "lifestyle", "shopping"],
-  "lang": "en-GB",
-  "dir": "ltr",
-  "scope": "/",
   "icons": [
     {
-      "src": "/icon-72x72.svg",
+      "src": "/qwikker-icon.svg",
       "sizes": "72x72",
       "type": "image/svg+xml",
-      "purpose": "maskable any"
+      "purpose": "any"
     },
     {
-      "src": "/icon-96x96.svg",
+      "src": "/qwikker-icon.svg", 
       "sizes": "96x96",
       "type": "image/svg+xml",
-      "purpose": "maskable any"
+      "purpose": "any"
     },
     {
-      "src": "/icon-128x128.svg",
-      "sizes": "128x128",
+      "src": "/qwikker-icon.svg",
+      "sizes": "128x128", 
       "type": "image/svg+xml",
-      "purpose": "maskable any"
+      "purpose": "any"
     },
     {
-      "src": "/icon-144x144.svg",
+      "src": "/qwikker-icon.svg",
       "sizes": "144x144",
-      "type": "image/svg+xml",
-      "purpose": "maskable any"
+      "type": "image/svg+xml", 
+      "purpose": "any"
     },
     {
-      "src": "/icon-152x152.svg",
+      "src": "/qwikker-icon.svg",
       "sizes": "152x152",
       "type": "image/svg+xml",
-      "purpose": "maskable any"
+      "purpose": "any"
     },
     {
-      "src": "/icon-192x192.svg",
+      "src": "/qwikker-icon.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
-      "purpose": "maskable any"
+      "purpose": "any maskable"
     },
     {
-      "src": "/icon-384x384.svg",
-      "sizes": "384x384",
+      "src": "/qwikker-icon.svg",
+      "sizes": "384x384", 
       "type": "image/svg+xml",
-      "purpose": "maskable any"
+      "purpose": "any"
     },
     {
-      "src": "/icon-512x512.svg",
+      "src": "/qwikker-icon.svg",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "maskable any"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Discover Businesses",
-      "short_name": "Discover",
-      "description": "Find local businesses and offers",
-      "url": "/user/discover",
-      "icons": [
-        {
-          "src": "/icon-96x96.svg",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "My Offers",
-      "short_name": "Offers",
-      "description": "View your saved offers",
-      "url": "/user/offers",
-      "icons": [
-        {
-          "src": "/icon-96x96.svg",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "Secret Menu",
-      "short_name": "Secret Menu",
-      "description": "Access exclusive secret menus",
-      "url": "/user/secret-menu",
-      "icons": [
-        {
-          "src": "/icon-96x96.svg",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "Business Dashboard",
-      "short_name": "Business",
-      "description": "Manage your business profile",
-      "url": "/dashboard",
-      "icons": [
-        {
-          "src": "/icon-96x96.svg",
-          "sizes": "96x96"
-        }
-      ]
+      "type": "image/svg+xml", 
+      "purpose": "any maskable"
     }
   ],
   "screenshots": [
     {
-      "src": "/screenshot-wide.png",
+      "src": "/qwikker-icon.svg",
       "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Qwikker Business Discovery"
-    },
-    {
-      "src": "/screenshot-narrow.png",
-      "sizes": "640x1136",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Qwikker Mobile Experience"
+      "type": "image/svg+xml",
+      "form_factor": "wide"
     }
   ]
 }
