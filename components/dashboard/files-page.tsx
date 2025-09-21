@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { LoadingButton } from '@/components/ui/loading-button'
 import { useRouter } from 'next/navigation'
 import { updateProfileFile } from '@/lib/actions/file-actions'
 import { uploadToCloudinary } from '@/lib/integrations'
@@ -166,15 +167,16 @@ export function FilesPage({ profile }: FilesPageProps) {
                   </div>
                   <p className="text-green-400 text-sm">HIGH PRIORITY COMPLETE</p>
                 </div>
-                <Button 
+                <LoadingButton 
                   variant="outline" 
                   size="sm"
                   onClick={() => triggerFileInput('logoUpload')}
-                  disabled={uploading === 'logo'}
+                  loading={uploading === 'logo'}
+                  loadingText="Uploading..."
                   className="border-slate-600 text-gray-300 hover:bg-slate-700"
                 >
-                  {uploading === 'logo' ? 'Uploading...' : 'Replace'}
-                </Button>
+                  Replace
+                </LoadingButton>
               </div>
             ) : (
               <div 
@@ -247,15 +249,16 @@ export function FilesPage({ profile }: FilesPageProps) {
                   >
                     View
                   </Button>
-                  <Button 
+                  <LoadingButton 
                     variant="outline" 
                     size="sm"
                     onClick={() => triggerFileInput('menuUpload')}
-                    disabled={uploading === 'menu'}
+                    loading={uploading === 'menu'}
+                    loadingText="Uploading..."
                     className="border-slate-600 text-gray-300 hover:bg-slate-700"
                   >
-                    {uploading === 'menu' ? 'Uploading...' : 'Replace'}
-                  </Button>
+                    Replace
+                  </LoadingButton>
                 </div>
               </div>
             ) : (
@@ -318,15 +321,16 @@ export function FilesPage({ profile }: FilesPageProps) {
                   </div>
                   <p className="text-green-400 text-sm">MEDIUM PRIORITY COMPLETE</p>
                 </div>
-                <Button 
+                <LoadingButton 
                   variant="outline" 
                   size="sm"
                   onClick={() => triggerFileInput('offerUpload')}
-                  disabled={uploading === 'offer'}
+                  loading={uploading === 'offer'}
+                  loadingText="Uploading..."
                   className="border-slate-600 text-gray-300 hover:bg-slate-700"
                 >
-                  {uploading === 'offer' ? 'Uploading...' : 'Replace'}
-                </Button>
+                  Replace
+                </LoadingButton>
               </div>
             ) : (
               <div 

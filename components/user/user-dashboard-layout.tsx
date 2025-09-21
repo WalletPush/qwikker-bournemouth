@@ -83,9 +83,13 @@ export function UserDashboardLayout({ children, currentSection, currentUser }: U
         )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ${
+      <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0`}>
+      } lg:translate-x-0 lg:max-w-none`}
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}>
         
         {/* Logo - Fixed at top */}
         <div className="flex-shrink-0 p-6 border-b border-slate-800">
@@ -111,10 +115,11 @@ export function UserDashboardLayout({ children, currentSection, currentUser }: U
             <Link
               key={item.id}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              onClick={() => setSidebarOpen(false)} // Close mobile sidebar on navigation
+              className={`flex items-center gap-3 px-4 py-4 rounded-lg transition-colors touch-manipulation min-h-[48px] ${
                 currentSection === item.id
                   ? 'bg-gradient-to-r from-[#00d083]/20 to-[#00b86f]/20 border border-[#00d083]/30 text-[#00d083]'
-                  : 'text-slate-300 hover:bg-slate-800/50 hover:text-slate-100'
+                  : 'text-slate-300 hover:bg-slate-800/50 hover:text-slate-100 active:bg-slate-700/50'
               }`}
             >
               <div className={currentSection === item.id ? "text-[#00d083]" : "text-slate-400"}>{item.icon}</div>
@@ -142,13 +147,17 @@ export function UserDashboardLayout({ children, currentSection, currentUser }: U
       {/* Main content */}
       <div className="lg:ml-80">
         {/* Top header */}
-        <header className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 px-6 py-4">
+        <header className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 px-4 sm:px-6 py-4"
+        style={{
+          paddingTop: `calc(env(safe-area-inset-top) + 1rem)`,
+        }}>
           <div className="flex items-center justify-between">
             {/* Left side - Mobile menu button */}
             <div className="flex items-center">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+                className="lg:hidden p-3 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors touch-manipulation min-h-[48px] min-w-[48px] flex items-center justify-center"
+                aria-label="Open navigation menu"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -180,7 +189,10 @@ export function UserDashboardLayout({ children, currentSection, currentUser }: U
         </header>
 
         {/* Page content */}
-        <main className="p-6">
+        <main className="p-4 sm:p-6"
+        style={{
+          paddingBottom: `calc(env(safe-area-inset-bottom) + 1rem)`,
+        }}>
           {children}
         </main>
       </div>

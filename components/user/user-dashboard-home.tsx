@@ -48,26 +48,28 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
       <Card className="bg-gradient-to-br from-slate-900/60 to-slate-800/40 border border-slate-700/50 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-emerald-500/5"></div>
         
-        <CardContent className="relative p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex-shrink-0">
+        <CardContent className="relative p-4 sm:p-6">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex-shrink-0 hidden xs:block">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur-md opacity-30 animate-pulse"></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur-xl opacity-20 animate-ping"></div>
-                <div className="relative p-3 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-2xl border border-emerald-500/20 backdrop-blur-sm">
-                  <svg className="w-8 h-8 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="relative p-2 sm:p-3 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-2xl border border-emerald-500/20 backdrop-blur-sm">
+                  <svg className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                 </div>
               </div>
             </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold text-slate-100 mb-1">Your AI Companion</h2>
-              <p className="text-slate-300 text-sm">Ask me anything about Bournemouth</p>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-100 mb-1">Your AI Companion</h2>
+              <p className="text-slate-300 text-xs sm:text-sm">Ask me anything about Bournemouth</p>
             </div>
-            <Button asChild className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-black font-bold px-6 py-2 rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-200 hover:shadow-emerald-500/30">
-              <Link href="/user/chat">Start Chat</Link>
-            </Button>
+            <div className="flex-shrink-0">
+              <Button asChild className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-black font-bold px-3 sm:px-4 md:px-6 py-2 sm:py-3 rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-200 hover:shadow-emerald-500/30 touch-manipulation min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm md:text-base">
+                <Link href="/user/chat">Chat</Link>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -83,7 +85,7 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
           <p className="text-xs text-slate-400">Offers</p>
         </div>
         <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3 text-center">
-          <p className="text-2xl font-bold text-purple-400">{secretMenuCount}</p>
+          <p className="text-2xl font-bold text-pink-400">{secretMenuCount}</p>
           <p className="text-xs text-slate-400">Secrets</p>
         </div>
       </div>
@@ -112,7 +114,7 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
                 <p className="text-slate-400">places to discover</p>
               </div>
 
-              <Button asChild className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-black font-semibold text-lg py-3 shadow-lg">
+              <Button asChild className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-black font-semibold text-base sm:text-lg py-3 shadow-lg touch-manipulation min-h-[48px] active:scale-[0.98] transition-transform">
                 <Link href="/user/discover">Start Exploring</Link>
               </Button>
             </div>
@@ -140,7 +142,7 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
                 <p className="text-slate-400">offers available</p>
               </div>
 
-              <Button asChild className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:brightness-110 text-black font-semibold text-lg py-3 shadow-lg">
+              <Button asChild className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:brightness-110 text-black font-semibold text-base sm:text-lg py-3 shadow-lg touch-manipulation min-h-[48px] active:scale-[0.98] transition-transform">
                 <Link href="/user/offers">View All Offers</Link>
               </Button>
             </div>
@@ -185,7 +187,7 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
               </div>
               </div>
 
-              <Button asChild className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:brightness-110 text-white font-semibold text-lg py-3 shadow-lg">
+              <Button asChild className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:brightness-110 text-white font-semibold text-base sm:text-lg py-3 shadow-lg touch-manipulation min-h-[48px] active:scale-[0.98] transition-transform">
                 <Link href="/user/credits">Spend Points</Link>
               </Button>
             </div>
@@ -216,14 +218,14 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
                   </div>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text">Secret Menu Club</h3>
+                  <h3 className="text-xl font-bold text-pink-300">Secret Menu Club</h3>
                   <p className="text-slate-300">Exclusive dishes you won't find anywhere else</p>
                 </div>
               </div>
               
               <div className="text-center py-4 relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-purple-500/10 to-purple-500/5 rounded-lg border border-purple-500/20"></div>
-                <p className="relative text-5xl font-bold text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text mb-2">{secretMenuCount}</p>
+                <p className="relative text-5xl font-bold text-pink-400 mb-2">{secretMenuCount}</p>
                 <p className="relative text-slate-300">hidden secrets await</p>
                 <div className="flex justify-center gap-1 mt-3">
                   {[...Array(3)].map((_, i) => (
@@ -232,7 +234,7 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
                 </div>
               </div>
 
-              <Button asChild className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-lg py-3 shadow-lg shadow-purple-500/30 border border-purple-500/50 transition-all duration-300 hover:shadow-purple-500/50 hover:scale-[1.02] relative overflow-hidden">
+              <Button asChild className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-base sm:text-lg py-3 shadow-lg shadow-purple-500/30 border border-purple-500/50 transition-all duration-300 hover:shadow-purple-500/50 hover:scale-[1.02] relative overflow-hidden touch-manipulation min-h-[48px]">
                 <Link href="/user/secret-menu">
                   <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                   <span className="relative flex items-center justify-center gap-2">

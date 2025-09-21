@@ -34,6 +34,16 @@ export function isPushNotificationSupported(): boolean {
 }
 
 /**
+ * Check if PWA installation is supported
+ */
+export function isPWASupported(): boolean {
+  return (
+    'serviceWorker' in navigator &&
+    typeof window !== 'undefined'
+  );
+}
+
+/**
  * Request notification permission from user
  */
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
@@ -227,16 +237,30 @@ let deferredPrompt: BeforeInstallPromptEvent | null = null;
  * Listen for PWA install prompt
  */
 export function setupPWAInstallPrompt(): void {
+  console.log('🔧 Setting up PWA install prompt listeners');
+  
   window.addEventListener('beforeinstallprompt', (e) => {
-    console.log('📱 PWA install prompt available');
+    console.log('📱 PWA install prompt available - beforeinstallprompt event fired');
     e.preventDefault();
     deferredPrompt = e as BeforeInstallPromptEvent;
   });
 
   window.addEventListener('appinstalled', () => {
-    console.log('✅ PWA installed successfully');
+    console.log('✅ PWA installed successfully - appinstalled event fired');
     deferredPrompt = null;
   });
+  
+  // Check if already installed
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+    console.log('📱 PWA is already running in standalone mode');
+  }
+  
+  // Fallback for browsers that don't support beforeinstallprompt
+  setTimeout(() => {
+    if (!deferredPrompt) {
+      console.log('⚠️ beforeinstallprompt event did not fire - browser may not support PWA install prompts');
+    }
+  }, 5000);
 }
 
 /**
@@ -245,6 +269,13 @@ export function setupPWAInstallPrompt(): void {
 export async function showPWAInstallPrompt(): Promise<boolean> {
   if (!deferredPrompt) {
     console.log('❌ PWA install prompt not available');
+    console.log('💡 This could be because:');
+    console.log('   - Browser doesn\'t support PWA install prompts (common on Safari)');
+    console.log('   - PWA is already installed');
+    console.log('   - Site is not served over HTTPS');
+    console.log('   - beforeinstallprompt event hasn\'t fired yet');
+    
+    // Don't show alert - manual instructions are shown in the modal
     return false;
   }
 
