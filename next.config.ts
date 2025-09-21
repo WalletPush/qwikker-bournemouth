@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import withPWA from 'next-pwa';
 
 const nextConfig: NextConfig = {
   eslint: {
@@ -28,4 +29,45 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development', // Disable PWA in development for easier debugging
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'google-fonts-cache',
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60 * 60 * 24 * 365, // 365 days
+        },
+        cacheKeyWillBeUsed: async ({ request }) => `${request.url}?${Math.round(Date.now() / 1000 / 60 / 60 / 24)}`,
+      },
+    },
+    {
+      urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'gstatic-fonts-cache',
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60 * 60 * 24 * 365, // 365 days
+        },
+      },
+    },
+    {
+      urlPattern: /^https:\/\/res\.cloudinary\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'cloudinary-images-cache',
+        expiration: {
+          maxEntries: 60,
+          maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+        },
+      },
+    },
+  ],
+})(nextConfig);
