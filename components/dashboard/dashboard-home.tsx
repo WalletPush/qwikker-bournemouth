@@ -8,6 +8,7 @@ import { getReferralStats } from '@/lib/actions/referral-actions'
 import { submitBusinessForReview } from '@/lib/actions/business-actions'
 import { getPendingChanges } from '@/lib/actions/pending-changes'
 import { SuccessModal, ErrorModal } from '@/components/ui/success-modal'
+import { PWAInstallButton } from '@/components/pwa/pwa-install-button'
 
 interface DashboardHomeProps {
   profile?: {
@@ -940,6 +941,11 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* PWA Install Card */}
+        <div className="md:col-span-2 lg:col-span-3">
+          <PWAInstallButton variant="card" className="w-full" />
+        </div>
       </div>
 
       {/* Modal */}
