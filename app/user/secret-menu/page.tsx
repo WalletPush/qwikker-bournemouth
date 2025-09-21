@@ -1,9 +1,9 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserSecretMenuPage } from '@/components/user/user-secret-menu-page'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export default async function SecretMenuPage() {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
   
   // Fetch approved businesses (we'll filter for secret menus after parsing)
   const { data: approvedBusinesses, error } = await supabase

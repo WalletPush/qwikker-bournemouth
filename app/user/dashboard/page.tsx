@@ -1,6 +1,6 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserDashboardHome } from '@/components/user/user-dashboard-home'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { mockBusinesses, mockOffers } from '@/lib/mock-data/user-mock-data'
 import type { Metadata } from "next"
 
@@ -16,7 +16,8 @@ interface UserDashboardPageProps {
 }
 
 export default async function UserDashboardPage({ searchParams }: UserDashboardPageProps) {
-  const supabase = await createClient()
+  // Use service role client to avoid auth token issues for wallet pass users
+  const supabase = createServiceRoleClient()
   
   // 🎯 WALLET PASS AUTHENTICATION FLOW
   // Get wallet pass ID from URL param or default to David for demo

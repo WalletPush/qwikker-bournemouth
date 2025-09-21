@@ -1,6 +1,6 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserBusinessDetailPage } from '@/components/user/user-business-detail-page'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 
@@ -12,7 +12,7 @@ interface BusinessDetailPageProps {
 
 export default async function BusinessDetailPage({ params }: BusinessDetailPageProps) {
   const { slug } = await params
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
   
   // Fetch approved businesses from database
   const { data: approvedBusinesses, error } = await supabase
