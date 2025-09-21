@@ -628,7 +628,7 @@ Qwikker Admin Team`
     if (!business.business_images || business.business_images.length === 0) missingRequiredFields.push('Business Photos')
     else providedRequiredFields.push('Business Photos')
     
-    // Optional fields (NOT counted in completion percentage)
+    // Optional fields (NOT counted in completion percentage, NOT shown as missing)
     if (business.menu_url) optionalFields.push('Services/Menu')
     if (business.offer_name) optionalFields.push('First Offer')
     
