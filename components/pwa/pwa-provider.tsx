@@ -28,6 +28,8 @@ export function PWAProvider({
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [showInstallBanner, setShowInstallBanner] = useState(false);
 
+  console.log('🚀 PWA Provider initialized:', { userId, enablePushNotifications, enableInstallPrompt });
+
   useEffect(() => {
     // Check PWA support
     setIsSupported(isPushNotificationSupported());
@@ -43,10 +45,17 @@ export function PWAProvider({
       
       // Show install banner if not installed and supported
       const timer = setTimeout(() => {
-        if (!isPWAInstalled() && isPushNotificationSupported()) {
+        const isInstalled = isPWAInstalled();
+        const isSupported = isPushNotificationSupported();
+        console.log('🎯 PWA Banner Check:', { isInstalled, isSupported, enableInstallPrompt });
+        
+        if (!isInstalled && isSupported) {
+          console.log('✅ Showing PWA install banner');
           setShowInstallBanner(true);
+        } else {
+          console.log('❌ Not showing PWA banner:', { isInstalled, isSupported });
         }
-      }, 10000); // Show after 10 seconds
+      }, 3000); // Show after 3 seconds for testing
 
       return () => clearTimeout(timer);
     }
