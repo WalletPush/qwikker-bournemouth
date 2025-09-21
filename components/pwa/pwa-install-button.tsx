@@ -25,24 +25,39 @@ export function PWAInstallButton({ className = "", variant = 'button' }: PWAInst
             </svg>
           </div>
           <div className="flex-1">
-            <h3 className="text-white font-semibold mb-1">Add to Home Screen</h3>
+            <h3 className="text-white font-semibold mb-1">Add Qwikker to Home Screen</h3>
             <p className="text-slate-400 text-sm mb-3">
-              Get app-like access to your Qwikker dashboard
+              App-like experience, no downloads needed
             </p>
             <button
               onClick={() => {
                 console.log('🎯 PWA Install Button clicked!');
-                console.log('🎯 installPWA function:', installPWA);
                 try {
                   installPWA();
                 } catch (error) {
                   console.error('❌ Error calling installPWA:', error);
-                  alert('Error: ' + error);
+                  // Show elegant error instead of alert
+                  const toast = document.createElement('div')
+                  toast.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full'
+                  toast.innerHTML = `
+                    <div class="flex items-center gap-2">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                      <span class="font-medium">Installation not available</span>
+                    </div>
+                  `
+                  document.body.appendChild(toast)
+                  setTimeout(() => toast.classList.remove('translate-x-full'), 100)
+                  setTimeout(() => {
+                    toast.classList.add('translate-x-full')
+                    setTimeout(() => document.body.removeChild(toast), 300)
+                  }, 3000)
                 }
               }}
-              className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-medium px-4 py-3 rounded-lg transition-all duration-200 text-sm touch-manipulation min-h-[44px] w-full sm:w-auto"
+              className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-semibold px-4 py-2.5 rounded-lg transition-all duration-200 text-sm touch-manipulation min-h-[44px] w-full sm:w-auto hover:shadow-lg hover:shadow-[#00d083]/20"
             >
-              Click here to add Qwikker to your home screen
+              Add to Home Screen
             </button>
           </div>
         </div>
@@ -54,15 +69,30 @@ export function PWAInstallButton({ className = "", variant = 'button' }: PWAInst
     <button
       onClick={() => {
         console.log('🎯 PWA Install Button clicked! (regular variant)');
-        console.log('🎯 installPWA function:', installPWA);
         try {
           installPWA();
         } catch (error) {
           console.error('❌ Error calling installPWA:', error);
-          alert('Error: ' + error);
+          // Show elegant error instead of alert
+          const toast = document.createElement('div')
+          toast.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full'
+          toast.innerHTML = `
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+              <span class="font-medium">Installation not available</span>
+            </div>
+          `
+          document.body.appendChild(toast)
+          setTimeout(() => toast.classList.remove('translate-x-full'), 100)
+          setTimeout(() => {
+            toast.classList.add('translate-x-full')
+            setTimeout(() => document.body.removeChild(toast), 300)
+          }, 3000)
         }
       }}
-      className={`bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-medium px-4 py-3 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] ${className}`}
+      className={`bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-semibold px-4 py-2.5 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] hover:shadow-lg hover:shadow-[#00d083]/20 ${className}`}
     >
       Add to Home Screen
     </button>
