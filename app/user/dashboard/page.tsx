@@ -28,14 +28,49 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   // Try to get user by wallet pass ID
   try {
     const { data: user } = await supabase
-      .from('app_users')
+      .from('user_members')
       .select('*')
       .eq('wallet_pass_id', walletPassId)
+      .eq('status', 'active')
       .single()
-    currentUser = user
+    
+    if (user) {
+      currentUser = {
+        id: user.id,
+        wallet_pass_id: user.wallet_pass_id,
+        name: user.name,
+        email: user.email,
+        city: user.city,
+        tier: user.tier,
+        level: user.level,
+        points_balance: user.points_balance,
+        badges_earned: user.badges_earned || [],
+        total_visits: user.total_visits || 0,
+        offers_claimed: user.offers_claimed || 0,
+        secret_menus_unlocked: user.secret_menus_unlocked || 0,
+        favorite_categories: user.preferences?.favorite_categories || []
+      }
+    }
     console.log('✅ Found user by wallet pass ID:', user?.name, 'ID:', walletPassId)
   } catch (error) {
     console.log('No user found with wallet pass ID:', walletPassId, 'using static mock data')
+    
+    // Create mock user for testing
+    currentUser = {
+      id: 'user-mock',
+      wallet_pass_id: walletPassId,
+      name: 'David (Demo User)',
+      email: 'david@demo.com',
+      city: 'bournemouth',
+      tier: 'explorer',
+      level: 2,
+      points_balance: 150,
+      badges_earned: ['early_adopter', 'local_explorer'],
+      total_visits: 8,
+      offers_claimed: 3,
+      secret_menus_unlocked: 2,
+      favorite_categories: ['Restaurant', 'Cafe']
+    }
   }
   
   // Fetch approved businesses from database

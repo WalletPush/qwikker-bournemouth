@@ -12,6 +12,9 @@ import { AdminAnalytics } from './admin-analytics'
 import { ContactsTab } from './contacts-tab'
 import { SyncHealthOverview } from './sync-health-overview'
 import { InitialAvatar } from '@/components/admin/initial-avatar'
+import { QRGeneratorManagement } from './qr-generator-management'
+import { AITestPage } from './ai-test-page'
+import { QRAnalyticsDashboard } from './qr-analytics-dashboard'
 
 interface Business {
   id: string
@@ -58,9 +61,9 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const searchParams = useSearchParams()
   
   // Get initial tab from URL or default to 'pending'
-  const [activeTab, setActiveTab] = useState<'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts'>(() => {
+  const [activeTab, setActiveTab] = useState<'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'qr-management' | 'ai-test'>(() => {
     const urlTab = searchParams.get('tab')
-    const validTabs = ['pending', 'updates', 'live', 'incomplete', 'rejected', 'knowledge', 'analytics', 'contacts']
+    const validTabs = ['pending', 'updates', 'live', 'incomplete', 'rejected', 'knowledge', 'analytics', 'contacts', 'qr-management', 'ai-test']
     return validTabs.includes(urlTab || '') ? (urlTab as any) : 'pending'
   })
   const [businessList, setBusinessList] = useState<Business[]>(businesses)
@@ -77,60 +80,8 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   
   const { showSuccess, showError, showConfirm, ModalComponent } = useElegantModal()
   
-  // Admin navigation items
-  const adminNavItems = [
-    {
-      id: 'pending',
-      label: 'Pending Reviews',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-      count: allPendingBusinesses.length
-    },
-    {
-      id: 'updates',
-      label: 'Pending Updates',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
-      count: pendingChangesCount || 0
-    },
-    {
-      id: 'live',
-      label: 'Live Listings',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-      count: allLiveBusinesses.length
-    },
-    {
-      id: 'incomplete',
-      label: 'Incomplete Listings',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>,
-      count: allIncompleteBusinesses.length
-    },
-    {
-      id: 'rejected',
-      label: 'Rejected Applications',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
-      count: allRejectedBusinesses.length
-    },
-    {
-      id: 'knowledge',
-      label: 'Knowledge Base',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>,
-      count: undefined
-    },
-    {
-      id: 'analytics',
-      label: 'City Analytics',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
-      count: undefined
-    },
-    {
-      id: 'contacts',
-      label: 'Business Contacts',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
-      count: undefined
-    }
-  ]
-  
   // Function to update tab and URL
-  const updateActiveTab = (newTab: 'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts') => {
+  const updateActiveTab = (newTab: 'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'qr-management' | 'ai-test') => {
     setActiveTab(newTab)
     // Update URL without page refresh
     const url = new URL(window.location.href)
@@ -395,6 +346,16 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       id: 'contacts', 
       label: 'Contacts', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>, 
+    },
+    { 
+      id: 'qr-management', 
+      label: 'QR Management', 
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>, 
+    },
+    { 
+      id: 'ai-test', 
+      label: 'AI Test', 
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>, 
     },
   ]
 
@@ -680,7 +641,7 @@ Qwikker Admin Team`
     if (!business.business_images || business.business_images.length === 0) missingRequiredFields.push('Business Photos')
     else providedRequiredFields.push('Business Photos')
     
-    // Optional fields (NOT counted in completion percentage, NOT shown as missing)
+    // Optional fields (NOT counted in completion percentage)
     if (business.menu_url) optionalFields.push('Services/Menu')
     if (business.offer_name) optionalFields.push('First Offer')
     
@@ -735,7 +696,7 @@ Qwikker Admin Team`
                     style={{ width: `${completionPercentage}%` }}
                   />
                 </div>
-                <div className="text-xs text-slate-400 mt-1">{completedFields}/{totalFields}</div>
+                <div className="text-xs text-slate-400 mt-1">{completedRequiredFields}/{totalRequiredFields}</div>
               </div>
               
               <button
@@ -786,7 +747,7 @@ Qwikker Admin Team`
               </div>
 
               {/* What's PROVIDED (Green) */}
-              {providedFields.length > 0 && (
+              {providedRequiredFields.length > 0 && (
                 <div className="mb-6">
                   <h4 className="text-green-400 font-semibold mb-3 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -876,27 +837,11 @@ Qwikker Admin Team`
     )
   }
 
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950/40 to-slate-950">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
       <div className="flex">
         {/* Sidebar */}
-        <div className={`fixed lg:static inset-y-0 left-0 w-80 max-w-[85vw] bg-slate-900/95 backdrop-blur-sm border-r border-indigo-500/30 min-h-screen shadow-2xl shadow-indigo-900/20 transform transition-transform duration-300 z-50 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
-        style={{
-          paddingTop: 'env(safe-area-inset-top)',
-          paddingBottom: 'env(safe-area-inset-bottom)',
-        }}>
+        <div className="w-80 bg-slate-900/95 backdrop-blur-sm border-r border-indigo-500/30 min-h-screen shadow-2xl shadow-indigo-900/20">
           <div className="p-6">
             <div className="text-center space-y-4 mb-8 border-b border-slate-700/50 pb-6">
               {/* QWIKKER Logo */}
@@ -921,14 +866,11 @@ Qwikker Admin Team`
               {adminNavItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => {
-                    updateActiveTab(item.id as any)
-                    setSidebarOpen(false) // Close mobile sidebar on navigation
-                  }}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 touch-manipulation min-h-[48px] ${
+                  onClick={() => updateActiveTab(item.id as any)}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                     activeTab === item.id
                       ? 'bg-gradient-to-r from-[#00d083]/20 to-[#00b86f]/20 border border-[#00d083]/30 text-[#00d083]'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50 active:bg-slate-700/50'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -959,34 +901,10 @@ Qwikker Admin Team`
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 lg:ml-0">
-          {/* Mobile Header */}
-          <div className="lg:hidden bg-slate-900/95 backdrop-blur-xl border-b border-indigo-500/30 px-4 py-4"
-          style={{
-            paddingTop: `calc(env(safe-area-inset-top) + 1rem)`,
-          }}>
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="p-3 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors touch-manipulation min-h-[48px] min-w-[48px] flex items-center justify-center"
-                aria-label="Open navigation menu"
-              >
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <div className="text-center">
-                <h1 className="text-lg font-bold text-white">Admin Dashboard</h1>
-                <p className="text-sm text-slate-400">{cityDisplayName}</p>
-              </div>
-              <div className="w-12"> {/* Spacer for centering */}</div>
-            </div>
-          </div>
-          
-          <div className="p-4 sm:p-6 lg:p-8">
-            <div className="max-w-6xl mx-auto">
-              {/* Header */}
-              <div className="mb-6 lg:mb-8">
+        <div className="flex-1 p-8">
+          <div className="max-w-6xl mx-auto">
+            {/* Header */}
+            <div className="mb-8">
               <h2 className="text-3xl font-bold text-white mb-2">
                 {activeTab === 'pending' && 'Pending Reviews'}
                 {activeTab === 'updates' && 'Pending Updates'}
@@ -996,6 +914,8 @@ Qwikker Admin Team`
                 {activeTab === 'knowledge' && 'Knowledge Base'}
                 {activeTab === 'analytics' && 'City Analytics'}
                 {activeTab === 'contacts' && 'Business Contacts'}
+                {activeTab === 'qr-management' && 'QR Code Management'}
+                {activeTab === 'ai-test' && 'AI Chat Testing'}
               </h2>
               <p className="text-slate-400">
                 {activeTab === 'pending' && 'Businesses awaiting your review and approval'}
@@ -1006,6 +926,8 @@ Qwikker Admin Team`
                 {activeTab === 'knowledge' && 'AI knowledge base management for businesses and city information'}
                 {activeTab === 'analytics' && `Performance metrics and user analytics for ${cityDisplayName}`}
                 {activeTab === 'contacts' && `CRM contact management with GHL sync for ${cityDisplayName}`}
+                {activeTab === 'qr-management' && 'Generate and manage QR codes for businesses, offers, and secret menus'}
+                {activeTab === 'ai-test' && 'Test AI chat responses and knowledge base accuracy'}
               </p>
             </div>
 
@@ -1765,12 +1687,33 @@ Qwikker Admin Team`
 
               {/* Analytics Tab */}
               {activeTab === 'analytics' && (
-                <AdminAnalytics city={city} />
+                <div className="space-y-8">
+                  <AdminAnalytics city={city} />
+                  
+                  {/* QR Analytics Section */}
+                  <div className="border-t border-slate-700 pt-8">
+                    <div className="mb-6">
+                      <h3 className="text-2xl font-bold text-white mb-2">QR Code Analytics</h3>
+                      <p className="text-slate-400">Track QR code performance and user engagement</p>
+                    </div>
+                    <QRAnalyticsDashboard city={city} />
+                  </div>
+                </div>
               )}
 
               {/* Contacts Tab */}
               {activeTab === 'contacts' && (
                 <ContactsTab city={city} cityDisplayName={cityDisplayName} />
+              )}
+
+              {/* QR Management Tab */}
+              {activeTab === 'qr-management' && (
+                <QRGeneratorManagement city={city} />
+              )}
+
+              {/* AI Test Tab */}
+              {activeTab === 'ai-test' && (
+                <AITestPage city={city} />
               )}
 
             </div>
