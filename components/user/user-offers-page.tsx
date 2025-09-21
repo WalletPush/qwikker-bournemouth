@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { mockOffers, mockBusinesses, mockClaimedOffers } from '@/lib/mock-data/user-mock-data'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import AddToWalletButton from '@/components/ui/add-to-wallet-button'
+import { useSearchParams } from 'next/navigation'
 
 interface UserOffersPageProps {
   realOffers?: any[]
@@ -13,6 +15,8 @@ interface UserOffersPageProps {
 export function UserOffersPage({ realOffers = [] }: UserOffersPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const searchParams = useSearchParams()
+  const walletPassId = searchParams.get('wallet_pass_id')
   
   // Initialize with empty sets to avoid hydration mismatch
   const [favoriteOffers, setFavoriteOffers] = useState<Set<string>>(new Set())
@@ -241,42 +245,54 @@ export function UserOffersPage({ realOffers = [] }: UserOffersPageProps) {
             <p><span className="font-medium">Valid until:</span> {isRealOffer ? (offer.validUntil || 'No expiry date') : (offer.expiryDate || 'No expiry date')}</p>
           </div>
 
-          {/* Action buttons */}
-          <div className="space-y-2">
+          {/* Action buttons - Fixed height container to prevent card size changes */}
+          <div className="min-h-[44px] flex flex-col justify-end">
             {!isClaimed ? (
               <Button 
                 onClick={() => claimOffer(offer.id, offer.title, businessName)}
-                className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold"
+                className="w-full h-[44px] bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/20"
               >
                 Claim Offer
               </Button>
             ) : (
               <div className="space-y-2">
-                <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg p-2">
-                  <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {/* Status indicator - consistent height */}
+                <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg p-2 min-h-[36px]">
+                  <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-green-400 text-sm font-medium">
+                  <span className="text-green-400 text-sm font-medium flex-1">
                     {claimedOfferData?.status === 'redeemed' ? 'Redeemed' : 
                      claimedOfferData?.status === 'wallet_added' ? 'In Your Wallet' : 'Claimed'}
                   </span>
                   {claimedOfferData?.redemptionCode && (
-                    <span className="text-xs text-slate-400 ml-auto">
+                    <span className="text-xs text-slate-400 flex-shrink-0">
                       Code: {claimedOfferData.redemptionCode}
                     </span>
                   )}
                 </div>
                 
-                {claimedOfferData?.status !== 'redeemed' && (
-                  <Button 
-                    onClick={() => alert(`"${offer.title}" has been added to your mobile wallet!`)}
-                    className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    {claimedOfferData?.status === 'wallet_added' ? 'In Wallet' : 'Add to Wallet'}
-                  </Button>
+                {/* Add to Wallet button - only show if not redeemed */}
+                {claimedOfferData?.status !== 'redeemed' ? (
+                  <AddToWalletButton
+                    offer={{
+                      id: offer.id,
+                      title: offer.title,
+                      description: offer.description,
+                      business_name: businessName,
+                      business_logo: isRealOffer ? offer.businessLogo : business?.logo,
+                      valid_until: isRealOffer ? offer.validUntil : offer.expiryDate,
+                      terms: isRealOffer ? offer.termsAndConditions : offer.terms,
+                      offer_type: isRealOffer ? offer.type : offer.type,
+                      offer_value: offer.value
+                    }}
+                    userWalletPassId={walletPassId || undefined}
+                    className="w-full h-[44px]"
+                    variant="outline"
+                  />
+                ) : (
+                  // Placeholder to maintain consistent card height
+                  <div className="h-[44px]"></div>
                 )}
               </div>
             )}

@@ -1,17 +1,23 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
-import { UserChatPagePremium } from '@/components/user/user-chat-page-premium'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
-export default async function ChatPage() {
+export default async function ChatPage({
+  searchParams
+}: {
+  searchParams: Promise<{ wallet_pass_id?: string }>
+}) {
   const supabase = createServiceRoleClient()
+  const params = await searchParams
   
   // Get current user for personalized chat
   let currentUser = null
+  let userId = params.wallet_pass_id || 'QWIK-BOURNEMOUTH-DAVID-2024'
+  
   try {
     const { data: user } = await supabase
       .from('app_users')
       .select('name, level, tier, total_points, city, preferred_categories')
-      .eq('wallet_pass_id', 'QWIK-BOURNEMOUTH-DAVID-2024')
+      .eq('wallet_pass_id', userId)
       .single()
     currentUser = user
   } catch (error) {
@@ -20,7 +26,13 @@ export default async function ChatPage() {
   
   return (
     <UserDashboardLayout currentSection="chat" currentUser={currentUser}>
-      <UserChatPagePremium currentUser={currentUser} />
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🤖</div>
+          <h2 className="text-2xl font-bold text-white mb-2">AI Chat Coming Soon</h2>
+          <p className="text-slate-400">We're working on integrating your AI companion</p>
+        </div>
+      </div>
     </UserDashboardLayout>
   )
 }

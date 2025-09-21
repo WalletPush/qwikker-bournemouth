@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     // your project has type errors.
     ignoreBuildErrors: true,
   },
+  // Removed compiler config to avoid styled-jsx issues
   images: {
     remotePatterns: [
       {

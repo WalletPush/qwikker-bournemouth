@@ -1,9 +1,17 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
+  "/admin/login/page": "app/admin/login/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/api/admin/analytics/route": "app/api/admin/analytics/route.js",
+  "/api/admin/contacts/route": "app/api/admin/contacts/route.js",
+  "/api/admin/login/route": "app/api/admin/login/route.js",
+  "/api/admin/sync/health/route": "app/api/admin/sync/health/route.js",
   "/auth/login/page": "app/auth/login/page.js",
-  "/debug-pwa/page": "app/debug-pwa/page.js",
+  "/business/dashboard/page": "app/business/dashboard/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/personal/page": "app/dashboard/personal/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/page": "app/page.js",
-  "/user/dashboard/page": "app/user/dashboard/page.js",
-  "/user/page": "app/user/page.js"
+  "/user/chat/page": "app/user/chat/page.js",
+  "/user/dashboard/page": "app/user/dashboard/page.js"
 }
