@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { PWAProvider } from "@/components/pwa/pwa-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,11 +14,31 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "QWIKKER - Business Dashboard",
-  description: "QWIKKER business management platform - Grow your business with smart customer engagement tools",
+  title: "Qwikker - Discover Local Businesses",
+  description: "Discover local businesses, unlock secret menus, and get exclusive offers in your city",
+  manifest: "/manifest.json",
   icons: {
-    icon: '/qwikker-icon.svg',
-    apple: '/qwikker-icon.svg',
+    icon: '/favicon.svg',
+    apple: '/apple-touch-icon.svg',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Qwikker",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Qwikker",
+    title: "Qwikker - Discover Local Businesses",
+    description: "Discover local businesses, unlock secret menus, and get exclusive offers in your city",
+  },
+  twitter: {
+    card: "summary",
+    title: "Qwikker - Discover Local Businesses",
+    description: "Discover local businesses, unlock secret menus, and get exclusive offers in your city",
   },
 };
 
@@ -31,7 +52,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950 text-white`}
       >
-        {children}
+        <PWAProvider enablePushNotifications={true} enableInstallPrompt={true}>
+          {children}
+        </PWAProvider>
       </body>
     </html>
   );

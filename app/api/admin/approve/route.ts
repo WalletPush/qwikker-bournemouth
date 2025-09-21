@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { addBasicBusinessKnowledge } from '@/lib/actions/knowledge-base-actions'
 import { sendContactUpdateToGoHighLevel } from '@/lib/integrations'
+import { sendBusinessApprovedNotification, getUsersForBusinessNotifications, sendNewOfferNotification } from '@/lib/notifications/business-notifications'
 
 export async function POST(request: NextRequest) {
   try {
@@ -114,6 +115,31 @@ export async function POST(request: NextRequest) {
         }
       } catch (error) {
         console.error('⚠️ Knowledge base integration error (non-critical):', error)
+      }
+
+      // 🔔 SEND PUSH NOTIFICATIONS: Business approved
+      try {
+        // Notify business owner
+        if (data.user_id) {
+          await sendBusinessApprovedNotification(data.user_id, data.business_name || 'Your Business')
+          console.log(`🔔 Approval notification sent to business owner: ${data.business_name}`)
+        }
+
+        // Notify users about new business (if has offers)
+        if (data.offer_name && data.offer_value) {
+          const userIds = await getUsersForBusinessNotifications(data.city || 'bournemouth', data.business_type)
+          if (userIds.length > 0) {
+            await sendNewOfferNotification(
+              userIds,
+              data.business_name || 'New Business',
+              data.offer_name,
+              data.offer_value
+            )
+            console.log(`🔔 New offer notification sent to ${userIds.length} users`)
+          }
+        }
+      } catch (error) {
+        console.error('⚠️ Push notification error (non-critical):', error)
       }
     }
     
