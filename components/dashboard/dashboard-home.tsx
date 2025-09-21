@@ -362,7 +362,8 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   const todoItems = [...requiredTodos, ...optionalTodos]
 
   // Calculate profile completion percentage based on REQUIRED fields only
-  const totalRequiredFields = 10 // business_name, business_hours, business_description, business_tagline, business_address, business_town, business_category, logo, business_images, menu_url, menu_preview
+  // Required fields: business_name, business_hours/business_hours_structured, business_description, business_tagline, business_address+business_town, business_category, logo, business_images
+  const totalRequiredFields = 8
   const completedRequiredFields = totalRequiredFields - requiredTodos.length
   const completionPercentage = Math.round((completedRequiredFields / totalRequiredFields) * 100)
   
