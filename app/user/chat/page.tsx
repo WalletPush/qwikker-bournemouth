@@ -1,9 +1,9 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserChatPagePremium } from '@/components/user/user-chat-page-premium'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export default async function ChatPage() {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
   
   // Get current user for personalized chat
   let currentUser = null

@@ -1,11 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { UserDiscoverPage } from '@/components/user/user-discover-page'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 
 export default async function DiscoverPage() {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
   
   // Fetch approved businesses only
   const { data: approvedBusinesses, error } = await supabase

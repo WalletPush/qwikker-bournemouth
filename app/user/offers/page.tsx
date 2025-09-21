@@ -1,9 +1,9 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserOffersPage } from '@/components/user/user-offers-page'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export default async function OffersPage() {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
   
   // Fetch approved businesses with offers
   const { data: approvedBusinesses, error } = await supabase
