@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { Button } from '@/components/ui/button'
+import { LoadingButton } from '@/components/ui/loading-button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -1115,13 +1116,15 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
                       Continue →
                     </Button>
                   ) : (
-                    <Button
+                    <LoadingButton
                     type="submit"
-                    disabled={isSubmitting}
-                    className="flex-1 bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] to-[#00a05c] text-white font-semibold"
+                    loading={isSubmitting}
+                    loadingText="Starting Free Trial..."
+                    variant="primary"
+                    className="flex-1"
                   >
-                    {isSubmitting ? 'Starting Free Trial...' : 'Start Free Trial'}
-                  </Button>
+                    Start Free Trial
+                  </LoadingButton>
                 )}
                 </div>
               )}

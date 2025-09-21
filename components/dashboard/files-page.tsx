@@ -398,15 +398,16 @@ export function FilesPage({ profile }: FilesPageProps) {
                     </div>
                   ))}
                 </div>
-                <Button 
+                <LoadingButton 
                   variant="outline" 
                   size="sm"
                   onClick={() => triggerFileInput('businessImagesUpload')}
-                  disabled={uploading === 'business_images'}
+                  loading={uploading === 'business_images'}
+                  loadingText="Uploading..."
                   className="border-slate-600 text-gray-300 hover:bg-slate-700"
                 >
-                  {uploading === 'business_images' ? 'Uploading...' : 'Add More Photos'}
-                </Button>
+                  Add More Photos
+                </LoadingButton>
               </div>
             ) : (
               <div 

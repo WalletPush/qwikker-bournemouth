@@ -824,11 +824,27 @@ Qwikker Admin Team`
     )
   }
 
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950/40 to-slate-950">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       <div className="flex">
         {/* Sidebar */}
-        <div className="w-80 bg-slate-900/95 backdrop-blur-sm border-r border-indigo-500/30 min-h-screen shadow-2xl shadow-indigo-900/20">
+        <div className={`fixed lg:static inset-y-0 left-0 w-80 max-w-[85vw] bg-slate-900/95 backdrop-blur-sm border-r border-indigo-500/30 min-h-screen shadow-2xl shadow-indigo-900/20 transform transition-transform duration-300 z-50 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}>
           <div className="p-6">
             <div className="text-center space-y-4 mb-8 border-b border-slate-700/50 pb-6">
               {/* QWIKKER Logo */}
@@ -853,11 +869,14 @@ Qwikker Admin Team`
               {adminNavItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => updateActiveTab(item.id as any)}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  onClick={() => {
+                    updateActiveTab(item.id as any)
+                    setSidebarOpen(false) // Close mobile sidebar on navigation
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 touch-manipulation min-h-[48px] ${
                     activeTab === item.id
                       ? 'bg-gradient-to-r from-[#00d083]/20 to-[#00b86f]/20 border border-[#00d083]/30 text-[#00d083]'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50 active:bg-slate-700/50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -888,10 +907,34 @@ Qwikker Admin Team`
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-8">
-          <div className="max-w-6xl mx-auto">
-            {/* Header */}
-            <div className="mb-8">
+        <div className="flex-1 lg:ml-0">
+          {/* Mobile Header */}
+          <div className="lg:hidden bg-slate-900/95 backdrop-blur-xl border-b border-indigo-500/30 px-4 py-4"
+          style={{
+            paddingTop: `calc(env(safe-area-inset-top) + 1rem)`,
+          }}>
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-3 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors touch-manipulation min-h-[48px] min-w-[48px] flex items-center justify-center"
+                aria-label="Open navigation menu"
+              >
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <div className="text-center">
+                <h1 className="text-lg font-bold text-white">Admin Dashboard</h1>
+                <p className="text-sm text-slate-400">{cityDisplayName}</p>
+              </div>
+              <div className="w-12"> {/* Spacer for centering */}</div>
+            </div>
+          </div>
+          
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="max-w-6xl mx-auto">
+              {/* Header */}
+              <div className="mb-6 lg:mb-8">
               <h2 className="text-3xl font-bold text-white mb-2">
                 {activeTab === 'pending' && 'Pending Reviews'}
                 {activeTab === 'updates' && 'Pending Updates'}
