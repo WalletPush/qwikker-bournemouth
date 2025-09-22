@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { mockOffers, mockBusinesses, mockClaimedOffers } from '@/lib/mock-data/user-mock-data'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { useSearchParams } from 'next/navigation'
@@ -17,10 +17,13 @@ export function UserOffersPage({ realOffers = [] }: UserOffersPageProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const searchParams = useSearchParams()
   const walletPassId = searchParams.get('wallet_pass_id')
+  const highlightBusiness = searchParams.get('highlight') // For QR deep linking
   
   // Initialize with empty sets to avoid hydration mismatch
   const [favoriteOffers, setFavoriteOffers] = useState<Set<string>>(new Set())
   const [claimedOffers, setClaimedOffers] = useState<Set<string>>(new Set())
+  const [highlightedCard, setHighlightedCard] = useState<string | null>(null)
+  const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   
   // Load from localStorage after component mounts
   useEffect(() => {
@@ -37,9 +40,40 @@ export function UserOffersPage({ realOffers = [] }: UserOffersPageProps) {
       setClaimedOffers(new Set(mockClaimedOffers.map(co => co.offerId)))
     }
   }, [])
-  
+
   // Combine real offers with mock offers
   const allOffers = [...realOffers, ...mockOffers]
+
+  // Handle QR deep linking auto-scroll and highlight
+  useEffect(() => {
+    if (highlightBusiness) {
+      // Wait for page to render and find the business card
+      const timer = setTimeout(() => {
+        // Look for business by name (convert to slug format)
+        const businessSlug = highlightBusiness.toLowerCase().replace(/[^a-z0-9]/g, '-')
+        const targetCard = cardRefs.current[businessSlug]
+        
+        if (targetCard) {
+          // Smooth scroll to the card
+          targetCard.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          })
+          
+          // Add highlight effect
+          setHighlightedCard(businessSlug)
+          
+          // Remove highlight after 3 seconds
+          setTimeout(() => {
+            setHighlightedCard(null)
+          }, 3000)
+        }
+      }, 800) // Wait for page to fully load
+      
+      return () => clearTimeout(timer)
+    }
+  }, [highlightBusiness, allOffers]) // Re-run when offers change
   
   // Get unique categories from all businesses
   const realCategories = realOffers.map(o => o.businessCategory).filter(Boolean)
@@ -138,6 +172,10 @@ export function UserOffersPage({ realOffers = [] }: UserOffersPageProps) {
     const business = isRealOffer ? null : mockBusinesses.find(b => b.id === offer.businessId)
     const businessName = offer.businessName || business?.name || 'Unknown Business'
     
+    // Create business slug for ref and highlighting
+    const businessSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-')
+    const isHighlighted = highlightedCard === businessSlug
+    
     // Fix image selection: for real offers use offer.image, for mock offers use business.images[0]
     const businessImage = isRealOffer
       ? (offer.image || '/placeholder-business.jpg') 
@@ -164,7 +202,14 @@ export function UserOffersPage({ realOffers = [] }: UserOffersPageProps) {
     const claimedOfferData = mockClaimedOffers.find(co => co.offerId === offer.id)
     
     return (
-      <Card className="bg-gradient-to-br from-slate-800/60 to-slate-700/40 border-slate-700/50 hover:border-orange-500/30 transition-all duration-300 overflow-hidden group">
+      <Card 
+        ref={(el) => { cardRefs.current[businessSlug] = el }}
+        className={`bg-gradient-to-br from-slate-800/60 to-slate-700/40 border-slate-700/50 hover:border-orange-500/30 transition-all duration-300 overflow-hidden group ${
+          isHighlighted 
+            ? 'qr-highlight ring-4 ring-[#00d083]/60 shadow-2xl shadow-[#00d083]/20 scale-105 border-[#00d083]/50' 
+            : ''
+        }`}
+      >
         {/* Header with Image */}
         <div className="relative h-40 overflow-hidden">
           <img 

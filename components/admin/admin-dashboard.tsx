@@ -12,7 +12,8 @@ import { AdminAnalytics } from './admin-analytics'
 import { ContactsTab } from './contacts-tab'
 import { SyncHealthOverview } from './sync-health-overview'
 import { InitialAvatar } from '@/components/admin/initial-avatar'
-import { QRGeneratorManagement } from './qr-generator-management'
+import { SmartQRGenerator } from './smart-qr-generator'
+import { ComprehensiveQRDashboard } from './comprehensive-qr-dashboard'
 import { AITestPage } from './ai-test-page'
 import { QRAnalyticsDashboard } from './qr-analytics-dashboard'
 
@@ -1708,7 +1709,7 @@ Qwikker Admin Team`
 
               {/* QR Management Tab */}
               {activeTab === 'qr-management' && (
-                <QRGeneratorManagement city={city} />
+                <ComprehensiveQRDashboard city={city} />
               )}
 
               {/* AI Test Tab */}

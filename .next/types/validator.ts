@@ -398,6 +398,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/intent/[code]/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/intent/[code]">> = Specific
+  const handler = {} as typeof import("../../app/intent/[code]/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/intent/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/intent">> = Specific
@@ -474,6 +483,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends AppPageConfig<"/test-ai">> = Specific
   const handler = {} as typeof import("../../app/test-ai/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/test-qr-scroll/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/test-qr-scroll">> = Specific
+  const handler = {} as typeof import("../../app/test-qr-scroll/page.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

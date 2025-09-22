@@ -3,10 +3,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { mockBusinesses, enhancedSecretMenus, mockUserProfile } from '@/lib/mock-data/user-mock-data'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { SecretUnlockModal } from '@/components/ui/secret-unlock-modal'
 import { useElegantModal } from '@/components/ui/elegant-modal'
+import { useSearchParams } from 'next/navigation'
 
 interface RealSecretMenu {
   businessId: string
@@ -44,7 +45,11 @@ export function UserSecretMenuPage({ realSecretMenus = [] }: UserSecretMenuPageP
     item: any
     business: any
   }>({ isOpen: false, item: null, business: null })
+  const [highlightedCard, setHighlightedCard] = useState<string | null>(null)
+  const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   
+  const searchParams = useSearchParams()
+  const highlightBusiness = searchParams.get('highlight')
   const { showSuccess, ModalComponent } = useElegantModal()
 
   // Load from localStorage after component mounts to avoid hydration mismatch
@@ -56,6 +61,7 @@ export function UserSecretMenuPage({ realSecretMenus = [] }: UserSecretMenuPageP
       }
     }
   }, [])
+
   // Remove membership tiers - Qwikker is FREE for everyone!
 
   // Animation state for mysterious effects
@@ -68,6 +74,32 @@ export function UserSecretMenuPage({ realSecretMenus = [] }: UserSecretMenuPageP
 
   // Combine real and mock secret menus
   const allSecretMenus = [...realSecretMenus, ...enhancedSecretMenus]
+
+  // Handle QR deep linking auto-scroll and highlight for secret menus
+  useEffect(() => {
+    if (highlightBusiness) {
+      const timer = setTimeout(() => {
+        const businessSlug = highlightBusiness.toLowerCase().replace(/[^a-z0-9]/g, '-')
+        const targetCard = cardRefs.current[businessSlug]
+        
+        if (targetCard) {
+          targetCard.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          })
+          
+          setHighlightedCard(businessSlug)
+          
+          setTimeout(() => {
+            setHighlightedCard(null)
+          }, 3000)
+        }
+      }, 800)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [highlightBusiness, allSecretMenus])
   
   // Get unique categories from all businesses with secret menus
   const businessesWithSecrets = mockBusinesses.filter(b => b.hasSecretMenu)
@@ -464,8 +496,8 @@ export function UserSecretMenuPage({ realSecretMenus = [] }: UserSecretMenuPageP
         ))}
       </div>
 
-      {/* Secret Menu Items Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Secret Menu Items - Grouped by Business */}
+      <div className="space-y-8">
         {getFilteredSecretMenus().map((menu) => {
           // For real menus, create business object from menu data
           // For mock menus, find in mockBusinesses
@@ -480,14 +512,55 @@ export function UserSecretMenuPage({ realSecretMenus = [] }: UserSecretMenuPageP
               }
             : mockBusinesses.find(b => b.id === menu.businessId)
           
-          return menu.items.map((item: any, index: number) => (
-            <SecretMenuItem 
-              key={`${menu.businessId}-${item.name}-${index}`} 
-              menu={menu} 
-              item={item} 
-              business={business}
-            />
-          ))
+          const businessSlug = business?.name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || menu.businessId
+          const isHighlighted = highlightedCard === businessSlug
+          
+          return (
+            <Card 
+              key={menu.businessId}
+              ref={(el) => { cardRefs.current[businessSlug] = el }}
+              className={`bg-gradient-to-br from-slate-900/60 to-slate-800/40 border-slate-700/50 transition-all duration-300 ${
+                isHighlighted 
+                  ? 'qr-highlight ring-4 ring-[#00d083]/60 shadow-2xl shadow-[#00d083]/20 scale-105 border-[#00d083]/50' 
+                  : ''
+              }`}
+            >
+              {/* Business Header */}
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-4">
+                  {business?.image && (
+                    <img 
+                      src={business.image} 
+                      alt={business.name}
+                      className="w-16 h-16 rounded-full object-cover border-2 border-purple-500/30"
+                    />
+                  )}
+                  <div>
+                    <CardTitle className="text-xl text-slate-100 mb-1">
+                      {business?.name || 'Unknown Business'}
+                    </CardTitle>
+                    <p className="text-slate-400 text-sm">
+                      {business?.category} • Secret Menu Collection
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              {/* Secret Items Grid */}
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {menu.items.map((item: any, index: number) => (
+                    <SecretMenuItem 
+                      key={`${menu.businessId}-${item.name}-${index}`} 
+                      menu={menu} 
+                      item={item} 
+                      business={business}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )
         })}
       </div>
 
