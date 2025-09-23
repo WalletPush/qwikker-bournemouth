@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { AdminLogoutButton } from '@/components/admin-logout-button'
 import AdminInspectionModal from './admin-inspection-modal'
 import { BusinessCRMCard } from './business-crm-card'
+import { ComprehensiveBusinessCRMCard } from './comprehensive-business-crm-card'
 import { BusinessCRMData } from '@/types/billing'
 import { useElegantModal } from '@/components/ui/elegant-modal'
 import { AdminAnalytics } from './admin-analytics'
@@ -73,6 +74,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [inspectedBusinesses, setInspectedBusinesses] = useState<Set<string>>(new Set())
   const [processingChangeId, setProcessingChangeId] = useState<string | null>(null)
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
   // 🔍 SEARCH & FILTER STATE
   const [searchTerm, setSearchTerm] = useState('')
@@ -84,6 +86,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   // Function to update tab and URL
   const updateActiveTab = (newTab: 'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'qr-management' | 'ai-test') => {
     setActiveTab(newTab)
+    setIsMobileMenuOpen(false) // Close mobile menu when tab is selected
     // Update URL without page refresh
     const url = new URL(window.location.href)
     url.searchParams.set('tab', newTab)
@@ -840,11 +843,22 @@ Qwikker Admin Team`
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950/40 to-slate-950">
-      <div className="flex">
-        {/* Sidebar */}
-        <div className="w-80 bg-slate-900/95 backdrop-blur-sm border-r border-indigo-500/30 min-h-screen shadow-2xl shadow-indigo-900/20">
-          <div className="p-6">
-            <div className="text-center space-y-4 mb-8 border-b border-slate-700/50 pb-6">
+      {/* Mobile sidebar overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-slate-900/95 backdrop-blur-xl border-r border-indigo-500/30 transform transition-transform duration-300 z-50 flex flex-col ${
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      } lg:translate-x-0 lg:max-w-none`}>
+        
+        {/* Logo - Fixed at top */}
+        <div className="flex-shrink-0 p-6 border-b border-slate-700/50">
+          <div className="text-center space-y-2">
               {/* QWIKKER Logo */}
               <img 
                 src="/Qwikker Logo web.svg" 
@@ -861,9 +875,15 @@ Qwikker Admin Team`
                 </div>
                 <p className="text-sm text-indigo-300">{cityDisplayName}</p>
               </div>
-            </div>
+          </div>
+        </div>
 
-            <nav className="space-y-2">
+        {/* Navigation - Scrollable */}
+        <nav className="flex-1 overflow-y-scroll overflow-x-hidden scrollbar-hidden p-4 space-y-2"
+        style={{ 
+          touchAction: 'pan-y',
+          overscrollBehavior: 'contain'
+        }}>
               {adminNavItems.map((item) => (
                 <button
                   key={item.id}
@@ -893,18 +913,66 @@ Qwikker Admin Team`
                   )}
                 </button>
               ))}
-            </nav>
+        </nav>
 
-            <div className="mt-8 pt-6 border-t border-slate-700">
-              <AdminLogoutButton />
+        {/* Bottom section - Admin info */}
+        <div className="flex-shrink-0 p-4 border-t border-slate-700">
+          <AdminLogoutButton />
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="lg:ml-80">
+        {/* Top header */}
+        <header className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700 px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left side - Mobile menu button */}
+            <div className="flex items-center">
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="lg:hidden p-3 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors touch-manipulation min-h-[48px] min-w-[48px] flex items-center justify-center"
+                aria-label="Open navigation menu"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              {/* Page title */}
+              <div className="hidden lg:block ml-4">
+                <h1 className="text-lg font-semibold text-slate-100">
+                {activeTab === 'pending' && 'Pending Reviews'}
+                {activeTab === 'updates' && 'Pending Updates'}
+                {activeTab === 'live' && 'Live Listings'}
+                {activeTab === 'incomplete' && 'Incomplete Listings'}
+                {activeTab === 'rejected' && 'Rejected Applications'}
+                {activeTab === 'knowledge' && 'Knowledge Base'}
+                {activeTab === 'analytics' && 'City Analytics'}
+                {activeTab === 'contacts' && 'Business Contacts'}
+                {activeTab === 'qr-management' && 'QR Code Management'}
+                {activeTab === 'ai-test' && 'AI Chat Testing'}
+                </h1>
+              </div>
+            </div>
+
+            {/* Right side - City info */}
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="font-semibold text-slate-100">{cityDisplayName}</p>
+                <p className="text-sm text-slate-400">Admin Dashboard</p>
+              </div>
+              
+              {/* City indicator */}
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center font-semibold text-slate-100">
+                {cityDisplayName.charAt(0).toUpperCase()}
+              </div>
             </div>
           </div>
-        </div>
+        </header>
 
-        {/* Main Content */}
-        <div className="flex-1 p-8">
+        {/* Page content */}
+        <main className="p-4 sm:p-6">
           <div className="max-w-6xl mx-auto">
-            {/* Header */}
+            {/* Page Header */}
             <div className="mb-8">
               <h2 className="text-3xl font-bold text-white mb-2">
                 {activeTab === 'pending' && 'Pending Reviews'}
@@ -1090,7 +1158,7 @@ Qwikker Admin Team`
                       }
                       
                       return (
-                        <BusinessCRMCard
+                        <ComprehensiveBusinessCRMCard
                           key={business.id}
                           business={crmBusiness}
                           onApprove={handleApproval}
@@ -1436,7 +1504,7 @@ Qwikker Admin Team`
                       }
                       
                       return (
-                        <BusinessCRMCard
+                        <ComprehensiveBusinessCRMCard
                           key={business.id}
                           business={crmBusiness}
                           onApprove={handleApproval}
@@ -1719,7 +1787,7 @@ Qwikker Admin Team`
 
             </div>
           </div>
-        </div>
+        </main>
       </div>
 
       {/* New Clean Inspection Modal */}
