@@ -362,15 +362,6 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
-// Validate ../../app/debug-pwa/page.tsx
-{
-  type __IsExpected<Specific extends AppPageConfig<"/debug-pwa">> = Specific
-  const handler = {} as typeof import("../../app/debug-pwa/page.js")
-  type __Check = __IsExpected<typeof handler>
-  // @ts-ignore
-  type __Unused = __Check
-}
-
 // Validate ../../app/debug-supabase/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/debug-supabase">> = Specific
@@ -735,6 +726,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/admin/update-notes">> = Specific
   const handler = {} as typeof import("../../app/api/admin/update-notes/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/dashboard/ai-support/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/dashboard/ai-support">> = Specific
+  const handler = {} as typeof import("../../app/api/dashboard/ai-support/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

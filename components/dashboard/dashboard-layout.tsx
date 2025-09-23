@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LogoutButton } from '@/components/logout-button'
-import { PWAProvider } from '@/components/pwa/pwa-provider'
+import { AISupportChat } from './ai-support-chat'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -118,8 +118,7 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
   }
 
   return (
-    <PWAProvider userId={profile?.user_id} enablePushNotifications={true} enableInstallPrompt={true}>
-      <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-slate-950 text-white">
         {/* Mobile sidebar overlay */}
         {sidebarOpen && (
           <div 
@@ -255,8 +254,10 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
         }}>
           {children}
         </main>
+        
+        {/* AI Support Chat */}
+        <AISupportChat profile={profile} />
       </div>
     </div>
-    </PWAProvider>
   )
 }
