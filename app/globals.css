@@ -78,12 +78,6 @@ button {
   }
 }
 
-/* PWA specific styles */
-@media all and (display-mode: standalone) {
-  body {
-    padding-top: env(safe-area-inset-top);
-  }
-}
 
 /* Prevent horizontal scroll - CRITICAL */
 * {
