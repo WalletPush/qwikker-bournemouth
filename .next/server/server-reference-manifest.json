@@ -44,21 +44,6 @@
       },
       "filename": "lib/actions/admin-crm-actions.ts",
       "exportedName": "recordPayment"
-    },
-    "78452510849cf7d79e703b4c40de18223efd368936": {
-      "workers": {
-        "app/onboarding/page": {
-          "moduleId": "[project]/.next-internal/server/app/onboarding/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/signup-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "createUserAndProfile",
-          "filename": "lib/actions/signup-actions.ts"
-        }
-      },
-      "layer": {
-        "app/onboarding/page": "action-browser"
-      },
-      "filename": "lib/actions/signup-actions.ts",
-      "exportedName": "createUserAndProfile"
     }
   },
   "edge": {},

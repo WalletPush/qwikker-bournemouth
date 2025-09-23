@@ -1,13 +1,14 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
   "/admin/page": "app/admin/page.js",
   "/api/admin/analytics/route": "app/api/admin/analytics/route.js",
   "/api/admin/contacts/route": "app/api/admin/contacts/route.js",
   "/api/admin/sync/health/route": "app/api/admin/sync/health/route.js",
-  "/auth/login/page": "app/auth/login/page.js",
-  "/onboarding/page": "app/onboarding/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
   "/page": "app/page.js",
-  "/test-qr-scroll/page": "app/test-qr-scroll/page.js",
+  "/user/credits/page": "app/user/credits/page.js",
   "/user/dashboard/page": "app/user/dashboard/page.js",
   "/user/offers/page": "app/user/offers/page.js",
+  "/user/page": "app/user/page.js",
   "/user/secret-menu/page": "app/user/secret-menu/page.js"
 }
