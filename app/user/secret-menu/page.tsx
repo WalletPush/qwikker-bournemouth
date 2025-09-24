@@ -1,6 +1,7 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserSecretMenuPage } from '@/components/user/user-secret-menu-page'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { Suspense } from 'react'
 
 export default async function SecretMenuPage() {
   const supabase = createServiceRoleClient()
@@ -70,7 +71,13 @@ export default async function SecretMenuPage() {
 
   return (
     <UserDashboardLayout>
-      <UserSecretMenuPage realSecretMenus={realSecretMenus} />
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-slate-400">Loading secret menu...</div>
+        </div>
+      }>
+        <UserSecretMenuPage realSecretMenus={realSecretMenus} />
+      </Suspense>
     </UserDashboardLayout>
   )
 }
