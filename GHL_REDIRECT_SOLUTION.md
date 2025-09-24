@@ -12,7 +12,7 @@ Use GHL's REDIRECT ACTION with the dashboard URL built from custom values.
 **Action Type**: Redirect
 **Redirect URL**: 
 ```
-https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id={{custom_values.serialNumber}}
+https://qwikkerdashboard-theta.vercel.app/welcome?wallet_pass_id={{custom_values.serialNumber}}
 ```
 
 ### 2. Alternative: Use JavaScript Redirect in Form
@@ -20,18 +20,18 @@ Add this to your form's success message or custom code:
 ```javascript
 // After successful form submission
 const serialNumber = '{{custom_values.serialNumber}}';
-window.location.href = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${serialNumber}`;
+window.location.href = `https://qwikkerdashboard-theta.vercel.app/welcome?wallet_pass_id=${serialNumber}`;
 ```
 
 ### 3. Test the Flow:
 1. Submit form → WalletPass created → Custom values populated
 2. Webhook fires → Creates user in Supabase  
-3. Redirect action → Takes user to personalized dashboard
-4. Dashboard loads → Shows user's real name and data
+3. Redirect action → Takes user to elegant welcome page
+4. User clicks "Enter Your Dashboard" → Shows personalized dashboard with name
 
 ## The Complete Flow:
 ```
-Form Submit → WalletPass API → GHL Custom Values → Webhook (our API) → Redirect Action → Dashboard
+Form Submit → WalletPass API → GHL Custom Values → Webhook (our API) → Redirect Action → Welcome Page → Dashboard
 ```
 
 **The webhook and redirect happen in PARALLEL, not sequentially!**

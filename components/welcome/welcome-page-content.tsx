@@ -94,14 +94,25 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
           </div>
           
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-light text-white mb-6 tracking-wide">
-            Welcome to the future of
-            <span className="block text-[#00d083] font-medium mt-2">local discovery</span>
+            Your Qwikker pass is
+            <span className="block text-[#00d083] font-medium mt-2 animate-pulse">ready to unlock Bournemouth</span>
           </h1>
           
-          <p className="text-lg md:text-xl text-slate-300 mb-12 max-w-3xl leading-relaxed">
-            Your digital pass has been created. Discover exclusive member offers, 
-            hidden menus, and personalized local experiences powered by AI.
+          <p className="text-lg md:text-xl text-slate-300 mb-8 max-w-3xl leading-relaxed">
+            Access exclusive member offers, discover hidden menus, and get personalized AI recommendations.
           </p>
+          
+          <div className="flex items-center justify-center gap-4 mb-12">
+            <div className="flex items-center gap-2 bg-slate-800/40 rounded-full px-4 py-2 border border-[#00d083]/30">
+              <div className="w-2 h-2 bg-[#00d083] rounded-full animate-pulse"></div>
+              <span className="text-[#00d083] text-sm font-medium">Pass Created</span>
+            </div>
+            <div className="w-8 h-0.5 bg-slate-600"></div>
+            <div className="flex items-center gap-2 bg-slate-800/40 rounded-full px-4 py-2 border border-slate-600/30">
+              <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
+              <span className="text-slate-400 text-sm">Loading Profile...</span>
+            </div>
+          </div>
         </div>
 
         {/* Features Grid */}
@@ -132,13 +143,14 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
         }`}>
           <Button
             onClick={handleGetStarted}
-            className="bg-gradient-to-r from-[#00d083] to-green-400 hover:from-green-500 hover:to-[#00d083] text-white font-medium py-4 px-12 rounded-2xl text-lg shadow-2xl transform hover:scale-105 transition-all duration-300 hover:shadow-[#00d083]/30"
+            className="bg-gradient-to-r from-[#00d083] to-green-400 hover:from-green-500 hover:to-[#00d083] text-white font-semibold py-5 px-16 rounded-2xl text-xl shadow-2xl transform hover:scale-105 transition-all duration-300 hover:shadow-[#00d083]/50 relative overflow-hidden group"
           >
-            Get Started
+            <span className="relative z-10">Enter Your Dashboard</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-[#00d083] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </Button>
           
-          <p className="text-slate-500 text-sm mt-6">
-            Your personalized experience is loading
+          <p className="text-slate-400 text-sm mt-6 animate-pulse">
+            Your personalized dashboard is being prepared...
           </p>
         </div>
 
