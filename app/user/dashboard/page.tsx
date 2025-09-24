@@ -158,7 +158,11 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   }
   
   return (
-    <UserDashboardLayout currentSection="dashboard" currentUser={currentUser}>
+    <UserDashboardLayout 
+      currentSection="dashboard" 
+      currentUser={currentUser}
+      walletPassId={walletPassId}
+    >
       <UserDashboardHome stats={stats} currentUser={currentUser} />
     </UserDashboardLayout>
   )
