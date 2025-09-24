@@ -34,7 +34,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
   // Use real user data or fallback to mock
   const userProfile = currentUser || mockUserProfile
   const userName = userProfile.name || mockUserProfile.name
-  const userPoints = userProfile.total_points || mockUserProfile.totalPoints
+  const userPoints = userProfile.total_points ?? mockUserProfile.totalPoints // Use nullish coalescing to preserve 0
   const userLevel = userProfile.level || mockUserProfile.level
   
   // Calculate level info using proper level system
