@@ -24,15 +24,25 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   // Priority: URL param > Cookie > Default demo user
   const resolvedSearchParams = await searchParams
   const urlWalletPassId = resolvedSearchParams.wallet_pass_id
-  const cookieWalletPassId = await getWalletPassCookie()
+  
+  let cookieWalletPassId = null
+  try {
+    cookieWalletPassId = await getWalletPassCookie()
+  } catch (error) {
+    console.log('Cookie read error (safe to ignore):', error)
+  }
   
   // If URL has wallet_pass_id, save it to cookie for future visits
   let walletPassId = urlWalletPassId || cookieWalletPassId || 'QWIK-BOURNEMOUTH-DAVID-2024'
   
   // Save to cookie if we got it from URL (for persistence across refreshes)
   if (urlWalletPassId && urlWalletPassId !== cookieWalletPassId) {
-    await setWalletPassCookie(urlWalletPassId)
-    console.log('💾 Saved wallet pass ID to cookie:', urlWalletPassId)
+    try {
+      await setWalletPassCookie(urlWalletPassId)
+      console.log('💾 Saved wallet pass ID to cookie:', urlWalletPassId)
+    } catch (error) {
+      console.log('Cookie save error (safe to ignore):', error)
+    }
   }
   
   let currentUser = null
