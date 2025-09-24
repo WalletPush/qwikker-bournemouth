@@ -125,35 +125,6 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
           </div>
         </div>
 
-        {/* Mobile Wallet Showcase */}
-        <div className={`transform transition-all duration-1000 delay-500 ${
-          featuresVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-        } mb-16`}>
-          <div className="relative max-w-sm mx-auto">
-            <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-3xl border border-slate-600/50 shadow-2xl p-2 backdrop-blur-sm">
-              <div className="bg-black rounded-2xl p-6 min-h-[400px] flex items-center justify-center">
-                <div className="bg-gradient-to-r from-[#00d083] to-green-400 rounded-2xl p-6 w-full max-w-xs shadow-xl">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <div className="text-white font-semibold text-lg">Qwikker</div>
-                      <div className="text-white/70 text-sm">Digital Pass</div>
-                    </div>
-                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                      <div className="w-4 h-4 bg-white rounded-full"></div>
-                    </div>
-                  </div>
-                  <div className="text-white/60 text-sm mb-6">
-                    Bournemouth Explorer
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div className="text-white/80 text-xs">Ready to use</div>
-                    <div className="text-white/60 text-xs">Show to redeem</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Call to Action */}
         <div className={`transform transition-all duration-1000 delay-700 ${
