@@ -16,7 +16,7 @@ export default async function HowItWorksPage({ searchParams }: HowItWorksPagePro
       currentSection="how-it-works"
       walletPassId={walletPassId}
     >
-      <UserHowItWorksPage />
+      <UserHowItWorksPage walletPassId={walletPassId} />
     </UserDashboardLayout>
   )
 }
