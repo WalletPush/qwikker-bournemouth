@@ -27,10 +27,13 @@ export async function POST(request: NextRequest) {
       ...customFields
     } = data
     
-    if (!serialNumber || !email) {
-      console.error('❌ Missing required fields:', { serialNumber, email })
+    // Use serialNumber as wallet_pass_id
+    const wallet_pass_id = serialNumber
+    
+    if (!wallet_pass_id || !email) {
+      console.error('❌ Missing required fields:', { wallet_pass_id, email, received_data: data })
       return NextResponse.json(
-        { error: 'Missing serialNumber or email' },
+        { error: 'Missing wallet_pass_id (serialNumber) or email' },
         { status: 400 }
       )
     }
@@ -41,7 +44,7 @@ export async function POST(request: NextRequest) {
     const { data: existingUser } = await supabase
       .from('app_users')
       .select('*')
-      .eq('wallet_pass_id', serialNumber)
+      .eq('wallet_pass_id', wallet_pass_id)
       .single()
     
     if (existingUser) {
@@ -50,8 +53,8 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'User already exists',
         user_id: existingUser.id,
-        wallet_pass_id: serialNumber,
-        dashboard_url: `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${serialNumber}`
+        wallet_pass_id: wallet_pass_id,
+        dashboard_url: `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${wallet_pass_id}`
       })
     }
     
@@ -60,7 +63,7 @@ export async function POST(request: NextRequest) {
       .from('app_users')
       .insert({
         user_id: crypto.randomUUID(), // Generate unique user ID
-        wallet_pass_id: serialNumber,
+        wallet_pass_id: wallet_pass_id,
         name: `${first_name} ${last_name}`,
         email: email,
         phone: phone || null,
@@ -108,15 +111,15 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    console.log('✅ Created new user:', newUser.name, 'ID:', serialNumber)
+    console.log('✅ Created new user:', newUser.name, 'ID:', wallet_pass_id)
     
     // Send success response back to GHL
     return NextResponse.json({
       success: true,
       message: 'User created successfully',
       user_id: newUser.id,
-      wallet_pass_id: serialNumber,
-      dashboard_url: `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${serialNumber}`,
+      wallet_pass_id: wallet_pass_id,
+      dashboard_url: `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${wallet_pass_id}`,
       user_data: {
         name: newUser.name,
         email: newUser.email,
