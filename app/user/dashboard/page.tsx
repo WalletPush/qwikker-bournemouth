@@ -28,10 +28,10 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   // Try to get user by wallet pass ID
   try {
     const { data: user } = await supabase
-      .from('user_members')
+      .from('app_users')
       .select('*')
       .eq('wallet_pass_id', walletPassId)
-      .eq('status', 'active')
+      .eq('wallet_pass_status', 'active')
       .single()
     
     if (user) {
@@ -54,6 +54,11 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
     console.log('✅ Found user by wallet pass ID:', user?.name, 'ID:', walletPassId)
   } catch (error) {
     console.log('No user found with wallet pass ID:', walletPassId, 'using static mock data')
+    
+    // If user doesn't exist, it might be a race condition - workflow still processing
+    if (walletPassId !== 'QWIK-BOURNEMOUTH-DAVID-2024') {
+      console.log('🔄 User might still be processing in GHL workflow...')
+    }
     
     // Create mock user for testing
     currentUser = {
