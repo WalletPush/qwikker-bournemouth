@@ -67,6 +67,32 @@ export default function AddToWalletButton({
         // Show success state briefly
         setSuccess(true);
         
+        // 🆕 UPDATE MAIN WALLET PASS (if user has one) - NON-BLOCKING
+        if (userWalletPassId && userWalletPassId !== 'guest') {
+          fetch('/api/walletpass/update-main-pass', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userWalletPassId: userWalletPassId,
+              currentOffer: `${offer.title} - ${offer.business_name}`,
+              offerDetails: {
+                description: offer.description,
+                validUntil: offer.valid_until,
+                terms: offer.terms
+              }
+            })
+          }).then(response => response.json()).then(result => {
+            if (result.success) {
+              console.log('✅ Main wallet pass updated with new offer');
+            } else {
+              console.warn('⚠️ Main pass update failed (non-critical):', result.error);
+            }
+          }).catch(error => {
+            console.warn('⚠️ Main pass update error (non-critical):', error);
+            // Don't break the user flow - this is optional functionality
+          });
+        }
+        
         // Redirect to wallet pass download after short delay
         setTimeout(() => {
           const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
