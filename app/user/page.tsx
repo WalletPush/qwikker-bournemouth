@@ -6,7 +6,20 @@ export const metadata: Metadata = {
   description: "Discover amazing local businesses, exclusive offers, and secret menus in Bournemouth",
 }
 
-// Redirect /user to /user/dashboard
-export default function UserPage() {
-  redirect('/user/dashboard')
+interface UserPageProps {
+  searchParams: Promise<{
+    wallet_pass_id?: string
+  }>
+}
+
+// Redirect /user to /user/dashboard with wallet_pass_id preserved
+export default async function UserPage({ searchParams }: UserPageProps) {
+  const resolvedSearchParams = await searchParams
+  const walletPassId = resolvedSearchParams.wallet_pass_id
+  
+  if (walletPassId) {
+    redirect(`/user/dashboard?wallet_pass_id=${walletPassId}`)
+  } else {
+    redirect('/user/dashboard')
+  }
 }

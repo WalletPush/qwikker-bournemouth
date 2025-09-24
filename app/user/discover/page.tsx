@@ -4,8 +4,16 @@ import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 
-export default async function DiscoverPage() {
+interface DiscoverPageProps {
+  searchParams: Promise<{
+    wallet_pass_id?: string
+  }>
+}
+
+export default async function DiscoverPage({ searchParams }: DiscoverPageProps) {
   const supabase = createServiceRoleClient()
+  const resolvedSearchParams = await searchParams
+  const walletPassId = resolvedSearchParams.wallet_pass_id
   
   // Fetch approved businesses only
   const { data: approvedBusinesses, error } = await supabase
@@ -96,7 +104,10 @@ export default async function DiscoverPage() {
   const allBusinesses = [...realBusinesses, ...mockBusinesses]
   
   return (
-    <UserDashboardLayout currentSection="discover">
+    <UserDashboardLayout 
+      currentSection="discover"
+      walletPassId={walletPassId}
+    >
       <UserDiscoverPage businesses={allBusinesses} />
     </UserDashboardLayout>
   )

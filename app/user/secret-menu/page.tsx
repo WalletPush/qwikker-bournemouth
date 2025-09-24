@@ -3,8 +3,16 @@ import { UserSecretMenuPage } from '@/components/user/user-secret-menu-page'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { Suspense } from 'react'
 
-export default async function SecretMenuPage() {
+interface SecretMenuPageProps {
+  searchParams: Promise<{
+    wallet_pass_id?: string
+  }>
+}
+
+export default async function SecretMenuPage({ searchParams }: SecretMenuPageProps) {
   const supabase = createServiceRoleClient()
+  const resolvedSearchParams = await searchParams
+  const walletPassId = resolvedSearchParams.wallet_pass_id
   
   // Fetch approved businesses (we'll filter for secret menus after parsing)
   const { data: approvedBusinesses, error } = await supabase
@@ -70,7 +78,10 @@ export default async function SecretMenuPage() {
   }).filter(menu => menu.items.length > 0) // Only include businesses with secret menu items
 
   return (
-    <UserDashboardLayout>
+    <UserDashboardLayout 
+      currentSection="secret-menu"
+      walletPassId={walletPassId}
+    >
       <Suspense fallback={
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-slate-400">Loading secret menu...</div>
