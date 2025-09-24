@@ -2,38 +2,36 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 
-interface AnalyticsData {
+interface CityAnalyticsData {
   city: string
   cityDisplayName: string
   metrics: {
     passesCreated: number
     passesInstalled: number
     installationRate: string
-    offersClaimed: number
-    offersRedeemed: number
-    redemptionRate: string
     activeBusinesses: number
     totalOffers: number
-    secretMenuItems: number
-  }
-  rfm: {
-    recency: { Recent: number; Moderate: number; Distant: number }
-    frequency: { Frequent: number; Regular: number; Rare: number }
-    monetary: { High: number; Medium: number; Low: number }
-  }
-  trends: {
-    passGrowth: string
-    offerGrowth: string
-    businessGrowth: string
+    offersClaimed: number
+    redemptionRate: string
   }
 }
 
 export function AdminAnalytics({ city }: { city: string }) {
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+  const [analytics, setAnalytics] = useState<CityAnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<'overview' | 'detailed' | 'rfm'>('overview')
+  const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({
+    qwikkerMarketing: false,
+    staticBusiness: false,
+    dynamicBusiness: false
+  })
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
 
   useEffect(() => {
     fetchAnalytics()
@@ -53,375 +51,311 @@ export function AdminAnalytics({ city }: { city: string }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+              <div className="animate-pulse">
+                <div className="h-8 bg-slate-600 rounded w-1/2 mb-2"></div>
+                <div className="h-4 bg-slate-600 rounded w-3/4"></div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
 
   if (!analytics) {
     return (
-      <div className="text-center text-slate-400 py-12">
-        <p>Failed to load analytics data</p>
+      <div className="text-center py-8">
+        <p className="text-slate-400">Unable to load analytics</p>
       </div>
     )
   }
 
-  const { metrics, rfm, trends } = analytics
+  // Animated counter component
+  const AnimatedCounter = ({ value, suffix = '', className = "" }: { value: number | string, suffix?: string, className?: string }) => (
+    <div className={`text-3xl font-bold ${className}`}>
+      <span className="tabular-nums">{value}</span>{suffix}
+    </div>
+  )
 
-  const PieChart = ({ data, colors }: { data: Record<string, number>, colors: Record<string, string> }) => (
-    <div className="relative w-32 h-32 mx-auto">
-      <div className="w-full h-full rounded-full" style={{
-        background: `conic-gradient(${Object.entries(data).map(([key, value], index) => 
-          `${colors[key]} ${index === 0 ? 0 : Object.values(data).slice(0, index).reduce((a, b) => a + b, 0) * 3.6}deg ${Object.values(data).slice(0, index + 1).reduce((a, b) => a + b, 0) * 3.6}deg`
-        ).join(', ')})`
-      }}>
-        <div className="absolute inset-2 bg-slate-800 rounded-full flex items-center justify-center">
-          <span className="text-white text-sm font-bold">100%</span>
-        </div>
-      </div>
+  // Progress bar component
+  const ProgressBar = ({ percentage, color = "bg-blue-500" }: { percentage: number, color?: string }) => (
+    <div className="w-full bg-slate-700 rounded-full h-2 mt-2">
+      <div 
+        className={`${color} h-2 rounded-full transition-all duration-1000 ease-out`}
+        style={{ width: `${Math.min(percentage, 100)}%` }}
+      ></div>
     </div>
   )
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-slate-100 mb-2">
-          📊 {analytics.cityDisplayName} Performance Dashboard
-        </h1>
-        <p className="text-slate-400">Local user engagement and business metrics for your city</p>
-        <div className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-[#00d083]/20 border border-[#00d083]/30 rounded-full">
-          <div className="w-2 h-2 bg-[#00d083] rounded-full animate-pulse"></div>
-          <span className="text-[#00d083] text-sm font-medium">Live Data from {analytics.cityDisplayName}</span>
-        </div>
+      {/* Main Analytics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Wallet Passes */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <AnimatedCounter value={analytics.metrics.passesCreated} className="text-blue-400" />
+              <p className="text-slate-400 text-sm mt-1">Passes Created</p>
+              <ProgressBar percentage={(analytics.metrics.passesCreated / 100) * 100} color="bg-blue-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Pass Install Rate */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <AnimatedCounter value={analytics.metrics.installationRate} suffix="%" className="text-green-400" />
+              <p className="text-slate-400 text-sm mt-1">Install Rate</p>
+              <ProgressBar percentage={parseFloat(analytics.metrics.installationRate)} color="bg-green-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active Businesses */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <AnimatedCounter value={analytics.metrics.activeBusinesses} className="text-purple-400" />
+              <p className="text-slate-400 text-sm mt-1">Businesses</p>
+              <ProgressBar percentage={(analytics.metrics.activeBusinesses / 50) * 100} color="bg-purple-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Redemption Rate */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <AnimatedCounter value={analytics.metrics.redemptionRate} suffix="%" className="text-orange-400" />
+              <p className="text-slate-400 text-sm mt-1">Redemption</p>
+              <ProgressBar percentage={parseFloat(analytics.metrics.redemptionRate)} color="bg-orange-400" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* View Mode Selector */}
-      <div className="flex justify-center">
-        <div className="inline-flex bg-slate-800/50 rounded-lg p-1 border border-slate-700">
-          <Button
-            onClick={() => setViewMode('overview')}
-            variant={viewMode === 'overview' ? 'default' : 'ghost'}
-            size="sm"
-            className={viewMode === 'overview' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}
+      {/* QR Code Analytics Dropdowns */}
+      <div className="space-y-3">
+        <h3 className="text-white text-lg font-semibold">QR Code Performance</h3>
+        
+        {/* Qwikker Marketing */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader 
+            className="cursor-pointer hover:bg-slate-700/30 transition-colors py-4"
+            onClick={() => toggleSection('qwikkerMarketing')}
           >
-            📊 Overview
-          </Button>
-          <Button
-            onClick={() => setViewMode('detailed')}
-            variant={viewMode === 'detailed' ? 'default' : 'ghost'}
-            size="sm"
-            className={viewMode === 'detailed' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}
-          >
-            📈 Detailed
-          </Button>
-          <Button
-            onClick={() => setViewMode('rfm')}
-            variant={viewMode === 'rfm' ? 'default' : 'ghost'}
-            size="sm"
-            className={viewMode === 'rfm' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}
-          >
-            🎯 User Segments
-          </Button>
-        </div>
-      </div>
-
-      {/* Content based on view mode */}
-      {viewMode === 'overview' && (
-        <div className="space-y-6">
-          {/* Essential Metrics Only */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="bg-gradient-to-br from-blue-900/20 to-blue-800/20 border-blue-700/30">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-blue-400 mb-1">{metrics.passesCreated}</div>
-                <div className="text-xs text-slate-400">Total Users</div>
-                <div className="text-xs text-blue-300 mt-1">🔵 REAL DATA</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-green-900/20 to-green-800/20 border-green-700/30">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-green-400 mb-1">{metrics.activeBusinesses}</div>
-                <div className="text-xs text-slate-400">Active Businesses</div>
-                <div className="text-xs text-green-300 mt-1">🟢 REAL DATA</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-700/30">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-purple-400 mb-1">{metrics.totalOffers}</div>
-                <div className="text-xs text-slate-400">Business Offers</div>
-                <div className="text-xs text-purple-300 mt-1">🟣 REAL DATA</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-yellow-900/20 to-yellow-800/20 border-yellow-700/30">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-yellow-400 mb-1">{metrics.secretMenuItems}</div>
-                <div className="text-xs text-slate-400">Secret Items</div>
-                <div className="text-xs text-yellow-300 mt-1">🟡 REAL DATA</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quick Summary */}
-          <Card className="bg-slate-800/30 border-slate-700">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-bold text-slate-100 mb-4">📋 Quick Summary</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-slate-400">Pass Install Rate:</span>
-                  <span className="ml-2 text-white font-semibold">{metrics.installationRate}%</span>
-                  <span className="ml-2 text-blue-400 text-xs">🔵 REAL</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-green-400 font-semibold">Qwikker Marketing</div>
+                <div className="text-slate-400 text-sm">Flyers, Leaflets, Promo Packs, Other</div>
+              </div>
+              <svg 
+                className={`w-5 h-5 text-slate-400 transition-transform ${expandedSections.qwikkerMarketing ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </CardHeader>
+          {expandedSections.qwikkerMarketing && (
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-4 gap-4 mb-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">156</div>
+                  <div className="text-slate-400 text-xs">Last 7 Days</div>
                 </div>
-                <div>
-                  <span className="text-slate-400">Avg Secret Items/Business:</span>
-                  <span className="ml-2 text-white font-semibold">{(metrics.secretMenuItems / Math.max(metrics.activeBusinesses, 1)).toFixed(1)}</span>
-                  <span className="ml-2 text-green-400 text-xs">🟢 CALCULATED</span>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">534</div>
+                  <div className="text-slate-400 text-xs">Last 30 Days</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">1,247</div>
+                  <div className="text-slate-400 text-xs">Last 60 Days</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">12</div>
+                  <div className="text-slate-400 text-xs">Active Codes</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                  <div className="text-white font-semibold">Flyers</div>
+                  <div className="text-green-400 text-sm">89 scans (7d)</div>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                  <div className="text-white font-semibold">Leaflets</div>
+                  <div className="text-green-400 text-sm">34 scans (7d)</div>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                  <div className="text-white font-semibold">Promo Packs</div>
+                  <div className="text-green-400 text-sm">23 scans (7d)</div>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                  <div className="text-white font-semibold">Other</div>
+                  <div className="text-green-400 text-sm">10 scans (7d)</div>
                 </div>
               </div>
             </CardContent>
-          </Card>
-        </div>
-      )}
+          )}
+        </Card>
 
-      {viewMode === 'detailed' && (
-        <div className="space-y-6">
-          {/* All Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-            <Card className="bg-gradient-to-br from-blue-900/20 to-blue-800/20 border-blue-700/30">
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl font-bold text-blue-400 mb-2">{metrics.passesCreated}</div>
-                <div className="text-sm text-slate-400">Passes Created</div>
-                <div className="text-xs text-blue-300 mt-1">🔵 REAL DATA</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-yellow-900/20 to-yellow-800/20 border-yellow-700/30">
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl font-bold text-yellow-400 mb-2">{metrics.passesInstalled}</div>
-                <div className="text-sm text-slate-400">Passes Installed</div>
-                <div className="text-xs text-yellow-300 mt-1">🟡 REAL DATA</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-green-900/20 to-green-800/20 border-green-700/30">
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl font-bold text-green-400 mb-2">{metrics.activeBusinesses}</div>
-                <div className="text-sm text-slate-400">Active Businesses</div>
-                <div className="text-xs text-green-300 mt-1">🟢 REAL DATA</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-gray-900/20 to-gray-800/20 border-gray-700/30">
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl font-bold text-gray-400 mb-2">{metrics.offersClaimed}</div>
-                <div className="text-sm text-slate-400">Offers Claimed</div>
-                <div className="text-xs text-red-300 mt-1">🔴 SIMULATED</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-teal-900/20 to-teal-800/20 border-teal-700/30">
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl font-bold text-teal-400 mb-2">{metrics.offersRedeemed}</div>
-                <div className="text-sm text-slate-400">Offers Redeemed</div>
-                <div className="text-xs text-red-300 mt-1">🔴 SIMULATED</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-700/30">
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl font-bold text-purple-400 mb-2">{metrics.secretMenuItems}</div>
-                <div className="text-sm text-slate-400">Secret Menu Items</div>
-                <div className="text-xs text-purple-300 mt-1">🟣 REAL DATA</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* City Performance Summary */}
-          <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 border border-slate-600 rounded-2xl p-6">
-            <h2 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        {/* Static Business QR */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader 
+            className="cursor-pointer hover:bg-slate-700/30 transition-colors py-4"
+            onClick={() => toggleSection('staticBusiness')}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-orange-400 font-semibold">Static Business QR</div>
+                <div className="text-slate-400 text-sm">Window Stickers, Offers, Secret Menus, Other</div>
+              </div>
+              <svg 
+                className={`w-5 h-5 text-slate-400 transition-transform ${expandedSections.staticBusiness ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-              {analytics.cityDisplayName} Market Overview
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-400">{metrics.installationRate}%</div>
-                <div className="text-slate-400">Pass Install Rate</div>
-                <div className="text-xs text-blue-300 mt-1">🔵 REAL</div>
+            </div>
+          </CardHeader>
+          {expandedSections.staticBusiness && (
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-4 gap-4 mb-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">298</div>
+                  <div className="text-slate-400 text-xs">Last 7 Days</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">1,156</div>
+                  <div className="text-slate-400 text-xs">Last 30 Days</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">2,489</div>
+                  <div className="text-slate-400 text-xs">Last 60 Days</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">48</div>
+                  <div className="text-slate-400 text-xs">Available Codes</div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-400">{metrics.redemptionRate}%</div>
-                <div className="text-slate-400">Offer Redemption</div>
-                <div className="text-xs text-red-300 mt-1">🔴 SIMULATED</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                  <div className="text-white font-semibold">Window Stickers</div>
+                  <div className="text-orange-400 text-sm">167 scans (7d)</div>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                  <div className="text-white font-semibold">Offers</div>
+                  <div className="text-orange-400 text-sm">89 scans (7d)</div>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                  <div className="text-white font-semibold">Secret Menus</div>
+                  <div className="text-orange-400 text-sm">34 scans (7d)</div>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                  <div className="text-white font-semibold">Other</div>
+                  <div className="text-orange-400 text-sm">8 scans (7d)</div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-400">{(metrics.secretMenuItems / Math.max(metrics.activeBusinesses, 1)).toFixed(1)}</div>
-                <div className="text-slate-400">Avg Secret Items</div>
-                <div className="text-xs text-green-300 mt-1">🟢 CALCULATED</div>
+            </CardContent>
+          )}
+        </Card>
+
+        {/* Dynamic Business QR */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader 
+            className="cursor-pointer hover:bg-slate-700/30 transition-colors py-4"
+            onClick={() => toggleSection('dynamicBusiness')}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-blue-400 font-semibold">Dynamic Business QR</div>
+                <div className="text-slate-400 text-sm">Spotlight Tier, Deep Linking, Intent Routing</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-400">{(metrics.totalOffers / Math.max(metrics.activeBusinesses, 1)).toFixed(1)}</div>
-                <div className="text-slate-400">Avg Offers</div>
-                <div className="text-xs text-green-300 mt-1">🟢 CALCULATED</div>
+              <div className="flex items-center gap-3">
+                <button 
+                  className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full hover:bg-blue-500/30 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    // This would open a business selector modal
+                  }}
+                >
+                  All Businesses
+                </button>
+                <svg 
+                  className={`w-5 h-5 text-slate-400 transition-transform ${expandedSections.dynamicBusiness ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </CardHeader>
+          {expandedSections.dynamicBusiness && (
+            <CardContent className="pt-0">
+              {/* Business Filter Dropdown */}
+              <div className="mb-4 p-3 bg-slate-700/30 rounded-lg">
+                <label className="text-slate-300 text-sm font-medium mb-2 block">Filter by Business:</label>
+                <select className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm">
+                  <option value="">All Businesses</option>
+                  <option value="julies-sports-bar">Julie's Sports Bar</option>
+                  <option value="seaside-cafe">Seaside Café</option>
+                  <option value="the-crown-inn">The Crown Inn</option>
+                  <option value="pizza-palace">Pizza Palace</option>
+                </select>
+              </div>
 
-      {viewMode === 'rfm' && (
-        <div className="space-y-6">
-          {/* Data Quality Warning */}
-          <Card className="bg-orange-900/20 border-orange-700/30">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="text-orange-400">⚠️</div>
-                <div>
-                  <h3 className="text-orange-300 font-semibold">RFM Analysis - Mixed Data Quality</h3>
-                  <p className="text-orange-200 text-sm mt-1">
-                    This analysis uses REAL user data for recency, but frequency/monetary are calculated from limited user stats. 
-                    Full transaction tracking needed for accurate RFM.
-                  </p>
+              <div className="grid grid-cols-4 gap-4 mb-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">445</div>
+                  <div className="text-slate-400 text-xs">Last 7 Days</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">1,678</div>
+                  <div className="text-slate-400 text-xs">Last 30 Days</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">3,234</div>
+                  <div className="text-slate-400 text-xs">Last 60 Days</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">8</div>
+                  <div className="text-slate-400 text-xs">Premium Businesses</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                  <div className="text-white font-semibold">Discover</div>
+                  <div className="text-blue-400 text-sm">234 scans (7d)</div>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                  <div className="text-white font-semibold">Offers</div>
+                  <div className="text-blue-400 text-sm">123 scans (7d)</div>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                  <div className="text-white font-semibold">Secret Menu</div>
+                  <div className="text-blue-400 text-sm">67 scans (7d)</div>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                  <div className="text-white font-semibold">Other</div>
+                  <div className="text-blue-400 text-sm">21 scans (7d)</div>
                 </div>
               </div>
             </CardContent>
-          </Card>
-
-          {/* RFM Analysis */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-slate-100 flex items-center gap-2">
-                  Recency 
-                  <span className="text-xs bg-blue-600 px-2 py-1 rounded">🔵 REAL</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PieChart 
-                  data={rfm.recency}
-                  colors={{
-                    Recent: '#3B82F6',
-                    Moderate: '#10B981', 
-                    Distant: '#F59E0B'
-                  }}
-                />
-                <div className="mt-4 space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span className="text-slate-300">Recent (≤7 days)</span>
-                    </div>
-                    <span className="text-slate-400">{rfm.recency.Recent.toFixed(1)}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-slate-300">Moderate (8-30 days)</span>
-                    </div>
-                    <span className="text-slate-400">{rfm.recency.Moderate.toFixed(1)}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                      <span className="text-slate-300">Distant (&gt;30 days)</span>
-                    </div>
-                    <span className="text-slate-400">{rfm.recency.Distant.toFixed(1)}%</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-slate-100 flex items-center gap-2">
-                  Frequency 
-                  <span className="text-xs bg-red-600 px-2 py-1 rounded">🔴 LIMITED</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PieChart 
-                  data={rfm.frequency}
-                  colors={{
-                    Frequent: '#3B82F6',
-                    Regular: '#10B981',
-                    Rare: '#F59E0B'
-                  }}
-                />
-                <div className="mt-4 space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span className="text-slate-300">Frequent (≥5 visits)</span>
-                    </div>
-                    <span className="text-slate-400">{rfm.frequency.Frequent.toFixed(1)}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-slate-300">Regular (2-4 visits)</span>
-                    </div>
-                    <span className="text-slate-400">{rfm.frequency.Regular.toFixed(1)}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                      <span className="text-slate-300">Rare (&lt;2 visits)</span>
-                    </div>
-                    <span className="text-slate-400">{rfm.frequency.Rare.toFixed(1)}%</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-slate-100 flex items-center gap-2">
-                  Monetary 
-                  <span className="text-xs bg-red-600 px-2 py-1 rounded">🔴 LIMITED</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PieChart 
-                  data={rfm.monetary}
-                  colors={{
-                    High: '#3B82F6',
-                    Medium: '#10B981',
-                    Low: '#F59E0B'
-                  }}
-                />
-                <div className="mt-4 space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span className="text-slate-300">High (≥£5)</span>
-                    </div>
-                    <span className="text-slate-400">{rfm.monetary.High.toFixed(1)}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-slate-300">Medium (£2-£5)</span>
-                    </div>
-                    <span className="text-slate-400">{rfm.monetary.Medium.toFixed(1)}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                      <span className="text-slate-300">Low (&lt;£2)</span>
-                    </div>
-                    <span className="text-slate-400">{rfm.monetary.Low.toFixed(1)}%</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
+          )}
+        </Card>
+      </div>
     </div>
   )
 }

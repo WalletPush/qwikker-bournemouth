@@ -17,6 +17,7 @@ import { SmartQRGenerator } from './smart-qr-generator'
 import { ComprehensiveQRDashboard } from './comprehensive-qr-dashboard'
 import { AITestPage } from './ai-test-page'
 import { QRAnalyticsDashboard } from './qr-analytics-dashboard'
+import { AdminDashboardOverview } from './admin-dashboard-overview'
 
 interface Business {
   id: string
@@ -63,10 +64,10 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const searchParams = useSearchParams()
   
   // Get initial tab from URL or default to 'pending'
-  const [activeTab, setActiveTab] = useState<'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'qr-management' | 'ai-test'>(() => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'qr-management' | 'ai-test'>(() => {
     const urlTab = searchParams.get('tab')
-    const validTabs = ['pending', 'updates', 'live', 'incomplete', 'rejected', 'knowledge', 'analytics', 'contacts', 'qr-management', 'ai-test']
-    return validTabs.includes(urlTab || '') ? (urlTab as any) : 'pending'
+    const validTabs = ['overview', 'pending', 'updates', 'live', 'incomplete', 'rejected', 'knowledge', 'analytics', 'contacts', 'qr-management', 'ai-test']
+    return validTabs.includes(urlTab || '') ? (urlTab as any) : 'overview'
   })
   const [businessList, setBusinessList] = useState<Business[]>(businesses)
   const [isLoading, setIsLoading] = useState<string | null>(null)
@@ -300,6 +301,12 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   }
 
   const adminNavItems = [
+    { 
+      id: 'overview', 
+      label: 'Dashboard Overview', 
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v0z" /></svg>, 
+      count: 0 
+    },
     { 
       id: 'pending', 
       label: 'Pending Reviews', 
@@ -863,7 +870,8 @@ Qwikker Admin Team`
               <img 
                 src="/Qwikker Logo web.svg" 
                 alt="QWIKKER Admin Dashboard" 
-                className="h-8 w-auto sm:h-10 mx-auto"
+                className="qwikker-logo mx-auto"
+                style={{ maxHeight: '32px' }}
               />
               {/* Admin Dashboard Text */}
               <div>
@@ -940,6 +948,7 @@ Qwikker Admin Team`
               {/* Page title */}
               <div className="hidden lg:block ml-4">
                 <h1 className="text-lg font-semibold text-slate-100">
+                {activeTab === 'overview' && 'Dashboard Overview'}
                 {activeTab === 'pending' && 'Pending Reviews'}
                 {activeTab === 'updates' && 'Pending Updates'}
                 {activeTab === 'live' && 'Live Listings'}
@@ -975,6 +984,7 @@ Qwikker Admin Team`
             {/* Page Header */}
             <div className="mb-8">
               <h2 className="text-3xl font-bold text-white mb-2">
+                {activeTab === 'overview' && 'Dashboard Overview'}
                 {activeTab === 'pending' && 'Pending Reviews'}
                 {activeTab === 'updates' && 'Pending Updates'}
                 {activeTab === 'live' && 'Live Listings'}
@@ -987,6 +997,7 @@ Qwikker Admin Team`
                 {activeTab === 'ai-test' && 'AI Chat Testing'}
               </h2>
               <p className="text-slate-400">
+                {activeTab === 'overview' && `Quick overview of ${cityDisplayName} admin activities and priority actions`}
                 {activeTab === 'pending' && 'Businesses awaiting your review and approval'}
                 {activeTab === 'updates' && 'Changes from approved businesses awaiting your review'}
                 {activeTab === 'live' && 'Currently active businesses on the platform'}
@@ -1065,6 +1076,17 @@ Qwikker Admin Team`
 
             {/* Content */}
             <div className="space-y-6">
+              {activeTab === 'overview' && (
+                <AdminDashboardOverview
+                  city={cityDisplayName}
+                  pendingCount={allPendingBusinesses.length}
+                  updatesCount={pendingChangesCount}
+                  liveCount={liveBusinesses.length}
+                  incompleteCount={incompleteBusinesses.length}
+                  onNavigateToTab={setActiveTab}
+                />
+              )}
+
               {activeTab === 'pending' && (
                 <div className="grid gap-6">
                   {pendingBusinesses.length === 0 ? (

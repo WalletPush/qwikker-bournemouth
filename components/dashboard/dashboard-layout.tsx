@@ -143,7 +143,8 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
               <img 
                 src="/Qwikker Logo web.svg" 
                 alt="QWIKKER Business Dashboard" 
-                className="h-8 w-auto sm:h-10 mx-auto"
+                className="qwikker-logo mx-auto"
+                style={{ maxHeight: '32px' }}
               />
               {/* Business Dashboard Text */}
               <p className="text-sm text-gray-400 font-medium">Business Dashboard</p>

@@ -89,66 +89,6 @@
       },
       "filename": "lib/actions/pending-changes.ts",
       "exportedName": "getPendingChanges"
-    },
-    "608abd3a6cf51778c3621c270f79cb202a8ed2ce08": {
-      "workers": {
-        "app/dashboard/offers/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/offers/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "createOffer",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "createOffer"
-    },
-    "4076907f021baca31ce253ba9c9f683397ff01fa9d": {
-      "workers": {
-        "app/dashboard/offers/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/offers/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "deleteOffer",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "deleteOffer"
-    },
-    "608f14038cbf9f02a534fc7bd623fcd1d0405e7e30": {
-      "workers": {
-        "app/dashboard/business/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/business/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "updateBusinessInfo",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/business/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "updateBusinessInfo"
-    },
-    "70e86543cd52e449341483c85d97d7fc3b6da9dc1d": {
-      "workers": {
-        "app/dashboard/files/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "updateProfileFile",
-          "filename": "lib/actions/file-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/files/page": "action-browser"
-      },
-      "filename": "lib/actions/file-actions.ts",
-      "exportedName": "updateProfileFile"
     }
   },
   "edge": {},

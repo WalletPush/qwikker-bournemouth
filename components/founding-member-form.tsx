@@ -277,7 +277,7 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
               <img 
                 src="/Qwikker Logo web.svg" 
                 alt="QWIKKER" 
-                className="h-12 w-auto sm:h-16"
+                className="qwikker-logo"
               />
             </div>
           <div className="text-xl text-gray-400">Business Registration</div>

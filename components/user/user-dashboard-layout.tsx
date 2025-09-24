@@ -96,7 +96,8 @@ export function UserDashboardLayout({ children, currentSection, currentUser }: U
             <img 
               src="/Qwikker Logo web.svg" 
               alt="QWIKKER User Dashboard" 
-              className="h-8 w-auto sm:h-10 mx-auto"
+              className="qwikker-logo mx-auto"
+              style={{ maxHeight: '32px' }}
             />
             {/* User Dashboard Text */}
             <p className="text-sm text-slate-400 font-medium">Discover Local Businesses</p>

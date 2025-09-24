@@ -18,7 +18,8 @@ export default function Home() {
                 alt="QWIKKER"
                 width={280}
                 height={100}
-                className="h-24 w-auto mx-auto"
+                className="qwikker-logo mx-auto"
+                style={{ maxHeight: '96px' }}
                 priority
               />
             </div>

@@ -19,7 +19,7 @@ export default function Page() {
             <img 
               src="/Qwikker Logo web.svg" 
               alt="QWIKKER" 
-              className="h-12 w-auto"
+              className="qwikker-logo"
             />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Welcome Back</h1>

@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-})
+}) : null
 
 export async function POST(request: Request) {
   try {
@@ -11,6 +11,12 @@ export async function POST(request: Request) {
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
+    }
+
+    if (!openai) {
+      return NextResponse.json({ 
+        response: "I'm sorry, the AI support system is temporarily unavailable. Please contact support directly for assistance with your business dashboard." 
+      })
     }
 
     // Build context about the business and dashboard
