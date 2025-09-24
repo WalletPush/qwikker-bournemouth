@@ -7,6 +7,7 @@ interface UserDashboardLayoutProps {
   children: React.ReactNode
   currentSection: string
   currentUser?: any
+  walletPassId?: string
 }
 
 interface NavItem {
@@ -67,8 +68,16 @@ const navItems: NavItem[] = [
   },
 ]
 
-export function UserDashboardLayout({ children, currentSection, currentUser }: UserDashboardLayoutProps) {
+export function UserDashboardLayout({ children, currentSection, currentUser, walletPassId }: UserDashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Helper function to append wallet_pass_id to navigation URLs
+  const getNavUrl = (href: string) => {
+    if (!walletPassId || walletPassId === 'QWIK-BOURNEMOUTH-DAVID-2024') {
+      return href
+    }
+    return `${href}?wallet_pass_id=${walletPassId}`
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -113,7 +122,7 @@ export function UserDashboardLayout({ children, currentSection, currentUser }: U
           {navItems.map((item) => (
             <Link
               key={item.id}
-              href={item.href}
+              href={getNavUrl(item.href)}
               onClick={() => setSidebarOpen(false)} // Close mobile sidebar on navigation
               className={`flex items-center gap-3 px-4 py-4 rounded-lg transition-colors touch-manipulation min-h-[48px] ${
                 currentSection === item.id
