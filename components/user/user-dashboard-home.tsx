@@ -38,7 +38,7 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
       {/* Simple Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-slate-100 mb-2">
-          Welcome back, <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent">{userName}</span>
+          Hello, <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent">{userName}</span>
         </h1>
         <p className="text-slate-400">Your AI companion is ready to help you discover Bournemouth</p>
       </div>
