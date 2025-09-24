@@ -14,9 +14,18 @@ interface UserDashboardHomeProps {
     realOffers: number
   }
   currentUser?: any
+  walletPassId?: string
 }
 
-export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps) {
+export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDashboardHomeProps) {
+  
+  // Helper function to append wallet_pass_id to navigation URLs
+  const getNavUrl = (href: string) => {
+    if (!walletPassId || walletPassId === 'QWIK-BOURNEMOUTH-DAVID-2024') {
+      return href
+    }
+    return `${href}?wallet_pass_id=${walletPassId}`
+  }
   // Use real stats or fallback to mock data
   const businessCount = stats?.totalBusinesses ?? mockBusinesses.length
   const offerCount = stats?.totalOffers ?? mockOffers.length
@@ -66,7 +75,7 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
             </div>
             <div className="flex-shrink-0">
               <Button asChild className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-black font-bold px-3 sm:px-4 md:px-6 py-2 sm:py-3 rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-200 hover:shadow-emerald-500/30 touch-manipulation min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm md:text-base">
-                <Link href="/user/chat">Chat</Link>
+                <Link href={getNavUrl("/user/chat")}>Chat</Link>
               </Button>
             </div>
           </div>
@@ -114,7 +123,7 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
               </div>
 
               <Button asChild className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-black font-semibold text-base sm:text-lg py-3 shadow-lg touch-manipulation min-h-[48px] active:scale-[0.98] transition-transform">
-                <Link href="/user/discover">Start Exploring</Link>
+                <Link href={getNavUrl("/user/discover")}>Start Exploring</Link>
               </Button>
             </div>
           </CardContent>
@@ -142,7 +151,7 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
               </div>
 
               <Button asChild className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:brightness-110 text-black font-semibold text-base sm:text-lg py-3 shadow-lg touch-manipulation min-h-[48px] active:scale-[0.98] transition-transform">
-                <Link href="/user/offers">View All Offers</Link>
+                <Link href={getNavUrl("/user/offers")}>View All Offers</Link>
               </Button>
             </div>
           </CardContent>
@@ -187,7 +196,7 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
               </div>
 
               <Button asChild className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:brightness-110 text-white font-semibold text-base sm:text-lg py-3 shadow-lg touch-manipulation min-h-[48px] active:scale-[0.98] transition-transform">
-                <Link href="/user/credits">Spend Points</Link>
+                <Link href={getNavUrl("/user/credits")}>Spend Points</Link>
               </Button>
             </div>
           </CardContent>
@@ -234,7 +243,7 @@ export function UserDashboardHome({ stats, currentUser }: UserDashboardHomeProps
               </div>
 
               <Button asChild className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-base sm:text-lg py-3 shadow-lg shadow-purple-500/30 border border-purple-500/50 transition-all duration-300 hover:shadow-purple-500/50 hover:scale-[1.02] relative overflow-hidden touch-manipulation min-h-[48px]">
-                <Link href="/user/secret-menu">
+                <Link href={getNavUrl("/user/secret-menu")}>
                   <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                   <span className="relative flex items-center justify-center gap-2">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
