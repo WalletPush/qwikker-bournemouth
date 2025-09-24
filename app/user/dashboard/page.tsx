@@ -32,8 +32,14 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
     console.log('Cookie read error (safe to ignore):', error)
   }
   
-  // If URL has wallet_pass_id, save it to cookie for future visits
+  // URL parameter ALWAYS takes priority over cookie (for new signups)
   let walletPassId = urlWalletPassId || cookieWalletPassId || 'QWIK-BOURNEMOUTH-DAVID-2024'
+  
+  console.log('🔍 Dashboard Debug:', {
+    urlWalletPassId,
+    cookieWalletPassId,
+    finalWalletPassId: walletPassId
+  })
   
   // Save to cookie if we got it from URL (for persistence across refreshes)
   if (urlWalletPassId && urlWalletPassId !== cookieWalletPassId) {
