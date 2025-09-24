@@ -88,21 +88,21 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
       console.log('🔄 User might still be processing in GHL workflow...')
     }
     
-    // Create mock user for testing
+    // Create fresh user profile for new users (no mock data)
     currentUser = {
-      id: 'user-mock',
+      id: 'user-processing',
       wallet_pass_id: walletPassId,
-      name: 'David (Demo User)',
-      email: 'david@demo.com',
+      name: 'New User (Processing...)',
+      email: 'processing@qwikker.com',
       city: 'bournemouth',
       tier: 'explorer',
-      level: 2,
-      points_balance: 150,
-      badges_earned: ['early_adopter', 'local_explorer'],
-      total_visits: 8,
-      offers_claimed: 3,
-      secret_menus_unlocked: 2,
-      favorite_categories: ['Restaurant', 'Cafe']
+      level: 1,
+      points_balance: 0,              // ← FRESH START!
+      badges_earned: [],              // ← NO FAKE BADGES!
+      total_visits: 0,                // ← FRESH START!
+      offers_claimed: 0,              // ← FRESH START!
+      secret_menus_unlocked: 0,       // ← FRESH START!
+      favorite_categories: []         // ← FRESH START!
     }
   }
   
