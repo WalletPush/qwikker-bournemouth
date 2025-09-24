@@ -95,22 +95,27 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
           
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-light text-white mb-6 tracking-wide">
             Your Qwikker pass is
-            <span className="block text-[#00d083] font-medium mt-2 animate-pulse">ready to unlock Bournemouth</span>
+            <span className="block text-[#00d083] font-medium mt-2 animate-pulse">ready to unlock your city</span>
           </h1>
           
-          <p className="text-lg md:text-xl text-slate-300 mb-8 max-w-3xl leading-relaxed">
-            Access exclusive member offers, discover hidden menus, and get personalized AI recommendations.
+          <p className="text-lg md:text-xl text-slate-300 mb-12 max-w-3xl leading-relaxed">
+            Discover exclusive local offers, hidden gems, and personalized recommendations powered by AI.
           </p>
           
-          <div className="flex items-center justify-center gap-4 mb-12">
-            <div className="flex items-center gap-2 bg-slate-800/40 rounded-full px-4 py-2 border border-[#00d083]/30">
-              <div className="w-2 h-2 bg-[#00d083] rounded-full animate-pulse"></div>
-              <span className="text-[#00d083] text-sm font-medium">Pass Created</span>
-            </div>
-            <div className="w-8 h-0.5 bg-slate-600"></div>
-            <div className="flex items-center gap-2 bg-slate-800/40 rounded-full px-4 py-2 border border-slate-600/30">
-              <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
-              <span className="text-slate-400 text-sm">Loading Profile...</span>
+          {/* Travel Discovery Animation */}
+          <div className="flex items-center justify-center mb-12">
+            <div className="relative w-32 h-32">
+              {/* Animated compass/discovery icon */}
+              <div className="absolute inset-0 border-2 border-[#00d083]/30 rounded-full animate-spin-slow"></div>
+              <div className="absolute inset-2 border-2 border-[#00d083]/50 rounded-full animate-pulse"></div>
+              <div className="absolute inset-4 bg-gradient-to-br from-[#00d083] to-green-400 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-white rounded-full opacity-80 animate-bounce"></div>
+              </div>
+              {/* Floating discovery dots */}
+              <div className="absolute -top-2 left-1/2 w-2 h-2 bg-[#00d083] rounded-full animate-ping"></div>
+              <div className="absolute top-1/2 -right-2 w-2 h-2 bg-green-400 rounded-full animate-ping delay-1000"></div>
+              <div className="absolute -bottom-2 left-1/2 w-2 h-2 bg-[#00d083] rounded-full animate-ping delay-2000"></div>
+              <div className="absolute top-1/2 -left-2 w-2 h-2 bg-green-400 rounded-full animate-ping delay-3000"></div>
             </div>
           </div>
         </div>
@@ -125,8 +130,11 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
                 key={index}
                 className="group bg-slate-800/30 backdrop-blur-sm border border-slate-700/30 rounded-2xl p-8 hover:bg-slate-800/50 hover:border-[#00d083]/30 transition-all duration-500 hover:transform hover:scale-105"
               >
-                <div className="w-12 h-12 bg-gradient-to-br from-[#00d083] to-green-400 rounded-xl flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform duration-300">
-                  <div className="w-6 h-6 bg-white rounded opacity-80"></div>
+                <div className="w-12 h-12 bg-gradient-to-br from-[#00d083] to-green-400 rounded-xl flex items-center justify-center mb-6 group-hover:rotate-12 transition-transform duration-300 relative">
+                  {index === 0 && <div className="w-6 h-6 bg-white rounded opacity-80 animate-pulse"></div>}
+                  {index === 1 && <div className="w-6 h-6 bg-white rounded-full opacity-80 animate-bounce"></div>}
+                  {index === 2 && <div className="w-6 h-6 bg-white rounded opacity-80 animate-spin"></div>}
+                  {index === 3 && <div className="w-6 h-6 bg-white rounded-full opacity-80 animate-ping"></div>}
                 </div>
                 <h3 className="text-xl font-medium text-white mb-3">{feature.title}</h3>
                 <p className="text-slate-400 mb-2 leading-relaxed">{feature.description}</p>
@@ -143,7 +151,7 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
         }`}>
           <Button
             onClick={handleGetStarted}
-            className="bg-gradient-to-r from-[#00d083] to-green-400 hover:from-green-500 hover:to-[#00d083] text-white font-semibold py-5 px-16 rounded-2xl text-xl shadow-2xl transform hover:scale-105 transition-all duration-300 hover:shadow-[#00d083]/50 relative overflow-hidden group"
+            className="bg-gradient-to-r from-[#00d083] to-green-400 hover:from-green-500 hover:to-[#00d083] text-white font-medium py-4 px-10 rounded-2xl text-lg shadow-2xl transform hover:scale-105 transition-all duration-300 hover:shadow-[#00d083]/50 relative overflow-hidden group"
           >
             <span className="relative z-10">Enter Your Dashboard</span>
             <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-[#00d083] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -154,17 +162,31 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
           </p>
         </div>
 
-        {/* Minimal Floating Elements */}
+        {/* Travel Discovery Floating Elements */}
         <div className="absolute inset-0 pointer-events-none">
-          {[...Array(8)].map((_, i) => (
+          {/* Discovery dots */}
+          {[...Array(6)].map((_, i) => (
             <div
-              key={i}
-              className="absolute w-1 h-1 bg-[#00d083]/30 rounded-full animate-float"
+              key={`dot-${i}`}
+              className="absolute w-1 h-1 bg-[#00d083]/40 rounded-full animate-float"
               style={{
                 left: `${20 + Math.random() * 60}%`,
                 top: `${20 + Math.random() * 60}%`,
                 animationDelay: `${Math.random() * 10}s`,
                 animationDuration: `${8 + Math.random() * 4}s`
+              }}
+            ></div>
+          ))}
+          {/* Traveling paths */}
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={`path-${i}`}
+              className="absolute w-20 h-0.5 bg-gradient-to-r from-transparent via-[#00d083]/20 to-transparent animate-pulse"
+              style={{
+                left: `${10 + Math.random() * 70}%`,
+                top: `${30 + Math.random() * 40}%`,
+                animationDelay: `${i * 2}s`,
+                transform: `rotate(${Math.random() * 360}deg)`
               }}
             ></div>
           ))}
