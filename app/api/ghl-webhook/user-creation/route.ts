@@ -10,28 +10,52 @@ export async function POST(request: NextRequest) {
     console.log('🎫 Received GHL webhook for user creation')
     
     const data = await request.json()
-    console.log('GHL Data:', data)
+    console.log('🔍 FULL GHL Data:', JSON.stringify(data, null, 2))
     
-    // Extract data from GHL webhook
+    // Extract data from GHL webhook - GHL sends data in customData object
     const {
-      first_name,
-      last_name,
-      email,
+      customData,
+      // Fallback to root level if customData not available
+      first_name: rootFirstName,
+      last_name: rootLastName,
+      email: rootEmail,
       phone,
-      // Custom fields from wallet pass creation
+      // Any other custom fields from GHL
+      ...otherFields
+    } = data
+    
+    // Get data from customData (preferred) or root level
+    const first_name = customData?.first_name || rootFirstName
+    const last_name = customData?.last_name || rootLastName
+    const email = customData?.email || rootEmail
+    const serialNumber = customData?.serialNumber
+    const passTypeIdentifier = customData?.passTypeIdentifier
+    const url = customData?.url
+    const device = customData?.device
+    
+    console.log('🔍 Extracted fields:', {
+      first_name,
+      last_name, 
+      email,
       serialNumber,
       passTypeIdentifier,
       url,
       device,
-      // Any other custom fields from GHL
-      ...customFields
-    } = data
+      customData
+    })
     
     // Use serialNumber as wallet_pass_id
     const wallet_pass_id = serialNumber
     
     if (!wallet_pass_id || !email) {
-      console.error('❌ Missing required fields:', { wallet_pass_id, email, received_data: data })
+      console.error('❌ Missing required fields:', { 
+        wallet_pass_id, 
+        email, 
+        serialNumber,
+        customData,
+        received_data: data,
+        all_keys: Object.keys(data)
+      })
       return NextResponse.json(
         { error: 'Missing wallet_pass_id (serialNumber) or email' },
         { status: 400 }
@@ -126,7 +150,7 @@ export async function POST(request: NextRequest) {
         city: newUser.city,
         tier: newUser.tier,
         level: newUser.level,
-        points_balance: newUser.points_balance
+        points_balance: newUser.total_points
       }
     })
     
