@@ -16,7 +16,7 @@ export default async function CreditsPage({ searchParams }: CreditsPageProps) {
       currentSection="credits"
       walletPassId={walletPassId}
     >
-      <UserCreditsPage />
+      <UserCreditsPage walletPassId={walletPassId} />
     </UserDashboardLayout>
   )
 }

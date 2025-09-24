@@ -5,7 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
-export function UserHowItWorksPage() {
+interface UserHowItWorksPageProps {
+  walletPassId?: string
+}
+
+export function UserHowItWorksPage({ walletPassId }: UserHowItWorksPageProps = {}) {
+  
+  // Helper function to append wallet_pass_id to navigation URLs
+  const getNavUrl = (href: string) => {
+    if (!walletPassId || walletPassId === 'QWIK-BOURNEMOUTH-DAVID-2024') {
+      return href
+    }
+    return `${href}?wallet_pass_id=${walletPassId}`
+  }
   const [visibleStep, setVisibleStep] = useState(0)
 
   useEffect(() => {
@@ -269,7 +281,7 @@ export function UserHowItWorksPage() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button asChild className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-black font-bold text-lg px-8 py-4 rounded-xl shadow-xl hover:shadow-2xl hover:shadow-emerald-500/25 transition-all duration-300">
-            <Link href="/user/discover">
+            <Link href={getNavUrl("/user/discover")}>
               <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -278,7 +290,7 @@ export function UserHowItWorksPage() {
           </Button>
           
           <Button asChild variant="outline" className="border-slate-500 text-slate-300 hover:bg-slate-700 font-semibold text-lg px-8 py-4 rounded-xl">
-            <Link href="/user/chat">
+            <Link href={getNavUrl("/user/chat")}>
               <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>

@@ -10,9 +10,18 @@ import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 interface UserBusinessDetailPageProps {
   slug: string
   businesses?: any[]
+  walletPassId?: string
 }
 
-export function UserBusinessDetailPage({ slug, businesses = mockBusinesses }: UserBusinessDetailPageProps) {
+export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, walletPassId }: UserBusinessDetailPageProps) {
+  
+  // Helper function to append wallet_pass_id to navigation URLs
+  const getNavUrl = (href: string) => {
+    if (!walletPassId || walletPassId === 'QWIK-BOURNEMOUTH-DAVID-2024') {
+      return href
+    }
+    return `${href}?wallet_pass_id=${walletPassId}`
+  }
   const [activeTab, setActiveTab] = useState<'overview' | 'menu' | 'offers' | 'reviews'>('overview')
   const [claimedOffers, setClaimedOffers] = useState<Set<string>>(() => {
     if (typeof window !== 'undefined') {
@@ -32,7 +41,7 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses }: Us
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
         <h1 className="text-2xl font-bold text-white mb-4">Business Not Found</h1>
         <p className="text-gray-400 mb-6">The business you're looking for doesn't exist.</p>
-        <Link href="/user/discover">
+        <Link href={getNavUrl("/user/discover")}>
           <Button className="bg-[#00d083] hover:bg-[#00b86f] text-black">
             Back to Discover
           </Button>
@@ -59,7 +68,7 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses }: Us
         <h1 className="text-2xl font-bold text-slate-100 mb-4">Business Not Found</h1>
         <p className="text-slate-400 mb-6">The business you're looking for doesn't exist.</p>
         <Button asChild>
-          <Link href="/user/discover">Back to Discover</Link>
+          <Link href={getNavUrl("/user/discover")}>Back to Discover</Link>
         </Button>
       </div>
     )
@@ -105,7 +114,7 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses }: Us
       {/* Back Button */}
       <div>
         <Button variant="outline" asChild className="border-slate-600 text-slate-300 hover:bg-slate-700">
-          <Link href="/user/discover">
+          <Link href={getNavUrl("/user/discover")}>
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>

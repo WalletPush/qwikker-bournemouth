@@ -14,7 +14,19 @@ import {
   levelSystem
 } from '@/lib/mock-data/user-mock-data'
 
-export function UserCreditsPage() {
+interface UserCreditsPageProps {
+  walletPassId?: string
+}
+
+export function UserCreditsPage({ walletPassId }: UserCreditsPageProps = {}) {
+  
+  // Helper function to append wallet_pass_id to navigation URLs
+  const getNavUrl = (href: string) => {
+    if (!walletPassId || walletPassId === 'QWIK-BOURNEMOUTH-DAVID-2024') {
+      return href
+    }
+    return `${href}?wallet_pass_id=${walletPassId}`
+  }
   const [activeTab, setActiveTab] = useState<'overview' | 'spend' | 'history' | 'badges' | 'rewards'>('overview')
   const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null)
 
@@ -263,7 +275,7 @@ export function UserCreditsPage() {
 
             <div className="text-center">
               <Button asChild className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold text-lg px-8 py-4">
-                <Link href="/user/discover">Start Earning Credits Now</Link>
+                <Link href={getNavUrl("/user/discover")}>Start Earning Credits Now</Link>
               </Button>
               <p className="text-slate-400 text-sm mt-2">Find partner businesses and start your reward journey</p>
             </div>
@@ -644,19 +656,19 @@ export function UserCreditsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <Button asChild className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold">
-                <Link href="/user/discover">
+                <Link href={getNavUrl("/user/discover")}>
                   <span className="mr-2">🏪</span>
                   Find Partner Businesses Near You
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full border-slate-600 text-slate-300 hover:bg-slate-700">
-                <Link href="/user/secret-menu">
+                <Link href={getNavUrl("/user/secret-menu")}>
                   <span className="mr-2">🗝️</span>
                   Explore Secret Menus (Free!)
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full border-slate-600 text-slate-300 hover:bg-slate-700">
-                <Link href="/user/offers">
+                <Link href={getNavUrl("/user/offers")}>
                   <span className="mr-2">🎯</span>
                   Browse Current Offers
                 </Link>
