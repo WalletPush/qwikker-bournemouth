@@ -2,6 +2,7 @@ import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserDashboardHome } from '@/components/user/user-dashboard-home'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { mockBusinesses, mockOffers } from '@/lib/mock-data/user-mock-data'
+import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -20,9 +21,20 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   const supabase = createServiceRoleClient()
   
   // 🎯 WALLET PASS AUTHENTICATION FLOW
-  // Get wallet pass ID from URL param or default to David for demo
+  // Priority: URL param > Cookie > Default demo user
   const resolvedSearchParams = await searchParams
-  const walletPassId = resolvedSearchParams.wallet_pass_id || 'QWIK-BOURNEMOUTH-DAVID-2024'
+  const urlWalletPassId = resolvedSearchParams.wallet_pass_id
+  const cookieWalletPassId = await getWalletPassCookie()
+  
+  // If URL has wallet_pass_id, save it to cookie for future visits
+  let walletPassId = urlWalletPassId || cookieWalletPassId || 'QWIK-BOURNEMOUTH-DAVID-2024'
+  
+  // Save to cookie if we got it from URL (for persistence across refreshes)
+  if (urlWalletPassId && urlWalletPassId !== cookieWalletPassId) {
+    await setWalletPassCookie(urlWalletPassId)
+    console.log('💾 Saved wallet pass ID to cookie:', urlWalletPassId)
+  }
+  
   let currentUser = null
   
   // Try to get user by wallet pass ID
@@ -43,12 +55,12 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
         city: user.city,
         tier: user.tier,
         level: user.level,
-        points_balance: user.points_balance,
-        badges_earned: user.badges_earned || [],
-        total_visits: user.total_visits || 0,
-        offers_claimed: user.offers_claimed || 0,
-        secret_menus_unlocked: user.secret_menus_unlocked || 0,
-        favorite_categories: user.preferences?.favorite_categories || []
+        points_balance: user.total_points || 0,
+        badges_earned: user.badges || [],
+        total_visits: user.stats?.businessesVisited || 0,
+        offers_claimed: user.stats?.offersRedeemed || 0,
+        secret_menus_unlocked: user.stats?.secretItemsUnlocked || 0,
+        favorite_categories: user.preferred_categories || []
       }
     }
     console.log('✅ Found user by wallet pass ID:', user?.name, 'ID:', walletPassId)
