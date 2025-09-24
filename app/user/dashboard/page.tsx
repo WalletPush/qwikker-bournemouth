@@ -28,10 +28,10 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   // Try to get user by wallet pass ID
   try {
     const { data: user } = await supabase
-      .from('user_members')
+      .from('app_users')
       .select('*')
       .eq('wallet_pass_id', walletPassId)
-      .eq('status', 'active')
+      .eq('wallet_pass_status', 'active')
       .single()
     
     if (user) {

@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     
     // Check if user already exists
     const { data: existingUser } = await supabase
-      .from('user_members')
+      .from('app_users')
       .select('*')
       .eq('wallet_pass_id', serialNumber)
       .single()
@@ -57,32 +57,45 @@ export async function POST(request: NextRequest) {
     
     // Create new user automatically
     const { data: newUser, error } = await supabase
-      .from('user_members')
+      .from('app_users')
       .insert({
+        user_id: crypto.randomUUID(), // Generate unique user ID
         wallet_pass_id: serialNumber,
         name: `${first_name} ${last_name}`,
-        first_name: first_name,
-        last_name: last_name,
         email: email,
         phone: phone || null,
         city: 'bournemouth', // Auto-detect from subdomain later
         tier: 'explorer',
         level: 1,
-        points_balance: 0,
-        badges_earned: ['new_member'],
-        preferences: {
-          notifications: true,
-          location_sharing: true,
-          favorite_categories: []
+        total_points: 0,
+        experience_points: 0,
+        stats: {
+          streakDays: 0,
+          chatMessages: 0,
+          photosShared: 0,
+          offersRedeemed: 0,
+          reviewsWritten: 0,
+          friendsReferred: 0,
+          businessesVisited: 0,
+          secretItemsUnlocked: 0
         },
-        device_info: {
-          device_type: device,
-          pass_url: url,
-          pass_type_identifier: passTypeIdentifier,
-          created_from: 'ghl_webhook'
+        badges: [],
+        referral_code: `${first_name.toUpperCase()}-QWK-${new Date().getFullYear()}`,
+        wallet_pass_status: 'active',
+        wallet_pass_assigned_at: new Date().toISOString(),
+        notification_preferences: {
+          sms: false,
+          geoOffers: true,
+          secretMenus: true,
+          weeklyDigest: true,
+          newBusinesses: true
         },
-        status: 'active',
-        created_at: new Date().toISOString()
+        profile_completion_percentage: 60,
+        onboarding_completed: true,
+        onboarding_completed_at: new Date().toISOString(),
+        last_active_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select()
       .single()
