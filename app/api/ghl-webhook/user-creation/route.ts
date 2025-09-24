@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         message: 'User already exists',
         user_id: existingUser.id,
         wallet_pass_id: wallet_pass_id,
-        dashboard_url: `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${wallet_pass_id}`
+        welcome_url: `https://qwikkerdashboard-theta.vercel.app/welcome?wallet_pass_id=${wallet_pass_id}&name=${encodeURIComponent(existingUser.name)}`
       })
     }
     
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       message: 'User created successfully',
       user_id: newUser.id,
       wallet_pass_id: wallet_pass_id,
-      dashboard_url: `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${wallet_pass_id}`,
+      welcome_url: `https://qwikkerdashboard-theta.vercel.app/welcome?wallet_pass_id=${wallet_pass_id}&name=${encodeURIComponent(newUser.name)}`,
       user_data: {
         name: newUser.name,
         email: newUser.email,

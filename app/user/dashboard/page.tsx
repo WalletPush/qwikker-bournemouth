@@ -55,6 +55,11 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   } catch (error) {
     console.log('No user found with wallet pass ID:', walletPassId, 'using static mock data')
     
+    // If user doesn't exist, it might be a race condition - workflow still processing
+    if (walletPassId !== 'QWIK-BOURNEMOUTH-DAVID-2024') {
+      console.log('🔄 User might still be processing in GHL workflow...')
+    }
+    
     // Create mock user for testing
     currentUser = {
       id: 'user-mock',
