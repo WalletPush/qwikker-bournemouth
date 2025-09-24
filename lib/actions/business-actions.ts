@@ -108,8 +108,8 @@ export async function createOffer(userId: string, offerData: {
           offer_value: offerData.offerValue,
           offer_claim_amount: offerData.offerClaimAmount,
           offer_terms: offerData.offerTerms,
-          offer_start_date: offerData.startDate,
-          offer_end_date: offerData.endDate,
+          offer_start_date: offerData.startDate && offerData.startDate.trim() !== '' ? offerData.startDate : null,
+          offer_end_date: offerData.endDate && offerData.endDate.trim() !== '' ? offerData.endDate : null,
           offer_image: offerData.offerImage
         },
         status: 'pending'

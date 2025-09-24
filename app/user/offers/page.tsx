@@ -40,8 +40,21 @@ export default async function OffersPage() {
     console.error('Error fetching businesses with offers:', error)
   }
   
+  // Filter out expired offers
+  const activeBusinesses = (approvedBusinesses || []).filter(business => {
+    // If no end date, offer is always active
+    if (!business.offer_end_date) return true
+    
+    // Check if offer hasn't expired
+    const endDate = new Date(business.offer_end_date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // Start of today
+    
+    return endDate >= today
+  })
+
   // Transform real offers to match expected format
-  const realOffers = (approvedBusinesses || []).map(business => ({
+  const realOffers = activeBusinesses.map(business => ({
     id: `${business.id}-offer`,
     businessId: business.id,
     businessName: business.business_name,

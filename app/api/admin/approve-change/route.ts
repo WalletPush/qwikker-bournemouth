@@ -7,7 +7,9 @@ import { sendContactUpdateToGoHighLevel } from '@/lib/integrations'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔥 APPROVE-CHANGE API CALLED')
     const { changeId, action } = await request.json()
+    console.log('📝 Request data:', { changeId, action })
     
     if (!changeId || !action) {
       return NextResponse.json(
@@ -52,6 +54,7 @@ export async function POST(request: NextRequest) {
     const supabaseAdmin = createAdminClient()
     
     // Get the change record
+    console.log('📊 Fetching change record for ID:', changeId)
     const { data: change, error: changeError } = await supabaseAdmin
       .from('business_changes')
       .select(`
@@ -73,11 +76,14 @@ export async function POST(request: NextRequest) {
       .single()
     
     if (changeError || !change) {
+      console.error('❌ Error fetching change record:', changeError)
       return NextResponse.json(
         { error: 'Change record not found' },
         { status: 404 }
       )
     }
+    
+    console.log('✅ Change record found:', change.change_type, change.business?.business_name)
     
     // Verify the change belongs to the admin's city
     if (change.business?.city !== requestCity) {
@@ -94,12 +100,12 @@ export async function POST(request: NextRequest) {
       if (change.change_type === 'offer') {
         updateData = {
           offer_name: change.change_data.offer_name,
-          offer_type: change.change_data.offer_type,
+          offer_type: change.change_data.offer_type || 'other', // Default to 'other' if empty
           offer_value: change.change_data.offer_value,
-          offer_claim_amount: change.change_data.offer_claim_amount,
+          offer_claim_amount: change.change_data.offer_claim_amount || 'multiple', // Default to 'multiple' if empty
           offer_terms: change.change_data.offer_terms,
-          offer_start_date: change.change_data.offer_start_date,
-          offer_end_date: change.change_data.offer_end_date,
+          offer_start_date: change.change_data.offer_start_date && change.change_data.offer_start_date.trim() !== '' ? change.change_data.offer_start_date : null, // Use null for empty dates
+          offer_end_date: change.change_data.offer_end_date && change.change_data.offer_end_date.trim() !== '' ? change.change_data.offer_end_date : null, // Use null for empty dates
           offer_image: change.change_data.offer_image
         }
       } else if (change.change_type === 'secret_menu') {
@@ -119,7 +125,7 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        const secretMenuItems = existingNotes.secret_menu_items || []
+        const secretMenuItems = (existingNotes as any).secret_menu_items || []
         secretMenuItems.push(change.change_data)
         
         updateData = {

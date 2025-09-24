@@ -62,7 +62,7 @@ export function SecretUnlockModal({ isOpen, onClose, item, business }: SecretUnl
       }}
     >
       <Card 
-        className={`max-w-md w-full bg-slate-800/95 border border-slate-700/50 shadow-2xl transition-all duration-300 ${
+        className={`modal-content max-w-md w-full bg-slate-800/95 border border-slate-700/50 shadow-2xl transition-all duration-300 ${
           isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
       >

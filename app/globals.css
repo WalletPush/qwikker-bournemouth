@@ -108,6 +108,48 @@ body {
   padding-right: 1rem;
 }
 
+/* Preserve modal and dialog sizing - ensure they work properly */
+[data-radix-dialog-content],
+[role="dialog"],
+.modal-content {
+  max-width: none !important; /* Let Tailwind classes control this */
+}
+
+/* Specifically fix Radix UI Dialog Content */
+[data-radix-dialog-content].max-w-lg {
+  max-width: 32rem !important;
+}
+
+[data-radix-dialog-content].max-w-md {
+  max-width: 28rem !important;
+}
+
+[data-radix-dialog-content].max-w-sm {
+  max-width: 24rem !important;
+}
+
+/* Fix custom modal components */
+.modal-content.max-w-lg {
+  max-width: 32rem !important;
+}
+
+.modal-content.max-w-md {
+  max-width: 28rem !important;
+}
+
+.modal-content.max-w-sm {
+  max-width: 24rem !important;
+}
+
+/* Ensure modals work properly on mobile */
+@media (max-width: 640px) {
+  .modal-content,
+  [data-radix-dialog-content] {
+    max-width: calc(100vw - 2rem) !important;
+    margin: 1rem;
+  }
+}
+
 /* Form containers and medium containers maintain their original Tailwind behavior */
 
 /* Fix common culprits of horizontal scroll */
@@ -116,14 +158,15 @@ body {
   max-width: 100%;
 }
 
-.flex {
+/* Only constrain flex containers that aren't modal content */
+.flex:not([data-radix-dialog-content]):not([role="dialog"]) {
   max-width: 100%;
 }
 
-/* Fix cards and components */
-.rounded-xl,
-.rounded-lg,
-.rounded-md {
+/* Fix cards and components - but preserve modal sizing */
+.rounded-xl:not([role="dialog"]):not([data-radix-dialog-content]),
+.rounded-lg:not([role="dialog"]):not([data-radix-dialog-content]),
+.rounded-md:not([role="dialog"]):not([data-radix-dialog-content]) {
   max-width: 100%;
 }
 

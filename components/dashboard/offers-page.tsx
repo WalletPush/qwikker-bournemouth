@@ -81,6 +81,34 @@ export function OffersPage({ profile }: OffersPageProps) {
     setIsLoading(true)
     setMessage(null)
 
+    // Validate dates
+    if (formData.startDate && formData.endDate) {
+      const startDate = new Date(formData.startDate)
+      const endDate = new Date(formData.endDate)
+      
+      if (endDate <= startDate) {
+        setMessage({
+          type: 'error',
+          text: 'End date must be after start date'
+        })
+        setIsLoading(false)
+        return
+      }
+      
+      // Check if end date is in the past
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      if (endDate < today) {
+        setMessage({
+          type: 'error',
+          text: 'End date cannot be in the past'
+        })
+        setIsLoading(false)
+        return
+      }
+    }
+
     try {
       // Upload image if provided
       let offerImageUrl = null
@@ -531,7 +559,9 @@ export function OffersPage({ profile }: OffersPageProps) {
                       value={formData.startDate}
                       onChange={(e) => handleInputChange('startDate', e.target.value)}
                       className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
+                      min={new Date().toISOString().split('T')[0]} // Prevent past dates
                     />
+                    <p className="text-slate-400 text-xs mt-1">When the offer becomes active (optional)</p>
                   </div>
                   <div>
                     <Label htmlFor="endDate" className="text-white">End Date</Label>
@@ -541,7 +571,9 @@ export function OffersPage({ profile }: OffersPageProps) {
                       value={formData.endDate}
                       onChange={(e) => handleInputChange('endDate', e.target.value)}
                       className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
+                      min={formData.startDate || new Date().toISOString().split('T')[0]}
                     />
+                    <p className="text-slate-400 text-xs mt-1">When the offer expires (optional)</p>
                   </div>
                 </div>
 

@@ -16,11 +16,12 @@ CREATE INDEX IF NOT EXISTS idx_push_subscriptions_created_at ON public.push_subs
 -- Enable RLS (Row Level Security)
 ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 
--- Create RLS policies
+-- Create RLS policies (drop first if exists)
+DROP POLICY IF EXISTS "Users can manage their own push subscriptions" ON public.push_subscriptions;
 CREATE POLICY "Users can manage their own push subscriptions" ON public.push_subscriptions
     FOR ALL USING (auth.uid()::text = user_id);
 
--- Create policy for service role (for sending notifications)
+DROP POLICY IF EXISTS "Service role can read all push subscriptions" ON public.push_subscriptions;
 CREATE POLICY "Service role can read all push subscriptions" ON public.push_subscriptions
     FOR SELECT USING (auth.role() = 'service_role');
 
@@ -40,7 +41,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger to automatically update updated_at
+-- Create trigger to automatically update updated_at (drop first if exists)
+DROP TRIGGER IF EXISTS trigger_update_push_subscriptions_updated_at ON public.push_subscriptions;
 CREATE TRIGGER trigger_update_push_subscriptions_updated_at
     BEFORE UPDATE ON public.push_subscriptions
     FOR EACH ROW
