@@ -142,7 +142,7 @@ export function ElegantModal({
       }}
     >
       <Card 
-        className={`${getSizeClasses()} w-full bg-slate-800/95 border ${typeStyles.border} shadow-2xl transition-all duration-300 ${
+        className={`modal-content ${getSizeClasses()} w-full bg-slate-800/95 border ${typeStyles.border} shadow-2xl transition-all duration-300 ${
           isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
       >

@@ -56,7 +56,7 @@ export function SuccessModal({
       />
       
       {/* Modal */}
-      <div className={`relative bg-slate-800 border border-slate-700 rounded-2xl p-8 max-w-md mx-4 shadow-2xl transform transition-all duration-200 ${
+      <div className={`modal-content relative bg-slate-800 border border-slate-700 rounded-2xl p-8 max-w-md mx-4 shadow-2xl transform transition-all duration-200 ${
         isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
       }`}>
         {/* Success Icon */}
@@ -119,7 +119,7 @@ export function ErrorModal({ isOpen, onClose, title, message }: ErrorModalProps)
       />
       
       {/* Modal */}
-      <div className={`relative bg-slate-800 border border-slate-700 rounded-2xl p-8 max-w-md mx-4 shadow-2xl transform transition-all duration-200 ${
+      <div className={`modal-content relative bg-slate-800 border border-slate-700 rounded-2xl p-8 max-w-md mx-4 shadow-2xl transform transition-all duration-200 ${
         isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
       }`}>
         {/* Error Icon */}

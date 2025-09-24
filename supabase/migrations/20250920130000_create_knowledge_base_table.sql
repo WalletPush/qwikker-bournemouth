@@ -6,7 +6,7 @@
 CREATE TABLE IF NOT EXISTS public.knowledge_base (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   city TEXT NOT NULL, -- City this knowledge belongs to (bournemouth, calgary, etc.)
-  business_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE, -- NULL for general city knowledge
+  business_id UUID REFERENCES public.business_profiles(id) ON DELETE CASCADE, -- NULL for general city knowledge
   knowledge_type TEXT NOT NULL CHECK (knowledge_type IN ('web_scrape', 'pdf_document', 'event', 'news_article', 'custom_knowledge')),
   title TEXT NOT NULL,
   content TEXT NOT NULL, -- Extracted/processed text content
@@ -53,7 +53,7 @@ ALTER TABLE public.knowledge_base ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view knowledge for their city" ON public.knowledge_base
   FOR SELECT USING (
     city = (
-      SELECT city FROM public.profiles WHERE user_id = auth.uid() LIMIT 1
+      SELECT city FROM public.business_profiles WHERE user_id = auth.uid() LIMIT 1
     )
   );
 

@@ -1,12 +1,12 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
   "/admin/page": "app/admin/page.js",
-  "/api/admin/analytics/route": "app/api/admin/analytics/route.js",
-  "/api/admin/contacts/route": "app/api/admin/contacts/route.js",
-  "/api/admin/sync/health/route": "app/api/admin/sync/health/route.js",
-  "/auth/login/page": "app/auth/login/page.js",
+  "/api/admin/approve-change/route": "app/api/admin/approve-change/route.js",
+  "/api/wallet/create-offer-pass/route": "app/api/wallet/create-offer-pass/route.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js",
   "/page": "app/page.js",
-  "/protected/page": "app/protected/page.js"
+  "/user/credits/page": "app/user/credits/page.js",
+  "/user/dashboard/page": "app/user/dashboard/page.js",
+  "/user/offers/page": "app/user/offers/page.js",
+  "/user/secret-menu/page": "app/user/secret-menu/page.js"
 }
