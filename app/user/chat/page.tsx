@@ -25,7 +25,11 @@ export default async function ChatPage({
   }
   
   return (
-    <UserDashboardLayout currentSection="chat" currentUser={currentUser}>
+    <UserDashboardLayout 
+      currentSection="chat" 
+      currentUser={currentUser}
+      walletPassId={userId}
+    >
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="text-6xl mb-4">🤖</div>

@@ -3,8 +3,16 @@ import { UserOffersPage } from '@/components/user/user-offers-page'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { Suspense } from 'react'
 
-export default async function OffersPage() {
+interface OffersPageProps {
+  searchParams: Promise<{
+    wallet_pass_id?: string
+  }>
+}
+
+export default async function OffersPage({ searchParams }: OffersPageProps) {
   const supabase = createServiceRoleClient()
+  const resolvedSearchParams = await searchParams
+  const walletPassId = resolvedSearchParams.wallet_pass_id
   
   // Fetch approved businesses with offers
   const { data: approvedBusinesses, error } = await supabase
@@ -79,7 +87,10 @@ export default async function OffersPage() {
   }))
   
   return (
-    <UserDashboardLayout>
+    <UserDashboardLayout 
+      currentSection="offers"
+      walletPassId={walletPassId}
+    >
       <Suspense fallback={
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-slate-400">Loading offers...</div>

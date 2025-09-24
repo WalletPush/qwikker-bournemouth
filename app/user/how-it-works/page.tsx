@@ -1,9 +1,21 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserHowItWorksPage } from '@/components/user/user-how-it-works-page'
 
-export default function HowItWorksPage() {
+interface HowItWorksPageProps {
+  searchParams: Promise<{
+    wallet_pass_id?: string
+  }>
+}
+
+export default async function HowItWorksPage({ searchParams }: HowItWorksPageProps) {
+  const resolvedSearchParams = await searchParams
+  const walletPassId = resolvedSearchParams.wallet_pass_id
+  
   return (
-    <UserDashboardLayout>
+    <UserDashboardLayout 
+      currentSection="how-it-works"
+      walletPassId={walletPassId}
+    >
       <UserHowItWorksPage />
     </UserDashboardLayout>
   )
