@@ -34,9 +34,18 @@ interface RealSecretMenu {
 
 interface UserSecretMenuPageProps {
   realSecretMenus?: RealSecretMenu[]
+  walletPassId?: string
 }
 
-export function UserSecretMenuPage({ realSecretMenus = [] }: UserSecretMenuPageProps) {
+export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserSecretMenuPageProps) {
+  
+  // Helper function to append wallet_pass_id to navigation URLs
+  const getNavUrl = (href: string) => {
+    if (!walletPassId || walletPassId === 'QWIK-BOURNEMOUTH-DAVID-2024') {
+      return href
+    }
+    return `${href}?wallet_pass_id=${walletPassId}`
+  }
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [unlockedItems, setUnlockedItems] = useState<Set<string>>(new Set())
@@ -582,7 +591,7 @@ export function UserSecretMenuPage({ realSecretMenus = [] }: UserSecretMenuPageP
           </p>
           <div className="flex gap-4 justify-center">
             <Button asChild className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-black font-bold px-6 py-3">
-              <Link href="/user/chat">
+              <Link href={getNavUrl("/user/chat")}>
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
@@ -590,7 +599,7 @@ export function UserSecretMenuPage({ realSecretMenus = [] }: UserSecretMenuPageP
               </Link>
             </Button>
             <Button asChild variant="outline" className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 px-6 py-3">
-              <Link href="/user/discover">
+              <Link href={getNavUrl("/user/discover")}>
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>

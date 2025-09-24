@@ -87,7 +87,7 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
           <div className="text-slate-400">Loading secret menu...</div>
         </div>
       }>
-        <UserSecretMenuPage realSecretMenus={realSecretMenus} />
+        <UserSecretMenuPage realSecretMenus={realSecretMenus} walletPassId={walletPassId} />
       </Suspense>
     </UserDashboardLayout>
   )
