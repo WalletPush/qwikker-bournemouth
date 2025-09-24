@@ -444,6 +444,106 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
 
   return (
     <div className="space-y-6">
+      {/* Instructions Section */}
+      <Card className="bg-gradient-to-r from-indigo-500/10 to-purple-600/10 border border-indigo-500/30">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            How to Use QR Code Management
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Qwikker Marketing */}
+            <div className="bg-slate-800/50 border border-green-500/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <h3 className="text-green-400 font-semibold">Qwikker Marketing</h3>
+              </div>
+              <ul className="text-sm text-slate-300 space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400 mt-1">•</span>
+                  <span><strong>Use for:</strong> Flyers, leaflets, promo packs</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400 mt-1">•</span>
+                  <span><strong>Purpose:</strong> Drive general traffic to Qwikker platform</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400 mt-1">•</span>
+                  <span><strong>URL:</strong> Enter your marketing landing page</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Static Business */}
+            <div className="bg-slate-800/50 border border-orange-500/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                <h3 className="text-orange-400 font-semibold">Static Business QR</h3>
+              </div>
+              <ul className="text-sm text-slate-300 space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-400 mt-1">•</span>
+                  <span><strong>Use for:</strong> Window stickers, offers, secret menus</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-400 mt-1">•</span>
+                  <span><strong>Purpose:</strong> Link to specific external content</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-400 mt-1">•</span>
+                  <span><strong>URL:</strong> Enter any external website/PDF link</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Intent Routing */}
+            <div className="bg-slate-800/50 border border-blue-500/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <h3 className="text-blue-400 font-semibold">Intent Routing</h3>
+              </div>
+              <ul className="text-sm text-slate-300 space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-1">•</span>
+                  <span><strong>Use for:</strong> Business-specific QR codes</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-1">•</span>
+                  <span><strong>Purpose:</strong> Route users to specific business pages</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-1">•</span>
+                  <span><strong>URL:</strong> Auto-generated based on business selection</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Quick Tips */}
+          <div className="bg-slate-800/30 border border-slate-600/50 rounded-lg p-4 mt-4">
+            <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+              <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              Quick Tips
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
+              <div className="space-y-2">
+                <p><strong className="text-indigo-400">Logo Upload:</strong> Add your business logo for branded QR codes (optional)</p>
+                <p><strong className="text-indigo-400">Test First:</strong> Always test QR codes before printing using the "Test" button</p>
+              </div>
+              <div className="space-y-2">
+                <p><strong className="text-indigo-400">High-Res Download:</strong> Use "Download" for print-ready PNG files</p>
+                <p><strong className="text-indigo-400">Analytics:</strong> Track scans with 7d, 30d, and 60d metrics</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Section Analytics */}
       <Card className="bg-slate-900 border-slate-800">

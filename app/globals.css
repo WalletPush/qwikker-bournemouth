@@ -8,13 +8,18 @@ html, body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Fix iOS Safari layout shifts */
-@supports (padding: max(0px)) {
-  body {
-    padding-top: max(env(safe-area-inset-top), 0px);
-    padding-bottom: max(env(safe-area-inset-bottom), 0px);
-    padding-left: max(env(safe-area-inset-left), 0px);
-    padding-right: max(env(safe-area-inset-right), 0px);
+/* Logo size constraints - prevent oversized logos after PWA removal */
+.qwikker-logo {
+  max-height: 48px;
+  max-width: 200px;
+  height: auto;
+  width: auto;
+}
+
+@media (min-width: 640px) {
+  .qwikker-logo {
+    max-height: 64px;
+    max-width: 250px;
   }
 }
 
@@ -95,20 +100,15 @@ body {
   position: relative;
 }
 
-/* Force all containers to stay within viewport */
-.container,
+/* Only apply viewport constraints to very large containers that need it */
 .max-w-7xl,
-.max-w-6xl,
-.max-w-4xl,
-.max-w-2xl,
-.max-w-xl,
-.max-w-lg,
-.max-w-md,
-.max-w-sm {
+.max-w-6xl {
   max-width: 100%;
   padding-left: 1rem;
   padding-right: 1rem;
 }
+
+/* Form containers and medium containers maintain their original Tailwind behavior */
 
 /* Fix common culprits of horizontal scroll */
 .grid {
@@ -145,12 +145,8 @@ pre, code {
   overflow-x: auto;
 }
 
-/* Fix any wide elements */
+/* Fix specific wide elements that cause horizontal scroll */
 @media (max-width: 768px) {
-  * {
-    max-width: 100vw;
-  }
-  
   .w-screen {
     width: 100vw;
     max-width: 100vw;

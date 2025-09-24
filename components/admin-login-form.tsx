@@ -91,7 +91,7 @@ export default function AdminLoginForm({ city, cityDisplayName }: AdminLoginForm
             <img 
               src="/Qwikker Logo web.svg" 
               alt="QWIKKER" 
-              className="h-12 w-auto"
+              className="qwikker-logo"
             />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Admin Access</h1>
