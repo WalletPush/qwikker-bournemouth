@@ -1,6 +1,7 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserOffersPage } from '@/components/user/user-offers-page'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { Suspense } from 'react'
 
 export default async function OffersPage() {
   const supabase = createServiceRoleClient()
@@ -79,7 +80,13 @@ export default async function OffersPage() {
   
   return (
     <UserDashboardLayout>
-      <UserOffersPage realOffers={realOffers} />
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-slate-400">Loading offers...</div>
+        </div>
+      }>
+        <UserOffersPage realOffers={realOffers} />
+      </Suspense>
     </UserDashboardLayout>
   )
 }

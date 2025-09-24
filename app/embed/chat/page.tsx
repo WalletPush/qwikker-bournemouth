@@ -2,9 +2,9 @@
 
 import { UserChatPagePremium } from '@/components/user/user-chat-page-premium';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 
-export default function EmbedChatPage() {
+function EmbedChatContent() {
   const searchParams = useSearchParams();
   const walletPassId = searchParams.get('wallet_pass_id');
   const businessName = searchParams.get('business');
@@ -40,5 +40,17 @@ export default function EmbedChatPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function EmbedChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-white">Loading chat...</div>
+      </div>
+    }>
+      <EmbedChatContent />
+    </Suspense>
   );
 }
