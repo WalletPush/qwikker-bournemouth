@@ -238,26 +238,19 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Page Header with Icon */}
       <div className="text-center">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent mb-2">
-          Discover Bournemouth
-        </h1>
+        <div className="flex items-center justify-center gap-4 mb-4">
+          <div className="p-3 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 rounded-full border border-emerald-500/30">
+            <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent">
+            Discover Bournemouth
+          </h1>
+        </div>
         <p className="text-slate-300 text-lg">Find amazing local businesses, exclusive deals, and hidden gems</p>
-      </div>
-
-      {/* AI Companion Card - Replace Search Bar */}
-      <div className="mb-4">
-        <AiCompanionCard 
-          title="Discover Your Next Favorite Spot"
-          description="Tell our AI exactly what you're in the mood for! Whether it's 'cozy coffee shop with WiFi' or 'best sushi near the beach' - we'll find your perfect match."
-          prompts={[
-            "Find me a romantic restaurant for tonight",
-            "Where can I get the best fish and chips?", 
-            "Show me cafes with outdoor seating"
-          ]}
-          walletPassId={walletPassId}
-        />
       </div>
 
       {/* Clickable Filter Cards - Mobile First */}
@@ -309,6 +302,20 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
           <p className="text-2xl font-bold text-blue-400">{businesses.length}</p>
           <p className="text-sm text-slate-400">All Places</p>
         </Card>
+      </div>
+
+      {/* AI Companion Card - After Filter Cards */}
+      <div className="mb-4">
+        <AiCompanionCard 
+          title="Discover Your Next Favorite Spot"
+          description="Tell our AI exactly what you're in the mood for! Whether it's 'cozy coffee shop with WiFi' or 'best sushi near the beach' - we'll find your perfect match."
+          prompts={[
+            "Find me a romantic restaurant for tonight",
+            "Where can I get the best fish and chips?", 
+            "Show me cafes with outdoor seating"
+          ]}
+          walletPassId={walletPassId}
+        />
       </div>
 
       {/* Results Header */}

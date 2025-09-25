@@ -190,7 +190,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
         <CardContent className="pt-0">
           <div className="space-y-3">
             {/* Sample Activity Items - Clickable */}
-            <Link href={getNavUrl("/user/business/the-seaside-bistro?highlight=offer-1")} className="group">
+            <Link href={getNavUrl("/user/offers")} className="group">
               <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 hover:border-orange-500/30 transition-all duration-200 cursor-pointer group-hover:scale-[1.02]">
                 <div className="w-8 h-8 bg-orange-500/20 rounded-full flex items-center justify-center">
                   <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,7 +207,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
               </div>
             </Link>
 
-            <Link href={getNavUrl("/user/business/artisan-coffee-co?highlight=secret-menu")} className="group">
+            <Link href={getNavUrl("/user/secret-menu")} className="group">
               <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 hover:border-purple-500/30 transition-all duration-200 cursor-pointer group-hover:scale-[1.02]">
                 <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center">
                   <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,7 +224,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
               </div>
             </Link>
 
-            <Link href={getNavUrl("/user/business/ocean-view-cafe?highlight=new-business")} className="group">
+            <Link href={getNavUrl("/user/discover")} className="group">
               <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 hover:border-emerald-500/30 transition-all duration-200 cursor-pointer group-hover:scale-[1.02]">
                 <div className="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center">
                   <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -242,7 +242,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
               </div>
             </Link>
 
-            <Link href={getNavUrl("/user/badges?highlight=explorer")} className="group">
+            <Link href={getNavUrl("/user/badges")} className="group">
               <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 hover:border-yellow-500/30 transition-all duration-200 cursor-pointer group-hover:scale-[1.02]">
                 <div className="w-8 h-8 bg-yellow-500/20 rounded-full flex items-center justify-center">
                   <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -440,13 +440,15 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
           }`}
           onClick={() => setSelectedFilter('all')}
         >
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <p className="text-2xl font-bold text-purple-400">{totalSecretItems}</p>
+          <div className="flex flex-col items-center">
+            <div className="mb-2">
+              <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <p className="text-3xl font-bold text-purple-400 mb-1">{totalSecretItems}</p>
+            <p className="text-sm text-slate-400">All Secrets</p>
           </div>
-          <p className="text-sm text-slate-400">All Secrets</p>
         </Card>
         <Card 
           className={`cursor-pointer transition-all duration-200 text-center p-4 hover:scale-105 ${
@@ -456,13 +458,15 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
           }`}
           onClick={() => setSelectedFilter('unlocked')}
         >
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <svg className="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-3a1 1 0 011-1h2.586l6.414-6.414A6 6 0 0121 9z" />
-            </svg>
-            <p className="text-2xl font-bold text-pink-400">{Array.from(unlockedItems).length}</p>
+          <div className="flex flex-col items-center">
+            <div className="mb-2">
+              <svg className="w-8 h-8 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-3a1 1 0 011-1h2.586l6.414-6.414A6 6 0 0121 9z" />
+              </svg>
+            </div>
+            <p className="text-3xl font-bold text-pink-400 mb-1">{Array.from(unlockedItems).length}</p>
+            <p className="text-sm text-slate-400">My Unlocked</p>
           </div>
-          <p className="text-sm text-slate-400">My Unlocked</p>
         </Card>
         <Card 
           className={`cursor-pointer transition-all duration-200 text-center p-4 hover:scale-105 ${
@@ -472,24 +476,28 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
           }`}
           onClick={() => setSelectedFilter('legendary')}
         >
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-            </svg>
-            <p className="text-2xl font-bold text-yellow-400">{legendaryCount}</p>
+          <div className="flex flex-col items-center">
+            <div className="mb-2">
+              <svg className="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </div>
+            <p className="text-3xl font-bold text-yellow-400 mb-1">{legendaryCount}</p>
+            <p className="text-sm text-slate-400">Legendary Items</p>
           </div>
-          <p className="text-sm text-slate-400">Legendary Items</p>
         </Card>
         <Card className="bg-gradient-to-br from-emerald-900/20 to-emerald-800/20 border-emerald-700/30 text-center p-4">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-2xl font-bold text-emerald-400">
+          <div className="flex flex-col items-center">
+            <div className="mb-2">
+              <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-3xl font-bold text-emerald-400 mb-1">
               {Array.from(unlockedItems).length} / {totalSecretItems}
             </p>
+            <p className="text-sm text-slate-400">Secrets Unlocked</p>
           </div>
-          <p className="text-sm text-slate-400">Secrets Unlocked</p>
         </Card>
       </div>
 

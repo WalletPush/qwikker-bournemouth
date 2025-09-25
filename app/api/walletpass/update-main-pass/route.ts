@@ -31,15 +31,13 @@ export async function POST(request: NextRequest) {
     const updateData = {
       // Update the Current_Offer field with full offer text
       'Current_Offer': currentOffer || 'No active offer',
-      // Update other dynamic fields
-      ...(offerDetails && {
-        'Last_Message': `New offer claimed: ${currentOffer}`,
-        'Offer_Description': offerDetails.description || '',
-        'Valid_Until': offerDetails.validUntil || '',
-        'Terms': offerDetails.terms || '',
-        'Business_Name': offerDetails.businessName || '',
-        'Discount_Amount': offerDetails.discount || '',
-      })
+      // Update Last_Message with rich offer details (since we can't use separate fields yet)
+      'Last_Message': offerDetails ? 
+        `${currentOffer} | Valid: ${offerDetails.validUntil ? new Date(offerDetails.validUntil).toLocaleDateString('en-GB') : 'No expiry'} | ${offerDetails.businessName || 'Qwikker Partner'}` :
+        `Latest offer: ${currentOffer}`,
+      // Add barcode with offer info for business scanning  
+      'barcode_message': `QWIKKER-USER-${userWalletPassId}-OFFER-${Date.now()}`,
+      'barcode_format': 'PKBarcodeFormatQR'
     }
     
     console.log('📡 Calling WalletPush API to update pass:', userWalletPassId)
