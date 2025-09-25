@@ -2,12 +2,6 @@
   "node": {
     "0080b636c7474f7ab63382e1606b7de6f7e2655ea4": {
       "workers": {
-        "app/user/badges/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/badges/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getAppUsers",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
         "app/user/chat/page": {
           "moduleId": "[project]/.next-internal/server/app/user/chat/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
@@ -34,7 +28,6 @@
         }
       },
       "layer": {
-        "app/user/badges/page": "rsc",
         "app/user/chat/page": "rsc",
         "app/user/discover/page": "rsc",
         "app/user/how-it-works/page": "rsc",
@@ -45,12 +38,6 @@
     },
     "008a7b655ae35a828405acde533174e2679bfe032d": {
       "workers": {
-        "app/user/badges/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/badges/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getCurrentAppUser",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
         "app/user/chat/page": {
           "moduleId": "[project]/.next-internal/server/app/user/chat/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
@@ -77,7 +64,6 @@
         }
       },
       "layer": {
-        "app/user/badges/page": "rsc",
         "app/user/chat/page": "rsc",
         "app/user/discover/page": "rsc",
         "app/user/how-it-works/page": "rsc",
@@ -88,12 +74,6 @@
     },
     "00e6086aee6ffcc4e04c00f1761fd5dd8d6a3768a1": {
       "workers": {
-        "app/user/badges/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/badges/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getWalletPassCookie",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
         "app/user/chat/page": {
           "moduleId": "[project]/.next-internal/server/app/user/chat/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
@@ -120,7 +100,6 @@
         }
       },
       "layer": {
-        "app/user/badges/page": "rsc",
         "app/user/chat/page": "rsc",
         "app/user/discover/page": "rsc",
         "app/user/how-it-works/page": "rsc",
@@ -131,12 +110,6 @@
     },
     "40045bc258e7947f715690703fb61aa959f880cb7a": {
       "workers": {
-        "app/user/badges/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/badges/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "setWalletPassCookie",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
         "app/user/chat/page": {
           "moduleId": "[project]/.next-internal/server/app/user/chat/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
@@ -163,7 +136,6 @@
         }
       },
       "layer": {
-        "app/user/badges/page": "rsc",
         "app/user/chat/page": "rsc",
         "app/user/discover/page": "rsc",
         "app/user/how-it-works/page": "rsc",

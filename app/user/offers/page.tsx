@@ -25,6 +25,33 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   
   const walletPassId = urlWalletPassId || cookieWalletPassId || null
   
+  // Get current user for the layout
+  let currentUser = null
+  if (walletPassId) {
+    try {
+      const { data: user } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('wallet_pass_id', walletPassId)
+        .eq('wallet_pass_status', 'active')
+        .single()
+      
+      if (user) {
+        currentUser = {
+          id: user.id,
+          wallet_pass_id: user.wallet_pass_id,
+          name: user.name,
+          email: user.email,
+          city: user.city,
+          tier: user.tier,
+          level: user.level
+        }
+      }
+    } catch (error) {
+      console.log('No user found for offers page')
+    }
+  }
+  
   // Fetch approved businesses with offers
   const { data: approvedBusinesses, error } = await supabase
     .from('business_profiles')
@@ -101,6 +128,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     <UserDashboardLayout 
       currentSection="offers"
       walletPassId={walletPassId}
+      currentUser={currentUser}
     >
       <Suspense fallback={
         <div className="flex items-center justify-center min-h-[400px]">
