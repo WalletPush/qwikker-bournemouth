@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { mockBusinesses, suggestedPrompts, enhancedSecretMenus, mockOffers, mockUserProfile, mockBadges, pointsEarningRules } from '@/lib/mock-data/user-mock-data'
+import { mockBusinesses, suggestedPrompts, enhancedSecretMenus, mockOffers, mockBadges } from '@/lib/mock-data/user-mock-data'
 import { useState } from 'react'
 import React from 'react'
 import Link from 'next/link'
@@ -42,6 +42,13 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
 
   const handleSendMessage = React.useCallback(async (message: string) => {
     if (!message.trim()) return
+
+    // Track badge progress for AI chat usage
+    if (typeof window !== 'undefined') {
+      const { getBadgeTracker } = require('@/lib/utils/simple-badge-tracker')
+      const badgeTracker = getBadgeTracker(currentUser?.wallet_pass_id)
+      badgeTracker.trackAction('ai_chat_used')
+    }
 
     // Add user message
     const userMessage: ChatMessage = {
@@ -280,10 +287,10 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
           if (secretItem) {
             return `Ah, you've discovered "${secretItem.name}" at ${secretMenu.businessName}! 🕵️‍♂️ You have excellent taste!\n\n🔍 **Here's what I can tell you:**\n${secretItem.hint}\n\n🗝️ **How to unlock the full details:**\n${secretItem.unlockMethods.map(method => {
               if (method.type === 'visit') return '• Visit the restaurant and scan their secret menu QR code';
-              if (method.type === 'points') return `• Spend ${method.cost} points to unlock remotely`;
+              if (method.type === 'points') return `• Use achievements to unlock remotely`;
               if (method.type === 'social') return '• Get friends to join Qwikker';
               return `• ${method.description}`;
-            }).join('\n')}\n\n✨ **Reward:** Unlock this item and earn ${secretItem.pointsReward} points!\n\nThis is definitely worth pursuing - would you like me to help you plan a visit to ${secretMenu.businessName}?`;
+            }).join('\n')}\n\n✨ **Achievement:** Unlock this item to progress your badges!\n\nThis is definitely worth pursuing - would you like me to help you plan a visit to ${secretMenu.businessName}?`;
           }
         }
       }
@@ -307,7 +314,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
             return `🔒 **${item.name}** ${rarityStars}\n   *${item.hint.substring(0, 80)}...*`;
           }).join('\n\n');
           
-          return `Ooh, ${secretMenu.businessName} has some incredible secret treasures! 🏴‍☠️ Here's what I can whisper about:\n\n${itemsList}\n\n🎯 **Want the full details?** Each item can be unlocked by:\n• Visiting the restaurant and scanning their QR code\n• Using your Qwikker points\n• Social challenges\n\nWhich secret item intrigues you most? I can give you more specific hints! 😉`;
+          return `Ooh, ${secretMenu.businessName} has some incredible secret treasures! 🏴‍☠️ Here's what I can whisper about:\n\n${itemsList}\n\n🎯 **Want the full details?** Each item can be unlocked by:\n• Visiting the restaurant and scanning their QR code\n• Progressing your achievements\n• Social challenges\n\nWhich secret item intrigues you most? I can give you more specific hints! 😉`;
         }
       }
       
@@ -326,14 +333,12 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
       return "I'd love to help you discover some amazing places! But first, tell me a bit more about what you're in the mood for. What brings you to Bournemouth today? Are you a local exploring or visiting? What sounds good to you right now?"
     }
     
-    // Handle points and rewards questions
-    if (msg.includes('points') || msg.includes('credits') || msg.includes('earn') || msg.includes('badges')) {
-      const userPoints = mockUserProfile.totalPoints
-      const userLevel = mockUserProfile.level
-      const earnedBadges = mockUserProfile.badges.filter(b => b.unlockedDate).length
+    // Handle achievements and badges questions
+    if (msg.includes('achievements') || msg.includes('badges') || msg.includes('earn') || msg.includes('unlock')) {
+      const earnedBadges = 0 // Will be updated with real user data later
       const totalBadges = mockBadges.length
       
-      return `Great question! Here's your current status:\n\n🏆 **Your Progress:**\n• Current Points: ${userPoints.toLocaleString()}\n• Level: ${userLevel}\n• Badges Earned: ${earnedBadges}/${totalBadges}\n\n💰 **Ways to Earn Points:**\n• Refer Friends: +${pointsEarningRules.friend_referral.points} points (highest earner!)\n• Redeem Offers: +${pointsEarningRules.offer_redeem.points} points\n• Visit Businesses: +${pointsEarningRules.business_visit.points} points\n• Write Reviews: +${pointsEarningRules.review_write.points} points\n• Share on Social: +${pointsEarningRules.social_share.points} points\n\nWant to see what badges you can unlock next or check out current offers?`
+      return `Great question! Here's your current status:\n\n🏆 **Your Progress:**\n• Achievements Earned: ${earnedBadges}/${totalBadges}\n\n🎯 **How to Earn More Achievements:**\n• Use different features of the app\n• Explore businesses and offers\n• Chat with the AI guide\n• View secret menus\n• Stay active on Qwikker\n\nAchievements are awarded automatically as you use the app! Want to see your current achievements or check out some offers?`
     }
     
     // Handle menu questions
@@ -354,8 +359,8 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
     const secretMenuCount = mockBusinesses.filter(b => b.hasSecretMenu).length
     const responses = [
       `I'm here to help you explore Bournemouth! We have ${totalBusinesses} partner venues, ${secretMenuCount} with secret menus, and ${mockOffers.length} active offers. What sounds good?`,
-      `Tell me what you're in the mood for! I can help with restaurants, offers, secret menus, or even show you how to earn more Qwikker Credits (you currently have ${mockUserProfile.totalPoints.toLocaleString()} points!).`,
-      `Great! I can help you discover amazing places. Are you looking for food, drinks, deals, or want to know about earning more points? You're level ${mockUserProfile.level} with ${mockUserProfile.badges.filter(b => b.unlockedDate).length} badges!`,
+      `Tell me what you're in the mood for! I can help with restaurants, offers, secret menus, or even show you your achievements progress!`,
+      `Great! I can help you discover amazing places. Are you looking for food, drinks, deals, or want to know about earning more achievements? Start exploring to unlock badges!`,
       `Perfect! What kind of experience are you after? I know all ${totalBusinesses} partner venues and can show you the best deals and secret menu items!`
     ]
     

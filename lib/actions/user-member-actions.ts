@@ -28,7 +28,7 @@ export async function getCurrentAppUser() {
   
   try {
     // TODO: In production, get wallet_pass_id from URL/cookie/localStorage
-    const walletPassId = 'QWIK-BOURNEMOUTH-DAVID-2024' // Mock for demo
+    const walletPassId = null // No default user - requires real wallet pass ID
     
     const { data, error } = await supabase
       .from('app_users')

@@ -1,11 +1,12 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
-import { useState } from 'react'
 import Link from 'next/link'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
+import { AiCompanionCard } from '@/components/ui/ai-companion-card'
 
 interface Business {
   id: string
@@ -32,11 +33,21 @@ interface Business {
 
 interface UserDiscoverPageProps {
   businesses?: Business[]
+  walletPassId?: string
 }
 
-export function UserDiscoverPage({ businesses = mockBusinesses }: UserDiscoverPageProps) {
+export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: UserDiscoverPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  
+  // Track badge progress for visiting discover page
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const { getBadgeTracker } = require('@/lib/utils/simple-badge-tracker')
+      const badgeTracker = getBadgeTracker() // Will use default user ID for now
+      badgeTracker.trackAction('discover_page_visited')
+    }
+  }, [])
   
   // Group businesses by subscription plan (determines badges)
   const qwikkerPicks = businesses.filter(b => b.plan === 'spotlight')
@@ -235,63 +246,69 @@ export function UserDiscoverPage({ businesses = mockBusinesses }: UserDiscoverPa
         <p className="text-slate-300 text-lg">Find amazing local businesses, exclusive deals, and hidden gems</p>
       </div>
 
-      {/* Search Bar */}
-      <div className="max-w-2xl mx-auto">
-        <div className="relative">
-          <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search for restaurants, cafes, bars, or anything..."
-            className="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-slate-600 rounded-xl text-slate-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                // Search happens automatically via getFilteredBusinesses
-              }
-            }}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-20 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300 p-1"
-              title="Clear search"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
-          <Button 
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-6"
-            onClick={() => {
-              // Search happens automatically via getFilteredBusinesses
-              // This button is mainly for visual consistency
-            }}
-          >
-            Search
-          </Button>
-        </div>
+      {/* AI Companion Card - Replace Search Bar */}
+      <div className="mb-4">
+        <AiCompanionCard 
+          title="Discover Your Next Favorite Spot"
+          description="Tell our AI exactly what you're in the mood for! Whether it's 'cozy coffee shop with WiFi' or 'best sushi near the beach' - we'll find your perfect match."
+          prompts={[
+            "Find me a romantic restaurant for tonight",
+            "Where can I get the best fish and chips?", 
+            "Show me cafes with outdoor seating"
+          ]}
+          walletPassId={walletPassId}
+        />
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex flex-wrap justify-center gap-2">
-        {filters.map((filter) => (
-          <button
-            key={filter.id}
-            onClick={() => setSelectedFilter(filter.id)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-              selectedFilter === filter.id
-                ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black'
-                : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700 border border-slate-600'
-            }`}
-          >
-            {filter.label} ({filter.count})
-          </button>
-        ))}
+      {/* Clickable Filter Cards - Mobile First */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Card 
+          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+            selectedFilter === 'qwikker_picks' 
+              ? 'bg-gradient-to-br from-yellow-400/30 to-amber-500/30 border-yellow-300/50 ring-2 ring-yellow-300/30' 
+              : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+          }`}
+          onClick={() => setSelectedFilter('qwikker_picks')}
+        >
+          <p className="text-2xl font-bold text-yellow-300">{qwikkerPicks.length}</p>
+          <p className="text-sm text-slate-400">Qwikker Picks</p>
+        </Card>
+        
+        <Card 
+          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+            selectedFilter === 'featured' 
+              ? 'bg-gradient-to-br from-green-600/30 to-green-500/30 border-green-400/50 ring-2 ring-green-400/30' 
+              : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+          }`}
+          onClick={() => setSelectedFilter('featured')}
+        >
+          <p className="text-2xl font-bold text-green-400">{featured.length}</p>
+          <p className="text-sm text-slate-400">Featured</p>
+        </Card>
+        
+        <Card 
+          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+            selectedFilter === 'recommended' 
+              ? 'bg-gradient-to-br from-purple-600/30 to-purple-500/30 border-purple-400/50 ring-2 ring-purple-400/30' 
+              : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+          }`}
+          onClick={() => setSelectedFilter('recommended')}
+        >
+          <p className="text-2xl font-bold text-purple-400">{recommended.length}</p>
+          <p className="text-sm text-slate-400">Recommended</p>
+        </Card>
+        
+        <Card 
+          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+            selectedFilter === 'all' 
+              ? 'bg-gradient-to-br from-blue-600/30 to-blue-500/30 border-blue-400/50 ring-2 ring-blue-400/30' 
+              : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+          }`}
+          onClick={() => setSelectedFilter('all')}
+        >
+          <p className="text-2xl font-bold text-blue-400">{businesses.length}</p>
+          <p className="text-sm text-slate-400">All Places</p>
+        </Card>
       </div>
 
       {/* Results Header */}

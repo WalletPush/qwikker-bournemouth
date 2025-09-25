@@ -70,9 +70,9 @@ export function UserDashboardLayoutMobile({ children, currentSection, currentUse
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-full flex items-center justify-center text-xs font-semibold text-black">
-                D
+                {currentUser?.name?.charAt(0).toUpperCase() || 'Q'}
               </div>
-              <span className="text-sm text-slate-300">{currentUser?.name || 'David'}</span>
+              <span className="text-sm text-slate-300">{currentUser?.name || 'Qwikker User'}</span>
             </div>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -150,10 +150,10 @@ export function UserDashboardLayoutMobile({ children, currentSection, currentUse
         <div className="flex-shrink-0 p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
             <div className="w-10 h-10 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-full flex items-center justify-center font-semibold text-black">
-              D
+              {currentUser?.name?.charAt(0).toUpperCase() || 'Q'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-100 truncate">{currentUser?.name || 'David'}</p>
+              <p className="font-semibold text-slate-100 truncate">{currentUser?.name || 'Qwikker User'}</p>
               <p className="text-sm text-slate-400 truncate">
                 {currentUser?.tier ? `${currentUser.tier.charAt(0).toUpperCase() + currentUser.tier.slice(1)} • Level ${currentUser.level}` : 'Explorer • Level 1'}
               </p>

@@ -33,7 +33,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   }
   
   // URL parameter ALWAYS takes priority over cookie (for new signups)
-  let walletPassId = urlWalletPassId || cookieWalletPassId || 'QWIK-BOURNEMOUTH-DAVID-2024'
+  let walletPassId = urlWalletPassId || cookieWalletPassId || null
   
   console.log('🔍 Dashboard Debug:', {
     urlWalletPassId,
@@ -53,14 +53,15 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   
   let currentUser = null
   
-  // Try to get user by wallet pass ID
-  try {
-    const { data: user } = await supabase
-      .from('app_users')
-      .select('*')
-      .eq('wallet_pass_id', walletPassId)
-      .eq('wallet_pass_status', 'active')
-      .single()
+  // Try to get user by wallet pass ID (only if we have one)
+  if (walletPassId) {
+    try {
+      const { data: user } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('wallet_pass_id', walletPassId)
+        .eq('wallet_pass_status', 'active')
+        .single()
     
     if (user) {
       currentUser = {
@@ -79,30 +80,44 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
         favorite_categories: user.preferred_categories || []
       }
     }
-    console.log('✅ Found user by wallet pass ID:', user?.name, 'ID:', walletPassId)
-  } catch (error) {
-    console.log('No user found with wallet pass ID:', walletPassId, 'using static mock data')
-    
-    // If user doesn't exist, it might be a race condition - workflow still processing
-    if (walletPassId !== 'QWIK-BOURNEMOUTH-DAVID-2024') {
-      console.log('🔄 User might still be processing in GHL workflow...')
+      console.log('✅ Found user by wallet pass ID:', user?.name, 'ID:', walletPassId)
+    } catch (error) {
+      console.log('No user found with wallet pass ID:', walletPassId, 'creating fresh user profile')
+      
+      // Create fresh user profile for new users (no mock data)
+      currentUser = {
+        id: 'user-processing',
+        wallet_pass_id: walletPassId,
+        name: 'New User (Processing...)',
+        email: 'processing@qwikker.com',
+        city: 'bournemouth',
+        tier: 'explorer',
+        level: 1,
+        points_balance: 0,
+        badges_earned: [],
+        total_visits: 0,
+        offers_claimed: 0,
+        secret_menus_unlocked: 0,
+        favorite_categories: []
+      }
     }
-    
-    // Create fresh user profile for new users (no mock data)
+  } else {
+    // No wallet pass ID at all - completely new user
+    console.log('No wallet pass ID provided - creating anonymous user profile')
     currentUser = {
-      id: 'user-processing',
-      wallet_pass_id: walletPassId,
-      name: 'New User (Processing...)',
-      email: 'processing@qwikker.com',
+      id: 'anonymous-user',
+      wallet_pass_id: null,
+      name: 'Welcome to Qwikker!',
+      email: 'anonymous@qwikker.com',
       city: 'bournemouth',
       tier: 'explorer',
       level: 1,
-      points_balance: 0,              // ← FRESH START!
-      badges_earned: [],              // ← NO FAKE BADGES!
-      total_visits: 0,                // ← FRESH START!
-      offers_claimed: 0,              // ← FRESH START!
-      secret_menus_unlocked: 0,       // ← FRESH START!
-      favorite_categories: []         // ← FRESH START!
+      points_balance: 0,
+      badges_earned: [],
+      total_visits: 0,
+      offers_claimed: 0,
+      secret_menus_unlocked: 0,
+      favorite_categories: []
     }
   }
   
