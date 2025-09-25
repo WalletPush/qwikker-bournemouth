@@ -12,13 +12,16 @@ import { useSearchParams } from 'next/navigation'
 
 interface UserOffersPageProps {
   realOffers?: any[]
+  walletPassId?: string
 }
 
-export function UserOffersPage({ realOffers = [] }: UserOffersPageProps) {
+export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId }: UserOffersPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const searchParams = useSearchParams()
-  const walletPassId = searchParams.get('wallet_pass_id')
+  const urlWalletPassId = searchParams.get('wallet_pass_id')
+  // Use prop first, then URL, then null - this ensures consistency with server-side logic
+  const walletPassId = propWalletPassId || urlWalletPassId
   const highlightBusiness = searchParams.get('highlight') // For QR deep linking
   
   // Initialize with empty sets to avoid hydration mismatch

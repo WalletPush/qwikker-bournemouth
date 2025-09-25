@@ -135,7 +135,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
           <div className="text-slate-400">Loading offers...</div>
         </div>
       }>
-        <UserOffersPage realOffers={realOffers} />
+        <UserOffersPage realOffers={realOffers} walletPassId={walletPassId} />
       </Suspense>
     </UserDashboardLayout>
   )
