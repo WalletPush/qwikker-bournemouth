@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { mockBusinesses, mockOffers, mockSecretMenus, mockClaimedOffers } from '@/lib/mock-data/user-mock-data'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 
 interface UserBusinessDetailPageProps {
@@ -483,15 +484,21 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                                 Already Redeemed
                               </Button>
                             ) : (
-                              <Button 
-                                onClick={() => alert(`"${offer.title}" has been added to your mobile wallet!`)}
+                              <AddToWalletButton 
+                                offer={{
+                                  id: offer.id,
+                                  title: offer.title,
+                                  description: offer.description,
+                                  business_name: business.name,
+                                  valid_until: offer.valid_until,
+                                  terms: offer.terms,
+                                  offer_value: offer.discount || offer.type
+                                }}
+                                userWalletPassId={walletPassId}
+                                variant="default"
+                                size="sm"
                                 className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold text-sm"
-                              >
-                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                                {claimedOfferData?.status === 'wallet_added' ? 'In Wallet - Ready to Use' : 'Add to Wallet'}
-                              </Button>
+                              />
                             )}
                             
                             {/* Only show Ask AI for non-redeemed offers */}

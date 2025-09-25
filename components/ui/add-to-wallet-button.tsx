@@ -51,74 +51,126 @@ export default function AddToWalletButton({
     setIsAdding(true);
     
     try {
-      const response = await fetch('/api/wallet/create-offer-pass', {
+      // Check if user has a wallet pass first
+      if (!userWalletPassId || userWalletPassId === 'guest') {
+        throw new Error('You need to sign up through the GHL form first to get your Qwikker wallet pass');
+      }
+
+      // UPDATE MAIN WALLET PASS with the new offer
+      const response = await fetch('/api/walletpass/update-main-pass', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          offerId: offer.id,
-          userWalletPassId: userWalletPassId || 'guest',
-          offer: offer
+          userWalletPassId: userWalletPassId,
+          currentOffer: `${offer.title} - ${offer.business_name}`,
+          offerDetails: {
+            description: offer.description,
+            validUntil: offer.valid_until,
+            terms: offer.terms,
+            businessName: offer.business_name,
+            discount: offer.offer_value || offer.title
+          }
         })
       });
       
       const data = await response.json();
       
-      if (data.success && data.passUrl) {
-        // Show success state briefly
+      if (data.success) {
+        // Show success state
         setSuccess(true);
+        console.log('✅ Main wallet pass updated with new offer');
         
-        // 🆕 UPDATE MAIN WALLET PASS (if user has one) - NON-BLOCKING
-        if (userWalletPassId && userWalletPassId !== 'guest') {
-          fetch('/api/walletpass/update-main-pass', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userWalletPassId: userWalletPassId,
-              currentOffer: `${offer.title} - ${offer.business_name}`,
-              offerDetails: {
-                description: offer.description,
-                validUntil: offer.valid_until,
-                terms: offer.terms
-              }
-            })
-          }).then(response => response.json()).then(result => {
-            if (result.success) {
-              console.log('✅ Main wallet pass updated with new offer');
-            } else {
-              console.warn('⚠️ Main pass update failed (non-critical):', result.error);
-            }
-          }).catch(error => {
-            console.warn('⚠️ Main pass update error (non-critical):', error);
-            // Don't break the user flow - this is optional functionality
-          });
-        }
+        // Show success message to user
+        const successMessage = `Your Qwikker pass has been updated with "${offer.title}"! Check your wallet app.`;
         
-        // Redirect to wallet pass download after short delay
+        // Create a nice success notification
+        const notification = document.createElement('div');
+        notification.innerHTML = `
+          <div style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #00d083, #00b86f);
+            color: black;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 208, 131, 0.3);
+            z-index: 9999;
+            max-width: 350px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+          ">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <div>
+              <div style="font-size: 14px; margin-bottom: 4px;">Wallet Updated!</div>
+              <div style="font-size: 12px; opacity: 0.8;">${offer.title} added to your pass</div>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Remove notification after 4 seconds
         setTimeout(() => {
-          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-          if (isMobile) {
-            // For mobile devices, try to open the pass directly
-            window.location.href = data.passUrl.replace('?t=', '.pkpass?t=');
-          } else {
-            // For desktop, open in new tab
-            window.open(data.passUrl, '_blank');
+          if (notification.parentNode) {
+            notification.remove();
           }
-          
-          // Reset success state after download
-          setTimeout(() => setSuccess(false), 2000);
-        }, 1000);
+        }, 4000);
+        
+        // Reset success state after delay
+        setTimeout(() => setSuccess(false), 3000);
         
       } else {
-        throw new Error(data.error || 'Failed to create wallet pass');
+        throw new Error(data.error || 'Failed to update wallet pass');
       }
     } catch (error) {
-      console.error('Error adding to wallet:', error);
+      console.error('Error updating wallet pass:', error);
       
       // Show user-friendly error
-      const errorMessage = error instanceof Error ? error.message : 'Failed to add offer to wallet';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update your wallet pass';
       
-      // You could implement a toast notification here
-      alert(`Sorry, we couldn't add this offer to your wallet right now. ${errorMessage}. Please try again.`);
+      // Create error notification
+      const notification = document.createElement('div');
+      notification.innerHTML = `
+        <div style="
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          color: white;
+          padding: 16px 20px;
+          border-radius: 12px;
+          box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+          z-index: 9999;
+          max-width: 350px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        ">
+          <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          <div>
+            <div style="font-size: 14px; margin-bottom: 4px;">Update Failed</div>
+            <div style="font-size: 12px; opacity: 0.9;">${errorMessage}</div>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Remove notification after 5 seconds
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 5000);
     } finally {
       setIsAdding(false);
     }
@@ -134,7 +186,7 @@ export default function AddToWalletButton({
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-          Added to Wallet!
+          Pass Updated!
         </span>
       </button>
     );
@@ -152,12 +204,12 @@ export default function AddToWalletButton({
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          Adding...
+          Updating...
         </span>
       ) : (
         <span className="flex items-center justify-center gap-2">
           <Wallet className="w-4 h-4" />
-          Add to Wallet
+          Update Pass
         </span>
       )}
     </button>
@@ -165,7 +217,7 @@ export default function AddToWalletButton({
 }
 
 // Compact version for small spaces
-export function CompactAddToWalletButton({ offer, userWalletPassId, className = '' }: AddToWalletButtonProps) {
+export function CompactUpdatePassButton({ offer, userWalletPassId, className = '' }: AddToWalletButtonProps) {
   return (
     <AddToWalletButton 
       offer={offer}
@@ -178,7 +230,7 @@ export function CompactAddToWalletButton({ offer, userWalletPassId, className = 
 }
 
 // Large promotional version
-export function PromoAddToWalletButton({ offer, userWalletPassId, className = '' }: AddToWalletButtonProps) {
+export function PromoUpdatePassButton({ offer, userWalletPassId, className = '' }: AddToWalletButtonProps) {
   return (
     <AddToWalletButton 
       offer={offer}
@@ -189,3 +241,7 @@ export function PromoAddToWalletButton({ offer, userWalletPassId, className = ''
     />
   );
 }
+
+// Legacy aliases for backward compatibility
+export const CompactAddToWalletButton = CompactUpdatePassButton;
+export const PromoAddToWalletButton = PromoUpdatePassButton;
