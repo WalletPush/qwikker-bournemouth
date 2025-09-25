@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 
 interface ChatMessage {
   id: string
@@ -548,12 +549,21 @@ export function UserChatPagePremium({ currentUser }: { currentUser?: any }) {
             <p className="text-slate-500 text-xs">ends {offer.validUntil}</p>
           </div>
         </div>
-        <Button 
-          size="sm" 
+        <AddToWalletButton 
+          offer={{
+            id: offer.id || 'premium-chat-offer',
+            title: offer.title,
+            description: offer.description || 'Exclusive AI recommended offer',
+            business_name: offer.businessName,
+            valid_until: offer.validUntil,
+            terms: offer.terms || 'Present at business to redeem',
+            offer_value: offer.discount
+          }}
+          userWalletPassId={currentUser?.wallet_pass_id}
+          variant="default"
+          size="sm"
           className="w-full mt-2 bg-orange-500 hover:bg-orange-600 text-white text-xs h-6"
-        >
-          Claim
-        </Button>
+        />
       </CardContent>
     </Card>
   )

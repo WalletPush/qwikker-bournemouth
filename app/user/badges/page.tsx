@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { SimpleBadgesPage } from '@/components/user/simple-badges-page'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 
 export const metadata = {
   title: 'Your Qwikker Achievements - Unlock Your Potential!',
@@ -17,7 +18,17 @@ interface BadgesPageProps {
 export default async function BadgesPage({ searchParams }: BadgesPageProps) {
   const supabase = createServiceRoleClient()
   const resolvedSearchParams = await searchParams
-  const walletPassId = resolvedSearchParams.wallet_pass_id
+  const urlWalletPassId = resolvedSearchParams.wallet_pass_id
+  
+  // Get wallet pass ID from URL or cookie
+  let cookieWalletPassId = null
+  try {
+    cookieWalletPassId = await getWalletPassCookie()
+  } catch (error) {
+    console.log('Cookie read error (safe to ignore):', error)
+  }
+  
+  const walletPassId = urlWalletPassId || cookieWalletPassId || null
 
   // Get current user data for the layout
   let currentUser = null

@@ -196,81 +196,6 @@ export function UserOffersPage({ realOffers = [] }: UserOffersPageProps) {
     }
   }
 
-  const addToWallet = (offerId: string, offerTitle: string, claimType: 'single' | 'multiple') => {
-    const userId = walletPassId || 'anonymous-user'
-    
-    setWalletOffers(prev => {
-      const newWallet = new Set([...prev, offerId])
-      // Save to localStorage with user ID
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify([...newWallet]))
-      }
-      return newWallet
-    })
-
-    // Remove from claimed (it goes to wallet)
-    setClaimedOffers(prev => {
-      const newClaimed = new Set(prev)
-      newClaimed.delete(offerId)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...newClaimed]))
-      }
-      return newClaimed
-    })
-
-    // Success modal
-    const modalOverlay = document.createElement('div')
-    modalOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300'
-    
-    const modal = document.createElement('div')
-    modal.className = 'bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 transform scale-95 transition-transform duration-300 shadow-2xl'
-    modal.innerHTML = `
-      <div class="text-center">
-        <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-        </div>
-        <h3 class="text-xl font-bold text-slate-100 mb-2">Added to Wallet!</h3>
-        <p class="text-slate-300 mb-1">"${offerTitle}" is now in your mobile wallet.</p>
-        <p class="text-sm text-slate-400 mb-6">You can use it at the business location!</p>
-        <button id="modal-close" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 active:scale-95">
-          Perfect!
-        </button>
-      </div>
-    `
-    
-    modalOverlay.appendChild(modal)
-    document.body.appendChild(modalOverlay)
-    
-    // Animate in
-    setTimeout(() => {
-      modalOverlay.style.opacity = '1'
-      modal.style.transform = 'scale(1)'
-    }, 50)
-    
-    // Close modal function
-    const closeModal = () => {
-      modalOverlay.style.opacity = '0'
-      modal.style.transform = 'scale(0.95)'
-      setTimeout(() => {
-        if (document.body.contains(modalOverlay)) {
-          document.body.removeChild(modalOverlay)
-        }
-      }, 300)
-    }
-    
-    // Close on button click
-    modal.querySelector('#modal-close')?.addEventListener('click', closeModal)
-    
-    // Close on overlay click
-    modalOverlay.addEventListener('click', (e) => {
-      if (e.target === modalOverlay) closeModal()
-    })
-    
-    // Auto close after 5 seconds
-    setTimeout(closeModal, 5000)
-  }
 
   const getFilteredOffers = () => {
     let filtered = allOffers
@@ -468,12 +393,21 @@ export function UserOffersPage({ realOffers = [] }: UserOffersPageProps) {
                 Claim Offer
               </Button>
             ) : (
-              <Button 
-                onClick={() => addToWallet(offer.id, offer.title, offer.claimType || 'single')}
+              <AddToWalletButton 
+                offer={{
+                  id: offer.id,
+                  title: offer.title,
+                  description: offer.description,
+                  business_name: businessName,
+                  valid_until: offer.valid_until,
+                  terms: offer.terms,
+                  offer_value: offer.discount || offer.type
+                }}
+                userWalletPassId={walletPassId}
+                variant="default"
+                size="md"
                 className="w-full h-[44px] bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20"
-              >
-                Claimed - Add to Wallet
-              </Button>
+              />
             )}
             
             {/* Share Button */}
@@ -495,7 +429,7 @@ export function UserOffersPage({ realOffers = [] }: UserOffersPageProps) {
     <div className="space-y-6">
       {/* Page Header - Simple and Clean */}
       <div className="text-center py-6">
-        <div className="flex items-center justify-center gap-3 mb-4">
+        <div className="flex flex-col items-center gap-4 mb-4">
           <div className="p-3 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full border border-green-500/30">
             <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />

@@ -47,3 +47,4 @@ export async function getCurrentAppUser() {
     return { success: false, error: 'Failed to fetch current user member', data: null }
   }
 }
+
