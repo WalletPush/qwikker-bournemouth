@@ -1,5 +1,6 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 
 export default async function ChatPage({
   searchParams
@@ -8,10 +9,20 @@ export default async function ChatPage({
 }) {
   const supabase = createServiceRoleClient()
   const params = await searchParams
+  const urlWalletPassId = params.wallet_pass_id
+  
+  // Get wallet pass ID from URL or cookie
+  let cookieWalletPassId = null
+  try {
+    cookieWalletPassId = await getWalletPassCookie()
+  } catch (error) {
+    console.log('Cookie read error (safe to ignore):', error)
+  }
+  
+  const userId = urlWalletPassId || cookieWalletPassId || null
   
   // Get current user for personalized chat
   let currentUser = null
-  let userId = params.wallet_pass_id || null
   
   try {
     const { data: user } = await supabase

@@ -213,7 +213,7 @@ export async function getUsersForBusinessNotifications(
   try {
     // For now, return mock user IDs
     // In production, this would query your user database
-    return ['QWIK-BOURNEMOUTH-DAVID-2024']; // David's wallet pass ID
+    return []; // No hardcoded test users - use real wallet pass IDs only
   } catch (error) {
     console.error('❌ Failed to get users for notifications:', error);
     return [];

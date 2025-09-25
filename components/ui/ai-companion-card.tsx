@@ -37,13 +37,6 @@ export function AiCompanionCard({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.847a4.5 4.5 0 003.09 3.09L15.75 12l-2.847.813a4.5 4.5 0 00-3.09 3.091z" />
                 </svg>
               </div>
-              {/* Small AI badge on avatar */}
-              <div className="absolute -bottom-1 -right-1 bg-slate-800 border border-[#00d083]/30 rounded-full px-1.5 py-0.5">
-                <div className="flex items-center gap-1">
-                  <div className="w-1 h-1 bg-[#00d083] rounded-full animate-pulse"></div>
-                  <span className="text-[10px] text-[#00d083] font-medium">AI</span>
-                </div>
-              </div>
             </div>
           </div>
           

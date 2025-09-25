@@ -3,6 +3,7 @@ import { UserDiscoverPage } from '@/components/user/user-discover-page'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
+import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 
 interface DiscoverPageProps {
   searchParams: Promise<{
@@ -13,7 +14,17 @@ interface DiscoverPageProps {
 export default async function DiscoverPage({ searchParams }: DiscoverPageProps) {
   const supabase = createServiceRoleClient()
   const resolvedSearchParams = await searchParams
-  const walletPassId = resolvedSearchParams.wallet_pass_id
+  const urlWalletPassId = resolvedSearchParams.wallet_pass_id
+  
+  // Get wallet pass ID from URL or cookie
+  let cookieWalletPassId = null
+  try {
+    cookieWalletPassId = await getWalletPassCookie()
+  } catch (error) {
+    console.log('Cookie read error (safe to ignore):', error)
+  }
+  
+  const walletPassId = urlWalletPassId || cookieWalletPassId || null
   
   // Fetch approved businesses only
   const { data: approvedBusinesses, error } = await supabase

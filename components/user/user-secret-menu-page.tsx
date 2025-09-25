@@ -66,12 +66,13 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
   // Load from localStorage after component mounts to avoid hydration mismatch
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('qwikker-unlocked-secrets')
+      const userId = walletPassId || 'anonymous-user'
+      const saved = localStorage.getItem(`qwikker-unlocked-secrets-${userId}`)
       if (saved) {
         setUnlockedItems(new Set(JSON.parse(saved)))
       }
     }
-  }, [])
+  }, [walletPassId])
 
   // Remove membership tiers - Qwikker is FREE for everyone!
 
@@ -179,7 +180,8 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
     setUnlockedItems(prev => {
       const newUnlocked = new Set([...prev, itemKey])
       if (typeof window !== 'undefined') {
-        localStorage.setItem('qwikker-unlocked-secrets', JSON.stringify([...newUnlocked]))
+        const userId = walletPassId || 'anonymous-user'
+        localStorage.setItem(`qwikker-unlocked-secrets-${userId}`, JSON.stringify([...newUnlocked]))
         
         // Track badge progress
         const badgeTracker = getBadgeTracker(walletPassId)
@@ -410,7 +412,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
       <div className="text-center relative">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 rounded-3xl blur-3xl"></div>
         <div className="relative">
-          <div className="flex items-center justify-center gap-4 mb-6">
+          <div className="flex flex-col items-center gap-6 mb-6">
             <div className="p-4 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full border border-purple-500/30 animate-pulse">
               <svg className="w-12 h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />

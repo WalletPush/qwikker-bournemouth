@@ -6,6 +6,7 @@ import { mockBusinesses, suggestedPrompts, enhancedSecretMenus, mockOffers, mock
 import { useState } from 'react'
 import React from 'react'
 import Link from 'next/link'
+import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 
 interface ChatMessage {
   id: string
@@ -60,9 +61,10 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
 
     setMessages(prev => {
       const newMessages = [...prev, userMessage]
-      // Persist to localStorage
+      // Persist to localStorage with user-specific key
       if (typeof window !== 'undefined') {
-        localStorage.setItem('qwikker-chat-messages', JSON.stringify(newMessages))
+        const userId = currentUser?.wallet_pass_id || 'anonymous-user'
+        localStorage.setItem(`qwikker-chat-messages-${userId}`, JSON.stringify(newMessages))
       }
       return newMessages
     })
@@ -81,9 +83,10 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
 
       setMessages(prev => {
         const newMessages = [...prev, assistantMessage]
-        // Persist to localStorage
+        // Persist to localStorage with user-specific key
         if (typeof window !== 'undefined') {
-          localStorage.setItem('qwikker-chat-messages', JSON.stringify(newMessages))
+          const userId = currentUser?.wallet_pass_id || 'anonymous-user'
+          localStorage.setItem(`qwikker-chat-messages-${userId}`, JSON.stringify(newMessages))
         }
         return newMessages
       })
@@ -97,7 +100,8 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
     
     if (typeof window !== 'undefined') {
       // Load conversation context for AI memory (but don't display history)
-      const savedMessages = localStorage.getItem('qwikker-chat-messages')
+      const userId = currentUser?.wallet_pass_id || 'anonymous-user'
+      const savedMessages = localStorage.getItem(`qwikker-chat-messages-${userId}`)
       if (savedMessages) {
         try {
           const parsedMessages = JSON.parse(savedMessages)
@@ -531,18 +535,21 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
                 {/* Add to Wallet Button for Offer Messages */}
                 {message.type === 'assistant' && conversationContext.offerInfo && message.content.includes('add this offer to your mobile wallet') && (
                   <div className="mt-3">
-                    <Button 
-                      onClick={() => {
-                        // Simulate adding to wallet
-                        alert(`"${conversationContext.offerInfo?.title}" has been added to your mobile wallet!`)
+                    <AddToWalletButton 
+                      offer={{
+                        id: conversationContext.offerInfo?.id || 'chat-offer',
+                        title: conversationContext.offerInfo?.title || 'Special Offer',
+                        description: conversationContext.offerInfo?.description || 'Exclusive offer from AI recommendation',
+                        business_name: conversationContext.businessInfo?.name || 'Qwikker Partner',
+                        valid_until: conversationContext.offerInfo?.validUntil,
+                        terms: conversationContext.offerInfo?.terms || 'Present at business to redeem',
+                        offer_value: conversationContext.offerInfo?.discount || 'Special Deal'
                       }}
+                      userWalletPassId={currentUser?.wallet_pass_id}
+                      variant="default"
+                      size="md"
                       className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-slate-100 font-semibold"
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Add "{conversationContext.offerInfo?.title}" to Wallet
-                    </Button>
+                    />
                   </div>
                 )}
                 

@@ -240,7 +240,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
     <div className="space-y-6">
       {/* Page Header with Icon */}
       <div className="text-center">
-        <div className="flex items-center justify-center gap-4 mb-4">
+        <div className="flex flex-col items-center gap-4 mb-4">
           <div className="p-3 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 rounded-full border border-emerald-500/30">
             <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

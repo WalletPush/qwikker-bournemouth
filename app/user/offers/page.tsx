@@ -1,6 +1,7 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserOffersPage } from '@/components/user/user-offers-page'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { Suspense } from 'react'
 
 interface OffersPageProps {
@@ -12,7 +13,17 @@ interface OffersPageProps {
 export default async function OffersPage({ searchParams }: OffersPageProps) {
   const supabase = createServiceRoleClient()
   const resolvedSearchParams = await searchParams
-  const walletPassId = resolvedSearchParams.wallet_pass_id
+  const urlWalletPassId = resolvedSearchParams.wallet_pass_id
+  
+  // Get wallet pass ID from URL or cookie
+  let cookieWalletPassId = null
+  try {
+    cookieWalletPassId = await getWalletPassCookie()
+  } catch (error) {
+    console.log('Cookie read error (safe to ignore):', error)
+  }
+  
+  const walletPassId = urlWalletPassId || cookieWalletPassId || null
   
   // Fetch approved businesses with offers
   const { data: approvedBusinesses, error } = await supabase
