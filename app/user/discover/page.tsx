@@ -26,6 +26,33 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
   
   const walletPassId = urlWalletPassId || cookieWalletPassId || null
   
+  // Get current user for the layout
+  let currentUser = null
+  if (walletPassId) {
+    try {
+      const { data: user } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('wallet_pass_id', walletPassId)
+        .eq('wallet_pass_status', 'active')
+        .single()
+      
+      if (user) {
+        currentUser = {
+          id: user.id,
+          wallet_pass_id: user.wallet_pass_id,
+          name: user.name,
+          email: user.email,
+          city: user.city,
+          tier: user.tier,
+          level: user.level
+        }
+      }
+    } catch (error) {
+      console.log('No user found for discover page')
+    }
+  }
+  
   // Fetch approved businesses only
   const { data: approvedBusinesses, error } = await supabase
     .from('business_profiles')
@@ -118,6 +145,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
     <UserDashboardLayout 
       currentSection="discover"
       walletPassId={walletPassId}
+      currentUser={currentUser}
     >
       <UserDiscoverPage businesses={allBusinesses} walletPassId={walletPassId} />
     </UserDashboardLayout>

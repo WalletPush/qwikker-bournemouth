@@ -25,6 +25,33 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
   
   const walletPassId = urlWalletPassId || cookieWalletPassId || null
   
+  // Get current user for the layout
+  let currentUser = null
+  if (walletPassId) {
+    try {
+      const { data: user } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('wallet_pass_id', walletPassId)
+        .eq('wallet_pass_status', 'active')
+        .single()
+      
+      if (user) {
+        currentUser = {
+          id: user.id,
+          wallet_pass_id: user.wallet_pass_id,
+          name: user.name,
+          email: user.email,
+          city: user.city,
+          tier: user.tier,
+          level: user.level
+        }
+      }
+    } catch (error) {
+      console.log('No user found for secret menu page')
+    }
+  }
+  
   // Fetch approved businesses (we'll filter for secret menus after parsing)
   const { data: approvedBusinesses, error } = await supabase
     .from('business_profiles')
@@ -92,6 +119,7 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
     <UserDashboardLayout 
       currentSection="secret-menu"
       walletPassId={walletPassId}
+      currentUser={currentUser}
     >
       <Suspense fallback={
         <div className="flex items-center justify-center min-h-[400px]">
