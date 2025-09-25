@@ -6,6 +6,12 @@ export async function POST(request: NextRequest) {
     
     const { userWalletPassId, currentOffer, offerDetails } = await request.json()
     
+    console.log('📥 Received data:', { 
+      userWalletPassId, 
+      currentOffer: currentOffer?.substring(0, 50) + '...', 
+      hasOfferDetails: !!offerDetails 
+    })
+    
     if (!userWalletPassId) {
       console.error('❌ Missing userWalletPassId')
       return NextResponse.json(
@@ -41,7 +47,10 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('📡 Calling WalletPush API to update pass:', userWalletPassId)
-    console.log('Update data:', updateData)
+    console.log('🔍 Template ID:', MOBILE_WALLET_TEMPLATE_ID)
+    console.log('🔍 Full Update URL:', updateUrl)
+    console.log('🔍 Update data:', updateData)
+    console.log('🔍 Auth Key (first 10 chars):', MOBILE_WALLET_APP_KEY?.substring(0, 10) + '...')
     
     const response = await fetch(updateUrl, {
       method: 'PUT',
