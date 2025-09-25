@@ -31,10 +31,12 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Update specific pass by serial number (userWalletPassId)
-    const updateUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes/${userWalletPassId}`
+    // Try the bulk update endpoint first (this might work for individual passes too)
+    const updateUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes/update`
     
     const updateData = {
+      // Specify which pass to update by serial number
+      'serial_number': userWalletPassId,
       // Update the Current_Offer field with full offer text
       'Current_Offer': currentOffer || 'No active offer',
       // Update Last_Message with rich offer details (since we can't use separate fields yet)
