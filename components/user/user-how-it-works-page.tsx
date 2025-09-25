@@ -13,7 +13,7 @@ export function UserHowItWorksPage({ walletPassId }: UserHowItWorksPageProps = {
   
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
-    if (!walletPassId || walletPassId === 'QWIK-BOURNEMOUTH-DAVID-2024') {
+    if (!walletPassId) {
       return href
     }
     return `${href}?wallet_pass_id=${walletPassId}`
@@ -242,9 +242,9 @@ export function UserHowItWorksPage({ walletPassId }: UserHowItWorksPageProps = {
         <CardContent className="relative p-12">
           <div className="text-center space-y-8">
             <div>
-              <h2 className="text-3xl font-bold text-slate-100 mb-4">Earn Rewards While You Explore</h2>
+              <h2 className="text-3xl font-bold text-slate-100 mb-4">Unlock Achievements While You Explore</h2>
               <p className="text-lg text-slate-300 max-w-2xl mx-auto">
-                The more you use Qwikker, the more you earn. Get points for trying new places, referring friends, and engaging with the community.
+                The more you use Qwikker, the more you achieve. Unlock badges for trying new places, sharing with friends, and engaging with the community.
               </p>
             </div>
 
@@ -262,8 +262,8 @@ export function UserHowItWorksPage({ walletPassId }: UserHowItWorksPageProps = {
                 <div className="text-sm text-slate-400">Live Offers</div>
               </div>
               <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 rounded-xl p-6 text-center">
-                <div className="text-3xl font-bold text-orange-400 mb-2">£20</div>
-                <div className="text-sm text-slate-400">Max Rewards</div>
+                <div className="text-3xl font-bold text-orange-400 mb-2">17</div>
+                <div className="text-sm text-slate-400">Total Badges</div>
               </div>
             </div>
           </div>

@@ -3,9 +3,16 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { mockUserProfile } from '@/lib/mock-data/user-mock-data'
+interface UserSettingsPageProps {
+  currentUser?: {
+    id: string
+    name: string
+    email: string
+    city?: string
+  }
+}
 
-export function UserSettingsPage() {
+export function UserSettingsPage({ currentUser }: UserSettingsPageProps) {
   const [notifications, setNotifications] = useState({
     geoOffers: true,
     newBusinesses: true,
@@ -25,26 +32,19 @@ export function UserSettingsPage() {
     setNotifications(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
-  const copyReferralLink = () => {
-    const referralLink = `https://bournemouth.qwikker.com/join?ref=${mockUserProfile.referralCode}`
-    navigator.clipboard.writeText(referralLink)
-    alert('Referral link copied! Share it to earn 500 points per friend.')
-  }
-
-  const shareReferralLink = () => {
-    const referralLink = `https://bournemouth.qwikker.com/join?ref=${mockUserProfile.referralCode}`
-    const text = `Hey! I've been discovering amazing local businesses with Qwikker in Bournemouth. Join me and we'll both get rewards! ${referralLink}`
+  const shareQwikker = () => {
+    const text = `Hey! I've been discovering amazing local businesses with Qwikker in Bournemouth. Check it out!`
     
     if (navigator.share) {
       navigator.share({
-        title: 'Join me on Qwikker!',
+        title: 'Check out Qwikker!',
         text: text,
-        url: referralLink
+        url: 'https://bournemouth.qwikker.com'
       })
     } else {
       // Fallback - copy to clipboard
       navigator.clipboard.writeText(text)
-      alert('Referral message copied! Paste it anywhere to share!')
+      alert('Message copied! Paste it anywhere to share!')
     }
   }
 
@@ -55,69 +55,44 @@ export function UserSettingsPage() {
         <CardHeader>
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-full flex items-center justify-center text-2xl font-bold text-black">
-              D
+              {currentUser?.name?.charAt(0).toUpperCase() || 'Q'}
             </div>
             <div>
-              <CardTitle className="text-slate-100 text-xl">{mockUserProfile.name}</CardTitle>
-              <p className="text-slate-400">{mockUserProfile.email}</p>
-              <p className="text-[#00d083] text-sm font-medium">Level {mockUserProfile.level} • {mockUserProfile.totalPoints} points</p>
+              <CardTitle className="text-slate-100 text-xl">{currentUser?.name || 'Qwikker User'}</CardTitle>
+              <p className="text-slate-400">{currentUser?.email || 'user@qwikker.com'}</p>
+              <p className="text-[#00d083] text-sm font-medium">Qwikker Member</p>
             </div>
           </div>
         </CardHeader>
       </Card>
 
-      {/* Referral Section - Highest Priority */}
-      <Card className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-500/50 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 animate-pulse"></div>
+      {/* Share Section */}
+      <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/30 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-transparent to-cyan-500/10 animate-pulse"></div>
         <CardHeader>
           <CardTitle className="text-slate-100 text-xl flex items-center gap-2">
-            Refer Friends & Earn Big
-            <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-2 py-1 rounded-full font-bold">
-              500 POINTS EACH
-            </span>
+            <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+            </svg>
+            Share Qwikker
           </CardTitle>
             <p className="text-slate-300">
-              Share Qwikker with friends and you'll both get 500 points when they join. 
-              It's the fastest way to earn credits and unlock rewards.
+              Help your friends discover amazing local businesses in Bournemouth!
             </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-600">
-            <p className="text-sm text-slate-400 mb-2">Your referral code:</p>
-            <div className="flex items-center gap-2">
-              <code className="bg-slate-700 text-[#00d083] px-3 py-2 rounded font-mono text-lg flex-1">
-                {mockUserProfile.referralCode}
-              </code>
-              <Button
-                onClick={copyReferralLink}
-                variant="outline"
-                className="border-[#00d083]/50 text-[#00d083] hover:bg-[#00d083]/10"
-              >
-                Copy Link
-              </Button>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button
-              onClick={shareReferralLink}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold"
+          <div className="flex gap-4">
+            <Button 
+              onClick={shareQwikker}
+              className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-              </svg>
-              Share with Friends
+              Share Qwikker
             </Button>
-            
-            <div className="text-center p-3 bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-lg">
-              <p className="text-green-400 font-bold text-lg">{mockUserProfile.stats.friendsReferred}</p>
-              <p className="text-slate-400 text-sm">Friends Referred</p>
-            </div>
           </div>
 
-            <div className="text-center text-sm text-slate-400">
-              <p>Pro tip: Friends who join through your link get 100 bonus points too</p>
-            </div>
+          <div className="text-center text-sm text-slate-400">
+            <p>Spread the word about great local businesses!</p>
+          </div>
         </CardContent>
       </Card>
 

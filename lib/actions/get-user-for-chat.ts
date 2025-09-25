@@ -7,7 +7,7 @@ export async function getUserForChat(walletPassId?: string) {
   
   try {
     // In production, walletPassId comes from URL param, cookie, or localStorage
-    const targetWalletPassId = walletPassId || 'QWIK-BOURNEMOUTH-DAVID-2024'
+    const targetWalletPassId = walletPassId || null
     
     const { data: user, error } = await supabase
       .from('app_users')

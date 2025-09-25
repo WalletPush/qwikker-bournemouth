@@ -108,7 +108,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       currentSection="discover"
       walletPassId={walletPassId}
     >
-      <UserDiscoverPage businesses={allBusinesses} />
+      <UserDiscoverPage businesses={allBusinesses} walletPassId={walletPassId} />
     </UserDashboardLayout>
   )
 }

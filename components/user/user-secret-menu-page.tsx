@@ -2,12 +2,14 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { mockBusinesses, enhancedSecretMenus, mockUserProfile } from '@/lib/mock-data/user-mock-data'
+import { mockBusinesses, enhancedSecretMenus } from '@/lib/mock-data/user-mock-data'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { SecretUnlockModal } from '@/components/ui/secret-unlock-modal'
 import { useElegantModal } from '@/components/ui/elegant-modal'
+import { AiCompanionCard } from '@/components/ui/ai-companion-card'
 import { useSearchParams } from 'next/navigation'
+import { getBadgeTracker } from '@/lib/utils/simple-badge-tracker'
 
 interface RealSecretMenu {
   businessId: string
@@ -41,7 +43,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
   
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
-    if (!walletPassId || walletPassId === 'QWIK-BOURNEMOUTH-DAVID-2024') {
+    if (!walletPassId) {
       return href
     }
     return `${href}?wallet_pass_id=${walletPassId}`
@@ -118,9 +120,8 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
 
   // Calculate counts including real secret menu items
   const totalSecretItems = allSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)
-  const legendaryCount = mockUserProfile.plan === 'spotlight' 
-    ? allSecretMenus.reduce((acc, menu) => acc + menu.items.filter(item => (item.rarity || 0) >= 5).length, 0) 
-    : 0
+  // For now, assume all users can see legendary items (can be updated later)
+  const legendaryCount = allSecretMenus.reduce((acc, menu) => acc + menu.items.filter(item => (item.rarity || 0) >= 5).length, 0)
 
   const filters = [
     { id: 'all', label: 'All Secrets', count: totalSecretItems },
@@ -143,7 +144,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
           <h4 class="text-slate-100 font-semibold text-sm">Badge Earned!</h4>
           <p class="text-slate-300 text-xs">${badgeName}</p>
           ${reward ? `<p class="text-[#00d083] text-xs font-medium mt-1">${reward}</p>` : ''}
-          <a href="/user/credits" class="text-[#00d083] text-xs hover:underline">View Credits →</a>
+          <a href="/user/badges" class="text-[#00d083] text-xs hover:underline">View Badges →</a>
         </div>
         <button onclick="this.parentElement.parentElement.remove()" class="text-slate-400 hover:text-slate-300">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,6 +180,10 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
       const newUnlocked = new Set([...prev, itemKey])
       if (typeof window !== 'undefined') {
         localStorage.setItem('qwikker-unlocked-secrets', JSON.stringify([...newUnlocked]))
+        
+        // Track badge progress
+        const badgeTracker = getBadgeTracker(walletPassId)
+        badgeTracker.trackAction('secret_menu_unlocked')
       }
       return newUnlocked
     })
@@ -223,15 +228,11 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
         })
       })).filter(menu => menu.items.length > 0)
     } else if (selectedFilter === 'legendary') {
-      // Only Spotlight subscribers can see legendary items
-      if (mockUserProfile.plan === 'spotlight') {
-        filtered = filtered.map(menu => ({
-          ...menu,
-          items: menu.items.filter(item => (item.rarity || 0) >= 5)
-        })).filter(menu => menu.items.length > 0)
-      } else {
-        filtered = [] // No legendary items for non-Spotlight users
-      }
+      // Show legendary items to all users (can be restricted later)
+      filtered = filtered.map(menu => ({
+        ...menu,
+        items: menu.items.filter(item => (item.rarity || 0) >= 5)
+      })).filter(menu => menu.items.length > 0)
     }
 
     return filtered
@@ -245,7 +246,8 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
     
     // Check if item requires specific badge
     const requiredBadge = item.requiredBadge // e.g., "secret_seeker", "deal_hunter"
-    const userBadges = mockUserProfile.badges.filter(b => b.unlockedDate).map(b => b.id)
+    // For now, assume no badge requirements (can be updated later with real user data)
+    const userBadges = []
     const canUnlock = !requiredBadge || userBadges.includes(requiredBadge)
     const isLocked = !canUnlock && !isUnlocked
     
@@ -280,7 +282,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
         {/* Top badges row */}
         <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-10">
           {/* Rarity Badge - Only for Spotlight subscribers */}
-          {(item.rarity || 0) >= 5 && mockUserProfile.plan === 'spotlight' && (
+          {(item.rarity || 0) >= 5 && (
             <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-2 py-1 rounded-full font-bold shadow-lg">
               LEGENDARY
             </span>
@@ -430,32 +432,53 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
 
       {/* Stats Dashboard - Dark & Mysterious */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-700/30 text-center p-4">
+        <Card 
+          className={`cursor-pointer transition-all duration-200 text-center p-4 hover:scale-105 ${
+            selectedFilter === 'all' 
+              ? 'bg-gradient-to-br from-purple-900/40 to-purple-800/40 border-purple-500/50 ring-2 ring-purple-400/30' 
+              : 'bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-700/30 hover:border-purple-600/50'
+          }`}
+          onClick={() => setSelectedFilter('all')}
+        >
           <div className="flex items-center justify-center gap-2 mb-2">
             <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
             <p className="text-2xl font-bold text-purple-400">{totalSecretItems}</p>
           </div>
-          <p className="text-sm text-slate-400">Secret Items</p>
+          <p className="text-sm text-slate-400">All Secrets</p>
         </Card>
-        <Card className="bg-gradient-to-br from-pink-900/20 to-pink-800/20 border-pink-700/30 text-center p-4">
+        <Card 
+          className={`cursor-pointer transition-all duration-200 text-center p-4 hover:scale-105 ${
+            selectedFilter === 'unlocked' 
+              ? 'bg-gradient-to-br from-pink-900/40 to-pink-800/40 border-pink-500/50 ring-2 ring-pink-400/30' 
+              : 'bg-gradient-to-br from-pink-900/20 to-pink-800/20 border-pink-700/30 hover:border-pink-600/50'
+          }`}
+          onClick={() => setSelectedFilter('unlocked')}
+        >
           <div className="flex items-center justify-center gap-2 mb-2">
             <svg className="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-3a1 1 0 011-1h2.586l6.414-6.414A6 6 0 0121 9z" />
             </svg>
             <p className="text-2xl font-bold text-pink-400">{Array.from(unlockedItems).length}</p>
           </div>
-          <p className="text-sm text-slate-400">Unlocked</p>
+          <p className="text-sm text-slate-400">My Unlocked</p>
         </Card>
-        <Card className="bg-gradient-to-br from-yellow-900/20 to-yellow-800/20 border-yellow-700/30 text-center p-4">
+        <Card 
+          className={`cursor-pointer transition-all duration-200 text-center p-4 hover:scale-105 ${
+            selectedFilter === 'legendary' 
+              ? 'bg-gradient-to-br from-yellow-900/40 to-yellow-800/40 border-yellow-500/50 ring-2 ring-yellow-400/30' 
+              : 'bg-gradient-to-br from-yellow-900/20 to-yellow-800/20 border-yellow-700/30 hover:border-yellow-600/50'
+          }`}
+          onClick={() => setSelectedFilter('legendary')}
+        >
           <div className="flex items-center justify-center gap-2 mb-2">
             <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
             </svg>
-            <p className="text-2xl font-bold text-yellow-400">{allSecretMenus.length}</p>
+            <p className="text-2xl font-bold text-yellow-400">{legendaryCount}</p>
           </div>
-          <p className="text-sm text-slate-400">Secret Venues</p>
+          <p className="text-sm text-slate-400">Legendary Items</p>
         </Card>
         <Card className="bg-gradient-to-br from-emerald-900/20 to-emerald-800/20 border-emerald-700/30 text-center p-4">
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -470,21 +493,18 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
         </Card>
       </div>
 
-      {/* Filter Tabs - Dark Theme */}
-      <div className="flex flex-wrap justify-center gap-2">
-        {filters.map((filter) => (
-          <button
-            key={filter.id}
-            onClick={() => setSelectedFilter(filter.id)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-              selectedFilter === filter.id
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-slate-100 shadow-lg'
-                : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700 border border-slate-600'
-            }`}
-          >
-            {filter.label} ({filter.count})
-          </button>
-        ))}
+      {/* AI Companion Card - Replace Category Filter */}
+      <div className="mb-4">
+        <AiCompanionCard 
+          title="Unlock Hidden Culinary Secrets"
+          description="Our AI knows every secret menu item in the city! Ask about off-menu dishes, hidden specialties, or get personalized recommendations based on your taste."
+          prompts={[
+            "What secret items does The Seaside Bistro have?",
+            "Find me hidden desserts I can unlock", 
+            "Show me legendary secret menu items"
+          ]}
+          walletPassId={walletPassId}
+        />
       </div>
 
       {/* Category Filter */}

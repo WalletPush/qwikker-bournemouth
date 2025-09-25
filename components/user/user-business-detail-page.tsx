@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { mockBusinesses, mockOffers, mockSecretMenus, mockClaimedOffers } from '@/lib/mock-data/user-mock-data'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 
@@ -17,20 +17,27 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
   
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
-    if (!walletPassId || walletPassId === 'QWIK-BOURNEMOUTH-DAVID-2024') {
+    if (!walletPassId) {
       return href
     }
     return `${href}?wallet_pass_id=${walletPassId}`
   }
   const [activeTab, setActiveTab] = useState<'overview' | 'menu' | 'offers' | 'reviews'>('overview')
-  const [claimedOffers, setClaimedOffers] = useState<Set<string>>(() => {
+  const [claimedOffers, setClaimedOffers] = useState<Set<string>>(new Set())
+  
+  // Load claimed offers after component mounts with user-specific key
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('qwikker-claimed')
-      return saved ? new Set(JSON.parse(saved)) : new Set()
+      const userId = walletPassId || 'anonymous-user'
+      const saved = localStorage.getItem(`qwikker-claimed-${userId}`)
+      if (saved) {
+        setClaimedOffers(new Set(JSON.parse(saved)))
+      } else {
+        // For development, start with mock data, but real users start fresh
+        setClaimedOffers(new Set(mockClaimedOffers.map(co => co.offerId)))
+      }
     }
-    // For development, start with mock data, but real users start fresh
-    return new Set(mockClaimedOffers.map(co => co.offerId))
-  })
+  }, [walletPassId])
   
   // Find business by slug in the combined businesses list
   const business = businesses.find(b => b.slug === slug)
@@ -51,15 +58,62 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
   }
   
   const claimOffer = (offerId: string, offerTitle: string, businessName: string) => {
+    const userId = walletPassId || 'anonymous-user'
+    
     setClaimedOffers(prev => {
       const newClaimed = new Set([...prev, offerId])
-      // Save to localStorage
+      // Save to localStorage with user-specific key (matching offers page)
       if (typeof window !== 'undefined') {
-        localStorage.setItem('qwikker-claimed', JSON.stringify([...newClaimed]))
+        localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...newClaimed]))
       }
       return newClaimed
     })
-    alert(`"${offerTitle}" claimed successfully!\n\nYou can now add it to your mobile wallet from "My Claimed" offers.`)
+    
+    // Create styled modal matching offers page
+    const modalOverlay = document.createElement('div')
+    modalOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300'
+    
+    const modal = document.createElement('div')
+    modal.className = 'bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 transform scale-95 transition-transform duration-300 shadow-2xl'
+    modal.innerHTML = `
+      <div class="text-center">
+        <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-100 mb-2">Offer Claimed!</h3>
+        <p class="text-slate-300 mb-1">"${offerTitle}" has been successfully added to your claimed offers.</p>
+        <p class="text-sm text-slate-400 mb-6">You can now add it to your mobile wallet from the "My Claimed" section.</p>
+        <button id="modal-close" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 active:scale-95">
+          Got it!
+        </button>
+      </div>
+    `
+    
+    document.body.appendChild(modalOverlay)
+    
+    // Animate in
+    requestAnimationFrame(() => {
+      modalOverlay.style.opacity = '1'
+      modal.style.transform = 'scale(1)'
+    })
+    
+    // Close handler
+    const closeModal = () => {
+      modalOverlay.style.opacity = '0'
+      modal.style.transform = 'scale(0.95)'
+      setTimeout(() => {
+        document.body.removeChild(modalOverlay)
+        // Refresh the page to show updated offer state
+        window.location.reload()
+      }, 300)
+    }
+    
+    modal.querySelector('#modal-close')?.addEventListener('click', closeModal)
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeModal()
+    })
   }
   
   if (!business) {
@@ -250,15 +304,6 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
             </p>
             
             {/* Gamification Info */}
-            <div className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 border border-purple-500/20 rounded-lg p-3 mb-4">
-              <div className="flex items-center gap-2 mb-1">
-                <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-                <span className="text-purple-300 font-medium text-sm">Earn 25 Qwikker Points when you visit!</span>
-              </div>
-              <p className="text-purple-200 text-xs">Visit this business to earn points towards badges and rewards</p>
-            </div>
             
             {business.specialties && business.specialties.length > 0 && (
               <div>
@@ -423,32 +468,44 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                             {!isClaimed ? (
                               <Button 
                                 onClick={() => claimOffer(offer.id, offer.title, business.name)}
-                                className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-slate-100 font-semibold text-sm"
+                                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold text-sm"
                               >
                                 Claim Offer
+                              </Button>
+                            ) : claimedOfferData?.status === 'redeemed' ? (
+                              <Button 
+                                disabled
+                                className="flex-1 bg-gradient-to-r from-gray-600 to-gray-700 text-gray-300 font-semibold text-sm cursor-not-allowed"
+                              >
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Already Redeemed
                               </Button>
                             ) : (
                               <Button 
                                 onClick={() => alert(`"${offer.title}" has been added to your mobile wallet!`)}
-                                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-slate-100 font-semibold text-sm"
-                                disabled={claimedOfferData?.status === 'redeemed'}
+                                className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold text-sm"
                               >
                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                 </svg>
-                                {claimedOfferData?.status === 'redeemed' ? 'Redeemed' : 
-                                 claimedOfferData?.status === 'wallet_added' ? 'In Wallet' : 'Add to Wallet'}
+                                {claimedOfferData?.status === 'wallet_added' ? 'In Wallet - Ready to Use' : 'Add to Wallet'}
                               </Button>
                             )}
-                            <Button 
-                              asChild
-                              variant="outline" 
-                              className="border-[#00d083]/50 text-[#00d083] hover:bg-[#00d083]/10 text-sm"
-                            >
-                              <Link href={`/user/chat?business=${business.name}&topic=offer&offer=${offer.title}`}>
-                                Ask AI
-                              </Link>
-                            </Button>
+                            
+                            {/* Only show Ask AI for non-redeemed offers */}
+                            {claimedOfferData?.status !== 'redeemed' && (
+                              <Button 
+                                asChild
+                                variant="outline" 
+                                className="border-[#00d083]/50 text-[#00d083] hover:bg-[#00d083]/10 text-sm"
+                              >
+                                <Link href={`/user/chat?business=${business.name}&topic=offer&offer=${offer.title}`}>
+                                  Ask About Offer
+                                </Link>
+                              </Button>
+                            )}
                           </div>
                         </div>
                       )

@@ -29,12 +29,16 @@ export async function POST(request: NextRequest) {
     const updateUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes/${userWalletPassId}`
     
     const updateData = {
-      // Update the Current_Offer field (this should match your existing template field)
+      // Update the Current_Offer field with full offer text
       'Current_Offer': currentOffer || 'No active offer',
-      // Optionally update other dynamic fields
+      // Update other dynamic fields
       ...(offerDetails && {
         'Last_Message': `New offer claimed: ${currentOffer}`,
-        // Add any other fields you want to update
+        'Offer_Description': offerDetails.description || '',
+        'Valid_Until': offerDetails.validUntil || '',
+        'Terms': offerDetails.terms || '',
+        'Business_Name': offerDetails.businessName || '',
+        'Discount_Amount': offerDetails.discount || '',
       })
     }
     

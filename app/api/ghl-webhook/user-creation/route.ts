@@ -28,10 +28,25 @@ export async function POST(request: NextRequest) {
     const first_name = customData?.first_name || rootFirstName
     const last_name = customData?.last_name || rootLastName
     const email = customData?.email || rootEmail
-    const serialNumber = customData?.serialNumber
-    const passTypeIdentifier = customData?.passTypeIdentifier
-    const url = customData?.url
-    const device = customData?.device
+    
+    // Look for wallet pass data in multiple possible locations
+    const serialNumber = customData?.serialNumber || 
+                         customData?.serial_number || 
+                         data.serialNumber || 
+                         data.serial_number ||
+                         customData?.walletpass_serial ||
+                         customData?.pass_serial
+    
+    const passTypeIdentifier = customData?.passTypeIdentifier || 
+                              customData?.pass_type_identifier ||
+                              data.passTypeIdentifier
+    
+    const url = customData?.url || 
+                customData?.pass_url || 
+                data.url ||
+                data.pass_url
+    
+    const device = customData?.device || data.device
     
     console.log('🔍 Extracted fields:', {
       first_name,
@@ -44,22 +59,41 @@ export async function POST(request: NextRequest) {
       customData
     })
     
+    // Enhanced debugging for wallet pass data
+    console.log('🔍 WALLET PASS DEBUG:', {
+      'customData keys': customData ? Object.keys(customData) : 'no customData',
+      'root data keys': Object.keys(data),
+      'serialNumber found in': serialNumber ? 'YES' : 'NO',
+      'all possible serial fields': {
+        'customData.serialNumber': customData?.serialNumber,
+        'customData.serial_number': customData?.serial_number,
+        'data.serialNumber': data.serialNumber,
+        'data.serial_number': data.serial_number,
+        'customData.walletpass_serial': customData?.walletpass_serial,
+        'customData.pass_serial': customData?.pass_serial
+      }
+    })
+    
     // Use serialNumber as wallet_pass_id
     const wallet_pass_id = serialNumber
     
-    if (!wallet_pass_id || !email) {
-      console.error('❌ Missing required fields:', { 
-        wallet_pass_id, 
-        email, 
-        serialNumber,
-        customData,
-        received_data: data,
-        all_keys: Object.keys(data)
-      })
+    if (!email) {
+      console.error('❌ Missing required email field')
       return NextResponse.json(
-        { error: 'Missing wallet_pass_id (serialNumber) or email' },
+        { error: 'Missing email field' },
         { status: 400 }
       )
+    }
+
+    // Handle case where wallet pass hasn't been created yet (webhook fired too early)
+    if (!wallet_pass_id) {
+      console.warn('⚠️ Webhook fired before wallet pass creation - redirecting to waiting page')
+      return NextResponse.json({
+        success: true,
+        message: 'User data received, waiting for wallet pass creation',
+        waiting_for_pass: true,
+        waiting_url: `https://qwikkerdashboard-theta.vercel.app/waiting-for-pass?email=${encodeURIComponent(email)}&name=${encodeURIComponent(`${first_name} ${last_name}`)}`
+      })
     }
     
     const supabase = createRouteHandlerClient({ cookies })
@@ -78,7 +112,7 @@ export async function POST(request: NextRequest) {
         message: 'User already exists',
         user_id: existingUser.id,
         wallet_pass_id: wallet_pass_id,
-        welcome_url: `https://qwikkerdashboard-theta.vercel.app/welcome?wallet_pass_id=${wallet_pass_id}&name=${encodeURIComponent(existingUser.name)}`
+        welcome_url: `https://qwikkerdashboard-theta.vercel.app/verify-pass?wallet_pass_id=${wallet_pass_id}&name=${encodeURIComponent(existingUser.name)}&email=${encodeURIComponent(existingUser.email)}`
       })
     }
     
@@ -143,7 +177,7 @@ export async function POST(request: NextRequest) {
       message: 'User created successfully',
       user_id: newUser.id,
       wallet_pass_id: wallet_pass_id,
-      welcome_url: `https://qwikkerdashboard-theta.vercel.app/welcome?wallet_pass_id=${wallet_pass_id}&name=${encodeURIComponent(newUser.name)}`,
+      welcome_url: `https://qwikkerdashboard-theta.vercel.app/verify-pass?wallet_pass_id=${wallet_pass_id}&name=${encodeURIComponent(newUser.name)}&email=${encodeURIComponent(newUser.email)}`,
       user_data: {
         name: newUser.name,
         email: newUser.email,

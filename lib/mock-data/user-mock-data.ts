@@ -117,6 +117,7 @@ export interface MockOffer {
   expiryDate: string
   isPopular: boolean
   isEndingSoon: boolean
+  claimType: 'single' | 'multiple'
   image?: string
 }
 
@@ -325,7 +326,9 @@ export const mockOffers: MockOffer[] = [
     terms: 'Valid Mon-Thu only. One per table.',
     expiryDate: '2024-12-31',
     isPopular: true,
-    isEndingSoon: false
+    isEndingSoon: false,
+    claimType: 'single',
+    isExclusive: false
   },
   {
     id: '2',
@@ -339,7 +342,9 @@ export const mockOffers: MockOffer[] = [
     terms: 'One per customer per day.',
     expiryDate: '2024-11-30',
     isPopular: false,
-    isEndingSoon: true
+    isEndingSoon: true,
+    claimType: 'multiple',
+    isExclusive: false
   },
   {
     id: '3',
@@ -353,7 +358,8 @@ export const mockOffers: MockOffer[] = [
     terms: 'Available 4-7pm weekdays only.',
     expiryDate: '2024-12-15',
     isPopular: true,
-    isEndingSoon: false
+    isEndingSoon: false,
+    claimType: 'single',
   },
   {
     id: '4',
@@ -367,7 +373,9 @@ export const mockOffers: MockOffer[] = [
     terms: 'Valid for dinner service only. One per person.',
     expiryDate: '2024-12-20',
     isPopular: true,
-    isEndingSoon: false
+    isEndingSoon: false,
+    claimType: 'single',
+    isExclusive: false
   },
   {
     id: '5',
@@ -381,7 +389,9 @@ export const mockOffers: MockOffer[] = [
     terms: 'Must be booked in advance. Same day appointments.',
     expiryDate: '2024-11-25',
     isPopular: false,
-    isEndingSoon: true
+    isEndingSoon: true,
+    claimType: 'multiple',
+    isExclusive: false
   },
   {
     id: '6',
@@ -395,7 +405,9 @@ export const mockOffers: MockOffer[] = [
     terms: 'In-store purchases only. While stocks last.',
     expiryDate: '2024-12-10',
     isPopular: false,
-    isEndingSoon: false
+    isEndingSoon: false,
+    claimType: 'multiple',
+    isExclusive: false
   },
   {
     id: '7',
@@ -409,7 +421,9 @@ export const mockOffers: MockOffer[] = [
     terms: 'Monday to Friday 4-6pm only.',
     expiryDate: '2024-12-31',
     isPopular: true,
-    isEndingSoon: false
+    isEndingSoon: false,
+    claimType: 'single',
+    isExclusive: false
   },
   {
     id: '8',
@@ -423,7 +437,9 @@ export const mockOffers: MockOffer[] = [
     terms: 'Dine-in only. Excludes vintage wines.',
     expiryDate: '2024-11-30',
     isPopular: true,
-    isEndingSoon: true
+    isEndingSoon: true,
+    claimType: 'single',
+    isExclusive: false
   }
 ]
 
@@ -661,21 +677,21 @@ export const mockBadges: Badge[] = [
     id: 'first_visit',
     name: 'First Steps',
     description: 'Made your first business visit',
-    icon: '👣',
+    icon: 'footsteps',
     rarity: 'common'
   },
   {
     id: 'chat_starter',
     name: 'Conversation Starter',
     description: 'Had your first AI chat conversation',
-    icon: '💬',
+    icon: 'chat',
     rarity: 'common'
   },
   {
     id: 'offer_collector',
     name: 'Deal Hunter',
     description: 'Claimed your first offer',
-    icon: '🎯',
+    icon: 'target',
     rarity: 'common'
   },
   
@@ -684,14 +700,14 @@ export const mockBadges: Badge[] = [
     id: 'secret_seeker',
     name: 'Secret Seeker',
     description: 'Unlocked your first secret menu item',
-    icon: '🔍',
+    icon: 'search',
     rarity: 'rare'
   },
   {
     id: 'social_butterfly',
     name: 'Social Butterfly',
     description: 'Referred 3 friends to Qwikker',
-    icon: '🦋',
+    icon: 'users',
     rarity: 'rare',
     alternateRequirement: {
       type: 'referrals',
@@ -703,7 +719,7 @@ export const mockBadges: Badge[] = [
     id: 'local_expert',
     name: 'Local Expert',
     description: 'Visited 10 different businesses',
-    icon: '🏆',
+    icon: 'trophy',
     rarity: 'rare',
     alternateRequirement: {
       type: 'visits',
@@ -715,7 +731,7 @@ export const mockBadges: Badge[] = [
     id: 'streak_master',
     name: 'Streak Master',
     description: 'Used Qwikker for 7 days straight',
-    icon: '🔥',
+    icon: 'fire',
     rarity: 'rare',
     alternateRequirement: {
       type: 'days',
@@ -729,7 +745,7 @@ export const mockBadges: Badge[] = [
     id: 'secret_master',
     name: 'Secret Menu Master',
     description: 'Unlocked 25 secret menu items',
-    icon: '🗝️',
+    icon: 'key',
     rarity: 'epic',
     alternateRequirement: {
       type: 'unlocks',
@@ -742,7 +758,7 @@ export const mockBadges: Badge[] = [
     id: 'influence_master',
     name: 'Hype Lord',
     description: 'Referred 10 friends to Qwikker',
-    icon: '📢',
+    icon: 'megaphone',
     rarity: 'epic',
     alternateRequirement: {
       type: 'referrals',
@@ -764,7 +780,7 @@ export const mockBadges: Badge[] = [
     id: 'points_collector',
     name: 'Point Collector',
     description: 'Earned 5,000 total points',
-    icon: '💎',
+    icon: 'gem',
     rarity: 'epic',
     pointsRequired: 5000,
     reward: {
@@ -784,7 +800,7 @@ export const mockBadges: Badge[] = [
     id: 'bournemouth_legend',
     name: 'Bournemouth Legend',
     description: 'Ultimate Bournemouth mastery - complete all achievements',
-    icon: '👑',
+    icon: 'crown',
     rarity: 'legendary',
     pointsRequired: 15000,
     reward: {
@@ -802,7 +818,7 @@ export const mockBadges: Badge[] = [
     id: 'founding_member',
     name: 'Founding Member',
     description: 'One of the first 100 Qwikker users',
-    icon: '⭐',
+    icon: 'star',
     rarity: 'legendary',
     pointsRequired: 8000,
     reward: {
@@ -935,41 +951,8 @@ export const mockPointsHistory: PointsTransaction[] = [
   }
 ]
 
-// Points Earning Rules (Anti-Abuse System)
-export const pointsEarningRules = {
-  friend_referral: { points: 500, description: 'Friend joins Qwikker using your referral link' },
-  offer_redeem: { points: 50, description: 'Actually redeem an offer at a business (verified by staff)' },
-  business_visit: { points: 25, description: 'Visit a business (simplified validation coming soon)' },
-  review_write: { points: 20, description: 'Write a review after business visit' },
-  social_share: { points: 10, description: 'Share a business or offer on social media' }
-}
-
-// Level System Definition
-export const levelSystem = {
-  levels: [
-    { level: 1, pointsRequired: 0, tier: 'explorer', title: 'Qwikker Explorer', benefits: ['Access to basic features', 'Earn points for activities'] },
-    { level: 2, pointsRequired: 250, tier: 'explorer', title: 'Local Explorer', benefits: ['Unlock secret menu hints', 'Basic badge rewards'] },
-    { level: 3, pointsRequired: 750, tier: 'insider', title: 'Qwikker Insider', benefits: ['Enhanced AI recommendations', 'Priority support'] },
-    { level: 4, pointsRequired: 2000, tier: 'insider', title: 'Bournemouth Insider', benefits: ['Exclusive offers', 'Early access to new features'] },
-    { level: 5, pointsRequired: 4000, tier: 'legend', title: 'Local Legend', benefits: ['VIP treatment at partners', 'Custom recommendations'] },
-    { level: 6, pointsRequired: 8000, tier: 'legend', title: 'Qwikker Legend', benefits: ['Ultimate rewards', 'Influence on new features'] }
-  ],
-  
-  // Calculate level from points
-  getLevelFromPoints: (points: number) => {
-    for (let i = levelSystem.levels.length - 1; i >= 0; i--) {
-      if (points >= levelSystem.levels[i].pointsRequired) {
-        return levelSystem.levels[i]
-      }
-    }
-    return levelSystem.levels[0]
-  },
-  
-  // Get next level info
-  getNextLevel: (currentLevel: number) => {
-    return levelSystem.levels.find(l => l.level === currentLevel + 1) || null
-  }
-}
+// REMOVED: Complex points, levels, and cash rewards system
+// Now using simple visual-only badge system for engagement
 
 // Enhanced Secret Menu Items
 export const enhancedSecretMenus: MockSecretMenu[] = [

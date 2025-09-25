@@ -11,7 +11,7 @@ export default async function ChatPage({
   
   // Get current user for personalized chat
   let currentUser = null
-  let userId = params.wallet_pass_id || 'QWIK-BOURNEMOUTH-DAVID-2024'
+  let userId = params.wallet_pass_id || null
   
   try {
     const { data: user } = await supabase
