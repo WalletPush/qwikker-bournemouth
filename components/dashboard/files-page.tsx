@@ -10,9 +10,10 @@ import { uploadToCloudinary } from '@/lib/integrations'
 
 interface FilesPageProps {
   profile?: any
+  hideOfferImage?: boolean
 }
 
-export function FilesPage({ profile }: FilesPageProps) {
+export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
   const router = useRouter()
   const [uploading, setUploading] = useState<string | null>(null)
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -294,76 +295,78 @@ export function FilesPage({ profile }: FilesPageProps) {
         </CardContent>
       </Card>
 
-      {/* Offer Images */}
-      <Card className="bg-slate-800/50 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-            </svg>
-            Offer Images
-            <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full">MEDIUM PRIORITY</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {profile?.offer_image ? (
-              <div className="flex items-center gap-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-                <div className="w-16 h-16 bg-slate-600 rounded-lg flex items-center justify-center overflow-hidden">
-                  <img src={profile.offer_image} alt="Offer Image" className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-white font-medium">Offer Image Uploaded</p>
+      {/* Offer Images - Hidden in Profile page */}
+      {!hideOfferImage && (
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              Offer Images
+              <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full">MEDIUM PRIORITY</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {profile?.offer_image ? (
+                <div className="flex items-center gap-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                  <div className="w-16 h-16 bg-slate-600 rounded-lg flex items-center justify-center overflow-hidden">
+                    <img src={profile.offer_image} alt="Offer Image" className="w-full h-full object-cover" />
                   </div>
-                  <p className="text-green-400 text-sm">MEDIUM PRIORITY COMPLETE</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      <p className="text-white font-medium">Offer Image Uploaded</p>
+                    </div>
+                    <p className="text-green-400 text-sm">MEDIUM PRIORITY COMPLETE</p>
+                  </div>
+                  <LoadingButton 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => triggerFileInput('offerUpload')}
+                    loading={uploading === 'offer'}
+                    loadingText="Uploading..."
+                    className="border-slate-600 text-gray-300 hover:bg-slate-700"
+                  >
+                    Replace
+                  </LoadingButton>
                 </div>
-                <LoadingButton 
-                  variant="outline" 
-                  size="sm"
+              ) : (
+                <div 
+                  className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-[#00d083] transition-colors"
                   onClick={() => triggerFileInput('offerUpload')}
-                  loading={uploading === 'offer'}
-                  loadingText="Uploading..."
-                  className="border-slate-600 text-gray-300 hover:bg-slate-700"
                 >
-                  Replace
-                </LoadingButton>
-              </div>
-            ) : (
-              <div 
-                className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-[#00d083] transition-colors"
-                onClick={() => triggerFileInput('offerUpload')}
-              >
-                <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
+                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-white mb-2">Upload Offer Images</h3>
+                  <p className="text-gray-400 text-sm mb-4">
+                    Upload images for your special offers and promotions.
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    PNG, JPG, WEBP up to 10MB
+                  </p>
                 </div>
-                <h3 className="text-lg font-medium text-white mb-2">Upload Offer Images</h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Upload images for your special offers and promotions.
-                </p>
-                <p className="text-xs text-gray-500">
-                  PNG, JPG, WEBP up to 10MB
-                </p>
-              </div>
-            )}
-            <input
-              id="offerUpload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) handleFileUpload(file, 'offer')
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+              )}
+              <input
+                id="offerUpload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleFileUpload(file, 'offer')
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Business Photos */}
       <Card id="business-images" className="bg-slate-800/50 border-slate-700">

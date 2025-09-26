@@ -1,148 +1,19 @@
 {
   "node": {
-    "0080b636c7474f7ab63382e1606b7de6f7e2655ea4": {
+    "78452510849cf7d79e703b4c40de18223efd368936": {
       "workers": {
-        "app/user/chat/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/chat/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+        "app/onboarding/page": {
+          "moduleId": "[project]/.next-internal/server/app/onboarding/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/signup-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "getAppUsers",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
-        "app/user/discover/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/discover/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getAppUsers",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
-        "app/user/how-it-works/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/how-it-works/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getAppUsers",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
-        "app/user/secret-menu/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/secret-menu/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getAppUsers",
-          "filename": "lib/actions/user-member-actions.ts"
+          "exportedName": "createUserAndProfile",
+          "filename": "lib/actions/signup-actions.ts"
         }
       },
       "layer": {
-        "app/user/chat/page": "rsc",
-        "app/user/discover/page": "rsc",
-        "app/user/how-it-works/page": "rsc",
-        "app/user/secret-menu/page": "rsc"
+        "app/onboarding/page": "action-browser"
       },
-      "filename": "lib/actions/user-member-actions.ts",
-      "exportedName": "getAppUsers"
-    },
-    "008a7b655ae35a828405acde533174e2679bfe032d": {
-      "workers": {
-        "app/user/chat/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/chat/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getCurrentAppUser",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
-        "app/user/discover/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/discover/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getCurrentAppUser",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
-        "app/user/how-it-works/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/how-it-works/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getCurrentAppUser",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
-        "app/user/secret-menu/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/secret-menu/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getCurrentAppUser",
-          "filename": "lib/actions/user-member-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/chat/page": "rsc",
-        "app/user/discover/page": "rsc",
-        "app/user/how-it-works/page": "rsc",
-        "app/user/secret-menu/page": "rsc"
-      },
-      "filename": "lib/actions/user-member-actions.ts",
-      "exportedName": "getCurrentAppUser"
-    },
-    "00e6086aee6ffcc4e04c00f1761fd5dd8d6a3768a1": {
-      "workers": {
-        "app/user/chat/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/chat/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getWalletPassCookie",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
-        "app/user/discover/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/discover/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getWalletPassCookie",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
-        "app/user/how-it-works/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/how-it-works/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getWalletPassCookie",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
-        "app/user/secret-menu/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/secret-menu/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getWalletPassCookie",
-          "filename": "lib/actions/user-member-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/chat/page": "rsc",
-        "app/user/discover/page": "rsc",
-        "app/user/how-it-works/page": "rsc",
-        "app/user/secret-menu/page": "rsc"
-      },
-      "filename": "lib/actions/user-member-actions.ts",
-      "exportedName": "getWalletPassCookie"
-    },
-    "40045bc258e7947f715690703fb61aa959f880cb7a": {
-      "workers": {
-        "app/user/chat/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/chat/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "setWalletPassCookie",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
-        "app/user/discover/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/discover/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "setWalletPassCookie",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
-        "app/user/how-it-works/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/how-it-works/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "setWalletPassCookie",
-          "filename": "lib/actions/user-member-actions.ts"
-        },
-        "app/user/secret-menu/page": {
-          "moduleId": "[project]/.next-internal/server/app/user/secret-menu/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-member-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "setWalletPassCookie",
-          "filename": "lib/actions/user-member-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/chat/page": "rsc",
-        "app/user/discover/page": "rsc",
-        "app/user/how-it-works/page": "rsc",
-        "app/user/secret-menu/page": "rsc"
-      },
-      "filename": "lib/actions/user-member-actions.ts",
-      "exportedName": "setWalletPassCookie"
+      "filename": "lib/actions/signup-actions.ts",
+      "exportedName": "createUserAndProfile"
     },
     "4033ff1aa12a35eda115c10b91d56465c8c8198314": {
       "workers": {
@@ -203,133 +74,6 @@
       "filename": "lib/actions/pending-changes.ts",
       "exportedName": "getPendingChanges"
     },
-    "608f14038cbf9f02a534fc7bd623fcd1d0405e7e30": {
-      "workers": {
-        "app/dashboard/business/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/business/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "updateBusinessInfo",
-          "filename": "lib/actions/business-actions.ts"
-        },
-        "app/dashboard/personal/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/personal/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "updateBusinessInfo",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/business/page": "action-browser",
-        "app/dashboard/personal/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "updateBusinessInfo"
-    },
-    "608abd3a6cf51778c3621c270f79cb202a8ed2ce08": {
-      "workers": {
-        "app/dashboard/offers/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/offers/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "createOffer",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "createOffer"
-    },
-    "4076907f021baca31ce253ba9c9f683397ff01fa9d": {
-      "workers": {
-        "app/dashboard/offers/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/offers/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "deleteOffer",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "deleteOffer"
-    },
-    "605f08aa1c9498ab0c1a4221951c17d5a3c3ec6ab4": {
-      "workers": {
-        "app/dashboard/secret-menu/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/secret-menu/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "addSecretMenuItem",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/secret-menu/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "addSecretMenuItem"
-    },
-    "602b82efc160360f28e6d8e4ddbfd881496d6d5666": {
-      "workers": {
-        "app/dashboard/secret-menu/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/secret-menu/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "deleteSecretMenuItem",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/secret-menu/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "deleteSecretMenuItem"
-    },
-    "40279635ee4b5ba66b1972d3c53898476d97f7561e": {
-      "workers": {
-        "app/dashboard/referrals/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/referrals/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/generate-referral-code.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/referral-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "generateReferralCodeForUser",
-          "filename": "lib/actions/generate-referral-code.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/referrals/page": "action-browser"
-      },
-      "filename": "lib/actions/generate-referral-code.ts",
-      "exportedName": "generateReferralCodeForUser"
-    },
-    "40c4fda7552b1695b8af5b82baae3171c0c3f641d9": {
-      "workers": {
-        "app/dashboard/referrals/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/referrals/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/generate-referral-code.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/referral-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getUserReferrals",
-          "filename": "lib/actions/referral-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/referrals/page": "action-browser"
-      },
-      "filename": "lib/actions/referral-actions.ts",
-      "exportedName": "getUserReferrals"
-    },
-    "70e86543cd52e449341483c85d97d7fc3b6da9dc1d": {
-      "workers": {
-        "app/dashboard/files/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "updateProfileFile",
-          "filename": "lib/actions/file-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/files/page": "action-browser"
-      },
-      "filename": "lib/actions/file-actions.ts",
-      "exportedName": "updateProfileFile"
-    },
     "4025436ee7a0be52934d6ce784c105a614d027beaf": {
       "workers": {
         "app/admin/page": {
@@ -374,6 +118,36 @@
       },
       "filename": "lib/actions/admin-crm-actions.ts",
       "exportedName": "recordPayment"
+    },
+    "608f14038cbf9f02a534fc7bd623fcd1d0405e7e30": {
+      "workers": {
+        "app/dashboard/profile/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/profile/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "updateBusinessInfo",
+          "filename": "lib/actions/business-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/profile/page": "action-browser"
+      },
+      "filename": "lib/actions/business-actions.ts",
+      "exportedName": "updateBusinessInfo"
+    },
+    "70e86543cd52e449341483c85d97d7fc3b6da9dc1d": {
+      "workers": {
+        "app/dashboard/profile/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/profile/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "updateProfileFile",
+          "filename": "lib/actions/file-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/profile/page": "action-browser"
+      },
+      "filename": "lib/actions/file-actions.ts",
+      "exportedName": "updateProfileFile"
     }
   },
   "edge": {},

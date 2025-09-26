@@ -101,12 +101,36 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   }, [profile?.user_id, profile?.status])
 
   const handleSubmitForReview = async () => {
-    if (!profile?.user_id || isSubmitting) return
+    console.log('handleSubmitForReview called', { 
+      hasUserId: !!profile?.user_id, 
+      isSubmitting, 
+      userId: profile?.user_id,
+      status: profile?.status
+    })
     
+    if (!profile?.user_id) {
+      console.error('NO USER ID!')
+      alert('Error: No user ID found!')
+      return
+    }
+    
+    if (isSubmitting) {
+      console.log('Already submitting, ignoring click')
+      return
+    }
+    
+    console.log('Setting isSubmitting to true...')
     setIsSubmitting(true)
+    
     try {
+      console.log('Calling submitBusinessForReview...')
       const result = await submitBusinessForReview(profile.user_id)
+      console.log('Submission result:', result)
+      
       if (result.success) {
+        console.log('SUCCESS! Showing success modal...')
+        
+        // Show beautiful success modal
         setSuccessModal({
           isOpen: true,
           title: 'Successfully Submitted!',
@@ -114,10 +138,16 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
           buttonText: 'Continue',
           onButtonClick: () => {
             setSuccessModal({ isOpen: false, title: '', message: '' })
-            window.location.reload()
+            // Use a slight delay to avoid React lifecycle conflicts
+            setTimeout(() => {
+              window.location.href = window.location.href
+            }, 100)
           }
         })
+        
+        console.log('Business should now be in admin "Pending Reviews" with status: pending_review')
       } else {
+        console.error('Submission failed:', result.error)
         setErrorModal({
           isOpen: true,
           title: 'Submission Failed',
@@ -132,6 +162,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
         message: 'Failed to submit for review. Please try again.'
       })
     } finally {
+      console.log('Submission finished, setting isSubmitting to false')
       setIsSubmitting(false)
     }
   }
@@ -583,13 +614,31 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
                   <p className="text-xs text-gray-400">
                     {businessName} • {profile?.business_type || 'Business'} • {profile?.business_town || 'Location'}
                   </p>
+                  {/* DEBUG INFO */}
+                <p className="text-xs text-red-400">
+                  DEBUG: Status={currentStatus}, Ready={isReadyForReview ? 'YES' : 'NO'}, RequiredItems={requiredTodos.length}, RecommendedItems={optionalTodos.length}
+                  <br />Profile Status: {profile?.status} | User ID: {profile?.user_id?.slice(-8)}
+                </p>
                 </div>
                 
-                {isReadyForReview && currentStatus === 'incomplete' ? (
+                {requiredTodos.length === 0 && currentStatus === 'incomplete' ? (
                   <Button 
-                    onClick={handleSubmitForReview}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      console.log('BUTTON CLICKED!', { 
+                        isSubmitting, 
+                        userId: profile?.user_id,
+                        status: profile?.status,
+                        requiredTodos: requiredTodos.length
+                      })
+                      handleSubmitForReview()
+                    }}
                     disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
+                    className={`w-full transition-all duration-200 ${
+                      isSubmitting 
+                        ? 'bg-gray-600 cursor-not-allowed' 
+                        : 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c]'
+                    } text-white`}
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit for Review'}
                   </Button>
@@ -603,42 +652,6 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
           </Card>
         )}
 
-        {/* Profile Complete - Ready to Submit Banner */}
-        {isReadyForReview && currentStatus === 'incomplete' && (
-          <Card className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500/30 h-80 flex flex-col overflow-hidden">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Profile Complete!
-                <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">100%</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col justify-center text-center">
-              <div className="space-y-4">
-                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
-                  <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white mb-2">Ready to Submit!</h3>
-                  <p className="text-green-100 text-sm leading-relaxed mb-6">
-                    Congratulations! You've completed all required fields. Your business profile is ready for admin review.
-                  </p>
-                </div>
-                <Button 
-                  onClick={handleSubmitForReview}
-                  disabled={isSubmitting}
-                  className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold py-3 px-8"
-                >
-                  {isSubmitting ? 'Submitting...' : 'Submit for Review'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* To-Do Notifications Card */}
         {todoItems.length > 0 ? (
@@ -768,7 +781,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
             <div className="text-center">
               <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
                 <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 616 0z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                 </svg>
               </div>
               <p className="font-semibold text-white mb-2">Unlock Analytics</p>
