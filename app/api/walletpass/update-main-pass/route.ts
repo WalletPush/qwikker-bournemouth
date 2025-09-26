@@ -46,7 +46,8 @@ export async function POST(request: NextRequest) {
           
           const updateData = {
             // WalletPush expects these fields
-            'Serial Number': userWalletPassId,
+            'contact_id': userWalletPassId, // This is what WalletPush is looking for
+            'Serial Number': userWalletPassId, // Keep this too just in case
             'Current_Offer': currentOffer || 'No active offer',
             'Last_Message': offerDetails ? 
               `${currentOffer} | Valid: ${offerDetails.validUntil ? new Date(offerDetails.validUntil).toLocaleDateString('en-GB') : 'No expiry'} | ${offerDetails.businessName || 'Qwikker Partner'}` :
