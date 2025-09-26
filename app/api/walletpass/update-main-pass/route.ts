@@ -31,15 +31,52 @@ export async function POST(request: NextRequest) {
       )
     }
     
-          // Submit to the "Redeem Offers" form via WalletPush webhook
-          const updateUrl = `https://app.walletpush.io/api/webhook/6949cdc9-dcb2-4b0b-94c9-d2c69b0cb9e0`
+          // Update HighLevel contact to trigger workflow
+          const GHL_API_KEY = process.env.GHL_API_KEY
+          if (!GHL_API_KEY) {
+            console.error('❌ Missing GHL_API_KEY environment variable')
+            return NextResponse.json(
+              { error: 'Missing HighLevel API key' },
+              { status: 500 }
+            )
+          }
+
+          // First, find the contact by email or serial number
+          const email = offerDetails?.email || `user-${userWalletPassId}@qwikker.com`
+          const contactSearchUrl = `https://services.leadconnectorhq.com/contacts/search?email=${encodeURIComponent(email)}`
           
+          const searchResponse = await fetch(contactSearchUrl, {
+            headers: {
+              'Authorization': `Bearer ${GHL_API_KEY}`,
+              'Content-Type': 'application/json'
+            }
+          })
+          
+          if (!searchResponse.ok) {
+            console.error('❌ Failed to find contact:', searchResponse.status)
+            return NextResponse.json(
+              { error: 'Failed to find contact in HighLevel' },
+              { status: 500 }
+            )
+          }
+          
+          const searchData = await searchResponse.json()
+          const contact = searchData.contacts?.[0]
+          
+          if (!contact) {
+            console.error('❌ No contact found with email:', email)
+            return NextResponse.json(
+              { error: 'Contact not found' },
+              { status: 404 }
+            )
+          }
+          
+          // Update the contact's Current_Offer field
+          const updateUrl = `https://services.leadconnectorhq.com/contacts/${contact.id}`
           const updateData = {
-            // Form fields that match the "Redeem Offers" form
-            'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
-            'last_amount_spent': '0', // Set to 0 for offer claims
-            'serialNumber': userWalletPassId,
-            'Current_Offer': currentOffer || 'No active offer'
+            customFields: {
+              'Current_Offer': currentOffer || 'No active offer'
+            }
           }
     
     console.log('📡 Calling WalletPush API to update pass:', userWalletPassId)
@@ -49,8 +86,9 @@ export async function POST(request: NextRequest) {
     console.log('🔍 Auth Key (first 10 chars):', MOBILE_WALLET_APP_KEY?.substring(0, 10) + '...')
     
     const response = await fetch(updateUrl, {
-      method: 'POST', // Webhook expects POST
+      method: 'PUT', // HighLevel API uses PUT for updates
       headers: {
+        'Authorization': `Bearer ${GHL_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(updateData)
@@ -66,15 +104,16 @@ export async function POST(request: NextRequest) {
     }
     
     const result = await response.json()
-    console.log('✅ Successfully updated main wallet pass')
-    console.log('🔍 WalletPush response:', JSON.stringify(result, null, 2))
+    console.log('✅ Successfully updated HighLevel contact - workflow should trigger')
+    console.log('🔍 Contact update response:', JSON.stringify(result, null, 2))
     
     return NextResponse.json({
       success: true,
-      message: 'Main wallet pass updated successfully',
+      message: 'HighLevel contact updated successfully - wallet pass should update automatically',
       userWalletPassId,
       currentOffer,
-      walletPushResponse: result
+      contactId: contact.id,
+      highLevelResponse: result
     })
     
   } catch (error) {
