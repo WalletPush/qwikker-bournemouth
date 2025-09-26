@@ -31,67 +31,27 @@ export async function POST(request: NextRequest) {
       )
     }
     
-          // Update HighLevel contact to trigger workflow
-          const GHL_API_KEY = process.env.GHL_API_KEY
-          if (!GHL_API_KEY) {
-            console.error('❌ Missing GHL_API_KEY environment variable')
-            return NextResponse.json(
-              { error: 'Missing HighLevel API key' },
-              { status: 500 }
-            )
-          }
-
-          // First, find the contact by email or serial number
-          const email = offerDetails?.email || `user-${userWalletPassId}@qwikker.com`
-          const contactSearchUrl = `https://services.leadconnectorhq.com/contacts/search?email=${encodeURIComponent(email)}`
+          // Submit to your existing redemption form
+          const updateUrl = `https://bournemouth.qwikker.com/offer-redemption`
           
-          const searchResponse = await fetch(contactSearchUrl, {
-            headers: {
-              'Authorization': `Bearer ${GHL_API_KEY}`,
-              'Content-Type': 'application/json'
-            }
+          const formData = new URLSearchParams({
+            'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
+            'amount_spent': '0', // Set to 0 for offer claims
+            'user_id': userWalletPassId,
+            'offer': currentOffer || 'No active offer'
           })
-          
-          if (!searchResponse.ok) {
-            console.error('❌ Failed to find contact:', searchResponse.status)
-            return NextResponse.json(
-              { error: 'Failed to find contact in HighLevel' },
-              { status: 500 }
-            )
-          }
-          
-          const searchData = await searchResponse.json()
-          const contact = searchData.contacts?.[0]
-          
-          if (!contact) {
-            console.error('❌ No contact found with email:', email)
-            return NextResponse.json(
-              { error: 'Contact not found' },
-              { status: 404 }
-            )
-          }
-          
-          // Update the contact's Current_Offer field
-          const updateUrl = `https://services.leadconnectorhq.com/contacts/${contact.id}`
-          const updateData = {
-            customFields: {
-              'Current_Offer': currentOffer || 'No active offer'
-            }
-          }
     
-    console.log('📡 Calling WalletPush API to update pass:', userWalletPassId)
-    console.log('🔍 Template ID:', MOBILE_WALLET_TEMPLATE_ID)
-    console.log('🔍 Full Update URL:', updateUrl)
-    console.log('🔍 Update data:', updateData)
+    console.log('📡 Submitting to redemption form:', userWalletPassId)
+    console.log('🔍 Form URL:', updateUrl)
+    console.log('🔍 Form data:', formData.toString())
     console.log('🔍 Auth Key (first 10 chars):', MOBILE_WALLET_APP_KEY?.substring(0, 10) + '...')
     
     const response = await fetch(updateUrl, {
-      method: 'PUT', // HighLevel API uses PUT for updates
+      method: 'POST', // Form submissions use POST
       headers: {
-        'Authorization': `Bearer ${GHL_API_KEY}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify(updateData)
+      body: formData.toString()
     })
     
     if (!response.ok) {
@@ -103,17 +63,16 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const result = await response.json()
-    console.log('✅ Successfully updated HighLevel contact - workflow should trigger')
-    console.log('🔍 Contact update response:', JSON.stringify(result, null, 2))
+    const result = await response.text() // Forms might return HTML
+    console.log('✅ Successfully submitted to redemption form')
+    console.log('🔍 Form response:', result.substring(0, 200) + '...')
     
     return NextResponse.json({
       success: true,
-      message: 'HighLevel contact updated successfully - wallet pass should update automatically',
+      message: 'Redemption form submitted successfully - wallet pass should update',
       userWalletPassId,
       currentOffer,
-      contactId: contact.id,
-      highLevelResponse: result
+      formResponse: result.substring(0, 200) + '...'
     })
     
   } catch (error) {
