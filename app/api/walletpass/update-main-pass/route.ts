@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
             'offer': currentOffer || 'No active offer'
           })
     
-    console.log('📡 Submitting to redemption form:', userWalletPassId)
+    console.log('📡 Submitting to redemption form (LATEST VERSION):', userWalletPassId)
     console.log('🔍 Form URL:', updateUrl)
     console.log('🔍 Form data:', formData.toString())
     console.log('🔍 Auth Key (first 10 chars):', MOBILE_WALLET_APP_KEY?.substring(0, 10) + '...')
