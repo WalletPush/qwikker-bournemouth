@@ -31,19 +31,29 @@ export async function POST(request: NextRequest) {
       )
     }
     
-          // Submit to the HighLevel "Redeem Offers" form to trigger workflow
-          const updateUrl = `https://services.leadconnectorhq.com/hooks/IkBldqzvQG4XkoSxkCq8/webhook-trigger/c3504fb3-adf2-4c00-8411-48798eb8d689`
+          // Call WalletPush API directly to update the pass
+          const WALLETPUSH_HL_ENDPOINT = process.env.WALLETPUSH_HL_ENDPOINT
+          
+          if (!WALLETPUSH_HL_ENDPOINT) {
+            console.error('❌ Missing WALLETPUSH_HL_ENDPOINT environment variable')
+            return NextResponse.json(
+              { error: 'Missing WalletPush HL endpoint configuration' },
+              { status: 500 }
+            )
+          }
+          
+          const updateUrl = WALLETPUSH_HL_ENDPOINT
           
           const updateData = {
-            // Match the exact form fields from the "Redeem Offers" form
-            'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
-            'last_amount_spent': '0', // Set to 0 for offer claims, or actual amount for redemptions
-            // Additional data for the workflow
-            'serialNumber': userWalletPassId,
+            // WalletPush expects these fields
+            'Serial Number': userWalletPassId,
             'Current_Offer': currentOffer || 'No active offer',
             'Last_Message': offerDetails ? 
               `${currentOffer} | Valid: ${offerDetails.validUntil ? new Date(offerDetails.validUntil).toLocaleDateString('en-GB') : 'No expiry'} | ${offerDetails.businessName || 'Qwikker Partner'}` :
-              `Latest offer: ${currentOffer}`
+              `Latest offer: ${currentOffer}`,
+            // Additional fields that might be useful
+            'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
+            'action': 'update_offer'
           }
     
     console.log('📡 Calling WalletPush API to update pass:', userWalletPassId)
