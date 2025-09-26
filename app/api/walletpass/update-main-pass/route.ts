@@ -31,30 +31,17 @@ export async function POST(request: NextRequest) {
       )
     }
     
-          // Call WalletPush API directly to update the pass
-          const WALLETPUSH_HL_ENDPOINT = process.env.WALLETPUSH_HL_ENDPOINT
-          
-          if (!WALLETPUSH_HL_ENDPOINT) {
-            console.error('❌ Missing WALLETPUSH_HL_ENDPOINT environment variable')
-            return NextResponse.json(
-              { error: 'Missing WalletPush HL endpoint configuration' },
-              { status: 500 }
-            )
-          }
-          
-          const updateUrl = WALLETPUSH_HL_ENDPOINT
+          // Use direct WalletPush API to update the pass
+          const updateUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes/${userWalletPassId}`
           
           const updateData = {
-            // WalletPush expects these fields
-            'contact_id': userWalletPassId, // This is what WalletPush is looking for
-            'Serial Number': userWalletPassId, // Keep this too just in case
+            // Direct WalletPush API fields
             'Current_Offer': currentOffer || 'No active offer',
             'Last_Message': offerDetails ? 
               `${currentOffer} | Valid: ${offerDetails.validUntil ? new Date(offerDetails.validUntil).toLocaleDateString('en-GB') : 'No expiry'} | ${offerDetails.businessName || 'Qwikker Partner'}` :
               `Latest offer: ${currentOffer}`,
-            // Additional fields that might be useful
-            'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
-            'action': 'update_offer'
+            'barcode_message': `QWIKKER-USER-${userWalletPassId}-OFFER-${Date.now()}`,
+            'barcode_format': 'PKBarcodeFormatQR'
           }
     
     console.log('📡 Calling WalletPush API to update pass:', userWalletPassId)
@@ -64,9 +51,9 @@ export async function POST(request: NextRequest) {
     console.log('🔍 Auth Key (first 10 chars):', MOBILE_WALLET_APP_KEY?.substring(0, 10) + '...')
     
     const response = await fetch(updateUrl, {
-      method: 'POST',
+      method: 'PUT', // WalletPush API uses PUT for updates
       headers: {
-        'Authorization': MOBILE_WALLET_APP_KEY,
+        'Authorization': `Bearer ${MOBILE_WALLET_APP_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(updateData)
