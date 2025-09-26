@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
+import { getAdminActivity, AdminActivity } from '@/lib/actions/admin-activity-actions'
 
 interface DashboardOverviewProps {
   city: string
@@ -21,6 +22,8 @@ export function AdminDashboardOverview({
   onNavigateToTab 
 }: DashboardOverviewProps) {
   const [currentTime, setCurrentTime] = useState<string>('')
+  const [recentActivity, setRecentActivity] = useState<AdminActivity[]>([])
+  const [isLoadingActivity, setIsLoadingActivity] = useState(true)
 
   useEffect(() => {
     const updateTime = () => {
@@ -128,63 +131,27 @@ export function AdminDashboardOverview({
     }
   ]
 
-  const recentActivity = [
-    {
-      type: 'application',
-      message: "New application from The Crown Inn",
-      time: '2 hours ago',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-      ),
-      color: 'bg-green-500'
-    },
-    {
-      type: 'update',
-      message: "Julie's Sports Bar updated business hours",
-      time: '4 hours ago',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      ),
-      color: 'bg-blue-500'
-    },
-    {
-      type: 'sync',
-      message: '3 businesses synced with GoHighLevel',
-      time: '6 hours ago',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-      ),
-      color: 'bg-purple-500'
-    },
-    {
-      type: 'trial',
-      message: 'Pizza Palace trial expires in 2 days',
-      time: '8 hours ago',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      color: 'bg-orange-500'
-    },
-    {
-      type: 'approval',
-      message: 'Approved: Cafe Central application',
-      time: '1 day ago',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      color: 'bg-green-500'
+  // Load real activity data
+  useEffect(() => {
+    async function loadActivity() {
+      setIsLoadingActivity(true)
+      try {
+        const activities = await getAdminActivity(5)
+        setRecentActivity(activities)
+      } catch (error) {
+        console.error('Error loading admin activity:', error)
+        setRecentActivity([])
+      } finally {
+        setIsLoadingActivity(false)
+      }
     }
-  ]
+    
+    loadActivity()
+    
+    // Refresh activity every 30 seconds
+    const interval = setInterval(loadActivity, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -305,19 +272,83 @@ export function AdminDashboardOverview({
         </h2>
         <Card className="p-4 sm:p-6 bg-slate-800/50 border border-slate-700/50">
           <div className="space-y-4">
-            {recentActivity.map((activity, index) => (
-              <div key={index} className="flex items-start gap-4 p-3 rounded-lg hover:bg-slate-700/30 transition-colors">
-                <div className={`w-8 h-8 ${activity.color} rounded-full flex items-center justify-center flex-shrink-0`}>
-                  <div className="text-white">
-                    {activity.icon}
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium">{activity.message}</p>
-                  <p className="text-sm text-slate-400">{activity.time}</p>
+            {isLoadingActivity ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center gap-3 text-slate-400">
+                  <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Loading recent activity...
                 </div>
               </div>
-            ))}
+            ) : recentActivity.length > 0 ? (
+              recentActivity.map((activity, index) => {
+                const getIcon = (iconType: string) => {
+                  switch (iconType) {
+                    case 'plus':
+                      return (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                      )
+                    case 'check':
+                      return (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )
+                    case 'x':
+                      return (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      )
+                    case 'edit':
+                      return (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      )
+                    case 'clock':
+                      return (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )
+                    default:
+                      return (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )
+                  }
+                }
+
+                return (
+                  <div key={activity.id || index} className="flex items-start gap-4 p-3 rounded-lg hover:bg-slate-700/30 transition-colors">
+                    <div className={`w-8 h-8 ${activity.color} rounded-full flex items-center justify-center flex-shrink-0`}>
+                      <div className="text-white">
+                        {getIcon(activity.iconType)}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium">{activity.message}</p>
+                      <p className="text-sm text-slate-400">{activity.time}</p>
+                    </div>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <svg className="w-12 h-12 text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-slate-400 text-sm">No recent activity</p>
+                  <p className="text-slate-500 text-xs mt-1">New business applications and updates will appear here</p>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
       </div>

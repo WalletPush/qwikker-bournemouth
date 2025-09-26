@@ -40,7 +40,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.business_name) {
     requiredTodos.push({ 
       title: 'Add your business name', 
-      href: '/dashboard/business',
+      href: '/dashboard/profile#business-info',
       priority: 'REQUIRED',
       description: 'Your business name appears as the main title on your listing.',
       icon: (
@@ -54,7 +54,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.business_hours && !profile?.business_hours_structured) {
     requiredTodos.push({ 
       title: 'Add your business hours', 
-      href: '/dashboard/business',
+      href: '/dashboard/profile#business-hours',
       priority: 'REQUIRED',
       description: 'Required for customers to know when you\'re open.',
       icon: (
@@ -68,7 +68,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.business_description) {
     requiredTodos.push({ 
       title: 'Add your business description', 
-      href: '/dashboard/business',
+      href: '/dashboard/profile#business-info',
       priority: 'REQUIRED',
       description: 'Required for customers to discover you and understand what you offer.',
       icon: (
@@ -82,7 +82,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.business_tagline) {
     requiredTodos.push({ 
       title: 'Add your business tagline', 
-      href: '/dashboard/business',
+      href: '/dashboard/profile#business-info',
       priority: 'REQUIRED',
       description: 'A catchy tagline that appears on your business card.',
       icon: (
@@ -96,7 +96,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.business_address || !profile?.business_town) {
     requiredTodos.push({ 
       title: 'Complete your business address', 
-      href: '/dashboard/business',
+      href: '/dashboard/profile#business-info',
       priority: 'REQUIRED',
       description: 'Required for customers to find your location.',
       icon: (
@@ -111,7 +111,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.business_category) {
     requiredTodos.push({ 
       title: 'Select your business category', 
-      href: '/dashboard/business',
+      href: '/dashboard/profile#business-info',
       priority: 'REQUIRED',
       description: 'Helps customers find you in the right category.',
       icon: (
@@ -125,7 +125,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.logo) {
     requiredTodos.push({ 
       title: 'Upload your business logo', 
-      href: '/dashboard/files#logo',
+      href: '/dashboard/profile#business-logo',
       priority: 'REQUIRED',
       description: 'Essential for branding and customer recognition.',
       icon: (
@@ -140,7 +140,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.business_images || (Array.isArray(profile.business_images) && profile.business_images.length === 0)) {
     requiredTodos.push({ 
       title: 'Upload business photo', 
-      href: '/dashboard/files#business-images',
+      href: '/dashboard/profile#business-photo',
       priority: 'REQUIRED',
       description: 'Required for the hero image on your business listing.',
       icon: (
@@ -157,7 +157,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.menu_preview || (Array.isArray(profile.menu_preview) && profile.menu_preview.length === 0)) {
     optionalTodos.push({ 
       title: 'Add featured services/items (top 3-5)', 
-      href: '/dashboard/business',
+      href: '/dashboard/profile#featured-items',
       priority: 'RECOMMENDED',
       description: 'Helps attract customers by showcasing your best services/offerings.',
       icon: (
@@ -226,7 +226,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.instagram_handle) {
     optionalTodos.push({ 
       title: 'Add your Instagram handle', 
-      href: '/dashboard/business',
+      href: '/dashboard/profile#business-info',
       priority: 'RECOMMENDED',
       description: 'Social media integration for promotion and customer engagement.',
       icon: (
@@ -241,7 +241,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.website_url) {
     optionalTodos.push({ 
       title: 'Add your website URL', 
-      href: '/dashboard/business',
+      href: '/dashboard/profile#business-info',
       priority: 'RECOMMENDED',
       description: 'Additional business information for customer reference.',
       icon: (
@@ -255,7 +255,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.facebook_url) {
     optionalTodos.push({ 
       title: 'Add your Facebook page', 
-      href: '/dashboard/business',
+      href: '/dashboard/profile#business-info',
       priority: 'RECOMMENDED',
       description: 'Secondary social media presence for broader customer reach.',
       icon: (
@@ -320,16 +320,116 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     }
   }
 
+  // DEBUG: Log the actual profile status
+  console.log('🔍 ACTION ITEMS PAGE: Profile status check:', {
+    profileStatus: profile?.status,
+    userId: profile?.user_id,
+    businessName: profile?.business_name,
+    requiredTodos: requiredTodos.length,
+    optionalTodos: optionalTodos.length,
+    totalRequiredItems,
+    isReadyToSubmit
+  })
+
   // Show different content based on business status
   if (profile?.status === 'approved') {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Business Updates</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">Action Items</h1>
           <p className="text-gray-400">
-            Your business is live on Qwikker! Keep your listing fresh with new offers, photos, and updates.
+            Your business is live! Here's your complete profile checklist with optimization suggestions.
           </p>
         </div>
+
+        {/* Live Business - Show ALL Action Items with Status */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Your Business is Live!
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-green-200 mb-6">
+              Congratulations! Your business is approved and live. Complete the remaining items to maximize your visibility.
+            </p>
+
+            {/* Show ALL action items with completion status */}
+            <div className="space-y-6">
+              {/* REQUIRED Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                  Required Items (Complete)
+                </h3>
+                <div className="grid gap-3">
+                  {requiredTodos.length === 0 ? (
+                    // Show completed required items
+                    [
+                      { title: 'Add your business name', href: '/dashboard/profile', icon: '🏢' },
+                      { title: 'Set your opening hours', href: '/dashboard/profile', icon: '🕐' },
+                      { title: 'Add your business description', href: '/dashboard/profile', icon: '📝' },
+                      { title: 'Add your business tagline', href: '/dashboard/profile', icon: '💬' },
+                      { title: 'Complete your business address', href: '/dashboard/profile', icon: '📍' },
+                      { title: 'Select your business category', href: '/dashboard/profile', icon: '🏷️' },
+                      { title: 'Upload your business logo', href: '/dashboard/profile', icon: '🖼️' },
+                      { title: 'Upload business photo', href: '/dashboard/profile', icon: '📸' }
+                    ].map((item, index) => (
+                      <div key={index} className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                        <div className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <span className="text-sm text-green-300 flex-1">{item.title}</span>
+                        <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full font-bold">COMPLETE</span>
+                      </div>
+                    ))
+                  ) : (
+                    // Show remaining required items
+                    requiredTodos.map((todo, index) => (
+                      <Link key={index} href={todo.href}>
+                        <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer">
+                          <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                          <span className="text-sm text-red-300 flex-1">{todo.title}</span>
+                          <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full font-bold">REQUIRED</span>
+                          <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* RECOMMENDED Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                  Recommended Items
+                </h3>
+                <div className="grid gap-3">
+                  {optionalTodos.map((todo, index) => (
+                    <Link key={index} href={todo.href}>
+                      <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 transition-colors cursor-pointer">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                        <span className="text-sm text-blue-300 flex-1">{todo.title}</span>
+                        <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full font-bold">RECOMMENDED</span>
+                        <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Approved Business - Pending Changes & Update Options */}
         <Card className="bg-slate-800/50 border-slate-700">

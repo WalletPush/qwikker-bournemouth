@@ -215,22 +215,49 @@ export function OffersPage({ profile }: OffersPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Review Process Banner */}
-      <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4 mb-6">
-        <div className="flex items-start gap-3">
-          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+      {/* Qwikker Exclusive Offer Promotion Banner */}
+      <div className="bg-gradient-to-r from-[#00d083]/10 to-[#00b86f]/10 border border-[#00d083]/30 rounded-xl p-6 mb-6">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-xl flex items-center justify-center mx-auto mb-3">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
             </svg>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-blue-200 mb-1">Review Process</h3>
-            <p className="text-blue-100 text-sm leading-relaxed">
-              Offers, menus, secret menu items, and images can take <strong>up to 48 hours</strong> to be reviewed and go live on the QWIKKER database. You'll see the status update here once reviewed.
-            </p>
+          <div className="flex justify-center mb-3">
+            <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-xs font-bold px-3 py-1 rounded-full">
+              EXCLUSIVE
+            </span>
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">
+            Create Qwikker-Exclusive Offers
+          </h3>
+          <p className="text-slate-300 mb-4 leading-relaxed max-w-3xl mx-auto">
+            Stand out from competitors by creating special offers exclusively for Qwikker users. 
+            These exclusive deals help build customer loyalty and drive repeat business through our platform.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
+            <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+              <svg className="w-4 h-4 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>Increase customer loyalty</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+              <svg className="w-4 h-4 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span>Attract new customers</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+              <svg className="w-4 h-4 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+              </svg>
+              <span>Stand out from competition</span>
+            </div>
           </div>
         </div>
       </div>
+
 
       <div className="flex justify-between items-center">
         <div>
@@ -414,81 +441,125 @@ export function OffersPage({ profile }: OffersPageProps) {
 
       {/* Create/Edit Offer Form */}
       {showCreateForm && (
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
+        <Card className="bg-slate-800/80 border-slate-600 shadow-2xl backdrop-blur-sm">
+          <CardHeader className="pb-6">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-white flex items-center gap-2">
-                <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                {hasExistingOffer ? 'Edit Offer' : 'Create New Offer'}
-              </CardTitle>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <div>
+                  <CardTitle className="text-white text-xl">
+                    {hasExistingOffer ? 'Edit Offer' : 'Create New Offer'}
+                  </CardTitle>
+                  <p className="text-slate-400 text-sm mt-1">
+                    {hasExistingOffer ? 'Update your existing offer details' : 'Create and manage your business offers and promotions'}
+                  </p>
+                </div>
+              </div>
               {showCreateForm && hasExistingOffer && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={resetForm}
-                  className="border-slate-600 text-gray-300 hover:bg-slate-700"
+                  className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:border-slate-500"
                 >
                   Cancel
                 </Button>
               )}
             </div>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Offer Details */}
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="offerName" className="text-white">Offer Name *</Label>
-                  <Input
-                    id="offerName"
-                    value={formData.offerName}
-                    onChange={(e) => handleInputChange('offerName', e.target.value)}
-                    className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
-                    placeholder="e.g., Student Discount, Happy Hour Special"
-                    required
-                  />
+          <CardContent className="pt-0">
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Basic Information Section */}
+              <div className="bg-slate-900/30 border border-slate-700 rounded-xl p-6 space-y-6">
+                <div className="border-b border-slate-600 pb-4">
+                  <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Basic Information
+                  </h3>
+                  <p className="text-slate-400 text-sm">Define your offer name and core details</p>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <div className="space-y-4">
                   <div>
-                    <Label htmlFor="offerType" className="text-white">Offer Type</Label>
-                    <select
-                      id="offerType"
-                      value={formData.offerType}
-                      onChange={(e) => handleInputChange('offerType', e.target.value)}
-                      className="w-full bg-slate-900 text-white border-slate-600 focus:border-[#00d083] rounded-md p-2"
-                    >
-                      <option value="">Select offer type</option>
-                      {OFFER_TYPE_OPTIONS.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="offerValue" className="text-white">Offer Value *</Label>
+                    <Label htmlFor="offerName" className="text-white font-medium mb-2 block">
+                      Offer Name <span className="text-red-400">*</span>
+                    </Label>
                     <Input
-                      id="offerValue"
-                      value={formData.offerValue}
-                      onChange={(e) => handleInputChange('offerValue', e.target.value)}
-                      className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
-                      placeholder="e.g., 20% off, Buy 1 Get 1 Free"
+                      id="offerName"
+                      value={formData.offerName}
+                      onChange={(e) => handleInputChange('offerName', e.target.value)}
+                      className="bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 transition-all duration-200 h-12 shadow-sm"
+                      placeholder="e.g., Student Discount, Happy Hour Special"
                       required
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="offerType" className="text-white font-medium mb-2 block">
+                        Offer Type <span className="text-red-400">*</span>
+                      </Label>
+                      <select
+                        id="offerType"
+                        value={formData.offerType}
+                        onChange={(e) => handleInputChange('offerType', e.target.value)}
+                        className="w-full bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 transition-all duration-200 rounded-lg p-3 h-12 shadow-sm"
+                        required
+                      >
+                        <option value="">Select offer type</option>
+                        {OFFER_TYPE_OPTIONS.map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="offerValue" className="text-white font-medium mb-2 block">
+                        Offer Value <span className="text-red-400">*</span>
+                      </Label>
+                      <Input
+                        id="offerValue"
+                        value={formData.offerValue}
+                        onChange={(e) => handleInputChange('offerValue', e.target.value)}
+                        className="bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 transition-all duration-200 h-12 shadow-sm"
+                        placeholder="e.g., 20% off, Buy 1 Get 1 Free"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Offer Configuration Section */}
+              <div className="bg-slate-900/30 border border-slate-700 rounded-xl p-6 space-y-6">
+                <div className="border-b border-slate-600 pb-4">
+                  <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Offer Configuration
+                  </h3>
+                  <p className="text-slate-400 text-sm">Set claim limits and upload promotional image</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="offerClaimAmount" className="text-white">Claim Amount *</Label>
+                    <Label htmlFor="offerClaimAmount" className="text-white font-medium mb-2 block">
+                      Claim Amount <span className="text-red-400">*</span>
+                    </Label>
                     <select
                       id="offerClaimAmount"
                       value={formData.offerClaimAmount}
                       onChange={(e) => handleInputChange('offerClaimAmount', e.target.value)}
-                      className="w-full bg-slate-900 text-white border-slate-600 focus:border-[#00d083] rounded-md p-2"
+                      className="w-full bg-slate-900/50 text-white border border-slate-600 focus:border-[#00d083] focus:ring-1 focus:ring-[#00d083]/20 hover:border-slate-500 transition-colors rounded-lg p-3 h-11"
                       required
                     >
                       <option value="">Select claim amount</option>
@@ -500,40 +571,53 @@ export function OffersPage({ profile }: OffersPageProps) {
                     </select>
                   </div>
                   <div>
-                    <Label htmlFor="offerImage" className="text-white">Offer Image</Label>
+                    <Label htmlFor="offerImage" className="text-white font-medium mb-2 block">
+                      Offer Image <span className="text-red-400">*</span>
+                    </Label>
                     <div className="space-y-2">
                       <Input
                         id="offerImage"
                         type="file"
                         accept="image/*"
                         onChange={handleImageUpload}
-                        className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
+                        className="bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 transition-all duration-200 h-12 shadow-sm file:bg-slate-700 file:border-0 file:text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:text-sm hover:file:bg-slate-600"
+                        required
                       />
-                      <p className="text-xs text-gray-400">
-                        Optional - QWIKKER team will design one if left blank
+                      <p className="text-xs text-slate-400">
+                        Required - Upload an image or QWIKKER team will design one
                       </p>
                     </div>
                   </div>
                 </div>
+              </div>
 
                 {imageUploadMessage && (
-                  <div className={`p-3 rounded-lg border text-sm ${
+                  <div className={`p-4 rounded-lg border text-sm flex items-center gap-3 ${
                     imageUploadMessage.type === 'success' 
-                      ? 'bg-green-500/10 border-green-500/30 text-green-400'
-                      : 'bg-red-500/10 border-red-500/30 text-red-400'
+                      ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                      : 'bg-red-500/10 border-red-500/20 text-red-400'
                   }`}>
+                    <svg className={`w-5 h-5 flex-shrink-0 ${
+                      imageUploadMessage.type === 'success' ? 'text-green-400' : 'text-red-400'
+                    }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {imageUploadMessage.type === 'success' ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      )}
+                    </svg>
                     {imageUploadMessage.text}
                   </div>
                 )}
 
                 {offerImagePreview && (
-                  <div>
-                    <Label className="text-white">Image Preview</Label>
-                    <div className="mt-2 relative">
+                  <div className="space-y-3">
+                    <Label className="text-white font-medium">Image Preview</Label>
+                    <div className="relative inline-block">
                       <img 
                         src={offerImagePreview} 
                         alt="Offer preview" 
-                        className="w-32 h-32 object-cover rounded-lg border border-slate-600"
+                        className="w-40 h-40 object-cover rounded-xl border-2 border-slate-600 shadow-lg"
                       />
                       <button
                         type="button"
@@ -542,7 +626,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                           setOfferImagePreview(null)
                           setImageUploadMessage(null)
                         }}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-sm"
+                        className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-sm shadow-lg transition-colors"
                       >
                         ×
                       </button>
@@ -550,52 +634,96 @@ export function OffersPage({ profile }: OffersPageProps) {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Schedule Section */}
+              <div className="bg-slate-900/30 border border-slate-700 rounded-xl p-6 space-y-6">
+                <div className="border-b border-slate-600 pb-4">
+                  <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Schedule
+                  </h3>
+                  <p className="text-slate-400 text-sm">Set when your offer becomes active and expires</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="startDate" className="text-white">Start Date</Label>
+                    <Label htmlFor="startDate" className="text-white font-medium mb-2 block">
+                      Start Date <span className="text-red-400">*</span>
+                    </Label>
                     <Input
                       id="startDate"
                       type="date"
                       value={formData.startDate}
                       onChange={(e) => handleInputChange('startDate', e.target.value)}
-                      className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
+                      className="bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 transition-all duration-200 h-12 shadow-sm"
                       min={new Date().toISOString().split('T')[0]} // Prevent past dates
+                      required
                     />
-                    <p className="text-slate-400 text-xs mt-1">When the offer becomes active (optional)</p>
+                    <p className="text-slate-400 text-xs mt-2">When the offer becomes active</p>
                   </div>
                   <div>
-                    <Label htmlFor="endDate" className="text-white">End Date</Label>
+                    <Label htmlFor="endDate" className="text-white font-medium mb-2 block">
+                      End Date <span className="text-red-400">*</span>
+                    </Label>
                     <Input
                       id="endDate"
                       type="date"
                       value={formData.endDate}
                       onChange={(e) => handleInputChange('endDate', e.target.value)}
-                      className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
+                      className="bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 transition-all duration-200 h-12 shadow-sm"
                       min={formData.startDate || new Date().toISOString().split('T')[0]}
+                      required
                     />
-                    <p className="text-slate-400 text-xs mt-1">When the offer expires (optional)</p>
+                    <p className="text-slate-400 text-xs mt-2">When the offer expires</p>
                   </div>
                 </div>
+              </div>
 
+              {/* Terms & Conditions Section */}
+              <div className="bg-slate-900/30 border border-slate-700 rounded-xl p-6 space-y-6">
+                <div className="border-b border-slate-600 pb-4">
+                  <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Terms & Conditions
+                  </h3>
+                  <p className="text-slate-400 text-sm">Add any restrictions or limitations for your offer</p>
+                </div>
+                
                 <div>
-                  <Label htmlFor="offerTerms" className="text-white">Terms & Conditions</Label>
+                  <Label htmlFor="offerTerms" className="text-white font-medium mb-2 block">
+                    Terms & Conditions <span className="text-red-400">*</span>
+                  </Label>
                   <textarea
                     id="offerTerms"
                     value={formData.offerTerms}
                     onChange={(e) => handleInputChange('offerTerms', e.target.value)}
-                    className="w-full bg-slate-900 text-white border border-slate-600 focus:border-[#00d083] hover:border-slate-500 rounded-md p-3 min-h-[100px] resize-vertical transition-colors"
-                    placeholder="Enter any terms and conditions, restrictions, or limitations..."
+                    className="w-full bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 rounded-lg p-4 min-h-[120px] resize-vertical transition-all duration-200 placeholder:text-slate-500 shadow-sm"
+                    required
+                    placeholder="Enter any terms and conditions, restrictions, or limitations...
+
+Examples:
+• Valid for dine-in only
+• Cannot be combined with other offers
+• Maximum one per customer per day
+• Valid Monday-Friday only"
                   />
+                  <p className="text-slate-400 text-xs mt-2">
+                    Required - Be specific about any restrictions to avoid customer confusion
+                  </p>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-4">
+              {/* Submit Section */}
+              <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-slate-700">
                 {showCreateForm && hasExistingOffer && (
                   <Button
                     type="button"
                     variant="outline"
                     onClick={resetForm}
-                    className="border-slate-600 text-gray-300 hover:bg-slate-700"
+                    className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:border-slate-500 px-6"
                   >
                     Cancel
                   </Button>
@@ -603,9 +731,18 @@ export function OffersPage({ profile }: OffersPageProps) {
                 <Button
                   type="submit"
                   disabled={isLoading || currentOfferCount >= offerLimit}
-                  className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white px-8"
+                  className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold px-8 py-3 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? 'Saving...' : hasExistingOffer ? 'Update Offer' : 'Create Offer'}
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Saving...
+                    </div>
+                  ) : (
+                    hasExistingOffer ? 'Update Offer' : 'Create Offer'
+                  )}
                 </Button>
               </div>
             </form>
@@ -680,6 +817,23 @@ export function OffersPage({ profile }: OffersPageProps) {
           </Card>
         </div>
       )}
+
+      {/* Review Process Banner */}
+      <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-blue-200 mb-1">Review Process</h3>
+            <p className="text-blue-100 text-sm leading-relaxed">
+              Offers, menus, secret menu items, and images can take <strong>up to 48 hours</strong> to be reviewed and go live on the QWIKKER database. You'll see the status update here once reviewed.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

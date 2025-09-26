@@ -22,21 +22,22 @@ export function formatBusinessHours(
   business_hours_structured?: StructuredHours | null,
   showFullSchedule: boolean = false
 ): string {
-  // If we have old format text, use it
+  // If full schedule is requested and we have structured hours, use them
+  if (showFullSchedule && business_hours_structured && typeof business_hours_structured === 'object') {
+    return formatFullWeeklySchedule(business_hours_structured)
+  }
+
+  // If we have structured hours, format them appropriately
+  if (business_hours_structured && typeof business_hours_structured === 'object') {
+    return formatStructuredHours(business_hours_structured)
+  }
+
+  // Fallback to old format text if structured hours not available
   if (business_hours && business_hours.trim() !== '') {
     return business_hours
   }
 
-  // If we have structured hours, format them
-  if (business_hours_structured && typeof business_hours_structured === 'object') {
-    if (showFullSchedule) {
-      return formatFullWeeklySchedule(business_hours_structured)
-    } else {
-      return formatStructuredHours(business_hours_structured)
-    }
-  }
-
-  // Fallback
+  // Final fallback
   return 'Hours not available'
 }
 

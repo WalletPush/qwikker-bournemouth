@@ -403,7 +403,8 @@ export async function submitBusinessForReview(userId: string) {
   const supabaseAdmin = createAdminClient()
 
   try {
-    console.log('DEBUGGING: Attempting to update status for userId:', userId)
+    console.log('🔧 SERVER ACTION: submitBusinessForReview called with userId:', userId)
+    console.log('🔧 SERVER ACTION: Using admin client to bypass RLS')
     
     // First check if the profile exists and what fields it has
     const { data: existingProfile, error: checkError } = await supabaseAdmin
@@ -412,11 +413,21 @@ export async function submitBusinessForReview(userId: string) {
       .eq('user_id', userId)
       .single()
     
-    console.log('DEBUGGING: Existing profile:', existingProfile)
-    console.log('DEBUGGING: Check error:', checkError)
+    console.log('🔧 SERVER ACTION: Existing profile found:', {
+      userId: existingProfile?.user_id,
+      businessName: existingProfile?.business_name,
+      currentStatus: existingProfile?.status
+    })
+    console.log('🔧 SERVER ACTION: Check error:', checkError)
+    
+    if (checkError) {
+      console.error('🔧 SERVER ACTION: Error fetching profile:', checkError)
+      return { success: false, error: 'Profile not found' }
+    }
     
     // Check what fields are missing
     const missingFields = []
+    if (!existingProfile?.business_name) missingFields.push('business_name')
     if (!existingProfile?.business_hours && !existingProfile?.business_hours_structured) missingFields.push('business_hours')
     if (!existingProfile?.business_description) missingFields.push('business_description') 
     if (!existingProfile?.business_tagline) missingFields.push('business_tagline')
@@ -425,7 +436,7 @@ export async function submitBusinessForReview(userId: string) {
     if (!existingProfile?.logo) missingFields.push('logo')
     if (!existingProfile?.business_images || (Array.isArray(existingProfile.business_images) && existingProfile.business_images.length === 0)) missingFields.push('business_images')
     
-    console.log('DEBUGGING: Missing required fields:', missingFields)
+    console.log('🔧 SERVER ACTION: Missing required fields:', missingFields)
     
     // Update status to pending_review and fix empty business_hours if structured hours exist
     const updateFields: any = { 
@@ -434,9 +445,56 @@ export async function submitBusinessForReview(userId: string) {
     }
     
     // Fix legacy empty business_hours field if structured hours exist
-    if (existingProfile?.business_hours === '' && existingProfile?.business_hours_structured) {
-      updateFields.business_hours = null
-      console.log('DEBUGGING: Fixing empty business_hours field')
+    // Convert structured hours to readable string for user dashboard display
+    if (existingProfile?.business_hours_structured && (!existingProfile?.business_hours || existingProfile?.business_hours === '')) {
+      try {
+        // Import the formatter function and use it to properly format hours
+        const { formatBusinessHours } = await import('@/lib/utils/business-hours-formatter')
+        const formattedHours = formatBusinessHours(null, existingProfile.business_hours_structured)
+        updateFields.business_hours = formattedHours
+        console.log('🔧 SERVER ACTION: Setting formatted business_hours:', formattedHours)
+      } catch (error) {
+        console.error('🔧 SERVER ACTION: Error formatting hours:', error)
+        updateFields.business_hours = 'See full schedule'
+      }
+    }
+    
+    // FIRST: Update business_hours if needed to satisfy the trigger
+    if (existingProfile?.business_hours_structured && (!existingProfile?.business_hours || existingProfile?.business_hours === '')) {
+      console.log('🔧 SERVER ACTION: Pre-updating business_hours to satisfy trigger')
+      
+      try {
+        const { formatBusinessHours } = await import('@/lib/utils/business-hours-formatter')
+        const formattedHours = formatBusinessHours(null, existingProfile.business_hours_structured)
+        
+        const { error: hoursError } = await supabaseAdmin
+          .from('business_profiles')
+          .update({ business_hours: formattedHours })
+          .eq('user_id', userId)
+        
+        if (hoursError) {
+          console.error('🔧 SERVER ACTION: Error updating business_hours:', hoursError)
+        } else {
+          console.log('🔧 SERVER ACTION: Business hours updated successfully to:', formattedHours)
+        }
+      } catch (error) {
+        console.error('🔧 SERVER ACTION: Error formatting hours for pre-update:', error)
+        // Fallback to a generic message
+        const { error: hoursError } = await supabaseAdmin
+          .from('business_profiles')
+          .update({ business_hours: 'See full schedule' })
+          .eq('user_id', userId)
+      }
+    }
+    
+    console.log('🔧 SERVER ACTION: About to update status to pending_review for userId:', userId)
+    console.log('🔧 SERVER ACTION: Update fields:', updateFields)
+    
+    // FORCE completion percentage to 100% if all required fields are present
+    // This bypasses the trigger issue with business_hours_structured
+    if (missingFields.length === 0) {
+      updateFields.profile_completion_percentage = 100
+      console.log('🔧 SERVER ACTION: Forcing completion to 100% since all required fields present')
     }
     
     const { data: updateData, error: updateError } = await supabaseAdmin
@@ -445,8 +503,9 @@ export async function submitBusinessForReview(userId: string) {
       .eq('user_id', userId)
       .select()
 
-    console.log('DEBUGGING: Update data:', updateData)
-    console.log('DEBUGGING: Update error:', updateError)
+    console.log('🔧 SERVER ACTION: Update completed!')
+    console.log('🔧 SERVER ACTION: Update data:', updateData)
+    console.log('🔧 SERVER ACTION: Update error:', updateError)
 
     if (updateError) {
       console.error('Error updating profile status:', updateError)
@@ -480,6 +539,15 @@ export async function submitBusinessForReview(userId: string) {
       // Don't fail the whole operation if notification fails
     }
 
+    console.log('🔧 SERVER ACTION: SUCCESS! Business status updated to pending_review')
+    console.log('🔧 SERVER ACTION: Business should now appear in admin dashboard pending section')
+    console.log('🔧 SERVER ACTION: Business details:', {
+      userId: profile.user_id,
+      businessName: profile.business_name,
+      email: profile.email,
+      status: 'pending_review'
+    })
+    
     revalidatePath('/dashboard')
     return { success: true, message: 'Successfully submitted for review!' }
 

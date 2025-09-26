@@ -61,9 +61,13 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
   const saveBusinessHours = async (hours: BusinessHoursStructured) => {
     setIsSavingHours(true)
     try {
+      // Format structured hours to text for consistency
+      const { formatBusinessHours } = await import('@/lib/utils/business-hours-formatter')
+      const formattedHours = formatBusinessHours(null, hours)
+      
       const result = await updateBusinessInfo(profile.user_id, {
         business_hours_structured: hours,
-        business_hours: null  // Clear old text field when using structured hours
+        business_hours: formattedHours  // Keep both formats in sync
       })
       
       if (result.success) {
@@ -512,12 +516,13 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
                 
                 <div>
                   <Label className="text-white">Description</Label>
-                  <Input
+                  <textarea
                     value={item.description}
                     onChange={(e) => updateMenuItem(index, 'description', e.target.value)}
-                    className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent resize-none"
                     placeholder="Brief description of the item"
                     maxLength={100}
+                    rows={2}
                   />
                   <p className="text-xs text-gray-400 mt-1">{item.description.length}/100 characters</p>
                 </div>

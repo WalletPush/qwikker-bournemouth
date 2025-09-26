@@ -113,9 +113,13 @@ export function ProfilePage({ profile }: ProfilePageProps) {
     setHoursSaved(false)
     try {
       console.log('Updating business hours for user:', profile.user_id)
+      // Format structured hours to text for consistency
+      const { formatBusinessHours } = await import('@/lib/utils/business-hours-formatter')
+      const formattedHours = formatBusinessHours(null, hours)
+      
       const result = await updateBusinessInfo(profile.user_id, {
         business_hours_structured: hours,
-        business_hours: null
+        business_hours: formattedHours  // Keep both formats in sync
       })
       console.log('Business hours update result:', result)
       if (result.success) {
@@ -609,13 +613,14 @@ export function ProfilePage({ profile }: ProfilePageProps) {
                   placeholder="e.g. £12.99"
                 />
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <Label className="text-white text-sm">Description</Label>
-                <Input
+                <textarea
                   value={item.description}
                   onChange={(e) => updateMenuItem(index, 'description', e.target.value)}
-                  className="bg-slate-700 border-slate-600 text-white"
-                  placeholder="Brief description"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent resize-none"
+                  placeholder="Brief description of the item"
+                  rows={2}
                 />
               </div>
               <div className="flex items-end">

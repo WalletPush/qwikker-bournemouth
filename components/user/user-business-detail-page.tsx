@@ -7,14 +7,19 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
+import { formatPrice } from '@/lib/utils/price-formatter'
 
 interface UserBusinessDetailPageProps {
   slug: string
   businesses?: any[]
   walletPassId?: string
+  trackingData?: {
+    businessId: string
+    visitorWalletPassId?: string
+  } | null
 }
 
-export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, walletPassId }: UserBusinessDetailPageProps) {
+export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, walletPassId, trackingData }: UserBusinessDetailPageProps) {
   
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
@@ -26,6 +31,21 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
   const [activeTab, setActiveTab] = useState<'overview' | 'menu' | 'offers' | 'reviews'>('overview')
   const [claimedOffers, setClaimedOffers] = useState<Set<string>>(new Set())
   
+  // Track business visit after component mounts
+  useEffect(() => {
+    if (trackingData) {
+      const trackVisit = async () => {
+        try {
+          const { trackBusinessVisit } = await import('@/lib/actions/business-visit-actions')
+          await trackBusinessVisit(trackingData)
+        } catch (error) {
+          console.error('Failed to track business visit:', error)
+        }
+      }
+      trackVisit()
+    }
+  }, [trackingData])
+
   // Load claimed offers after component mounts with user-specific key
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -58,17 +78,33 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
     )
   }
   
-  const claimOffer = (offerId: string, offerTitle: string, businessName: string) => {
+  const claimOffer = async (offerId: string, offerTitle: string, businessName: string) => {
     const userId = walletPassId || 'anonymous-user'
     
+    // Update UI immediately
     setClaimedOffers(prev => {
       const newClaimed = new Set([...prev, offerId])
-      // Save to localStorage with user-specific key (matching offers page)
+      // Save to localStorage as backup
       if (typeof window !== 'undefined') {
         localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...newClaimed]))
       }
       return newClaimed
     })
+    
+    // Store in database
+    try {
+      const { claimOffer: claimOfferAction } = await import('@/lib/actions/offer-claim-actions')
+      await claimOfferAction({
+        offerId,
+        offerTitle,
+        businessName,
+        businessId: business.id,
+        visitorWalletPassId: walletPassId
+      })
+    } catch (error) {
+      console.error('Failed to store offer claim in database:', error)
+      // UI already updated, so don't fail the user experience
+    }
     
     // Create styled modal matching offers page
     const modalOverlay = document.createElement('div')
@@ -579,7 +615,7 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                         </div>
                       </div>
                       <div className="text-right ml-4">
-                        <span className="text-[#00d083] font-bold text-xl">£{item.price}</span>
+                        <span className="text-[#00d083] font-bold text-xl">{formatPrice(item.price)}</span>
                       </div>
                     </div>
                   ))}

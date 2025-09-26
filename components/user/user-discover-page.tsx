@@ -7,6 +7,7 @@ import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import Link from 'next/link'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 import { AiCompanionCard } from '@/components/ui/ai-companion-card'
+import { formatPrice } from '@/lib/utils/price-formatter'
 
 interface Business {
   id: string
@@ -199,7 +200,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
               {business.menuPreview?.slice(0, 2).map((item: any, index: number) => (
                 <div key={index} className="flex items-center justify-between">
                   <p className="text-slate-300 text-xs">{item.name}</p>
-                  <p className="text-[#00d083] text-xs font-medium">£{item.price}</p>
+                  <p className="text-[#00d083] text-xs font-medium">{formatPrice(item.price)}</p>
                 </div>
               ))}
               {(business.menuPreview?.length || 0) > 2 && (

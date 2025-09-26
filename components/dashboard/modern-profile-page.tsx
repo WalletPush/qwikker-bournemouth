@@ -109,9 +109,13 @@ export function ModernProfilePage({ profile }: ModernProfilePageProps) {
     setHoursSaving(true)
     setHoursSaved(false)
     try {
+      // Format structured hours to text for consistency
+      const { formatBusinessHours } = await import('@/lib/utils/business-hours-formatter')
+      const formattedHours = formatBusinessHours(null, hours)
+      
       const result = await updateBusinessInfo(profile.user_id, {
         business_hours_structured: hours,
-        business_hours: null
+        business_hours: formattedHours  // Keep both formats in sync
       })
       if (result.success) {
         setHoursSaved(true)

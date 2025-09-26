@@ -40,6 +40,44 @@ export async function getPendingChanges(userId: string) {
 }
 
 /**
+ * Get approved changes for activity feed
+ */
+export async function getApprovedChanges(userId: string) {
+  const supabaseAdmin = createAdminClient()
+
+  // Get user profile first
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from('business_profiles')
+    .select('id, status')
+    .eq('user_id', userId)
+    .single()
+
+  if (profileError || !profile) {
+    return { success: false, error: 'Profile not found', approvedChanges: [] }
+  }
+
+  // Get approved changes for this business
+  const { data: changes, error: changesError } = await supabaseAdmin
+    .from('business_changes')
+    .select('*')
+    .eq('business_id', profile.id)
+    .eq('status', 'approved')
+    .order('approved_at', { ascending: false })
+    .limit(10)
+
+  if (changesError) {
+    console.error('Error fetching approved changes:', changesError)
+    return { success: false, error: 'Failed to fetch approved changes', approvedChanges: [] }
+  }
+
+  return { 
+    success: true, 
+    approvedChanges: changes || [],
+    businessStatus: profile.status
+  }
+}
+
+/**
  * Get approved changes count for a business (for stats)
  */
 export async function getApprovedChangesCount(userId: string) {
