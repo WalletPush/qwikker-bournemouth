@@ -118,12 +118,13 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     })
   }
 
-  const claimOffer = (offerId: string, offerTitle: string, businessName: string) => {
+  const claimOffer = async (offerId: string, offerTitle: string, businessName: string) => {
     const userId = walletPassId || 'anonymous-user'
     
+    // Update UI immediately
     setClaimedOffers(prev => {
       const newClaimed = new Set([...prev, offerId])
-      // Save to localStorage with user ID
+      // Save to localStorage as backup
       if (typeof window !== 'undefined') {
         localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...newClaimed]))
         
@@ -134,6 +135,20 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       }
       return newClaimed
     })
+    
+    // Store in database
+    try {
+      const { claimOffer: claimOfferAction } = await import('@/lib/actions/offer-claim-actions')
+      await claimOfferAction({
+        offerId,
+        offerTitle,
+        businessName,
+        visitorWalletPassId: walletPassId
+      })
+    } catch (error) {
+      console.error('Failed to store offer claim in database:', error)
+      // UI already updated, so don't fail the user experience
+    }
     // Create center modal popup
     const modalOverlay = document.createElement('div')
     modalOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300'

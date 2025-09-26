@@ -3,6 +3,8 @@ import { UserBusinessDetailPage } from '@/components/user/user-business-detail-p
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
+import { trackBusinessVisit } from '@/lib/actions/business-visit-actions'
+import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 
 interface BusinessDetailPageProps {
   params: Promise<{
@@ -97,9 +99,29 @@ export default async function BusinessDetailPage({ params }: BusinessDetailPageP
   // Combine real and mock businesses
   const allBusinesses = [...realBusinesses, ...mockBusinesses]
   
+  // Find the specific business being viewed
+  const viewedBusiness = allBusinesses.find(business => business.slug === slug)
+  
+  // Get visitor info and business ID for client-side tracking
+  let trackingData = null
+  if (viewedBusiness) {
+    const realBusiness = realBusinesses.find(rb => rb.slug === slug)
+    if (realBusiness) {
+      const visitorWalletPassId = await getWalletPassCookie()
+      trackingData = {
+        businessId: realBusiness.id,
+        visitorWalletPassId: visitorWalletPassId || undefined
+      }
+    }
+  }
+  
   return (
     <UserDashboardLayout>
-      <UserBusinessDetailPage slug={slug} businesses={allBusinesses} />
+      <UserBusinessDetailPage 
+        slug={slug} 
+        businesses={allBusinesses} 
+        trackingData={trackingData}
+      />
     </UserDashboardLayout>
   )
 }

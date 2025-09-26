@@ -90,7 +90,28 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
 
   const handlePatternChange = (newPattern: typeof pattern) => {
     setPattern(newPattern)
-    setFormData({ ...formData, pattern: newPattern })
+    
+    let newFormData = { ...formData, pattern: newPattern }
+    
+    // Initialize custom_hours when switching to custom pattern
+    if (newPattern === 'custom' && !formData.custom_hours) {
+      const defaultCustomHours: BusinessHoursStructured = {
+        monday: { open: '09:00', close: '17:00', closed: false },
+        tuesday: { open: '09:00', close: '17:00', closed: false },
+        wednesday: { open: '09:00', close: '17:00', closed: false },
+        thursday: { open: '09:00', close: '17:00', closed: false },
+        friday: { open: '09:00', close: '17:00', closed: false },
+        saturday: { open: '10:00', close: '16:00', closed: false },
+        sunday: { open: '', close: '', closed: true }
+      }
+      newFormData.custom_hours = defaultCustomHours
+    }
+    
+    setFormData(newFormData)
+    
+    // Convert and emit changes
+    const structured = convertFormDataToStructured(newFormData)
+    onChange(structured)
   }
 
   const handleFormChange = (field: keyof BusinessHoursFormData, value: any) => {

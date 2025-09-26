@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
-import { DashboardHome } from '@/components/dashboard/dashboard-home'
+import { ImprovedDashboardHome } from '@/components/dashboard/improved-dashboard-home'
 import { calculateActionItemsCount } from '@/lib/utils/action-items-count'
 
 export default async function DashboardPage() {
@@ -24,7 +24,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardLayout currentSection="dashboard" profile={profile} actionItemsCount={actionItemsCount}>
-      <DashboardHome profile={profile} />
+      <ImprovedDashboardHome profile={profile} />
     </DashboardLayout>
   )
 }

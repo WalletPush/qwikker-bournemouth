@@ -114,9 +114,13 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
     setHoursSaving(true)
     setHoursSaved(false)
     try {
+      // Format structured hours to text for consistency
+      const { formatBusinessHours } = await import('@/lib/utils/business-hours-formatter')
+      const formattedHours = formatBusinessHours(null, hours)
+      
       const result = await updateBusinessInfo(profile.user_id, {
         business_hours_structured: hours,
-        business_hours: null
+        business_hours: formattedHours  // Keep both formats in sync
       })
       if (result.success) {
         setHoursSaved(true)
@@ -164,14 +168,33 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
   }
 
   const removeMenuItem = (index: number) => {
-    setMenuItems(menuItems.filter((_, i) => i !== index))
+    try {
+      if (!menuItems || index < 0 || index >= menuItems.length) {
+        console.error('Invalid menu item index for removal:', { index, menuItemsLength: menuItems?.length })
+        return
+      }
+      setMenuItems(menuItems.filter((_, i) => i !== index))
+    } catch (error) {
+      console.error('Error removing menu item:', error)
+      setMessage({ type: 'error', text: 'Error removing menu item. Please try again.' })
+    }
   }
 
   const updateMenuItem = (index: number, field: keyof MenuPreviewItem, value: string) => {
-    const updated = menuItems.map((item, i) => 
-      i === index ? { ...item, [field]: value } : item
-    )
-    setMenuItems(updated)
+    try {
+      if (!menuItems || index < 0 || index >= menuItems.length) {
+        console.error('Invalid menu item index or menuItems array:', { index, menuItemsLength: menuItems?.length })
+        return
+      }
+      
+      const updated = menuItems.map((item, i) => 
+        i === index ? { ...item, [field]: value } : item
+      )
+      setMenuItems(updated)
+    } catch (error) {
+      console.error('Error updating menu item:', error)
+      setMessage({ type: 'error', text: 'Error updating menu item. Please try again.' })
+    }
   }
 
   // File upload handler
@@ -194,11 +217,11 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
     setUploading(type)
     try {
       // Upload to Cloudinary
-      const uploadResult = await uploadToCloudinary(file, type === 'logo' ? 'logo' : 'business')
+      const uploadedUrl = await uploadToCloudinary(file, type === 'logo' ? 'logo' : 'business')
       
-      if (uploadResult.success && uploadResult.url) {
+      if (uploadedUrl) {
         // Update profile with new file URL
-        const result = await updateProfileFile(profile.user_id, type === 'logo' ? 'logo' : 'business_images', uploadResult.url)
+        const result = await updateProfileFile(profile.user_id, type === 'logo' ? 'logo' : 'business_images', uploadedUrl)
         
         if (result.success) {
           setMessage({ 
@@ -210,7 +233,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
           throw new Error(result.error || 'Failed to update profile')
         }
       } else {
-        throw new Error(uploadResult.error || 'Upload failed')
+        throw new Error('Upload failed - no URL returned')
       }
     } catch (error) {
       console.error('File upload error:', error)
@@ -323,7 +346,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
       )}
 
         {/* Personal Information Section */}
-        <div className="group relative">
+        <div id="personal-info" className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-[#00d083] to-[#00b86f] rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-500"></div>
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
@@ -391,7 +414,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
       </div>
 
         {/* Business Information Section */}
-        <div className="group relative">
+        <div id="business-info" className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-[#00b86f] to-[#00a05c] rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-500"></div>
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
@@ -486,7 +509,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
       </div>
 
         {/* Business Hours Section */}
-        <div className="group relative">
+        <div id="business-hours" className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-500"></div>
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
@@ -517,7 +540,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
       </div>
 
         {/* Featured Items Section */}
-        <div className="group relative">
+        <div id="featured-items" className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-500"></div>
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
@@ -533,7 +556,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
             </CardHeader>
         <CardContent className="space-y-4">
           {menuItems.map((item, index) => (
-            <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-700/30 rounded-lg">
+            <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-700/30 rounded-lg">
               <div>
                 <Label className="text-white text-sm">Item Name</Label>
                 <Input
@@ -550,6 +573,16 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
                   onChange={(e) => updateMenuItem(index, 'price', e.target.value)}
                   className="bg-slate-600/50 border-slate-500/50 text-white"
                   placeholder="£0.00"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-white text-sm">Description</Label>
+                <textarea
+                  value={item.description}
+                  onChange={(e) => updateMenuItem(index, 'description', e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-600/50 border border-slate-500/50 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent resize-none"
+                  placeholder="Brief description of the item"
+                  rows={2}
                 />
               </div>
               <div className="flex items-end">
@@ -582,7 +615,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
       </div>
 
         {/* Business Logo Section */}
-        <div className="group relative">
+        <div id="business-logo" className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-500"></div>
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
@@ -672,7 +705,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
       </div>
 
         {/* Business Photo Section */}
-        <div className="group relative">
+        <div id="business-photo" className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-rose-500 to-pink-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-500"></div>
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
