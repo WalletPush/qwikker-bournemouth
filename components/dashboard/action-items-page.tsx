@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { submitBusinessForReview } from '@/lib/actions/business-actions'
 import { getPendingChanges } from '@/lib/actions/pending-changes'
 import { useState, useEffect } from 'react'
+import { ElegantModal } from '@/components/ui/elegant-modal'
 
 interface ActionItemsPageProps {
   profile?: any
@@ -15,6 +16,8 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingChanges, setPendingChanges] = useState<any[]>([])
   const [loadingPendingChanges, setLoadingPendingChanges] = useState(false)
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   // Fetch pending changes on component mount
   useEffect(() => {
@@ -28,7 +31,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
       })
     }
   }, [profile?.user_id, profile?.status])
-  
+
   // Updated logic to match dashboard-home.tsx - REQUIRED fields for user dashboard listing
   const requiredTodos = []
   const optionalTodos = []
@@ -272,21 +275,46 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   const totalItems = requiredTodos.length + optionalTodos.length
   const isReadyToSubmit = totalRequiredItems === 0
 
+  // Show completion modal when all required fields are completed and status is still incomplete
+  useEffect(() => {
+    if (profile?.status === 'incomplete' && totalRequiredItems === 0 && !showCompletionModal) {
+      // Check if we've already shown the completion modal for this user
+      const hasShownModal = localStorage.getItem(`completion-modal-shown-${profile.user_id}`)
+      
+      if (!hasShownModal) {
+        // Small delay to let the page render first
+        const timer = setTimeout(() => {
+          setShowCompletionModal(true)
+          localStorage.setItem(`completion-modal-shown-${profile.user_id}`, 'true')
+        }, 1000)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [profile?.status, profile?.user_id, totalRequiredItems, showCompletionModal])
+
   const handleSubmitListing = async () => {
     if (!profile?.user_id || !isReadyToSubmit || isSubmitting) return
     
     setIsSubmitting(true)
+    setShowCompletionModal(false) // Close completion modal if open
+    
     try {
       const result = await submitBusinessForReview(profile.user_id)
       if (result.success) {
-        // Show success message - could add toast notification here
-        window.location.reload() // Refresh to show updated status
+        // Clear the completion modal flag since they've successfully submitted
+        localStorage.removeItem(`completion-modal-shown-${profile.user_id}`)
+        setShowSuccessModal(true) // Show success modal
+        // Refresh after a short delay to let user see the success message
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
       } else {
         console.error('Failed to submit:', result.error)
-        // Could add error toast here
+        alert(`Failed to submit: ${result.error}`) // Temporary error handling
       }
     } catch (error) {
       console.error('Error submitting:', error)
+      alert(`Error submitting: ${error}`) // Temporary error handling
     } finally {
       setIsSubmitting(false)
     }
@@ -530,7 +558,11 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
               </p>
             </div>
             <Button 
-              onClick={handleSubmitListing}
+              onClick={() => {
+                if (isReadyToSubmit) {
+                  setShowCompletionModal(true)
+                }
+              }}
               disabled={!isReadyToSubmit || isSubmitting}
               className={`${
                 isReadyToSubmit 
@@ -538,7 +570,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                   : 'bg-gray-600 text-gray-300 cursor-not-allowed'
               }`}
             >
-              {isSubmitting ? 'Submitting...' : 'Submit Listing'}
+              {isSubmitting ? 'Submitting...' : isReadyToSubmit ? 'Ready to Submit!' : 'Submit Listing'}
             </Button>
           </div>
           {!isReadyToSubmit && (
@@ -569,6 +601,92 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Completion Modal - Shows when all required fields are complete */}
+      <ElegantModal
+        isOpen={showCompletionModal}
+        onClose={() => setShowCompletionModal(false)}
+        title="🎉 Profile Complete!"
+        description="Congratulations! You've completed all required fields for your business profile."
+        type="success"
+        size="lg"
+        actions={[
+          {
+            label: 'Review Later',
+            onClick: () => setShowCompletionModal(false),
+            variant: 'outline'
+          },
+          {
+            label: 'Submit for Review',
+            onClick: handleSubmitListing,
+            variant: 'default',
+            className: 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white'
+          }
+        ]}
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+            <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-medium text-green-400">Ready to Go Live!</h4>
+              <p className="text-sm text-green-300">Your business profile is now complete and ready for admin review.</p>
+            </div>
+          </div>
+          
+          <div className="space-y-2 text-sm">
+            <p className="text-slate-300">
+              <strong>What happens next?</strong>
+            </p>
+            <ul className="space-y-1 text-slate-400 ml-4">
+              <li>• Our team will review your profile (usually within 24 hours)</li>
+              <li>• You'll receive an email notification when approved</li>
+              <li>• Your business will go live on the Qwikker platform</li>
+              <li>• Customers can start discovering and engaging with your business</li>
+            </ul>
+          </div>
+        </div>
+      </ElegantModal>
+
+      {/* Success Modal - Shows after successful submission */}
+      <ElegantModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="Successfully Submitted!"
+        description="Your business profile has been submitted for review."
+        type="success"
+        showCloseButton={false}
+        actions={[
+          {
+            label: 'Continue',
+            onClick: () => {
+              setShowSuccessModal(false)
+              window.location.reload()
+            },
+            variant: 'default',
+            className: 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white'
+          }
+        ]}
+      >
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+            <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </div>
+          <div className="space-y-2">
+            <p className="text-slate-300">
+              Your profile is now under review by our admin team. You'll receive an email notification once it's approved!
+            </p>
+            <p className="text-sm text-slate-400">
+              Expected review time: <strong className="text-green-400">24-48 hours</strong>
+            </p>
+          </div>
+        </div>
+      </ElegantModal>
     </div>
   )
 }

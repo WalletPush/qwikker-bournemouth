@@ -403,13 +403,50 @@ export async function submitBusinessForReview(userId: string) {
   const supabaseAdmin = createAdminClient()
 
   try {
-    // Update status to pending_review
-    const { error: updateError } = await supabaseAdmin
+    console.log('DEBUGGING: Attempting to update status for userId:', userId)
+    
+    // First check if the profile exists and what fields it has
+    const { data: existingProfile, error: checkError } = await supabaseAdmin
       .from('business_profiles')
-      .update({ 
-        status: 'pending_review'
-      })
+      .select('user_id, status, business_name, business_hours, business_hours_structured, business_description, business_tagline, logo, business_images, business_address, business_town, business_category')
       .eq('user_id', userId)
+      .single()
+    
+    console.log('DEBUGGING: Existing profile:', existingProfile)
+    console.log('DEBUGGING: Check error:', checkError)
+    
+    // Check what fields are missing
+    const missingFields = []
+    if (!existingProfile?.business_hours && !existingProfile?.business_hours_structured) missingFields.push('business_hours')
+    if (!existingProfile?.business_description) missingFields.push('business_description') 
+    if (!existingProfile?.business_tagline) missingFields.push('business_tagline')
+    if (!existingProfile?.business_address || !existingProfile?.business_town) missingFields.push('business_address/town')
+    if (!existingProfile?.business_category) missingFields.push('business_category')
+    if (!existingProfile?.logo) missingFields.push('logo')
+    if (!existingProfile?.business_images || (Array.isArray(existingProfile.business_images) && existingProfile.business_images.length === 0)) missingFields.push('business_images')
+    
+    console.log('DEBUGGING: Missing required fields:', missingFields)
+    
+    // Update status to pending_review and fix empty business_hours if structured hours exist
+    const updateFields: any = { 
+      status: 'pending_review',
+      updated_at: new Date().toISOString()
+    }
+    
+    // Fix legacy empty business_hours field if structured hours exist
+    if (existingProfile?.business_hours === '' && existingProfile?.business_hours_structured) {
+      updateFields.business_hours = null
+      console.log('DEBUGGING: Fixing empty business_hours field')
+    }
+    
+    const { data: updateData, error: updateError } = await supabaseAdmin
+      .from('business_profiles')
+      .update(updateFields)
+      .eq('user_id', userId)
+      .select()
+
+    console.log('DEBUGGING: Update data:', updateData)
+    console.log('DEBUGGING: Update error:', updateError)
 
     if (updateError) {
       console.error('Error updating profile status:', updateError)

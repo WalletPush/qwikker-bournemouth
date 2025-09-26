@@ -643,7 +643,7 @@ Qwikker Admin Team`
     if (!business.business_description) missingRequiredFields.push('Business Description') 
     else providedRequiredFields.push('Business Description')
     
-    if (!business.business_hours && !business.business_hours_structured) missingRequiredFields.push('Opening Hours')
+    if ((!business.business_hours || business.business_hours.trim() === '') && !business.business_hours_structured) missingRequiredFields.push('Opening Hours')
     else providedRequiredFields.push('Opening Hours')
     
     if (!business.logo) missingRequiredFields.push('Business Logo')

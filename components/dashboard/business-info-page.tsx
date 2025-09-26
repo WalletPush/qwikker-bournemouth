@@ -62,7 +62,8 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
     setIsSavingHours(true)
     try {
       const result = await updateBusinessInfo(profile.user_id, {
-        business_hours_structured: hours
+        business_hours_structured: hours,
+        business_hours: null  // Clear old text field when using structured hours
       })
       
       if (result.success) {
