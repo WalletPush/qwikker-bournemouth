@@ -31,17 +31,15 @@ export async function POST(request: NextRequest) {
       )
     }
     
-          // Use direct WalletPush API to update the pass
-          const updateUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes/${userWalletPassId}`
+          // Submit to the "Redeem Offers" form via WalletPush webhook
+          const updateUrl = `https://app.walletpush.io/api/webhook/6949cdc9-dcb2-4b0b-94c9-d2c69b0cb9e0`
           
           const updateData = {
-            // Direct WalletPush API fields
-            'Current_Offer': currentOffer || 'No active offer',
-            'Last_Message': offerDetails ? 
-              `${currentOffer} | Valid: ${offerDetails.validUntil ? new Date(offerDetails.validUntil).toLocaleDateString('en-GB') : 'No expiry'} | ${offerDetails.businessName || 'Qwikker Partner'}` :
-              `Latest offer: ${currentOffer}`,
-            'barcode_message': `QWIKKER-USER-${userWalletPassId}-OFFER-${Date.now()}`,
-            'barcode_format': 'PKBarcodeFormatQR'
+            // Form fields that match the "Redeem Offers" form
+            'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
+            'last_amount_spent': '0', // Set to 0 for offer claims
+            'serialNumber': userWalletPassId,
+            'Current_Offer': currentOffer || 'No active offer'
           }
     
     console.log('📡 Calling WalletPush API to update pass:', userWalletPassId)
@@ -51,9 +49,8 @@ export async function POST(request: NextRequest) {
     console.log('🔍 Auth Key (first 10 chars):', MOBILE_WALLET_APP_KEY?.substring(0, 10) + '...')
     
     const response = await fetch(updateUrl, {
-      method: 'PUT', // WalletPush API uses PUT for updates
+      method: 'POST', // Webhook expects POST
       headers: {
-        'Authorization': `Bearer ${MOBILE_WALLET_APP_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(updateData)
