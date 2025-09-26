@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
           secretItemsUnlocked: 0
         },
         badges: [],
-        referral_code: `${first_name.toUpperCase()}-QWK-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+        referral_code: `QWK-${crypto.randomUUID().substring(0, 8).toUpperCase()}`,
         wallet_pass_status: 'active',
         wallet_pass_assigned_at: new Date().toISOString(),
         notification_preferences: {
