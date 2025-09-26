@@ -31,21 +31,21 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Use the bulk update endpoint but filter by serial number
-    const updateUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes/update`
+    // Trigger the HighLevel wallet pass creation workflow with updated offer data
+    const updateUrl = `https://services.leadconnectorhq.com/hooks/IkBldqzvQG4XkoSxkCq8/webhook-trigger/h830Xao6D2o90210ROqj`
     
     const updateData = {
-      // Filter to update only this specific pass
-      'serial_number': userWalletPassId,
-      // Update the Current_Offer field with full offer text
+      // Format data like a HighLevel form submission
+      'first_name': 'Qwikker',
+      'last_name': 'User', 
+      'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
+      'serialNumber': userWalletPassId,
       'Current_Offer': currentOffer || 'No active offer',
-      // Update Last_Message with rich offer details (since we can't use separate fields yet)
       'Last_Message': offerDetails ? 
         `${currentOffer} | Valid: ${offerDetails.validUntil ? new Date(offerDetails.validUntil).toLocaleDateString('en-GB') : 'No expiry'} | ${offerDetails.businessName || 'Qwikker Partner'}` :
         `Latest offer: ${currentOffer}`,
-      // Add barcode with offer info for business scanning  
-      'barcode_message': `QWIKKER-USER-${userWalletPassId}-OFFER-${Date.now()}`,
-      'barcode_format': 'PKBarcodeFormatQR'
+      // Additional fields that might trigger the update
+      'action': 'update_offer'
     }
     
     console.log('📡 Calling WalletPush API to update pass:', userWalletPassId)
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     console.log('🔍 Auth Key (first 10 chars):', MOBILE_WALLET_APP_KEY?.substring(0, 10) + '...')
     
     const response = await fetch(updateUrl, {
-      method: 'PUT',
+      method: 'POST',
       headers: {
         'Authorization': MOBILE_WALLET_APP_KEY,
         'Content-Type': 'application/json',
@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
     
     const result = await response.json()
     console.log('✅ Successfully updated main wallet pass')
+    console.log('🔍 WalletPush response:', JSON.stringify(result, null, 2))
     
     return NextResponse.json({
       success: true,
