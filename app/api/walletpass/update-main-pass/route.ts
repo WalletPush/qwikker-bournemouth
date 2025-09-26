@@ -31,22 +31,20 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Trigger the HighLevel wallet pass creation workflow with updated offer data
-    const updateUrl = `https://services.leadconnectorhq.com/hooks/IkBldqzvQG4XkoSxkCq8/webhook-trigger/h830Xao6D2o90210ROqj`
-    
-    const updateData = {
-      // Format data like a HighLevel form submission
-      'first_name': 'Qwikker',
-      'last_name': 'User', 
-      'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
-      'serialNumber': userWalletPassId,
-      'Current_Offer': currentOffer || 'No active offer',
-      'Last_Message': offerDetails ? 
-        `${currentOffer} | Valid: ${offerDetails.validUntil ? new Date(offerDetails.validUntil).toLocaleDateString('en-GB') : 'No expiry'} | ${offerDetails.businessName || 'Qwikker Partner'}` :
-        `Latest offer: ${currentOffer}`,
-      // Additional fields that might trigger the update
-      'action': 'update_offer'
-    }
+          // Submit to the HighLevel "Redeem Offers" form to trigger workflow
+          const updateUrl = `https://services.leadconnectorhq.com/hooks/IkBldqzvQG4XkoSxkCq8/webhook-trigger/c3504fb3-adf2-4c00-8411-48798eb8d689`
+          
+          const updateData = {
+            // Match the exact form fields from the "Redeem Offers" form
+            'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
+            'last_amount_spent': '0', // Set to 0 for offer claims, or actual amount for redemptions
+            // Additional data for the workflow
+            'serialNumber': userWalletPassId,
+            'Current_Offer': currentOffer || 'No active offer',
+            'Last_Message': offerDetails ? 
+              `${currentOffer} | Valid: ${offerDetails.validUntil ? new Date(offerDetails.validUntil).toLocaleDateString('en-GB') : 'No expiry'} | ${offerDetails.businessName || 'Qwikker Partner'}` :
+              `Latest offer: ${currentOffer}`
+          }
     
     console.log('📡 Calling WalletPush API to update pass:', userWalletPassId)
     console.log('🔍 Template ID:', MOBILE_WALLET_TEMPLATE_ID)
