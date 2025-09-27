@@ -87,14 +87,15 @@ export async function claimOffer(data: {
         // Submit the "Redeem Offers" form to trigger GHL "Redemption Made" workflow
         const REDEEM_OFFERS_FORM_URL = 'https://bournemouth.qwikker.com/offer-redemption'
         
-        // Prepare form data for submission (matching WalletPush form fields)
+        // Prepare form data for submission - start with minimal fields
+        // Based on the form, we know it has Email and Amount Spent fields
         const formData = new URLSearchParams({
           'email': ghlData.email,
           'amount_spent': '0', // Set to 0 for offer claims (not actual purchases)
+          // Add any additional fields that might be required by the GHL workflow
           'serial_number': data.visitorWalletPassId,
           'current_offer': `${data.offerTitle} at ${data.businessName}`,
-          'user_id': data.visitorWalletPassId,
-          'offer': data.offerTitle,
+          'offer_title': data.offerTitle,
           'business_name': data.businessName
         })
         
