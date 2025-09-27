@@ -1,5 +1,5 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { FranchiseConfigManager } from '@/components/admin/franchise-config-manager'
+import { Card } from '@/components/ui/card'
 
 export default async function FranchiseConfigPage() {
   const supabase = createServiceRoleClient()
@@ -26,9 +26,41 @@ export default async function FranchiseConfigPage() {
           </p>
         </div>
         
-        <FranchiseConfigManager 
-          initialConfigs={franchiseConfigs || []} 
-        />
+        <div className="grid gap-6">
+          {franchiseConfigs?.map((config) => (
+            <Card key={config.id} className="p-6 bg-slate-800 border-slate-700">
+              <h3 className="text-xl font-semibold text-white mb-4">
+                {config.display_name} ({config.city})
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-400">WalletPush API Key:</p>
+                  <p className="text-white font-mono">
+                    {config.walletpush_api_key ? '••••••••••••' : 'Not configured'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Template ID:</p>
+                  <p className="text-white font-mono">
+                    {config.walletpush_template_id || 'Not configured'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">GHL Webhook:</p>
+                  <p className="text-white font-mono text-xs">
+                    {config.ghl_webhook_url || 'Not configured'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Slack Webhook:</p>
+                  <p className="text-white font-mono text-xs">
+                    {config.slack_webhook_url || 'Not configured'}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   )
