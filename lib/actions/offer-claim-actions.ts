@@ -62,10 +62,10 @@ export async function claimOffer(data: {
       try {
         console.log('🎫 Triggering GHL Redemption Made workflow for:', data.offerTitle)
         
-        // Get user details for GHL submission
+        // Get user details for GHL submission (including city for dynamic routing)
         const { data: user } = await supabase
           .from('user_members')
-          .select('email, first_name, last_name')
+          .select('email, first_name, last_name, city')
           .eq('wallet_pass_id', data.visitorWalletPassId)
           .single()
         
@@ -85,7 +85,9 @@ export async function claimOffer(data: {
         console.log('📡 Submitting to GHL Redemption Made workflow:', ghlData)
         
         // Submit the "Redeem Offers" form to trigger GHL "Redemption Made" workflow
-        const REDEEM_OFFERS_FORM_URL = 'https://bournemouth.qwikker.com/offer-redemption'
+        // Get user's city to use correct redemption form
+        const userCity = user?.city || 'bournemouth'
+        const REDEEM_OFFERS_FORM_URL = `https://${userCity}.qwikker.com/offer-redemption`
         
         // Prepare form data for submission - start with minimal fields
         // Based on the form, we know it has Email and Amount Spent fields

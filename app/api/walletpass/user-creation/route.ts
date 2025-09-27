@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
+// Extract city from request headers or URL
+function extractCityFromRequest(request: NextRequest): string {
+  const host = request.headers.get('host') || 'bournemouth.qwikker.com'
+  const city = host.split('.')[0] // Extract subdomain
+  return city === 'qwikkerdashboard-theta' || city === 'localhost' ? 'bournemouth' : city
+}
+
 // This endpoint receives data from GHL after WalletPass creation
 export async function POST(request: NextRequest) {
   try {
@@ -43,7 +50,7 @@ export async function POST(request: NextRequest) {
         message: 'User already exists',
         user_id: existingUser.id,
         wallet_pass_id: serialNumber,
-        dashboard_url: `https://bournemouth.qwikker.com/user?pass=${serialNumber}`
+        dashboard_url: `https://${existingUser.city}.qwikker.com/user?pass=${serialNumber}`
       })
     }
     
@@ -56,7 +63,7 @@ export async function POST(request: NextRequest) {
         first_name: First_Name,
         last_name: Last_Name,
         email: email,
-        city: 'bournemouth', // Extract from subdomain later
+        city: extractCityFromRequest(request), // Dynamic city detection
         tier: 'explorer',
         level: 1,
         points_balance: 0,
@@ -93,7 +100,7 @@ export async function POST(request: NextRequest) {
       message: 'User created successfully',
       user_id: newUser.id,
       wallet_pass_id: serialNumber,
-      dashboard_url: `https://bournemouth.qwikker.com/user?pass=${serialNumber}`,
+      dashboard_url: `https://${newUser.city}.qwikker.com/user?pass=${serialNumber}`,
       user_data: {
         name: newUser.name,
         email: newUser.email,
