@@ -45,9 +45,9 @@ export async function POST(request: NextRequest) {
       'Organization_Name': 'Qwikker',
       'Pass_Type': 'Loyalty Card',
       
-      // CRITICAL: Personalized back-of-pass links with user ID
-      'Offers_Url': `https://qwikkerdashboard-theta.vercel.app/user/offers?user_id=${serialNumber}`,
-      'AI_Url': `https://qwikkerdashboard-theta.vercel.app/user/chat?user_id=${serialNumber}`,
+      // CRITICAL: Personalized back-of-pass links with SHORT URLs (like old system)
+      'Offers_Url': 'https://go.qwikker.com/offers', // Will be updated after pass creation
+      'AI_Url': 'https://go.qwikker.com/chat', // Will be updated after pass creation
       
       // Barcode for user identification
       'barcode_value': serialNumber,
@@ -83,6 +83,54 @@ export async function POST(request: NextRequest) {
         serialNumber: result.serialNumber,
         passUrl: result.url
       })
+      
+      // Create short URLs for the pass back links
+      try {
+        const { createShortUrl } = await import('@/lib/actions/short-url-actions')
+        
+        const offersShortUrl = await createShortUrl({
+          targetUrl: `https://qwikkerdashboard-theta.vercel.app/user/offers?user_id=${result.serialNumber}`,
+          userId: result.serialNumber,
+          urlType: 'offers'
+        })
+        
+        const chatShortUrl = await createShortUrl({
+          targetUrl: `https://qwikkerdashboard-theta.vercel.app/user/chat?user_id=${result.serialNumber}`,
+          userId: result.serialNumber,
+          urlType: 'chat'
+        })
+        
+        if (offersShortUrl.success && chatShortUrl.success) {
+          // Update the pass with the actual short URLs
+          const updateUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes/${result.serialNumber}`
+          
+          const updateData = {
+            'Offers_Url': offersShortUrl.shortUrl,
+            'AI_Url': chatShortUrl.shortUrl
+          }
+          
+          const updateResponse = await fetch(updateUrl, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': MOBILE_WALLET_APP_KEY,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updateData)
+          })
+          
+          if (updateResponse.ok) {
+            console.log('✅ Pass updated with short URLs:', {
+              offers: offersShortUrl.shortUrl,
+              chat: chatShortUrl.shortUrl
+            })
+          } else {
+            console.warn('⚠️ Failed to update pass with short URLs, but pass was created')
+          }
+        }
+      } catch (shortUrlError) {
+        console.warn('⚠️ Failed to create short URLs:', shortUrlError)
+        // Don't fail the entire operation if short URLs fail
+      }
       
       return NextResponse.json({ 
         success: true, 

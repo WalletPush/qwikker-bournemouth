@@ -60,7 +60,6 @@ export async function POST(request: NextRequest) {
       .eq('id', businessId)
       .eq('city', requestCity) // Only allow updating businesses in admin's city
       .select()
-      .single()
     
     if (error) {
       console.error('Database error:', error)
@@ -70,7 +69,16 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    console.log(`📝 Admin notes updated for ${data.business_name} by ${admin.username}`)
+    // Check if any rows were updated
+    if (!data || data.length === 0) {
+      console.error('No business found with ID:', businessId, 'in city:', requestCity)
+      return NextResponse.json(
+        { error: 'Business not found or insufficient permissions' },
+        { status: 404 }
+      )
+    }
+    
+    console.log(`📝 Admin notes updated for ${data[0].business_name} by ${admin.username}`)
     
     return NextResponse.json({
       success: true,

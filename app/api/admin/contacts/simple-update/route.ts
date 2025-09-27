@@ -35,7 +35,6 @@ export async function POST(request: Request) {
       })
       .eq('id', contactId)
       .select('id, business_name, first_name, last_name, email, phone')
-      .single()
     
     if (error) {
       console.error('🔥 Supabase error:', error)
@@ -45,12 +44,21 @@ export async function POST(request: Request) {
       }, { status: 500 })
     }
     
-    console.log('🔥 Update successful:', data)
+    // Check if any rows were updated
+    if (!data || data.length === 0) {
+      console.error('🔥 No business found with ID:', contactId)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Business not found or no changes made' 
+      }, { status: 404 })
+    }
+    
+    console.log('🔥 Update successful:', data[0])
     
     return NextResponse.json({
       success: true,
       message: 'Contact updated successfully',
-      contact: data
+      contact: data[0] // Return first result since we expect only one
     })
     
   } catch (error) {
