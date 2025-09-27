@@ -5,11 +5,12 @@ import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 export default async function ChatPage({
   searchParams
 }: {
-  searchParams: Promise<{ wallet_pass_id?: string }>
+  searchParams: Promise<{ wallet_pass_id?: string; user_id?: string }>
 }) {
   const supabase = createServiceRoleClient()
   const params = await searchParams
   const urlWalletPassId = params.wallet_pass_id
+  const urlUserId = params.user_id // Support old system
   
   // Get wallet pass ID from URL or cookie
   let cookieWalletPassId = null
@@ -19,7 +20,8 @@ export default async function ChatPage({
     console.log('Cookie read error (safe to ignore):', error)
   }
   
-  const userId = urlWalletPassId || cookieWalletPassId || null
+  // Priority: URL wallet_pass_id > URL user_id > cookie
+  const userId = urlWalletPassId || urlUserId || cookieWalletPassId || null
   
   // Get current user for personalized chat
   let currentUser = null

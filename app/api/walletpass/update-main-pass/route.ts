@@ -31,14 +31,16 @@ export async function POST(request: NextRequest) {
       )
     }
     
-          // Submit to your existing redemption form
-          const updateUrl = `https://bournemouth.qwikker.com/offer-redemption`
+          // Submit to WalletPush HighLevel endpoint (the CORRECT way)
+          const updateUrl = `https://app.walletpush.io/api/hl-endpoint/lkBldqzvQG4XkoSxkCq8`
           
           const formData = new URLSearchParams({
             'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
             'amount_spent': '0', // Set to 0 for offer claims
             'user_id': userWalletPassId,
-            'offer': currentOffer || 'No active offer'
+            'offer': currentOffer || 'No active offer',
+            'serial_number': userWalletPassId, // Critical: This is how WalletPush identifies the specific pass
+            'current_offer': currentOffer || 'No active offer'
           })
     
     console.log('📡 Submitting to redemption form (LATEST VERSION):', userWalletPassId)
