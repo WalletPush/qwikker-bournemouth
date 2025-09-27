@@ -91,14 +91,42 @@ export function SettingsPage({ profile }: SettingsPageProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <Button variant="outline" className="w-full justify-start border-slate-600 text-gray-300 hover:bg-slate-700">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start border-slate-600 text-gray-300 hover:bg-slate-700"
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/download-data', { method: 'POST' })
+                  if (response.ok) {
+                    const blob = await response.blob()
+                    const url = window.URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `qwikker-data-export-${new Date().toISOString().split('T')[0]}.json`
+                    document.body.appendChild(a)
+                    a.click()
+                    window.URL.revokeObjectURL(url)
+                    document.body.removeChild(a)
+                  } else {
+                    alert('Failed to download data. Please try again.')
+                  }
+                } catch (error) {
+                  console.error('Download error:', error)
+                  alert('Failed to download data. Please try again.')
+                }
+              }}
+            >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Download My Data
             </Button>
             
-            <Button variant="outline" className="w-full justify-start border-slate-600 text-gray-300 hover:bg-slate-700">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start border-slate-600 text-gray-300 hover:bg-slate-700"
+              onClick={() => window.location.href = '/dashboard/profile'}
+            >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
@@ -172,7 +200,7 @@ export function SettingsPage({ profile }: SettingsPageProps) {
         <CardContent>
           <div className="space-y-3">
             <a 
-              href="#" 
+              href="/terms-of-service" 
               className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors"
             >
               <div className="flex items-center gap-3">
@@ -187,7 +215,7 @@ export function SettingsPage({ profile }: SettingsPageProps) {
             </a>
             
             <a 
-              href="#" 
+              href="/privacy-policy" 
               className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors"
             >
               <div className="flex items-center gap-3">

@@ -72,7 +72,6 @@ export async function POST(request: Request) {
         status: 'active'
       })
       .select()
-      .single()
     
     if (error) {
       console.error('Failed to create franchise:', error)
@@ -81,10 +80,16 @@ export async function POST(request: Request) {
       }, { status: 500 })
     }
     
+    if (!franchise || franchise.length === 0) {
+      return NextResponse.json({ 
+        error: 'Failed to create franchise - no data returned' 
+      }, { status: 500 })
+    }
+    
     return NextResponse.json({
       success: true,
       message: 'Franchise created successfully',
-      franchise
+      franchise: franchise[0]
     })
     
   } catch (error) {
@@ -105,12 +110,11 @@ export async function PUT(request: Request) {
     
     const supabaseAdmin = createAdminClient()
     
-    const { data: franchise, error } = await supabaseAdmin
+    const { data: franchises, error } = await supabaseAdmin
       .from('franchise_crm_configs')
       .update(updates)
       .eq('id', id)
       .select()
-      .single()
     
     if (error) {
       console.error('Failed to update franchise:', error)
@@ -119,10 +123,16 @@ export async function PUT(request: Request) {
       }, { status: 500 })
     }
     
+    if (!franchises || franchises.length === 0) {
+      return NextResponse.json({ 
+        error: 'Franchise not found' 
+      }, { status: 404 })
+    }
+    
     return NextResponse.json({
       success: true,
       message: 'Franchise updated successfully',
-      franchise
+      franchise: franchises[0]
     })
     
   } catch (error) {
