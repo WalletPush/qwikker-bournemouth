@@ -57,6 +57,38 @@ export async function claimOffer(data: {
       }
     }
     
+    // 🎫 CRITICAL: Update wallet pass with claimed offer
+    if (data.visitorWalletPassId) {
+      try {
+        console.log('🎫 Updating wallet pass for claimed offer:', data.offerTitle)
+        
+        const updateResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://qwikkerdashboard-theta.vercel.app'}/api/walletpass/update-main-pass`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userWalletPassId: data.visitorWalletPassId,
+            currentOffer: `${data.offerTitle} at ${data.businessName}`,
+            offerDetails: {
+              business: data.businessName,
+              offer: data.offerTitle,
+              claimed_at: new Date().toISOString()
+            }
+          })
+        })
+        
+        if (updateResponse.ok) {
+          console.log('✅ Wallet pass updated successfully')
+        } else {
+          console.error('❌ Failed to update wallet pass:', await updateResponse.text())
+        }
+      } catch (walletError) {
+        console.error('❌ Error updating wallet pass:', walletError)
+        // Don't fail the offer claim if wallet update fails
+      }
+    }
+    
     return { 
       success: true, 
       message: 'Offer claimed successfully!',
