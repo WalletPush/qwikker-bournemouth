@@ -35,10 +35,10 @@ export async function POST(request: NextRequest) {
     
     const MOBILE_WALLET_APP_KEY = credentials.apiKey
     const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
-    // Use direct WalletPush API instead of HL endpoint for pass updates
-    const updateUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes/${userWalletPassId}`
+    // Use GHL "Redeem Offers" form to trigger "Redemption Made" workflow
+    const REDEEM_OFFERS_FORM_URL = `https://${userCity}.qwikker.com/offer-redemption`
     
-    if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID || !updateUrl) {
+    if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID || !REDEEM_OFFERS_FORM_URL) {
       console.error(`❌ Missing WalletPush credentials for ${userCity}`)
       return NextResponse.json(
         { error: `Missing WalletPush credentials for ${userCity}` },
@@ -46,46 +46,48 @@ export async function POST(request: NextRequest) {
       )
     }
           
-    // Use JSON for WalletPush API
-    const updateData = {
-      'Current_Offer': currentOffer || 'No active offer',
-      'Last_Message': `New offer claimed: ${currentOffer}`,
-      'Offers_Claimed': '1' // Could be dynamic based on user's total claims
-    }
+    // Submit to GHL "Redeem Offers" form to trigger "Redemption Made" workflow
+    const formData = new URLSearchParams({
+      'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
+      'amount_spent': '0', // Set to 0 for offer claims (not purchases)
+      'serial_number': userWalletPassId,
+      'current_offer': currentOffer || 'No active offer',
+      'offer_title': offerDetails?.businessName || 'Qwikker Offer',
+      'business_name': offerDetails?.businessName || 'Local Business',
+      'form_type': 'Redeem Offers' // This should match the filter in your GHL workflow
+    })
     
-    console.log('📡 Updating WalletPush pass:', userWalletPassId)
-    console.log('🔍 API URL:', updateUrl)
-    console.log('🔍 Update data:', updateData)
-    console.log('🔍 Auth Key (first 10 chars):', MOBILE_WALLET_APP_KEY?.substring(0, 10) + '...')
+    console.log('📡 Submitting to GHL Redeem Offers form:', userWalletPassId)
+    console.log('🔍 Form URL:', REDEEM_OFFERS_FORM_URL)
+    console.log('🔍 Form data:', formData.toString())
     
-    const response = await fetch(updateUrl, {
-      method: 'PATCH', // WalletPush API uses PATCH for updates
+    const response = await fetch(REDEEM_OFFERS_FORM_URL, {
+      method: 'POST',
       headers: {
-        'Authorization': MOBILE_WALLET_APP_KEY,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify(updateData)
+      body: formData.toString()
     })
     
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('❌ WalletPush API error:', response.status, errorText)
+      console.error('❌ GHL form submission error:', response.status, errorText)
       return NextResponse.json(
-        { error: `WalletPush error: ${response.status}`, details: errorText },
+        { error: `GHL form error: ${response.status}`, details: errorText },
         { status: 500 }
       )
     }
     
-    const result = await response.json()
-    console.log('✅ WalletPush pass updated successfully')
-    console.log('🔍 API response:', result)
+    const result = await response.text() // GHL forms return HTML
+    console.log('✅ GHL Redeem Offers form submitted successfully')
+    console.log('🔍 GHL response (first 200 chars):', result.substring(0, 200))
     
     return NextResponse.json({
       success: true,
-      message: 'Wallet pass updated successfully',
+      message: 'GHL workflow triggered - wallet pass should update shortly',
       userWalletPassId,
       currentOffer,
-      walletPushResponse: result
+      ghlResponse: result.substring(0, 200) + '...'
     })
     
   } catch (error) {
