@@ -57,35 +57,65 @@ export async function claimOffer(data: {
       }
     }
     
-    // 🎫 CRITICAL: Update wallet pass with claimed offer
+    // 🎫 CRITICAL: Trigger GHL "Redemption Made" workflow
     if (data.visitorWalletPassId) {
       try {
-        console.log('🎫 Updating wallet pass for claimed offer:', data.offerTitle)
+        console.log('🎫 Triggering GHL Redemption Made workflow for:', data.offerTitle)
         
-        const updateResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://qwikkerdashboard-theta.vercel.app'}/api/walletpass/update-main-pass`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userWalletPassId: data.visitorWalletPassId,
-            currentOffer: `${data.offerTitle} at ${data.businessName}`,
-            offerDetails: {
-              business: data.businessName,
-              offer: data.offerTitle,
-              claimed_at: new Date().toISOString()
-            }
-          })
+        // Get user details for GHL submission
+        const { data: user } = await supabase
+          .from('user_members')
+          .select('email, first_name, last_name')
+          .eq('wallet_pass_id', data.visitorWalletPassId)
+          .single()
+        
+        // Prepare data for GHL "Redemption Made" workflow
+        const ghlData = {
+          email: user?.email || `user-${data.visitorWalletPassId}@qwikker.com`,
+          first_name: user?.first_name || 'Qwikker',
+          last_name: user?.last_name || 'User',
+          serial_number: data.visitorWalletPassId,
+          current_offer: `${data.offerTitle} at ${data.businessName}`,
+          offer_title: data.offerTitle,
+          business_name: data.businessName,
+          claimed_at: new Date().toISOString(),
+          form_type: 'Redeem Offers' // This should match the filter in your GHL workflow
+        }
+        
+        console.log('📡 Submitting to GHL Redemption Made workflow:', ghlData)
+        
+        // Submit the "Redeem Offers" form to trigger GHL "Redemption Made" workflow
+        const REDEEM_OFFERS_FORM_URL = 'https://bournemouth.qwikker.com/offer-redemption'
+        
+        // Prepare form data for submission (matching WalletPush form fields)
+        const formData = new URLSearchParams({
+          'email': ghlData.email,
+          'amount_spent': '0', // Set to 0 for offer claims (not actual purchases)
+          'serial_number': data.visitorWalletPassId,
+          'current_offer': `${data.offerTitle} at ${data.businessName}`,
+          'user_id': data.visitorWalletPassId,
+          'offer': data.offerTitle,
+          'business_name': data.businessName
         })
         
-        if (updateResponse.ok) {
-          console.log('✅ Wallet pass updated successfully')
+        console.log('📝 Submitting Redeem Offers form:', formData.toString())
+        
+        const ghlResponse = await fetch(REDEEM_OFFERS_FORM_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: formData.toString()
+        })
+        
+        if (ghlResponse.ok) {
+          console.log('✅ GHL Redemption Made workflow triggered successfully')
         } else {
-          console.error('❌ Failed to update wallet pass:', await updateResponse.text())
+          console.error('❌ Failed to trigger GHL workflow:', await ghlResponse.text())
         }
-      } catch (walletError) {
-        console.error('❌ Error updating wallet pass:', walletError)
-        // Don't fail the offer claim if wallet update fails
+      } catch (ghlError) {
+        console.error('❌ Error triggering GHL Redemption Made workflow:', ghlError)
+        // Don't fail the offer claim if GHL trigger fails
       }
     }
     
