@@ -63,7 +63,7 @@ export async function updateContactEverywhere(
       .single()
     
     if (updateError || !updatedContact) {
-      throw new Error(`Supabase update failed: ${updateError?.message}`)
+      throw new Error(`Supabase update failed: ${updateError?.message || 'No contact found with ID: ' + contactId}`)
     }
     
     console.log(`✅ Supabase updated: ${updatedContact.business_name}`)
@@ -210,8 +210,8 @@ async function createPendingUpdate(userId: string, updates: any): Promise<Update
       .select()
       .single()
     
-    if (error) {
-      throw new Error(`Failed to create pending update: ${error.message}`)
+    if (error || !pendingChange) {
+      throw new Error(`Failed to create pending update: ${error?.message || 'No data returned'}`)
     }
     
     // Refresh admin dashboard to show pending update
@@ -241,13 +241,13 @@ async function applyBusinessUpdate(userId: string, updates: any): Promise<Update
     const supabaseAdmin = createAdminClient()
     
     // Get current profile
-    const { data: currentProfile } = await supabaseAdmin
+    const { data: currentProfile, error: profileError } = await supabaseAdmin
       .from('business_profiles')
       .select('*')
       .eq('user_id', userId)
       .single()
     
-    if (!currentProfile) {
+    if (profileError || !currentProfile) {
       throw new Error('Business profile not found')
     }
     
