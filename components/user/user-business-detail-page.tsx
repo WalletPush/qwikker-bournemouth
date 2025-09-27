@@ -91,18 +91,21 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
       return newClaimed
     })
     
-    // Store in database
+    // Store in database AND update wallet pass
     try {
       const { claimOffer: claimOfferAction } = await import('@/lib/actions/offer-claim-actions')
-      await claimOfferAction({
+      const result = await claimOfferAction({
         offerId,
         offerTitle,
         businessName,
         businessId: business.id,
         visitorWalletPassId: walletPassId
       })
+      
+      // Show success message - wallet pass should be updated
+      console.log('✅ Offer claimed and wallet pass updated:', result)
     } catch (error) {
-      console.error('Failed to store offer claim in database:', error)
+      console.error('Failed to claim offer:', error)
       // UI already updated, so don't fail the user experience
     }
     
@@ -119,9 +122,11 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
           </svg>
         </div>
-        <h3 class="text-xl font-bold text-slate-100 mb-2">Offer Claimed!</h3>
-        <p class="text-slate-300 mb-1">"${offerTitle}" has been successfully added to your claimed offers.</p>
-        <p class="text-sm text-slate-400 mb-6">You can now add it to your mobile wallet from the "My Claimed" section.</p>
+        <h3 class="text-xl font-bold text-slate-100 mb-2">Pass Updated!</h3>
+        <p class="text-slate-300 mb-1">"${offerTitle}"</p>
+        <p class="text-slate-400 text-sm mb-2">from ${businessName}</p>
+        <p class="text-slate-300 text-sm mb-2">Your wallet pass has been updated with this offer.</p>
+        <p class="text-sm text-slate-400 mb-6">Check your mobile wallet to view the updated pass.</p>
         <button id="modal-close" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 active:scale-95">
           Got it!
         </button>
