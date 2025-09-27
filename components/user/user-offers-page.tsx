@@ -165,11 +165,11 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
           </svg>
         </div>
-        <h3 class="text-xl font-bold text-slate-100 mb-2">Pass Updated!</h3>
+        <h3 class="text-xl font-bold text-slate-100 mb-2">Offer Claimed!</h3>
         <p class="text-slate-300 mb-1">"${offerTitle}"</p>
         <p class="text-slate-400 text-sm mb-2">from ${businessName}</p>
-        <p class="text-slate-300 text-sm mb-2">Your wallet pass has been updated with this offer.</p>
-        <p class="text-sm text-slate-400 mb-6">Check your mobile wallet to view the updated pass.</p>
+        <p class="text-slate-300 text-sm mb-2">Offer saved to your claimed offers.</p>
+        <p class="text-sm text-slate-400 mb-6">Go to "My Claimed Offers" and click "Update Pass" to add it to your wallet.</p>
         <button id="modal-close" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 active:scale-95">
           Got it!
         </button>

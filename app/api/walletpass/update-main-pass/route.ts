@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
     
     const MOBILE_WALLET_APP_KEY = credentials.apiKey
     const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
-    const updateUrl = credentials.endpointUrl // 🎯 DYNAMIC endpoint!
+    // Use direct WalletPush API instead of HL endpoint for pass updates
+    const updateUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes/${userWalletPassId}`
     
     if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID || !updateUrl) {
       console.error(`❌ Missing WalletPush credentials for ${userCity}`)
@@ -45,26 +46,25 @@ export async function POST(request: NextRequest) {
       )
     }
           
-          const formData = new URLSearchParams({
-            'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
-            'amount_spent': '0', // Set to 0 for offer claims
-            'user_id': userWalletPassId,
-            'offer': currentOffer || 'No active offer',
-            'serial_number': userWalletPassId, // Critical: This is how WalletPush identifies the specific pass
-            'current_offer': currentOffer || 'No active offer'
-          })
+    // Use JSON for WalletPush API
+    const updateData = {
+      'Current_Offer': currentOffer || 'No active offer',
+      'Last_Message': `New offer claimed: ${currentOffer}`,
+      'Offers_Claimed': '1' // Could be dynamic based on user's total claims
+    }
     
-    console.log('📡 Submitting to redemption form (LATEST VERSION):', userWalletPassId)
-    console.log('🔍 Form URL:', updateUrl)
-    console.log('🔍 Form data:', formData.toString())
+    console.log('📡 Updating WalletPush pass:', userWalletPassId)
+    console.log('🔍 API URL:', updateUrl)
+    console.log('🔍 Update data:', updateData)
     console.log('🔍 Auth Key (first 10 chars):', MOBILE_WALLET_APP_KEY?.substring(0, 10) + '...')
     
     const response = await fetch(updateUrl, {
-      method: 'POST', // Form submissions use POST
+      method: 'PATCH', // WalletPush API uses PATCH for updates
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': MOBILE_WALLET_APP_KEY,
+        'Content-Type': 'application/json',
       },
-      body: formData.toString()
+      body: JSON.stringify(updateData)
     })
     
     if (!response.ok) {
@@ -76,16 +76,16 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const result = await response.text() // Forms might return HTML
-    console.log('✅ Successfully submitted to redemption form')
-    console.log('🔍 Form response:', result.substring(0, 200) + '...')
+    const result = await response.json()
+    console.log('✅ WalletPush pass updated successfully')
+    console.log('🔍 API response:', result)
     
     return NextResponse.json({
       success: true,
-      message: 'Redemption form submitted successfully - wallet pass should update',
+      message: 'Wallet pass updated successfully',
       userWalletPassId,
       currentOffer,
-      formResponse: result.substring(0, 200) + '...'
+      walletPushResponse: result
     })
     
   } catch (error) {
