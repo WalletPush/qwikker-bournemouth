@@ -27,6 +27,9 @@ export async function POST(request: NextRequest) {
     // Create main user wallet pass
     const createUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes`
     
+    // Generate unique serial number for this pass
+    const serialNumber = `QWIK-${city?.toUpperCase() || 'BOURNE'}-${firstName.toUpperCase()}-${Date.now()}`
+    
     const passData = {
       // Dynamic fields that can be updated later
       'First_Name': firstName,
@@ -42,8 +45,12 @@ export async function POST(request: NextRequest) {
       'Organization_Name': 'Qwikker',
       'Pass_Type': 'Loyalty Card',
       
+      // CRITICAL: Personalized back-of-pass links with user ID
+      'Offers_Url': `https://qwikkerdashboard-theta.vercel.app/user/offers?user_id=${serialNumber}`,
+      'AI_Url': `https://qwikkerdashboard-theta.vercel.app/user/chat?user_id=${serialNumber}`,
+      
       // Barcode for user identification
-      'barcode_value': `QWIK-${city?.toUpperCase() || 'BOURNE'}-${firstName.toUpperCase()}-${new Date().getFullYear()}`,
+      'barcode_value': serialNumber,
       'barcode_format': 'PKBarcodeFormatQR',
       'barcode_message': 'Scan to access your Qwikker dashboard'
     }

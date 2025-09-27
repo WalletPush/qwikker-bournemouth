@@ -7,6 +7,7 @@ import { Suspense } from 'react'
 interface OffersPageProps {
   searchParams: Promise<{
     wallet_pass_id?: string
+    user_id?: string // Support old system parameter
   }>
 }
 
@@ -14,6 +15,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   const supabase = createServiceRoleClient()
   const resolvedSearchParams = await searchParams
   const urlWalletPassId = resolvedSearchParams.wallet_pass_id
+  const urlUserId = resolvedSearchParams.user_id // Support old system
   
   // Get wallet pass ID from URL or cookie
   let cookieWalletPassId = null
@@ -23,7 +25,8 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     console.log('Cookie read error (safe to ignore):', error)
   }
   
-  const walletPassId = urlWalletPassId || cookieWalletPassId || null
+  // Priority: URL wallet_pass_id > URL user_id > cookie
+  const walletPassId = urlWalletPassId || urlUserId || cookieWalletPassId || null
   
   // Get current user for the layout
   let currentUser = null
