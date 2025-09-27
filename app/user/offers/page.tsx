@@ -2,6 +2,7 @@ import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserOffersPage } from '@/components/user/user-offers-page'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
+import { updatePassActivity } from '@/lib/utils/pass-status-tracker'
 import { Suspense } from 'react'
 
 interface OffersPageProps {
@@ -28,6 +29,11 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   // Priority: URL wallet_pass_id > URL user_id > cookie
   const walletPassId = urlWalletPassId || urlUserId || cookieWalletPassId || null
   
+  // 🎯 TRACK: Update pass activity when user visits (indicates pass is still installed)
+  if (walletPassId) {
+    updatePassActivity(walletPassId).catch(console.error)
+  }
+  
   // Get current user for the layout
   let currentUser = null
   if (walletPassId) {
@@ -36,7 +42,6 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
         .from('app_users')
         .select('*')
         .eq('wallet_pass_id', walletPassId)
-        .eq('wallet_pass_status', 'active')
         .single()
       
       if (user) {
@@ -55,36 +60,45 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     }
   }
   
-  // Fetch approved businesses with offers
-  const { data: approvedBusinesses, error } = await supabase
-    .from('business_profiles')
-    .select(`
-      id,
-      business_name,
-      business_type,
-      business_category,
-      business_town,
-      business_address,
-      business_tagline,
-      business_description,
-      business_hours,
-      business_images,
-      logo,
-      offer_name,
-      offer_type,
-      offer_value,
-      offer_terms,
-      offer_start_date,
-      offer_end_date,
-      offer_image,
-      rating,
-      review_count,
-      created_at
-    `)
-    .eq('status', 'approved')
-    .not('offer_name', 'is', null) // Only businesses with offers
-    .not('business_name', 'is', null)
-    .order('created_at', { ascending: false })
+  // Fetch approved businesses with offers (city-scoped)
+  let approvedBusinesses = []
+  let error = null
+  
+  if (currentUser?.city) {
+    const { data, error: fetchError } = await supabase
+      .from('business_profiles')
+      .select(`
+        id,
+        business_name,
+        business_type,
+        business_category,
+        business_town,
+        business_address,
+        business_tagline,
+        business_description,
+        business_hours,
+        business_images,
+        logo,
+        offer_name,
+        offer_type,
+        offer_value,
+        offer_terms,
+        offer_start_date,
+        offer_end_date,
+        offer_image,
+        rating,
+        review_count,
+        created_at
+      `)
+      .eq('status', 'approved')
+      .eq('business_town', currentUser.city) // 🎯 CRITICAL: City filtering
+      .not('offer_name', 'is', null) // Only businesses with offers
+      .not('business_name', 'is', null)
+      .order('created_at', { ascending: false })
+    
+    approvedBusinesses = data || []
+    error = fetchError
+  }
   
   if (error) {
     console.error('Error fetching businesses with offers:', error)

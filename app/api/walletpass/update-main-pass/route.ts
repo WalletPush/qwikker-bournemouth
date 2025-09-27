@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,19 +22,28 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const MOBILE_WALLET_APP_KEY = process.env.MOBILE_WALLET_APP_KEY
-    const MOBILE_WALLET_TEMPLATE_ID = process.env.MOBILE_WALLET_TEMPLATE_ID
+    // 🎯 DYNAMIC: Get user's city to determine which WalletPush endpoint to use
+    const supabase = createServiceRoleClient()
+    const { data: user } = await supabase
+      .from('app_users')
+      .select('city')
+      .eq('wallet_pass_id', userWalletPassId)
+      .single()
     
-    if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID) {
-      console.error('❌ Missing WalletPush credentials')
+    const userCity = user?.city || 'bournemouth'
+    const credentials = await getWalletPushCredentials(userCity)
+    
+    const MOBILE_WALLET_APP_KEY = credentials.apiKey
+    const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
+    const updateUrl = credentials.endpointUrl // 🎯 DYNAMIC endpoint!
+    
+    if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID || !updateUrl) {
+      console.error(`❌ Missing WalletPush credentials for ${userCity}`)
       return NextResponse.json(
-        { error: 'Missing WalletPush credentials' },
+        { error: `Missing WalletPush credentials for ${userCity}` },
         { status: 500 }
       )
     }
-    
-          // Submit to WalletPush HighLevel endpoint (the CORRECT way)
-          const updateUrl = `https://app.walletpush.io/api/hl-endpoint/lkBldqzvQG4XkoSxkCq8`
           
           const formData = new URLSearchParams({
             'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,

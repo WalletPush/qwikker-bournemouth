@@ -1,5 +1,7 @@
 'use server'
 
+import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
+
 interface WalletPushAnalytics {
   passesCreated: number
   passesInstalled: number
@@ -15,11 +17,18 @@ interface WalletPushAnalytics {
 
 export async function getWalletPushAnalytics(city: string = 'bournemouth'): Promise<WalletPushAnalytics> {
   try {
-    const MOBILE_WALLET_APP_KEY = process.env.MOBILE_WALLET_APP_KEY
-    const MOBILE_WALLET_TEMPLATE_ID = process.env.MOBILE_WALLET_TEMPLATE_ID
+    // 🎯 DYNAMIC: Get city-specific WalletPush credentials
+    const credentials = await getWalletPushCredentials(city)
+    const MOBILE_WALLET_APP_KEY = credentials.apiKey
+    const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
     
     if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID) {
-      console.warn('Missing WalletPush credentials for analytics')
+      console.warn(`Missing WalletPush credentials for analytics (${city}):`, {
+        hasApiKey: !!MOBILE_WALLET_APP_KEY,
+        hasTemplateId: !!MOBILE_WALLET_TEMPLATE_ID,
+        apiKeyFirst10: MOBILE_WALLET_APP_KEY?.substring(0, 10) + '...',
+        templateId: MOBILE_WALLET_TEMPLATE_ID
+      })
       return {
         passesCreated: 0,
         passesInstalled: 0,
@@ -32,6 +41,12 @@ export async function getWalletPushAnalytics(city: string = 'bournemouth'): Prom
     // Fetch analytics from WalletPush API
     const analyticsUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/analytics`
     
+    console.log(`📊 Fetching WalletPush analytics for ${city}:`, {
+      url: analyticsUrl,
+      templateId: MOBILE_WALLET_TEMPLATE_ID,
+      hasApiKey: !!MOBILE_WALLET_APP_KEY
+    })
+    
     const response = await fetch(analyticsUrl, {
       method: 'GET',
       headers: {
@@ -41,7 +56,12 @@ export async function getWalletPushAnalytics(city: string = 'bournemouth'): Prom
     })
     
     if (!response.ok) {
-      console.error('Failed to fetch WalletPush analytics:', response.status)
+      const errorText = await response.text()
+      console.error(`Failed to fetch WalletPush analytics for ${city}:`, {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      })
       return {
         passesCreated: 0,
         passesInstalled: 0,
@@ -104,19 +124,6 @@ const CITY_TEMPLATE_MAPPING = {
 }
 
 export async function getCitySpecificAnalytics(city: string): Promise<WalletPushAnalytics> {
-  const templateId = CITY_TEMPLATE_MAPPING[city as keyof typeof CITY_TEMPLATE_MAPPING]
-  
-  if (!templateId) {
-    console.warn(`No template ID configured for city: ${city}`)
-    return {
-      passesCreated: 0,
-      passesInstalled: 0,
-      offersClaimed: 0,
-      offersRedeemed: 0,
-      recentActivity: []
-    }
-  }
-  
-  // Use city-specific template ID for analytics
+  // 🎯 DYNAMIC: Use the franchise config system instead of hardcoded mapping
   return getWalletPushAnalytics(city)
 }

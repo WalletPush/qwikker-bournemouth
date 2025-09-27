@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { getAdminActivity, AdminActivity } from '@/lib/actions/admin-activity-actions'
-import { getCitySpecificAnalytics } from '@/lib/actions/walletpush-analytics'
+import { getEnhancedWalletPushAnalytics } from '@/lib/actions/enhanced-walletpush-analytics'
+import { getAdminAnalytics, AdminAnalytics } from '@/lib/actions/admin-analytics-actions'
 
 interface DashboardOverviewProps {
   city: string
@@ -32,6 +33,7 @@ export function AdminDashboardOverview({
     offersRedeemed: 0,
     recentActivity: []
   })
+  const [adminAnalytics, setAdminAnalytics] = useState<AdminAnalytics | null>(null)
 
   useEffect(() => {
     const updateTime = () => {
@@ -144,7 +146,7 @@ export function AdminDashboardOverview({
     async function loadActivity() {
       setIsLoadingActivity(true)
       try {
-        const activities = await getAdminActivity(5)
+        const activities = await getAdminActivity(city, 5) // 🎯 Pass city parameter
         setRecentActivity(activities)
       } catch (error) {
         console.error('Error loading admin activity:', error)
@@ -165,14 +167,25 @@ export function AdminDashboardOverview({
   useEffect(() => {
     const fetchWalletAnalytics = async () => {
       try {
-        const analytics = await getCitySpecificAnalytics(city)
+        const analytics = await getEnhancedWalletPushAnalytics(city)
         setWalletAnalytics(analytics)
       } catch (error) {
         console.error('Error fetching WalletPush analytics:', error)
       }
     }
 
+    // Fetch admin analytics
+    const fetchAdminAnalytics = async () => {
+      try {
+        const analytics = await getAdminAnalytics(city) // 🎯 Pass city parameter
+        setAdminAnalytics(analytics)
+      } catch (error) {
+        console.error('Error fetching admin analytics:', error)
+      }
+    }
+
     fetchWalletAnalytics()
+    fetchAdminAnalytics()
     
     // Refresh analytics every 5 minutes
     const interval = setInterval(fetchWalletAnalytics, 5 * 60 * 1000)
@@ -215,10 +228,14 @@ export function AdminDashboardOverview({
               </p>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
+            <div className="text-right">
+              <p className="text-sm text-slate-400">Total Users</p>
+              <p className="text-2xl font-bold text-white">{adminAnalytics?.totalUsers || 0}</p>
+            </div>
             <div className="text-right">
               <p className="text-sm text-slate-400">Active Businesses</p>
-              <p className="text-2xl font-bold text-white">{liveCount}</p>
+              <p className="text-2xl font-bold text-white">{adminAnalytics?.approvedBusinesses || liveCount}</p>
             </div>
             <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -228,6 +245,48 @@ export function AdminDashboardOverview({
           </div>
         </div>
       </div>
+
+      {/* Real-Time Analytics */}
+      {adminAnalytics && (
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Live Analytics
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <Card className="p-4 bg-slate-800/50 border-slate-700">
+              <div className="text-center">
+                <p className="text-sm text-slate-400 mb-1">Active Users</p>
+                <p className="text-2xl font-bold text-green-400">{adminAnalytics.activeUsers}</p>
+                <p className="text-xs text-slate-500">with wallet passes</p>
+              </div>
+            </Card>
+            <Card className="p-4 bg-slate-800/50 border-slate-700">
+              <div className="text-center">
+                <p className="text-sm text-slate-400 mb-1">Pending Apps</p>
+                <p className="text-2xl font-bold text-yellow-400">{adminAnalytics.pendingApplications}</p>
+                <p className="text-xs text-slate-500">awaiting review</p>
+              </div>
+            </Card>
+            <Card className="p-4 bg-slate-800/50 border-slate-700">
+              <div className="text-center">
+                <p className="text-sm text-slate-400 mb-1">Offers Claimed</p>
+                <p className="text-2xl font-bold text-blue-400">{adminAnalytics.totalOffersClaimed}</p>
+                <p className="text-xs text-slate-500">total claims</p>
+              </div>
+            </Card>
+            <Card className="p-4 bg-slate-800/50 border-slate-700">
+              <div className="text-center">
+                <p className="text-sm text-slate-400 mb-1">Recent Signups</p>
+                <p className="text-2xl font-bold text-purple-400">{adminAnalytics.recentSignups}</p>
+                <p className="text-xs text-slate-500">last 7 days</p>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
 
       {/* Priority Actions */}
       <div>
@@ -301,7 +360,8 @@ export function AdminDashboardOverview({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Passes Created</p>
-                <p className="text-2xl font-bold text-white">{walletAnalytics.passesCreated}</p>
+                <p className="text-2xl font-bold text-white">{walletAnalytics.passesCreatedInDB || walletAnalytics.passesCreated || 0}</p>
+                <p className="text-xs text-slate-500">From database</p>
               </div>
               <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
                 <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -314,8 +374,9 @@ export function AdminDashboardOverview({
           <Card className="p-4 bg-slate-800/50 border border-slate-700/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Passes Installed</p>
-                <p className="text-2xl font-bold text-white">{walletAnalytics.passesInstalled}</p>
+                <p className="text-sm text-slate-400">Estimated Active</p>
+                <p className="text-2xl font-bold text-white">{walletAnalytics.estimatedInstalled || walletAnalytics.activeUsers || 0}</p>
+                <p className="text-xs text-slate-500">Active in 30 days</p>
               </div>
               <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
                 <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -406,6 +467,25 @@ export function AdminDashboardOverview({
                       return (
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )
+                    case 'wallet':
+                      return (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                      )
+                    case 'gift':
+                      return (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                        </svg>
+                      )
+                    case 'mapPin':
+                      return (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                       )
                     default:

@@ -437,7 +437,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             <ShareButton
               title={`Amazing Deal: ${offer.title}`}
               text={`Check out this exclusive offer at ${businessName}: ${offer.title}! Save ${offer.discount} - but you need Qwikker to claim it.`}
-              url={`https://bournemouth.qwikker.com/join?ref=offer-${offer.id}`}
+              url={`https://bournemouth.qwikker.com/join?ref=offer-${offer.id}`} // TODO: Make dynamic
               onShare={() => handleShare(offer.id, offer.title, businessName)}
               className="w-full"
               size="sm"

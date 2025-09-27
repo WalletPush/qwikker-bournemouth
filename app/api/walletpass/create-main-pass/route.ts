@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,13 +14,15 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const MOBILE_WALLET_APP_KEY = process.env.MOBILE_WALLET_APP_KEY
-    const MOBILE_WALLET_TEMPLATE_ID = process.env.MOBILE_WALLET_TEMPLATE_ID
+    // 🎯 DYNAMIC: Get city-specific WalletPush credentials
+    const credentials = await getWalletPushCredentials(city || 'bournemouth')
+    const MOBILE_WALLET_APP_KEY = credentials.apiKey
+    const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
     
     if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID) {
-      console.error('❌ Missing WalletPush credentials')
+      console.error(`❌ Missing WalletPush credentials for ${city}`)
       return NextResponse.json(
-        { error: 'Missing WalletPush credentials' },
+        { error: `Missing WalletPush credentials for ${city}` },
         { status: 500 }
       )
     }
@@ -88,25 +91,36 @@ export async function POST(request: NextRequest) {
       try {
         const { createShortUrl } = await import('@/lib/actions/short-url-actions')
         
+        // Use city-specific URLs for personalized experience
+        const cityDomain = city ? `${city}.qwikker.com` : 'bournemouth.qwikker.com'
+        
         const offersShortUrl = await createShortUrl({
-          targetUrl: `https://qwikkerdashboard-theta.vercel.app/user/offers?user_id=${result.serialNumber}`,
+          targetUrl: `https://${cityDomain}/user/offers?user_id=${result.serialNumber}`,
           userId: result.serialNumber,
           urlType: 'offers'
         })
         
         const chatShortUrl = await createShortUrl({
-          targetUrl: `https://qwikkerdashboard-theta.vercel.app/user/chat?user_id=${result.serialNumber}`,
+          targetUrl: `https://${cityDomain}/user/chat?user_id=${result.serialNumber}`,
           userId: result.serialNumber,
           urlType: 'chat'
         })
         
-        if (offersShortUrl.success && chatShortUrl.success) {
+        // Add dashboard link (ready for future implementation)
+        const dashboardShortUrl = await createShortUrl({
+          targetUrl: `https://${cityDomain}/user/dashboard?user_id=${result.serialNumber}`,
+          userId: result.serialNumber,
+          urlType: 'dashboard'
+        })
+        
+        if (offersShortUrl.success && chatShortUrl.success && dashboardShortUrl.success) {
           // Update the pass with the actual short URLs
           const updateUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes/${result.serialNumber}`
           
           const updateData = {
             'Offers_Url': offersShortUrl.shortUrl,
-            'AI_Url': chatShortUrl.shortUrl
+            'AI_Url': chatShortUrl.shortUrl,
+            'Dashboard_Url': dashboardShortUrl.shortUrl // New dashboard link
           }
           
           const updateResponse = await fetch(updateUrl, {
