@@ -186,7 +186,7 @@ export default function AddToWalletButton({
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-          Pass Updated!
+          Added to Wallet!
         </span>
       </button>
     );
@@ -209,7 +209,7 @@ export default function AddToWalletButton({
       ) : (
         <span className="flex items-center justify-center gap-2">
           <Wallet className="w-4 h-4" />
-          Update Pass
+          Add to Wallet
         </span>
       )}
     </button>
