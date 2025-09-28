@@ -1,8 +1,10 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
+  "/admin/login/page": "app/admin/login/page.js",
   "/admin/page": "app/admin/page.js",
   "/api/admin/comprehensive-analytics/route": "app/api/admin/comprehensive-analytics/route.js",
   "/api/admin/contacts/route": "app/api/admin/contacts/route.js",
+  "/api/admin/login/route": "app/api/admin/login/route.js",
   "/api/admin/sync/health/route": "app/api/admin/sync/health/route.js",
   "/api/dashboard/ai-support/route": "app/api/dashboard/ai-support/route.js",
   "/auth/login/page": "app/auth/login/page.js",

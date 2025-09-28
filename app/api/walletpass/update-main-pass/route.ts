@@ -4,158 +4,150 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🎫 [DEBUG] Starting wallet pass update process')
+    console.log('🎫 [DIRECT API] Using WalletPush Direct API - MUCH SIMPLER!')
     
     const requestBody = await request.json()
     const { userWalletPassId, currentOffer, offerDetails } = requestBody
     
-    console.log('📥 [DEBUG] Full request body:', JSON.stringify(requestBody, null, 2))
-    console.log('📥 [DEBUG] Extracted values:', { 
-      userWalletPassId, 
-      currentOffer, 
-      offerDetails 
-    })
+    console.log('📥 [DEBUG] Request data:', { userWalletPassId, currentOffer, offerDetails })
     
     if (!userWalletPassId) {
-      console.error('❌ Missing userWalletPassId')
-      return NextResponse.json(
-        { error: 'Missing userWalletPassId' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing userWalletPassId' }, { status: 400 })
     }
     
-    // 🎯 DYNAMIC: Get user's city and GHL contact ID for WalletPush webhook
-    console.log('🔍 [DEBUG] Looking up user in database...')
+    // Get user's city for dynamic credentials
     const supabase = createServiceRoleClient()
     const { data: user, error: userError } = await supabase
       .from('app_users')
-      .select('city, ghl_contact_id, name, email, first_name, last_name')
+      .select('city, email, name, first_name, last_name')
       .eq('wallet_pass_id', userWalletPassId)
       .single()
     
-    console.log('🔍 [DEBUG] Database query result:', { user, userError })
-    
-    if (userError) {
-      console.error('❌ [DEBUG] Database error:', userError)
-      return NextResponse.json(
-        { error: 'User not found in database', details: userError.message },
-        { status: 404 }
-      )
+    if (userError || !user?.email) {
+      console.error('❌ User not found:', userError)
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
     
     const userCity = user?.city || 'bournemouth'
     console.log('🔍 [DEBUG] Getting credentials for city:', userCity)
     const credentials = await getWalletPushCredentials(userCity)
-    console.log('🔍 [DEBUG] Retrieved credentials:', { 
-      hasApiKey: !!credentials.apiKey, 
-      hasTemplateId: !!credentials.templateId, 
-      endpointUrl: credentials.endpointUrl 
-    })
     
     const MOBILE_WALLET_APP_KEY = credentials.apiKey
     const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
-    const WALLETPUSH_WEBHOOK_URL = credentials.endpointUrl || `https://app.walletpush.io/api/hl-endpoint/IkBldqzvQG4XkoSxkCq8`
     
-    if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID || !WALLETPUSH_WEBHOOK_URL) {
+    if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID) {
       console.error(`❌ Missing WalletPush credentials for ${userCity}`)
-      return NextResponse.json(
-        { error: `Missing WalletPush credentials for ${userCity}` },
-        { status: 500 }
-      )
-    }
-          
-    // 🎯 PROPER FIX: Use the stored GHL contact_id from database
-    const ghlContactId = user?.ghl_contact_id
-    
-    if (!ghlContactId) {
-      console.error(`❌ No GHL contact ID found for user ${userWalletPassId}`)
-      return NextResponse.json(
-        { error: 'User not properly linked to GHL contact - please contact support' },
-        { status: 400 }
-      )
+      return NextResponse.json({ 
+        error: `Missing WalletPush credentials for ${userCity}` 
+      }, { status: 500 })
     }
     
-    // ✅ Use separate first_name field if available, fallback to extracting from name
-    const firstName = user?.first_name || user?.name?.split(' ')[0] || 'Qwikker'
+    // 🎯 DIRECT API APPROACH: Two API calls to WalletPush
+    // 1. Update Current_Offer (changes pass content)
+    // 2. Update Last_Message (triggers push notification)
     
-    console.log('🔍 [DEBUG] Name handling:', {
-      'user.first_name': user?.first_name,
-      'user.name': user?.name,
-      'extracted firstName': firstName
+    const firstName = user?.first_name || user?.name?.split(' ')[0] || 'User'
+    
+    // Add timestamp to make the offer unique and ensure it's different from previous value
+    const timestamp = new Date().toLocaleTimeString('en-GB', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit' 
     })
+    const offerValue = `${currentOffer || 'Offer Redeemed'} (${timestamp})`
     
-    // 🧪 REVERT TO WORKING APPROACH: With curly braces + all required fields + timestamp for uniqueness
-    const timestamp = new Date().toLocaleTimeString()
-    const walletPushData = {
-      'contact_id': ghlContactId, // ✅ Use the actual GHL contact ID
-      '{Current_Offer}': `${currentOffer || 'No active offer'} (${timestamp})`, // 🎯 Add timestamp to ensure it changes
-      '{First_Name}': firstName, // 🎯 Use separate first_name field
-      '{Last_Message}': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // 🧪 Test 2: With curly braces
-      '{ID}': userWalletPassId // Also include wallet pass ID
+    // API Call 1: Update Current_Offer
+    const CURRENT_OFFER_API_URL = `https://app2.walletpush.io/api/v1/passes/${MOBILE_WALLET_TEMPLATE_ID}/${userWalletPassId}/values/Current_Offer`
+    const offerPayload = {
+      value: offerValue
     }
     
-    console.log('📡 [DEBUG] About to call WalletPush webhook - REVERTED TO WORKING APPROACH')
-    console.log('🔍 [DEBUG] Webhook URL:', WALLETPUSH_WEBHOOK_URL)
-    console.log('🔍 [DEBUG] Payload:', JSON.stringify(walletPushData, null, 2))
+    console.log('📡 [API 1] Updating Current_Offer field')
+    console.log('🔍 [DEBUG] API URL:', CURRENT_OFFER_API_URL)
+    console.log('🔍 [DEBUG] Payload:', JSON.stringify(offerPayload, null, 2))
     
-    const response = await fetch(WALLETPUSH_WEBHOOK_URL, {
+    const offerResponse = await fetch(CURRENT_OFFER_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': MOBILE_WALLET_APP_KEY,
       },
-      body: JSON.stringify(walletPushData)
+      body: JSON.stringify(offerPayload)
     })
     
-    console.log('📡 [DEBUG] WalletPush response status:', response.status)
-    console.log('📡 [DEBUG] WalletPush response headers:', Object.fromEntries(response.headers.entries()))
+    console.log('📡 [API 1] Current_Offer response status:', offerResponse.status)
     
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ [DEBUG] WalletPush webhook error:', response.status, errorText)
-      return NextResponse.json(
-        { 
-          error: `WalletPush webhook error: ${response.status}`, 
-          details: errorText,
-          debug: {
-            approach: 'Reverted to working curly braces approach',
-            userCity,
-            ghlContactId,
-            webhookUrl: WALLETPUSH_WEBHOOK_URL,
-            payloadSent: walletPushData,
-            responseStatus: response.status,
-            responseHeaders: Object.fromEntries(response.headers.entries())
-          }
-        },
-        { status: 500 }
-      )
+    if (!offerResponse.ok) {
+      const errorText = await offerResponse.text()
+      console.error('❌ Current_Offer API error:', offerResponse.status, errorText)
+      return NextResponse.json({ 
+        error: `WalletPush Current_Offer API error: ${offerResponse.status}`, 
+        details: errorText
+      }, { status: 500 })
     }
     
-    const result = await response.json() // WalletPush webhooks return JSON
-    console.log('✅ [DEBUG] WalletPush webhook called successfully - REVERTED APPROACH')
-    console.log('🔍 [DEBUG] WalletPush response:', JSON.stringify(result, null, 2))
+    const offerResult = await offerResponse.text()
+    console.log('✅ [API 1] Current_Offer updated successfully!')
+    console.log('🔍 [DEBUG] Offer API Response:', offerResult)
+    
+    // API Call 2: Update Last_Message (triggers push notification)
+    const LAST_MESSAGE_API_URL = `https://app2.walletpush.io/api/v1/passes/${MOBILE_WALLET_TEMPLATE_ID}/${userWalletPassId}/values/Last_Message`
+    const pushMessage = `Congratulations ${firstName}. You have redeemed: ${currentOffer || 'your offer'}!`
+    const messagePayload = {
+      value: pushMessage
+    }
+    
+    console.log('📡 [API 2] Updating Last_Message field (triggers push)')
+    console.log('🔍 [DEBUG] API URL:', LAST_MESSAGE_API_URL)
+    console.log('🔍 [DEBUG] Payload:', JSON.stringify(messagePayload, null, 2))
+    
+    const messageResponse = await fetch(LAST_MESSAGE_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': MOBILE_WALLET_APP_KEY,
+      },
+      body: JSON.stringify(messagePayload)
+    })
+    
+    console.log('📡 [API 2] Last_Message response status:', messageResponse.status)
+    
+    if (!messageResponse.ok) {
+      const errorText = await messageResponse.text()
+      console.error('❌ Last_Message API error:', messageResponse.status, errorText)
+      // Don't fail the whole request if push fails - the offer was still updated
+      console.log('⚠️ Offer updated but push notification failed')
+    }
+    
+    const messageResult = await messageResponse.text()
+    console.log('✅ [API 2] Last_Message updated - push notification sent!')
+    console.log('🔍 [DEBUG] Message API Response:', messageResult)
     
     return NextResponse.json({
       success: true,
-      message: 'Offer added to wallet pass successfully!',
+      message: 'Wallet pass updated and push notification sent!',
       userWalletPassId,
-      currentOffer,
-      walletPushResponse: result,
+      currentOffer: offerValue,
+      pushMessage: pushMessage,
+      apiResponses: {
+        offerUpdate: offerResult,
+        pushNotification: messageResult
+      },
       debug: {
-        approach: 'Reverted to working curly braces approach',
+        approach: 'Direct WalletPush API - Two calls for update + push',
+        offerApiUrl: CURRENT_OFFER_API_URL,
+        messageApiUrl: LAST_MESSAGE_API_URL,
         userCity,
-        ghlContactId,
-        firstName,
-        webhookUrl: WALLETPUSH_WEBHOOK_URL,
-        payloadSent: walletPushData
+        templateId: MOBILE_WALLET_TEMPLATE_ID,
+        firstName: firstName
       }
     })
     
   } catch (error) {
-    console.error('❌ [DEBUG] Caught error in wallet pass update:', error)
-    console.error('❌ [DEBUG] Error stack:', error.stack)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message, stack: error.stack },
-      { status: 500 }
-    )
+    console.error('❌ [DIRECT API] Error calling WalletPush API:', error)
+    return NextResponse.json({ 
+      error: 'Internal server error', 
+      details: error.message 
+    }, { status: 500 })
   }
 }
