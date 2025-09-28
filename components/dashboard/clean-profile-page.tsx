@@ -499,6 +499,52 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
               placeholder="Describe your business..."
             />
           </div>
+          
+          {/* Social Media & Website Section */}
+          <div className="space-y-4 pt-6 border-t border-slate-700/50">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              Social Media & Website
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="website_url" className="text-white">Website URL</Label>
+                <Input
+                  id="website_url"
+                  value={businessData.website_url}
+                  onChange={(e) => setBusinessData(prev => ({ ...prev, website_url: e.target.value }))}
+                  className="bg-slate-700/50 border-slate-600/50 text-white"
+                  placeholder="https://yourwebsite.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="instagram_handle" className="text-white">Instagram Handle</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">@</span>
+                  <Input
+                    id="instagram_handle"
+                    value={businessData.instagram_handle}
+                    onChange={(e) => setBusinessData(prev => ({ ...prev, instagram_handle: e.target.value }))}
+                    className="bg-slate-700/50 border-slate-600/50 text-white pl-8"
+                    placeholder="yourbusiness"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="facebook_url" className="text-white">Facebook Page URL</Label>
+                <Input
+                  id="facebook_url"
+                  value={businessData.facebook_url}
+                  onChange={(e) => setBusinessData(prev => ({ ...prev, facebook_url: e.target.value }))}
+                  className="bg-slate-700/50 border-slate-600/50 text-white"
+                  placeholder="https://facebook.com/yourpage"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="flex justify-end pt-4 border-t border-slate-700/50">
             <SaveButton saved={businessSaved} saving={businessSaving} onClick={saveBusinessInfo}>
               Save Business Info

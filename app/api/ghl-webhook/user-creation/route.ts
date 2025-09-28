@@ -98,21 +98,62 @@ export async function POST(request: NextRequest) {
     
     const supabase = createRouteHandlerClient({ cookies })
     
-    // Check if user already exists
-    const { data: existingUser } = await supabase
+    // 🔄 IMPROVED: Check by email first to handle deleted passes
+    const { data: existingUserByEmail } = await supabase
+      .from('app_users')
+      .select('*')
+      .eq('email', email)
+      .single()
+    
+    if (existingUserByEmail) {
+      // User exists by email - update with new wallet pass ID (handles deleted passes)
+      console.log('🔄 Updating existing user with new wallet pass:', existingUserByEmail.name)
+      
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('app_users')
+        .update({
+          wallet_pass_id: wallet_pass_id, // New wallet pass ID
+          name: `${first_name} ${last_name}`, // Update name in case it changed
+          phone: phone || existingUserByEmail.phone, // Update phone if provided
+          wallet_pass_status: 'active', // Reactivate
+          wallet_pass_assigned_at: new Date().toISOString(), // New assignment time
+          last_active_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('email', email)
+        .select()
+        .single()
+      
+      if (updateError) {
+        console.error('❌ Error updating existing user:', updateError)
+        // Continue to create new user if update fails
+      } else {
+        console.log('✅ Successfully updated existing user with new pass')
+        return NextResponse.json({
+          success: true,
+          message: 'User updated with new wallet pass',
+          user_id: updatedUser.id,
+          wallet_pass_id: wallet_pass_id,
+          welcome_url: `https://qwikkerdashboard-theta.vercel.app/verify-pass?wallet_pass_id=${wallet_pass_id}&name=${encodeURIComponent(updatedUser.name)}&email=${encodeURIComponent(updatedUser.email)}`
+        })
+      }
+    }
+    
+    // Also check if this specific wallet_pass_id already exists (different email)
+    const { data: existingUserByPassId } = await supabase
       .from('app_users')
       .select('*')
       .eq('wallet_pass_id', wallet_pass_id)
       .single()
     
-    if (existingUser) {
-      console.log('✅ User already exists:', existingUser.name)
+    if (existingUserByPassId) {
+      console.log('✅ Wallet pass ID already exists for different user:', existingUserByPassId.name)
       return NextResponse.json({
         success: true,
-        message: 'User already exists',
-        user_id: existingUser.id,
+        message: 'Wallet pass already assigned',
+        user_id: existingUserByPassId.id,
         wallet_pass_id: wallet_pass_id,
-        welcome_url: `https://qwikkerdashboard-theta.vercel.app/verify-pass?wallet_pass_id=${wallet_pass_id}&name=${encodeURIComponent(existingUser.name)}&email=${encodeURIComponent(existingUser.email)}`
+        welcome_url: `https://qwikkerdashboard-theta.vercel.app/verify-pass?wallet_pass_id=${wallet_pass_id}&name=${encodeURIComponent(existingUserByPassId.name)}&email=${encodeURIComponent(existingUserByPassId.email)}`
       })
     }
     

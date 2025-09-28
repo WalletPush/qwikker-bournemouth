@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { getApprovedBusinessesForQR, QRBusiness } from '@/lib/actions/qr-management-actions'
+import { debugBusinessData } from '@/lib/actions/debug-businesses'
 import { QRCodeCanvas as QRCode } from 'qrcode.react'
 import { useElegantModal } from '@/components/ui/elegant-modal'
 import { Download, Search, Filter, Eye } from 'lucide-react'
@@ -84,51 +86,40 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
   }
 
   const fetchAllBusinesses = async () => {
-    // Always start with your REAL approved businesses to ensure it works
-    const realApprovedBusinesses: Business[] = [
-      {
-        id: 'fuck-cursor-id',
-        business_name: "Fuck Cursor",
-        business_tier: 'spotlight',
-        slug: 'fuck-cursor'
-      },
-      {
-        id: 'lilleys-florist-id',
-        business_name: "Lilley's Florist",
-        business_tier: 'featured',
-        slug: 'lilleys-florist'
-      },
-      {
-        id: 'rage-gym-id',
-        business_name: "Rage Gym",
-        business_tier: 'starter',
-        slug: 'rage-gym'
-      }
-    ]
-
-    // Set the businesses immediately so UI works
-    setBusinesses(realApprovedBusinesses)
-
-    // Try to fetch from database in background, but don't fail if it doesn't work
+    setLoading(true)
+    
     try {
-      const supabase = createClientComponentClient()
+      console.log(`🔍 Fetching businesses for city: ${city}`)
       
-      // Try a simple query first
-      const { data, error } = await supabase
-        .from('business_profiles')
-        .select('id, business_name, business_tier, slug')
-        .eq('status', 'approved')
-        .limit(10)
+      // 🐛 DEBUG: Check what businesses actually exist
+      const debugData = await debugBusinessData()
+      console.log('🐛 DEBUG DATA:', debugData)
       
-      if (data && data.length > 0) {
-        console.log('✅ Database connection successful, found businesses:', data.length)
-        // If we get real data, use it instead of mock data
-        setBusinesses(data)
+      // Use server action to fetch businesses (bypasses RLS issues)
+      const businesses = await getApprovedBusinessesForQR(city)
+      
+      console.log('📊 Server action result:', { 
+        count: businesses.length,
+        city: city.toLowerCase(),
+        businesses: businesses.map(b => b.business_name)
+      })
+      
+      if (businesses.length > 0) {
+        console.log(`✅ Found ${businesses.length} businesses for ${city}:`, businesses.map(b => b.business_name))
+        setBusinesses(businesses)
       } else {
-        console.log('ℹ️ No businesses found in database, using approved mock businesses')
+        console.log(`ℹ️ No approved businesses found for ${city}`)
+        // If no businesses found, show what we have in debug data
+        if (debugData.allBusinesses.length > 0) {
+          console.log('🔍 But we found these businesses in debug:', debugData.allBusinesses)
+        }
+        setBusinesses([])
       }
     } catch (error) {
-      console.log('ℹ️ Database not ready yet, using approved mock businesses')
+      console.error('❌ Error fetching businesses:', error)
+      setBusinesses([])
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -276,20 +267,24 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         const businessSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-')
         codeName = `${businessSlug}-${qrSubtype}-${Date.now()}`
         
-        // Generate deep-link URL
+        // Generate deep-link URL (this will be the target URL, but QR will point to redirect)
+        let targetUrl = ''
         switch (qrSubtype) {
           case 'discover':
-            generatedUrl = `https://${city}.qwikker.com/user/dashboard?highlight=${businessSlug}`
+            targetUrl = `https://${city}.qwikker.com/user/dashboard?highlight=${businessSlug}`
             break
           case 'offers':
-            generatedUrl = `https://${city}.qwikker.com/user/offers?highlight=${businessSlug}`
+            targetUrl = `https://${city}.qwikker.com/user/offers?highlight=${businessSlug}`
             break
           case 'secret-menu':
-            generatedUrl = `https://${city}.qwikker.com/user/secret-menu?highlight=${businessSlug}`
+            targetUrl = `https://${city}.qwikker.com/user/secret-menu?highlight=${businessSlug}`
             break
           default:
-            generatedUrl = `https://${city}.qwikker.com/user/dashboard?highlight=${businessSlug}`
+            targetUrl = `https://${city}.qwikker.com/user/dashboard?highlight=${businessSlug}`
         }
+        
+        // QR code points to our redirect system (EDITABLE after printing!)
+        generatedUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://qwikkerdashboard-theta.vercel.app'}/qr/${codeName}`
       } else {
         codeName = `${activeSection}-${qrSubtype}-${Date.now()}`
         generatedUrl = targetUrl
@@ -322,7 +317,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
           qr_category: activeSection,
           qr_subtype: qrSubtype,
           city: city,
-          base_url: generatedUrl,
+          base_url: generatedUrl, // This is the QR redirect URL
+          target_url: activeSection === 'intent-routing' ? targetUrl : targetUrl, // This is the actual target
           is_active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()

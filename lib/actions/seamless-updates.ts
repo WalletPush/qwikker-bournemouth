@@ -104,14 +104,18 @@ export async function updateContactEverywhere(
       await sendContactUpdateToGoHighLevel(ghlData, updatedContact.city)
       ghlSyncSuccess = true
       
-      // Update last_ghl_sync timestamp after successful sync (if column exists)
+      // Update sync timestamps after successful sync
       try {
         await supabaseAdmin
           .from('business_profiles')
-          .update({ last_ghl_sync: new Date().toISOString() })
+          .update({ 
+            last_ghl_sync: new Date().toISOString(),
+            last_crm_sync: new Date().toISOString(),
+            crm_sync_status: 'synced'
+          })
           .eq('id', contactId)
       } catch (syncUpdateError) {
-        console.warn('⚠️ Could not update last_ghl_sync (column may not exist yet):', syncUpdateError)
+        console.warn('⚠️ Could not update sync timestamps:', syncUpdateError)
         // Continue anyway - the main sync was successful
       }
       

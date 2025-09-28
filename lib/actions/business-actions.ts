@@ -204,9 +204,9 @@ export async function updateBusinessInfo(userId: string, updates: any) {
       postcode: profile.business_postcode || '',
       
       // Optional fields
-      website: profile.website || '',
-      instagram: profile.instagram || '',
-      facebook: profile.facebook || '',
+      website: profile.website_url || '',
+      instagram: profile.instagram_handle || '',
+      facebook: profile.facebook_url || '',
       
       // File URLs
       logo_url: profile.logo || '',
@@ -241,6 +241,21 @@ export async function updateBusinessInfo(userId: string, updates: any) {
     }
     
     await sendContactUpdateToGoHighLevel(ghlData, profile.city)
+    
+    // Update sync status after successful GHL sync
+    try {
+      await supabaseAdmin
+        .from('business_profiles')
+        .update({ 
+          last_ghl_sync: new Date().toISOString(),
+          last_crm_sync: new Date().toISOString(),
+          crm_sync_status: 'synced'
+        })
+        .eq('user_id', userId)
+    } catch (syncError) {
+      console.warn('⚠️ Could not update sync status:', syncError)
+    }
+    
     console.log(`✅ Business info updated and synced to ${profile.city} GHL: ${profile.business_name}`)
     
   } catch (ghlError) {

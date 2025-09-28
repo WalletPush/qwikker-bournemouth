@@ -29,6 +29,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         status,
         approved_at,
         admin_notes,
+        logo,
         menu_url,
         business_images,
         offer_name,
