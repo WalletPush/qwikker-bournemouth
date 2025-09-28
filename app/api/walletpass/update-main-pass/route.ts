@@ -36,13 +36,25 @@ export async function POST(request: NextRequest) {
     const serialNumber = userWalletPassId
     const appKey = 'xIwpMeyEfuoAtvyCeLsNkQOuCYhOWahJYDHpQzlLfJbFWhptwLhArihcLcBCfpmF'
     
-    // Add timestamp to ensure Current_Offer field actually changes
-    const timestamp = new Date().toLocaleTimeString('en-GB', { 
+    // Calculate 12-hour expiry from now (in UK timezone)
+    const now = new Date()
+    const expiryTime = new Date(now.getTime() + (12 * 60 * 60 * 1000)) // Add 12 hours
+    
+    // Format expiry as "29 Sep 09:17" in UK timezone
+    const expiryFormatted = expiryTime.toLocaleDateString('en-GB', { 
+      day: '2-digit', 
+      month: 'short',
+      timeZone: 'Europe/London'
+    }) + ' ' + expiryTime.toLocaleTimeString('en-GB', { 
       hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Europe/London'
     })
-    const offerWithTimestamp = `${currentOffer || 'Offer Redeemed'} (${timestamp})`
+    
+    // Get business name from offerDetails or fallback
+    const businessName = requestBody.offerDetails?.businessName || 'Business'
+    const passDisplayText = `${businessName} (Expires: ${expiryFormatted})`
     
     // 🎯 DIRECT API APPROACH: Two PUT calls
     // 1. Update Current_Offer (changes pass content)
@@ -55,7 +67,7 @@ export async function POST(request: NextRequest) {
     
     console.log('📡 [API 1] Updating Current_Offer field')
     console.log('🔍 [DEBUG] URL:', offerUrl)
-    console.log('🔍 [DEBUG] Payload:', JSON.stringify({ value: offerWithTimestamp }, null, 2))
+    console.log('🔍 [DEBUG] Payload:', JSON.stringify({ value: passDisplayText }, null, 2))
     
     const offerResponse = await fetch(offerUrl, {
       method: 'PUT',
@@ -63,7 +75,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
         'Authorization': appKey
       },
-      body: JSON.stringify({ value: offerWithTimestamp })
+      body: JSON.stringify({ value: passDisplayText })
     })
     
     console.log('📡 [API 1] Response status:', offerResponse.status)
@@ -113,7 +125,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Wallet pass updated and push notification sent via Direct API!',
       userWalletPassId,
-      currentOffer: offerWithTimestamp,
+      currentOffer: passDisplayText,
       pushMessage: pushMessage,
       apiResponses: {
         offerUpdate: offerResult,
@@ -123,7 +135,9 @@ export async function POST(request: NextRequest) {
         approach: 'WalletPush Direct API - Two PUT calls for update + push',
         passTypeId: passTypeId,
         serialNumber: serialNumber,
-        firstName: firstName
+        firstName: firstName,
+        businessName: businessName,
+        expiryTime: expiryFormatted
       }
     })
     
