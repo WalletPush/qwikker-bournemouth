@@ -19,35 +19,56 @@ export async function getAdminAnalytics(city: string): Promise<AdminAnalytics> {
   try {
     const supabase = createServiceRoleClient()
     
-    // Get total and active users - CITY FILTERED
+    // Get covered areas using the new franchise geography system
+    const { data: areasData, error: areasError } = await supabase
+      .rpc('get_areas_for_franchise', { franchise_code: city.toLowerCase() })
+
+    let coveredCities: string[] = []
+    
+    if (areasError || !areasData) {
+      console.warn(`⚠️ Admin Analytics: Could not get areas from franchise geography system:`, areasError)
+      // Fallback to legacy hardcoded mapping
+      const legacyMapping: Record<string, string[]> = {
+        'bournemouth': ['bournemouth', 'christchurch', 'poole'],
+        'calgary': ['calgary'],
+        'london': ['london'],
+      }
+      coveredCities = legacyMapping[city.toLowerCase()] || [city.toLowerCase()]
+      console.log(`📊 Admin Analytics using LEGACY mapping for ${city}:`, coveredCities)
+    } else {
+      coveredCities = areasData
+      console.log(`📊 Admin Analytics for franchise ${city} covering cities:`, coveredCities)
+    }
+    
+    // Get total and active users - FRANCHISE FILTERED
     const { count: totalUsers } = await supabase
       .from('app_users')
       .select('*', { count: 'exact', head: true })
-      .eq('city', city.toLowerCase())
+      .in('city', coveredCities)
 
     const { count: activeUsers } = await supabase
       .from('app_users')
       .select('*', { count: 'exact', head: true })
       .eq('wallet_pass_status', 'active')
-      .eq('city', city.toLowerCase())
+      .in('city', coveredCities)
 
-    // Get business metrics - CITY FILTERED
+    // Get business metrics - FRANCHISE FILTERED
     const { count: totalBusinesses } = await supabase
       .from('business_profiles')
       .select('*', { count: 'exact', head: true })
-      .eq('business_town', city.toLowerCase())
+      .in('business_town', coveredCities)
 
     const { count: approvedBusinesses } = await supabase
       .from('business_profiles')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'approved')
-      .eq('business_town', city.toLowerCase())
+      .in('business_town', coveredCities)
 
     const { count: pendingApplications } = await supabase
       .from('business_profiles')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending_review')
-      .eq('business_town', city.toLowerCase())
+      .in('business_town', coveredCities)
 
     // Get engagement metrics
     const { count: totalOffersClaimed } = await supabase

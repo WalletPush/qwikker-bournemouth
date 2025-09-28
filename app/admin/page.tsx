@@ -37,7 +37,16 @@ export default async function AdminPage() {
   // 🔥 ADMIN: Use admin client to see ALL businesses (bypasses RLS)
   const supabase = createAdminClient()
   
-  // Fetch business profiles for this city only
+  // Fetch business profiles for this franchise (covers multiple cities)
+  // Use hardcoded mapping for now to ensure businesses show up
+  const legacyMapping: Record<string, string[]> = {
+    'bournemouth': ['bournemouth', 'christchurch', 'poole'],
+    'calgary': ['calgary'],
+    'london': ['london'],
+  }
+  const coveredCities = legacyMapping[currentCity.toLowerCase()] || [currentCity.toLowerCase()]
+  console.log(`🏢 Admin Page for ${currentCity} covering cities:`, coveredCities)
+
   const { data: allBusinesses, error: businessError } = await supabase
     .from('business_profiles')
     .select(`
@@ -59,6 +68,9 @@ export default async function AdminPage() {
       business_description,
       business_hours,
       business_hours_structured,
+      website_url,
+      instagram_handle,
+      facebook_url,
       offer_name,
       offer_type,
       offer_value,
@@ -79,7 +91,7 @@ export default async function AdminPage() {
       created_at,
       updated_at
     `)
-    .eq('city', currentCity) // Only show businesses for this city
+    .in('business_town', coveredCities) // Use franchise-aware filtering
     .not('email', 'is', null)
     .order('created_at', { ascending: false })
   

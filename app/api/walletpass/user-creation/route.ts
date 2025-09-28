@@ -36,21 +36,66 @@ export async function POST(request: NextRequest) {
     
     const supabase = createRouteHandlerClient({ cookies })
     
-    // Create user_members record with WalletPass data
-    const { data: existingUser } = await supabase
+    // 🔄 IMPROVED: Check by email first to handle deleted passes
+    const { data: existingUserByEmail } = await supabase
+      .from('user_members')
+      .select('*')
+      .eq('email', email)
+      .single()
+    
+    if (existingUserByEmail) {
+      // User exists by email - update with new wallet pass ID (handles deleted passes)
+      console.log('🔄 Updating existing user with new wallet pass:', existingUserByEmail.name)
+      
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('user_members')
+        .update({
+          wallet_pass_id: serialNumber, // New wallet pass ID
+          name: `${First_Name} ${Last_Name}`, // Update name in case it changed
+          first_name: First_Name,
+          last_name: Last_Name,
+          status: 'active', // Reactivate
+          device_info: {
+            device_type: device,
+            pass_url: url,
+            pass_type_identifier: passTypeIdentifier
+          },
+          created_at: new Date().toISOString() // Update creation time for new pass
+        })
+        .eq('email', email)
+        .select()
+        .single()
+      
+      if (updateError) {
+        console.error('❌ Error updating existing user:', updateError)
+        // Continue to create new user if update fails
+      } else {
+        console.log('✅ Successfully updated existing user with new pass')
+        return NextResponse.json({
+          success: true,
+          message: 'User updated with new wallet pass',
+          user_id: updatedUser.id,
+          wallet_pass_id: serialNumber,
+          dashboard_url: `https://${updatedUser.city}.qwikker.com/user?pass=${serialNumber}`
+        })
+      }
+    }
+    
+    // Also check if this specific wallet_pass_id already exists (different email)
+    const { data: existingUserByPassId } = await supabase
       .from('user_members')
       .select('*')
       .eq('wallet_pass_id', serialNumber)
       .single()
     
-    if (existingUser) {
-      console.log('✅ User already exists:', existingUser.name)
+    if (existingUserByPassId) {
+      console.log('✅ Wallet pass ID already exists for different user:', existingUserByPassId.name)
       return NextResponse.json({
         success: true,
-        message: 'User already exists',
-        user_id: existingUser.id,
+        message: 'Wallet pass already assigned',
+        user_id: existingUserByPassId.id,
         wallet_pass_id: serialNumber,
-        dashboard_url: `https://${existingUser.city}.qwikker.com/user?pass=${serialNumber}`
+        dashboard_url: `https://${existingUserByPassId.city}.qwikker.com/user?pass=${serialNumber}`
       })
     }
     

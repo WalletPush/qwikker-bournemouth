@@ -9,7 +9,7 @@ import { BusinessCRMCard } from './business-crm-card'
 import { ComprehensiveBusinessCRMCard } from './comprehensive-business-crm-card'
 import { BusinessCRMData } from '@/types/billing'
 import { useElegantModal } from '@/components/ui/elegant-modal'
-import { AdminAnalytics } from './admin-analytics'
+import { ComprehensiveAdminAnalytics } from './comprehensive-admin-analytics'
 import { ContactsTab } from './contacts-tab'
 import { SyncHealthOverview } from './sync-health-overview'
 import { InitialAvatar } from '@/components/admin/initial-avatar'
@@ -1132,8 +1132,22 @@ Qwikker Admin Team`
                         business_postcode: business.business_postcode || '',
                         email: business.email || '',
                         phone: business.phone || '',
+                        logo: business.logo || '',
+                        business_tagline: business.business_tagline || '',
+                        business_description: business.business_description || '',
+                        business_hours: business.business_hours || '',
+                        business_hours_structured: business.business_hours_structured || null,
+                        website_url: business.website_url || '',
+                        website: business.website_url || '', // CRM card looks for 'website' field
+                        instagram_handle: business.instagram_handle || '',
+                        facebook_url: business.facebook_url || '',
                         status: business.status as 'incomplete' | 'pending_review' | 'approved' | 'rejected',
                         approved_at: business.approved_at,
+                        created_at: business.created_at,
+                        updated_at: business.updated_at,
+                        last_ghl_sync: null, // Will be fixed later
+                        last_crm_sync: null, // Will be fixed later
+                        crm_sync_status: 'pending', // Will be fixed later
                         admin_notes: business.admin_notes,
                         subscription: null,
                         tier: null,
@@ -1779,16 +1793,7 @@ Qwikker Admin Team`
               {/* Analytics Tab */}
               {activeTab === 'analytics' && (
                 <div className="space-y-8">
-                  <AdminAnalytics city={city} />
-                  
-                  {/* QR Analytics Section */}
-                  <div className="border-t border-slate-700 pt-8">
-                    <div className="mb-6">
-                      <h3 className="text-2xl font-bold text-white mb-2">QR Code Analytics</h3>
-                      <p className="text-slate-400">Track QR code performance and user engagement</p>
-                    </div>
-                    <QRAnalyticsDashboard city={city} />
-                  </div>
+                  <ComprehensiveAdminAnalytics city={city} />
                 </div>
               )}
 

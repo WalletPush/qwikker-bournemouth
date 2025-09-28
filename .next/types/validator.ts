@@ -686,6 +686,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/admin/comprehensive-analytics/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/admin/comprehensive-analytics">> = Specific
+  const handler = {} as typeof import("../../app/api/admin/comprehensive-analytics/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/admin/contacts/bulk-sync-ghl/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/admin/contacts/bulk-sync-ghl">> = Specific
@@ -987,6 +996,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/auth/logout">> = Specific
   const handler = {} as typeof import("../../app/auth/logout/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/qr/[qrId]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/qr/[qrId]">> = Specific
+  const handler = {} as typeof import("../../app/qr/[qrId]/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
