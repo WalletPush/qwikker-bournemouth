@@ -77,9 +77,9 @@ export async function POST(request: NextRequest) {
     
     const walletPushData = {
       'contact_id': ghlContactId, // ✅ Use the actual GHL contact ID
-      'current_offer': currentOffer || 'No active offer', // ✅ Fixed: lowercase field name
-      'last_message': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // ✅ Fixed: lowercase field name
-      'id': userWalletPassId // Also include wallet pass ID (lowercase)
+      '${Current_Offer}': currentOffer || 'No active offer', // ✅ WalletPush template format
+      '${Last_Message}': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // ✅ WalletPush template format
+      '${ID}': userWalletPassId // Also include wallet pass ID in template format
     }
     
     console.log('📡 [DEBUG] About to call WalletPush webhook')
