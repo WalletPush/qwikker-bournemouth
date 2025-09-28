@@ -39,59 +39,92 @@ export async function POST(request: NextRequest) {
     })
     const offerWithTimestamp = `${currentOffer || 'Offer Redeemed'} (${timestamp})`
     
-    // 🎯 WEBHOOK APPROACH: Use the format that worked before
+    // 🎯 WEBHOOK APPROACH: Two webhook calls like the direct API approach
+    // 1. Update Current_Offer (changes pass content)
+    // 2. Update Last_Message (triggers push notification)
+    
     const WALLETPUSH_WEBHOOK_URL = `https://app.walletpush.io/api/hl-endpoint/IkBldqzvQG4XkoSxkCq8`
     
-    const walletPushData = {
-      'contact_id': user.ghl_contact_id, // ✅ Use the actual GHL contact ID
-      'Current_Offer': offerWithTimestamp, // 🎯 This should trigger Rule 2
+    // Call 1: Update Current_Offer
+    const offerData = {
+      'contact_id': user.ghl_contact_id,
+      'Current_Offer': offerWithTimestamp,
       'First_Name': firstName,
-      'Last_Message': `Congratulations ${firstName}. You have redeemed: ${currentOffer || 'your offer'}!`,
-      'serialNumber': userWalletPassId // Also include wallet pass ID
+      'serialNumber': userWalletPassId
     }
     
-    console.log('📡 [WEBHOOK] Calling WalletPush webhook with correct field names')
-    console.log('🔍 [DEBUG] Webhook URL:', WALLETPUSH_WEBHOOK_URL)
-    console.log('🔍 [DEBUG] Payload:', JSON.stringify(walletPushData, null, 2))
+    console.log('📡 [WEBHOOK 1] Updating Current_Offer field')
+    console.log('🔍 [DEBUG] Payload:', JSON.stringify(offerData, null, 2))
     
-    const response = await fetch(WALLETPUSH_WEBHOOK_URL, {
+    const offerResponse = await fetch(WALLETPUSH_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(walletPushData)
+      body: JSON.stringify(offerData)
     })
     
-    console.log('📡 [DEBUG] WalletPush webhook response status:', response.status)
+    console.log('📡 [WEBHOOK 1] Response status:', offerResponse.status)
     
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ WalletPush webhook error:', response.status, errorText)
+    if (!offerResponse.ok) {
+      const errorText = await offerResponse.text()
+      console.error('❌ Current_Offer webhook error:', offerResponse.status, errorText)
       return NextResponse.json({ 
-        error: `WalletPush webhook error: ${response.status}`, 
-        details: errorText,
-        debug: {
-          webhookUrl: WALLETPUSH_WEBHOOK_URL,
-          payloadSent: walletPushData
-        }
+        error: `WalletPush Current_Offer webhook error: ${offerResponse.status}`, 
+        details: errorText
       }, { status: 500 })
     }
     
-    const result = await response.json()
-    console.log('✅ [WEBHOOK] WalletPush webhook called successfully!')
-    console.log('🔍 [DEBUG] Webhook Response:', result)
+    const offerResult = await offerResponse.json()
+    console.log('✅ [WEBHOOK 1] Current_Offer updated successfully!')
+    
+    // Call 2: Update Last_Message (triggers push notification)
+    const pushMessage = `Congratulations ${firstName}. You have redeemed: ${currentOffer || 'your offer'}!`
+    const messageData = {
+      'contact_id': user.ghl_contact_id,
+      'Last_Message': pushMessage,
+      'First_Name': firstName,
+      'serialNumber': userWalletPassId
+    }
+    
+    console.log('📡 [WEBHOOK 2] Updating Last_Message field (triggers push)')
+    console.log('🔍 [DEBUG] Payload:', JSON.stringify(messageData, null, 2))
+    
+    const messageResponse = await fetch(WALLETPUSH_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messageData)
+    })
+    
+    console.log('📡 [WEBHOOK 2] Response status:', messageResponse.status)
+    
+    if (!messageResponse.ok) {
+      const errorText = await messageResponse.text()
+      console.error('❌ Last_Message webhook error:', messageResponse.status, errorText)
+      // Don't fail the whole request if push fails - the offer was still updated
+      console.log('⚠️ Offer updated but push notification failed')
+    }
+    
+    const messageResult = messageResponse.ok ? await messageResponse.json() : null
+    console.log('✅ [WEBHOOK 2] Last_Message updated - push notification sent!')
     
     return NextResponse.json({
       success: true,
-      message: 'Offer sent to WalletPush - pass should update shortly!',
+      message: 'Wallet pass updated and push notification sent via webhooks!',
       userWalletPassId,
       currentOffer: offerWithTimestamp,
-      walletPushResponse: result,
+      pushMessage: pushMessage,
+      webhookResponses: {
+        offerUpdate: offerResult,
+        pushNotification: messageResult
+      },
       debug: {
-        approach: 'WalletPush Webhook (Direct API not available)',
+        approach: 'WalletPush Webhook - Two calls for update + push',
         webhookUrl: WALLETPUSH_WEBHOOK_URL,
-        payloadSent: walletPushData,
-        ghlContactId: user.ghl_contact_id
+        ghlContactId: user.ghl_contact_id,
+        firstName: firstName
       }
     })
     
