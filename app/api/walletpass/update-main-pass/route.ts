@@ -1,52 +1,100 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🎫 [FINAL] Using WalletPush webhook directly (not GHL)')
+    console.log('🎫 [DEBUG] Starting wallet pass update process')
     
     const requestBody = await request.json()
     const { userWalletPassId, currentOffer, offerDetails } = requestBody
     
-    console.log('📥 [DEBUG] Request data:', { userWalletPassId, currentOffer, offerDetails })
+    console.log('📥 [DEBUG] Full request body:', JSON.stringify(requestBody, null, 2))
+    console.log('📥 [DEBUG] Extracted values:', { 
+      userWalletPassId, 
+      currentOffer, 
+      offerDetails 
+    })
     
     if (!userWalletPassId) {
-      return NextResponse.json({ error: 'Missing userWalletPassId' }, { status: 400 })
+      console.error('❌ Missing userWalletPassId')
+      return NextResponse.json(
+        { error: 'Missing userWalletPassId' },
+        { status: 400 }
+      )
     }
     
-    // Get user's data
+    // 🎯 DYNAMIC: Get user's city and GHL contact ID for WalletPush webhook
+    console.log('🔍 [DEBUG] Looking up user in database...')
     const supabase = createServiceRoleClient()
     const { data: user, error: userError } = await supabase
       .from('app_users')
-      .select('city, email, name, first_name, last_name')
+      .select('city, ghl_contact_id, name, email, first_name, last_name')
       .eq('wallet_pass_id', userWalletPassId)
       .single()
     
-    if (userError || !user?.email) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    console.log('🔍 [DEBUG] Database query result:', { user, userError })
+    
+    if (userError) {
+      console.error('❌ [DEBUG] Database error:', userError)
+      return NextResponse.json(
+        { error: 'User not found in database', details: userError.message },
+        { status: 404 }
+      )
     }
     
-    const firstName = user.first_name || user.name?.split(' ')[0] || 'User'
+    const userCity = user?.city || 'bournemouth'
+    console.log('🔍 [DEBUG] Getting credentials for city:', userCity)
+    const credentials = await getWalletPushCredentials(userCity)
+    console.log('🔍 [DEBUG] Retrieved credentials:', { 
+      hasApiKey: !!credentials.apiKey, 
+      hasTemplateId: !!credentials.templateId, 
+      endpointUrl: credentials.endpointUrl 
+    })
     
-    // 🎯 FINAL APPROACH: Call WalletPush webhook directly (not HighLevel endpoint)
-    const WALLETPUSH_WEBHOOK_URL = 'https://app.walletpush.io/api/webhook/6949cdc9-dcb2-4b0b-94c9-d2c69b0cb9e0'
+    const MOBILE_WALLET_APP_KEY = credentials.apiKey
+    const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
+    const WALLETPUSH_WEBHOOK_URL = credentials.endpointUrl || `https://app.walletpush.io/api/hl-endpoint/IkBldqzvQG4XkoSxkCq8`
     
-    // Use the exact format that triggers Rule 2 (Current_Offer "Has Changed")
+    if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID || !WALLETPUSH_WEBHOOK_URL) {
+      console.error(`❌ Missing WalletPush credentials for ${userCity}`)
+      return NextResponse.json(
+        { error: `Missing WalletPush credentials for ${userCity}` },
+        { status: 500 }
+      )
+    }
+          
+    // 🎯 PROPER FIX: Use the stored GHL contact_id from database
+    const ghlContactId = user?.ghl_contact_id
+    
+    if (!ghlContactId) {
+      console.error(`❌ No GHL contact ID found for user ${userWalletPassId}`)
+      return NextResponse.json(
+        { error: 'User not properly linked to GHL contact - please contact support' },
+        { status: 400 }
+      )
+    }
+    
+    // ✅ Use separate first_name field if available, fallback to extracting from name
+    const firstName = user?.first_name || user?.name?.split(' ')[0] || 'Qwikker'
+    
+    console.log('🔍 [DEBUG] Name handling:', {
+      'user.first_name': user?.first_name,
+      'user.name': user?.name,
+      'extracted firstName': firstName
+    })
+    
+    // 🧪 REVERT TO WORKING APPROACH: With curly braces + all required fields + timestamp for uniqueness
+    const timestamp = new Date().toLocaleTimeString()
     const walletPushData = {
-      // User identification
-      email: user.email,
-      serialNumber: userWalletPassId,
-      
-      // Fields that match your WalletPush template
-      First_Name: firstName,
-      Current_Offer: currentOffer || 'Offer Redeemed',
-      Last_Message: `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`,
-      
-      // Timestamp to ensure "Has Changed" condition is met
-      updated_at: new Date().toISOString()
+      'contact_id': ghlContactId, // ✅ Use the actual GHL contact ID
+      '{Current_Offer}': `${currentOffer || 'No active offer'} (${timestamp})`, // 🎯 Add timestamp to ensure it changes
+      '{First_Name}': firstName, // 🎯 Use separate first_name field
+      '{Last_Message}': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // 🧪 Test 2: With curly braces
+      '{ID}': userWalletPassId // Also include wallet pass ID
     }
     
-    console.log('📡 [FINAL] Calling WalletPush webhook directly')
+    console.log('📡 [DEBUG] About to call WalletPush webhook - REVERTED TO WORKING APPROACH')
     console.log('🔍 [DEBUG] Webhook URL:', WALLETPUSH_WEBHOOK_URL)
     console.log('🔍 [DEBUG] Payload:', JSON.stringify(walletPushData, null, 2))
     
@@ -54,44 +102,60 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer eDZUgyCo0vUZQWk`, // Using the secret key from your webhook settings
       },
       body: JSON.stringify(walletPushData)
     })
     
     console.log('📡 [DEBUG] WalletPush response status:', response.status)
+    console.log('📡 [DEBUG] WalletPush response headers:', Object.fromEntries(response.headers.entries()))
     
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('❌ WalletPush webhook error:', response.status, errorText)
-      return NextResponse.json({ 
-        error: `WalletPush webhook error: ${response.status}`, 
-        details: errorText 
-      }, { status: 500 })
+      console.error('❌ [DEBUG] WalletPush webhook error:', response.status, errorText)
+      return NextResponse.json(
+        { 
+          error: `WalletPush webhook error: ${response.status}`, 
+          details: errorText,
+          debug: {
+            approach: 'Reverted to working curly braces approach',
+            userCity,
+            ghlContactId,
+            webhookUrl: WALLETPUSH_WEBHOOK_URL,
+            payloadSent: walletPushData,
+            responseStatus: response.status,
+            responseHeaders: Object.fromEntries(response.headers.entries())
+          }
+        },
+        { status: 500 }
+      )
     }
     
-    const result = await response.json()
-    console.log('✅ [FINAL] WalletPush webhook called successfully')
-    console.log('🔍 [DEBUG] Response:', result)
+    const result = await response.json() // WalletPush webhooks return JSON
+    console.log('✅ [DEBUG] WalletPush webhook called successfully - REVERTED APPROACH')
+    console.log('🔍 [DEBUG] WalletPush response:', JSON.stringify(result, null, 2))
     
     return NextResponse.json({
       success: true,
-      message: 'Offer added to wallet pass via WalletPush webhook!',
+      message: 'Offer added to wallet pass successfully!',
       userWalletPassId,
       currentOffer,
       walletPushResponse: result,
       debug: {
-        approach: 'Direct WalletPush webhook call',
+        approach: 'Reverted to working curly braces approach',
+        userCity,
+        ghlContactId,
+        firstName,
         webhookUrl: WALLETPUSH_WEBHOOK_URL,
         payloadSent: walletPushData
       }
     })
     
   } catch (error) {
-    console.error('❌ [FINAL] Error:', error)
-    return NextResponse.json({ 
-      error: 'Internal server error', 
-      details: error.message 
-    }, { status: 500 })
+    console.error('❌ [DEBUG] Caught error in wallet pass update:', error)
+    console.error('❌ [DEBUG] Error stack:', error.stack)
+    return NextResponse.json(
+      { error: 'Internal server error', details: error.message, stack: error.stack },
+      { status: 500 }
+    )
   }
 }
