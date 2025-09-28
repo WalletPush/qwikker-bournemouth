@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { sendContactUpdateToGoHighLevel } from '@/lib/integrations'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🎫 [DEBUG] Starting wallet pass update process')
+    console.log('🎫 [DEBUG] Starting wallet pass update via GHL contact update')
     
     const requestBody = await request.json()
     const { userWalletPassId, currentOffer, offerDetails } = requestBody
     
     console.log('📥 [DEBUG] Full request body:', JSON.stringify(requestBody, null, 2))
-    console.log('📥 [DEBUG] Extracted values:', { 
-      userWalletPassId, 
-      currentOffer, 
-      offerDetails 
-    })
     
     if (!userWalletPassId) {
       console.error('❌ Missing userWalletPassId')
@@ -24,134 +19,94 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // 🎯 DYNAMIC: Get user's city and GHL contact ID for WalletPush webhook
+    // Get user's data for the GHL contact update
     console.log('🔍 [DEBUG] Looking up user in database...')
     const supabase = createServiceRoleClient()
     const { data: user, error: userError } = await supabase
       .from('app_users')
-      .select('city, ghl_contact_id, name, email, first_name, last_name')
+      .select('city, email, name, first_name, last_name, ghl_contact_id')
       .eq('wallet_pass_id', userWalletPassId)
       .single()
     
     console.log('🔍 [DEBUG] Database query result:', { user, userError })
     
-    if (userError) {
-      console.error('❌ [DEBUG] Database error:', userError)
+    if (userError || !user?.email) {
+      console.error('❌ [DEBUG] User not found or missing email:', userError)
       return NextResponse.json(
-        { error: 'User not found in database', details: userError.message },
+        { error: 'User not found in database or missing email' },
         { status: 404 }
       )
     }
     
-    const userCity = user?.city || 'bournemouth'
-    console.log('🔍 [DEBUG] Getting credentials for city:', userCity)
-    const credentials = await getWalletPushCredentials(userCity)
-    console.log('🔍 [DEBUG] Retrieved credentials:', { 
-      hasApiKey: !!credentials.apiKey, 
-      hasTemplateId: !!credentials.templateId, 
-      endpointUrl: credentials.endpointUrl 
-    })
+    const userCity = user.city || 'bournemouth'
     
-    const MOBILE_WALLET_APP_KEY = credentials.apiKey
-    const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
-    const WALLETPUSH_WEBHOOK_URL = credentials.endpointUrl || `https://app.walletpush.io/api/hl-endpoint/IkBldqzvQG4XkoSxkCq8`
+    // 🎯 NEW APPROACH: Update GHL contact's Current_Offer field
+    // This should trigger the "Redemption Made" workflow automatically
     
-    if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID || !WALLETPUSH_WEBHOOK_URL) {
-      console.error(`❌ Missing WalletPush credentials for ${userCity}`)
-      return NextResponse.json(
-        { error: `Missing WalletPush credentials for ${userCity}` },
-        { status: 500 }
-      )
-    }
-          
-    // 🎯 PROPER FIX: Use the stored GHL contact_id from database
-    const ghlContactId = user?.ghl_contact_id
-    
-    if (!ghlContactId) {
-      console.error(`❌ No GHL contact ID found for user ${userWalletPassId}`)
-      return NextResponse.json(
-        { error: 'User not properly linked to GHL contact - please contact support' },
-        { status: 400 }
-      )
+    const ghlUpdateData = {
+      email: user.email,
+      first_name: user.first_name || user.name?.split(' ')[0] || 'User',
+      last_name: user.last_name || user.name?.split(' ').slice(1).join(' ') || '',
+      contact_id: user.ghl_contact_id, // Include the GHL contact ID if we have it
+      
+      // 🎯 KEY FIELD: Update Current_Offer to trigger the redemption workflow
+      Current_Offer: currentOffer || 'Offer Redeemed',
+      
+      // Additional fields that might be useful
+      Last_Message: `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`,
+      
+      // Metadata for GHL workflow
+      updateType: 'offer_redemption',
+      isContactUpdate: true,
+      skipSignupNotification: true,
+      redemption_timestamp: new Date().toISOString(),
+      offer_details: JSON.stringify(offerDetails),
+      wallet_pass_id: userWalletPassId
     }
     
-    // ✅ Use separate first_name field if available, fallback to extracting from name
-    const firstName = user?.first_name || user?.name?.split(' ')[0] || 'Qwikker'
+    console.log('📡 [DEBUG] About to update GHL contact with offer redemption')
+    console.log('🔍 [DEBUG] Update data:', JSON.stringify(ghlUpdateData, null, 2))
     
-    console.log('🔍 [DEBUG] Name handling:', {
-      'user.first_name': user?.first_name,
-      'user.name': user?.name,
-      'extracted firstName': firstName
-    })
-    
-    // 🧪 APPROACH 2 ENHANCED: With curly braces + all required fields + timestamp for uniqueness
-    const timestamp = new Date().toLocaleTimeString()
-    const walletPushData = {
-      'contact_id': ghlContactId, // ✅ Use the actual GHL contact ID
-      '{Current_Offer}': `${currentOffer || 'No active offer'} (${timestamp})`, // 🎯 Add timestamp to ensure it changes
-      '{First_Name}': firstName, // 🎯 Use separate first_name field
-      '{Last_Message}': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // 🧪 Test 2: With curly braces
-      '{ID}': userWalletPassId // Also include wallet pass ID
-    }
-    
-    console.log('📡 [DEBUG] About to call WalletPush webhook - APPROACH 2 ENHANCED')
-    console.log('🔍 [DEBUG] Webhook URL:', WALLETPUSH_WEBHOOK_URL)
-    console.log('🔍 [DEBUG] Payload:', JSON.stringify(walletPushData, null, 2))
-    
-    const response = await fetch(WALLETPUSH_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(walletPushData)
-    })
-    
-    console.log('📡 [DEBUG] WalletPush response status:', response.status)
-    console.log('📡 [DEBUG] WalletPush response headers:', Object.fromEntries(response.headers.entries()))
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ [DEBUG] WalletPush webhook error:', response.status, errorText)
+    try {
+      // Use our existing GHL integration to update the contact
+      await sendContactUpdateToGoHighLevel(ghlUpdateData, userCity)
+      
+      console.log('✅ [DEBUG] GHL contact updated successfully')
+      console.log('🔍 [DEBUG] This should trigger the redemption workflow and update the wallet pass')
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Offer redeemed! GHL contact updated and wallet pass should update automatically.',
+        userWalletPassId,
+        currentOffer,
+        userEmail: user.email,
+        debug: {
+          approach: 'GHL contact update to trigger redemption workflow',
+          userCity,
+          userName: user.name,
+          ghlContactId: user.ghl_contact_id,
+          updateData: ghlUpdateData
+        }
+      })
+      
+    } catch (ghlError) {
+      console.error('❌ [DEBUG] GHL contact update failed:', ghlError)
       return NextResponse.json(
         { 
-          error: `WalletPush webhook error: ${response.status}`, 
-          details: errorText,
+          error: 'Failed to update GHL contact', 
+          details: ghlError.message,
           debug: {
-            approach: 'Enhanced curly braces with separate first_name + timestamp',
             userCity,
-            ghlContactId,
-            webhookUrl: WALLETPUSH_WEBHOOK_URL,
-            payloadSent: walletPushData,
-            responseStatus: response.status,
-            responseHeaders: Object.fromEntries(response.headers.entries())
+            userEmail: user.email,
+            ghlUpdateData
           }
         },
         { status: 500 }
       )
     }
     
-    const result = await response.json() // WalletPush webhooks return JSON
-    console.log('✅ [DEBUG] WalletPush webhook called successfully - APPROACH 2 ENHANCED')
-    console.log('🔍 [DEBUG] WalletPush response:', JSON.stringify(result, null, 2))
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Offer added to wallet pass successfully!',
-      userWalletPassId,
-      currentOffer,
-      walletPushResponse: result,
-      debug: {
-        approach: 'Enhanced curly braces with separate first_name + timestamp',
-        userCity,
-        ghlContactId,
-        firstName,
-        webhookUrl: WALLETPUSH_WEBHOOK_URL,
-        payloadSent: walletPushData
-      }
-    })
-    
   } catch (error) {
-    console.error('❌ [DEBUG] Caught error in wallet pass update:', error)
+    console.error('❌ [DEBUG] Caught error in GHL contact update:', error)
     console.error('❌ [DEBUG] Error stack:', error.stack)
     return NextResponse.json(
       { error: 'Internal server error', details: error.message, stack: error.stack },
