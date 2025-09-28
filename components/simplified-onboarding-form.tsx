@@ -211,8 +211,14 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
         // Don't block the user flow, but log the error
       })
 
-      // Redirect to success page
-      router.push(`/onboarding/success?email=${encodeURIComponent(data.email)}`)
+      // Handle redirect based on auto-login result
+      if (result.redirectTo) {
+        console.log('🚀 Redirecting to:', result.redirectTo)
+        router.push(result.redirectTo)
+      } else {
+        // Fallback to success page
+        router.push(`/onboarding/success?email=${encodeURIComponent(data.email)}`)
+      }
       
     } catch (error) {
       console.error('Form submission error:', error)

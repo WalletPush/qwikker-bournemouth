@@ -1,9 +1,11 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { uploadToCloudinary } from '@/lib/integrations'
 import { getCurrentLocation, mapTownToCity } from '@/lib/utils/location-detection'
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 // import { sendWelcomeEmail } from '@/lib/email/send-welcome-email' // Disabled until domain verification
 
 interface SignupData {
@@ -277,10 +279,47 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
            //   console.error('Welcome email failed (non-blocking):', error)
            // })
     
-    return {
-      success: true,
-      user: authData.user,
-      profile: profile
+    // 7. Auto-login the user after successful signup
+    try {
+      const supabase = createClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      })
+      
+      if (signInError) {
+        console.error('Auto-login failed:', signInError)
+        // Don't fail the entire signup, just redirect to login with email pre-filled
+        return {
+          success: true,
+          user: authData.user,
+          profile: profile,
+          autoLoginFailed: true,
+          redirectTo: `/auth/login?email=${encodeURIComponent(formData.email)}&message=account-created`
+        }
+      }
+      
+      console.log('✅ Auto-login successful for:', formData.email)
+      
+      // Successful auto-login - redirect to dashboard
+      return {
+        success: true,
+        user: authData.user,
+        profile: profile,
+        autoLoginSuccess: true,
+        redirectTo: '/dashboard?welcome=true'
+      }
+      
+    } catch (autoLoginError) {
+      console.error('Auto-login error:', autoLoginError)
+      // Don't fail the entire signup, just redirect to login
+      return {
+        success: true,
+        user: authData.user,
+        profile: profile,
+        autoLoginFailed: true,
+        redirectTo: `/auth/login?email=${encodeURIComponent(formData.email)}&message=account-created`
+      }
     }
 
   } catch (error) {

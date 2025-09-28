@@ -26,12 +26,19 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 
   // Auto-fill email from URL parameter (from onboarding success)
   const [isFromOnboarding, setIsFromOnboarding] = useState(false)
+  const [welcomeMessage, setWelcomeMessage] = useState('')
   
   useEffect(() => {
     const emailParam = searchParams.get('email')
+    const messageParam = searchParams.get('message')
+    
     if (emailParam) {
       setEmail(emailParam)
       setIsFromOnboarding(true)
+    }
+    
+    if (messageParam === 'account-created') {
+      setWelcomeMessage('Your account has been created successfully! Please sign in to continue.')
     }
   }, [searchParams])
 
@@ -64,7 +71,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
         <CardDescription className="text-slate-400">
           Log in to your business dashboard
         </CardDescription>
-          {isFromOnboarding && (
+          {(isFromOnboarding || welcomeMessage) && (
             <div className="mt-4 p-4 bg-gradient-to-r from-[#00d083]/10 to-[#00b86f]/10 border border-[#00d083]/30 rounded-lg">
               <div className="flex items-center gap-2 text-sm text-[#00d083]">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -73,7 +80,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                 <span className="font-semibold">Account Created Successfully!</span>
               </div>
               <p className="text-xs text-slate-300 mt-2">
-                Welcome to Qwikker! Your account is ready - just sign in to get started.
+                {welcomeMessage || 'Welcome to Qwikker! Your account is ready - just sign in to get started.'}
               </p>
             </div>
           )}
