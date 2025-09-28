@@ -52,9 +52,10 @@ export async function POST(request: NextRequest) {
       timeZone: 'Europe/London'
     })
     
-    // Get business name from offerDetails or fallback
+    // Get business name and offer name from request
     const businessName = requestBody.offerDetails?.businessName || 'Business'
-    const passDisplayText = `${businessName} (Expires: ${expiryFormatted})`
+    const offerName = currentOffer || 'Offer'
+    const passDisplayText = `${offerName} at ${businessName} (Expires: ${expiryFormatted})`
     
     // 🎯 DIRECT API APPROACH: Two PUT calls
     // 1. Update Current_Offer (changes pass content)
