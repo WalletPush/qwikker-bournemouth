@@ -45,15 +45,15 @@ export async function POST(request: NextRequest) {
       )
     }
           
-    // 🎯 CORRECT: Call WalletPush webhook directly with proper field names
+    // 🎯 TRY: Use serial_number instead of contact_id (maybe the error is misleading)
     const walletPushData = {
-      'serial_number': userWalletPassId,
-      'Current_Offer': currentOffer || 'No active offer', // ✅ Correct field name (matches template ${Current_Offer})
-      'Last_Message': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`,
-      'Offers_Claimed': '1' // Could be dynamic based on user's claim count
+      'serial_number': userWalletPassId, // Try serial_number instead
+      'Current_Offer': currentOffer || 'No active offer', // ✅ Matches template ${Current_Offer}
+      'Last_Message': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // ✅ Matches template ${Last_Message}
+      'ID': userWalletPassId // Also include ID from template
     }
     
-    console.log('📡 Calling WalletPush webhook directly:', userWalletPassId)
+    console.log('📡 Calling WalletPush webhook endpoint as instructed:', userWalletPassId)
     console.log('🔍 Webhook URL:', WALLETPUSH_WEBHOOK_URL)
     console.log('🔍 Payload:', walletPushData)
     
