@@ -139,6 +139,8 @@ export async function POST(request: NextRequest) {
         .update({
           wallet_pass_id: wallet_pass_id, // New wallet pass ID
           name: newName, // ✅ Better name handling
+          first_name: first_name || existingUserByEmail.first_name, // ✅ Store first_name separately
+          last_name: last_name || existingUserByEmail.last_name, // ✅ Store last_name separately
           phone: phone || existingUserByEmail.phone, // Update phone if provided
           ghl_contact_id: contact_id, // ✅ Store GHL contact ID
           wallet_pass_status: 'active', // Reactivate
@@ -202,6 +204,8 @@ export async function POST(request: NextRequest) {
         user_id: crypto.randomUUID(), // Generate unique user ID
         wallet_pass_id: wallet_pass_id,
         name: userName, // ✅ Better name with fallbacks
+        first_name: first_name || null, // ✅ Store first_name separately
+        last_name: last_name || null, // ✅ Store last_name separately
         email: email,
         phone: phone || null,
         ghl_contact_id: contact_id, // ✅ Store GHL contact ID
