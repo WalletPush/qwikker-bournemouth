@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       last_name: rootLastName,
       email: rootEmail,
       phone,
+      contact_id: rootContactId, // ✅ Extract GHL contact ID
       // Any other custom fields from GHL
       ...otherFields
     } = data
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
     const first_name = customData?.first_name || rootFirstName
     const last_name = customData?.last_name || rootLastName
     const email = customData?.email || rootEmail
+    const contact_id = customData?.contact_id || rootContactId // ✅ Get GHL contact ID
     
     // Look for wallet pass data in multiple possible locations
     const serialNumber = customData?.serialNumber || 
@@ -109,12 +111,13 @@ export async function POST(request: NextRequest) {
       // User exists by email - update with new wallet pass ID (handles deleted passes)
       console.log('🔄 Updating existing user with new wallet pass:', existingUserByEmail.name)
       
-      const { data: updatedUser, error: updateError } = await supabase
+        const { data: updatedUser, error: updateError } = await supabase
         .from('app_users')
         .update({
           wallet_pass_id: wallet_pass_id, // New wallet pass ID
           name: `${first_name} ${last_name}`, // Update name in case it changed
           phone: phone || existingUserByEmail.phone, // Update phone if provided
+          ghl_contact_id: contact_id, // ✅ Store GHL contact ID
           wallet_pass_status: 'active', // Reactivate
           wallet_pass_assigned_at: new Date().toISOString(), // New assignment time
           last_active_at: new Date().toISOString(),
@@ -166,6 +169,7 @@ export async function POST(request: NextRequest) {
         name: `${first_name} ${last_name}`,
         email: email,
         phone: phone || null,
+        ghl_contact_id: contact_id, // ✅ Store GHL contact ID
         city: 'bournemouth', // Auto-detect from subdomain later
         tier: 'explorer',
         level: 1,
