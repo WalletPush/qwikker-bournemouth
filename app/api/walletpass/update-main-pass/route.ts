@@ -75,14 +75,15 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    // 🧪 APPROACH 1: Just field names (most common)
     const walletPushData = {
       'contact_id': ghlContactId, // ✅ Use the actual GHL contact ID
-      '${Current_Offer}': currentOffer || 'No active offer', // ✅ WalletPush template format
-      '${Last_Message}': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // ✅ WalletPush template format
-      '${ID}': userWalletPassId // Also include wallet pass ID in template format
+      'Current_Offer': currentOffer || 'No active offer', // 🧪 Test 1: Just field name
+      'Last_Message': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // 🧪 Test 1: Just field name
+      'ID': userWalletPassId // Also include wallet pass ID
     }
     
-    console.log('📡 [DEBUG] About to call WalletPush webhook')
+    console.log('📡 [DEBUG] About to call WalletPush webhook - APPROACH 1: Just field names')
     console.log('🔍 [DEBUG] Webhook URL:', WALLETPUSH_WEBHOOK_URL)
     console.log('🔍 [DEBUG] Payload:', JSON.stringify(walletPushData, null, 2))
     
@@ -105,6 +106,7 @@ export async function POST(request: NextRequest) {
           error: `WalletPush webhook error: ${response.status}`, 
           details: errorText,
           debug: {
+            approach: 'Just field names',
             userCity,
             ghlContactId,
             webhookUrl: WALLETPUSH_WEBHOOK_URL,
@@ -118,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
     
     const result = await response.json() // WalletPush webhooks return JSON
-    console.log('✅ [DEBUG] WalletPush webhook called successfully')
+    console.log('✅ [DEBUG] WalletPush webhook called successfully - APPROACH 1')
     console.log('🔍 [DEBUG] WalletPush response:', JSON.stringify(result, null, 2))
     
     return NextResponse.json({
@@ -128,6 +130,7 @@ export async function POST(request: NextRequest) {
       currentOffer,
       walletPushResponse: result,
       debug: {
+        approach: 'Just field names (Current_Offer)',
         userCity,
         ghlContactId,
         webhookUrl: WALLETPUSH_WEBHOOK_URL,
