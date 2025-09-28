@@ -101,7 +101,18 @@ export async function POST(request: NextRequest) {
       const errorText = await response.text()
       console.error('❌ [DEBUG] WalletPush webhook error:', response.status, errorText)
       return NextResponse.json(
-        { error: `WalletPush webhook error: ${response.status}`, details: errorText },
+        { 
+          error: `WalletPush webhook error: ${response.status}`, 
+          details: errorText,
+          debug: {
+            userCity,
+            ghlContactId,
+            webhookUrl: WALLETPUSH_WEBHOOK_URL,
+            payloadSent: walletPushData,
+            responseStatus: response.status,
+            responseHeaders: Object.fromEntries(response.headers.entries())
+          }
+        },
         { status: 500 }
       )
     }
@@ -115,7 +126,13 @@ export async function POST(request: NextRequest) {
       message: 'Offer added to wallet pass successfully!',
       userWalletPassId,
       currentOffer,
-      walletPushResponse: result
+      walletPushResponse: result,
+      debug: {
+        userCity,
+        ghlContactId,
+        webhookUrl: WALLETPUSH_WEBHOOK_URL,
+        payloadSent: walletPushData
+      }
     })
     
   } catch (error) {
