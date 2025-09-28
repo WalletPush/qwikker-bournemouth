@@ -14,6 +14,8 @@ import {
   calculateTrialStatus
 } from '@/types/billing'
 import { InitialAvatar } from '@/components/admin/initial-avatar'
+import { formatDate, formatLastSync, formatJoinedDate } from '@/lib/utils/date-formatter'
+import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 
 interface ComprehensiveBusinessCRMCardProps {
   business: BusinessCRMData
@@ -439,12 +441,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <div>
                 <span className="text-slate-400 font-medium">Joined:</span>
                 <span className="ml-2 text-white">
-                  {business.created_at ? 
-                    new Date(business.created_at).toLocaleDateString('en-GB', { 
-                      day: '2-digit', 
-                      month: 'short' 
-                    }) : 'Unknown'
-                  }
+                  {formatJoinedDate(business.created_at)}
                 </span>
               </div>
               <div>
@@ -657,18 +654,50 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                         <span className="text-slate-400 text-sm">Address:</span>
                         <span className="text-white text-sm text-right">{business.business_address || 'Not provided'}</span>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between">
                         <span className="text-slate-400 text-sm">Hours:</span>
-                        <span className="text-white text-sm text-right">
-                          {business.business_hours || business.business_hours_structured ? 'Set' : 'Missing'}
-                        </span>
+                        <div className="text-white text-sm text-right max-w-[250px]">
+                          {business.business_hours || business.business_hours_structured ? (
+                            <div className="text-right">
+                              <div className="text-xs leading-relaxed whitespace-pre-line">
+                                {formatBusinessHours(
+                                  business.business_hours,
+                                  business.business_hours_structured,
+                                  true // showFullSchedule = true for complete weekly schedule
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-red-400">Missing</span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 text-sm">Website:</span>
                         <span className="text-white text-sm text-right">
-                          {business.website ? (
-                            <a href={business.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                          {business.website_url ? (
+                            <a href={business.website_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
                               View Site
+                            </a>
+                          ) : 'Not provided'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 text-sm">Instagram:</span>
+                        <span className="text-white text-sm text-right">
+                          {business.instagram_handle ? (
+                            <a href={`https://instagram.com/${business.instagram_handle}`} target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:underline">
+                              @{business.instagram_handle}
+                            </a>
+                          ) : 'Not provided'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 text-sm">Facebook:</span>
+                        <span className="text-white text-sm text-right">
+                          {business.facebook_url ? (
+                            <a href={business.facebook_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                              View Page
                             </a>
                           ) : 'Not provided'}
                         </span>
@@ -692,31 +721,19 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 text-sm">Last Sync:</span>
                         <span className="text-white text-sm">
-                          {business.last_ghl_sync ? new Date(business.last_ghl_sync).toLocaleDateString('en-GB', { 
-                            year: 'numeric', 
-                            month: '2-digit', 
-                            day: '2-digit' 
-                          }) : 'Never'}
+                          {formatLastSync(business.last_ghl_sync)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 text-sm">Joined:</span>
                         <span className="text-white text-sm">
-                          {business.created_at ? new Date(business.created_at).toLocaleDateString('en-GB', { 
-                            year: 'numeric', 
-                            month: '2-digit', 
-                            day: '2-digit' 
-                          }) : 'Unknown'}
+                          {formatDate(business.created_at)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 text-sm">Updated:</span>
                         <span className="text-white text-sm">
-                          {business.updated_at ? new Date(business.updated_at).toLocaleDateString('en-GB', { 
-                            year: 'numeric', 
-                            month: '2-digit', 
-                            day: '2-digit' 
-                          }) : 'Never'}
+                          {formatDate(business.updated_at)}
                         </span>
                       </div>
                     </CardContent>
