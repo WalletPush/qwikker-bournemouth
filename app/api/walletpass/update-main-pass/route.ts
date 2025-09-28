@@ -75,15 +75,15 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // 🧪 APPROACH 1: Just field names (most common)
+    // 🧪 APPROACH 2: With curly braces (matching template display)
     const walletPushData = {
       'contact_id': ghlContactId, // ✅ Use the actual GHL contact ID
-      'Current_Offer': currentOffer || 'No active offer', // 🧪 Test 1: Just field name
-      'Last_Message': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // 🧪 Test 1: Just field name
-      'ID': userWalletPassId // Also include wallet pass ID
+      '{Current_Offer}': currentOffer || 'No active offer', // 🧪 Test 2: With curly braces
+      '{Last_Message}': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // 🧪 Test 2: With curly braces
+      '{ID}': userWalletPassId // Also include wallet pass ID
     }
     
-    console.log('📡 [DEBUG] About to call WalletPush webhook - APPROACH 1: Just field names')
+    console.log('📡 [DEBUG] About to call WalletPush webhook - APPROACH 2: With curly braces')
     console.log('🔍 [DEBUG] Webhook URL:', WALLETPUSH_WEBHOOK_URL)
     console.log('🔍 [DEBUG] Payload:', JSON.stringify(walletPushData, null, 2))
     
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
           error: `WalletPush webhook error: ${response.status}`, 
           details: errorText,
           debug: {
-            approach: 'Just field names',
+            approach: 'With curly braces {Current_Offer}',
             userCity,
             ghlContactId,
             webhookUrl: WALLETPUSH_WEBHOOK_URL,
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
     
     const result = await response.json() // WalletPush webhooks return JSON
-    console.log('✅ [DEBUG] WalletPush webhook called successfully - APPROACH 1')
+    console.log('✅ [DEBUG] WalletPush webhook called successfully - APPROACH 2')
     console.log('🔍 [DEBUG] WalletPush response:', JSON.stringify(result, null, 2))
     
     return NextResponse.json({
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       currentOffer,
       walletPushResponse: result,
       debug: {
-        approach: 'Just field names (Current_Offer)',
+        approach: 'With curly braces ({Current_Offer})',
         userCity,
         ghlContactId,
         webhookUrl: WALLETPUSH_WEBHOOK_URL,
