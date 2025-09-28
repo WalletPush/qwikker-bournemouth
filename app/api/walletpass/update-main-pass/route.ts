@@ -4,14 +4,16 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🎫 Updating main wallet pass with new offer')
+    console.log('🎫 [DEBUG] Starting wallet pass update process')
     
-    const { userWalletPassId, currentOffer, offerDetails } = await request.json()
+    const requestBody = await request.json()
+    const { userWalletPassId, currentOffer, offerDetails } = requestBody
     
-    console.log('📥 Received data:', { 
+    console.log('📥 [DEBUG] Full request body:', JSON.stringify(requestBody, null, 2))
+    console.log('📥 [DEBUG] Extracted values:', { 
       userWalletPassId, 
-      currentOffer: currentOffer?.substring(0, 50) + '...', 
-      hasOfferDetails: !!offerDetails 
+      currentOffer, 
+      offerDetails 
     })
     
     if (!userWalletPassId) {
@@ -23,15 +25,32 @@ export async function POST(request: NextRequest) {
     }
     
     // 🎯 DYNAMIC: Get user's city and GHL contact ID for WalletPush webhook
+    console.log('🔍 [DEBUG] Looking up user in database...')
     const supabase = createServiceRoleClient()
-    const { data: user } = await supabase
+    const { data: user, error: userError } = await supabase
       .from('app_users')
-      .select('city, ghl_contact_id')
+      .select('city, ghl_contact_id, name, email')
       .eq('wallet_pass_id', userWalletPassId)
       .single()
     
+    console.log('🔍 [DEBUG] Database query result:', { user, userError })
+    
+    if (userError) {
+      console.error('❌ [DEBUG] Database error:', userError)
+      return NextResponse.json(
+        { error: 'User not found in database', details: userError.message },
+        { status: 404 }
+      )
+    }
+    
     const userCity = user?.city || 'bournemouth'
+    console.log('🔍 [DEBUG] Getting credentials for city:', userCity)
     const credentials = await getWalletPushCredentials(userCity)
+    console.log('🔍 [DEBUG] Retrieved credentials:', { 
+      hasApiKey: !!credentials.apiKey, 
+      hasTemplateId: !!credentials.templateId, 
+      endpointUrl: credentials.endpointUrl 
+    })
     
     const MOBILE_WALLET_APP_KEY = credentials.apiKey
     const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
@@ -63,9 +82,9 @@ export async function POST(request: NextRequest) {
       'ID': userWalletPassId // Also include wallet pass ID
     }
     
-    console.log('📡 Calling WalletPush webhook endpoint as instructed:', userWalletPassId)
-    console.log('🔍 Webhook URL:', WALLETPUSH_WEBHOOK_URL)
-    console.log('🔍 Payload:', walletPushData)
+    console.log('📡 [DEBUG] About to call WalletPush webhook')
+    console.log('🔍 [DEBUG] Webhook URL:', WALLETPUSH_WEBHOOK_URL)
+    console.log('🔍 [DEBUG] Payload:', JSON.stringify(walletPushData, null, 2))
     
     const response = await fetch(WALLETPUSH_WEBHOOK_URL, {
       method: 'POST',
@@ -75,9 +94,12 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(walletPushData)
     })
     
+    console.log('📡 [DEBUG] WalletPush response status:', response.status)
+    console.log('📡 [DEBUG] WalletPush response headers:', Object.fromEntries(response.headers.entries()))
+    
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('❌ WalletPush webhook error:', response.status, errorText)
+      console.error('❌ [DEBUG] WalletPush webhook error:', response.status, errorText)
       return NextResponse.json(
         { error: `WalletPush webhook error: ${response.status}`, details: errorText },
         { status: 500 }
@@ -85,8 +107,8 @@ export async function POST(request: NextRequest) {
     }
     
     const result = await response.json() // WalletPush webhooks return JSON
-    console.log('✅ WalletPush webhook called successfully')
-    console.log('🔍 WalletPush response:', result)
+    console.log('✅ [DEBUG] WalletPush webhook called successfully')
+    console.log('🔍 [DEBUG] WalletPush response:', JSON.stringify(result, null, 2))
     
     return NextResponse.json({
       success: true,
@@ -97,9 +119,10 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('❌ Error updating main wallet pass:', error)
+    console.error('❌ [DEBUG] Caught error in wallet pass update:', error)
+    console.error('❌ [DEBUG] Error stack:', error.stack)
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: error.message, stack: error.stack },
       { status: 500 }
     )
   }
