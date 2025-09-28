@@ -75,15 +75,20 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // 🧪 APPROACH 2: With curly braces (matching template display)
+    // Extract first name from user's full name
+    const firstName = user?.name?.split(' ')[0] || 'Qwikker'
+    
+    // 🧪 APPROACH 2 ENHANCED: With curly braces + all required fields + timestamp for uniqueness
+    const timestamp = new Date().toLocaleTimeString()
     const walletPushData = {
       'contact_id': ghlContactId, // ✅ Use the actual GHL contact ID
-      '{Current_Offer}': currentOffer || 'No active offer', // 🧪 Test 2: With curly braces
+      '{Current_Offer}': `${currentOffer || 'No active offer'} (${timestamp})`, // 🎯 Add timestamp to ensure it changes
+      '{First_Name}': firstName, // 🎯 Include First_Name as seen in Rule 1
       '{Last_Message}': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // 🧪 Test 2: With curly braces
       '{ID}': userWalletPassId // Also include wallet pass ID
     }
     
-    console.log('📡 [DEBUG] About to call WalletPush webhook - APPROACH 2: With curly braces')
+    console.log('📡 [DEBUG] About to call WalletPush webhook - APPROACH 2 ENHANCED')
     console.log('🔍 [DEBUG] Webhook URL:', WALLETPUSH_WEBHOOK_URL)
     console.log('🔍 [DEBUG] Payload:', JSON.stringify(walletPushData, null, 2))
     
@@ -106,7 +111,7 @@ export async function POST(request: NextRequest) {
           error: `WalletPush webhook error: ${response.status}`, 
           details: errorText,
           debug: {
-            approach: 'With curly braces {Current_Offer}',
+            approach: 'Enhanced curly braces with First_Name + timestamp',
             userCity,
             ghlContactId,
             webhookUrl: WALLETPUSH_WEBHOOK_URL,
@@ -120,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
     
     const result = await response.json() // WalletPush webhooks return JSON
-    console.log('✅ [DEBUG] WalletPush webhook called successfully - APPROACH 2')
+    console.log('✅ [DEBUG] WalletPush webhook called successfully - APPROACH 2 ENHANCED')
     console.log('🔍 [DEBUG] WalletPush response:', JSON.stringify(result, null, 2))
     
     return NextResponse.json({
@@ -130,7 +135,7 @@ export async function POST(request: NextRequest) {
       currentOffer,
       walletPushResponse: result,
       debug: {
-        approach: 'With curly braces ({Current_Offer})',
+        approach: 'Enhanced curly braces with First_Name + timestamp',
         userCity,
         ghlContactId,
         webhookUrl: WALLETPUSH_WEBHOOK_URL,
