@@ -22,11 +22,11 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // 🎯 DYNAMIC: Get user's city to determine which WalletPush endpoint to use
+    // 🎯 DYNAMIC: Get user's city and GHL contact ID for WalletPush webhook
     const supabase = createServiceRoleClient()
     const { data: user } = await supabase
       .from('app_users')
-      .select('city')
+      .select('city, ghl_contact_id')
       .eq('wallet_pass_id', userWalletPassId)
       .single()
     
@@ -45,12 +45,22 @@ export async function POST(request: NextRequest) {
       )
     }
           
-    // 🎯 TRY: Use serial_number instead of contact_id (maybe the error is misleading)
+    // 🎯 PROPER FIX: Use the stored GHL contact_id from database
+    const ghlContactId = user?.ghl_contact_id
+    
+    if (!ghlContactId) {
+      console.error(`❌ No GHL contact ID found for user ${userWalletPassId}`)
+      return NextResponse.json(
+        { error: 'User not properly linked to GHL contact - please contact support' },
+        { status: 400 }
+      )
+    }
+    
     const walletPushData = {
-      'serial_number': userWalletPassId, // Try serial_number instead
+      'contact_id': ghlContactId, // ✅ Use the actual GHL contact ID
       'Current_Offer': currentOffer || 'No active offer', // ✅ Matches template ${Current_Offer}
       'Last_Message': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // ✅ Matches template ${Last_Message}
-      'ID': userWalletPassId // Also include ID from template
+      'ID': userWalletPassId // Also include wallet pass ID
     }
     
     console.log('📡 Calling WalletPush webhook endpoint as instructed:', userWalletPassId)
