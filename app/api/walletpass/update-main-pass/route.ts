@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceRoleClient()
     const { data: user, error: userError } = await supabase
       .from('app_users')
-      .select('city, ghl_contact_id, name, email')
+      .select('city, ghl_contact_id, name, email, first_name, last_name')
       .eq('wallet_pass_id', userWalletPassId)
       .single()
     
@@ -75,15 +75,21 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Extract first name from user's full name
-    const firstName = user?.name?.split(' ')[0] || 'Qwikker'
+    // ✅ Use separate first_name field if available, fallback to extracting from name
+    const firstName = user?.first_name || user?.name?.split(' ')[0] || 'Qwikker'
+    
+    console.log('🔍 [DEBUG] Name handling:', {
+      'user.first_name': user?.first_name,
+      'user.name': user?.name,
+      'extracted firstName': firstName
+    })
     
     // 🧪 APPROACH 2 ENHANCED: With curly braces + all required fields + timestamp for uniqueness
     const timestamp = new Date().toLocaleTimeString()
     const walletPushData = {
       'contact_id': ghlContactId, // ✅ Use the actual GHL contact ID
       '{Current_Offer}': `${currentOffer || 'No active offer'} (${timestamp})`, // 🎯 Add timestamp to ensure it changes
-      '{First_Name}': firstName, // 🎯 Include First_Name as seen in Rule 1
+      '{First_Name}': firstName, // 🎯 Use separate first_name field
       '{Last_Message}': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`, // 🧪 Test 2: With curly braces
       '{ID}': userWalletPassId // Also include wallet pass ID
     }
@@ -111,7 +117,7 @@ export async function POST(request: NextRequest) {
           error: `WalletPush webhook error: ${response.status}`, 
           details: errorText,
           debug: {
-            approach: 'Enhanced curly braces with First_Name + timestamp',
+            approach: 'Enhanced curly braces with separate first_name + timestamp',
             userCity,
             ghlContactId,
             webhookUrl: WALLETPUSH_WEBHOOK_URL,
@@ -135,9 +141,10 @@ export async function POST(request: NextRequest) {
       currentOffer,
       walletPushResponse: result,
       debug: {
-        approach: 'Enhanced curly braces with First_Name + timestamp',
+        approach: 'Enhanced curly braces with separate first_name + timestamp',
         userCity,
         ghlContactId,
+        firstName,
         webhookUrl: WALLETPUSH_WEBHOOK_URL,
         payloadSent: walletPushData
       }
