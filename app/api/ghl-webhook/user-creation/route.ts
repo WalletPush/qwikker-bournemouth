@@ -54,11 +54,23 @@ export async function POST(request: NextRequest) {
       first_name,
       last_name, 
       email,
+      contact_id,
       serialNumber,
       passTypeIdentifier,
       url,
       device,
       customData
+    })
+    
+    // 🔍 DEBUG: Check name extraction specifically
+    console.log('🔍 NAME DEBUG:', {
+      'customData.first_name': customData?.first_name,
+      'customData.last_name': customData?.last_name,
+      'data.first_name': rootFirstName,
+      'data.last_name': rootLastName,
+      'final first_name': first_name,
+      'final last_name': last_name,
+      'will create name': `${first_name} ${last_name}`
     })
     
     // Enhanced debugging for wallet pass data
@@ -111,11 +123,22 @@ export async function POST(request: NextRequest) {
       // User exists by email - update with new wallet pass ID (handles deleted passes)
       console.log('🔄 Updating existing user with new wallet pass:', existingUserByEmail.name)
       
+        // 🔧 Better name handling - don't overwrite with empty names
+        const newName = (first_name && last_name) ? `${first_name} ${last_name}` : existingUserByEmail.name
+        
+        console.log('🔍 Name update logic:', {
+          'has first_name': !!first_name,
+          'has last_name': !!last_name,
+          'existing name': existingUserByEmail.name,
+          'new name would be': `${first_name} ${last_name}`,
+          'final name': newName
+        })
+        
         const { data: updatedUser, error: updateError } = await supabase
         .from('app_users')
         .update({
           wallet_pass_id: wallet_pass_id, // New wallet pass ID
-          name: `${first_name} ${last_name}`, // Update name in case it changed
+          name: newName, // ✅ Better name handling
           phone: phone || existingUserByEmail.phone, // Update phone if provided
           ghl_contact_id: contact_id, // ✅ Store GHL contact ID
           wallet_pass_status: 'active', // Reactivate
@@ -161,12 +184,24 @@ export async function POST(request: NextRequest) {
     }
     
     // Create new user automatically
+    // 🔧 Better name handling with fallbacks
+    const userName = (first_name && last_name) ? `${first_name} ${last_name}` : 
+                     first_name ? first_name : 
+                     email ? email.split('@')[0] : 'Qwikker User'
+    
+    console.log('🔍 New user name logic:', {
+      'has first_name': !!first_name,
+      'has last_name': !!last_name,
+      'email': email,
+      'final name': userName
+    })
+    
     const { data: newUser, error } = await supabase
       .from('app_users')
       .insert({
         user_id: crypto.randomUUID(), // Generate unique user ID
         wallet_pass_id: wallet_pass_id,
-        name: `${first_name} ${last_name}`,
+        name: userName, // ✅ Better name with fallbacks
         email: email,
         phone: phone || null,
         ghl_contact_id: contact_id, // ✅ Store GHL contact ID
