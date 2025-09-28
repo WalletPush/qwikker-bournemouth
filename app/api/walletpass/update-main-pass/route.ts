@@ -40,8 +40,8 @@ export async function POST(request: NextRequest) {
     
     const userCity = user.city || 'bournemouth'
     
-    // 🎯 NEW APPROACH: Update GHL contact's Current_Offer field
-    // This should trigger the "Redemption Made" workflow automatically
+    // 🎯 FIXED: Use exact field name from GHL Custom Fields
+    // Field is "Current Offer" (with space) not "Current_Offer" (with underscore)
     
     const ghlUpdateData = {
       email: user.email,
@@ -49,11 +49,11 @@ export async function POST(request: NextRequest) {
       last_name: user.last_name || user.name?.split(' ').slice(1).join(' ') || '',
       contact_id: user.ghl_contact_id, // Include the GHL contact ID if we have it
       
-      // 🎯 KEY FIELD: Update Current_Offer to trigger the redemption workflow
-      Current_Offer: currentOffer || 'Offer Redeemed',
+      // 🎯 CRITICAL FIX: Use "Current Offer" (with space) as seen in GHL Custom Fields
+      'Current Offer': currentOffer || 'Offer Redeemed',
       
       // Additional fields that might be useful
-      Last_Message: `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`,
+      'Last Message': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`,
       
       // Metadata for GHL workflow
       updateType: 'offer_redemption',
@@ -64,27 +64,29 @@ export async function POST(request: NextRequest) {
       wallet_pass_id: userWalletPassId
     }
     
-    console.log('📡 [DEBUG] About to update GHL contact with offer redemption')
+    console.log('📡 [DEBUG] About to update GHL contact with CORRECT field names')
+    console.log('🔍 [DEBUG] Using "Current Offer" (with space) not "Current_Offer" (with underscore)')
     console.log('🔍 [DEBUG] Update data:', JSON.stringify(ghlUpdateData, null, 2))
     
     try {
       // Use our existing GHL integration to update the contact
       await sendContactUpdateToGoHighLevel(ghlUpdateData, userCity)
       
-      console.log('✅ [DEBUG] GHL contact updated successfully')
+      console.log('✅ [DEBUG] GHL contact updated successfully with correct field name')
       console.log('🔍 [DEBUG] This should trigger the redemption workflow and update the wallet pass')
       
       return NextResponse.json({
         success: true,
-        message: 'Offer redeemed! GHL contact updated and wallet pass should update automatically.',
+        message: 'Offer redeemed! GHL contact updated with correct field name.',
         userWalletPassId,
         currentOffer,
         userEmail: user.email,
         debug: {
-          approach: 'GHL contact update to trigger redemption workflow',
+          approach: 'GHL contact update with CORRECT field name "Current Offer"',
           userCity,
           userName: user.name,
           ghlContactId: user.ghl_contact_id,
+          fieldUsed: 'Current Offer (with space)',
           updateData: ghlUpdateData
         }
       })
