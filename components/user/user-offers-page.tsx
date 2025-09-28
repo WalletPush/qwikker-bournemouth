@@ -92,7 +92,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   // Dynamic filter counts that update with state changes
   const getFilters = () => [
     { id: 'all', label: 'All Offers', count: allOffers.length },
-    { id: 'claimed', label: 'My Claimed', count: claimedOffers.size },
+    { id: 'claimed', label: 'My Claimed', count: Array.from(claimedOffers).filter(id => !walletOffers.has(id)).length },
     { id: 'favorites', label: 'My Favorites', count: favoriteOffers.size },
     { id: 'popular', label: 'Popular', count: allOffers.filter(o => o.isPopular).length },
     { id: 'ending_soon', label: 'Ending Soon', count: allOffers.filter(o => o.isEndingSoon).length },
@@ -152,7 +152,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       console.error('Failed to claim offer:', error)
       // UI already updated, so don't fail the user experience
     }
-    // Create center modal popup
+    // Create center modal popup with three action buttons
     const modalOverlay = document.createElement('div')
     modalOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300'
     
@@ -168,11 +168,27 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         <h3 class="text-xl font-bold text-slate-100 mb-2">Offer Claimed!</h3>
         <p class="text-slate-300 mb-1">"${offerTitle}"</p>
         <p class="text-slate-400 text-sm mb-2">from ${businessName}</p>
-        <p class="text-slate-300 text-sm mb-2">Offer saved to your claimed offers.</p>
-        <p class="text-sm text-slate-400 mb-6">Go to "My Claimed Offers" and click "Add to Wallet" to add it to your wallet.</p>
-        <button id="modal-close" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 active:scale-95">
-          Got it!
-        </button>
+        <p class="text-slate-300 text-sm mb-6">What would you like to do next?</p>
+        
+        <div class="space-y-3">
+          <button id="view-claimed" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            View Claimed Offers
+          </button>
+          
+          <button id="add-to-wallet" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Add to Wallet
+          </button>
+          
+          <button id="modal-dismiss" class="w-full bg-slate-600 hover:bg-slate-500 text-slate-200 font-medium py-2.5 px-6 rounded-xl transition-all duration-200 active:scale-95">
+            Dismiss
+          </button>
+        </div>
       </div>
     `
     
@@ -196,16 +212,72 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       }, 300)
     }
     
-    // Close on button click
-    modal.querySelector('#modal-close')?.addEventListener('click', closeModal)
+    // Button event handlers
+    modal.querySelector('#view-claimed')?.addEventListener('click', () => {
+      closeModal()
+      // Navigate to claimed offers
+      setSelectedFilter('claimed')
+    })
+    
+    modal.querySelector('#add-to-wallet')?.addEventListener('click', async () => {
+      closeModal()
+      // Trigger wallet pass update directly
+      try {
+        const response = await fetch('/api/walletpass/update-main-pass', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userWalletPassId: walletPassId,
+            currentOffer: offerTitle,
+            offerDetails: { businessName, offerId }
+          })
+        })
+        
+        if (response.ok) {
+          // Mark as added to wallet
+          setWalletOffers(prev => {
+            const newWallet = new Set([...prev, offerId])
+            if (typeof window !== 'undefined') {
+              const userId = walletPassId || 'anonymous-user'
+              localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify([...newWallet]))
+            }
+            return newWallet
+          })
+          
+          // Show success message
+          const successOverlay = document.createElement('div')
+          successOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'
+          successOverlay.innerHTML = `
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 text-center">
+              <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <h3 class="text-xl font-bold text-slate-100 mb-2">Added to Wallet!</h3>
+              <p class="text-slate-300 mb-4">Your wallet pass has been updated with this offer.</p>
+              <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200" onclick="this.parentElement.parentElement.remove()">
+                Perfect!
+              </button>
+            </div>
+          `
+          document.body.appendChild(successOverlay)
+          setTimeout(() => successOverlay.remove(), 5000)
+        } else {
+          throw new Error('Failed to update wallet pass')
+        }
+      } catch (error) {
+        console.error('Error adding to wallet:', error)
+        alert('Sorry, there was an error adding the offer to your wallet. Please try again.')
+      }
+    })
+    
+    modal.querySelector('#modal-dismiss')?.addEventListener('click', closeModal)
     
     // Close on overlay click
     modalOverlay.addEventListener('click', (e) => {
       if (e.target === modalOverlay) closeModal()
     })
-    
-    // Auto close after 8 seconds
-    setTimeout(closeModal, 8000)
   }
 
   const handleShare = (offerId: string, offerTitle: string, businessName: string) => {
@@ -242,13 +314,13 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       
       // Then apply specific filters
       if (selectedFilter === 'favorites') {
-        filtered = filtered.filter(o => favoriteOffers.has(o.id))
-      } else if (selectedFilter === 'ending_soon') {
-        filtered = filtered.filter(o => o.isEndingSoon)
-      } else if (selectedFilter === 'two_for_one') {
-        filtered = filtered.filter(o => o.type === 'two_for_one')
-      } else if (selectedFilter === 'percentage_off') {
-        filtered = filtered.filter(o => o.type === 'percentage_off')
+      filtered = filtered.filter(o => favoriteOffers.has(o.id))
+    } else if (selectedFilter === 'ending_soon') {
+      filtered = filtered.filter(o => o.isEndingSoon)
+    } else if (selectedFilter === 'two_for_one') {
+      filtered = filtered.filter(o => o.type === 'two_for_one')
+    } else if (selectedFilter === 'percentage_off') {
+      filtered = filtered.filter(o => o.type === 'percentage_off')
       }
     }
 
@@ -314,6 +386,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     
     const isFavorite = favoriteOffers.has(offer.id)
     const isClaimed = claimedOffers.has(offer.id)
+    const isInWallet = walletOffers.has(offer.id)
     const claimedOfferData = mockClaimedOffers.find(co => co.offerId === offer.id)
     
     return (
@@ -322,6 +395,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         className={`bg-gradient-to-br from-slate-800/60 to-slate-700/40 border-slate-700/50 hover:border-green-500/30 transition-all duration-300 overflow-hidden group h-full flex flex-col ${
           isHighlighted 
             ? 'qr-highlight ring-4 ring-[#00d083]/60 shadow-2xl shadow-[#00d083]/20 scale-105 border-[#00d083]/50' 
+            : ''
+        } ${
+          isInWallet 
+            ? 'opacity-50 blur-[1px] pointer-events-none relative' 
             : ''
         }`}
       >
@@ -383,6 +460,18 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             <p className="text-white font-semibold text-sm drop-shadow-lg truncate">{businessName}</p>
             <p className="text-white/80 text-xs drop-shadow-md truncate">{isRealOffer ? offer.businessCategory : business?.category}</p>
           </div>
+
+          {/* In Wallet Badge */}
+          {isInWallet && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+              <div className="bg-blue-500 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Added to Wallet
+              </div>
+            </div>
+          )}
         </div>
 
         <CardContent className="p-3 sm:p-4 flex flex-col flex-grow">
@@ -396,13 +485,13 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               <div className="flex items-center justify-between">
                 <span className="text-green-300 font-semibold">You Save:</span>
                 <span className="text-green-400 font-bold text-lg">{offer.value}</span>
-              </div>
             </div>
+          </div>
 
-            {/* Clean Terms & Expiry */}
-            <div className="mb-4 text-xs text-slate-400 space-y-1">
-              <p><span className="font-medium">Terms:</span> {isRealOffer ? (offer.termsAndConditions || 'Standard terms apply') : (offer.terms || 'Standard terms apply')}</p>
-              <p><span className="font-medium">Valid until:</span> {isRealOffer ? (offer.validUntil || 'No expiry date') : (offer.expiryDate || 'No expiry date')}</p>
+          {/* Clean Terms & Expiry */}
+          <div className="mb-4 text-xs text-slate-400 space-y-1">
+            <p><span className="font-medium">Terms:</span> {isRealOffer ? (offer.termsAndConditions || 'Standard terms apply') : (offer.terms || 'Standard terms apply')}</p>
+            <p><span className="font-medium">Valid until:</span> {isRealOffer ? (offer.validUntil || 'No expiry date') : (offer.expiryDate || 'No expiry date')}</p>
             </div>
           </div>
 
@@ -416,12 +505,12 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                 Claim Offer
               </Button>
             ) : (
-              <AddToWalletButton 
-                offer={{
-                  id: offer.id,
-                  title: offer.title,
-                  description: offer.description,
-                  business_name: businessName,
+                  <AddToWalletButton
+                    offer={{
+                      id: offer.id,
+                      title: offer.title,
+                      description: offer.description,
+                      business_name: businessName,
                   valid_until: offer.valid_until,
                   terms: offer.terms,
                   offer_value: offer.discount || offer.type
@@ -460,7 +549,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-green-400">
             Your Exclusive Offers
-          </h1>
+        </h1>
         </div>
         <p className="text-lg text-slate-300 mb-2">Save money while discovering amazing local businesses</p>
         <p className="text-slate-400">All offers are verified and ready to claim instantly</p>
@@ -476,8 +565,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           }`}
           onClick={() => setSelectedFilter('all')}
         >
-          <p className="text-2xl font-bold text-blue-400">{allOffers.filter(o => !claimedOffers.has(o.id)).length}</p>
-          <p className="text-sm text-slate-400">Total Offers</p>
+          <p className="text-base sm:text-lg font-semibold text-blue-300 mb-1">Total Offers</p>
+          <p className="text-lg font-bold text-blue-400">{allOffers.filter(o => !claimedOffers.has(o.id)).length}</p>
         </Card>
         
         <Card 
@@ -488,8 +577,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           }`}
           onClick={() => setSelectedFilter('percentage_off')}
         >
-          <p className="text-2xl font-bold text-green-400">{allOffers.filter(o => o.type === 'percentage_off' && !claimedOffers.has(o.id)).length}</p>
-          <p className="text-sm text-slate-400">% Off Deals</p>
+          <p className="text-base sm:text-lg font-semibold text-green-300 mb-1">% Off Deals</p>
+          <p className="text-lg font-bold text-green-400">{allOffers.filter(o => o.type === 'percentage_off' && !claimedOffers.has(o.id)).length}</p>
         </Card>
         
         <Card 
@@ -500,8 +589,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           }`}
           onClick={() => setSelectedFilter('two_for_one')}
         >
-          <p className="text-2xl font-bold text-purple-400">{allOffers.filter(o => o.type === 'two_for_one' && !claimedOffers.has(o.id)).length}</p>
-          <p className="text-sm text-slate-400">2-for-1 Deals</p>
+          <p className="text-base sm:text-lg font-semibold text-purple-300 mb-1">2-for-1 Deals</p>
+          <p className="text-lg font-bold text-purple-400">{allOffers.filter(o => o.type === 'two_for_one' && !claimedOffers.has(o.id)).length}</p>
         </Card>
         
         <Card 
@@ -512,8 +601,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           }`}
           onClick={() => setSelectedFilter('ending_soon')}
         >
-          <p className="text-2xl font-bold text-red-400">{allOffers.filter(o => o.isEndingSoon && !claimedOffers.has(o.id)).length}</p>
-          <p className="text-sm text-slate-400">Ending Soon</p>
+          <p className="text-base sm:text-lg font-semibold text-red-300 mb-1">Ending Soon</p>
+          <p className="text-lg font-bold text-red-400">{allOffers.filter(o => o.isEndingSoon && !claimedOffers.has(o.id)).length}</p>
         </Card>
         
         <Card 
@@ -524,8 +613,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           }`}
           onClick={() => setSelectedFilter('claimed')}
         >
-          <p className="text-2xl font-bold text-amber-400">{claimedOffers.size}</p>
-          <p className="text-sm text-slate-400">My Claimed</p>
+          <p className="text-base sm:text-lg font-semibold text-amber-300 mb-1">My Claimed</p>
+          <p className="text-lg font-bold text-amber-400">{Array.from(claimedOffers).filter(id => !walletOffers.has(id)).length}</p>
         </Card>
         
         <Card 
@@ -536,8 +625,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           }`}
           onClick={() => setSelectedFilter('favorites')}
         >
-          <p className="text-2xl font-bold text-pink-400">{favoriteOffers.size}</p>
-          <p className="text-sm text-slate-400">Favourites</p>
+          <p className="text-base sm:text-lg font-semibold text-pink-300 mb-1">Favourites</p>
+          <p className="text-lg font-bold text-pink-400">{favoriteOffers.size}</p>
         </Card>
       </div>
 
@@ -597,11 +686,11 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             </>
           ) : (
             <>
-              <h3 className="text-xl font-bold text-slate-100 mb-2">No offers match your filters</h3>
-              <p className="text-slate-400 mb-4">Try adjusting your filters or check back later for new deals!</p>
+          <h3 className="text-xl font-bold text-slate-100 mb-2">No offers match your filters</h3>
+          <p className="text-slate-400 mb-4">Try adjusting your filters or check back later for new deals!</p>
               <Button onClick={() => {setSelectedFilter('all'); setSelectedCategory('all')}} className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100">
-                Show All Offers
-              </Button>
+            Show All Offers
+          </Button>
             </>
           )}
         </Card>
