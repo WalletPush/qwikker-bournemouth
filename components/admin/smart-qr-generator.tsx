@@ -241,7 +241,12 @@ export function SmartQRGenerator({ city }: SmartQRGeneratorProps) {
       {/* Generator */}
       <Card className="bg-slate-900 border-slate-800">
         <CardHeader>
-          <CardTitle className="text-white text-2xl">🎯 Smart QR Generator</CardTitle>
+          <CardTitle className="text-white text-2xl flex items-center gap-3">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+            </svg>
+            Smart QR Generator
+          </CardTitle>
           <p className="text-slate-400">Generate deep-linking QR codes for Spotlight businesses</p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -356,10 +361,10 @@ export function SmartQRGenerator({ city }: SmartQRGeneratorProps) {
               onChange={(e) => setQrType(e.target.value as 'discover' | 'offers' | 'secret-menu' | 'other')}
               className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white"
             >
-              <option value="discover">🔍 Discover Business</option>
-              <option value="offers">🎯 View Offers</option>
-              <option value="secret-menu">🤫 Secret Menu</option>
-              <option value="other">📱 Other</option>
+              <option value="discover">Discover Business</option>
+              <option value="offers">View Offers</option>
+              <option value="secret-menu">Secret Menu</option>
+              <option value="other">Other</option>
             </select>
             <p className="text-xs text-slate-400 mt-1">
               {getQRTypeDescription(qrType)}
@@ -387,7 +392,7 @@ export function SmartQRGenerator({ city }: SmartQRGeneratorProps) {
             disabled={generating || !selectedBusiness}
             className="w-full bg-[#00d083] hover:bg-[#00b86f] text-black font-bold py-3"
           >
-            {generating ? 'Generating...' : '🎯 Generate Smart QR Code'}
+            {generating ? 'Generating...' : 'Generate Smart QR Code'}
           </Button>
 
           {/* Preview */}
@@ -412,7 +417,7 @@ export function SmartQRGenerator({ city }: SmartQRGeneratorProps) {
                   variant="outline"
                   className="text-slate-300 border-slate-600 hover:bg-slate-700"
                 >
-                  📋 Copy URL
+                  Copy URL
                 </Button>
                 <Button
                   onClick={() => {
@@ -436,7 +441,12 @@ export function SmartQRGenerator({ city }: SmartQRGeneratorProps) {
       {/* Generated QR Codes List */}
       <Card className="bg-slate-900 border-slate-800">
         <CardHeader>
-          <CardTitle className="text-white text-xl">📋 Generated QR Codes ({generatedCodes.length})</CardTitle>
+          <CardTitle className="text-white text-xl flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Generated QR Codes ({generatedCodes.length})
+          </CardTitle>
           <p className="text-slate-400">Manage your Spotlight business QR codes</p>
         </CardHeader>
         <CardContent>
