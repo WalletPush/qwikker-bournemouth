@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🎫 [DIRECT API] Using WalletPush Direct API - MUCH SIMPLER!')
+    console.log('🎫 [DIRECT API] Using real WalletPush API values from GHL!')
     
     const requestBody = await request.json()
     const { userWalletPassId, currentOffer, offerDetails } = requestBody
@@ -15,11 +14,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing userWalletPassId' }, { status: 400 })
     }
     
-    // Get user's city for dynamic credentials
+    // Get user's data including Pass Type ID
     const supabase = createServiceRoleClient()
     const { data: user, error: userError } = await supabase
       .from('app_users')
-      .select('city, email, name, first_name, last_name')
+      .select('city, email, name, first_name, last_name, pass_type_identifier')
       .eq('wallet_pass_id', userWalletPassId)
       .single()
     
@@ -28,23 +27,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
     
-    const userCity = user?.city || 'bournemouth'
-    console.log('🔍 [DEBUG] Getting credentials for city:', userCity)
-    const credentials = await getWalletPushCredentials(userCity)
-    
-    const MOBILE_WALLET_APP_KEY = credentials.apiKey
-    const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
-    
-    if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID) {
-      console.error(`❌ Missing WalletPush credentials for ${userCity}`)
-      return NextResponse.json({ 
-        error: `Missing WalletPush credentials for ${userCity}` 
-      }, { status: 500 })
-    }
-    
-    // 🎯 DIRECT API APPROACH: Two API calls to WalletPush
-    // 1. Update Current_Offer (changes pass content)
-    // 2. Update Last_Message (triggers push notification)
+    // 🎯 REAL VALUES from GHL Custom Values
+    const MOBILE_WALLET_APP_KEY = 'xIwpMeyEfuoAtvyCeLsNkQOuCYnOWahJYDHpQzlLfJbFWhptwLhArhcLcBCfpmF'
+    const PASS_TYPE_ID = user.pass_type_identifier // ✅ Use stored Pass Type ID from database!
     
     const firstName = user?.first_name || user?.name?.split(' ')[0] || 'User'
     
@@ -56,21 +41,34 @@ export async function POST(request: NextRequest) {
     })
     const offerValue = `${currentOffer || 'Offer Redeemed'} (${timestamp})`
     
+    // 🎯 DIRECT API APPROACH: Two API calls to WalletPush
+    // 1. Update Current_Offer (changes pass content)
+    // 2. Update Last_Message (triggers push notification)
+    
+    // Check if we have the Pass Type ID
+    if (!PASS_TYPE_ID) {
+      console.error('❌ Missing Pass Type ID for user:', userWalletPassId)
+      return NextResponse.json({ 
+        error: 'Missing Pass Type ID - user may need to recreate wallet pass' 
+      }, { status: 400 })
+    }
+
     // API Call 1: Update Current_Offer
-    const CURRENT_OFFER_API_URL = `https://app2.walletpush.io/api/v1/passes/${MOBILE_WALLET_TEMPLATE_ID}/${userWalletPassId}/values/Current_Offer`
+    const CURRENT_OFFER_API_URL = `https://app2.walletpush.io/api/v1/passes/${PASS_TYPE_ID}/${userWalletPassId}/values/Current_Offer`
     const offerPayload = {
       value: offerValue
     }
     
-    console.log('📡 [API 1] Updating Current_Offer field')
+    console.log('📡 [API 1] Updating Current_Offer field with REAL values')
     console.log('🔍 [DEBUG] API URL:', CURRENT_OFFER_API_URL)
     console.log('🔍 [DEBUG] Payload:', JSON.stringify(offerPayload, null, 2))
+    console.log('🔍 [DEBUG] App Key:', MOBILE_WALLET_APP_KEY.substring(0, 10) + '...')
     
     const offerResponse = await fetch(CURRENT_OFFER_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': MOBILE_WALLET_APP_KEY,
+        'Authorization': MOBILE_WALLET_APP_KEY, // Direct app key (no Bearer)
       },
       body: JSON.stringify(offerPayload)
     })
@@ -82,7 +80,13 @@ export async function POST(request: NextRequest) {
       console.error('❌ Current_Offer API error:', offerResponse.status, errorText)
       return NextResponse.json({ 
         error: `WalletPush Current_Offer API error: ${offerResponse.status}`, 
-        details: errorText
+        details: errorText,
+        debug: {
+          apiUrl: CURRENT_OFFER_API_URL,
+          passTypeId: PASS_TYPE_ID,
+          passId: userWalletPassId,
+          appKey: MOBILE_WALLET_APP_KEY.substring(0, 10) + '...'
+        }
       }, { status: 500 })
     }
     
@@ -91,7 +95,7 @@ export async function POST(request: NextRequest) {
     console.log('🔍 [DEBUG] Offer API Response:', offerResult)
     
     // API Call 2: Update Last_Message (triggers push notification)
-    const LAST_MESSAGE_API_URL = `https://app2.walletpush.io/api/v1/passes/${MOBILE_WALLET_TEMPLATE_ID}/${userWalletPassId}/values/Last_Message`
+    const LAST_MESSAGE_API_URL = `https://app2.walletpush.io/api/v1/passes/${PASS_TYPE_ID}/${userWalletPassId}/values/Last_Message`
     const pushMessage = `Congratulations ${firstName}. You have redeemed: ${currentOffer || 'your offer'}!`
     const messagePayload = {
       value: pushMessage
@@ -125,7 +129,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       success: true,
-      message: 'Wallet pass updated and push notification sent!',
+      message: 'Wallet pass updated and push notification sent via direct API!',
       userWalletPassId,
       currentOffer: offerValue,
       pushMessage: pushMessage,
@@ -133,14 +137,14 @@ export async function POST(request: NextRequest) {
         offerUpdate: offerResult,
         pushNotification: messageResult
       },
-      debug: {
-        approach: 'Direct WalletPush API - Two calls for update + push',
-        offerApiUrl: CURRENT_OFFER_API_URL,
-        messageApiUrl: LAST_MESSAGE_API_URL,
-        userCity,
-        templateId: MOBILE_WALLET_TEMPLATE_ID,
-        firstName: firstName
-      }
+        debug: {
+          approach: 'Direct WalletPush API with stored Pass Type ID',
+          offerApiUrl: CURRENT_OFFER_API_URL,
+          messageApiUrl: LAST_MESSAGE_API_URL,
+          passTypeId: PASS_TYPE_ID,
+          firstName: firstName,
+          appKeyUsed: MOBILE_WALLET_APP_KEY.substring(0, 10) + '...'
+        }
     })
     
   } catch (error) {

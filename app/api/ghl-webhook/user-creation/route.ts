@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
           last_name: last_name || existingUserByEmail.last_name, // ✅ Store last_name separately
           phone: phone || existingUserByEmail.phone, // Update phone if provided
           ghl_contact_id: contact_id, // ✅ Store GHL contact ID
+          pass_type_identifier: passTypeIdentifier, // ✅ Store Pass Type ID for API calls
           wallet_pass_status: 'active', // Reactivate
           wallet_pass_assigned_at: new Date().toISOString(), // New assignment time
           last_active_at: new Date().toISOString(),
@@ -209,6 +210,7 @@ export async function POST(request: NextRequest) {
         email: email,
         phone: phone || null,
         ghl_contact_id: contact_id, // ✅ Store GHL contact ID
+        pass_type_identifier: passTypeIdentifier, // ✅ Store Pass Type ID for API calls
         city: 'bournemouth', // Auto-detect from subdomain later
         tier: 'explorer',
         level: 1,
