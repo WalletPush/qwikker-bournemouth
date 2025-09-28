@@ -35,10 +35,9 @@ export async function POST(request: NextRequest) {
     
     const MOBILE_WALLET_APP_KEY = credentials.apiKey
     const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
-    // Use GHL "Redeem Offers" form to trigger "Redemption Made" workflow
-    const REDEEM_OFFERS_FORM_URL = `https://${userCity}.qwikker.com/offer-redemption`
+    const WALLETPUSH_WEBHOOK_URL = credentials.endpointUrl || `https://app.walletpush.io/api/hl-endpoint/IkBldqzvQG4XkoSxkCq8`
     
-    if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID || !REDEEM_OFFERS_FORM_URL) {
+    if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID || !WALLETPUSH_WEBHOOK_URL) {
       console.error(`❌ Missing WalletPush credentials for ${userCity}`)
       return NextResponse.json(
         { error: `Missing WalletPush credentials for ${userCity}` },
@@ -46,48 +45,45 @@ export async function POST(request: NextRequest) {
       )
     }
           
-    // Submit to GHL "Redeem Offers" form to trigger "Redemption Made" workflow
-    const formData = new URLSearchParams({
-      'email': offerDetails?.email || `user-${userWalletPassId}@qwikker.com`,
-      'amount_spent': '0', // Set to 0 for offer claims (not purchases)
+    // 🎯 CORRECT: Call WalletPush webhook directly with proper field names
+    const walletPushData = {
       'serial_number': userWalletPassId,
-      'current_offer': currentOffer || 'No active offer',
-      'offer_title': offerDetails?.businessName || 'Qwikker Offer',
-      'business_name': offerDetails?.businessName || 'Local Business',
-      'form_type': 'Redeem Offers' // This should match the filter in your GHL workflow
-    })
+      'Current_Offer': currentOffer || 'No active offer', // ✅ Correct field name (matches template ${Current_Offer})
+      'Last_Message': `Offer claimed: ${offerDetails?.businessName || 'Local Business'}`,
+      'Offers_Claimed': '1' // Could be dynamic based on user's claim count
+    }
     
-    console.log('📡 Submitting to GHL Redeem Offers form:', userWalletPassId)
-    console.log('🔍 Form URL:', REDEEM_OFFERS_FORM_URL)
-    console.log('🔍 Form data:', formData.toString())
+    console.log('📡 Calling WalletPush webhook directly:', userWalletPassId)
+    console.log('🔍 Webhook URL:', WALLETPUSH_WEBHOOK_URL)
+    console.log('🔍 Payload:', walletPushData)
     
-    const response = await fetch(REDEEM_OFFERS_FORM_URL, {
+    const response = await fetch(WALLETPUSH_WEBHOOK_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: formData.toString()
+      body: JSON.stringify(walletPushData)
     })
     
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('❌ GHL form submission error:', response.status, errorText)
+      console.error('❌ WalletPush webhook error:', response.status, errorText)
       return NextResponse.json(
-        { error: `GHL form error: ${response.status}`, details: errorText },
+        { error: `WalletPush webhook error: ${response.status}`, details: errorText },
         { status: 500 }
       )
     }
     
-    const result = await response.text() // GHL forms return HTML
-    console.log('✅ GHL Redeem Offers form submitted successfully')
-    console.log('🔍 GHL response (first 200 chars):', result.substring(0, 200))
+    const result = await response.json() // WalletPush webhooks return JSON
+    console.log('✅ WalletPush webhook called successfully')
+    console.log('🔍 WalletPush response:', result)
     
     return NextResponse.json({
       success: true,
-      message: 'GHL workflow triggered - wallet pass should update shortly',
+      message: 'Offer added to wallet pass successfully!',
       userWalletPassId,
       currentOffer,
-      ghlResponse: result.substring(0, 200) + '...'
+      walletPushResponse: result
     })
     
   } catch (error) {

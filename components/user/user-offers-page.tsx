@@ -169,7 +169,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         <p class="text-slate-300 mb-1">"${offerTitle}"</p>
         <p class="text-slate-400 text-sm mb-2">from ${businessName}</p>
         <p class="text-slate-300 text-sm mb-2">Offer saved to your claimed offers.</p>
-        <p class="text-sm text-slate-400 mb-6">Go to "My Claimed Offers" and click "Update Pass" to add it to your wallet.</p>
+        <p class="text-sm text-slate-400 mb-6">Go to "My Claimed Offers" and click "Add to Wallet" to add it to your wallet.</p>
         <button id="modal-close" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 active:scale-95">
           Got it!
         </button>
