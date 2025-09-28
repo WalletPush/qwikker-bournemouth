@@ -3,7 +3,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🎫 [DIRECT API] Using real WalletPush API values from GHL!')
+    console.log('🎫 [WEBHOOK] Back to WalletPush webhook approach - Direct API not working')
     
     const requestBody = await request.json()
     const { userWalletPassId, currentOffer, offerDetails } = requestBody
@@ -14,141 +14,89 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing userWalletPassId' }, { status: 400 })
     }
     
-    // Get user's data including Pass Type ID
+    // Get user's data including GHL contact ID
     const supabase = createServiceRoleClient()
     const { data: user, error: userError } = await supabase
       .from('app_users')
-      .select('city, email, name, first_name, last_name, pass_type_identifier')
+      .select('city, ghl_contact_id, email, name, first_name, last_name')
       .eq('wallet_pass_id', userWalletPassId)
       .single()
     
-    if (userError || !user?.email) {
-      console.error('❌ User not found:', userError)
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    if (userError || !user?.ghl_contact_id) {
+      console.error('❌ User not found or missing GHL contact ID:', userError)
+      return NextResponse.json({ 
+        error: 'User not properly linked to GHL contact - please contact support' 
+      }, { status: 404 })
     }
-    
-    // 🎯 REAL VALUES from GHL Custom Values
-    const MOBILE_WALLET_APP_KEY = 'xIwpMeyEfuoAtvyCeLsNkQOuCYnOWahJYDHpQzlLfJbFWhptwLhArhcLcBCfpmF'
-    const PASS_TYPE_ID = user.pass_type_identifier // ✅ Use stored Pass Type ID from database!
     
     const firstName = user?.first_name || user?.name?.split(' ')[0] || 'User'
     
-    // Add timestamp to make the offer unique and ensure it's different from previous value
+    // Add timestamp to ensure Current_Offer field actually changes
     const timestamp = new Date().toLocaleTimeString('en-GB', { 
       hour: '2-digit', 
       minute: '2-digit', 
       second: '2-digit' 
     })
-    const offerValue = `${currentOffer || 'Offer Redeemed'} (${timestamp})`
+    const offerWithTimestamp = `${currentOffer || 'Offer Redeemed'} (${timestamp})`
     
-    // 🎯 DIRECT API APPROACH: Two API calls to WalletPush
-    // 1. Update Current_Offer (changes pass content)
-    // 2. Update Last_Message (triggers push notification)
+    // 🎯 WEBHOOK APPROACH: Use the format that worked before
+    const WALLETPUSH_WEBHOOK_URL = `https://app.walletpush.io/api/hl-endpoint/IkBldqzvQG4XkoSxkCq8`
     
-    // Check if we have the Pass Type ID
-    if (!PASS_TYPE_ID) {
-      console.error('❌ Missing Pass Type ID for user:', userWalletPassId)
-      return NextResponse.json({ 
-        error: 'Missing Pass Type ID - user may need to recreate wallet pass' 
-      }, { status: 400 })
-    }
-
-    // API Call 1: Update Current_Offer
-    const CURRENT_OFFER_API_URL = `https://app2.walletpush.io/api/v1/passes/${PASS_TYPE_ID}/${userWalletPassId}/values/Current_Offer`
-    const offerPayload = {
-      value: offerValue
+    const walletPushData = {
+      'contact_id': user.ghl_contact_id, // ✅ Use the actual GHL contact ID
+      'Current_Offer': offerWithTimestamp, // 🎯 This should trigger Rule 2
+      'First_Name': firstName,
+      'Last_Message': `Congratulations ${firstName}. You have redeemed: ${currentOffer || 'your offer'}!`,
+      'serialNumber': userWalletPassId // Also include wallet pass ID
     }
     
-    console.log('📡 [API 1] Updating Current_Offer field with REAL values')
-    console.log('🔍 [DEBUG] API URL:', CURRENT_OFFER_API_URL)
-    console.log('🔍 [DEBUG] Payload:', JSON.stringify(offerPayload, null, 2))
-    console.log('🔍 [DEBUG] App Key:', MOBILE_WALLET_APP_KEY.substring(0, 10) + '...')
+    console.log('📡 [WEBHOOK] Calling WalletPush webhook with correct field names')
+    console.log('🔍 [DEBUG] Webhook URL:', WALLETPUSH_WEBHOOK_URL)
+    console.log('🔍 [DEBUG] Payload:', JSON.stringify(walletPushData, null, 2))
     
-    const offerResponse = await fetch(CURRENT_OFFER_API_URL, {
+    const response = await fetch(WALLETPUSH_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': MOBILE_WALLET_APP_KEY, // Direct app key (no Bearer)
       },
-      body: JSON.stringify(offerPayload)
+      body: JSON.stringify(walletPushData)
     })
     
-    console.log('📡 [API 1] Current_Offer response status:', offerResponse.status)
+    console.log('📡 [DEBUG] WalletPush webhook response status:', response.status)
     
-    if (!offerResponse.ok) {
-      const errorText = await offerResponse.text()
-      console.error('❌ Current_Offer API error:', offerResponse.status, errorText)
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ WalletPush webhook error:', response.status, errorText)
       return NextResponse.json({ 
-        error: `WalletPush Current_Offer API error: ${offerResponse.status}`, 
+        error: `WalletPush webhook error: ${response.status}`, 
         details: errorText,
         debug: {
-          apiUrl: CURRENT_OFFER_API_URL,
-          passTypeId: PASS_TYPE_ID,
-          passId: userWalletPassId,
-          appKey: MOBILE_WALLET_APP_KEY.substring(0, 10) + '...'
+          webhookUrl: WALLETPUSH_WEBHOOK_URL,
+          payloadSent: walletPushData
         }
       }, { status: 500 })
     }
     
-    const offerResult = await offerResponse.text()
-    console.log('✅ [API 1] Current_Offer updated successfully!')
-    console.log('🔍 [DEBUG] Offer API Response:', offerResult)
-    
-    // API Call 2: Update Last_Message (triggers push notification)
-    const LAST_MESSAGE_API_URL = `https://app2.walletpush.io/api/v1/passes/${PASS_TYPE_ID}/${userWalletPassId}/values/Last_Message`
-    const pushMessage = `Congratulations ${firstName}. You have redeemed: ${currentOffer || 'your offer'}!`
-    const messagePayload = {
-      value: pushMessage
-    }
-    
-    console.log('📡 [API 2] Updating Last_Message field (triggers push)')
-    console.log('🔍 [DEBUG] API URL:', LAST_MESSAGE_API_URL)
-    console.log('🔍 [DEBUG] Payload:', JSON.stringify(messagePayload, null, 2))
-    
-    const messageResponse = await fetch(LAST_MESSAGE_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': MOBILE_WALLET_APP_KEY,
-      },
-      body: JSON.stringify(messagePayload)
-    })
-    
-    console.log('📡 [API 2] Last_Message response status:', messageResponse.status)
-    
-    if (!messageResponse.ok) {
-      const errorText = await messageResponse.text()
-      console.error('❌ Last_Message API error:', messageResponse.status, errorText)
-      // Don't fail the whole request if push fails - the offer was still updated
-      console.log('⚠️ Offer updated but push notification failed')
-    }
-    
-    const messageResult = await messageResponse.text()
-    console.log('✅ [API 2] Last_Message updated - push notification sent!')
-    console.log('🔍 [DEBUG] Message API Response:', messageResult)
+    const result = await response.json()
+    console.log('✅ [WEBHOOK] WalletPush webhook called successfully!')
+    console.log('🔍 [DEBUG] Webhook Response:', result)
     
     return NextResponse.json({
       success: true,
-      message: 'Wallet pass updated and push notification sent via direct API!',
+      message: 'Offer sent to WalletPush - pass should update shortly!',
       userWalletPassId,
-      currentOffer: offerValue,
-      pushMessage: pushMessage,
-      apiResponses: {
-        offerUpdate: offerResult,
-        pushNotification: messageResult
-      },
-        debug: {
-          approach: 'Direct WalletPush API with stored Pass Type ID',
-          offerApiUrl: CURRENT_OFFER_API_URL,
-          messageApiUrl: LAST_MESSAGE_API_URL,
-          passTypeId: PASS_TYPE_ID,
-          firstName: firstName,
-          appKeyUsed: MOBILE_WALLET_APP_KEY.substring(0, 10) + '...'
-        }
+      currentOffer: offerWithTimestamp,
+      walletPushResponse: result,
+      debug: {
+        approach: 'WalletPush Webhook (Direct API not available)',
+        webhookUrl: WALLETPUSH_WEBHOOK_URL,
+        payloadSent: walletPushData,
+        ghlContactId: user.ghl_contact_id
+      }
     })
     
   } catch (error) {
-    console.error('❌ [DIRECT API] Error calling WalletPush API:', error)
+    console.error('❌ [WEBHOOK] Error calling WalletPush webhook:', error)
     return NextResponse.json({ 
       error: 'Internal server error', 
       details: error.message 
