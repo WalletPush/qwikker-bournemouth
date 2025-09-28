@@ -517,12 +517,12 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
           <div className="px-6 py-3 bg-slate-800/30 border-b border-slate-600">
             <div className="flex flex-wrap gap-1">
               {[
-                { id: 'overview', label: '📊 Overview', icon: '📊' },
-                { id: 'contact', label: '📞 Contact History', icon: '📞' },
-                { id: 'activity', label: '🔄 Activity Feed', icon: '🔄' },
-                { id: 'tasks', label: '✅ Tasks', icon: '✅' },
-                { id: 'offers', label: '🎯 Offers & Content', icon: '🎯' },
-                { id: 'analytics', label: '📈 Performance', icon: '📈' }
+                { id: 'overview', label: 'Overview', icon: 'chart-bar' },
+                { id: 'contact', label: 'Contact History', icon: 'phone' },
+                { id: 'activity', label: 'Activity Feed', icon: 'activity' },
+                { id: 'tasks', label: 'Tasks', icon: 'check' },
+                { id: 'offers', label: 'Offers & Content', icon: 'gift' },
+                { id: 'analytics', label: 'Performance', icon: 'trending-up' }
               ].map((tab) => (
                 <Button
                   key={tab.id}
@@ -535,7 +535,29 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
                       : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                   }`}
                 >
-                  {tab.label}
+                  <div className="flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {tab.icon === 'chart-bar' && (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      )}
+                      {tab.icon === 'phone' && (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      )}
+                      {tab.icon === 'activity' && (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      )}
+                      {tab.icon === 'check' && (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      )}
+                      {tab.icon === 'gift' && (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                      )}
+                      {tab.icon === 'trending-up' && (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      )}
+                    </svg>
+                    {tab.label}
+                  </div>
                 </Button>
               ))}
             </div>
@@ -644,10 +666,23 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
                               contact.type === 'sync' ? 'bg-yellow-500/20 text-yellow-400' :
                               'bg-slate-500/20 text-slate-400'
                             }`}>
-                              {contact.type === 'call' ? '📞' : 
-                               contact.type === 'email' ? '📧' :
-                               contact.type === 'approval' ? '✅' :
-                               contact.type === 'sync' ? '🔄' : '📝'}
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                {contact.type === 'call' && (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                )}
+                                {contact.type === 'email' && (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                )}
+                                {contact.type === 'approval' && (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                )}
+                                {contact.type === 'sync' && (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                )}
+                                {!['call', 'email', 'approval', 'sync'].includes(contact.type) && (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                )}
+                              </svg>
                             </div>
                             <div>
                               <div className="text-white font-medium text-sm">
@@ -739,7 +774,7 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
                 <label className="text-sm font-medium text-slate-400">Menu</label>
                 {business.menu_url ? (
                   <a href={business.menu_url} target="_blank" className="text-purple-400 hover:text-purple-300 text-sm block mt-1">
-                    📋 View Menu PDF
+                    View Menu PDF
                   </a>
                 ) : (
                   <p className="text-slate-500 text-sm mt-1">Not uploaded</p>
