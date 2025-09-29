@@ -22,6 +22,7 @@ interface UniversalQRRouterProps {
   nearbyBusinesses: Business[]
   allBusinesses: Business[]
   userLocation: { lat: number; lng: number } | null
+  walletPassId?: string
 }
 
 export function UniversalQRRouter({ 
