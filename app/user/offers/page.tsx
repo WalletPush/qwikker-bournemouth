@@ -71,6 +71,15 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   
   console.log(`📊 Offers Page: User city: ${userCity}, Franchise city: ${franchiseCity}`)
   
+  // 🔍 DEBUG: Check what city values exist in database
+  const { data: cityCheck } = await supabase
+    .from('business_profiles')
+    .select('business_name, city, business_town, status')
+    .eq('status', 'approved')
+    .not('offer_name', 'is', null)
+  
+  console.log('🔍 DEBUG: Current city values in database:', cityCheck?.map(b => `${b.business_name}: city="${b.city}", town="${b.business_town}"`))
+  
   const { data, error: fetchError } = await supabase
     .from('business_profiles')
     .select(`
