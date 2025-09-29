@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getFranchiseAreas } from '@/lib/utils/franchise-areas'
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,6 +12,10 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createServiceRoleClient()
+    
+    // 🎯 FRANCHISE SYSTEM: Get all areas covered by this franchise
+    const franchiseAreas = getFranchiseAreas(city)
+    console.log(`📊 Comprehensive Analytics for ${city} franchise covering areas:`, franchiseAreas)
 
     // Get offer claim trends (last 30 days)
     const thirtyDaysAgo = new Date()
@@ -57,7 +62,7 @@ export async function GET(request: NextRequest) {
           updated_at
         )
       `)
-      .eq('business_profiles.business_town', city.toLowerCase())
+      .in('business_profiles.business_town', franchiseAreas)
 
     const { data: businessOfferClaims } = await supabase
       .from('user_offer_claims')
@@ -122,12 +127,12 @@ export async function GET(request: NextRequest) {
     const { count: totalUsers } = await supabase
       .from('app_users')
       .select('*', { count: 'exact', head: true })
-      .eq('city', city.toLowerCase())
+      .in('city', franchiseAreas)
 
     const { count: usersWithPasses } = await supabase
       .from('app_users')
       .select('*', { count: 'exact', head: true })
-      .eq('city', city.toLowerCase())
+      .in('city', franchiseAreas)
       .not('wallet_pass_id', 'is', null)
 
     const passInstallRate = totalUsers > 0 

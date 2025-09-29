@@ -64,41 +64,42 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   let approvedBusinesses = []
   let error = null
   
-  if (currentUser?.city) {
-    const { data, error: fetchError } = await supabase
-      .from('business_profiles')
-      .select(`
-        id,
-        business_name,
-        business_type,
-        business_category,
-        business_town,
-        business_address,
-        business_tagline,
-        business_description,
-        business_hours,
-        business_images,
-        logo,
-        offer_name,
-        offer_type,
-        offer_value,
-        offer_terms,
-        offer_start_date,
-        offer_end_date,
-        offer_image,
-        rating,
-        review_count,
-        created_at
-      `)
-      .eq('status', 'approved')
-      .eq('business_town', currentUser.city) // 🎯 CRITICAL: City filtering
-      .not('offer_name', 'is', null) // Only businesses with offers
-      .not('business_name', 'is', null)
-      .order('created_at', { ascending: false })
-    
-    approvedBusinesses = data || []
-    error = fetchError
-  }
+  // Use user's city or default to 'bournemouth' for anonymous users
+  const userCity = currentUser?.city || 'bournemouth'
+  
+  const { data, error: fetchError } = await supabase
+    .from('business_profiles')
+    .select(`
+      id,
+      business_name,
+      business_type,
+      business_category,
+      business_town,
+      business_address,
+      business_tagline,
+      business_description,
+      business_hours,
+      business_images,
+      logo,
+      offer_name,
+      offer_type,
+      offer_value,
+      offer_terms,
+      offer_start_date,
+      offer_end_date,
+      offer_image,
+      rating,
+      review_count,
+      created_at
+    `)
+    .eq('status', 'approved')
+    .in('business_town', ['bournemouth', 'christchurch', 'poole']) // 🎯 CRITICAL: Multi-city filtering for Bournemouth franchise
+    .not('offer_name', 'is', null) // Only businesses with offers
+    .not('business_name', 'is', null)
+    .order('created_at', { ascending: false })
+  
+  approvedBusinesses = data || []
+  error = fetchError
   
   if (error) {
     console.error('Error fetching businesses with offers:', error)
