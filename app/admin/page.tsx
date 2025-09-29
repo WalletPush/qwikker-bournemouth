@@ -91,7 +91,7 @@ export default async function AdminPage() {
       created_at,
       updated_at
     `)
-    .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Use city field for franchise
+    .in('city', coveredCities) // 🎯 FRANCHISE FILTERING: Use covered cities for franchise
     .not('email', 'is', null)
     .order('created_at', { ascending: false })
   
