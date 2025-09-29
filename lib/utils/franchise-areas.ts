@@ -12,22 +12,17 @@
 
 import { headers } from 'next/headers'
 
-// Central franchise area mapping
-export const FRANCHISE_AREAS: Record<string, string[]> = {
-  // Bournemouth franchise covers South Coast UK
-  bournemouth: ['bournemouth', 'christchurch', 'poole', 'wimborne', 'ferndown', 'ringwood', 'new_milton'],
-  
-  // Calgary franchise covers Alberta region (example)
-  calgary: ['calgary', 'edmonton', 'red_deer', 'lethbridge'],
-  
-  // London franchise covers Greater London (example)
-  london: ['london', 'westminster', 'camden', 'islington', 'hackney'],
-  
-  // Paris franchise covers Île-de-France (example)
-  paris: ['paris', 'versailles', 'boulogne', 'neuilly'],
-  
-  // Add more franchises as they expand
-}
+// 🎯 SIMPLIFIED: Domain-based franchise system
+// Each domain gets ONE city - no complex area mapping needed
+export const FRANCHISE_CITIES = [
+  'bournemouth', // bournemouth.qwikker.com
+  'calgary',     // calgary.qwikker.com  
+  'london',      // london.qwikker.com
+  'paris',       // paris.qwikker.com
+  // Add more franchise cities as they expand
+] as const
+
+export type FranchiseCity = typeof FRANCHISE_CITIES[number]
 
 // Franchise display names
 export const FRANCHISE_DISPLAY_NAMES: Record<string, string> = {
@@ -38,15 +33,24 @@ export const FRANCHISE_DISPLAY_NAMES: Record<string, string> = {
 }
 
 /**
- * Get franchise areas for a given franchise key
+ * 🎯 SIMPLIFIED: Get franchise city (just returns the city itself)
+ * Domain-based system: bournemouth.qwikker.com → 'bournemouth'
+ */
+export function getFranchiseCity(franchiseKey: string): string {
+  const city = franchiseKey.toLowerCase()
+  if (!FRANCHISE_CITIES.includes(city as FranchiseCity)) {
+    console.warn(`⚠️ Unknown franchise: ${franchiseKey}, defaulting to Bournemouth`)
+    return 'bournemouth'
+  }
+  return city
+}
+
+/**
+ * @deprecated Use getFranchiseCity instead - we now use single city per domain
  */
 export function getFranchiseAreas(franchiseKey: string): string[] {
-  const areas = FRANCHISE_AREAS[franchiseKey.toLowerCase()]
-  if (!areas) {
-    console.warn(`⚠️ Unknown franchise: ${franchiseKey}, defaulting to Bournemouth`)
-    return FRANCHISE_AREAS.bournemouth
-  }
-  return areas
+  console.warn('⚠️ getFranchiseAreas is deprecated - use getFranchiseCity instead')
+  return [getFranchiseCity(franchiseKey)]
 }
 
 /**
@@ -63,12 +67,12 @@ export function getFranchiseFromHostname(hostname: string): string {
     return 'bournemouth' // Default for local development
   }
   
-  // Handle Vercel URLs (e.g., qwikkerdashboard-theta.vercel.app)
+  // Handle Vercel URLs (e.g., qwikkerdashboard-theta.vercel.app, qwikker-calgary-git-main.vercel.app)
   if (hostname.includes('vercel.app')) {
     // Try to extract franchise from Vercel URL pattern
     const parts = hostname.split('-')
     for (const part of parts) {
-      if (FRANCHISE_AREAS[part.toLowerCase()]) {
+      if (FRANCHISE_CITIES.includes(part.toLowerCase() as FranchiseCity)) {
         console.log(`🌐 Vercel deployment detected - using ${part} franchise`)
         return part.toLowerCase()
       }
@@ -84,7 +88,7 @@ export function getFranchiseFromHostname(hostname: string): string {
     const subdomain = parts[0].toLowerCase()
     
     // Check if it's a known franchise
-    if (FRANCHISE_AREAS[subdomain]) {
+    if (FRANCHISE_CITIES.includes(subdomain as FranchiseCity)) {
       console.log(`🌍 Franchise detected from subdomain: ${subdomain}`)
       return subdomain
     }
@@ -96,28 +100,35 @@ export function getFranchiseFromHostname(hostname: string): string {
 }
 
 /**
- * Get franchise areas directly from hostname
+ * 🎯 SIMPLIFIED: Get franchise city directly from hostname
  */
-export function getFranchiseAreasFromHostname(hostname: string): string[] {
-  const franchiseKey = getFranchiseFromHostname(hostname)
-  return getFranchiseAreas(franchiseKey)
+export function getFranchiseCityFromHostname(hostname: string): string {
+  return getFranchiseFromHostname(hostname)
 }
 
 /**
- * Get franchise info from Next.js request headers
+ * Get franchise city from Next.js request headers
  */
-export function getFranchiseFromRequest(): string {
+export function getFranchiseCityFromRequest(): string {
   const headersList = headers()
   const host = headersList.get('host') || 'localhost'
   return getFranchiseFromHostname(host)
 }
 
 /**
- * Get franchise areas from Next.js request headers
+ * @deprecated Use getFranchiseCityFromHostname instead
+ */
+export function getFranchiseAreasFromHostname(hostname: string): string[] {
+  console.warn('⚠️ getFranchiseAreasFromHostname is deprecated - use getFranchiseCityFromHostname instead')
+  return [getFranchiseFromHostname(hostname)]
+}
+
+/**
+ * @deprecated Use getFranchiseCityFromRequest instead
  */
 export function getFranchiseAreasFromRequest(): string[] {
-  const franchiseKey = getFranchiseFromRequest()
-  return getFranchiseAreas(franchiseKey)
+  console.warn('⚠️ getFranchiseAreasFromRequest is deprecated - use getFranchiseCityFromRequest instead')
+  return [getFranchiseCityFromRequest()]
 }
 
 /**
@@ -128,35 +139,41 @@ export function getFranchiseDisplayName(franchiseKey: string): string {
 }
 
 /**
- * Check if a business_town belongs to a franchise
+ * 🎯 SIMPLIFIED: Check if business belongs to franchise (now just city comparison)
  */
 export function isBusinessInFranchise(businessTown: string, franchiseKey: string): boolean {
-  const franchiseAreas = getFranchiseAreas(franchiseKey)
-  return franchiseAreas.includes(businessTown.toLowerCase())
+  const franchiseCity = getFranchiseCity(franchiseKey)
+  return businessTown.toLowerCase() === franchiseCity.toLowerCase()
 }
 
 /**
- * Get all available franchise keys
+ * Get all available franchise cities
+ */
+export function getAllFranchiseCities(): string[] {
+  return [...FRANCHISE_CITIES]
+}
+
+/**
+ * @deprecated Use getAllFranchiseCities instead
  */
 export function getAllFranchiseKeys(): string[] {
-  return Object.keys(FRANCHISE_AREAS)
+  console.warn('⚠️ getAllFranchiseKeys is deprecated - use getAllFranchiseCities instead')
+  return getAllFranchiseCities()
 }
 
 /**
- * Debug function to log franchise detection
+ * 🎯 SIMPLIFIED: Debug function for franchise detection
  */
 export function debugFranchiseDetection(hostname: string) {
   const franchise = getFranchiseFromHostname(hostname)
-  const areas = getFranchiseAreas(franchise)
   const displayName = getFranchiseDisplayName(franchise)
   
   console.log(`🔍 Franchise Debug:`, {
     hostname,
     detectedFranchise: franchise,
     displayName,
-    coveredAreas: areas,
-    totalAreas: areas.length
+    systemType: 'Domain-based (one city per franchise)'
   })
   
-  return { franchise, areas, displayName }
+  return { franchise, displayName }
 }

@@ -3,7 +3,7 @@ import { UserOffersPage } from '@/components/user/user-offers-page'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { updatePassActivity } from '@/lib/utils/pass-status-tracker'
-import { getFranchiseAreas } from '@/lib/utils/franchise-areas'
+import { getFranchiseCity } from '@/lib/utils/franchise-areas'
 import { Suspense } from 'react'
 
 interface OffersPageProps {
@@ -65,11 +65,11 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   let approvedBusinesses = []
   let error = null
   
-  // 🎯 FRANCHISE SYSTEM: Use user's city or default to 'bournemouth' for anonymous users
+  // 🎯 SIMPLIFIED FRANCHISE SYSTEM: Use user's city or default to 'bournemouth' for anonymous users
   const userCity = currentUser?.city || 'bournemouth'
-  const franchiseAreas = getFranchiseAreas(userCity)
+  const franchiseCity = getFranchiseCity(userCity)
   
-  console.log(`📊 Offers Page: User city: ${userCity}, Franchise areas:`, franchiseAreas)
+  console.log(`📊 Offers Page: User city: ${userCity}, Franchise city: ${franchiseCity}`)
   
   const { data, error: fetchError } = await supabase
     .from('business_profiles')
@@ -97,7 +97,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       created_at
     `)
     .eq('status', 'approved')
-    .in('business_town', franchiseAreas) // 🎯 FRANCHISE SYSTEM: Dynamic franchise area filtering
+    .eq('business_town', franchiseCity) // 🎯 SIMPLIFIED: Single city filtering based on domain
     .not('offer_name', 'is', null) // Only businesses with offers
     .not('business_name', 'is', null)
     .order('created_at', { ascending: false })
