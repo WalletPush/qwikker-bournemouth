@@ -62,28 +62,39 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   // Combine real offers with mock offers
   const allOffers = [...realOffers, ...mockOffers]
 
-  // Handle auto-scroll - simple scroll to first card
+  // Handle auto-scroll to specific highlighted business
   useEffect(() => {
     if (highlightBusiness) {
-      // Simple scroll to top of offers section after short delay
       const scrollTimer = setTimeout(() => {
-        // Find the first offer card or scroll to top of page
-        const firstCard = document.querySelector('[data-offer-card]')
-        if (firstCard) {
-          firstCard.scrollIntoView({ 
+        // Convert highlight business to slug format (same as in OfferCard)
+        const businessSlug = highlightBusiness.toLowerCase().replace(/[^a-z0-9]/g, '-')
+        
+        // Find the specific business card using the ref
+        const targetCard = cardRefs.current[businessSlug]
+        
+        if (targetCard) {
+          // Scroll to the specific business's offer card
+          targetCard.scrollIntoView({ 
             behavior: 'smooth', 
-            block: 'start',
+            block: 'center',
             inline: 'nearest'
           })
         } else {
-          // Fallback: scroll to top
-          window.scrollTo({ top: 0, behavior: 'smooth' })
+          // Fallback: scroll to first offer if specific business not found
+          const firstCard = document.querySelector('[data-offer-card]')
+          if (firstCard) {
+            firstCard.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start',
+              inline: 'nearest'
+            })
+          }
         }
-      }, 100)
+      }, 300) // Slightly longer delay to ensure cards are rendered
       
       return () => clearTimeout(scrollTimer)
     }
-  }, [highlightBusiness])
+  }, [highlightBusiness, allOffers]) // Include allOffers to re-run when offers load
   
   // Get unique categories from all businesses
   const realCategories = realOffers.map(o => o.businessCategory).filter(Boolean)
