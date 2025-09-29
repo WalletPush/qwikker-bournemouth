@@ -97,7 +97,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       created_at
     `)
     .eq('status', 'approved')
-    .eq('business_town', franchiseCity) // 🎯 SIMPLIFIED: Single city filtering based on domain
+    .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Use city field for franchise
     .not('offer_name', 'is', null) // Only businesses with offers
     .not('business_name', 'is', null)
     .order('created_at', { ascending: false })

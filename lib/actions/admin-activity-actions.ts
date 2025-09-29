@@ -50,7 +50,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
         user_id,
         business_town
       `)
-      .eq('business_town', franchiseCity) // 🎯 SIMPLIFIED: Filter by franchise city
+      .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Use city field for franchise
       .order('created_at', { ascending: false })
       .limit(10)
 

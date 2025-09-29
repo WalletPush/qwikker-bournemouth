@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
           updated_at
         )
       `)
-      .eq('business_profiles.business_town', franchiseCity)
+      .eq('business_profiles.city', franchiseCity)
 
     const { data: businessOfferClaims } = await supabase
       .from('user_offer_claims')
