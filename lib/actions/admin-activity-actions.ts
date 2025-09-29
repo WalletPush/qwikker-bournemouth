@@ -1,7 +1,7 @@
 'use server'
 
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getFranchiseAreas } from '@/lib/utils/franchise-areas'
+import { getFranchiseCity } from '@/lib/utils/franchise-areas'
 
 export interface AdminActivity {
   id: string
@@ -19,9 +19,9 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
     const supabase = createServiceRoleClient()
     const activities: AdminActivity[] = []
     
-    // 🎯 FRANCHISE SYSTEM: Get all areas covered by this franchise
-    const franchiseAreas = getFranchiseAreas(city)
-    console.log(`📊 Admin Activity for ${city} franchise covering areas:`, franchiseAreas)
+    // 🎯 SIMPLIFIED FRANCHISE SYSTEM: Get franchise city
+    const franchiseCity = getFranchiseCity(city)
+    console.log(`📊 Admin Activity for ${city} franchise city: ${franchiseCity}`)
 
     // Get recent wallet pass installations (user signups) - CITY FILTERED
     const { data: newPassInstalls } = await supabase
@@ -35,7 +35,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
         created_at
       `)
       .not('wallet_pass_id', 'is', null)
-      .in('city', franchiseAreas) // 🎯 FRANCHISE SYSTEM: Filter by franchise areas
+      .eq('city', franchiseCity) // 🎯 SIMPLIFIED: Filter by franchise city
       .order('wallet_pass_assigned_at', { ascending: false })
       .limit(15)
 
@@ -50,7 +50,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
         user_id,
         business_town
       `)
-      .in('business_town', franchiseAreas) // 🎯 FRANCHISE SYSTEM: Filter by franchise areas
+      .eq('business_town', franchiseCity) // 🎯 SIMPLIFIED: Filter by franchise city
       .order('created_at', { ascending: false })
       .limit(10)
 
