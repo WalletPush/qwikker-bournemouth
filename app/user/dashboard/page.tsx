@@ -141,7 +141,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
       additional_notes
     `)
     .eq('status', 'approved')
-    .eq('business_town', franchiseCity) // 🎯 FRANCHISE FILTERING: Only show businesses from this franchise
+    .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Use city field for franchise
     .not('business_name', 'is', null)
   
   if (error) {

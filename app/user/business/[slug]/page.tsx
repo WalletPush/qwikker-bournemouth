@@ -6,6 +6,7 @@ import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { trackBusinessVisit } from '@/lib/actions/business-visit-actions'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 
+
 interface BusinessDetailPageProps {
   params: Promise<{
     slug: string
@@ -64,8 +65,9 @@ export default async function BusinessDetailPage({ params }: BusinessDetailPageP
       id: business.id,
       name: business.business_name,
       category: business.business_category || business.business_type,
-      location: business.business_town,
+      location: business.business_town, // Keep for display
       address: business.business_address,
+      town: business.business_town, // Use actual business town for display
       tagline: business.business_tagline || '',
       description: business.business_description || '',
       hours: formatBusinessHours(business.business_hours, business.business_hours_structured), // For cards
