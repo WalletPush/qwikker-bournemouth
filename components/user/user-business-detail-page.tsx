@@ -171,16 +171,17 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
   }
 
   // Get related data - Use real business offers, not mock data
-  const businessOffers = business.offer_name ? [{ 
-    id: `${business.id}-offer`,
+  // Check if business has active offers (from transformed data)
+  const businessOffers = business.activeOffers > 0 ? Array(business.activeOffers).fill(null).map((_, index) => ({
+    id: `${business.id}-offer-${index}`,
     businessId: business.id,
-    title: business.offer_name,
-    type: business.offer_type,
-    value: business.offer_value,
-    terms: business.offer_terms,
+    title: business.offer_name || `Special Offer ${index + 1}`,
+    type: business.offer_type || 'discount',
+    value: business.offer_value || '20% off',
+    terms: business.offer_terms || 'Terms and conditions apply',
     validUntil: business.offer_end_date,
-    image: business.offer_image
-  }] : []
+    image: business.offer_image || business.images?.[0]
+  })) : []
   const secretMenu = mockSecretMenus.find(menu => menu.businessId === business.id)
   
   const tabs = [
