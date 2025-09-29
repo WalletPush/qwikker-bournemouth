@@ -3,6 +3,7 @@ import { UserOffersPage } from '@/components/user/user-offers-page'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { updatePassActivity } from '@/lib/utils/pass-status-tracker'
+import { getFranchiseAreas } from '@/lib/utils/franchise-areas'
 import { Suspense } from 'react'
 
 interface OffersPageProps {
@@ -64,8 +65,11 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   let approvedBusinesses = []
   let error = null
   
-  // Use user's city or default to 'bournemouth' for anonymous users
+  // 🎯 FRANCHISE SYSTEM: Use user's city or default to 'bournemouth' for anonymous users
   const userCity = currentUser?.city || 'bournemouth'
+  const franchiseAreas = getFranchiseAreas(userCity)
+  
+  console.log(`📊 Offers Page: User city: ${userCity}, Franchise areas:`, franchiseAreas)
   
   const { data, error: fetchError } = await supabase
     .from('business_profiles')
@@ -93,7 +97,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       created_at
     `)
     .eq('status', 'approved')
-    .in('business_town', ['bournemouth', 'christchurch', 'poole']) // 🎯 CRITICAL: Multi-city filtering for Bournemouth franchise
+    .in('business_town', franchiseAreas) // 🎯 FRANCHISE SYSTEM: Dynamic franchise area filtering
     .not('offer_name', 'is', null) // Only businesses with offers
     .not('business_name', 'is', null)
     .order('created_at', { ascending: false })
@@ -103,6 +107,9 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   
   if (error) {
     console.error('Error fetching businesses with offers:', error)
+  } else {
+    console.log(`📊 Offers Page: Found ${approvedBusinesses.length} approved businesses with offers`)
+    console.log('📊 Business names:', approvedBusinesses.map(b => `${b.business_name} (${b.business_town}) - Offer: ${b.offer_name}`))
   }
   
   // Filter out expired offers
@@ -117,6 +124,11 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     
     return endDate >= today
   })
+
+  console.log(`📊 Offers Page: After expiry filter: ${activeBusinesses.length} active businesses`)
+  if (activeBusinesses.length !== approvedBusinesses.length) {
+    console.log('📊 Filtered out expired offers:', approvedBusinesses.filter(b => !activeBusinesses.includes(b)).map(b => `${b.business_name} - Expired: ${b.offer_end_date}`))
+  }
 
   // Transform real offers to match expected format
   const realOffers = activeBusinesses.map(business => ({
