@@ -185,7 +185,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             Add to Wallet
           </button>
           
-          <p class="text-sm text-slate-300 text-center mt-2 font-medium">⏰ Offers expire 12 hours after being added to your wallet</p>
+          <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mt-3 mb-2">
+            <p class="text-amber-200 text-sm font-semibold text-center mb-1">Important: 12-Hour Expiry</p>
+            <p class="text-amber-100 text-xs text-center">Once added to your wallet, this offer will automatically expire after 12 hours</p>
+          </div>
           
           <button id="modal-dismiss" class="w-full bg-slate-600 hover:bg-slate-500 text-slate-200 font-medium py-2.5 px-6 rounded-xl transition-all duration-200 active:scale-95">
             Dismiss
@@ -658,9 +661,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
            'Percentage Off Deals'}
         </h2>
         {selectedFilter === 'claimed' && (
-          <p className="text-base text-slate-300 mt-3 font-medium">
-            ⏰ <strong className="text-amber-400">Important:</strong> Offers expire 12 hours after being added to your wallet
-          </p>
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mt-4 max-w-md mx-auto">
+            <p className="text-amber-200 text-base font-semibold text-center mb-2">Important: 12-Hour Expiry</p>
+            <p className="text-amber-100 text-sm text-center">Offers automatically expire 12 hours after being added to your wallet</p>
+          </div>
         )}
       </div>
 
