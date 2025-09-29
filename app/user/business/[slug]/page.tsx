@@ -11,11 +11,53 @@ interface BusinessDetailPageProps {
   params: Promise<{
     slug: string
   }>
+  searchParams: Promise<{
+    wallet_pass_id?: string
+  }>
 }
 
-export default async function BusinessDetailPage({ params }: BusinessDetailPageProps) {
+export default async function BusinessDetailPage({ params, searchParams }: BusinessDetailPageProps) {
   const { slug } = await params
+  const resolvedSearchParams = await searchParams
+  const urlWalletPassId = resolvedSearchParams.wallet_pass_id
   const supabase = createServiceRoleClient()
+  
+  // Get wallet pass ID from URL or cookie
+  let cookieWalletPassId = null
+  try {
+    cookieWalletPassId = await getWalletPassCookie()
+  } catch (error) {
+    console.log('Cookie read error (safe to ignore):', error)
+  }
+  
+  const walletPassId = urlWalletPassId || cookieWalletPassId || null
+  
+  // Get current user for the layout
+  let currentUser = null
+  if (walletPassId) {
+    try {
+      const { data: user } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('wallet_pass_id', walletPassId)
+        .eq('wallet_pass_status', 'active')
+        .single()
+      
+      if (user) {
+        currentUser = {
+          id: user.id,
+          wallet_pass_id: user.wallet_pass_id,
+          name: user.name,
+          email: user.email,
+          city: user.city,
+          tier: user.tier,
+          level: user.level
+        }
+      }
+    } catch (error) {
+      console.log('No user found for business detail page')
+    }
+  }
   
   // Fetch approved businesses from database
   const { data: approvedBusinesses, error } = await supabase
@@ -126,10 +168,11 @@ export default async function BusinessDetailPage({ params }: BusinessDetailPageP
   }
   
   return (
-    <UserDashboardLayout>
-      <UserBusinessDetailPage 
-        slug={slug} 
-        businesses={allBusinesses} 
+    <UserDashboardLayout currentSection="discover" currentUser={currentUser} walletPassId={walletPassId}>
+      <UserBusinessDetailPage
+        slug={slug}
+        businesses={allBusinesses}
+        walletPassId={walletPassId}
         trackingData={trackingData}
       />
     </UserDashboardLayout>
