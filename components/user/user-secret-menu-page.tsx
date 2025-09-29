@@ -145,7 +145,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
           <h4 class="text-slate-100 font-semibold text-sm">Badge Earned!</h4>
           <p class="text-slate-300 text-xs">${badgeName}</p>
           ${reward ? `<p class="text-[#00d083] text-xs font-medium mt-1">${reward}</p>` : ''}
-          <a href="/user/badges" class="text-[#00d083] text-xs hover:underline">View Badges →</a>
+          <Link href={getNavUrl("/user/badges")} className="text-[#00d083] text-xs hover:underline">View Badges →</Link>
         </div>
         <button onclick="this.parentElement.parentElement.remove()" class="text-slate-400 hover:text-slate-300">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

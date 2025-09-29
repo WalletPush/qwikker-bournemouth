@@ -475,7 +475,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
           <span className="text-slate-100 text-xs font-medium">{business.rating}</span>
         </div>
         <Button asChild size="sm" className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-medium">
-          <Link href={`/user/business/${mockBusinesses.find(b => b.id === business.id)?.slug}`}>View Details</Link>
+          <Link href={`/user/business/${mockBusinesses.find(b => b.id === business.id)?.slug}${currentUser?.wallet_pass_id ? `?wallet_pass_id=${currentUser.wallet_pass_id}` : ''}`}>View Details</Link>
         </Button>
       </CardContent>
     </Card>

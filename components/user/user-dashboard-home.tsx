@@ -46,22 +46,104 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
   // Dynamic badge count using badge tracker
   const [badgeCount, setBadgeCount] = useState(0)
   const [claimedOffersCount, setClaimedOffersCount] = useState(0)
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
   
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Get actual badge count from badge tracker
-      const { getBadgeTracker } = require('@/lib/utils/simple-badge-tracker')
-      const tracker = getBadgeTracker(walletPassId)
-      const progress = tracker.getBadgeProgress()
-      const earnedCount = progress.filter(b => b.earned).length
-      setBadgeCount(earnedCount)
+    const loadActivity = async () => {
+      // Get real business activity from database
+      const { getRecentBusinessActivity } = await import('@/lib/actions/recent-activity-actions')
+      const businessActivity = await getRecentBusinessActivity()
       
-      // Get claimed offers count from localStorage
-      const userId = walletPassId || 'anonymous-user'
-      const claimedKey = `qwikker-claimed-${userId}`
-      const claimed = JSON.parse(localStorage.getItem(claimedKey) || '[]')
-      setClaimedOffersCount(claimed.length)
+      if (typeof window !== 'undefined') {
+        // Get actual badge count from badge tracker
+        const { getBadgeTracker } = require('@/lib/utils/simple-badge-tracker')
+        const tracker = getBadgeTracker(walletPassId)
+        const progress = tracker.getBadgeProgress()
+        const earnedCount = progress.filter(b => b.earned).length
+        setBadgeCount(earnedCount)
+        
+        // Get claimed offers count from localStorage
+        const userId = walletPassId || 'anonymous-user'
+        const claimedKey = `qwikker-claimed-${userId}`
+        const claimed = JSON.parse(localStorage.getItem(claimedKey) || '[]')
+        setClaimedOffersCount(claimed.length)
+        
+        // Combine business activity with user activity
+        const userActivity = []
+        
+        // Recent offer claims
+        const claimedOffers = JSON.parse(localStorage.getItem(claimedKey) || '[]')
+        if (claimedOffers.length > 0) {
+          userActivity.push({
+            id: 'recent-claim',
+            type: 'offer',
+            icon: 'tag',
+            text: `You claimed ${claimedOffers.length} offer${claimedOffers.length > 1 ? 's' : ''}`,
+            subtext: 'View your claimed offers',
+            color: 'orange',
+            href: '/user/offers?filter=claimed',
+            time: 'Recently',
+            timestamp: new Date() // Recent user activity
+          })
+        }
+        
+        // Secret menu unlocks
+        const unlockedKey = `qwikker-unlocked-secrets-${userId}`
+        const unlocked = JSON.parse(localStorage.getItem(unlockedKey) || '[]')
+        if (unlocked.length > 0) {
+          userActivity.push({
+            id: 'recent-secrets',
+            type: 'secret',
+            icon: 'lock',
+            text: `You unlocked ${unlocked.length} secret menu item${unlocked.length > 1 ? 's' : ''}`,
+            subtext: 'Explore secret menus',
+            color: 'purple',
+            href: '/user/secret-menu',
+            time: 'Recently',
+            timestamp: new Date()
+          })
+        }
+        
+        // Badge achievements
+        if (earnedCount > 0) {
+          userActivity.push({
+            id: 'recent-badges',
+            type: 'achievement',
+            icon: 'badge',
+            text: `You earned ${earnedCount} achievement${earnedCount > 1 ? 's' : ''}`,
+            subtext: 'View your progress',
+            color: 'yellow',
+            href: '/user/settings',
+            time: 'Recently',
+            timestamp: new Date()
+          })
+        }
+        
+        // Mix business activity with user activity
+        const allActivity = [...businessActivity, ...userActivity]
+        
+        // Sort by timestamp (most recent first)
+        allActivity.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0))
+        
+        // If no activity at all, show welcome message
+        if (allActivity.length === 0) {
+          allActivity.push({
+            id: 'welcome',
+            type: 'welcome',
+            icon: 'sparkles',
+            text: 'Welcome to Qwikker!',
+            subtext: 'Start exploring offers and businesses',
+            color: 'green',
+            href: '/user/offers',
+            time: 'Now'
+          })
+        }
+        
+        setRecentActivity(allActivity.slice(0, 4)) // Show max 4 items
+      }
     }
+    
+    loadActivity()
   }, [walletPassId])
   
   return (
@@ -189,75 +271,51 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
         </CardHeader>
         <CardContent className="pt-0">
           <div className="space-y-3">
-            {/* Sample Activity Items - Clickable */}
-            <Link href={getNavUrl("/user/offers")} className="group">
-              <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 hover:border-orange-500/30 transition-all duration-200 cursor-pointer group-hover:scale-[1.02]">
-                <div className="w-8 h-8 bg-orange-500/20 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-slate-200">New 2-for-1 offer at <span className="font-medium text-[#00d083]">The Seaside Bistro</span></p>
-                  <p className="text-xs text-slate-400">2 minutes ago</p>
-                </div>
-                <svg className="w-4 h-4 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-
-            <Link href={getNavUrl("/user/secret-menu")} className="group">
-              <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 hover:border-purple-500/30 transition-all duration-200 cursor-pointer group-hover:scale-[1.02]">
-                <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-slate-200">Secret menu item unlocked at <span className="font-medium text-[#00d083]">Artisan Coffee Co.</span></p>
-                  <p className="text-xs text-slate-400">1 hour ago</p>
-                </div>
-                <svg className="w-4 h-4 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-
-            <Link href={getNavUrl("/user/discover")} className="group">
-              <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 hover:border-emerald-500/30 transition-all duration-200 cursor-pointer group-hover:scale-[1.02]">
-                <div className="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-slate-200">New business <span className="font-medium text-[#00d083]">Ocean View Cafe</span> joined Qwikker</p>
-                  <p className="text-xs text-slate-400">3 hours ago</p>
-                </div>
-                <svg className="w-4 h-4 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-
-            <Link href={getNavUrl("/user/badges")} className="group">
-              <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 hover:border-yellow-500/30 transition-all duration-200 cursor-pointer group-hover:scale-[1.02]">
-                <div className="w-8 h-8 bg-yellow-500/20 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-slate-200">Achievement unlocked: <span className="font-medium text-yellow-400">Explorer Badge</span></p>
-                  <p className="text-xs text-slate-400">1 day ago</p>
-                </div>
-                <svg className="w-4 h-4 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
+            {/* Real Activity Items */}
+            {recentActivity.map((activity) => {
+              const getIconAndColor = (type: string, color: string) => {
+                const colors = {
+                  orange: { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30' },
+                  purple: { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/30' },
+                  green: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30' },
+                  yellow: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30' }
+                }
+                
+                const icons = {
+                  tag: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />,
+                  lock: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />,
+                  badge: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 713.138-3.138z" />,
+                  location: <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></>,
+                  sparkles: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                }
+                
+                return {
+                  colorClasses: colors[color as keyof typeof colors] || colors.green,
+                  icon: icons[activity.icon as keyof typeof icons] || icons.sparkles
+                }
+              }
+              
+              const { colorClasses, icon } = getIconAndColor(activity.type, activity.color)
+              
+              return (
+                <Link key={activity.id} href={getNavUrl(activity.href)} className="group">
+                  <div className={`flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 hover:${colorClasses.border} transition-all duration-200 cursor-pointer hover:opacity-80`}>
+                    <div className={`w-8 h-8 ${colorClasses.bg} rounded-full flex items-center justify-center`}>
+                      <svg className={`w-4 h-4 ${colorClasses.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {icon}
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-slate-200">{activity.text}</p>
+                      <p className="text-xs text-slate-400">{activity.subtext} • {activity.time}</p>
+                    </div>
+                    <svg className="w-4 h-4 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
 
           {/* View All Activity Button */}
