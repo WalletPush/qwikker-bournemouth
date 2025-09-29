@@ -3,6 +3,7 @@ import { UserDashboardHome } from '@/components/user/user-dashboard-home'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { mockBusinesses, mockOffers } from '@/lib/mock-data/user-mock-data'
 import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
+import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -121,7 +122,11 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
     }
   }
   
-  // Fetch approved businesses from database
+  // 🎯 FRANCHISE SYSTEM: Get franchise city for filtering
+  const franchiseCity = getFranchiseCityFromRequest()
+  console.log(`📊 Dashboard: Filtering businesses for franchise city: ${franchiseCity}`)
+  
+  // Fetch approved businesses from database (franchise-filtered)
   const { data: approvedBusinesses, error } = await supabase
     .from('business_profiles')
     .select(`
@@ -136,6 +141,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
       additional_notes
     `)
     .eq('status', 'approved')
+    .eq('business_town', franchiseCity) // 🎯 FRANCHISE FILTERING: Only show businesses from this franchise
     .not('business_name', 'is', null)
   
   if (error) {
