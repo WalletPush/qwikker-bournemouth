@@ -549,7 +549,7 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                                 variant="outline" 
                                 className="border-[#00d083]/50 text-[#00d083] hover:bg-[#00d083]/10 text-sm"
                               >
-                                <Link href={`/user/chat?business=${business.name}&topic=offer&offer=${offer.title}`}>
+                                <Link href={getNavUrl(`/user/chat?business=${business.name}&topic=offer&offer=${offer.title}`)}>
                                   Ask About Offer
                                 </Link>
                               </Button>
@@ -583,7 +583,7 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                       Chat with your local guide to explore the complete menu, get personalized recommendations, and discover hidden gems!
                     </p>
                     <Button asChild className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold">
-                      <Link href={`/user/chat?business=${business.name}`}>
+                      <Link href={getNavUrl(`/user/chat?business=${business.name}`)}>
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
@@ -631,7 +631,7 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                       Want to see the full menu, daily specials, and get personalized recommendations?
                     </p>
                     <Button asChild variant="outline" className="border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10">
-                      <Link href={`/user/chat?business=${business.name}`}>
+                      <Link href={getNavUrl(`/user/chat?business=${business.name}`)}>
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
@@ -684,7 +684,7 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                   </div>
 
                   <Button asChild className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-slate-100 font-semibold">
-                    <Link href={`/user/chat?business=${business.name}&topic=secret-menu`}>
+                    <Link href={getNavUrl(`/user/chat?business=${business.name}&topic=secret-menu`)}>
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
@@ -712,13 +712,19 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                           <p className="text-sm text-slate-400"><strong>Valid until:</strong> {offer.expiryDate}</p>
                         </div>
                       </div>
-                      <div className="text-center ml-6">
-                        <span className="bg-orange-500 text-slate-100 text-lg px-4 py-2 rounded-full font-bold block mb-3">
-                          {offer.badge}
-                        </span>
-                        <Button className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold">
+                      <div className="ml-6 space-y-3 w-[160px] flex-shrink-0">
+                        <button 
+                          onClick={() => claimOffer(offer.id, offer.title, business.name)}
+                          className="w-full h-11 px-4 py-2 bg-[#00d083] text-black font-semibold rounded-lg text-sm hover:opacity-80 cursor-pointer"
+                        >
                           Claim Offer
-                        </Button>
+                        </button>
+                        <Link 
+                          href={`${getNavUrl('/user/offers')}${walletPassId ? '&' : '?'}highlight=${business.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+                          className="w-full h-11 px-4 py-2 border border-slate-600 text-slate-300 font-semibold rounded-lg text-sm flex items-center justify-center hover:opacity-80 cursor-pointer"
+                        >
+                          View Offer
+                        </Link>
                       </div>
                     </div>
                   </CardContent>

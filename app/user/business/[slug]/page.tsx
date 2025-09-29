@@ -86,6 +86,8 @@ export default async function BusinessDetailPage({ params }: BusinessDetailPageP
         value: business.offer_value,
         terms: business.offer_terms || 'Terms and conditions apply',
         validUntil: business.offer_end_date,
+        expiryDate: business.offer_end_date ? new Date(business.offer_end_date).toLocaleDateString() : 'No expiry date',
+        badge: business.offer_value || 'OFFER',
         image: business.offer_image || business.business_images?.[0]
       }] : [],
       plan: business.plan || 'starter',

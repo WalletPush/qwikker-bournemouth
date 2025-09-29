@@ -39,6 +39,16 @@ interface UserDiscoverPageProps {
 
 export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: UserDiscoverPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
+  
+  // Helper function to scroll to results after filter change
+  const scrollToResults = () => {
+    setTimeout(() => {
+      const resultsSection = document.querySelector('[data-discover-results]')
+      if (resultsSection) {
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
+  }
   const [searchQuery, setSearchQuery] = useState<string>('')
   
   // Track badge progress for visiting discover page
@@ -96,8 +106,16 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
     return filtered
   }
 
-  const BusinessCard = ({ business }: { business: any }) => (
-    <Link href={`/user/business/${business.slug}`} className="block">
+  const BusinessCard = ({ business }: { business: any }) => {
+    const getNavUrl = (href: string) => {
+      if (!walletPassId) {
+        return href
+      }
+      return `${href}?wallet_pass_id=${walletPassId}`
+    }
+    
+    return (
+    <Link href={getNavUrl(`/user/business/${business.slug}`)} className="block">
       <Card className="bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden">
       {/* Business Image */}
       <div className="relative h-48 overflow-hidden">
@@ -233,9 +251,10 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
           </Button>
         </div>
       </CardContent>
-    </Card>
+      </Card>
     </Link>
   )
+  }
 
   return (
     <div className="space-y-6">
@@ -262,7 +281,10 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
               ? 'bg-gradient-to-br from-yellow-400/30 to-amber-500/30 border-yellow-300/50 ring-2 ring-yellow-300/30' 
               : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
           }`}
-          onClick={() => setSelectedFilter('qwikker_picks')}
+          onClick={() => {
+            setSelectedFilter('qwikker_picks')
+            scrollToResults()
+          }}
         >
           <p className="text-2xl font-bold text-yellow-300">{qwikkerPicks.length}</p>
           <p className="text-sm text-slate-400">Qwikker Picks</p>
@@ -274,7 +296,10 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
               ? 'bg-gradient-to-br from-green-600/30 to-green-500/30 border-green-400/50 ring-2 ring-green-400/30' 
               : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
           }`}
-          onClick={() => setSelectedFilter('featured')}
+          onClick={() => {
+            setSelectedFilter('featured')
+            scrollToResults()
+          }}
         >
           <p className="text-2xl font-bold text-green-400">{featured.length}</p>
           <p className="text-sm text-slate-400">Featured</p>
@@ -286,7 +311,10 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
               ? 'bg-gradient-to-br from-purple-600/30 to-purple-500/30 border-purple-400/50 ring-2 ring-purple-400/30' 
               : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
           }`}
-          onClick={() => setSelectedFilter('recommended')}
+          onClick={() => {
+            setSelectedFilter('recommended')
+            scrollToResults()
+          }}
         >
           <p className="text-2xl font-bold text-purple-400">{recommended.length}</p>
           <p className="text-sm text-slate-400">Recommended</p>
@@ -298,7 +326,10 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
               ? 'bg-gradient-to-br from-blue-600/30 to-blue-500/30 border-blue-400/50 ring-2 ring-blue-400/30' 
               : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
           }`}
-          onClick={() => setSelectedFilter('all')}
+          onClick={() => {
+            setSelectedFilter('all')
+            scrollToResults()
+          }}
         >
           <p className="text-2xl font-bold text-blue-400">{businesses.length}</p>
           <p className="text-sm text-slate-400">All Places</p>
@@ -351,7 +382,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
 
       {/* Business Grid */}
       {getFilteredBusinesses().length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-discover-results>
           {getFilteredBusinesses().map((business) => (
             <BusinessCard key={business.id} business={business} />
           ))}

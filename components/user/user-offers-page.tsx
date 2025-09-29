@@ -28,8 +28,17 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   const [favoriteOffers, setFavoriteOffers] = useState<Set<string>>(new Set())
   const [claimedOffers, setClaimedOffers] = useState<Set<string>>(new Set())
   const [walletOffers, setWalletOffers] = useState<Set<string>>(new Set())
-  const [highlightedCard, setHighlightedCard] = useState<string | null>(null)
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  
+  // Helper function to scroll to results after filter change
+  const scrollToResults = () => {
+    setTimeout(() => {
+      const resultsSection = document.querySelector('[data-offers-results]')
+      if (resultsSection) {
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
+  }
   
   // Load from localStorage after component mounts
   useEffect(() => {
@@ -53,36 +62,28 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   // Combine real offers with mock offers
   const allOffers = [...realOffers, ...mockOffers]
 
-  // Handle QR deep linking auto-scroll and highlight
+  // Handle auto-scroll - simple scroll to first card
   useEffect(() => {
     if (highlightBusiness) {
-      // Wait for page to render and find the business card
-      const timer = setTimeout(() => {
-        // Look for business by name (convert to slug format)
-        const businessSlug = highlightBusiness.toLowerCase().replace(/[^a-z0-9]/g, '-')
-        const targetCard = cardRefs.current[businessSlug]
-        
-        if (targetCard) {
-          // Smooth scroll to the card
-          targetCard.scrollIntoView({ 
+      // Simple scroll to top of offers section after short delay
+      const scrollTimer = setTimeout(() => {
+        // Find the first offer card or scroll to top of page
+        const firstCard = document.querySelector('[data-offer-card]')
+        if (firstCard) {
+          firstCard.scrollIntoView({ 
             behavior: 'smooth', 
-            block: 'center',
+            block: 'start',
             inline: 'nearest'
           })
-          
-          // Add highlight effect
-          setHighlightedCard(businessSlug)
-          
-          // Remove highlight after 3 seconds
-          setTimeout(() => {
-            setHighlightedCard(null)
-          }, 3000)
+        } else {
+          // Fallback: scroll to top
+          window.scrollTo({ top: 0, behavior: 'smooth' })
         }
-      }, 800) // Wait for page to fully load
+      }, 100)
       
-      return () => clearTimeout(timer)
+      return () => clearTimeout(scrollTimer)
     }
-  }, [highlightBusiness, allOffers]) // Re-run when offers change
+  }, [highlightBusiness])
   
   // Get unique categories from all businesses
   const realCategories = realOffers.map(o => o.businessCategory).filter(Boolean)
@@ -366,7 +367,6 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     
     // Create business slug for ref and highlighting
     const businessSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-')
-    const isHighlighted = highlightedCard === businessSlug
     
     // Fix image selection: for real offers use offer.image, for mock offers use business.images[0]
     const businessImage = isRealOffer
@@ -397,11 +397,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     return (
       <Card 
         ref={(el) => { cardRefs.current[businessSlug] = el }}
+        data-offer-card
         className={`bg-gradient-to-br from-slate-800/60 to-slate-700/40 border-slate-700/50 hover:border-green-500/30 transition-all duration-300 overflow-hidden group h-full flex flex-col ${
-          isHighlighted 
-            ? 'qr-highlight ring-4 ring-[#00d083]/60 shadow-2xl shadow-[#00d083]/20 scale-105 border-[#00d083]/50' 
-            : ''
-        } ${
           isInWallet 
             ? 'opacity-50 blur-[1px] pointer-events-none relative' 
             : ''
@@ -568,7 +565,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               ? 'bg-gradient-to-br from-blue-600/30 to-blue-500/30 border-blue-400/50 ring-2 ring-blue-400/30' 
               : 'bg-gradient-to-br from-blue-900/20 to-blue-800/20 border-blue-700/30 hover:border-blue-600/50'
           }`}
-          onClick={() => setSelectedFilter('all')}
+          onClick={() => {
+            setSelectedFilter('all')
+            scrollToResults()
+          }}
         >
           <p className="text-base sm:text-lg font-semibold text-blue-300 mb-1">Total Offers</p>
           <p className="text-lg font-bold text-blue-400">{allOffers.filter(o => !claimedOffers.has(o.id)).length}</p>
@@ -580,7 +580,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               ? 'bg-gradient-to-br from-green-600/30 to-green-500/30 border-green-400/50 ring-2 ring-green-400/30' 
               : 'bg-gradient-to-br from-green-900/20 to-green-800/20 border-green-700/30 hover:border-green-600/50'
           }`}
-          onClick={() => setSelectedFilter('percentage_off')}
+          onClick={() => {
+            setSelectedFilter('percentage_off')
+            scrollToResults()
+          }}
         >
           <p className="text-base sm:text-lg font-semibold text-green-300 mb-1">% Off Deals</p>
           <p className="text-lg font-bold text-green-400">{allOffers.filter(o => o.type === 'percentage_off' && !claimedOffers.has(o.id)).length}</p>
@@ -592,7 +595,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               ? 'bg-gradient-to-br from-purple-600/30 to-purple-500/30 border-purple-400/50 ring-2 ring-purple-400/30' 
               : 'bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-700/30 hover:border-purple-600/50'
           }`}
-          onClick={() => setSelectedFilter('two_for_one')}
+          onClick={() => {
+            setSelectedFilter('two_for_one')
+            scrollToResults()
+          }}
         >
           <p className="text-base sm:text-lg font-semibold text-purple-300 mb-1">2-for-1 Deals</p>
           <p className="text-lg font-bold text-purple-400">{allOffers.filter(o => o.type === 'two_for_one' && !claimedOffers.has(o.id)).length}</p>
@@ -604,7 +610,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               ? 'bg-gradient-to-br from-red-600/30 to-red-500/30 border-red-400/50 ring-2 ring-red-400/30' 
               : 'bg-gradient-to-br from-red-900/20 to-red-800/20 border-red-700/30 hover:border-red-600/50'
           }`}
-          onClick={() => setSelectedFilter('ending_soon')}
+          onClick={() => {
+            setSelectedFilter('ending_soon')
+            scrollToResults()
+          }}
         >
           <p className="text-base sm:text-lg font-semibold text-red-300 mb-1">Ending Soon</p>
           <p className="text-lg font-bold text-red-400">{allOffers.filter(o => o.isEndingSoon && !claimedOffers.has(o.id)).length}</p>
@@ -616,7 +625,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               ? 'bg-gradient-to-br from-amber-600/30 to-amber-500/30 border-amber-400/50 ring-2 ring-amber-400/30' 
               : 'bg-gradient-to-br from-amber-900/20 to-amber-800/20 border-amber-700/30 hover:border-amber-600/50'
           }`}
-          onClick={() => setSelectedFilter('claimed')}
+          onClick={() => {
+            setSelectedFilter('claimed')
+            scrollToResults()
+          }}
         >
           <p className="text-base sm:text-lg font-semibold text-amber-300 mb-1">My Claimed</p>
           <p className="text-lg font-bold text-amber-400">{Array.from(claimedOffers).filter(id => !walletOffers.has(id)).length}</p>
@@ -628,7 +640,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               ? 'bg-gradient-to-br from-pink-600/30 to-pink-500/30 border-pink-400/50 ring-2 ring-pink-400/30' 
               : 'bg-gradient-to-br from-pink-900/20 to-pink-800/20 border-pink-700/30 hover:border-pink-600/50'
           }`}
-          onClick={() => setSelectedFilter('favorites')}
+          onClick={() => {
+            setSelectedFilter('favorites')
+            scrollToResults()
+          }}
         >
           <p className="text-base sm:text-lg font-semibold text-pink-300 mb-1">Favourites</p>
           <p className="text-lg font-bold text-pink-400">{favoriteOffers.size}</p>
@@ -664,12 +679,12 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mt-4 max-w-md mx-auto">
             <p className="text-amber-200 text-base font-semibold text-center mb-2">Important: 12-Hour Expiry</p>
             <p className="text-amber-100 text-sm text-center">Offers automatically expire 12 hours after being added to your wallet</p>
-          </div>
+        </div>
         )}
       </div>
 
       {/* Offers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch" data-offers-results>
         {getFilteredOffers().map((offer) => (
           <OfferCard key={offer.id} offer={offer} />
         ))}

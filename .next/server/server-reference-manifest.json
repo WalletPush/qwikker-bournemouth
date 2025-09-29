@@ -1,5 +1,20 @@
 {
   "node": {
+    "0043cf2741ad2f1735ed0a50176dbf541a5d5e4d84": {
+      "workers": {
+        "app/user/dashboard/page": {
+          "moduleId": "[project]/.next-internal/server/app/user/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/recent-activity-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getRecentBusinessActivity",
+          "filename": "lib/actions/recent-activity-actions.ts"
+        }
+      },
+      "layer": {
+        "app/user/dashboard/page": "action-browser"
+      },
+      "filename": "lib/actions/recent-activity-actions.ts",
+      "exportedName": "getRecentBusinessActivity"
+    },
     "405674449b6e5b4fdc14b67ac9406eab8cac1ce86c": {
       "workers": {
         "app/admin/page": {
