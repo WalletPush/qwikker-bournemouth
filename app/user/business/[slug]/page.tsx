@@ -36,6 +36,9 @@ export default async function BusinessDetailPage({ params }: BusinessDetailPageP
       offer_name,
       offer_type,
       offer_value,
+      offer_terms,
+      offer_start_date,
+      offer_end_date,
       offer_image,
       menu_preview,
       plan,
@@ -77,10 +80,13 @@ export default async function BusinessDetailPage({ params }: BusinessDetailPageP
       slug: business.business_name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || business.id,
       offers: business.offer_name ? [{
         id: `${business.id}-offer`,
+        businessId: business.id,
         title: business.offer_name,
         type: business.offer_type,
         value: business.offer_value,
-        image: business.offer_image
+        terms: business.offer_terms || 'Terms and conditions apply',
+        validUntil: business.offer_end_date,
+        image: business.offer_image || business.business_images?.[0]
       }] : [],
       plan: business.plan || 'starter',
       rating: business.rating || 4.5,
