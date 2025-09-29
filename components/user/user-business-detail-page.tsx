@@ -170,8 +170,17 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
     )
   }
 
-  // Get related data
-  const businessOffers = mockOffers.filter(offer => offer.businessId === business.id)
+  // Get related data - Use real business offers, not mock data
+  const businessOffers = business.offer_name ? [{ 
+    id: `${business.id}-offer`,
+    businessId: business.id,
+    title: business.offer_name,
+    type: business.offer_type,
+    value: business.offer_value,
+    terms: business.offer_terms,
+    validUntil: business.offer_end_date,
+    image: business.offer_image
+  }] : []
   const secretMenu = mockSecretMenus.find(menu => menu.businessId === business.id)
   
   const tabs = [
@@ -313,15 +322,15 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 px-4 py-3 text-sm font-medium rounded-md transition-all duration-200 ${
+            className={`flex-1 px-2 sm:px-4 py-3 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black'
                 : 'text-slate-300 hover:text-slate-100 hover:bg-slate-700/50'
             }`}
           >
-            {tab.label}
+            <span className="block sm:inline">{tab.label}</span>
             {tab.count !== null && (
-              <span className={`ml-2 text-xs px-2 py-1 rounded-full ${
+              <span className={`ml-1 sm:ml-2 text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full ${
                 activeTab === tab.id ? 'bg-black/20' : 'bg-slate-600'
               }`}>
                 {tab.count}
