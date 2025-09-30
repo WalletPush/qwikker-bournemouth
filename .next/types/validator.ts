@@ -965,6 +965,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/walletpass/update-existing-links/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/walletpass/update-existing-links">> = Specific
+  const handler = {} as typeof import("../../app/api/walletpass/update-existing-links/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/walletpass/update-main-pass/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/walletpass/update-main-pass">> = Specific

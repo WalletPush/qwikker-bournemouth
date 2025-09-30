@@ -18,6 +18,7 @@ export function OffersPage({ profile }: OffersPageProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
 
   const [formData, setFormData] = useState({
     offerName: '',
@@ -40,6 +41,36 @@ export function OffersPage({ profile }: OffersPageProps) {
       ...prev,
       [field]: value
     }))
+  }
+
+  // Function to start editing existing offer
+  const startEditOffer = () => {
+    setFormData({
+      offerName: profile.offer_name || '',
+      offerType: profile.offer_type || '',
+      offerValue: profile.offer_value || '',
+      offerClaimAmount: profile.offer_claim_amount || '',
+      offerTerms: profile.offer_terms || '',
+      startDate: profile.offer_start_date || '',
+      endDate: profile.offer_end_date || '',
+    })
+    setIsEditMode(true)
+    setShowCreateForm(true)
+  }
+
+  // Function to start creating new offer
+  const startCreateOffer = () => {
+    setFormData({
+      offerName: '',
+      offerType: '',
+      offerValue: '',
+      offerClaimAmount: '',
+      offerTerms: '',
+      startDate: '',
+      endDate: '',
+    })
+    setIsEditMode(false)
+    setShowCreateForm(true)
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -206,9 +237,18 @@ export function OffersPage({ profile }: OffersPageProps) {
   // Check if user has an existing offer
   const hasExistingOffer = profile.offer_name && profile.offer_name.trim() !== ''
 
-  // Plan limits
-  const isFreeTrial = profile.plan === 'starter'
-  const offerLimit = isFreeTrial ? 3 : profile.plan === 'spotlight' ? 10 : 999
+  // Plan limits based on business tier
+  const getOfferLimit = (plan: string) => {
+    switch (plan) {
+      case 'starter': return 1      // Starter businesses: 1 offer
+      case 'featured': return 3     // Featured businesses: 3 offers  
+      case 'spotlight': return 999  // Spotlight businesses: unlimited offers
+      default: return 1             // Default to starter limit
+    }
+  }
+  
+  const offerLimit = getOfferLimit(profile.plan || 'starter')
+  const isStarterTier = profile.plan === 'starter'
   // For now, we only support one offer in the profiles table
   // In a real app, you'd have a separate offers table and count all offers
   const currentOfferCount = hasExistingOffer ? 1 : 0
@@ -268,9 +308,19 @@ export function OffersPage({ profile }: OffersPageProps) {
           <p className="text-sm text-gray-400">
             {currentOfferCount} of {offerLimit} offers used
           </p>
-          {isFreeTrial && (
+          {isStarterTier && (
             <p className="text-xs text-yellow-400">
-              Free Trial: {offerLimit} offers maximum
+              Starter Tier: {offerLimit} offer maximum
+            </p>
+          )}
+          {profile.plan === 'featured' && (
+            <p className="text-xs text-blue-400">
+              Featured Tier: {offerLimit} offers maximum
+            </p>
+          )}
+          {profile.plan === 'spotlight' && (
+            <p className="text-xs text-green-400">
+              Spotlight Tier: Unlimited offers
             </p>
           )}
         </div>
@@ -308,7 +358,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                       variant="outline"
                       size="sm"
                       className="border-slate-600 text-gray-300 hover:bg-slate-700 text-xs"
-                      onClick={() => setShowCreateForm(true)}
+                      onClick={startEditOffer}
                     >
                       Edit
                     </Button>
@@ -351,13 +401,13 @@ export function OffersPage({ profile }: OffersPageProps) {
                   {profile.offer_start_date && (
                     <div>
                       <span className="text-gray-400">Start Date:</span>
-                      <span className="text-white ml-2">{new Date(profile.offer_start_date).toLocaleDateString()}</span>
+                      <span className="text-white ml-2">{new Date(profile.offer_start_date).toLocaleDateString('en-GB')}</span>
                     </div>
                   )}
                   {profile.offer_end_date && (
                     <div>
                       <span className="text-gray-400">End Date:</span>
-                      <span className="text-white ml-2">{new Date(profile.offer_end_date).toLocaleDateString()}</span>
+                      <span className="text-white ml-2">{new Date(profile.offer_end_date).toLocaleDateString('en-GB')}</span>
                     </div>
                   )}
                 </div>
@@ -375,7 +425,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                     variant="outline"
                     size="sm"
                     className="border-slate-600 text-gray-300 hover:bg-slate-700 flex-1 touch-manipulation min-h-[44px]"
-                    onClick={() => setShowCreateForm(true)}
+                    onClick={startEditOffer}
                   >
                     Edit Offer
                   </Button>
@@ -391,7 +441,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                     <Button
                       size="sm"
                       className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white w-full touch-manipulation min-h-[44px]"
-                      onClick={() => setShowCreateForm(true)}
+                      onClick={startCreateOffer}
                     >
                       Create Another Offer
                     </Button>
@@ -401,13 +451,13 @@ export function OffersPage({ profile }: OffersPageProps) {
                 {/* Desktop "Create Another" button */}
                 {currentOfferCount < offerLimit && (
                   <div className="hidden sm:block pt-4 border-t border-slate-600">
-                    <Button
-                      size="sm"
-                      className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
-                      onClick={() => setShowCreateForm(true)}
-                    >
-                      Create Another Offer
-                    </Button>
+                  <Button
+                    size="sm"
+                    className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
+                    onClick={startCreateOffer}
+                  >
+                    Create Another Offer
+                  </Button>
                   </div>
                 )}
               </div>
@@ -430,7 +480,7 @@ export function OffersPage({ profile }: OffersPageProps) {
               Create your first offer to attract customers and drive engagement
             </p>
             <Button
-              onClick={() => setShowCreateForm(true)}
+              onClick={startCreateOffer}
               className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
             >
               Create Your First Offer
@@ -452,11 +502,16 @@ export function OffersPage({ profile }: OffersPageProps) {
                 </div>
                 <div>
                   <CardTitle className="text-white text-xl">
-                    {hasExistingOffer ? 'Edit Offer' : 'Create New Offer'}
+                    {isEditMode ? 'Edit Offer' : 'Create New Offer'}
                   </CardTitle>
                   <p className="text-slate-400 text-sm mt-1">
-                    {hasExistingOffer ? 'Update your existing offer details' : 'Create and manage your business offers and promotions'}
+                    {isEditMode ? 'Update expiry date and terms only' : 'Create and manage your business offers and promotions'}
                   </p>
+                  {isEditMode && (
+                    <p className="text-xs text-amber-400 mt-1">
+                      Core offer details (name, type, value) cannot be changed after approval
+                    </p>
+                  )}
                 </div>
               </div>
               {showCreateForm && hasExistingOffer && (
@@ -494,9 +549,15 @@ export function OffersPage({ profile }: OffersPageProps) {
                       id="offerName"
                       value={formData.offerName}
                       onChange={(e) => handleInputChange('offerName', e.target.value)}
-                      className="bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 transition-all duration-200 h-12 shadow-sm"
+                      className={`text-white border-2 focus:ring-2 focus:ring-[#00d083]/20 transition-all duration-200 h-12 shadow-sm ${
+                        isEditMode 
+                          ? 'bg-slate-700 border-slate-500 cursor-not-allowed opacity-75' 
+                          : 'bg-slate-800 border-slate-600 focus:border-[#00d083] hover:border-slate-500'
+                      }`}
                       placeholder="e.g., Student Discount, Happy Hour Special"
                       required
+                      readOnly={isEditMode}
+                      disabled={isEditMode}
                     />
                   </div>
 
@@ -509,8 +570,13 @@ export function OffersPage({ profile }: OffersPageProps) {
                         id="offerType"
                         value={formData.offerType}
                         onChange={(e) => handleInputChange('offerType', e.target.value)}
-                        className="w-full bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 transition-all duration-200 rounded-lg p-3 h-12 shadow-sm"
+                        className={`w-full text-white border-2 focus:ring-2 focus:ring-[#00d083]/20 transition-all duration-200 rounded-lg p-3 h-12 shadow-sm ${
+                          isEditMode 
+                            ? 'bg-slate-700 border-slate-500 cursor-not-allowed opacity-75' 
+                            : 'bg-slate-800 border-slate-600 focus:border-[#00d083] hover:border-slate-500'
+                        }`}
                         required
+                        disabled={isEditMode}
                       >
                         <option value="">Select offer type</option>
                         {OFFER_TYPE_OPTIONS.map(option => (
@@ -528,9 +594,15 @@ export function OffersPage({ profile }: OffersPageProps) {
                         id="offerValue"
                         value={formData.offerValue}
                         onChange={(e) => handleInputChange('offerValue', e.target.value)}
-                        className="bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 transition-all duration-200 h-12 shadow-sm"
+                        className={`text-white border-2 focus:ring-2 focus:ring-[#00d083]/20 transition-all duration-200 h-12 shadow-sm ${
+                          isEditMode 
+                            ? 'bg-slate-700 border-slate-500 cursor-not-allowed opacity-75' 
+                            : 'bg-slate-800 border-slate-600 focus:border-[#00d083] hover:border-slate-500'
+                        }`}
                         placeholder="e.g., 20% off, Buy 1 Get 1 Free"
                         required
+                        readOnly={isEditMode}
+                        disabled={isEditMode}
                       />
                     </div>
                   </div>
@@ -741,7 +813,7 @@ Examples:
                       Saving...
                     </div>
                   ) : (
-                    hasExistingOffer ? 'Update Offer' : 'Create Offer'
+                    isEditMode ? 'Update Offer' : 'Create Offer'
                   )}
                 </Button>
               </div>
@@ -752,7 +824,7 @@ Examples:
 
 
       {/* Plan Upgrade Notice */}
-      {isFreeTrial && currentOfferCount >= offerLimit && (
+      {currentOfferCount >= offerLimit && profile.plan !== 'spotlight' && (
         <Card className="bg-slate-800/50 border-slate-700">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -764,8 +836,12 @@ Examples:
               <div className="flex-1">
                 <h3 className="font-semibold text-white mb-1">Offer Limit Reached</h3>
                 <p className="text-sm text-gray-400">
-                  You've reached the maximum of {offerLimit} offers for the Free Trial plan. 
-                  Upgrade to Spotlight for up to 10 offers or Pro for unlimited offers.
+                  {profile.plan === 'starter' && (
+                    <>You've reached the maximum of {offerLimit} offer for the Starter plan. Upgrade to Featured for 3 offers or Spotlight for unlimited offers.</>
+                  )}
+                  {profile.plan === 'featured' && (
+                    <>You've reached the maximum of {offerLimit} offers for the Featured plan. Upgrade to Spotlight for unlimited offers.</>
+                  )}
                 </p>
               </div>
               <Button

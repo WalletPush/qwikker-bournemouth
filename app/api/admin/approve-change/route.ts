@@ -98,15 +98,82 @@ export async function POST(request: NextRequest) {
       let updateData = {}
       
       if (change.change_type === 'offer') {
-        updateData = {
-          offer_name: change.change_data.offer_name,
-          offer_type: change.change_data.offer_type || 'other', // Default to 'other' if empty
-          offer_value: change.change_data.offer_value,
-          offer_claim_amount: change.change_data.offer_claim_amount || 'multiple', // Default to 'multiple' if empty
-          offer_terms: change.change_data.offer_terms,
-          offer_start_date: change.change_data.offer_start_date && change.change_data.offer_start_date.trim() !== '' ? change.change_data.offer_start_date : null, // Use null for empty dates
-          offer_end_date: change.change_data.offer_end_date && change.change_data.offer_end_date.trim() !== '' ? change.change_data.offer_end_date : null, // Use null for empty dates
-          offer_image: change.change_data.offer_image
+        // 🚨 CRITICAL FIX: Create NEW offer in business_offers table (supports multiple offers)
+        const { data: currentBusiness } = await supabaseAdmin
+          .from('business_profiles')
+          .select('subscription_plan')
+          .eq('id', change.business_id)
+          .single()
+        
+        // Check current offer count for this business
+        const { data: existingOffers, count: offerCount } = await supabaseAdmin
+          .from('business_offers')
+          .select('*', { count: 'exact' })
+          .eq('business_id', change.business_id)
+          .eq('status', 'approved')
+        
+        const currentOfferCount = offerCount || 0
+        const businessPlan = currentBusiness?.subscription_plan || 'starter'
+        
+        // Check tier limits
+        let maxOffers = 1 // Default starter
+        if (businessPlan === 'featured') maxOffers = 3
+        if (businessPlan === 'spotlight') maxOffers = 999 // Unlimited
+        
+        if (currentOfferCount >= maxOffers) {
+          console.error(`❌ Offer limit exceeded: ${businessPlan} plan allows ${maxOffers} offers, business has ${currentOfferCount}`)
+          return NextResponse.json(
+            { error: `Offer limit exceeded. ${businessPlan} plan allows maximum ${maxOffers} offers.` },
+            { status: 400 }
+          )
+        }
+        
+        // Create NEW offer in business_offers table
+        const { data: newOffer, error: offerError } = await supabaseAdmin
+          .from('business_offers')
+          .insert({
+            business_id: change.business_id,
+            offer_name: change.change_data.offer_name,
+            offer_type: change.change_data.offer_type || 'other',
+            offer_value: change.change_data.offer_value,
+            offer_claim_amount: change.change_data.offer_claim_amount || 'multiple',
+            offer_terms: change.change_data.offer_terms,
+            offer_start_date: change.change_data.offer_start_date && change.change_data.offer_start_date.trim() !== '' ? change.change_data.offer_start_date : null,
+            offer_end_date: change.change_data.offer_end_date && change.change_data.offer_end_date.trim() !== '' ? change.change_data.offer_end_date : null,
+            offer_image: change.change_data.offer_image,
+            status: 'approved',
+            approved_by: admin.id,
+            approved_at: new Date().toISOString(),
+            display_order: currentOfferCount + 1
+          })
+          .select()
+          .single()
+        
+        if (offerError) {
+          console.error('Error creating new offer:', offerError)
+          return NextResponse.json(
+            { error: 'Failed to create new offer' },
+            { status: 500 }
+          )
+        }
+        
+        console.log(`✅ NEW OFFER CREATED: ${change.change_data.offer_name} for ${change.business?.business_name} (${currentOfferCount + 1}/${maxOffers})`)
+        
+        // Update business_profiles with the FIRST offer for backward compatibility
+        if (currentOfferCount === 0) {
+          updateData = {
+            offer_name: change.change_data.offer_name,
+            offer_type: change.change_data.offer_type || 'other',
+            offer_value: change.change_data.offer_value,
+            offer_claim_amount: change.change_data.offer_claim_amount || 'multiple',
+            offer_terms: change.change_data.offer_terms,
+            offer_start_date: change.change_data.offer_start_date && change.change_data.offer_start_date.trim() !== '' ? change.change_data.offer_start_date : null,
+            offer_end_date: change.change_data.offer_end_date && change.change_data.offer_end_date.trim() !== '' ? change.change_data.offer_end_date : null,
+            offer_image: change.change_data.offer_image
+          }
+        } else {
+          // Don't update business_profiles for additional offers
+          updateData = {}
         }
       } else if (change.change_type === 'secret_menu') {
         // For secret menu, we need to append to existing additional_notes
@@ -162,11 +229,15 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      // Update the business profile
-      const { error: updateError } = await supabaseAdmin
-        .from('business_profiles')
-        .update(updateData)
-        .eq('id', change.business_id)
+      // Update the business profile (only if there's data to update)
+      let updateError = null
+      if (Object.keys(updateData).length > 0) {
+        const { error } = await supabaseAdmin
+          .from('business_profiles')
+          .update(updateData)
+          .eq('id', change.business_id)
+        updateError = error
+      }
       
       if (updateError) {
         console.error('Error updating business profile:', updateError)
