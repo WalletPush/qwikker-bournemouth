@@ -1328,7 +1328,9 @@ Qwikker Admin Team`
 
                               {/* Change Details */}
                               <div className="bg-slate-700/50 rounded-lg p-4 mb-4">
-                                <h4 className="text-white font-semibold mb-2">Change Details:</h4>
+                                <h4 className="text-white font-semibold mb-2">
+                                  {change.change_type === 'offer' ? 'Offer Details:' : 'Change Details:'}
+                                </h4>
                                 {change.change_type === 'offer' && (
                                   <div>
                                     <p><strong>Offer Name:</strong> {change.change_data.offer_name}</p>
