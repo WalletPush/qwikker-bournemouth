@@ -101,7 +101,13 @@ export async function POST(request: NextRequest) {
         // 🚨 CRITICAL FIX: Create NEW offer in business_offers table (supports multiple offers)
         const { data: currentBusiness } = await supabaseAdmin
           .from('business_profiles')
-          .select('subscription_plan')
+          .select(`
+            id,
+            user_id,
+            profiles!user_id (
+              plan
+            )
+          `)
           .eq('id', change.business_id)
           .single()
         
@@ -113,12 +119,12 @@ export async function POST(request: NextRequest) {
           .eq('status', 'approved')
         
         const currentOfferCount = offerCount || 0
-        const businessPlan = currentBusiness?.subscription_plan || 'starter'
+        const businessPlan = currentBusiness?.profiles?.plan || 'starter'
         
-        // Check tier limits
-        let maxOffers = 1 // Default starter
-        if (businessPlan === 'featured') maxOffers = 3
-        if (businessPlan === 'spotlight') maxOffers = 999 // Unlimited
+        // Check tier limits (updated to match database function)
+        let maxOffers = 3 // Default starter
+        if (businessPlan === 'featured') maxOffers = 5
+        if (businessPlan === 'spotlight') maxOffers = 25
         
         if (currentOfferCount >= maxOffers) {
           console.error(`❌ Offer limit exceeded: ${businessPlan} plan allows ${maxOffers} offers, business has ${currentOfferCount}`)
@@ -142,7 +148,6 @@ export async function POST(request: NextRequest) {
             offer_end_date: change.change_data.offer_end_date && change.change_data.offer_end_date.trim() !== '' ? change.change_data.offer_end_date : null,
             offer_image: change.change_data.offer_image,
             status: 'approved',
-            approved_by: admin.id,
             approved_at: new Date().toISOString(),
             display_order: currentOfferCount + 1
           })

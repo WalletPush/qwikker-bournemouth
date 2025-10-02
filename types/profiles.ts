@@ -7,6 +7,22 @@ export interface MenuPreviewItem {
   description: string;
 }
 
+// Business offer structure for multiple offers
+export interface BusinessOffer {
+  id: string;
+  offer_name: string;
+  offer_type: string;
+  offer_value: string;
+  offer_claim_amount: string;
+  offer_terms: string | null;
+  offer_start_date: string | null;
+  offer_end_date: string | null;
+  offer_image: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  display_order: number;
+  created_at: string;
+}
+
 export interface Profile {
   id: string;
   user_id: string;
@@ -38,7 +54,7 @@ export interface Profile {
   logo: string | null; // URL to uploaded logo
   menu_url: string | null; // URL to uploaded menu/price list PDF
   
-  // Offer data
+  // Offer data (legacy single offer)
   offer_name: string | null;
   offer_type: OfferType | null;
   offer_value: string | null;
@@ -48,7 +64,15 @@ export interface Profile {
   offer_terms: string | null;
   offer_image: string | null; // URL to uploaded offer image
   
-  // Plan and billing
+  // Multiple offers (new system)
+  business_offers?: BusinessOffer[];
+  
+  // Plan from profiles table (nested relationship)
+  profiles?: {
+    plan: SubscriptionPlan;
+  };
+  
+  // Plan and billing (legacy - may be deprecated)
   plan: SubscriptionPlan;
   trial_expiry: string | null; // ISO timestamp
   is_founder: boolean;

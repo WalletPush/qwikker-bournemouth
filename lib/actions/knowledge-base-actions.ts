@@ -9,12 +9,24 @@ export async function addBasicBusinessKnowledge(businessId: string, adminId: str
   const supabaseAdmin = createAdminClient()
 
   try {
-    // Get business details
-    const { data: business, error: businessError } = await supabaseAdmin
-      .from('business_profiles')
-      .select('*')
-      .eq('id', businessId)
-      .single()
+  // Get business details and all their offers
+  const { data: business, error: businessError } = await supabaseAdmin
+    .from('business_profiles')
+    .select(`
+      *,
+      business_offers!business_id (
+        id,
+        offer_name,
+        offer_type,
+        offer_value,
+        offer_terms,
+        offer_start_date,
+        offer_end_date,
+        status
+      )
+    `)
+    .eq('id', businessId)
+    .single()
 
     if (businessError || !business) {
       console.error('Error fetching business for knowledge base:', businessError)
@@ -131,8 +143,29 @@ function generateBasicBusinessContent(business: any): string {
     sections.push(`Hours: ${business.business_hours}`)
   }
 
-  // Current Offers
-  if (business.offer_name) {
+  // Current Offers (updated to use business_offers table)
+  if (business.business_offers && business.business_offers.length > 0) {
+    const approvedOffers = business.business_offers.filter(offer => offer.status === 'approved')
+    if (approvedOffers.length > 0) {
+      sections.push(`Current Offers:`)
+      approvedOffers.forEach((offer, index) => {
+        sections.push(`  ${index + 1}. ${offer.offer_name}`)
+        if (offer.offer_type) {
+          sections.push(`     Type: ${offer.offer_type}`)
+        }
+        if (offer.offer_value) {
+          sections.push(`     Value: ${offer.offer_value}`)
+        }
+        if (offer.offer_terms) {
+          sections.push(`     Terms: ${offer.offer_terms}`)
+        }
+        if (offer.offer_end_date) {
+          sections.push(`     Valid until: ${offer.offer_end_date}`)
+        }
+      })
+    }
+  } else if (business.offer_name) {
+    // Fallback to legacy single offer from business_profiles
     sections.push(`Current Offer: ${business.offer_name}`)
     if (business.offer_type) {
       sections.push(`Offer Type: ${business.offer_type}`)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,8 @@ export function OffersPage({ profile }: OffersPageProps) {
   const [imageUploadMessage, setImageUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [editingOfferId, setEditingOfferId] = useState<string | null>(null)
+  const formRef = useRef<HTMLDivElement>(null)
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -203,6 +205,8 @@ export function OffersPage({ profile }: OffersPageProps) {
     setImageUploadMessage(null)
     setShowCreateForm(false)
     setMessage(null)
+    setIsEditMode(false)
+    setEditingOfferId(null) // Clear editing state
   }
 
   const handleDeleteOffer = async () => {
@@ -234,24 +238,25 @@ export function OffersPage({ profile }: OffersPageProps) {
     }
   }
 
-  // Check if user has an existing offer
-  const hasExistingOffer = profile.offer_name && profile.offer_name.trim() !== ''
+  // Get approved offers from the new business_offers table
+  const approvedOffers = profile.business_offers?.filter(offer => offer.status === 'approved') || []
+  const currentOfferCount = approvedOffers.length
+  
+  // Check if user has any existing offers (for backward compatibility)
+  const hasLegacyOffer = profile.offer_name && profile.offer_name.trim() !== ''
 
-  // Plan limits based on business tier
+  // Plan limits based on business tier (updated to match database)
   const getOfferLimit = (plan: string) => {
     switch (plan) {
-      case 'starter': return 1      // Starter businesses: 1 offer
-      case 'featured': return 3     // Featured businesses: 3 offers  
-      case 'spotlight': return 999  // Spotlight businesses: unlimited offers
-      default: return 1             // Default to starter limit
+      case 'starter': return 3      // Starter businesses: 3 offers
+      case 'featured': return 5     // Featured businesses: 5 offers  
+      case 'spotlight': return 25   // Spotlight businesses: 25 offers
+      default: return 3             // Default to starter limit
     }
   }
   
   const offerLimit = getOfferLimit(profile.plan || 'starter')
   const isStarterTier = profile.plan === 'starter'
-  // For now, we only support one offer in the profiles table
-  // In a real app, you'd have a separate offers table and count all offers
-  const currentOfferCount = hasExistingOffer ? 1 : 0
 
   return (
     <div className="space-y-6">
@@ -281,7 +286,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               <span>Increase customer loyalty</span>
-            </div>
+          </div>
             <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
               <svg className="w-4 h-4 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -336,8 +341,138 @@ export function OffersPage({ profile }: OffersPageProps) {
         </div>
       )}
 
-      {/* Existing Offer */}
-      {hasExistingOffer && (
+      {/* Current Offers */}
+      {approvedOffers.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+            <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            Your Active Offers ({approvedOffers.length})
+          </h2>
+          
+          {approvedOffers.map((offer, index) => (
+            <Card 
+              key={offer.id} 
+              className={`bg-slate-800/50 border-slate-700 transition-all duration-300 ${
+                editingOfferId === offer.id ? 'ring-2 ring-[#00d083] shadow-lg shadow-[#00d083]/20' : ''
+              }`}
+            >
+              <CardContent className="p-6">
+                <div className="bg-slate-700/30 rounded-lg p-4 sm:p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg font-semibold text-white">{offer.offer_name}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs bg-[#00d083]/20 text-[#00d083] px-2 py-1 rounded-full">
+                            Offer #{index + 1}
+                          </span>
+                          <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                            {offer.status}
+                          </span>
+                          {/* Business Tier Badge */}
+                          {profile.business_tier === 'qwikker_picks' && (
+                            <span className="text-xs bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 px-2 py-1 rounded-full border border-purple-500/30">
+                              ⭐ Qwikker Picks
+                            </span>
+                          )}
+                          {profile.business_tier === 'featured' && (
+                            <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full border border-blue-500/30">
+                              🔥 Featured
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="hidden sm:flex gap-2 flex-shrink-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-slate-600 text-gray-300 hover:bg-slate-700 text-xs"
+                          onClick={() => {
+                            // Edit this specific offer
+                            setFormData({
+                              offerName: offer.offer_name,
+                              offerType: offer.offer_type,
+                              offerValue: offer.offer_value,
+                              offerClaimAmount: offer.offer_claim_amount || 'multiple',
+                              offerTerms: offer.offer_terms || '',
+                              startDate: offer.offer_start_date || '',
+                              endDate: offer.offer_end_date || '',
+                            })
+                            setEditingOfferId(offer.id)
+                            setIsEditMode(true)
+                            setShowCreateForm(true)
+                            
+                            // Auto-scroll to form with delay for state update
+                            setTimeout(() => {
+                              formRef.current?.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'start' 
+                              })
+                            }, 100)
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-400">Type:</span>
+                        <span className="text-white ml-2">{offer.offer_type || 'Not specified'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Value:</span>
+                        <span className="text-white ml-2">{offer.offer_value || 'Not specified'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Claim Amount:</span>
+                        <span className="text-white ml-2">
+                          {offer.offer_claim_amount === 'single' ? 'Single Use' : 
+                           offer.offer_claim_amount === 'multiple' ? 'Multiple Use' : 
+                           'Not specified'}
+                        </span>
+                      </div>
+                      {offer.offer_image && (
+                        <div>
+                          <span className="text-gray-400">Offer Image:</span>
+                          <a href={offer.offer_image} target="_blank" rel="noopener noreferrer" className="text-[#00d083] hover:text-[#00b86f] ml-2 underline">
+                            View Image
+                          </a>
+                        </div>
+                      )}
+                      {offer.offer_start_date && (
+                        <div>
+                          <span className="text-gray-400">Start Date:</span>
+                          <span className="text-white ml-2">{new Date(offer.offer_start_date).toLocaleDateString('en-GB')}</span>
+                        </div>
+                      )}
+                      {offer.offer_end_date && (
+                        <div>
+                          <span className="text-gray-400">End Date:</span>
+                          <span className="text-white ml-2">{new Date(offer.offer_end_date).toLocaleDateString('en-GB')}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {offer.offer_terms && (
+                      <div className="mt-4 pt-4 border-t border-slate-600">
+                        <span className="text-gray-400 text-sm">Terms & Conditions:</span>
+                        <p className="text-white text-sm mt-1 leading-relaxed">{offer.offer_terms}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Legacy Offer (for backward compatibility) */}
+      {hasLegacyOffer && approvedOffers.length === 0 && (
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
@@ -451,13 +586,13 @@ export function OffersPage({ profile }: OffersPageProps) {
                 {/* Desktop "Create Another" button */}
                 {currentOfferCount < offerLimit && (
                   <div className="hidden sm:block pt-4 border-t border-slate-600">
-                  <Button
-                    size="sm"
-                    className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
+                    <Button
+                      size="sm"
+                      className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
                     onClick={startCreateOffer}
-                  >
-                    Create Another Offer
-                  </Button>
+                    >
+                      Create Another Offer
+                    </Button>
                   </div>
                 )}
               </div>
@@ -467,7 +602,7 @@ export function OffersPage({ profile }: OffersPageProps) {
       )}
 
       {/* Create New Offer Button */}
-      {!hasExistingOffer && !showCreateForm && currentOfferCount < offerLimit && (
+      {approvedOffers.length === 0 && !showCreateForm && currentOfferCount < offerLimit && (
         <Card className="bg-slate-800/50 border-slate-700">
           <CardContent className="text-center py-12">
             <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
@@ -489,21 +624,39 @@ export function OffersPage({ profile }: OffersPageProps) {
         </Card>
       )}
 
+      {/* Create Another Offer Button */}
+      {approvedOffers.length > 0 && !showCreateForm && currentOfferCount < offerLimit && (
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardContent className="text-center py-8">
+            <h3 className="text-lg font-medium text-white mb-2">Add Another Offer</h3>
+            <p className="text-gray-400 mb-4">
+              You have {currentOfferCount} of {offerLimit} offers. Create another to maximize your reach!
+            </p>
+            <Button
+              onClick={startCreateOffer}
+              className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
+            >
+              Create Another Offer
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Create/Edit Offer Form */}
       {showCreateForm && (
-        <Card className="bg-slate-800/80 border-slate-600 shadow-2xl backdrop-blur-sm">
+        <Card ref={formRef} className="bg-slate-800/80 border-slate-600 shadow-2xl backdrop-blur-sm">
           <CardHeader className="pb-6">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-lg flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
                 </div>
                 <div>
                   <CardTitle className="text-white text-xl">
                     {isEditMode ? 'Edit Offer' : 'Create New Offer'}
-                  </CardTitle>
+              </CardTitle>
                   <p className="text-slate-400 text-sm mt-1">
                     {isEditMode ? 'Update expiry date and terms only' : 'Create and manage your business offers and promotions'}
                   </p>
@@ -514,7 +667,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                   )}
                 </div>
               </div>
-              {showCreateForm && hasExistingOffer && (
+              {showCreateForm && hasLegacyOffer && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -540,36 +693,36 @@ export function OffersPage({ profile }: OffersPageProps) {
                   <p className="text-slate-400 text-sm">Define your offer name and core details</p>
                 </div>
                 
-                <div className="space-y-4">
-                  <div>
+              <div className="space-y-4">
+                <div>
                     <Label htmlFor="offerName" className="text-white font-medium mb-2 block">
                       Offer Name <span className="text-red-400">*</span>
                     </Label>
-                    <Input
-                      id="offerName"
-                      value={formData.offerName}
-                      onChange={(e) => handleInputChange('offerName', e.target.value)}
+                  <Input
+                    id="offerName"
+                    value={formData.offerName}
+                    onChange={(e) => handleInputChange('offerName', e.target.value)}
                       className={`text-white border-2 focus:ring-2 focus:ring-[#00d083]/20 transition-all duration-200 h-12 shadow-sm ${
                         isEditMode 
                           ? 'bg-slate-700 border-slate-500 cursor-not-allowed opacity-75' 
                           : 'bg-slate-800 border-slate-600 focus:border-[#00d083] hover:border-slate-500'
                       }`}
-                      placeholder="e.g., Student Discount, Happy Hour Special"
-                      required
+                    placeholder="e.g., Student Discount, Happy Hour Special"
+                    required
                       readOnly={isEditMode}
                       disabled={isEditMode}
-                    />
-                  </div>
+                  />
+                </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
+                  <div>
                       <Label htmlFor="offerType" className="text-white font-medium mb-2 block">
                         Offer Type <span className="text-red-400">*</span>
                       </Label>
-                      <select
-                        id="offerType"
-                        value={formData.offerType}
-                        onChange={(e) => handleInputChange('offerType', e.target.value)}
+                    <select
+                      id="offerType"
+                      value={formData.offerType}
+                      onChange={(e) => handleInputChange('offerType', e.target.value)}
                         className={`w-full text-white border-2 focus:ring-2 focus:ring-[#00d083]/20 transition-all duration-200 rounded-lg p-3 h-12 shadow-sm ${
                           isEditMode 
                             ? 'bg-slate-700 border-slate-500 cursor-not-allowed opacity-75' 
@@ -577,37 +730,37 @@ export function OffersPage({ profile }: OffersPageProps) {
                         }`}
                         required
                         disabled={isEditMode}
-                      >
-                        <option value="">Select offer type</option>
-                        {OFFER_TYPE_OPTIONS.map(option => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
+                    >
+                      <option value="">Select offer type</option>
+                      {OFFER_TYPE_OPTIONS.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
                       <Label htmlFor="offerValue" className="text-white font-medium mb-2 block">
                         Offer Value <span className="text-red-400">*</span>
                       </Label>
-                      <Input
-                        id="offerValue"
-                        value={formData.offerValue}
-                        onChange={(e) => handleInputChange('offerValue', e.target.value)}
+                    <Input
+                      id="offerValue"
+                      value={formData.offerValue}
+                      onChange={(e) => handleInputChange('offerValue', e.target.value)}
                         className={`text-white border-2 focus:ring-2 focus:ring-[#00d083]/20 transition-all duration-200 h-12 shadow-sm ${
                           isEditMode 
                             ? 'bg-slate-700 border-slate-500 cursor-not-allowed opacity-75' 
                             : 'bg-slate-800 border-slate-600 focus:border-[#00d083] hover:border-slate-500'
                         }`}
-                        placeholder="e.g., 20% off, Buy 1 Get 1 Free"
-                        required
+                      placeholder="e.g., 20% off, Buy 1 Get 1 Free"
+                      required
                         readOnly={isEditMode}
                         disabled={isEditMode}
-                      />
+                    />
                     </div>
                   </div>
+                  </div>
                 </div>
-              </div>
 
               {/* Offer Configuration Section */}
               <div className="bg-slate-900/30 border border-slate-700 rounded-xl p-6 space-y-6">
@@ -659,9 +812,9 @@ export function OffersPage({ profile }: OffersPageProps) {
                         Required - Upload an image or QWIKKER team will design one
                       </p>
                     </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
                 {imageUploadMessage && (
                   <div className={`p-4 rounded-lg border text-sm flex items-center gap-3 ${
@@ -749,7 +902,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                     />
                     <p className="text-slate-400 text-xs mt-2">When the offer expires</p>
                   </div>
-                </div>
+                  </div>
               </div>
 
               {/* Terms & Conditions Section */}
@@ -763,7 +916,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                   </h3>
                   <p className="text-slate-400 text-sm">Add any restrictions or limitations for your offer</p>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="offerTerms" className="text-white font-medium mb-2 block">
                     Terms & Conditions <span className="text-red-400">*</span>
@@ -790,7 +943,7 @@ Examples:
 
               {/* Submit Section */}
               <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-slate-700">
-                {showCreateForm && hasExistingOffer && (
+                {showCreateForm && hasLegacyOffer && (
                   <Button
                     type="button"
                     variant="outline"
