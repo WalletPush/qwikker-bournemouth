@@ -920,6 +920,33 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/shortlinks/create/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/shortlinks/create">> = Specific
+  const handler = {} as typeof import("../../app/api/shortlinks/create/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/shortlinks/ghl-create/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/shortlinks/ghl-create">> = Specific
+  const handler = {} as typeof import("../../app/api/shortlinks/ghl-create/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/shortlinks/redirect/[code]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/shortlinks/redirect/[code]">> = Specific
+  const handler = {} as typeof import("../../app/api/shortlinks/redirect/[code]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/test-contact-update/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/test-contact-update">> = Specific
