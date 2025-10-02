@@ -61,8 +61,8 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     }
   }
   
-  // Fetch approved businesses with offers (city-scoped)
-  let approvedBusinesses = []
+  // Fetch approved businesses and their offers from the new business_offers table
+  let businessOffers = []
   let error = null
   
   // 🎯 SIMPLIFIED FRANCHISE SYSTEM: Use user's city or default to 'bournemouth' for anonymous users
@@ -72,19 +72,9 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   console.log(`📊 Offers Page: User city: ${userCity}, Franchise city: ${franchiseCity}`)
   
   const { data, error: fetchError } = await supabase
-    .from('business_profiles')
+    .from('business_offers')
     .select(`
       id,
-      business_name,
-      business_type,
-      business_category,
-      business_town,
-      business_address,
-      business_tagline,
-      business_description,
-      business_hours,
-      business_images,
-      logo,
       offer_name,
       offer_type,
       offer_value,
@@ -92,66 +82,80 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       offer_start_date,
       offer_end_date,
       offer_image,
-      rating,
-      review_count,
-      created_at
+      display_order,
+      created_at,
+      business:business_id (
+        id,
+        business_name,
+        business_type,
+        business_category,
+        business_town,
+        business_address,
+        business_tagline,
+        business_description,
+        business_hours,
+        business_images,
+        logo,
+        rating,
+        review_count,
+        city
+      )
     `)
     .eq('status', 'approved')
-    .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Use city field for franchise
-    .not('offer_name', 'is', null) // Only businesses with offers
-    .not('business_name', 'is', null)
+    .eq('business.city', franchiseCity) // 🎯 FRANCHISE FILTERING: Use city field for franchise
+    .not('business.business_name', 'is', null)
     .order('created_at', { ascending: false })
   
-  approvedBusinesses = data || []
+  businessOffers = data || []
   error = fetchError
   
   if (error) {
-    console.error('Error fetching businesses with offers:', error)
+    console.error('Error fetching business offers:', error)
   } else {
-    console.log(`📊 Offers Page: Found ${approvedBusinesses.length} approved businesses with offers`)
-    console.log('📊 Business names:', approvedBusinesses.map(b => `${b.business_name} (${b.business_town}) - Offer: ${b.offer_name}`))
+    console.log(`📊 Offers Page: Found ${businessOffers.length} approved offers`)
+    console.log('📊 Offers:', businessOffers.map(offer => `${offer.offer_name} at ${offer.business?.business_name} (${offer.business?.business_town})`))
   }
   
   // Filter out expired offers
-  const activeBusinesses = (approvedBusinesses || []).filter(business => {
+  const activeOffers = (businessOffers || []).filter(offer => {
     // If no end date, offer is always active
-    if (!business.offer_end_date) return true
+    if (!offer.offer_end_date) return true
     
     // Check if offer hasn't expired
-    const endDate = new Date(business.offer_end_date)
+    const endDate = new Date(offer.offer_end_date)
     const today = new Date()
     today.setHours(0, 0, 0, 0) // Start of today
     
     return endDate >= today
   })
 
-  console.log(`📊 Offers Page: After expiry filter: ${activeBusinesses.length} active businesses`)
-  if (activeBusinesses.length !== approvedBusinesses.length) {
-    console.log('📊 Filtered out expired offers:', approvedBusinesses.filter(b => !activeBusinesses.includes(b)).map(b => `${b.business_name} - Expired: ${b.offer_end_date}`))
+  console.log(`📊 Offers Page: After expiry filter: ${activeOffers.length} active offers`)
+  if (activeOffers.length !== businessOffers.length) {
+    console.log('📊 Filtered out expired offers:', businessOffers.filter(o => !activeOffers.includes(o)).map(o => `${o.offer_name} - Expired: ${o.offer_end_date}`))
   }
 
-  // Transform real offers to match expected format
-  const realOffers = activeBusinesses.map(business => ({
-    id: `${business.id}-offer`,
-    businessId: business.id,
-    businessName: business.business_name,
-    businessCategory: business.business_category,
-    businessLogo: business.logo,
-    businessRating: business.rating || 4.5,
-    title: business.offer_name,
-    description: business.offer_terms || `${business.offer_type} offer from ${business.business_name}`,
-    type: business.offer_type?.toLowerCase().replace(' ', '_') || 'discount',
-    value: business.offer_value,
+  // Transform offers to match expected format
+  const realOffers = activeOffers.map(offer => ({
+    id: offer.id,
+    businessId: offer.business?.id,
+    businessName: offer.business?.business_name,
+    businessCategory: offer.business?.business_category,
+    businessLogo: offer.business?.logo,
+    businessRating: offer.business?.rating || 4.5,
+    title: offer.offer_name,
+    description: offer.offer_terms || `${offer.offer_type} offer from ${offer.business?.business_name}`,
+    type: offer.offer_type?.toLowerCase().replace(' ', '_') || 'discount',
+    value: offer.offer_value,
     originalPrice: null, // Real offers don't have original price tracking yet
     discountedPrice: null,
-    image: business.offer_image || business.business_images?.[0] || business.logo,
-    isPopular: business.rating > 4.0,
-    isEndingSoon: business.offer_end_date ? new Date(business.offer_end_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : false,
-    validUntil: business.offer_end_date ? new Date(business.offer_end_date).toLocaleDateString() : null,
-    termsAndConditions: business.offer_terms || 'Standard terms and conditions apply.',
-    businessAddress: business.business_address,
-    businessTown: business.business_town,
-    businessHours: business.business_hours
+    image: offer.offer_image || offer.business?.business_images?.[0] || offer.business?.logo,
+    isPopular: (offer.business?.rating || 0) > 4.0,
+    isEndingSoon: offer.offer_end_date ? new Date(offer.offer_end_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : false,
+    validUntil: offer.offer_end_date ? new Date(offer.offer_end_date).toLocaleDateString() : null,
+    termsAndConditions: offer.offer_terms || 'Standard terms and conditions apply.',
+    businessAddress: offer.business?.business_address,
+    businessTown: offer.business?.business_town,
+    businessHours: offer.business?.business_hours
   }))
   
   return (

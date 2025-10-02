@@ -15,7 +15,23 @@ export default async function DashboardOffersPage() {
 
   const { data: profileData, error: profileError } = await supabase
     .from('business_profiles')
-    .select('*')
+    .select(`
+      *,
+      business_offers!business_id (
+        id,
+        offer_name,
+        offer_type,
+        offer_value,
+        offer_claim_amount,
+        offer_terms,
+        offer_start_date,
+        offer_end_date,
+        offer_image,
+        status,
+        display_order,
+        created_at
+      )
+    `)
     .eq('user_id', data.claims.sub)
     .single()
 
@@ -24,7 +40,18 @@ export default async function DashboardOffersPage() {
     redirect('/onboarding')
   }
 
-  const profile: Profile = profileData
+  // Get the plan from profiles table
+  const { data: profilePlan } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('user_id', data.claims.sub)
+    .single()
+
+  // Add plan to profile data
+  const profile: Profile = {
+    ...profileData,
+    plan: profilePlan?.plan || 'starter'
+  }
   const actionItemsCount = calculateActionItemsCount(profile)
 
   return (
