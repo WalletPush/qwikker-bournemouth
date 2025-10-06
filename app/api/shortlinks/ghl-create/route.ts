@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       idstring: shortCode,
       path: shortCode,
       domain: "s.qwikker.com",
-      originalURL: `https://${city}.qwikker.com/user/${link_type}?wallet_pass_id=${wallet_pass_id}`,
+      originalURL: `https://qwikkerdashboard-theta.vercel.app/user/${link_type}?wallet_pass_id=${wallet_pass_id}`,
       allowDuplicates: true,
       cloaking: true,
       utmSource: "shortlink",
