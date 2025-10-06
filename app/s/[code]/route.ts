@@ -8,8 +8,11 @@ export async function GET(
   try {
     const { code } = await params
     console.log(`🔗 Shortlink redirect for code: ${code}`)
+    console.log(`🔗 Request URL: ${request.url}`)
+    console.log(`🔗 Request headers:`, Object.fromEntries(request.headers.entries()))
     
     if (!code) {
+      console.log(`❌ No code provided, redirecting to home`)
       return NextResponse.redirect('https://qwikkerdashboard-theta.vercel.app', 302)
     }
     
@@ -18,36 +21,30 @@ export async function GET(
     
     const { data: user, error } = await supabase
       .from('app_users')
-      .select('wallet_pass_id, name, first_visit_completed')
+      .select('wallet_pass_id, name')
       .like('wallet_pass_id', `%${code}`)
       .single()
     
     if (error || !user) {
       console.error('❌ Could not find user for shortlink code:', code, error)
-      return NextResponse.redirect('https://qwikkerdashboard-theta.vercel.app', 302)
+      console.log('🔄 Falling back to user dashboard with code as wallet_pass_id')
+      // Fallback: Use the full code as a potential wallet_pass_id
+      const fallbackUrl = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${code}`
+      return NextResponse.redirect(fallbackUrl, 302)
     }
     
-    // SMART ROUTING: First visit vs returning user
-    let redirectUrl
-    
-    if (!user.first_visit_completed) {
-      // First time: Go to How It Works + mark as visited
-      await supabase
-        .from('app_users')
-        .update({ first_visit_completed: true })
-        .eq('wallet_pass_id', user.wallet_pass_id)
-      
-      redirectUrl = `https://qwikkerdashboard-theta.vercel.app/user/how-it-works?wallet_pass_id=${user.wallet_pass_id}`
-      console.log(`✅ First visit: Redirecting ${user.name} (${code}) to How It Works`)
-    } else {
-      // Returning: Go straight to dashboard
-      redirectUrl = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
-      console.log(`✅ Returning visit: Redirecting ${user.name} (${code}) to Dashboard`)
-    }
+    // SIMPLE ROUTING: Always go to user dashboard for now
+    const redirectUrl = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
+    console.log(`✅ Redirecting ${user.name} (${code}) to Dashboard: ${redirectUrl}`)
     
     console.log(`✅ Redirecting ${user.name} (${code}) to: ${redirectUrl}`)
+    console.log(`🎯 FINAL REDIRECT: ${redirectUrl}`)
     
-    return NextResponse.redirect(redirectUrl, 302)
+    const response = NextResponse.redirect(redirectUrl, 302)
+    console.log(`📤 Response status: ${response.status}`)
+    console.log(`📤 Response headers:`, Object.fromEntries(response.headers.entries()))
+    
+    return response
     
   } catch (error) {
     console.error('❌ Shortlink redirect error:', error)
