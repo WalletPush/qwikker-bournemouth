@@ -5,9 +5,10 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 export async function POST(request: NextRequest) {
   try {
     console.log('🔗 GHL Shortlink creation request (replacing vippassbot)')
+    console.log('📨 Headers:', Object.fromEntries(request.headers.entries()))
     
     const body = await request.json()
-    console.log('📥 Request body:', body)
+    console.log('📥 Request body:', JSON.stringify(body, null, 2))
     
     // Extract data from GHL webhook format
     const { 
@@ -37,10 +38,21 @@ export async function POST(request: NextRequest) {
     
     if (userError || !user) {
       console.error('❌ User not found for shortlink creation:', userError)
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+      console.error('❌ Searched for wallet_pass_id:', wallet_pass_id)
+      
+      // For now, create a basic shortlink even if user not found
+      // This allows the GHL workflow to continue
+      const basicShortUrl = `https://s.qwikker.com/temp-${wallet_pass_id.slice(-8)}`
+      
+      return NextResponse.json({
+        result: "success",
+        message: basicShortUrl,
+        warning: "User not found in database, created temporary shortlink",
+        debug: {
+          wallet_pass_id: wallet_pass_id,
+          error: userError?.message || 'No user found'
+        }
+      })
     }
     
     const franchise_city = city || user.city || 'bournemouth'
@@ -132,11 +144,16 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('❌ GHL shortlink creation error:', error)
+    console.error('❌ Error stack:', error.stack)
     return NextResponse.json(
       { 
         result: "error",
         message: "Failed to create shortlink",
-        error: error.message 
+        error: error.message,
+        debug: {
+          errorType: error.constructor.name,
+          timestamp: new Date().toISOString()
+        }
       },
       { status: 500 }
     )
