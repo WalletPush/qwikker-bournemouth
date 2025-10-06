@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
@@ -6,21 +7,30 @@ export async function GET(
 ) {
   try {
     const { code } = await params
-    console.log(`🔗 Simple shortlink redirect for code: ${code}`)
+    console.log(`🔗 Shortlink redirect for code: ${code}`)
     
     if (!code) {
       return NextResponse.redirect('https://qwikkerdashboard-theta.vercel.app', 302)
     }
     
-    // For now, reconstruct the wallet_pass_id from the code
-    // This is a temporary solution until we have proper database storage
-    const searchParams = request.nextUrl.searchParams
-    const walletPassId = `bee78ec9-897a-4c96-99cc-9c68e2db2e19` // This should come from database lookup
+    // Look up the wallet_pass_id from the code (last 8 characters)
+    const supabase = createServiceRoleClient()
     
-    // Default redirect to dashboard
-    const redirectUrl = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${walletPassId}`
+    const { data: user, error } = await supabase
+      .from('app_users')
+      .select('wallet_pass_id, name')
+      .like('wallet_pass_id', `%${code}`)
+      .single()
     
-    console.log(`✅ Redirecting shortlink ${code} to: ${redirectUrl}`)
+    if (error || !user) {
+      console.error('❌ Could not find user for shortlink code:', code, error)
+      return NextResponse.redirect('https://qwikkerdashboard-theta.vercel.app', 302)
+    }
+    
+    // Redirect to dashboard with the correct wallet_pass_id
+    const redirectUrl = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
+    
+    console.log(`✅ Redirecting ${user.name} (${code}) to: ${redirectUrl}`)
     
     return NextResponse.redirect(redirectUrl, 302)
     
