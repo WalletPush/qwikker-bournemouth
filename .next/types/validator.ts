@@ -839,6 +839,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/debug-ghl/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/debug-ghl">> = Specific
+  const handler = {} as typeof import("../../app/api/debug-ghl/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/download-data/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/download-data">> = Specific
@@ -1050,6 +1059,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/qr/[qrId]">> = Specific
   const handler = {} as typeof import("../../app/qr/[qrId]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/s/[code]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/s/[code]">> = Specific
+  const handler = {} as typeof import("../../app/s/[code]/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
