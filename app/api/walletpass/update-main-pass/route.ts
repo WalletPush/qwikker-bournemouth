@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🎫 [DIRECT API] Using WalletPush Direct API with PUT method - WORKING!')
-    
     const requestBody = await request.json()
     const { userWalletPassId, currentOffer, offerDetails } = requestBody
-    
-    console.log('📥 [DEBUG] Request data:', { userWalletPassId, currentOffer, offerDetails })
-    
+
     if (!userWalletPassId) {
       return NextResponse.json({ error: 'Missing userWalletPassId' }, { status: 400 })
+    }
+
+    // Basic validation: Ensure wallet_pass_id exists and is not a test/guest ID
+    if (userWalletPassId === 'guest' || userWalletPassId === 'test' || userWalletPassId.length < 10) {
+      return NextResponse.json({ 
+        error: 'Invalid wallet pass ID. Please sign up through the GHL form first.' 
+      }, { status: 400 })
     }
     
     // Get user's data including pass_type_identifier
@@ -21,12 +25,19 @@ export async function POST(request: NextRequest) {
       .select('city, ghl_contact_id, email, name, first_name, last_name, pass_type_identifier')
       .eq('wallet_pass_id', userWalletPassId)
       .single()
-    
+
     if (userError || !user) {
       console.error('❌ User not found:', userError)
-      return NextResponse.json({ 
-        error: 'User not found - please contact support' 
+      return NextResponse.json({
+        error: 'Wallet pass not found. Please contact support if you believe this is an error.'
       }, { status: 404 })
+    }
+
+    // Additional security: Check if wallet pass is active
+    if (!user.email || user.email.length < 5) {
+      return NextResponse.json({
+        error: 'Invalid wallet pass. Please contact support.'
+      }, { status: 403 })
     }
     
     const firstName = user?.first_name || user?.name?.split(' ')[0] || 'User'
@@ -34,7 +45,14 @@ export async function POST(request: NextRequest) {
     // Use stored pass_type_identifier or fallback to default
     const passTypeId = user.pass_type_identifier || 'pass.com.qwikker'
     const serialNumber = userWalletPassId
-    const appKey = 'xIwpMeyEfuoAtvyCeLsNkQOuCYhOWahJYDHpQzlLfJbFWhptwLhArihcLcBCfpmF'
+
+    const credentials = await getWalletPushCredentials(user.city || 'bournemouth')
+    const appKey = credentials.apiKey
+
+    if (!appKey) {
+      console.error('❌ Missing WalletPush API key for update-main-pass request')
+      return NextResponse.json({ error: 'WalletPush credentials not configured' }, { status: 500 })
+    }
     
     // Calculate 12-hour expiry from now (in UK timezone)
     const now = new Date()
@@ -66,10 +84,6 @@ export async function POST(request: NextRequest) {
     // Call 1: Update Current_Offer
     const offerUrl = `${baseUrl}/${passTypeId}/${serialNumber}/values/Current_Offer`
     
-    console.log('📡 [API 1] Updating Current_Offer field')
-    console.log('🔍 [DEBUG] URL:', offerUrl)
-    console.log('🔍 [DEBUG] Payload:', JSON.stringify({ value: passDisplayText }, null, 2))
-    
     const offerResponse = await fetch(offerUrl, {
       method: 'PUT',
       headers: {
@@ -79,28 +93,21 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ value: passDisplayText })
     })
     
-    console.log('📡 [API 1] Response status:', offerResponse.status)
-    
     if (!offerResponse.ok) {
       const errorText = await offerResponse.text()
       console.error('❌ Current_Offer API error:', offerResponse.status, errorText)
-      return NextResponse.json({ 
-        error: `WalletPush Current_Offer API error: ${offerResponse.status}`, 
+      return NextResponse.json({
+        error: `WalletPush Current_Offer API error: ${offerResponse.status}`,
         details: errorText
       }, { status: 500 })
     }
-    
+
     const offerResult = await offerResponse.json()
-    console.log('✅ [API 1] Current_Offer updated successfully!')
     
     // Call 2: Update Last_Message (triggers push notification)
     const pushMessage = `🎉 Congratulations ${firstName}! You have redeemed: ${currentOffer || 'your offer'}!`
     const messageUrl = `${baseUrl}/${passTypeId}/${serialNumber}/values/Last_Message`
-    
-    console.log('📡 [API 2] Updating Last_Message field (triggers push)')
-    console.log('🔍 [DEBUG] URL:', messageUrl)
-    console.log('🔍 [DEBUG] Payload:', JSON.stringify({ value: pushMessage }, null, 2))
-    
+
     const messageResponse = await fetch(messageUrl, {
       method: 'PUT',
       headers: {
@@ -110,17 +117,14 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ value: pushMessage })
     })
     
-    console.log('📡 [API 2] Response status:', messageResponse.status)
-    
     if (!messageResponse.ok) {
       const errorText = await messageResponse.text()
       console.error('❌ Last_Message API error:', messageResponse.status, errorText)
       // Don't fail the whole request if push fails - the offer was still updated
       console.log('⚠️ Offer updated but push notification failed')
     }
-    
+
     const messageResult = messageResponse.ok ? await messageResponse.json() : null
-    console.log('✅ [API 2] Last_Message updated - push notification sent!')
     
     return NextResponse.json({
       success: true,
@@ -144,9 +148,9 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('❌ [WEBHOOK] Error calling WalletPush webhook:', error)
-    return NextResponse.json({ 
-      error: 'Internal server error', 
-      details: error.message 
+    return NextResponse.json({
+      error: 'Internal server error',
+      details: error.message
     }, { status: 500 })
   }
 }

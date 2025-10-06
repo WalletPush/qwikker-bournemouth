@@ -23,9 +23,9 @@ interface AddToWalletButtonProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export default function AddToWalletButton({ 
-  offer, 
-  userWalletPassId, 
+export default function AddToWalletButton({
+  offer,
+  userWalletPassId,
   className = '',
   variant = 'default',
   size = 'md'
@@ -59,7 +59,9 @@ export default function AddToWalletButton({
       // UPDATE MAIN WALLET PASS with the new offer
       const response = await fetch('/api/walletpass/update-main-pass', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           userWalletPassId: userWalletPassId,
           currentOffer: `${offer.title} - ${offer.business_name}`,
@@ -73,7 +75,20 @@ export default function AddToWalletButton({
         })
       });
       
-      const data = await response.json();
+      const responseText = await response.text();
+      const data = responseText ? JSON.parse(responseText) : {};
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Wallet pass not found. Please try signing up again.');
+        }
+
+        if (response.status === 403) {
+          throw new Error('This wallet pass is invalid. Please contact support.');
+        }
+
+        throw new Error(data?.error || 'Failed to update wallet pass');
+      }
       
       if (data.success) {
         // Show success state
@@ -125,8 +140,6 @@ export default function AddToWalletButton({
         // Reset success state after delay
         setTimeout(() => setSuccess(false), 3000);
         
-      } else {
-        throw new Error(data.error || 'Failed to update wallet pass');
       }
     } catch (error) {
       console.error('Error updating wallet pass:', error);
