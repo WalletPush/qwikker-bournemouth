@@ -398,6 +398,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/install-wallet-pass/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/install-wallet-pass">> = Specific
+  const handler = {} as typeof import("../../app/install-wallet-pass/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/intent/[...params]/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/intent/[...params]">> = Specific

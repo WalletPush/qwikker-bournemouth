@@ -88,41 +88,47 @@ export async function POST(request: NextRequest) {
         passUrl: result.url
       })
       
-      // Create short URLs for the pass back links
+      // 🔗 Create bulletproof shortlinks for the pass back-of-card links
       try {
-        const { createShortUrl } = await import('@/lib/actions/short-url-actions')
-        
-        // Use city-specific URLs for personalized experience
-        const cityDomain = city ? `${city}.qwikker.com` : 'bournemouth.qwikker.com'
-        
-        const offersShortUrl = await createShortUrl({
-          targetUrl: `https://${cityDomain}/user/offers?user_id=${result.serialNumber}`,
-          userId: result.serialNumber,
-          urlType: 'offers'
+        // Create shortlinks for all three link types
+        const shortlinkPromises = ['dashboard', 'offers', 'chat'].map(async (linkType) => {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://qwikkerdashboard-theta.vercel.app'}/api/shortlinks/ghl-create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              wallet_pass_id: result.serialNumber,
+              city: city || 'bournemouth',
+              link_type: linkType
+            })
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            return { linkType, shortUrl: data.message } // GHL format returns shortlink in 'message'
+          }
+          return null
         })
+
+        const shortlinks = (await Promise.all(shortlinkPromises)).filter(Boolean)
         
-        const chatShortUrl = await createShortUrl({
-          targetUrl: `https://${cityDomain}/user/chat?user_id=${result.serialNumber}`,
-          userId: result.serialNumber,
-          urlType: 'chat'
-        })
-        
-        // Add dashboard link (ready for future implementation)
-        const dashboardShortUrl = await createShortUrl({
-          targetUrl: `https://${cityDomain}/user/dashboard?user_id=${result.serialNumber}`,
-          userId: result.serialNumber,
-          urlType: 'dashboard'
-        })
-        
-        if (offersShortUrl.success && chatShortUrl.success && dashboardShortUrl.success) {
-          // Update the pass with the actual short URLs
+        if (shortlinks.length > 0) {
+          // Update the pass with bulletproof shortlinks
           const updateUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes/${result.serialNumber}`
           
-          const updateData = {
-            'Offers_Url': offersShortUrl.shortUrl,
-            'AI_Url': chatShortUrl.shortUrl,
-            'Dashboard_Url': dashboardShortUrl.shortUrl // New dashboard link
-          }
+          const updateData = {}
+          shortlinks.forEach(({ linkType, shortUrl }) => {
+            switch (linkType) {
+              case 'dashboard':
+                updateData['Dashboard_Url'] = shortUrl
+                break
+              case 'offers':
+                updateData['Offers_Url'] = shortUrl
+                break
+              case 'chat':
+                updateData['AI_Url'] = shortUrl
+                break
+            }
+          })
           
           const updateResponse = await fetch(updateUrl, {
             method: 'PATCH',
@@ -134,17 +140,42 @@ export async function POST(request: NextRequest) {
           })
           
           if (updateResponse.ok) {
-            console.log('✅ Pass updated with short URLs:', {
-              offers: offersShortUrl.shortUrl,
-              chat: chatShortUrl.shortUrl
-            })
+            console.log('✅ Pass updated with bulletproof shortlinks:', updateData)
           } else {
-            console.warn('⚠️ Failed to update pass with short URLs, but pass was created')
+            console.warn('⚠️ Failed to update pass with shortlinks, using fallback URLs')
+            // Fallback to direct URLs if shortlinks fail
+            await updatePassWithDirectUrls()
           }
+        } else {
+          console.warn('⚠️ No shortlinks created, using fallback URLs')
+          await updatePassWithDirectUrls()
         }
-      } catch (shortUrlError) {
-        console.warn('⚠️ Failed to create short URLs:', shortUrlError)
-        // Don't fail the entire operation if short URLs fail
+      } catch (shortlinkError) {
+        console.warn('⚠️ Shortlink creation failed, using fallback URLs:', shortlinkError)
+        await updatePassWithDirectUrls()
+      }
+
+      // Fallback function for direct URLs
+      async function updatePassWithDirectUrls() {
+        const updateUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes/${result.serialNumber}`
+        const updateData = {
+          'Offers_Url': `https://${city || 'bournemouth'}.qwikker.com/user/offers?wallet_pass_id=${result.serialNumber}`,
+          'AI_Url': `https://${city || 'bournemouth'}.qwikker.com/user/chat?wallet_pass_id=${result.serialNumber}`,
+          'Dashboard_Url': `https://${city || 'bournemouth'}.qwikker.com/user/dashboard?wallet_pass_id=${result.serialNumber}`
+        }
+        
+        const updateResponse = await fetch(updateUrl, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': MOBILE_WALLET_APP_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData)
+        })
+        
+        if (updateResponse.ok) {
+          console.log('✅ Pass updated with direct URLs as fallback')
+        }
       }
       
       return NextResponse.json({ 

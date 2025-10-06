@@ -1,0 +1,176 @@
+import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
+import { UserOffersPage } from '@/components/user/user-offers-page'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getWalletPassCookie } from '@/lib/utils/wallet-session'
+import { updatePassActivity } from '@/lib/utils/pass-status-tracker'
+import { getFranchiseCity } from '@/lib/utils/franchise-areas'
+import { Suspense } from 'react'
+
+interface OffersPageProps {
+  searchParams: Promise<{
+    wallet_pass_id?: string
+    user_id?: string // Support old system parameter
+  }>
+}
+
+export default async function OffersPage({ searchParams }: OffersPageProps) {
+  const supabase = createServiceRoleClient()
+  const resolvedSearchParams = await searchParams
+  const urlWalletPassId = resolvedSearchParams.wallet_pass_id
+  const urlUserId = resolvedSearchParams.user_id // Support old system
+  
+  // Get wallet pass ID from URL or cookie
+  let cookieWalletPassId = null
+  try {
+    cookieWalletPassId = await getWalletPassCookie()
+  } catch (error) {
+    console.log('Cookie read error (safe to ignore):', error)
+  }
+  
+  // Priority: URL wallet_pass_id > URL user_id > cookie
+  const walletPassId = urlWalletPassId || urlUserId || cookieWalletPassId || null
+  
+  // 🎯 TRACK: Update pass activity when user visits (indicates pass is still installed)
+  if (walletPassId) {
+    updatePassActivity(walletPassId).catch(console.error)
+  }
+  
+  // Get current user for the layout
+  let currentUser = null
+  if (walletPassId) {
+    try {
+      const { data: user } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('wallet_pass_id', walletPassId)
+        .single()
+      
+      if (user) {
+        currentUser = {
+          id: user.id,
+          wallet_pass_id: user.wallet_pass_id,
+          name: user.name,
+          email: user.email,
+          city: user.city,
+          tier: user.tier,
+          level: user.level
+        }
+      }
+    } catch (error) {
+      console.log('No user found for offers page')
+    }
+  }
+  
+  // Fetch approved businesses and their offers from the new business_offers table
+  let businessOffers = []
+  let error = null
+  
+  // 🎯 SIMPLIFIED FRANCHISE SYSTEM: Use user's city or default to 'bournemouth' for anonymous users
+  const userCity = currentUser?.city || 'bournemouth'
+  const franchiseCity = getFranchiseCity(userCity)
+  
+  console.log(`📊 Offers Page: User city: ${userCity}, Franchise city: ${franchiseCity}`)
+  
+  const { data, error: fetchError } = await supabase
+    .from('business_offers')
+    .select(`
+      id,
+      offer_name,
+      offer_type,
+      offer_value,
+      offer_terms,
+      offer_start_date,
+      offer_end_date,
+      offer_image,
+      display_order,
+      created_at,
+      business:business_id (
+        id,
+        business_name,
+        business_type,
+        business_category,
+        business_town,
+        business_address,
+        business_tagline,
+        business_description,
+        business_hours,
+        business_images,
+        logo,
+        rating,
+        review_count,
+        city
+      )
+    `)
+    .eq('status', 'approved')
+    .eq('business.city', franchiseCity) // 🎯 FRANCHISE FILTERING: Use city field for franchise
+    .not('business.business_name', 'is', null)
+    .order('created_at', { ascending: false })
+  
+  businessOffers = data || []
+  error = fetchError
+  
+  if (error) {
+    console.error('Error fetching business offers:', error)
+  } else {
+    console.log(`📊 Offers Page: Found ${businessOffers.length} approved offers`)
+    console.log('📊 Offers:', businessOffers.map(offer => `${offer.offer_name} at ${offer.business?.business_name} (${offer.business?.business_town})`))
+  }
+  
+  // Filter out expired offers
+  const activeOffers = (businessOffers || []).filter(offer => {
+    // If no end date, offer is always active
+    if (!offer.offer_end_date) return true
+    
+    // Check if offer hasn't expired
+    const endDate = new Date(offer.offer_end_date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // Start of today
+    
+    return endDate >= today
+  })
+
+  console.log(`📊 Offers Page: After expiry filter: ${activeOffers.length} active offers`)
+  if (activeOffers.length !== businessOffers.length) {
+    console.log('📊 Filtered out expired offers:', businessOffers.filter(o => !activeOffers.includes(o)).map(o => `${o.offer_name} - Expired: ${o.offer_end_date}`))
+  }
+
+  // Transform offers to match expected format
+  const realOffers = activeOffers.map(offer => ({
+    id: offer.id,
+    businessId: offer.business?.id,
+    businessName: offer.business?.business_name,
+    businessCategory: offer.business?.business_category,
+    businessLogo: offer.business?.logo,
+    businessRating: offer.business?.rating || 4.5,
+    title: offer.offer_name,
+    description: offer.offer_terms || `${offer.offer_type} offer from ${offer.business?.business_name}`,
+    type: offer.offer_type?.toLowerCase().replace(' ', '_') || 'discount',
+    value: offer.offer_value,
+    originalPrice: null, // Real offers don't have original price tracking yet
+    discountedPrice: null,
+    image: offer.offer_image || offer.business?.business_images?.[0] || offer.business?.logo,
+    isPopular: (offer.business?.rating || 0) > 4.0,
+    isEndingSoon: offer.offer_end_date ? new Date(offer.offer_end_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : false,
+    validUntil: offer.offer_end_date ? new Date(offer.offer_end_date).toLocaleDateString() : null,
+    termsAndConditions: offer.offer_terms || 'Standard terms and conditions apply.',
+    businessAddress: offer.business?.business_address,
+    businessTown: offer.business?.business_town,
+    businessHours: offer.business?.business_hours
+  }))
+  
+  return (
+    <UserDashboardLayout 
+      currentSection="offers"
+      walletPassId={walletPassId}
+      currentUser={currentUser}
+    >
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-slate-400">Loading offers...</div>
+        </div>
+      }>
+        <UserOffersPage realOffers={realOffers} walletPassId={walletPassId} />
+      </Suspense>
+    </UserDashboardLayout>
+  )
+}
