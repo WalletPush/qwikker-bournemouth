@@ -24,12 +24,23 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // For now, just return a simple shortlink without database operations
-    // This ensures GHL workflow continues working
+    // Generate shortlink code from wallet pass ID
     const shortCode = wallet_pass_id.slice(-8)
     const shortUrl = `https://s.qwikker.com/${shortCode}`
     
-    console.log(`✅ Created temporary shortlink: ${shortUrl}`)
+    // Generate destination URL based on environment and city
+    const isProduction = process.env.NODE_ENV === 'production'
+    let originalURL
+    
+    if (isProduction) {
+      // Production: Use city-specific domain (calgary.qwikker.com, london.qwikker.com, etc.)
+      originalURL = `https://${city}.qwikker.com/user/${link_type}?wallet_pass_id=${wallet_pass_id}`
+    } else {
+      // Testing: Use Vercel deployment for testing
+      originalURL = `https://qwikkerdashboard-theta.vercel.app/user/${link_type}?wallet_pass_id=${wallet_pass_id}`
+    }
+    
+    console.log(`✅ Created temporary shortlink: ${shortUrl} → ${originalURL}`)
     
     return NextResponse.json({
       result: "success",
@@ -37,7 +48,7 @@ export async function POST(request: NextRequest) {
       idstring: shortCode,
       path: shortCode,
       domain: "s.qwikker.com",
-      originalURL: `https://qwikkerdashboard-theta.vercel.app/user/${link_type}?wallet_pass_id=${wallet_pass_id}`,
+      originalURL: originalURL,
       allowDuplicates: true,
       cloaking: true,
       utmSource: "shortlink",
