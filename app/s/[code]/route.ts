@@ -18,7 +18,7 @@ export async function GET(
     
     const { data: user, error } = await supabase
       .from('app_users')
-      .select('wallet_pass_id, name')
+      .select('wallet_pass_id, name, first_visit_completed')
       .like('wallet_pass_id', `%${code}`)
       .single()
     
@@ -27,8 +27,23 @@ export async function GET(
       return NextResponse.redirect('https://qwikkerdashboard-theta.vercel.app', 302)
     }
     
-    // Redirect to dashboard with the correct wallet_pass_id
-    const redirectUrl = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
+    // SMART ROUTING: First visit vs returning user
+    let redirectUrl
+    
+    if (!user.first_visit_completed) {
+      // First time: Go to How It Works + mark as visited
+      await supabase
+        .from('app_users')
+        .update({ first_visit_completed: true })
+        .eq('wallet_pass_id', user.wallet_pass_id)
+      
+      redirectUrl = `https://qwikkerdashboard-theta.vercel.app/user/how-it-works?wallet_pass_id=${user.wallet_pass_id}`
+      console.log(`✅ First visit: Redirecting ${user.name} (${code}) to How It Works`)
+    } else {
+      // Returning: Go straight to dashboard
+      redirectUrl = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
+      console.log(`✅ Returning visit: Redirecting ${user.name} (${code}) to Dashboard`)
+    }
     
     console.log(`✅ Redirecting ${user.name} (${code}) to: ${redirectUrl}`)
     
