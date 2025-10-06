@@ -1,0 +1,253 @@
+<div class="vip-pass-container">
+    <h1>Create Your VIP Pass</h1>
+    <form id="vipPassForm">
+        <div class="form-group">
+            <label for="firstName">First Name:</label>
+            <input type="text" id="firstName" name="First_Name" placeholder="Enter your first name" required>
+        </div>
+        <div class="form-group">
+            <label for="lastName">Last Name:</label>
+            <input type="text" id="lastName" name="Last_Name" placeholder="Enter your last name" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" placeholder="Enter your email" required>
+        </div>
+        <button type="submit">Create My Pass</button>
+        <div class="loading-notification"></div>
+        <div class="success-notification"></div>
+    </form>
+</div>
+
+<script>
+// CONFIGURATION START - REPLACE THESE VALUES FOR EACH CLIENT
+const MOBILE_WALLET_TEMPLATE_ID = '4844561051942912'; // Replace with your WalletPush Template ID
+const MOBILE_WALLET_APP_KEY = 'xIwpMeyEfuoAtvyCeLsNkQOuCYhOWahJYDHpQzlLfJbFWhptwLhArihcLcBCfpmF'; // Replace with your WalletPush App Key
+const HIGHLEVEL_WEBHOOK_URL = 'https://services.leadconnectorhq.com/hooks/IkBldqzvQG4XkoSxkCq8/webhook-trigger/h830Xao6D2o90210ROqj'; // Replace with your HighLevel Webhook URL
+// CONFIGURATION END
+
+document.getElementById('vipPassForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    const form = event.target;
+    const button = form.querySelector('button');
+    const notification = form.querySelector('.loading-notification');
+    const successNotification = form.querySelector('.success-notification');
+    const firstName = form.First_Name.value.trim();
+    const lastName = form.Last_Name.value.trim();
+    const email = form.email.value.trim();
+
+    if (!firstName || !lastName || !email) {
+        alert('Please fill out all fields.');
+        return;
+    }
+
+    button.innerHTML = 'Creating Your Pass<span class="loading-dots"></span>';
+    button.disabled = true;
+    notification.textContent = 'Please wait. Pass Creation in progress...';
+    notification.style.display = 'block';
+
+    const apiUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/pass`;
+    const apiHeaders = {
+        'Authorization': MOBILE_WALLET_APP_KEY,
+        'Content-Type': 'application/json',
+    };
+
+    fetch(apiUrl, {
+        method: 'POST',
+        headers: apiHeaders,
+        body: JSON.stringify({ 'First_Name': firstName, 'Last_Name': lastName, 'Email': email }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.url) throw new Error('Pass creation failed.');
+        
+        return fetch(HIGHLEVEL_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                'First_Name': firstName,
+                'Last_Name': lastName,
+                'email': email,
+                'serialNumber': data.serialNumber,
+                'passTypeIdentifier': data.passTypeIdentifier,
+                'url': data.url,
+                'device': /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+            }),
+        }).then(() => data);
+    })
+    .then(data => {
+        notification.style.display = 'none';
+        
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+            window.location.href = data.url.replace('?t=', '.pkpass?t=');
+        } else {
+            // For desktop users, load the pass URL in the same window (no new tab)
+            window.location.href = data.url;
+        }
+        
+        button.textContent = 'Pass Created Successfully!';
+        
+        // Show success message encouraging pass installation
+        successNotification.innerHTML = `
+            <div style="color: #00d083; font-weight: bold; margin-bottom: 10px;">
+                🎉 Your Qwikker Pass is Ready!
+            </div>
+            <div style="color: #ffffff; font-size: 14px; line-height: 1.4;">
+                Please add the pass to your wallet now.<br>
+                <span id="countdown">You'll be redirected in 7 seconds...</span>
+            </div>
+        `;
+        successNotification.style.display = 'block';
+        
+        // Countdown timer
+        let countdown = 7;
+        const countdownElement = document.getElementById('countdown');
+        const countdownTimer = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                countdownElement.textContent = `You'll be redirected in ${countdown} seconds...`;
+            } else {
+                countdownElement.textContent = 'Redirecting now...';
+                clearInterval(countdownTimer);
+            }
+        }, 1000);
+        
+        // Wait 7 seconds, then redirect to shortlink (bulletproof!)
+        setTimeout(() => {
+            // Generate shortlink code from serialNumber (last 8 characters)
+            const shortCode = data.serialNumber.slice(-8);
+            
+            // Redirect to shortlink which will lookup user and go to How It Works
+            window.location.href = `https://qwikkerdashboard-theta.vercel.app/s/${shortCode}`;
+        }, 7000);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        notification.style.display = 'none';
+        alert('An error occurred. Please try again.');
+        button.textContent = 'Create My Pass';
+        button.disabled = false;
+    });
+});
+</script>
+
+<style>
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+}
+
+.vip-pass-container {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 400px;
+    margin: 20px auto;
+    text-align: center;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+}
+
+.vip-pass-container h1 {
+    margin-top: 0;
+    font-size: 26px;
+    color: #ffffff;
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+.form-group {
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    box-sizing: border-box;
+    outline: none;
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    margin-top: 20px;
+    background-color: #1877f2;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #145dbf;
+}
+
+.loading-dots::after {
+    content: '.';
+    animation: dots 1.5s infinite step-end;
+    display: inline-block;
+    width: 1em;
+    margin-left: 2px;
+}
+
+@keyframes dots {
+    0%, 20% { content: '.'; }
+    40%, 60% { content: '..'; }
+    80%, 100% { content: '...'; }
+}
+
+.loading-notification, .success-notification {
+    display: none;
+    color: #ffffff;
+    font-size: 14px;
+    margin-top: 15px;
+    padding: 15px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.loading-notification {
+    animation: pulse 2s infinite;
+}
+
+.success-notification {
+    background: rgba(0, 208, 131, 0.2);
+    border: 1px solid rgba(0, 208, 131, 0.3);
+}
+
+@keyframes pulse {
+    0% { opacity: 0.8; }
+    50% { opacity: 1; }
+    100% { opacity: 0.8; }
+}
+
+@media (max-width: 768px) {
+    .vip-pass-container {
+        padding: 15px;
+        margin: 15px auto;
+    }
+    .vip-pass-container h1 {
+        font-size: 22px;
+    }
+    button {
+        font-size: 14px;
+    }
+}
+</style>
