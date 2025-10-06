@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     
     // Generate shortlink code from wallet pass ID
     const shortCode = wallet_pass_id.slice(-8)
-    const shortUrl = `https://s.qwikker.com/${shortCode}`
+    const shortUrl = `https://qwikkerdashboard-theta.vercel.app/s/${shortCode}`
     
     // Generate destination URL based on environment and city
     const isProduction = process.env.NODE_ENV === 'production'
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       message: shortUrl,
       idstring: shortCode,
       path: shortCode,
-      domain: "s.qwikker.com",
+      domain: "qwikkerdashboard-theta.vercel.app",
       originalURL: originalURL,
       allowDuplicates: true,
       cloaking: true,
