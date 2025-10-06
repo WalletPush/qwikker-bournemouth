@@ -30,6 +30,14 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   // Priority: URL wallet_pass_id > URL user_id > cookie
   const walletPassId = urlWalletPassId || urlUserId || cookieWalletPassId || null
   
+  // 🐛 DEBUG: Log wallet pass ID resolution
+  console.log('🔍 Offers page wallet_pass_id resolution:', {
+    urlWalletPassId,
+    urlUserId,
+    cookieWalletPassId,
+    finalWalletPassId: walletPassId
+  })
+  
   // 🎯 TRACK: Update pass activity when user visits (indicates pass is still installed)
   if (walletPassId) {
     updatePassActivity(walletPassId).catch(console.error)
@@ -55,9 +63,12 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
           tier: user.tier,
           level: user.level
         }
+        console.log('✅ Offers page found user:', user.name, 'with wallet_pass_id:', walletPassId)
+      } else {
+        console.log('❌ Offers page: User query returned null for wallet_pass_id:', walletPassId)
       }
     } catch (error) {
-      console.log('No user found for offers page')
+      console.log('❌ Offers page: Error fetching user for wallet_pass_id:', walletPassId, 'Error:', error)
     }
   }
   

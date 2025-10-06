@@ -7,6 +7,7 @@ interface UserDashboardLayoutProps {
   children: React.ReactNode
   currentSection: string
   currentUser?: any
+  walletPassId?: string
 }
 
 interface NavItem {
