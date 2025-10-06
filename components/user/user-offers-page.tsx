@@ -133,6 +133,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   const claimOffer = async (offerId: string, offerTitle: string, businessName: string) => {
     const userId = walletPassId || 'anonymous-user'
     
+    // Find the offer to get its claim type
+    const offer = allOffers.find(o => o.id === offerId)
+    const claimType = offer?.claimType || offer?.offer_claim_amount || 'single'
+    
     // Update UI immediately
     setClaimedOffers(prev => {
       const newClaimed = new Set([...prev, offerId])
@@ -238,6 +242,13 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     
     modal.querySelector('#add-to-wallet')?.addEventListener('click', async () => {
       closeModal()
+      
+      // Check if already in wallet
+      if (walletOffers.has(offerId)) {
+        alert('This offer is already in your wallet!')
+        return
+      }
+      
       // Trigger wallet pass update directly
       try {
         const response = await fetch('/api/walletpass/update-main-pass', {
@@ -261,25 +272,28 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             return newWallet
           })
           
-          // Show success message
-          const successOverlay = document.createElement('div')
-          successOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'
-          successOverlay.innerHTML = `
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 text-center">
-              <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
-                </svg>
-              </div>
-              <h3 class="text-xl font-bold text-slate-100 mb-2">Added to Wallet!</h3>
-              <p class="text-slate-300 mb-4">Your wallet pass has been updated with this offer.</p>
-              <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200" onclick="this.parentElement.parentElement.remove()">
-                Perfect!
-              </button>
-            </div>
-          `
-          document.body.appendChild(successOverlay)
-          setTimeout(() => successOverlay.remove(), 5000)
+          // Handle different claim types
+          if (claimType === 'single') {
+            // Single-use offers: Remove from claimed (they disappear forever)
+            setClaimedOffers(prev => {
+              const newClaimed = new Set([...prev])
+              newClaimed.delete(offerId)
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...newClaimed]))
+              }
+              return newClaimed
+            })
+            
+            // Show success and navigate back to offers
+            showSuccessMessage('Added to Wallet!', 'This single-use offer has been added to your wallet and will expire in 12 hours.', () => {
+              setSelectedFilter('all') // Go back to main offers
+            })
+          } else {
+            // Multiple-use offers: Keep in claimed, but remove from current view and go back to offers
+            showSuccessMessage('Added to Wallet!', 'This offer has been added to your wallet and will expire in 12 hours. You can claim it again later!', () => {
+              setSelectedFilter('all') // Go back to main offers
+            })
+          }
         } else {
           throw new Error('Failed to update wallet pass')
         }
@@ -306,6 +320,39 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       const badgeTracker = getBadgeTracker(walletPassId)
       badgeTracker.trackAction('share_completed')
     }
+  }
+
+  // Helper function to show success messages with callbacks
+  const showSuccessMessage = (title: string, message: string, onClose?: () => void) => {
+    const successOverlay = document.createElement('div')
+    successOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'
+    successOverlay.innerHTML = `
+      <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 text-center">
+        <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-100 mb-2">${title}</h3>
+        <p class="text-slate-300 mb-4">${message}</p>
+        <button id="success-close" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200">
+          Perfect!
+        </button>
+      </div>
+    `
+    document.body.appendChild(successOverlay)
+    
+    const closeSuccess = () => {
+      if (document.body.contains(successOverlay)) {
+        document.body.removeChild(successOverlay)
+      }
+      if (onClose) onClose()
+    }
+    
+    successOverlay.querySelector('#success-close')?.addEventListener('click', closeSuccess)
+    
+    // Auto-close after 5 seconds
+    setTimeout(closeSuccess, 5000)
   }
 
 
