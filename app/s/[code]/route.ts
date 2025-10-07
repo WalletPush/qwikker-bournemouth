@@ -7,9 +7,17 @@ export async function GET(
 ) {
   try {
     const { code } = await params
-    console.log(`🔗 Shortlink redirect for code: ${code}`)
+    console.log(`🔗 Shortlink redirect for code: ${code} (length: ${code.length})`)
     console.log(`🔗 Request URL: ${request.url}`)
-    console.log(`🔗 Request headers:`, Object.fromEntries(request.headers.entries()))
+    
+    // Debug: Show all wallet_pass_ids that end with this code
+    const supabaseDebug = createServiceRoleClient()
+    const { data: allUsers } = await supabaseDebug
+      .from('app_users')
+      .select('wallet_pass_id, name, first_visit_completed')
+      .ilike('wallet_pass_id', `%${code}`)
+    
+    console.log(`🔍 Found ${allUsers?.length || 0} users matching code "${code}":`, allUsers)
     
     if (!code) {
       console.log(`❌ No code provided, redirecting to home`)
@@ -19,17 +27,20 @@ export async function GET(
     // Look up the wallet_pass_id from the code (last 8 characters)
     const supabase = createServiceRoleClient()
     
+    // Look up user by matching the end of wallet_pass_id with the code
     const { data: user, error } = await supabase
       .from('app_users')
       .select('wallet_pass_id, name, first_visit_completed')
-      .like('wallet_pass_id', `%${code}`)
+      .ilike('wallet_pass_id', `%${code}`)
       .single()
     
     if (error || !user) {
       console.error('❌ Could not find user for shortlink code:', code, error)
       console.log('🔄 Falling back to user dashboard with code as wallet_pass_id')
       // Fallback: Use the full code as a potential wallet_pass_id
-      const fallbackUrl = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${code}`
+      const host = request.headers.get('host') || 'qwikkerdashboard-theta.vercel.app'
+      const protocol = request.headers.get('x-forwarded-proto') || 'https'
+      const fallbackUrl = `${protocol}://${host}/user/dashboard?wallet_pass_id=${code}`
       return NextResponse.redirect(fallbackUrl, 302)
     }
     
@@ -37,14 +48,19 @@ export async function GET(
     const userName = user.name || 'User'
     let redirectUrl
     
+    // Get the current domain dynamically
+    const host = request.headers.get('host') || 'qwikkerdashboard-theta.vercel.app'
+    const protocol = request.headers.get('x-forwarded-proto') || 'https'
+    const baseUrl = `${protocol}://${host}`
+    
     if (!user.first_visit_completed) {
-      // FIRST TIME: Show welcome page
-      redirectUrl = `https://qwikkerdashboard-theta.vercel.app/welcome?wallet_pass_id=${user.wallet_pass_id}&name=${encodeURIComponent(userName)}`
-      console.log(`🎉 FIRST VISIT: Onboarding redirect for ${userName} (${code}) to Welcome: ${redirectUrl}`)
+      // NEW USER FROM GHL FORM: Show welcome page
+      redirectUrl = `${baseUrl}/welcome?wallet_pass_id=${user.wallet_pass_id}&name=${encodeURIComponent(userName)}`
+      console.log(`🎉 NEW USER FROM GHL: Welcome flow for ${userName} (${code}) on ${baseUrl}`)
     } else {
-      // RETURNING USER: Direct to dashboard (shortlinks on pass)
-      redirectUrl = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
-      console.log(`🔗 RETURNING USER: Quick access for ${userName} (${code}) to Dashboard: ${redirectUrl}`)
+      // EXISTING USER SHORTLINKS: Direct to dashboard
+      redirectUrl = `${baseUrl}/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
+      console.log(`🔗 EXISTING USER SHORTLINK: Dashboard for ${userName} (${code}) on ${baseUrl}`)
     }
     
     console.log(`✅ Redirecting ${user.name} (${code}) to: ${redirectUrl}`)
