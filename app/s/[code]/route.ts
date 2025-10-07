@@ -30,7 +30,7 @@ export async function GET(
     // Look up user by matching the end of wallet_pass_id with the code
     const { data: user, error } = await supabase
       .from('app_users')
-      .select('wallet_pass_id, name, first_visit_completed')
+      .select('wallet_pass_id, name, first_visit_completed, created_at')
       .ilike('wallet_pass_id', `%${code}`)
       .single()
     
@@ -53,14 +53,19 @@ export async function GET(
     const protocol = request.headers.get('x-forwarded-proto') || 'https'
     const baseUrl = `${protocol}://${host}`
     
-    if (!user.first_visit_completed) {
+    // SIMPLE LOGIC: If user was created in the last 2 minutes = NEW USER from GHL form
+    const userCreatedAt = new Date(user.created_at || Date.now())
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000)
+    const isNewUser = userCreatedAt > twoMinutesAgo
+    
+    if (isNewUser) {
       // NEW USER FROM GHL FORM: Show welcome page
       redirectUrl = `${baseUrl}/welcome?wallet_pass_id=${user.wallet_pass_id}&name=${encodeURIComponent(userName)}`
-      console.log(`🎉 NEW USER FROM GHL: Welcome flow for ${userName} (${code}) on ${baseUrl}`)
+      console.log(`🎉 NEW USER FROM GHL: Welcome flow for ${userName} (${code}) - created ${userCreatedAt}`)
     } else {
       // EXISTING USER SHORTLINKS: Direct to dashboard
       redirectUrl = `${baseUrl}/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
-      console.log(`🔗 EXISTING USER SHORTLINK: Dashboard for ${userName} (${code}) on ${baseUrl}`)
+      console.log(`🔗 EXISTING USER SHORTLINK: Dashboard for ${userName} (${code}) - created ${userCreatedAt}`)
     }
     
     console.log(`✅ Redirecting ${user.name} (${code}) to: ${redirectUrl}`)
