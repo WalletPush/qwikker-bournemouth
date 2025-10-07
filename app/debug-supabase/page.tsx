@@ -141,6 +141,56 @@ export default function DebugSupabasePage() {
     }
   }
 
+  const checkBusinessOffers = async () => {
+    setIsLoading(true)
+    try {
+      const supabase = createClient()
+      
+      addResult('🔍 Checking David\'s Grill Shack offers...')
+      
+      // First, find David's Grill Shack business ID
+      const { data: business, error: businessError } = await supabase
+        .from('business_profiles')
+        .select('id, business_name, offer_name')
+        .ilike('business_name', '%david%grill%')
+        .single()
+      
+      if (businessError) {
+        addResult(`❌ Error finding David's Grill Shack: ${businessError.message}`)
+        return
+      }
+      
+      if (!business) {
+        addResult('❌ David\'s Grill Shack not found')
+        return
+      }
+      
+      addResult(`✅ Found business: ${business.business_name} (ID: ${business.id})`)
+      addResult(`📝 Legacy offer_name: ${business.offer_name || 'None'}`)
+      
+      // Now check business_offers table
+      const { data: offers, error: offersError } = await supabase
+        .from('business_offers')
+        .select('*')
+        .eq('business_id', business.id)
+      
+      if (offersError) {
+        addResult(`❌ Error fetching business_offers: ${offersError.message}`)
+        return
+      }
+      
+      addResult(`📊 Found ${offers?.length || 0} offers in business_offers table:`)
+      offers?.forEach((offer, index) => {
+        addResult(`  ${index + 1}. ${offer.offer_name} (${offer.status}) - ${offer.offer_value}`)
+      })
+      
+    } catch (error) {
+      addResult(`💥 Business offers check failed: ${error}`)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const clearResults = () => {
     setResults([])
   }
@@ -162,6 +212,9 @@ export default function DebugSupabasePage() {
               </Button>
               <Button onClick={testSignup} disabled={isLoading} variant="outline">
                 {isLoading ? 'Testing...' : '🧪 Test Signup'}
+              </Button>
+              <Button onClick={checkBusinessOffers} disabled={isLoading} variant="outline">
+                {isLoading ? 'Checking...' : '🏢 Check David\'s Offers'}
               </Button>
               <Button onClick={clearResults} variant="outline" size="sm">
                 🗑️ Clear
