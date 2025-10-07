@@ -338,7 +338,7 @@ Qwikker Admin Team`
               <div className="space-y-6">
 
                 {/* Special Offers Card */}
-                {business.offer_name ? (
+                {business.business_offers && business.business_offers.length > 0 ? (
                   <div className="bg-gradient-to-br from-purple-900/20 to-purple-800/20 rounded-2xl p-6 border border-purple-500/20">
                     <div className="flex items-center gap-3 mb-5">
                       <div className="w-10 h-10 bg-purple-500/30 rounded-xl flex items-center justify-center">
@@ -346,29 +346,33 @@ Qwikker Admin Team`
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 01 3 12V7a4 4 0 01 4-4z" />
                         </svg>
                       </div>
-                      <h3 className="text-xl font-bold text-purple-200">Special Offers</h3>
+                      <h3 className="text-xl font-bold text-purple-200">Special Offers ({business.business_offers.filter(offer => offer.status === 'approved').length})</h3>
                     </div>
                     <div className="space-y-4">
-                      <div className="bg-purple-950/30 rounded-lg p-4">
-                        <div className="text-purple-300 text-sm font-medium mb-1">Offer Name</div>
-                        <div className="text-white text-lg font-semibold">{business.offer_name}</div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-purple-950/30 rounded-lg p-4">
-                          <div className="text-purple-300 text-sm font-medium mb-1">Type</div>
-                          <div className="text-white font-medium">{business.offer_type || 'Not specified'}</div>
+                      {business.business_offers.filter(offer => offer.status === 'approved').map((offer, index) => (
+                        <div key={offer.id || index} className="border border-purple-500/20 rounded-lg p-4 space-y-3">
+                          <div className="bg-purple-950/30 rounded-lg p-4">
+                            <div className="text-purple-300 text-sm font-medium mb-1">Offer Name</div>
+                            <div className="text-white text-lg font-semibold">{offer.offer_name}</div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-purple-950/30 rounded-lg p-4">
+                              <div className="text-purple-300 text-sm font-medium mb-1">Type</div>
+                              <div className="text-white font-medium">{offer.offer_type || 'Not specified'}</div>
+                            </div>
+                            <div className="bg-purple-950/30 rounded-lg p-4">
+                              <div className="text-purple-300 text-sm font-medium mb-1">Value</div>
+                              <div className="text-white font-medium">{offer.offer_value || 'Not specified'}</div>
+                            </div>
+                          </div>
+                          {offer.offer_terms && (
+                            <div className="bg-purple-950/30 rounded-lg p-4">
+                              <div className="text-purple-300 text-sm font-medium mb-2">Terms & Conditions</div>
+                              <div className="text-white leading-relaxed">{offer.offer_terms}</div>
+                            </div>
+                          )}
                         </div>
-                        <div className="bg-purple-950/30 rounded-lg p-4">
-                          <div className="text-purple-300 text-sm font-medium mb-1">Value</div>
-                          <div className="text-white font-medium">{business.offer_value || 'Not specified'}</div>
-                        </div>
-                      </div>
-                      {business.offer_terms && (
-                        <div className="bg-purple-950/30 rounded-lg p-4">
-                          <div className="text-purple-300 text-sm font-medium mb-2">Terms & Conditions</div>
-                          <div className="text-white leading-relaxed">{business.offer_terms}</div>
-                        </div>
-                      )}
+                      ))}
                     </div>
                   </div>
                 ) : (
