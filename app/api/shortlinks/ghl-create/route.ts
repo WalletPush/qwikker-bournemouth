@@ -27,10 +27,10 @@ export async function POST(request: NextRequest) {
     // Generate shortlink code from wallet pass ID
     const shortCode = wallet_pass_id.slice(-8)
     
-    // Generate shortlink URL based on link type
+    // Generate shortlink URL based on link type (bulletproof prefixes)
     let shortUrl
     if (link_type === 'chat') {
-      shortUrl = `https://qwikkerdashboard-theta.vercel.app/s/${shortCode}/chat`
+      shortUrl = `https://qwikkerdashboard-theta.vercel.app/c/${shortCode}`
     } else {
       // Default to dashboard
       shortUrl = `https://qwikkerdashboard-theta.vercel.app/s/${shortCode}`
