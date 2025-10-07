@@ -12,10 +12,21 @@ export default async function DashboardPage() {
     redirect('/auth/login')
   }
 
-  // Get user profile data
+  // Get user profile data with business offers
   const { data: profile } = await supabase
     .from('business_profiles')
-    .select('*')
+    .select(`
+      *,
+      business_offers!left(
+        id,
+        offer_name,
+        offer_type,
+        offer_value,
+        offer_image,
+        status,
+        created_at
+      )
+    `)
     .eq('user_id', data.claims.sub)
     .single()
 
