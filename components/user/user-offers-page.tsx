@@ -104,7 +104,16 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   // Dynamic filter counts that update with state changes
   const getFilters = () => [
     { id: 'all', label: 'All Offers', count: allOffers.length },
-    { id: 'claimed', label: 'My Claimed', count: Array.from(claimedOffers).filter(id => !walletOffers.has(id)).length },
+    { id: 'claimed', label: 'My Claimed', count: Array.from(claimedOffers).filter(id => {
+      const offer = allOffers.find(o => o.id === id)
+      // Show in claimed if: not in wallet OR is multiple-use
+      return !walletOffers.has(id) || offer?.claimType !== 'single'
+    }).length },
+    { id: 'redeemed', label: 'My Redeemed', count: Array.from(walletOffers).filter(id => {
+      const offer = allOffers.find(o => o.id === id)
+      // Show in redeemed if: in wallet AND is single-use
+      return offer?.claimType === 'single'
+    }).length },
     { id: 'favorites', label: 'My Favorites', count: favoriteOffers.size },
     { id: 'popular', label: 'Popular', count: allOffers.filter(o => o.isPopular).length },
     { id: 'ending_soon', label: 'Ending Soon', count: allOffers.filter(o => o.isEndingSoon).length },
@@ -322,6 +331,65 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     }
   }
 
+  // Handle adding offer to wallet
+  const handleAddToWallet = async (offerId: string, offerTitle: string, businessName: string) => {
+    if (walletOffers.has(offerId)) {
+      alert('This offer is already in your wallet!')
+      return
+    }
+    
+    try {
+      const response = await fetch('/api/walletpass/update-main-pass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userWalletPassId: walletPassId,
+          currentOffer: offerTitle,
+          offerDetails: { businessName, offerId }
+        })
+      })
+      
+      if (response.ok) {
+        // Mark as added to wallet
+        setWalletOffers(prev => {
+          const newWallet = new Set([...prev, offerId])
+          if (typeof window !== 'undefined') {
+            const userId = walletPassId || 'anonymous-user'
+            localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify([...newWallet]))
+          }
+          return newWallet
+        })
+        
+        // Find the offer to check claim type
+        const offer = allOffers.find(o => o.id === offerId)
+        const claimType = offer?.claimType || 'single'
+        
+        if (claimType === 'single') {
+          // Single-use offers: Remove from claimed (move to redeemed)
+          setClaimedOffers(prev => {
+            const newClaimed = new Set([...prev])
+            newClaimed.delete(offerId)
+            if (typeof window !== 'undefined') {
+              const userId = walletPassId || 'anonymous-user'
+              localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...newClaimed]))
+            }
+            return newClaimed
+          })
+          
+          showSuccessMessage('Added to Wallet!', 'This offer has been redeemed and moved to "My Redeemed" section. It will expire in 12 hours.')
+        } else {
+          // Multiple-use offers: Keep in claimed
+          showSuccessMessage('Added to Wallet!', 'This offer has been added to your wallet and will expire in 12 hours. You can claim it again later!')
+        }
+      } else {
+        throw new Error('Failed to update wallet pass')
+      }
+    } catch (error) {
+      console.error('Error adding to wallet:', error)
+      alert('Sorry, there was an error adding the offer to your wallet. Please try again.')
+    }
+  }
+
   // Helper function to show success messages with callbacks
   const showSuccessMessage = (title: string, message: string, onClose?: () => void) => {
     const successOverlay = document.createElement('div')
@@ -361,8 +429,22 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
 
     // Filter by type
     if (selectedFilter === 'claimed') {
-      // Show ONLY claimed offers (not yet added to wallet)
-      filtered = filtered.filter(o => claimedOffers.has(o.id) && !walletOffers.has(o.id))
+      // Show claimed offers that are either: not in wallet OR multiple-use
+      filtered = filtered.filter(o => {
+        const isClaimed = claimedOffers.has(o.id)
+        const isInWallet = walletOffers.has(o.id)
+        const isMultipleUse = o.claimType !== 'single'
+        
+        return isClaimed && (!isInWallet || isMultipleUse)
+      })
+    } else if (selectedFilter === 'redeemed') {
+      // Show offers that are in wallet AND single-use (redeemed)
+      filtered = filtered.filter(o => {
+        const isInWallet = walletOffers.has(o.id)
+        const isSingleUse = o.claimType === 'single'
+        
+        return isInWallet && isSingleUse
+      })
     } else {
       // For ALL other filters, show available offers
       // Hide claimed offers AND single-use wallet offers
@@ -565,21 +647,27 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                 Claim Offer
               </Button>
             ) : (
-                  <AddToWalletButton
-                    offer={{
-                      id: offer.id,
-                      title: offer.title,
-                      description: offer.description,
-                      business_name: businessName,
-                  valid_until: offer.valid_until,
-                  terms: offer.terms,
-                  offer_value: offer.discount || offer.type
-                }}
-                userWalletPassId={walletPassId}
-                variant="default"
-                size="md"
-                className="w-full h-[44px] bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20"
-              />
+              {isInWallet ? (
+                <Button
+                  disabled
+                  className="w-full h-[44px] bg-green-600 text-white font-semibold cursor-default opacity-75"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Added to Wallet
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => handleAddToWallet(offer.id, offer.title, businessName)}
+                  className="w-full h-[44px] bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Add to Wallet
+                </Button>
+              )}
             )}
             
             {/* Share Button */}
