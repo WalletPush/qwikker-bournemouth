@@ -89,7 +89,17 @@ export default async function AdminPage() {
       profile_completion_percentage,
       business_tier,
       created_at,
-      updated_at
+      updated_at,
+      business_offers!left(
+        id,
+        offer_name,
+        offer_type,
+        offer_value,
+        offer_image,
+        status,
+        created_at,
+        approved_at
+      )
     `)
     .in('city', coveredCities) // 🎯 FRANCHISE FILTERING: Use covered cities for franchise
     .not('email', 'is', null)
