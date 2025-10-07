@@ -115,14 +115,14 @@ document.getElementById('vipPassForm').addEventListener('submit', function (even
         
         // BULLETPROOF REDIRECT: Use shortlink after 7-second delay
         setTimeout(() => {
-            // Generate shortlink code from serialNumber (last 8 characters)
-            const shortCode = data.serialNumber.slice(-8);
+            // Generate shortlink code from serialNumber (remove hyphens, then last 8 characters)
+            const shortCode = data.serialNumber.replace(/-/g, '').slice(-8);
             
             // Redirect to bulletproof shortlink - it will:
             // 1. Look up user in database (never fails to "Qwikker User")
             // 2. Check if first visit (smart routing)
             // 3. Go to How It Works (first time) or Dashboard (returning)
-            window.location.href = `https://qwikkerdashboard-theta.vercel.app/welcome?wallet_pass_id=${shortCode}&name=${encodeURIComponent(firstName + ' ' + lastName)}`;
+            window.location.href = `https://qwikkerdashboard-theta.vercel.app/s/${shortCode}`;
         }, 7000);
     })
     .catch(error => {
