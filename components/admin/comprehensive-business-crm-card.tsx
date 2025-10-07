@@ -1090,32 +1090,37 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white">Offers & Content</h3>
                 
-                {business.offer_name ? (
-                  <Card className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-700/30">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="text-yellow-300 font-semibold">{business.offer_name}</h4>
-                          <p className="text-slate-300 text-sm mt-1">{business.offer_type?.replace('_', ' ').toUpperCase()}</p>
-                          {business.offer_terms && (
-                            <p className="text-slate-400 text-sm mt-2">{business.offer_terms}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <div className="text-yellow-400 text-sm">Active</div>
-                          {business.offer_end_date && (
-                            <div className="text-slate-400 text-xs">
-                              Ends: {new Date(business.offer_end_date).toLocaleDateString('en-GB', { 
-                                year: 'numeric', 
-                                month: '2-digit', 
-                                day: '2-digit' 
-                              })}
+                {business.business_offers && business.business_offers.length > 0 ? (
+                  <div className="space-y-3">
+                    {business.business_offers.filter(offer => offer.status === 'approved').map((offer, index) => (
+                      <Card key={offer.id || index} className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-700/30">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="text-yellow-300 font-semibold">{offer.offer_name}</h4>
+                              <p className="text-slate-300 text-sm mt-1">{offer.offer_type?.replace('_', ' ').toUpperCase()}</p>
+                              <p className="text-orange-300 text-sm font-medium">{offer.offer_value}</p>
+                              {offer.offer_terms && (
+                                <p className="text-slate-400 text-sm mt-2">{offer.offer_terms}</p>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                            <div className="text-right">
+                              <div className="text-yellow-400 text-sm">Active</div>
+                              {offer.offer_end_date && (
+                                <div className="text-slate-400 text-xs">
+                                  Ends: {new Date(offer.offer_end_date).toLocaleDateString('en-GB', { 
+                                    year: 'numeric', 
+                                    month: '2-digit', 
+                                    day: '2-digit' 
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 ) : (
                   <Card className="bg-slate-800/30 border-slate-700 border-dashed">
                     <CardContent className="p-6 text-center">
