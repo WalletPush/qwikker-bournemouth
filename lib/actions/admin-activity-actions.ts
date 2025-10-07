@@ -138,10 +138,13 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
         
         const updatedAt = new Date(change.updated_at)
         const createdAt = new Date(change.created_at)
-        const timeAgo = getTimeAgo(updatedAt)
         
-        // Skip if this is just the initial creation (not a real update)
-        if (Math.abs(updatedAt.getTime() - createdAt.getTime()) < 60000) {
+        // For pending_review, we want to show the initial submission
+        // For approved/rejected, we want to show the status change (skip if no real update)
+        const isInitialCreation = Math.abs(updatedAt.getTime() - createdAt.getTime()) < 60000
+        
+        // Skip initial creation for approved/rejected (we only want to show the status change)
+        if (isInitialCreation && change.status !== 'pending_review') {
           continue
         }
 
@@ -149,6 +152,8 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
         let type: AdminActivity['type'] = 'update'
         let color = 'bg-blue-500'
         let iconType = 'edit'
+        let activityDate = updatedAt // Default to updated_at
+        let activityId = `status-${change.id}-${change.updated_at}`
 
         switch (change.status) {
           case 'approved':
@@ -156,28 +161,39 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
             type = 'approval'
             color = 'bg-green-500'
             iconType = 'check'
+            // Use updated_at for approvals (when admin approved it)
+            activityDate = updatedAt
             break
           case 'rejected':
             message = `Rejected: ${change.business_name || 'Business'} application`
             type = 'rejection'
             color = 'bg-red-500'
             iconType = 'x'
+            // Use updated_at for rejections (when admin rejected it)
+            activityDate = updatedAt
             break
           case 'pending_review':
             message = `${change.business_name || 'Business'} submitted for review`
             type = 'update'
             color = 'bg-yellow-500'
             iconType = 'clock'
+            // Use created_at for submissions (when business first submitted)
+            activityDate = createdAt
+            activityId = `status-${change.id}-${change.created_at}`
             break
           default:
             message = `${change.business_name || 'Business'} updated profile`
             type = 'update'
             iconType = 'edit'
+            // Use updated_at for general updates
+            activityDate = updatedAt
             break
         }
 
+        const timeAgo = getTimeAgo(activityDate)
+
         activities.push({
-          id: `status-${change.id}-${change.updated_at}`,
+          id: activityId,
           type,
           message,
           time: timeAgo,

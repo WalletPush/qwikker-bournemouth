@@ -9,6 +9,7 @@ import { submitBusinessForReview } from '@/lib/actions/business-actions'
 import { getPendingChanges } from '@/lib/actions/pending-changes'
 import { getBusinessVisits } from '@/lib/actions/business-visit-actions'
 import { SuccessModal, ErrorModal } from '@/components/ui/success-modal'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 interface ImprovedDashboardHomeProps {
   profile?: {
@@ -30,6 +31,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   const [loadingPendingChanges, setLoadingPendingChanges] = useState(false)
   const [activityFeed, setActivityFeed] = useState<any[]>([])
   const [businessVisits, setBusinessVisits] = useState<any[]>([])
+  const supabase = createClientComponentClient()
   
   // Modal states
   const [successModal, setSuccessModal] = useState<{
@@ -268,7 +270,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
       
       // Add business visits to activity feed
             businessVisits.forEach((visit) => {
-              const visitorName = `${visit.user_members?.first_name || ''} ${visit.user_members?.last_name || ''}`.trim() || 'Someone'
+              const visitorName = `${visit.app_users?.first_name || ''} ${visit.app_users?.last_name || ''}`.trim() || 'Someone'
         realActivity.push({
           id: `visit_${visit.id}`,
           type: 'business_viewed',
@@ -283,6 +285,73 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           color: visit.is_first_visit ? 'text-green-400' : 'text-blue-400'
         })
       })
+
+      // Add offer claims and redemptions for THIS business
+      try {
+        const { data: offerClaims } = await supabase
+          .from('user_offer_claims')
+          .select(`
+            id,
+            offer_title,
+            claimed_at,
+            status,
+            updated_at,
+            wallet_pass_id
+          `)
+          .eq('business_name', profile.business_name)
+          .order('claimed_at', { ascending: false })
+          .limit(10)
+
+        if (offerClaims) {
+          for (const claim of offerClaims) {
+            // Get user name
+            let userName = 'Someone'
+            if (claim.wallet_pass_id) {
+              const { data: user } = await supabase
+                .from('app_users')
+                .select('first_name, last_name, name')
+                .eq('wallet_pass_id', claim.wallet_pass_id)
+                .single()
+              
+              if (user) {
+                userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.name || 'Someone'
+              }
+            }
+
+            // Add claim activity
+            realActivity.push({
+              id: `claim_${claim.id}`,
+              type: 'offer_claimed',
+              message: `${userName} claimed YOUR "${claim.offer_title}" offer`,
+              timestamp: new Date(claim.claimed_at),
+              icon: (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+              ),
+              color: 'text-blue-400'
+            })
+
+            // Add redemption activity if redeemed
+            if (claim.status === 'wallet_added' || claim.status === 'redeemed') {
+              realActivity.push({
+                id: `redeem_${claim.id}`,
+                type: 'offer_redeemed',
+                message: `${userName} redeemed YOUR "${claim.offer_title}" offer`,
+                timestamp: new Date(claim.updated_at || claim.claimed_at),
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                ),
+                color: 'text-green-400'
+              })
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading offer claims for business activity:', error)
+      }
       
         // Sort by timestamp (newest first) and take top 4
         const sortedActivity = realActivity
