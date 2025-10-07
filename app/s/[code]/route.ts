@@ -30,7 +30,7 @@ export async function GET(
     // Look up user by matching the end of wallet_pass_id with the code
     const { data: user, error } = await supabase
       .from('app_users')
-      .select('wallet_pass_id, name, first_visit_completed, created_at')
+      .select('wallet_pass_id, name, created_at')
       .ilike('wallet_pass_id', `%${code}`)
       .single()
     

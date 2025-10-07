@@ -150,18 +150,7 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
     setLoadingComplete(false)
   }
 
-  const handleAccessDashboard = async () => {
-    // Mark first visit as completed
-    if (wallet_pass_id) {
-      try {
-        const { markFirstVisitCompleted } = await import('@/lib/actions/user-onboarding-actions')
-        await markFirstVisitCompleted(wallet_pass_id)
-        console.log('✅ First visit marked as completed')
-      } catch (error) {
-        console.error('❌ Error marking first visit completed:', error)
-      }
-    }
-    
+  const handleAccessDashboard = () => {
     const dashboardUrl = `/user/dashboard${wallet_pass_id ? `?wallet_pass_id=${wallet_pass_id}` : ''}`
     router.push(dashboardUrl)
   }
