@@ -54,7 +54,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
       .order('created_at', { ascending: false })
       .limit(10)
 
-    // Get recent offer claims
+    // Get recent offer claims and redemptions
     const { data: offerClaims } = await supabase
       .from('user_offer_claims')
       .select(`
@@ -62,10 +62,12 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
         offer_title,
         business_name,
         claimed_at,
-        wallet_pass_id
+        wallet_pass_id,
+        status,
+        updated_at
       `)
       .order('claimed_at', { ascending: false })
-      .limit(10)
+      .limit(20)
 
     // Get recent business visits
     const { data: businessVisits } = await supabase
@@ -186,12 +188,9 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
       }
     }
 
-    // Process offer claims
+    // Process offer claims and redemptions
     if (offerClaims) {
       for (const claim of offerClaims) {
-        const claimDate = new Date(claim.claimed_at)
-        const timeAgo = getTimeAgo(claimDate)
-
         // Get user name from wallet pass ID
         let userName = 'Unknown User'
         if (claim.wallet_pass_id) {
@@ -204,16 +203,37 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
           if (user) userName = user.name || 'Unknown User'
         }
 
+        // Add claim activity
+        const claimDate = new Date(claim.claimed_at)
+        const claimTimeAgo = getTimeAgo(claimDate)
+
         activities.push({
           id: `claim-${claim.id}`,
           type: 'offer_claim',
           message: `${userName} claimed "${claim.offer_title}" at ${claim.business_name}`,
-          time: timeAgo,
+          time: claimTimeAgo,
           user_name: userName,
           business_name: claim.business_name,
           iconType: 'gift',
           color: 'bg-blue-500'
         })
+
+        // Add redemption activity if status is wallet_added or redeemed
+        if (claim.status === 'wallet_added' || claim.status === 'redeemed') {
+          const updateDate = new Date(claim.updated_at || claim.claimed_at)
+          const updateTimeAgo = getTimeAgo(updateDate)
+
+          activities.push({
+            id: `redeem-${claim.id}`,
+            type: 'offer_claim',
+            message: `${userName} redeemed "${claim.offer_title}" at ${claim.business_name}`,
+            time: updateTimeAgo,
+            user_name: userName,
+            business_name: claim.business_name,
+            iconType: 'wallet',
+            color: 'bg-green-500'
+          })
+        }
       }
     }
 
