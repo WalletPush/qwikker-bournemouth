@@ -33,9 +33,10 @@ export async function GET(
       return NextResponse.redirect(fallbackUrl, 302)
     }
     
-    // QUICK ACCESS: Direct to dashboard (for shortlinks on pass)
-    const redirectUrl = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
-    console.log(`✅ Quick access for ${user.name} (${code}) to Dashboard: ${redirectUrl}`)
+    // ONBOARDING FLOW: Redirect to welcome page with user's name
+    const userName = user.name || 'User'
+    const redirectUrl = `https://qwikkerdashboard-theta.vercel.app/welcome?wallet_pass_id=${user.wallet_pass_id}&name=${encodeURIComponent(userName)}`
+    console.log(`🎉 Onboarding redirect for ${userName} (${code}) to Welcome: ${redirectUrl}`)
     
     console.log(`✅ Redirecting ${user.name} (${code}) to: ${redirectUrl}`)
     console.log(`🎯 FINAL REDIRECT: ${redirectUrl}`)
