@@ -53,19 +53,18 @@ export async function GET(
     const protocol = request.headers.get('x-forwarded-proto') || 'https'
     const baseUrl = `${protocol}://${host}`
     
-    // SIMPLE LOGIC: If user was created in the last 2 minutes = NEW USER from GHL form
-    const userCreatedAt = new Date(user.created_at || Date.now())
-    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000)
-    const isNewUser = userCreatedAt > twoMinutesAgo
+    // SIMPLE LOGIC: Check if URL has ?new=1 parameter (from GHL form)
+    const url = new URL(request.url)
+    const isFromGHLForm = url.searchParams.get('new') === '1'
     
-    if (isNewUser) {
+    if (isFromGHLForm) {
       // NEW USER FROM GHL FORM: Show welcome page
       redirectUrl = `${baseUrl}/welcome?wallet_pass_id=${user.wallet_pass_id}&name=${encodeURIComponent(userName)}`
-      console.log(`🎉 NEW USER FROM GHL: Welcome flow for ${userName} (${code}) - created ${userCreatedAt}`)
+      console.log(`🎉 NEW USER FROM GHL: Welcome flow for ${userName} (${code})`)
     } else {
       // EXISTING USER SHORTLINKS: Direct to dashboard
       redirectUrl = `${baseUrl}/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
-      console.log(`🔗 EXISTING USER SHORTLINK: Dashboard for ${userName} (${code}) - created ${userCreatedAt}`)
+      console.log(`🔗 EXISTING USER SHORTLINK: Dashboard for ${userName} (${code})`)
     }
     
     console.log(`✅ Redirecting ${user.name} (${code}) to: ${redirectUrl}`)
