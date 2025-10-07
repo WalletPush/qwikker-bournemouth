@@ -21,7 +21,7 @@ export async function GET(
     
     const { data: user, error } = await supabase
       .from('app_users')
-      .select('wallet_pass_id, name')
+      .select('wallet_pass_id, name, first_visit_completed')
       .like('wallet_pass_id', `%${code}`)
       .single()
     
@@ -33,10 +33,19 @@ export async function GET(
       return NextResponse.redirect(fallbackUrl, 302)
     }
     
-    // ONBOARDING FLOW: Redirect to welcome page with user's name
+    // SMART ROUTING: First visit = Welcome, Returning = Dashboard
     const userName = user.name || 'User'
-    const redirectUrl = `https://qwikkerdashboard-theta.vercel.app/welcome?wallet_pass_id=${user.wallet_pass_id}&name=${encodeURIComponent(userName)}`
-    console.log(`🎉 Onboarding redirect for ${userName} (${code}) to Welcome: ${redirectUrl}`)
+    let redirectUrl
+    
+    if (!user.first_visit_completed) {
+      // FIRST TIME: Show welcome page
+      redirectUrl = `https://qwikkerdashboard-theta.vercel.app/welcome?wallet_pass_id=${user.wallet_pass_id}&name=${encodeURIComponent(userName)}`
+      console.log(`🎉 FIRST VISIT: Onboarding redirect for ${userName} (${code}) to Welcome: ${redirectUrl}`)
+    } else {
+      // RETURNING USER: Direct to dashboard (shortlinks on pass)
+      redirectUrl = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
+      console.log(`🔗 RETURNING USER: Quick access for ${userName} (${code}) to Dashboard: ${redirectUrl}`)
+    }
     
     console.log(`✅ Redirecting ${user.name} (${code}) to: ${redirectUrl}`)
     console.log(`🎯 FINAL REDIRECT: ${redirectUrl}`)
