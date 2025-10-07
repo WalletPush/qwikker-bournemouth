@@ -1160,6 +1160,7 @@ Qwikker Admin Team`
                         offer_start_date: business.offer_start_date,
                         offer_end_date: business.offer_end_date,
                         offer_terms: business.offer_terms,
+                        business_offers: business.business_offers || [],
                         secret_menu_items: business.additional_notes ? 
                           (() => {
                             try {
@@ -1516,6 +1517,7 @@ Qwikker Admin Team`
                         offer_start_date: business.offer_start_date,
                         offer_end_date: business.offer_end_date,
                         offer_terms: business.offer_terms,
+                        business_offers: business.business_offers || [],
                         secret_menu_items: business.additional_notes ? 
                           (() => {
                             try {
