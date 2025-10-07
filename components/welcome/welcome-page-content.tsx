@@ -13,6 +13,8 @@ interface WelcomePageContentProps {
 }
 
 export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
+  console.log('🎉 WelcomePageContent loaded with:', searchParams)
+  
   const [isVisible, setIsVisible] = useState(false)
   const [logoAnimated, setLogoAnimated] = useState(false)
   const [featuresVisible, setFeaturesVisible] = useState(false)
