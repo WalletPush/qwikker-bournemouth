@@ -175,7 +175,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const businessMetrics = {
     totalUsers: 1, // From analytics
     walletPasses: 0, // No passes created yet
-    offers: business.offer_name ? 1 : 0,
+    offers: business.business_offers?.filter(offer => offer.status === 'approved')?.length || 0,
     secretItems: business.secret_menu_items?.length || 0,
     lastActive: business.last_ghl_sync || business.updated_at || business.created_at,
     status: business.status,
