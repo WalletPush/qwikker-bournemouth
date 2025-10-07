@@ -33,9 +33,9 @@ export async function GET(
       return NextResponse.redirect(fallbackUrl, 302)
     }
     
-    // SIMPLE ROUTING: Always go to user dashboard for now
+    // QUICK ACCESS: Direct to dashboard (for shortlinks on pass)
     const redirectUrl = `https://qwikkerdashboard-theta.vercel.app/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
-    console.log(`✅ Redirecting ${user.name} (${code}) to Dashboard: ${redirectUrl}`)
+    console.log(`✅ Quick access for ${user.name} (${code}) to Dashboard: ${redirectUrl}`)
     
     console.log(`✅ Redirecting ${user.name} (${code}) to: ${redirectUrl}`)
     console.log(`🎯 FINAL REDIRECT: ${redirectUrl}`)
