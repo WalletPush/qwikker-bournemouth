@@ -26,7 +26,15 @@ export async function POST(request: NextRequest) {
     
     // Generate shortlink code from wallet pass ID
     const shortCode = wallet_pass_id.slice(-8)
-    const shortUrl = `https://qwikkerdashboard-theta.vercel.app/s/${shortCode}`
+    
+    // Generate shortlink URL based on link type
+    let shortUrl
+    if (link_type === 'chat') {
+      shortUrl = `https://qwikkerdashboard-theta.vercel.app/s/${shortCode}/chat`
+    } else {
+      // Default to dashboard
+      shortUrl = `https://qwikkerdashboard-theta.vercel.app/s/${shortCode}`
+    }
     
     // Generate destination URL based on environment and city
     const isProduction = process.env.NODE_ENV === 'production'
