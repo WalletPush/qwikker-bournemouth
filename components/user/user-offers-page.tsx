@@ -655,7 +655,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                 Claim Offer
               </Button>
             ) : (
-              {isInWallet ? (
+              isInWallet ? (
                 <Button
                   disabled
                   className="w-full h-[44px] bg-green-600 text-white font-semibold cursor-default opacity-75"
@@ -675,7 +675,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                   </svg>
                   Add to Wallet
                 </Button>
-              )}
+              )
             )}
             
             {/* Share Button */}
