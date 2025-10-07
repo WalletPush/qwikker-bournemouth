@@ -22,8 +22,7 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
   const [loadingComplete, setLoadingComplete] = useState(false)
   const router = useRouter()
 
-  const { wallet_pass_id, name } = searchParams
-  const userName = name || 'User'
+  const { wallet_pass_id } = searchParams
 
   const loadingSteps = [
     { 
@@ -197,13 +196,9 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
             Your pass is ready
           </h1>
           
-          <p className="text-2xl md:text-3xl text-slate-300 font-light mb-4">
-            Welcome, {userName}!
-          </p>
-          
-          <p className="text-xl md:text-2xl text-slate-400 font-light mb-12">
-            Time to unlock your city
-          </p>
+                  <p className="text-2xl md:text-3xl text-slate-300 font-light mb-12">
+                    Time to unlock your city
+                  </p>
 
           {/* Call to Action */}
           <div className={`transform transition-all duration-1000 delay-500 mb-16 ${
