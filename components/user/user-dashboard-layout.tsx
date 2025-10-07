@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 interface UserDashboardLayoutProps {
@@ -70,13 +70,43 @@ const navItems: NavItem[] = [
 
 export function UserDashboardLayout({ children, currentSection, currentUser, walletPassId }: UserDashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  
+  // Save wallet_pass_id to localStorage for persistence across navigation
+  useEffect(() => {
+    if (walletPassId && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('qwikker-wallet-pass-id', walletPassId)
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+    }
+  }, [walletPassId])
 
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
-    if (!walletPassId) {
+    // Try multiple sources for wallet_pass_id
+    let activeWalletPassId = walletPassId
+    
+    // Fallback 1: Check URL parameters
+    if (!activeWalletPassId && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      activeWalletPassId = urlParams.get('wallet_pass_id')
+    }
+    
+    // Fallback 2: Check localStorage
+    if (!activeWalletPassId && typeof window !== 'undefined') {
+      try {
+        activeWalletPassId = localStorage.getItem('qwikker-wallet-pass-id')
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+    }
+    
+    if (!activeWalletPassId) {
       return href
     }
-    return `${href}?wallet_pass_id=${walletPassId}`
+    
+    return `${href}?wallet_pass_id=${activeWalletPassId}`
   }
 
   return (

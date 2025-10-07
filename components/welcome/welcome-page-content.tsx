@@ -151,8 +151,13 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
   }
 
   const handleAccessDashboard = () => {
-    const dashboardUrl = `/user/dashboard${wallet_pass_id ? `?wallet_pass_id=${wallet_pass_id}` : ''}`
-    router.push(dashboardUrl)
+    if (wallet_pass_id) {
+      // Use window.location.href for more reliable parameter preservation
+      window.location.href = `/user/dashboard?wallet_pass_id=${wallet_pass_id}`
+    } else {
+      // Fallback if no wallet_pass_id
+      router.push('/user/dashboard')
+    }
   }
 
   return (
