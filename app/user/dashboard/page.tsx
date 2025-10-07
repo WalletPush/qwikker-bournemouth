@@ -138,7 +138,14 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
       menu_preview,
       plan,
       status,
-      additional_notes
+      additional_notes,
+      business_offers!left(
+        id,
+        offer_name,
+        offer_type,
+        offer_value,
+        status
+      )
     `)
     .eq('status', 'approved')
     .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Use city field for franchise
@@ -153,7 +160,9 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   const totalBusinesses = realBusinesses.length + mockBusinesses.length
   
   // Count real offers + mock offers
-  const realOffers = realBusinesses.filter(b => b.offer_name).length
+  const realOffers = realBusinesses.reduce((total, b) => {
+    return total + (b.business_offers?.filter(offer => offer.status === 'approved')?.length || 0)
+  }, 0)
   const totalOffers = realOffers + mockOffers.length
   
   // Count businesses with secret menus (both real and mock)

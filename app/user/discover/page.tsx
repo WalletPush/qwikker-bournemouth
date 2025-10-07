@@ -78,7 +78,15 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       rating,
       review_count,
       additional_notes,
-      created_at
+      created_at,
+      business_offers!left(
+        id,
+        offer_name,
+        offer_type,
+        offer_value,
+        offer_image,
+        status
+      )
     `)
     .eq('status', 'approved')
     .not('business_name', 'is', null)
@@ -116,13 +124,13 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       images: business.business_images || ['/placeholder-business.jpg'],
       logo: business.logo || '/placeholder-logo.jpg',
       slug: business.business_name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || business.id,
-      offers: business.offer_name ? [{
-        id: `${business.id}-offer`,
-        title: business.offer_name,
-        type: business.offer_type,
-        value: business.offer_value,
-        image: business.offer_image
-      }] : [],
+      offers: business.business_offers?.filter(offer => offer.status === 'approved').map(offer => ({
+        id: offer.id,
+        title: offer.offer_name,
+        type: offer.offer_type,
+        value: offer.offer_value,
+        image: offer.offer_image
+      })) || [],
       plan: business.plan || 'starter',
       rating: business.rating || 4.5,
       reviewCount: business.review_count || Math.floor(Math.random() * 50) + 10,
@@ -132,7 +140,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
         business.business_town
       ].filter(Boolean),
       distance: (Math.random() * 2 + 0.1).toFixed(1), // Random distance for demo
-      activeOffers: business.offer_name ? 1 : 0,
+      activeOffers: business.business_offers?.filter(offer => offer.status === 'approved')?.length || 0,
       menuPreview: business.menu_preview || [], // Add menu preview for popular items
       hasSecretMenu, // Now properly checks for real secret menu data
       tier: business.plan === 'spotlight' ? 'qwikker_picks' : business.plan === 'featured' ? 'featured' : 'recommended'
