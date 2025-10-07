@@ -10,6 +10,7 @@ import { getPendingChanges } from '@/lib/actions/pending-changes'
 import { getBusinessVisits } from '@/lib/actions/business-visit-actions'
 import { SuccessModal, ErrorModal } from '@/components/ui/success-modal'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { ElegantModal } from '@/components/ui/elegant-modal'
 
 interface ImprovedDashboardHomeProps {
   profile?: {
@@ -31,6 +32,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   const [loadingPendingChanges, setLoadingPendingChanges] = useState(false)
   const [activityFeed, setActivityFeed] = useState<any[]>([])
   const [businessVisits, setBusinessVisits] = useState<any[]>([])
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false)
   const supabase = createClientComponentClient()
   
   // Modal states
@@ -750,6 +752,20 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                     View all activity
                   </Button>
                 )}
+                
+                {/* Unlock Full Analytics Button */}
+                <div className="pt-3 border-t border-slate-700/50">
+                  <Button 
+                    onClick={() => setShowAnalyticsModal(true)}
+                    size="sm" 
+                    className="w-full bg-gradient-to-r from-[#00d083]/20 to-[#00b86f]/20 hover:from-[#00d083]/30 hover:to-[#00b86f]/30 text-[#00d083] border border-[#00d083]/30 hover:border-[#00d083]/50 transition-all duration-200"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Unlock Full Analytics
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="text-center py-8">
@@ -760,6 +776,20 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                 </div>
                 <p className="text-slate-400 text-sm">No recent activity</p>
                 <p className="text-slate-500 text-xs mt-1">Activity will appear once your business is live</p>
+                
+                {/* Unlock Full Analytics Button for empty state */}
+                <div className="pt-4">
+                  <Button 
+                    onClick={() => setShowAnalyticsModal(true)}
+                    size="sm" 
+                    className="bg-gradient-to-r from-[#00d083]/20 to-[#00b86f]/20 hover:from-[#00d083]/30 hover:to-[#00b86f]/30 text-[#00d083] border border-[#00d083]/30 hover:border-[#00d083]/50 transition-all duration-200"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Unlock Full Analytics
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
@@ -1161,6 +1191,53 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         title={errorModal.title}
         message={errorModal.message}
       />
+
+      {/* Analytics Unlock Modal */}
+      <ElegantModal
+        isOpen={showAnalyticsModal}
+        onClose={() => setShowAnalyticsModal(false)}
+        title="Analytics Dashboard"
+        description="Get deep insights into your business performance with detailed analytics and reporting."
+        type="info"
+        size="md"
+        actions={[
+          {
+            label: 'Upgrade to Spotlight',
+            onClick: () => {
+              window.location.href = '/dashboard/settings'
+            },
+            variant: 'default',
+            className: 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold'
+          }
+        ]}
+      >
+        <div className="space-y-4">
+          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+            <h4 className="font-medium text-blue-400 mb-3">Unlock Advanced Analytics</h4>
+            <div className="space-y-2 text-sm text-slate-300">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
+                <span>Search visibility & impressions tracking</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
+                <span>Offer performance & conversion rates</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
+                <span>Customer demographics & behavior insights</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
+                <span>Export data & QR code tracking</span>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 text-center">
+            Available on Spotlight plan • Data is anonymized & privacy-friendly
+          </p>
+        </div>
+      </ElegantModal>
     </div>
   )
 }
