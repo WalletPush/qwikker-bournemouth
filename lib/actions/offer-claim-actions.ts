@@ -19,7 +19,7 @@ export async function claimOffer(data: {
     let userId = null
     if (data.visitorWalletPassId) {
       const { data: user } = await supabase
-        .from('user_members')
+        .from('app_users')
         .select('user_id')
         .eq('wallet_pass_id', data.visitorWalletPassId)
         .single()
@@ -64,7 +64,7 @@ export async function claimOffer(data: {
         
         // Get user details for GHL submission (including city for dynamic routing)
         const { data: user } = await supabase
-          .from('user_members')
+          .from('app_users')
           .select('email, first_name, last_name, city')
           .eq('wallet_pass_id', data.visitorWalletPassId)
           .single()
@@ -185,5 +185,38 @@ export async function isOfferClaimed(offerId: string, visitorWalletPassId?: stri
   } catch (error) {
     console.error('Error checking if offer is claimed:', error)
     return false
+  }
+}
+
+export async function updateOfferClaimStatus(
+  offerId: string, 
+  walletPassId: string, 
+  status: 'claimed' | 'wallet_added' | 'redeemed' | 'expired'
+) {
+  'use server'
+  
+  try {
+    const supabase = createServiceRoleClient()
+    
+    const { error } = await supabase
+      .from('user_offer_claims')
+      .update({ 
+        status: status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('offer_id', offerId)
+      .eq('wallet_pass_id', walletPassId)
+    
+    if (error) {
+      console.error('❌ Error updating offer claim status:', error)
+      return { success: false, error: error.message }
+    }
+    
+    console.log(`✅ Updated offer ${offerId} status to ${status} for wallet ${walletPassId}`)
+    return { success: true }
+    
+  } catch (error) {
+    console.error('❌ Error in updateOfferClaimStatus:', error)
+    return { success: false, error: error.message }
   }
 }

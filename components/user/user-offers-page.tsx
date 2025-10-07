@@ -350,7 +350,15 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       })
       
       if (response.ok) {
-        // Mark as added to wallet
+        // Update database status to 'wallet_added'
+        try {
+          const { updateOfferClaimStatus } = await import('@/lib/actions/offer-claim-actions')
+          await updateOfferClaimStatus(offerId, walletPassId, 'wallet_added')
+        } catch (error) {
+          console.error('Failed to update claim status in database:', error)
+        }
+        
+        // Mark as added to wallet in UI state
         setWalletOffers(prev => {
           const newWallet = new Set([...prev, offerId])
           if (typeof window !== 'undefined') {

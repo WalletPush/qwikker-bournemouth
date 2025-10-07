@@ -16,7 +16,7 @@ export async function trackBusinessVisit({ businessId, visitorName, visitorWalle
     let visitorUserId = null
     if (visitorWalletPassId) {
       const { data: visitor } = await supabase
-        .from('user_members')
+        .from('app_users')
         .select('user_id, first_name, last_name')
         .eq('wallet_pass_id', visitorWalletPassId)
         .single()
@@ -104,7 +104,7 @@ export async function getBusinessVisits(businessId: string, limit: number = 10) 
         visit_date,
         is_first_visit,
         points_earned,
-        user_members (
+        app_users (
           first_name,
           last_name,
           wallet_pass_id
