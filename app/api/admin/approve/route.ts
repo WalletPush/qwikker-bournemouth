@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     // Verify admin exists and get city from request
     const admin = await getAdminById(adminSession.adminId)
     const hostname = request.headers.get('host') || ''
-    const requestCity = getCityFromHostname(hostname)
+    const requestCity = await getCityFromHostname(hostname)
     
     if (!admin || !await isAdminForCity(adminSession.adminId, requestCity)) {
       return NextResponse.json(

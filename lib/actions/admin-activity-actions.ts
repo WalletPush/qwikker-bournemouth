@@ -20,7 +20,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
     const activities: AdminActivity[] = []
     
     // 🎯 SIMPLIFIED FRANCHISE SYSTEM: Get franchise city
-    const franchiseCity = getFranchiseCity(city)
+    const franchiseCity = await getFranchiseCity(city)
     console.log(`📊 Admin Activity for ${city} franchise city: ${franchiseCity}`)
 
     // Get recent wallet pass installations (user signups) - CITY FILTERED

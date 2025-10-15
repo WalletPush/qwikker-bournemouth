@@ -237,7 +237,7 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       notes: formData.notes || null,
       plan: 'featured', // Free trial users get Featured plan access during 120-day trial
       is_founder: new Date() < new Date('2025-12-31'),
-      city: locationInfo.franchise, // SECURITY: Use validated franchise from request, not Google Places
+      city: locationInfo.city, // SECURITY: Use validated franchise city from request, not Google Places
       status: 'incomplete', // Fix: Add default status
       profile_completion_percentage: 25, // Fix: Add default completion percentage
       business_tier: 'free_trial', // Fix: Add correct business tier for onboarding
