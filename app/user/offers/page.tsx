@@ -188,26 +188,27 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   // Transform offers to match expected format
   const realOffers = activeOffers.map(offer => ({
     id: offer.id,
-    businessId: offer.business?.id,
-    businessName: offer.business?.business_name,
-    businessCategory: offer.business?.business_category,
-    businessLogo: offer.business?.logo,
-    businessRating: offer.business?.rating || 4.5,
+    businessId: offer.business_profiles?.id,
+    businessName: offer.business_profiles?.business_name,
+    businessCategory: offer.business_profiles?.business_category,
+    businessLogo: offer.business_profiles?.logo,
+    businessRating: offer.business_profiles?.rating || 4.5,
     title: offer.offer_name,
-    description: offer.offer_terms || `${offer.offer_type} offer from ${offer.business?.business_name}`,
+    description: offer.offer_terms || `${offer.offer_type} offer from ${offer.business_profiles?.business_name}`,
     type: offer.offer_type?.toLowerCase().replace(' ', '_') || 'discount',
     value: offer.offer_value,
     originalPrice: null, // Real offers don't have original price tracking yet
     discountedPrice: null,
-    image: offer.offer_image || offer.business?.business_images?.[0] || offer.business?.logo,
-    isPopular: (offer.business?.rating || 0) > 4.0,
+    image: offer.offer_image || offer.business_profiles?.business_images?.[0] || offer.business_profiles?.logo,
+    isPopular: (offer.business_profiles?.rating || 0) > 4.0,
     isEndingSoon: offer.offer_end_date ? new Date(offer.offer_end_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : false,
-    validUntil: offer.offer_end_date ? new Date(offer.offer_end_date).toLocaleDateString() : null,
+    validUntil: offer.offer_end_date ? new Date(offer.offer_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
     termsAndConditions: offer.offer_terms || 'Standard terms and conditions apply.',
-    businessAddress: offer.business?.business_address,
-    businessTown: offer.business?.business_town,
-    businessHours: offer.business?.business_hours
+    businessAddress: offer.business_profiles?.business_address,
+    businessTown: offer.business_profiles?.business_town,
+    businessHours: offer.business_profiles?.business_hours
   }))
+  
   
   return (
     <UserDashboardLayout 
