@@ -6,6 +6,9 @@ import { getCityFromRequest, getCityDisplayName } from '@/lib/utils/city-detecti
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { getBusinessCRMData } from '@/lib/actions/admin-crm-actions'
 
+// Force dynamic rendering for security (city detection requires headers)
+export const dynamic = 'force-dynamic'
+
 export default async function AdminPage() {
   // Get city from URL subdomain
   const headersList = await headers()
