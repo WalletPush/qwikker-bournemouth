@@ -112,14 +112,6 @@ export async function getFranchiseFromHostname(hostname: string): Promise<string
   
   // Handle Vercel URLs (e.g., qwikkerdashboard-theta.vercel.app, qwikker-calgary-git-main.vercel.app)
   if (hostname.includes('vercel.app')) {
-    // Try to extract franchise from Vercel URL pattern
-    const parts = hostname.split('-')
-    for (const part of parts) {
-      if (await isValidFranchiseCity(part.toLowerCase())) {
-        console.log(`🌐 Vercel deployment detected - using ${part} franchise`)
-        return part.toLowerCase()
-      }
-    }
     console.log('🌐 Vercel deployment detected - defaulting to Bournemouth')
     return 'bournemouth'
   }
@@ -137,9 +129,9 @@ export async function getFranchiseFromHostname(hostname: string): Promise<string
     }
   }
   
-  // Default to Bournemouth for main domain or unknown subdomains
-  console.log(`🌍 Using default franchise: bournemouth for hostname: ${hostname}`)
-  return 'bournemouth'
+  // SECURITY: Block unknown subdomains instead of defaulting
+  console.error(`🚨 SECURITY: Unknown hostname blocked: ${hostname}`)
+  throw new Error(`Access denied: Unknown franchise hostname '${hostname}'`)
 }
 
 /**

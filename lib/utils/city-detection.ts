@@ -21,6 +21,11 @@ export async function getCityFromHostname(hostname: string): Promise<FranchiseCi
     return 'bournemouth' // Default for local development
   }
   
+  // Handle Vercel deployments
+  if (hostname.includes('vercel.app')) {
+    return 'bournemouth' // Default for Vercel deployments
+  }
+  
   // Extract subdomain
   const parts = hostname.split('.')
   if (parts.length >= 2) {
@@ -37,9 +42,9 @@ export async function getCityFromHostname(hostname: string): Promise<FranchiseCi
       return 'bournemouth' // Default for main domain
     }
     
-    // Unknown subdomain - this is now a security risk
-    console.warn(`⚠️ Unknown subdomain detected: ${subdomain}`)
-    throw new Error(`Invalid franchise subdomain: ${subdomain}`)
+    // SECURITY: Block unknown subdomains instead of defaulting
+    console.error(`🚨 SECURITY: Unknown subdomain blocked: ${subdomain}`)
+    throw new Error(`Access denied: Unknown franchise subdomain '${subdomain}'`)
   }
   
   // Fallback to bournemouth for main domain
