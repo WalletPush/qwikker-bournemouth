@@ -1,6 +1,5 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserSecretMenuPage } from '@/components/user/user-secret-menu-page'
-import { createServiceRoleClient } from '@/lib/supabase/server'
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { Suspense } from 'react'
@@ -29,13 +28,8 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
   }
 
   // Use tenant-aware client instead of service role
-  let supabase
-  try {
-    supabase = await createTenantAwareClient()
-  } catch (error) {
-    console.warn('⚠️ Falling back to service role client:', error)
-    supabase = createServiceRoleClient()
-  }
+  // SECURITY: Use tenant-aware client (no fallback to service role)
+  const supabase = await createTenantAwareClient()
 
   const resolvedSearchParams = await searchParams
   const urlWalletPassId = resolvedSearchParams.wallet_pass_id
@@ -91,6 +85,7 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
       status
     `)
     .eq('status', 'approved')
+    .eq('city', currentCity) // SECURITY: Filter by franchise city
     .not('business_name', 'is', null)
 
   if (error) {

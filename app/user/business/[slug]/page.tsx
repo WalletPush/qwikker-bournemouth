@@ -1,10 +1,11 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserBusinessDetailPage } from '@/components/user/user-business-detail-page'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createTenantAwareClient } from '@/lib/utils/tenant-security'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { trackBusinessVisit } from '@/lib/actions/business-visit-actions'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
+import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 
 
 interface BusinessDetailPageProps {
@@ -19,8 +20,13 @@ interface BusinessDetailPageProps {
 export default async function BusinessDetailPage({ params, searchParams }: BusinessDetailPageProps) {
   const { slug } = await params
   const resolvedSearchParams = await searchParams
+  
+  // SECURITY: Validate franchise first
+  const currentCity = await getSafeCurrentCity()
   const urlWalletPassId = resolvedSearchParams.wallet_pass_id
-  const supabase = createServiceRoleClient()
+  
+  // SECURITY: Use tenant-aware client (no service role fallback)
+  const supabase = await createTenantAwareClient()
   
   // Get wallet pass ID from URL or cookie
   let cookieWalletPassId = null
@@ -101,6 +107,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       )
     `)
     .eq('status', 'approved')
+    .eq('city', currentCity) // SECURITY: Filter by franchise city
     .not('business_name', 'is', null)
   
   // Transform real businesses to match expected format

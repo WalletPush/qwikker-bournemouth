@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { uploadToCloudinary } from '@/lib/integrations'
 import { getCurrentLocation, mapTownToCity } from '@/lib/utils/location-detection'
+import { validateBusinessProfile } from '@/lib/utils/business-validation'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 // import { sendWelcomeEmail } from '@/lib/email/send-welcome-email' // Disabled until domain verification
@@ -236,7 +237,7 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       notes: formData.notes || null,
       plan: 'featured', // Free trial users get Featured plan access during 120-day trial
       is_founder: new Date() < new Date('2025-12-31'),
-      city: mapTownToCity(formData.town, locationInfo), // Fix: Use dynamic location-aware city mapping
+      city: locationInfo.franchise, // SECURITY: Use validated franchise from request, not Google Places
       status: 'incomplete', // Fix: Add default status
       profile_completion_percentage: 25, // Fix: Add default completion percentage
       business_tier: 'free_trial', // Fix: Add correct business tier for onboarding
@@ -244,10 +245,13 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       review_count: 0, // Fix: Add default review count
     }
 
+    // SECURITY: Validate business profile data server-side
+    const validatedProfileData = await validateBusinessProfile(profileData)
+
     // 4. Create profile
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('business_profiles')
-      .insert(profileData)
+      .insert(validatedProfileData)
       .select()
       .single()
 

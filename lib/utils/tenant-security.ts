@@ -22,9 +22,9 @@ export async function createTenantAwareClient() {
     const city = await getFranchiseCityFromRequest()
     await client.rpc('set_current_city', { city_name: city })
   } catch (error) {
-    console.warn('Could not set city context:', error)
-    // Fallback to bournemouth for safety
-    await client.rpc('set_current_city', { city_name: 'bournemouth' })
+    console.error('🚨 SECURITY: Could not set city context:', error)
+    // SECURITY: Block request instead of falling back
+    throw new Error('Tenant context required - access denied')
   }
   
   return client
@@ -131,8 +131,9 @@ export async function getSafeCurrentCity(): Promise<string> {
       throw new Error(`Unauthorized city: ${city}`)
     }
   } catch (error) {
-    console.error('City detection failed:', error)
-    throw new Error('Could not determine valid franchise city')
+    console.error('🚨 SECURITY: City detection failed:', error)
+    // SECURITY: Don't fall back to bournemouth - block the request
+    throw new Error(`Access denied: Could not validate franchise city - ${error}`)
   }
 }
 
@@ -153,7 +154,8 @@ export async function setTenantContext(city?: string) {
     return targetCity
   } catch (error) {
     console.warn('Could not set tenant context:', error)
-    return 'bournemouth' // Safe fallback
+    // SECURITY: No fallback - block unknown cities
+    throw new Error(`Access denied: Unknown city '${city}'`)
   }
 }
 
