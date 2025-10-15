@@ -511,14 +511,14 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     // Distinguish real vs mock offers: real offers have businessCategory, mock offers don't
     const isRealOffer = !!offer.businessCategory
     const business = isRealOffer ? null : mockBusinesses.find(b => b.id === offer.businessId)
-    const businessName = offer.businessName || business?.name || 'Unknown Business'
+    const businessName = offer.business_profiles?.business_name || offer.businessName || business?.name || 'Unknown Business'
     
     // Create business slug for ref and highlighting
     const businessSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-')
     
-    // Fix image selection: for real offers use offer.image, for mock offers use business.images[0]
+    // Fix image selection: for real offers use offer.image, then business image, for mock offers use business.images[0]
     const businessImage = isRealOffer
-      ? (offer.image || '/placeholder-business.jpg') 
+      ? (offer.offer_image || offer.business_profiles?.business_image || '/placeholder-business.jpg') 
       : (business?.images?.[0] || '/placeholder-business.jpg')
     
     const businessRating = offer.businessRating || business?.rating || 4.5

@@ -138,7 +138,13 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       display_order,
       created_at,
       business_id,
-      status
+      status,
+      business_profiles!inner (
+        id,
+        business_name,
+        business_image,
+        business_tier
+      )
     `)
     .eq('status', 'approved')
     .in('business_id', businessIds.length > 0 ? businessIds : ['no-matches'])
