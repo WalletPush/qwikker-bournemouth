@@ -1,10 +1,9 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserDashboardHome } from '@/components/user/user-dashboard-home'
-import { createServiceRoleClient } from '@/lib/supabase/server'
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { mockBusinesses, mockOffers } from '@/lib/mock-data/user-mock-data'
 import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
-import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
+// Removed unused import
 import { getValidatedUser } from '@/lib/utils/wallet-pass-security'
 import type { Metadata } from "next"
 
@@ -42,7 +41,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
     supabase = await createTenantAwareClient()
   } catch (error) {
     console.warn('⚠️ Falling back to service role client:', error)
-    supabase = createServiceRoleClient()
+    supabase = await createTenantAwareClient()
   }
   
   // 🎯 WALLET PASS AUTHENTICATION FLOW
@@ -123,8 +122,8 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   }
   
   // 🎯 FRANCHISE SYSTEM: Get franchise city for filtering
-  const franchiseCity = await getFranchiseCityFromRequest()
-  console.log(`📊 Dashboard: Filtering businesses for franchise city: ${franchiseCity}`)
+  // Use consistent city detection like other pages
+  console.log(`📊 Dashboard: Filtering businesses for franchise city: ${currentCity}`)
   
   // Fetch approved businesses from database (franchise-filtered)
   const { data: approvedBusinesses, error } = await supabase
@@ -148,7 +147,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
       )
     `)
     .eq('status', 'approved')
-    .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Use city field for franchise
+    .eq('city', currentCity) // SECURITY: Filter by franchise city
     .not('business_name', 'is', null)
   
   if (error) {
@@ -193,7 +192,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
       currentUser={currentUser}
       walletPassId={walletPassId}
     >
-      <UserDashboardHome stats={stats} currentUser={currentUser} walletPassId={walletPassId} franchiseCity={franchiseCity} />
+      <UserDashboardHome stats={stats} currentUser={currentUser} walletPassId={walletPassId} franchiseCity={currentCity} />
     </UserDashboardLayout>
   )
 }

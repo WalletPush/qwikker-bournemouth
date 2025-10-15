@@ -37,7 +37,12 @@ export function getCityFromHostnameClient(hostname: string): string {
       'paris': 'paris'
     }
     
-    return cityMap[subdomain] || 'bournemouth' // Default fallback
+    // SECURITY: Block unknown subdomains instead of defaulting
+    if (cityMap[subdomain]) {
+      return cityMap[subdomain]
+    } else {
+      throw new Error(`Access denied: Unknown franchise subdomain '${subdomain}'`)
+    }
   }
   
   // Handle localhost and development

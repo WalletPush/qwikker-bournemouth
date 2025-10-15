@@ -1,6 +1,6 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserChatPage } from '@/components/user/user-chat-page'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+// Removed service role import for security
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 
@@ -25,14 +25,8 @@ export default async function ChatPage({
     )
   }
 
-  // Use tenant-aware client instead of service role
-  let supabase
-  try {
-    supabase = await createTenantAwareClient()
-  } catch (error) {
-    console.warn('⚠️ Falling back to service role client:', error)
-    supabase = createServiceRoleClient()
-  }
+  // SECURITY: Use tenant-aware client (no service role fallback)
+  const supabase = await createTenantAwareClient()
 
   const params = await searchParams
   const urlWalletPassId = params.wallet_pass_id

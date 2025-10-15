@@ -1,6 +1,6 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserOffersPage } from '@/components/user/user-offers-page'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createTenantAwareClient } from '@/lib/utils/tenant-security'
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { updatePassActivity } from '@/lib/utils/pass-status-tracker'
@@ -38,7 +38,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     supabase = await createTenantAwareClient()
   } catch (error) {
     console.warn('⚠️ Falling back to service role client:', error)
-    supabase = createServiceRoleClient()
+    supabase = await createTenantAwareClient()
   }
 
   const resolvedSearchParams = await searchParams

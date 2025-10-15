@@ -91,9 +91,10 @@ export async function getFranchiseCity(franchiseKey: string): Promise<string> {
 /**
  * @deprecated Use getFranchiseCity instead - we now use single city per domain
  */
-export function getFranchiseAreas(franchiseKey: string): string[] {
+export async function getFranchiseAreas(franchiseKey: string): Promise<string[]> {
   console.warn('⚠️ getFranchiseAreas is deprecated - use getFranchiseCity instead')
-  return [getFranchiseCity(franchiseKey)]
+  const city = await getFranchiseCity(franchiseKey)
+  return [city]
 }
 
 /**
@@ -137,8 +138,8 @@ export async function getFranchiseFromHostname(hostname: string): Promise<string
 /**
  * 🎯 SIMPLIFIED: Get franchise city directly from hostname
  */
-export function getFranchiseCityFromHostname(hostname: string): string {
-  return getFranchiseFromHostname(hostname)
+export async function getFranchiseCityFromHostname(hostname: string): Promise<string> {
+  return await getFranchiseFromHostname(hostname)
 }
 
 /**
@@ -179,16 +180,16 @@ export function getFranchiseDisplayName(franchiseKey: string): string {
 /**
  * 🎯 SIMPLIFIED: Check if business belongs to franchise (now just city comparison)
  */
-export function isBusinessInFranchise(businessTown: string, franchiseKey: string): boolean {
-  const franchiseCity = getFranchiseCity(franchiseKey)
+export async function isBusinessInFranchise(businessTown: string, franchiseKey: string): Promise<boolean> {
+  const franchiseCity = await getFranchiseCity(franchiseKey)
   return businessTown.toLowerCase() === franchiseCity.toLowerCase()
 }
 
 /**
  * Get all available franchise cities
  */
-export function getAllFranchiseCities(): string[] {
-  return [...FRANCHISE_CITIES]
+export async function getAllFranchiseCities(): Promise<string[]> {
+  return await getFranchiseCities()
 }
 
 /**

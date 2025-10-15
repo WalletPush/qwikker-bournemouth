@@ -80,7 +80,8 @@ export function FranchiseOnboardingForm({ city, cityDisplayName }: FranchiseOnbo
           business_name: placeDetails.name || businessName,
           business_address: placeDetails.formatted_address || fullAddress,
           business_postcode: postcode,
-          business_city: cityComponent.toLowerCase() || city,
+          business_town: cityComponent.toLowerCase() || '', // Store actual town in business_town
+          city: city, // SECURITY: Always use franchise city, never Google Places
           latitude: placeDetails.geometry?.location?.lat() || null,
           longitude: placeDetails.geometry?.location?.lng() || null,
           website: placeDetails.website || '',
