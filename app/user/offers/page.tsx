@@ -1,6 +1,8 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserOffersPage } from '@/components/user/user-offers-page'
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+
+export const dynamic = 'force-dynamic'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { updatePassActivity } from '@/lib/utils/pass-status-tracker'
 import { getFranchiseCity } from '@/lib/utils/franchise-areas'

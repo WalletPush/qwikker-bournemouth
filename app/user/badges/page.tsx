@@ -3,6 +3,8 @@ import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { SimpleBadgesPage } from '@/components/user/simple-badges-page'
 // Removed service role import for security
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+
+export const dynamic = 'force-dynamic'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 
 export const metadata = {

@@ -1,6 +1,8 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserBusinessDetailPage } from '@/components/user/user-business-detail-page'
 import { createTenantAwareClient } from '@/lib/utils/tenant-security'
+
+export const dynamic = 'force-dynamic'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { trackBusinessVisit } from '@/lib/actions/business-visit-actions'

@@ -1,6 +1,8 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserDashboardHome } from '@/components/user/user-dashboard-home'
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+
+export const dynamic = 'force-dynamic'
 import { mockBusinesses, mockOffers } from '@/lib/mock-data/user-mock-data'
 import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
 // Removed unused import
