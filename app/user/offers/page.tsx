@@ -127,6 +127,8 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   console.log(`📊 Offers Page: Business IDs for offers query:`, businessIds)
   
   // Then get offers for those businesses
+  console.log(`📊 Offers Page: Querying business_offers with businessIds:`, businessIds)
+  
   const { data, error: fetchError } = await supabase
     .from('business_offers')
     .select(`
@@ -140,27 +142,19 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       offer_image,
       display_order,
       created_at,
-      business:business_id (
-        id,
-        business_name,
-        business_type,
-        business_category,
-        business_town,
-        business_address,
-        business_tagline,
-        business_description,
-        business_hours,
-        business_images,
-        logo,
-        rating,
-        review_count,
-        city
-      )
+      business_id,
+      status
     `)
     .eq('status', 'approved')
     .in('business_id', businessIds.length > 0 ? businessIds : ['no-matches'])
-    .not('business.business_name', 'is', null)
     .order('created_at', { ascending: false })
+  
+  console.log(`📊 Offers Page: business_offers query result:`, {
+    data,
+    error: fetchError,
+    queryBusinessIds: businessIds,
+    queryStatus: 'approved'
+  })
   
   businessOffers = data || []
   error = fetchError
