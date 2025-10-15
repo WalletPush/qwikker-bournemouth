@@ -2,6 +2,8 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect } from 'react'
+import { getCityFromHostnameClient } from '@/lib/utils/client-city-detection'
 
 interface PricingPlansProps {
   currentPlan?: string
@@ -9,7 +11,95 @@ interface PricingPlansProps {
   profile?: any
 }
 
+interface DynamicPricing {
+  currency_symbol: string
+  starter_price: number
+  featured_price: number
+  spotlight_price: number
+  starter_yearly: number
+  featured_yearly: number
+  spotlight_yearly: number
+  founding_member_enabled: boolean
+  founding_member_discount: number
+  founding_member_title: string
+  founding_member_description: string
+}
+
 export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false, profile }: PricingPlansProps) {
+  const [dynamicPricing, setDynamicPricing] = useState<DynamicPricing | null>(null)
+  const [city, setCity] = useState<string>('bournemouth')
+
+  useEffect(() => {
+    // Detect city and fetch dynamic pricing
+    const loadDynamicPricing = async () => {
+      try {
+        const detectedCity = getCityFromHostnameClient(window.location.hostname)
+        setCity(detectedCity)
+        
+        // Fetch pricing from admin settings
+        const response = await fetch(`/api/admin/pricing-cards?city=${detectedCity}`)
+        console.log('🔍 Pricing API Response:', response.status)
+        
+        if (response.ok) {
+          const data = await response.json()
+          console.log('🔍 Pricing Data:', data)
+          
+          if (data.success && data.config.pricing_cards) {
+            const cards = data.config.pricing_cards
+            const pricing = {
+              currency_symbol: data.config.currency_symbol || '£',
+              starter_price: cards.starter?.price || 29,
+              featured_price: cards.featured?.price || 59,
+              spotlight_price: cards.spotlight?.price || 89,
+              starter_yearly: cards.starter?.annual_price || 290,
+              featured_yearly: cards.featured?.annual_price || 590,
+              spotlight_yearly: cards.spotlight?.annual_price || 890,
+              founding_member_enabled: data.config.founding_member_enabled ?? true,
+              founding_member_discount: data.config.founding_member_discount || 20,
+              founding_member_title: data.config.founding_member_title || 'Founding Member Benefit',
+              founding_member_description: data.config.founding_member_description || '20% off for life on 12-month plans if you upgrade to a paid plan before your trial expires. This discount locks in your rate permanently.'
+            }
+            console.log('🔍 Setting Dynamic Pricing:', pricing)
+            setDynamicPricing(pricing)
+          }
+        } else {
+          console.log('❌ Pricing API failed:', response.status)
+          // Set fallback pricing if API fails
+          setDynamicPricing({
+            currency_symbol: '£',
+            starter_price: 29,
+            featured_price: 59,
+            spotlight_price: 89,
+            starter_yearly: 290,
+            featured_yearly: 590,
+            spotlight_yearly: 890,
+            founding_member_enabled: true,
+            founding_member_discount: 20,
+            founding_member_title: 'Founding Member Benefit',
+            founding_member_description: '20% off for life on 12-month plans if you upgrade to a paid plan before your trial expires. This discount locks in your rate permanently.'
+          })
+        }
+      } catch (error) {
+        console.log('❌ Pricing API error:', error)
+        // Set fallback pricing if API fails
+        setDynamicPricing({
+          currency_symbol: '£',
+          starter_price: 29,
+          featured_price: 59,
+          spotlight_price: 89,
+          starter_yearly: 290,
+          featured_yearly: 590,
+          spotlight_yearly: 890,
+          founding_member_enabled: true,
+          founding_member_discount: 20,
+          founding_member_title: 'Founding Member Benefit',
+          founding_member_description: '20% off for life on 12-month plans if you upgrade to a paid plan before your trial expires. This discount locks in your rate permanently.'
+        })
+      }
+    }
+    
+    loadDynamicPricing()
+  }, [])
   // Check if user is in free trial
   const isInFreeTrial = profile?.plan === 'featured' && profile?.created_at
   const trialDaysLeft = isInFreeTrial ? (() => {
@@ -20,15 +110,18 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
     return Math.max(0, 120 - daysSinceSignup)
   })() : 0
   
-  const showDiscountPricing = isInFreeTrial && trialDaysLeft > 0 && isFoundingMember
+  const showDiscountPricing = isInFreeTrial && trialDaysLeft > 0 && isFoundingMember && dynamicPricing?.founding_member_enabled
+  
+  // Calculate discount multiplier from admin settings
+  const discountMultiplier = dynamicPricing?.founding_member_discount ? (100 - dynamicPricing.founding_member_discount) / 100 : 0.8
 
   const plans = [
     {
       id: 'starter',
       name: 'Starter',
-      price: 29,
-      yearlyPrice: 290,
-      yearlyDiscount: 232,
+      price: dynamicPricing?.starter_price || 29,
+      yearlyPrice: dynamicPricing?.starter_yearly || 290,
+      yearlyDiscount: Math.round((dynamicPricing?.starter_yearly || 290) * discountMultiplier),
       icon: (
         <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -46,9 +139,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
     {
       id: 'featured',
       name: 'Featured',
-      price: 59,
-      yearlyPrice: 590,
-      yearlyDiscount: 472,
+      price: dynamicPricing?.featured_price || 59,
+      yearlyPrice: dynamicPricing?.featured_yearly || 590,
+      yearlyDiscount: Math.round((dynamicPricing?.featured_yearly || 590) * discountMultiplier),
       popular: true,
       icon: (
         <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,9 +160,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
     {
       id: 'spotlight',
       name: 'Spotlight',
-      price: 89,
-      yearlyPrice: 890,
-      yearlyDiscount: 712,
+      price: dynamicPricing?.spotlight_price || 89,
+      yearlyPrice: dynamicPricing?.spotlight_yearly || 890,
+      yearlyDiscount: Math.round((dynamicPricing?.spotlight_yearly || 890) * discountMultiplier),
       premium: true,
       icon: (
         <svg className="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -126,7 +219,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
               <div className="mt-4">
                 {/* Clean Pricing Display */}
                 <div className="text-3xl font-bold text-white mb-2">
-                  £{plan.price}
+                  {dynamicPricing?.currency_symbol || '£'}{plan.price}
                   <span className="text-lg font-normal text-gray-400">/month</span>
                 </div>
                 
@@ -134,18 +227,18 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
                 {showDiscountPricing ? (
                   <div className="text-center">
                     <div className="text-sm text-gray-400 line-through">
-                      £{plan.yearlyPrice}/year
+                      {dynamicPricing?.currency_symbol || '£'}{plan.yearlyPrice}/year
                     </div>
                     <div className="text-base font-semibold text-green-400">
-                      £{plan.yearlyDiscount}/year
+                      {dynamicPricing?.currency_symbol || '£'}{plan.yearlyDiscount}/year
                     </div>
                     <div className="text-xs text-green-300">
-                      20% off 12-month plans
+                      {dynamicPricing?.founding_member_discount || 20}% off 12-month plans
                     </div>
                   </div>
                 ) : (
                   <div className="text-sm text-gray-400">
-                    £{plan.yearlyPrice}/year
+                    {dynamicPricing?.currency_symbol || '£'}{plan.yearlyPrice}/year
                   </div>
                 )}
               </div>

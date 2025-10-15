@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import type { FranchiseCity } from '@/lib/utils/city-detection'
+import type { FranchiseCity } from '@/lib/utils/client-city-detection'
 
 interface AdminLoginFormProps {
   city: FranchiseCity

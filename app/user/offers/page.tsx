@@ -1,9 +1,11 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserOffersPage } from '@/components/user/user-offers-page'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { updatePassActivity } from '@/lib/utils/pass-status-tracker'
 import { getFranchiseCity } from '@/lib/utils/franchise-areas'
+import { getValidatedUser } from '@/lib/utils/wallet-pass-security'
 import { Suspense } from 'react'
 
 interface OffersPageProps {
@@ -14,7 +16,31 @@ interface OffersPageProps {
 }
 
 export default async function OffersPage({ searchParams }: OffersPageProps) {
-  const supabase = createServiceRoleClient()
+  // SECURITY: Validate franchise first
+  let currentCity: string
+  try {
+    currentCity = await getSafeCurrentCity()
+  } catch (error) {
+    console.error('❌ Invalid franchise access:', error)
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+          <p className="text-slate-400">Invalid franchise location detected.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Use tenant-aware client instead of service role
+  let supabase
+  try {
+    supabase = await createTenantAwareClient()
+  } catch (error) {
+    console.warn('⚠️ Falling back to service role client:', error)
+    supabase = createServiceRoleClient()
+  }
+
   const resolvedSearchParams = await searchParams
   const urlWalletPassId = resolvedSearchParams.wallet_pass_id
   const urlUserId = resolvedSearchParams.user_id // Support old system
@@ -76,9 +102,9 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   let businessOffers = []
   let error = null
   
-  // 🎯 SIMPLIFIED FRANCHISE SYSTEM: Use user's city or default to 'bournemouth' for anonymous users
-  const userCity = currentUser?.city || 'bournemouth'
-  const franchiseCity = getFranchiseCity(userCity)
+  // 🎯 SIMPLIFIED FRANCHISE SYSTEM: Use validated current city
+  const userCity = currentUser?.city || currentCity
+  const franchiseCity = currentCity // Use validated city directly
   
   console.log(`📊 Offers Page: User city: ${userCity}, Franchise city: ${franchiseCity}`)
   

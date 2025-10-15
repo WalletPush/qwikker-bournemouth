@@ -7,6 +7,7 @@ export async function POST(request: NextRequest) {
     console.log('Admin login API called')
     const { city, username, password } = await request.json()
     console.log('Received data:', { city, username, passwordLength: password?.length })
+    console.log('Request hostname:', request.headers.get('host'))
 
     // Validate input
     if (!city || !username || !password) {
@@ -17,14 +18,53 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate city
-    const validCities: FranchiseCity[] = ['bournemouth', 'calgary', 'london', 'paris']
-    if (!validCities.includes(city)) {
-      console.log('Invalid city:', city)
-      return NextResponse.json(
-        { success: false, error: 'Invalid city' },
-        { status: 400 }
-      )
+    // Simple city validation for localhost development
+    const hostname = request.headers.get('host') || ''
+    console.log('Validating city:', city, 'for hostname:', hostname)
+    
+    // For localhost, always allow bournemouth
+    if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+      console.log('Localhost detected - allowing bournemouth')
+      if (city !== 'bournemouth') {
+        console.log('Invalid city for localhost:', city)
+        return NextResponse.json(
+          { success: false, error: 'Invalid city for localhost' },
+          { status: 400 }
+        )
+      }
+    } else {
+      // For production, validate against database
+      try {
+        const { createServiceRoleClient } = await import('@/lib/supabase/server')
+        const supabase = createServiceRoleClient()
+        
+        const { data: franchise } = await supabase
+          .from('franchise_crm_configs')
+          .select('city')
+          .eq('city', city)
+          .eq('status', 'active')
+          .single()
+        
+        if (!franchise) {
+          console.log('City not found in database:', city)
+          return NextResponse.json(
+            { success: false, error: 'Invalid city' },
+            { status: 400 }
+          )
+        }
+        console.log('City validated successfully:', city)
+      } catch (error) {
+        console.error('Database validation failed:', error)
+        // Fallback to known cities
+        const validCities = ['bournemouth', 'calgary', 'london', 'paris']
+        if (!validCities.includes(city)) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid city' },
+            { status: 400 }
+          )
+        }
+        console.log('Using fallback validation for city:', city)
+      }
     }
 
     console.log('Attempting to authenticate admin...')

@@ -359,64 +359,60 @@ export function AITestPage() {
   )
 }
 
-// TODO: Replace this with actual AI API integration
+// Real AI API integration using the new vector embeddings system
 async function simulateAIResponse(query: string, city: string) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200))
-  
-  // Mock responses based on query type
-  if (query.toLowerCase().includes('weather')) {
-    return {
-      response: "The weather in Bournemouth today looks lovely! Perfect for exploring the local businesses and attractions. If you're planning to head out, I can recommend some great spots to visit - from seaside cafés to indoor entertainment if it gets chilly later!",
-      accuracy: 'excellent' as const,
-      businessContext: 'Helpful general information with business suggestions'
+  try {
+    // Call the real AI chat API
+    const response = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: query,
+        walletPassId: null, // Admin testing - no specific user
+        conversationHistory: []
+      })
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || 'API request failed')
     }
-  }
-  
-  if (query.toLowerCase().includes("jerry's") || query.toLowerCase().includes('burger')) {
-    return {
-      response: "Jerry's Burgers is a popular local spot in Bournemouth! They offer classic American-style burgers with fresh ingredients. Their menu includes the signature Jerry Burger, BBQ Bacon Burger, and vegetarian options. They're open Monday-Sunday 11am-10pm. Would you like to see their current offers or get directions?",
-      accuracy: 'excellent' as const,
-      businessContext: 'Jerry\'s Burgers - Bournemouth'
+
+    // Determine accuracy based on response quality and sources
+    let accuracy: 'excellent' | 'good' | 'poor' | 'failed' = 'good'
+    
+    if (data.sources && data.sources.length > 0) {
+      const avgSimilarity = data.sources.reduce((sum: number, source: any) => sum + source.similarity, 0) / data.sources.length
+      if (avgSimilarity > 0.8) accuracy = 'excellent'
+      else if (avgSimilarity > 0.6) accuracy = 'good'
+      else accuracy = 'poor'
     }
-  }
-  
-  if (query.toLowerCase().includes('restaurant') || query.toLowerCase().includes('food')) {
+
+    // Extract business context from sources
+    const businessContext = data.sources
+      ?.filter((source: any) => source.type === 'business')
+      ?.map((source: any) => source.businessName)
+      ?.join(', ') || `General ${city} information`
+
     return {
-      response: `Here are some excellent restaurants in ${city.charAt(0).toUpperCase() + city.slice(1)}: Jerry's Burgers for American classics, The Local Bistro for fine dining, and Seaside Fish & Chips for traditional British fare. Each offers unique experiences and current promotions. Which type of cuisine interests you most?`,
-      accuracy: 'good' as const,
-      businessContext: `${city} restaurants - multiple businesses`
+      response: data.response || 'No response generated',
+      businessContext,
+      accuracy,
+      sources: data.sources || [],
+      sourceCount: data.sources?.length || 0
     }
-  }
-  
-  if (query.toLowerCase().includes('offer') || query.toLowerCase().includes('deal')) {
+
+  } catch (error) {
+    console.error('AI Test API Error:', error)
     return {
-      response: "Current offers this week include: 2-for-1 burgers at Jerry's (valid until Sunday), 20% off dinner at The Local Bistro (weekdays only), and a free drink with any meal at Seaside Café. Would you like me to add any of these to your wallet?",
-      accuracy: 'good' as const,
-      businessContext: 'Multiple current offers'
+      response: `⚠️ AI System Error: ${error.message}. This could indicate:\n• OpenAI API key is missing or invalid\n• Vector embeddings need to be synced\n• Database connection issues\n\nCheck the Knowledge Base tab to sync embeddings.`,
+      businessContext: 'System Error',
+      accuracy: 'failed' as const,
+      sources: [],
+      sourceCount: 0
     }
-  }
-  
-  if (query.toLowerCase().includes('secret menu')) {
-    return {
-      response: "I can show you secret menu items from our partner businesses! Jerry's has a hidden 'Monster Burger' not on the regular menu, and The Local Bistro offers an exclusive tasting menu for VIP members. To access these, you'll need to mention you're a Qwikker member. Which secret menu interests you?",
-      accuracy: 'excellent' as const,
-      businessContext: 'Secret menu items from approved businesses'
-    }
-  }
-  
-  if (query.toLowerCase().includes('coffee') && query.toLowerCase().includes('beach')) {
-    return {
-      response: "For coffee near the beach in Bournemouth, I recommend Seaside Café (2-minute walk from the pier) and Beach Beans Coffee House (right on the promenade). Both offer excellent coffee with sea views. Seaside Café currently has a 'Buy 2 Get 1 Free' offer on all hot drinks!",
-      accuracy: 'excellent' as const,
-      businessContext: 'Location-filtered coffee shops near beach'
-    }
-  }
-  
-  // Default response
-  return {
-    response: `I'd be happy to help you discover businesses in ${city}! I can provide information about restaurants, cafés, offers, secret menus, and local recommendations. What specifically are you looking for?`,
-    accuracy: 'good' as const,
-    businessContext: `General ${city} business discovery`
   }
 }

@@ -1,9 +1,11 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserDashboardHome } from '@/components/user/user-dashboard-home'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { mockBusinesses, mockOffers } from '@/lib/mock-data/user-mock-data'
 import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
+import { getValidatedUser } from '@/lib/utils/wallet-pass-security'
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -18,8 +20,30 @@ interface UserDashboardPageProps {
 }
 
 export default async function UserDashboardPage({ searchParams }: UserDashboardPageProps) {
-  // Use service role client to avoid auth token issues for wallet pass users
-  const supabase = createServiceRoleClient()
+  // SECURITY: Validate franchise first
+  let currentCity: string
+  try {
+    currentCity = await getSafeCurrentCity()
+  } catch (error) {
+    console.error('❌ Invalid franchise access:', error)
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+          <p className="text-slate-400">Invalid franchise location detected.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Use tenant-aware client instead of service role
+  let supabase
+  try {
+    supabase = await createTenantAwareClient()
+  } catch (error) {
+    console.warn('⚠️ Falling back to service role client:', error)
+    supabase = createServiceRoleClient()
+  }
   
   // 🎯 WALLET PASS AUTHENTICATION FLOW
   // Priority: URL param > Cookie > Default demo user
@@ -52,64 +76,40 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
     }
   }
   
+  // 🔒 SECURITY: Validate wallet pass ID and get user securely
+  const { user: validatedUser, isValid, error: validationError } = await getValidatedUser(walletPassId)
+  
   let currentUser = null
   
-  // Try to get user by wallet pass ID (only if we have one)
-  if (walletPassId) {
-    try {
-      const { data: user } = await supabase
-        .from('app_users')
-        .select('*')
-        .eq('wallet_pass_id', walletPassId)
-        .eq('wallet_pass_status', 'active')
-        .single()
-    
-    if (user) {
-      currentUser = {
-        id: user.id,
-        wallet_pass_id: user.wallet_pass_id,
-        name: user.name,
-        email: user.email,
-        city: user.city,
-        tier: user.tier,
-        level: user.level,
-        points_balance: user.total_points || 0,
-        badges_earned: user.badges || [],
-        total_visits: user.stats?.businessesVisited || 0,
-        offers_claimed: user.stats?.offersRedeemed || 0,
-        secret_menus_unlocked: user.stats?.secretItemsUnlocked || 0,
-        favorite_categories: user.preferred_categories || []
-      }
-    }
-      console.log('✅ Found user by wallet pass ID:', user?.name, 'ID:', walletPassId)
-    } catch (error) {
-      console.log('No user found with wallet pass ID:', walletPassId, 'creating fresh user profile')
-      
-      // Create fresh user profile for new users (no mock data)
-      currentUser = {
-        id: 'user-processing',
-        wallet_pass_id: walletPassId,
-        name: 'New User (Processing...)',
-        email: 'processing@qwikker.com',
-        city: 'bournemouth',
-        tier: 'explorer',
-        level: 1,
-        points_balance: 0,
-        badges_earned: [],
-        total_visits: 0,
-        offers_claimed: 0,
-        secret_menus_unlocked: 0,
-        favorite_categories: []
-      }
-    }
-  } else {
-    // No wallet pass ID at all - completely new user
-    console.log('No wallet pass ID provided - creating anonymous user profile')
+  if (isValid && validatedUser) {
     currentUser = {
-      id: 'anonymous-user',
-      wallet_pass_id: null,
-      name: 'Welcome to Qwikker!',
-      email: 'anonymous@qwikker.com',
+      id: validatedUser.id,
+      wallet_pass_id: validatedUser.wallet_pass_id,
+      name: validatedUser.name,
+      email: validatedUser.email,
+      city: validatedUser.city,
+      tier: validatedUser.tier || 'explorer',
+      level: validatedUser.level || 1,
+      points_balance: 0,
+      badges_earned: [],
+      total_visits: 0,
+      offers_claimed: 0,
+      secret_menus_unlocked: 0,
+      favorite_categories: []
+    }
+    console.log('✅ Dashboard: Validated user:', validatedUser.name)
+  } else {
+    // 🔒 SECURITY: Log invalid access attempts
+    if (walletPassId && !isValid) {
+      console.warn(`🚨 Security: Invalid wallet pass access attempt on dashboard: ${walletPassId} - ${validationError}`)
+    }
+    
+    // Create fresh user profile for new/invalid users
+    currentUser = {
+      id: 'user-processing',
+      wallet_pass_id: walletPassId,
+      name: walletPassId ? 'New User (Processing...)' : 'Qwikker User',
+      email: 'processing@qwikker.com',
       city: 'bournemouth',
       tier: 'explorer',
       level: 1,
@@ -123,7 +123,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   }
   
   // 🎯 FRANCHISE SYSTEM: Get franchise city for filtering
-  const franchiseCity = getFranchiseCityFromRequest()
+  const franchiseCity = await getFranchiseCityFromRequest()
   console.log(`📊 Dashboard: Filtering businesses for franchise city: ${franchiseCity}`)
   
   // Fetch approved businesses from database (franchise-filtered)
@@ -193,7 +193,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
       currentUser={currentUser}
       walletPassId={walletPassId}
     >
-      <UserDashboardHome stats={stats} currentUser={currentUser} walletPassId={walletPassId} />
+      <UserDashboardHome stats={stats} currentUser={currentUser} walletPassId={walletPassId} franchiseCity={franchiseCity} />
     </UserDashboardLayout>
   )
 }

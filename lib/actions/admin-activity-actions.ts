@@ -54,7 +54,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
       .order('created_at', { ascending: false })
       .limit(10)
 
-    // Get recent offer claims and redemptions
+    // Get recent offer claims and redemptions - FRANCHISE FILTERED
     const { data: offerClaims } = await supabase
       .from('user_offer_claims')
       .select(`
@@ -64,20 +64,24 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
         claimed_at,
         wallet_pass_id,
         status,
-        updated_at
+        updated_at,
+        app_users!inner(city)
       `)
+      .eq('app_users.city', franchiseCity) // 🔒 SECURITY: Filter by franchise
       .order('claimed_at', { ascending: false })
       .limit(20)
 
-    // Get recent business visits
+    // Get recent business visits - FRANCHISE FILTERED
     const { data: businessVisits } = await supabase
       .from('user_business_visits')
       .select(`
         id,
         visit_date,
         business_id,
-        user_id
+        user_id,
+        app_users!inner(city)
       `)
+      .eq('app_users.city', franchiseCity) // 🔒 SECURITY: Filter by franchise
       .order('visit_date', { ascending: false })
       .limit(8)
 

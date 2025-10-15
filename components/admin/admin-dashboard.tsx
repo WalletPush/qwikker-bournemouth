@@ -18,6 +18,8 @@ import { ComprehensiveQRDashboard } from './comprehensive-qr-dashboard'
 import { AITestPage } from './ai-test-page'
 import { QRAnalyticsDashboard } from './qr-analytics-dashboard'
 import { AdminDashboardOverview } from './admin-dashboard-overview'
+import { PricingCardEditor } from './pricing-card-editor'
+import { AdminSetupPage } from './admin-setup-page'
 
 interface Business {
   id: string
@@ -64,9 +66,9 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const searchParams = useSearchParams()
   
   // Get initial tab from URL or default to 'pending'
-  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'qr-management' | 'ai-test'>(() => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'qr-management' | 'ai-test' | 'pricing' | 'setup'>(() => {
     const urlTab = searchParams.get('tab')
-    const validTabs = ['overview', 'pending', 'updates', 'live', 'incomplete', 'rejected', 'knowledge', 'analytics', 'contacts', 'qr-management', 'ai-test']
+    const validTabs = ['overview', 'pending', 'updates', 'live', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'qr-management', 'ai-test', 'pricing', 'setup']
     return validTabs.includes(urlTab || '') ? (urlTab as any) : 'overview'
   })
   const [businessList, setBusinessList] = useState<Business[]>(businesses)
@@ -83,6 +85,78 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [filterTier, setFilterTier] = useState('all')
   
   const { showSuccess, showError, showConfirm, ModalComponent } = useElegantModal()
+  
+  // Knowledge Base State
+  const [selectedTarget, setSelectedTarget] = useState<string>('general')
+  const [knowledgeStatus, setKnowledgeStatus] = useState<string>('')
+  const [isProcessing, setIsProcessing] = useState<string | null>(null)
+
+  // Auto-populate handler
+  const handleAutoPopulate = async () => {
+    setIsProcessing('auto-populate')
+    setKnowledgeStatus('🚀 Auto-populating knowledge base...')
+
+    try {
+      const response = await fetch('/api/admin/knowledge/auto-populate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ city: city })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setKnowledgeStatus(`✅ Success! Processed ${result.stats.businessesProcessed} businesses and created ${result.stats.knowledgeEntriesCreated} knowledge entries.
+
+${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}`).join('\n')}`)
+      } else {
+        setKnowledgeStatus(`❌ Error: ${result.error}`)
+      }
+    } catch (error) {
+      setKnowledgeStatus(`❌ Error: ${error.message}`)
+    } finally {
+      setIsProcessing(null)
+    }
+  }
+
+  // PDF Upload Handler
+  const handlePDFUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setIsProcessing('pdf')
+    setKnowledgeStatus('🔄 Processing PDF...')
+
+    try {
+      const formData = new FormData()
+      formData.append('pdf', file)
+      formData.append('targetId', selectedTarget === 'general' ? city : selectedTarget)
+      formData.append('targetType', selectedTarget === 'general' ? 'general' : 'business')
+      formData.append('title', file.name.replace('.pdf', ''))
+
+      const response = await fetch('/api/admin/knowledge/upload-pdf', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setKnowledgeStatus(`✅ ${data.message}`)
+        showSuccess('PDF Processed Successfully', `Created ${data.data.embeddings} embeddings from ${data.data.chunks} text chunks`)
+        // Clear the file input
+        event.target.value = ''
+      } else {
+        setKnowledgeStatus(`❌ ${data.error}`)
+        showError('PDF Processing Failed', data.error || 'Unknown error occurred')
+      }
+    } catch (error) {
+      setKnowledgeStatus(`❌ Upload failed: ${error.message}`)
+      showError('Upload Error', 'Failed to upload PDF. Please try again.')
+    } finally {
+      setIsProcessing(null)
+    }
+  }
   
   // Function to update tab and URL
   const updateActiveTab = (newTab: 'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'qr-management' | 'ai-test') => {
@@ -352,6 +426,16 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       id: 'analytics', 
       label: 'Analytics', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>, 
+    },
+    { 
+      id: 'pricing', 
+      label: 'Pricing & Billing', 
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, 
+    },
+    { 
+      id: 'setup', 
+      label: 'Franchise Setup', 
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>, 
     },
     { 
       id: 'contacts', 
@@ -956,6 +1040,8 @@ Qwikker Admin Team`
                 {activeTab === 'rejected' && 'Rejected Applications'}
                 {activeTab === 'knowledge' && 'Knowledge Base'}
                 {activeTab === 'analytics' && 'City Analytics'}
+                {activeTab === 'pricing' && 'Pricing & Billing'}
+                {activeTab === 'setup' && 'Franchise Setup'}
                 {activeTab === 'contacts' && 'Business Contacts'}
                 {activeTab === 'qr-management' && 'QR Code Management'}
                 {activeTab === 'ai-test' && 'AI Chat Testing'}
@@ -992,6 +1078,8 @@ Qwikker Admin Team`
                 {activeTab === 'rejected' && 'Rejected Applications'}
                 {activeTab === 'knowledge' && 'Knowledge Base'}
                 {activeTab === 'analytics' && 'City Analytics'}
+                {activeTab === 'pricing' && 'Pricing & Billing'}
+                {activeTab === 'setup' && 'Franchise Setup'}
                 {activeTab === 'contacts' && 'Business Contacts'}
                 {activeTab === 'qr-management' && 'QR Code Management'}
                 {activeTab === 'ai-test' && 'AI Chat Testing'}
@@ -1005,6 +1093,7 @@ Qwikker Admin Team`
                 {activeTab === 'rejected' && 'Previously rejected business applications'}
                 {activeTab === 'knowledge' && 'AI knowledge base management for businesses and city information'}
                 {activeTab === 'analytics' && `Performance metrics and user analytics for ${cityDisplayName}`}
+                {activeTab === 'pricing' && `Customize pricing cards, currency, and billing settings for ${cityDisplayName}`}
                 {activeTab === 'contacts' && `CRM contact management with GHL sync for ${cityDisplayName}`}
                 {activeTab === 'qr-management' && 'Generate and manage QR codes for businesses, offers, and secret menus'}
                 {activeTab === 'ai-test' && 'Test AI chat responses and knowledge base accuracy'}
@@ -1019,7 +1108,7 @@ Qwikker Admin Team`
             )}
 
             {/* 🔍 MINIMAL SEARCH */}
-            {activeTab !== 'knowledge' && activeTab !== 'analytics' && activeTab !== 'contacts' && (
+            {activeTab !== 'knowledge' && activeTab !== 'analytics' && activeTab !== 'contacts' && activeTab !== 'pricing' && activeTab !== 'setup' && (
               <div className="mb-3 flex items-center gap-2">
                 <input
                   type="text"
@@ -1592,6 +1681,7 @@ Qwikker Admin Team`
 
               {activeTab === 'knowledge' && (
                 <div className="space-y-6">
+
                   {/* Business Selector */}
                   <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-6">
                     <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
@@ -1605,7 +1695,11 @@ Qwikker Admin Team`
                       <label className="block text-sm font-medium text-slate-300 mb-2">
                         Choose Business or General Knowledge
                       </label>
-                      <select className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-[#00d083] focus:ring-1 focus:ring-[#00d083] transition-colors">
+                      <select 
+                        value={selectedTarget}
+                        onChange={(e) => setSelectedTarget(e.target.value)}
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-[#00d083] focus:ring-1 focus:ring-[#00d083] transition-colors"
+                      >
                         <option value="general">General {cityDisplayName} Knowledge</option>
                         <optgroup label="Live Businesses">
                           {liveBusinesses.map((business) => (
@@ -1616,6 +1710,40 @@ Qwikker Admin Team`
                         </optgroup>
                       </select>
                     </div>
+                  </div>
+
+                  {/* Auto-Populate Section */}
+                  <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-2xl p-6">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Auto-Populate Knowledge Base
+                    </h3>
+                    <p className="text-slate-300 mb-4 text-sm">
+                      Automatically add all approved businesses in {cityDisplayName} to the AI knowledge base with embeddings. This gives the AI instant knowledge of every business.
+                    </p>
+                    <button
+                      onClick={handleAutoPopulate}
+                      disabled={isProcessing === 'auto-populate'}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                      {isProcessing === 'auto-populate' ? (
+                        <>
+                          <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          Auto-Populate {cityDisplayName}
+                        </>
+                      )}
+                    </button>
                   </div>
 
                   {/* Knowledge Base Actions Grid */}
@@ -1662,11 +1790,16 @@ Qwikker Admin Team`
                         <input
                           type="file"
                           accept=".pdf"
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-400 focus:ring-1 focus:ring-red-400 file:bg-red-500/20 file:border-0 file:text-red-400 file:px-3 file:py-1 file:rounded file:text-sm file:mr-3"
+                          onChange={handlePDFUpload}
+                          disabled={isProcessing === 'pdf'}
+                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-400 focus:ring-1 focus:ring-red-400 file:bg-red-500/20 file:border-0 file:text-red-400 file:px-3 file:py-1 file:rounded file:text-sm file:mr-3 disabled:opacity-50"
                         />
-                        <button className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 text-sm">
-                          Process PDF
-                        </button>
+                        <div className="text-xs text-slate-400 mt-2">
+                          {selectedTarget === 'general' 
+                            ? `Upload PDF for general ${cityDisplayName} knowledge`
+                            : `Upload PDF for ${liveBusinesses.find(b => b.id === selectedTarget)?.business_name || 'selected business'}`
+                          }
+                        </div>
                       </div>
                     </div>
 
@@ -1764,6 +1897,15 @@ Qwikker Admin Team`
                     </div>
                   </div>
 
+                  {/* Status Display */}
+                  {knowledgeStatus && (
+                    <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-4">
+                      <div className="text-sm font-mono text-slate-300">
+                        {knowledgeStatus}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Instructions */}
                   <div className="bg-gradient-to-r from-[#00d083]/10 to-[#00b86f]/10 border border-[#00d083]/20 rounded-2xl p-6">
                     <h3 className="text-[#00d083] font-bold text-lg mb-3 flex items-center gap-2">
@@ -1791,6 +1933,21 @@ Qwikker Admin Team`
                       </div>
                     </div>
                   </div>
+
+                  {/* Status Display */}
+                  {knowledgeStatus && (
+                    <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-6">
+                      <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Status
+                      </h3>
+                      <div className="bg-slate-900/50 rounded-lg p-4">
+                        <pre className="text-sm text-slate-300 whitespace-pre-wrap font-mono">{knowledgeStatus}</pre>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1809,6 +1966,16 @@ Qwikker Admin Team`
               {/* QR Management Tab */}
               {activeTab === 'qr-management' && (
                 <ComprehensiveQRDashboard city={city} />
+              )}
+
+              {/* Pricing & Billing Tab */}
+              {activeTab === 'pricing' && (
+                <PricingCardEditor city={city} />
+              )}
+
+              {/* Franchise Setup Tab */}
+              {activeTab === 'setup' && (
+                <AdminSetupPage city={city} />
               )}
 
               {/* AI Test Tab */}

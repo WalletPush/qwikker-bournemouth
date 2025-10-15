@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { UserDiscoverPage } from '@/components/user/user-discover-page'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
@@ -12,7 +13,31 @@ interface DiscoverPageProps {
 }
 
 export default async function DiscoverPage({ searchParams }: DiscoverPageProps) {
-  const supabase = createServiceRoleClient()
+  // SECURITY: Validate franchise first
+  let currentCity: string
+  try {
+    currentCity = await getSafeCurrentCity()
+  } catch (error) {
+    console.error('❌ Invalid franchise access:', error)
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+          <p className="text-slate-400">Invalid franchise location detected.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Use tenant-aware client instead of service role
+  let supabase
+  try {
+    supabase = await createTenantAwareClient()
+  } catch (error) {
+    console.warn('⚠️ Falling back to service role client:', error)
+    supabase = createServiceRoleClient()
+  }
+
   const resolvedSearchParams = await searchParams
   const urlWalletPassId = resolvedSearchParams.wallet_pass_id
   

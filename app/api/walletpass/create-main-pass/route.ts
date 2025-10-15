@@ -48,13 +48,13 @@ export async function POST(request: NextRequest) {
       'Organization_Name': 'Qwikker',
       'Pass_Type': 'Loyalty Card',
       
-      // CRITICAL: Personalized back-of-pass links (FIXED - includes wallet_pass_id)
-      'Offers_Url': `https://${city || 'bournemouth'}.qwikker.com/user/offers?wallet_pass_id=${serialNumber}`,
-      'AI_Url': `https://${city || 'bournemouth'}.qwikker.com/user/chat?wallet_pass_id=${serialNumber}`,
-      'Dashboard_Url': `https://${city || 'bournemouth'}.qwikker.com/user/dashboard?wallet_pass_id=${serialNumber}`,
+      // CRITICAL: Bulletproof shortlinks (never break, always work)
+      'Offers_Url': `https://qwikkerdashboard-theta.vercel.app/user/offers?wallet_pass_id=${serialNumber}`,
+      'AI_Url': `https://qwikkerdashboard-theta.vercel.app/s/${serialNumber.slice(-8)}/chat`,
+      'Dashboard_Url': `https://qwikkerdashboard-theta.vercel.app/s/${serialNumber.slice(-8)}`,
       
-      // Barcode for user identification (FIXED - links to personalized dashboard)
-      'barcode_value': `https://${city || 'bournemouth'}.qwikker.com/user/dashboard?wallet_pass_id=${serialNumber}`,
+      // Barcode for user identification (Bulletproof shortlink)
+      'barcode_value': `https://qwikkerdashboard-theta.vercel.app/s/${serialNumber.slice(-8)}`,
       'barcode_format': 'PKBarcodeFormatQR',
       'barcode_message': 'Scan to access your personalized Qwikker dashboard'
     }

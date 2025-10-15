@@ -14,22 +14,29 @@ export interface ActivityItem {
   timestamp: Date
 }
 
-export async function getRecentBusinessActivity(): Promise<ActivityItem[]> {
+export async function getRecentBusinessActivity(franchiseCity?: string): Promise<ActivityItem[]> {
   const supabase = createServiceRoleClient()
   const activity: ActivityItem[] = []
 
   try {
-    // Get recently joined businesses (last 7 days)
+    // Get recently joined businesses (last 7 days) - FRANCHISE FILTERED
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
     
-    const { data: recentBusinesses } = await supabase
+    let query = supabase
       .from('business_profiles')
-      .select('business_name, created_at, business_town')
+      .select('business_name, created_at, business_town, city')
       .eq('status', 'approved')
       .gte('created_at', sevenDaysAgo.toISOString())
       .order('created_at', { ascending: false })
       .limit(5)
+    
+    // 🔒 SECURITY: Filter by franchise if provided
+    if (franchiseCity) {
+      query = query.eq('city', franchiseCity)
+    }
+    
+    const { data: recentBusinesses } = await query
 
     recentBusinesses?.forEach(business => {
       activity.push({
@@ -45,15 +52,22 @@ export async function getRecentBusinessActivity(): Promise<ActivityItem[]> {
       })
     })
 
-    // Get recently added offers (businesses that got offers in last 7 days)
-    const { data: recentOffers } = await supabase
+    // Get recently added offers (businesses that got offers in last 7 days) - FRANCHISE FILTERED
+    let offersQuery = supabase
       .from('business_profiles')
-      .select('business_name, offer_name, updated_at, business_town')
+      .select('business_name, offer_name, updated_at, business_town, city')
       .eq('status', 'approved')
       .not('offer_name', 'is', null)
       .gte('updated_at', sevenDaysAgo.toISOString())
       .order('updated_at', { ascending: false })
       .limit(5)
+    
+    // 🔒 SECURITY: Filter by franchise if provided
+    if (franchiseCity) {
+      offersQuery = offersQuery.eq('city', franchiseCity)
+    }
+    
+    const { data: recentOffers } = await offersQuery
 
     recentOffers?.forEach(business => {
       activity.push({
@@ -69,15 +83,22 @@ export async function getRecentBusinessActivity(): Promise<ActivityItem[]> {
       })
     })
 
-    // Get businesses with secret menu items (from additional_notes)
-    const { data: secretMenuBusinesses } = await supabase
+    // Get businesses with secret menu items (from additional_notes) - FRANCHISE FILTERED
+    let secretQuery = supabase
       .from('business_profiles')
-      .select('business_name, additional_notes, updated_at, business_town')
+      .select('business_name, additional_notes, updated_at, business_town, city')
       .eq('status', 'approved')
       .not('additional_notes', 'is', null)
       .gte('updated_at', sevenDaysAgo.toISOString())
       .order('updated_at', { ascending: false })
       .limit(3)
+    
+    // 🔒 SECURITY: Filter by franchise if provided
+    if (franchiseCity) {
+      secretQuery = secretQuery.eq('city', franchiseCity)
+    }
+    
+    const { data: secretMenuBusinesses } = await secretQuery
 
     secretMenuBusinesses?.forEach(business => {
       try {

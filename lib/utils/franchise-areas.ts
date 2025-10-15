@@ -12,17 +12,58 @@
 
 import { headers } from 'next/headers'
 
-// 🎯 SIMPLIFIED: Domain-based franchise system
+// 🎯 DYNAMIC: Domain-based franchise system - cities loaded from database
 // Each domain gets ONE city - no complex area mapping needed
-export const FRANCHISE_CITIES = [
-  'bournemouth', // bournemouth.qwikker.com
-  'calgary',     // calgary.qwikker.com  
-  'london',      // london.qwikker.com
-  'paris',       // paris.qwikker.com
-  // Add more franchise cities as they expand
-] as const
 
-export type FranchiseCity = typeof FRANCHISE_CITIES[number]
+import { createServiceRoleClient } from '@/lib/supabase/server'
+
+// Cache for franchise cities to avoid repeated DB calls
+let _franchiseCitiesCache: string[] | null = null
+let _cacheExpiry: number = 0
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Get all active franchise cities from database
+ */
+export async function getFranchiseCities(): Promise<string[]> {
+  const now = Date.now()
+  
+  // Return cached result if still valid
+  if (_franchiseCitiesCache && now < _cacheExpiry) {
+    return _franchiseCitiesCache
+  }
+  
+  try {
+    const supabase = createServiceRoleClient()
+    const { data: configs } = await supabase
+      .from('franchise_crm_configs')
+      .select('city')
+      .eq('status', 'active')
+      .order('city')
+    
+    const cities = configs?.map(c => c.city) || ['bournemouth'] // Fallback
+    
+    // Update cache
+    _franchiseCitiesCache = cities
+    _cacheExpiry = now + CACHE_DURATION
+    
+    return cities
+  } catch (error) {
+    console.warn('Failed to load franchise cities from DB, using fallback:', error)
+    return ['bournemouth', 'calgary', 'london', 'paris'] // Static fallback
+  }
+}
+
+/**
+ * Check if a city is a valid franchise
+ */
+export async function isValidFranchiseCity(city: string): Promise<boolean> {
+  const cities = await getFranchiseCities()
+  return cities.includes(city.toLowerCase())
+}
+
+// Legacy type for backward compatibility
+export type FranchiseCity = string
 
 // Franchise display names
 export const FRANCHISE_DISPLAY_NAMES: Record<string, string> = {
@@ -36,9 +77,11 @@ export const FRANCHISE_DISPLAY_NAMES: Record<string, string> = {
  * 🎯 SIMPLIFIED: Get franchise city (just returns the city itself)
  * Domain-based system: bournemouth.qwikker.com → 'bournemouth'
  */
-export function getFranchiseCity(franchiseKey: string): string {
+export async function getFranchiseCity(franchiseKey: string): Promise<string> {
   const city = franchiseKey.toLowerCase()
-  if (!FRANCHISE_CITIES.includes(city as FranchiseCity)) {
+  const isValid = await isValidFranchiseCity(city)
+  
+  if (!isValid) {
     console.warn(`⚠️ Unknown franchise: ${franchiseKey}, defaulting to Bournemouth`)
     return 'bournemouth'
   }
@@ -61,7 +104,7 @@ export function getFranchiseAreas(franchiseKey: string): string[] {
  * - localhost:3000 → 'bournemouth' (default)
  * - qwikker.com → 'bournemouth' (main domain default)
  */
-export function getFranchiseFromHostname(hostname: string): string {
+export async function getFranchiseFromHostname(hostname: string): Promise<string> {
   // Handle localhost and development
   if (hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('192.168')) {
     return 'bournemouth' // Default for local development
@@ -72,7 +115,7 @@ export function getFranchiseFromHostname(hostname: string): string {
     // Try to extract franchise from Vercel URL pattern
     const parts = hostname.split('-')
     for (const part of parts) {
-      if (FRANCHISE_CITIES.includes(part.toLowerCase() as FranchiseCity)) {
+      if (await isValidFranchiseCity(part.toLowerCase())) {
         console.log(`🌐 Vercel deployment detected - using ${part} franchise`)
         return part.toLowerCase()
       }
@@ -88,7 +131,7 @@ export function getFranchiseFromHostname(hostname: string): string {
     const subdomain = parts[0].toLowerCase()
     
     // Check if it's a known franchise
-    if (FRANCHISE_CITIES.includes(subdomain as FranchiseCity)) {
+    if (await isValidFranchiseCity(subdomain)) {
       console.log(`🌍 Franchise detected from subdomain: ${subdomain}`)
       return subdomain
     }
@@ -109,10 +152,10 @@ export function getFranchiseCityFromHostname(hostname: string): string {
 /**
  * Get franchise city from Next.js request headers
  */
-export function getFranchiseCityFromRequest(): string {
-  const headersList = headers()
+export async function getFranchiseCityFromRequest(): Promise<string> {
+  const headersList = await headers()
   const host = headersList.get('host') || 'localhost'
-  return getFranchiseFromHostname(host)
+  return await getFranchiseFromHostname(host)
 }
 
 /**
@@ -120,7 +163,8 @@ export function getFranchiseCityFromRequest(): string {
  */
 export function getFranchiseAreasFromHostname(hostname: string): string[] {
   console.warn('⚠️ getFranchiseAreasFromHostname is deprecated - use getFranchiseCityFromHostname instead')
-  return [getFranchiseFromHostname(hostname)]
+  // This function is deprecated and should not be used
+  return ['bournemouth'] // Fallback
 }
 
 /**
@@ -128,7 +172,9 @@ export function getFranchiseAreasFromHostname(hostname: string): string[] {
  */
 export function getFranchiseAreasFromRequest(): string[] {
   console.warn('⚠️ getFranchiseAreasFromRequest is deprecated - use getFranchiseCityFromRequest instead')
-  return [getFranchiseCityFromRequest()]
+  // Can't await in sync function, so use hostname directly
+  const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
+  return [getFranchiseFromHostname(host)]
 }
 
 /**

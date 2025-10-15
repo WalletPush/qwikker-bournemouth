@@ -161,7 +161,7 @@ export function getFranchiseCRMConfigSync(city: FranchiseCity): FranchiseCRMConf
  * Get all franchise cities that have CRM configurations
  */
 export function getAllFranchiseCities(): FranchiseCity[] {
-  return Object.keys(FRANCHISE_CRM_CONFIGS) as FranchiseCity[]
+  return Object.keys(FALLBACK_FRANCHISE_CRM_CONFIGS) as FranchiseCity[]
 }
 
 /**
@@ -180,7 +180,7 @@ export function validateCRMConfig(city: FranchiseCity): {
   errors: string[]
   warnings: string[]
 } {
-  const config = FRANCHISE_CRM_CONFIGS[city]
+  const config = FALLBACK_FRANCHISE_CRM_CONFIGS[city]
   const errors: string[] = []
   const warnings: string[] = []
   

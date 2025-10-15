@@ -9,7 +9,7 @@ import { getBusinessCRMData } from '@/lib/actions/admin-crm-actions'
 export default async function AdminPage() {
   // Get city from URL subdomain
   const headersList = await headers()
-  const currentCity = getCityFromRequest(headersList)
+  const currentCity = await getCityFromRequest(headersList)
   
   // Check for admin session cookie
   const cookieStore = await cookies()

@@ -1,5 +1,7 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
+import { UserChatPage } from '@/components/user/user-chat-page'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 
 export default async function ChatPage({
@@ -7,7 +9,31 @@ export default async function ChatPage({
 }: {
   searchParams: Promise<{ wallet_pass_id?: string; user_id?: string }>
 }) {
-  const supabase = createServiceRoleClient()
+  // SECURITY: Validate franchise first
+  let currentCity: string
+  try {
+    currentCity = await getSafeCurrentCity()
+  } catch (error) {
+    console.error('❌ Invalid franchise access:', error)
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+          <p className="text-slate-400">Invalid franchise location detected.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Use tenant-aware client instead of service role
+  let supabase
+  try {
+    supabase = await createTenantAwareClient()
+  } catch (error) {
+    console.warn('⚠️ Falling back to service role client:', error)
+    supabase = createServiceRoleClient()
+  }
+
   const params = await searchParams
   const urlWalletPassId = params.wallet_pass_id
   const urlUserId = params.user_id // Support old system
@@ -31,6 +57,7 @@ export default async function ChatPage({
       .from('app_users')
       .select('name, level, tier, total_points, city, preferred_categories')
       .eq('wallet_pass_id', userId)
+      .eq('city', currentCity) // Explicit city filter for extra safety
       .single()
     currentUser = user
   } catch (error) {
@@ -43,13 +70,7 @@ export default async function ChatPage({
       currentUser={currentUser}
       walletPassId={userId}
     >
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🤖</div>
-          <h2 className="text-2xl font-bold text-white mb-2">AI Chat Coming Soon</h2>
-          <p className="text-slate-400">We're working on integrating your AI companion</p>
-        </div>
-      </div>
+      <UserChatPage currentUser={{ ...currentUser, wallet_pass_id: userId }} />
     </UserDashboardLayout>
   )
 }
