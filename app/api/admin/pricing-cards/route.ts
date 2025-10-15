@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createServiceRoleClient()
+    const supabase = createAdminClient()
 
     // Update the franchise_crm_configs table with new pricing cards and settings
     const { error } = await supabase
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const supabase = createServiceRoleClient()
+    const supabase = createAdminClient()
 
     // Get current pricing cards and config for the city
     const { data, error } = await supabase
