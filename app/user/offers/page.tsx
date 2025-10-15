@@ -109,6 +109,16 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   
   console.log(`📊 Offers Page: User city: ${userCity}, Franchise city: ${franchiseCity}`)
   
+  // First get approved businesses for this franchise
+  const { data: franchiseBusinesses } = await supabase
+    .from('business_profiles')
+    .select('id')
+    .eq('city', franchiseCity)
+    .eq('status', 'approved')
+  
+  const businessIds = franchiseBusinesses?.map(b => b.id) || []
+  
+  // Then get offers for those businesses
   const { data, error: fetchError } = await supabase
     .from('business_offers')
     .select(`
@@ -140,7 +150,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       )
     `)
     .eq('status', 'approved')
-    .eq('business.city', franchiseCity) // 🎯 FRANCHISE FILTERING: Use city field for franchise
+    .in('business_id', businessIds.length > 0 ? businessIds : ['no-matches'])
     .not('business.business_name', 'is', null)
     .order('created_at', { ascending: false })
   
