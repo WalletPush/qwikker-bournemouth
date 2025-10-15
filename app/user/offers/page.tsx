@@ -1,6 +1,5 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserOffersPage } from '@/components/user/user-offers-page'
-import { createTenantAwareClient } from '@/lib/utils/tenant-security'
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { updatePassActivity } from '@/lib/utils/pass-status-tracker'
