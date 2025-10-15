@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getFranchiseCity } from '@/lib/utils/franchise-areas'
 
 export async function GET(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'City parameter is required' }, { status: 400 })
     }
 
-    const supabase = createServiceRoleClient()
+    const supabase = createAdminClient()
     
     // 🎯 SIMPLIFIED FRANCHISE SYSTEM: Get franchise city
     const franchiseCity = getFranchiseCity(city)

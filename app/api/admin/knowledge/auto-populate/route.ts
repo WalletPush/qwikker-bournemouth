@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { storeKnowledgeWithEmbedding } from '@/lib/ai/embeddings'
 
 /**
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const supabase = createServiceRoleClient()
+    const supabase = createAdminClient()
     
     // Get all approved businesses for the city
     const { data: businesses, error } = await supabase

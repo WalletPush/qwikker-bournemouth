@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
     } else {
       // For production, validate against database
       try {
-        const { createServiceRoleClient } = await import('@/lib/supabase/server')
-        const supabase = createServiceRoleClient()
+        const { createAdminClient } = await import('@/lib/supabase/admin')
+        const supabase = createAdminClient()
         
         const { data: franchise } = await supabase
           .from('franchise_crm_configs')
