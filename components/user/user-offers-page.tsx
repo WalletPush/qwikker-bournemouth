@@ -508,18 +508,30 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   }
 
   const OfferCard = ({ offer }: { offer: any }) => {
-    // Distinguish real vs mock offers: real offers have businessCategory, mock offers don't
-    const isRealOffer = !!offer.businessCategory
+    // Distinguish real vs mock offers: real offers have 'image' property from transformation, mock offers don't
+    const isRealOffer = !!offer.image
     const business = isRealOffer ? null : mockBusinesses.find(b => b.id === offer.businessId)
-    const businessName = offer.business_profiles?.business_name || offer.businessName || business?.name || 'Unknown Business'
+    const businessName = offer.businessName || business?.name || 'Unknown Business'
     
     // Create business slug for ref and highlighting
     const businessSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-')
     
-    // Fix image selection: for real offers use offer.image, then business image, for mock offers use business.images[0]
+    // Fix image selection: for real offers use offer.image (from transformation), for mock offers use business.images[0]
     const businessImage = isRealOffer
-      ? (offer.offer_image || offer.business_profiles?.business_images?.[0] || '/placeholder-business.jpg') 
+      ? (offer.image || '/placeholder-business.jpg') 
       : (business?.images?.[0] || '/placeholder-business.jpg')
+    
+    // DEBUG: Log image selection for mock offers
+    if (!isRealOffer) {
+      console.log('🖼️ Mock offer image debug:', {
+        offerTitle: offer.title,
+        businessId: offer.businessId,
+        businessFound: !!business,
+        businessName: business?.name,
+        businessImages: business?.images,
+        finalImage: businessImage
+      })
+    }
     
     const businessRating = offer.businessRating || business?.rating || 4.5
     
