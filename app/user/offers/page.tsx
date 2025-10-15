@@ -139,10 +139,10 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       created_at,
       business_id,
       status,
-      business_profiles!inner (
+      business_profiles (
         id,
         business_name,
-        business_image,
+        business_images,
         business_tier
       )
     `)
@@ -164,7 +164,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     console.error('Error fetching business offers:', error)
   } else {
     console.log(`📊 Offers Page: Found ${businessOffers.length} approved offers`)
-    console.log('📊 Offers:', businessOffers.map(offer => `${offer.offer_name} at ${offer.business?.business_name} (${offer.business?.business_town})`))
+    console.log('📊 Offers:', businessOffers.map(offer => `${offer.offer_name} at ${offer.business_profiles?.business_name || 'Unknown'} (${offer.business_profiles?.business_tier || 'N/A'})`))
   }
   
   // Filter out expired offers

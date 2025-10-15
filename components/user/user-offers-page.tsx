@@ -518,7 +518,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     
     // Fix image selection: for real offers use offer.image, then business image, for mock offers use business.images[0]
     const businessImage = isRealOffer
-      ? (offer.offer_image || offer.business_profiles?.business_image || '/placeholder-business.jpg') 
+      ? (offer.offer_image || offer.business_profiles?.business_images?.[0] || '/placeholder-business.jpg') 
       : (business?.images?.[0] || '/placeholder-business.jpg')
     
     const businessRating = offer.businessRating || business?.rating || 4.5
