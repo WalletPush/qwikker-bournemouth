@@ -33,14 +33,10 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     )
   }
 
-  // Use tenant-aware client instead of service role
-  let supabase
-  try {
-    supabase = await createTenantAwareClient()
-  } catch (error) {
-    console.warn('⚠️ Falling back to service role client:', error)
-    supabase = await createTenantAwareClient()
-  }
+  // TEMPORARY: Test with service role client to debug
+  const { createServiceRoleClient } = await import('@/lib/supabase/server')
+  const supabase = createServiceRoleClient()
+  console.log('🔧 TEMPORARY: Using service role client for debugging')
 
   const resolvedSearchParams = await searchParams
   const urlWalletPassId = resolvedSearchParams.wallet_pass_id
