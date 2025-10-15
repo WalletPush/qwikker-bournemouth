@@ -33,10 +33,9 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     )
   }
 
-  // TEMPORARY: Test with service role client to debug
-  const { createServiceRoleClient } = await import('@/lib/supabase/server')
-  const supabase = createServiceRoleClient()
-  console.log('🔧 TEMPORARY: Using service role client for debugging')
+  // Use tenant-aware client with fixed RLS policies
+  const supabase = await createTenantAwareClient()
+  console.log('✅ Using tenant-aware client with fixed business_offers RLS')
 
   const resolvedSearchParams = await searchParams
   const urlWalletPassId = resolvedSearchParams.wallet_pass_id
