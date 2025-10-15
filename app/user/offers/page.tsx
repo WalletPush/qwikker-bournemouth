@@ -110,13 +110,21 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   console.log(`📊 Offers Page: User city: ${userCity}, Franchise city: ${franchiseCity}`)
   
   // First get approved businesses for this franchise
-  const { data: franchiseBusinesses } = await supabase
+  const { data: franchiseBusinesses, error: businessError } = await supabase
     .from('business_profiles')
-    .select('id')
+    .select('id, business_name, city, status')
     .eq('city', franchiseCity)
     .eq('status', 'approved')
   
+  console.log(`📊 Offers Page: Business query result:`, {
+    franchiseBusinesses,
+    businessError,
+    franchiseCity,
+    count: franchiseBusinesses?.length || 0
+  })
+  
   const businessIds = franchiseBusinesses?.map(b => b.id) || []
+  console.log(`📊 Offers Page: Business IDs for offers query:`, businessIds)
   
   // Then get offers for those businesses
   const { data, error: fetchError } = await supabase
