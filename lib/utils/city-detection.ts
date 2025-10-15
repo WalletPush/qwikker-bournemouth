@@ -3,7 +3,9 @@
  * Detects city from URL subdomain for multi-city deployment
  */
 
-export type FranchiseCity = 'bournemouth' | 'calgary' | 'london' | 'paris'
+import { isValidFranchiseCity } from './franchise-areas'
+
+export type FranchiseCity = string // Now dynamic instead of hard-coded
 
 /**
  * Extract city from hostname/subdomain
@@ -13,7 +15,7 @@ export type FranchiseCity = 'bournemouth' | 'calgary' | 'london' | 'paris'
  * - localhost:3000 -> 'bournemouth' (default for development)
  * - qwikker.com -> 'bournemouth' (default for main domain)
  */
-export function getCityFromHostname(hostname: string): FranchiseCity {
+export async function getCityFromHostname(hostname: string): Promise<FranchiseCity> {
   // Handle localhost and development
   if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
     return 'bournemouth' // Default for local development
@@ -24,32 +26,32 @@ export function getCityFromHostname(hostname: string): FranchiseCity {
   if (parts.length >= 2) {
     const subdomain = parts[0].toLowerCase()
     
-    // Check for known cities
-    switch (subdomain) {
-      case 'calgary':
-        return 'calgary'
-      case 'london':
-        return 'london'
-      case 'paris':
-        return 'paris'
-      case 'bournemouth':
-        return 'bournemouth'
-      default:
-        // Default to bournemouth for unknown subdomains or main domain
-        return 'bournemouth'
+    // Validate against database instead of hard-coded switch
+    const isValid = await isValidFranchiseCity(subdomain)
+    if (isValid) {
+      return subdomain
     }
+    
+    // Check if it's the main domain (www, app, etc.)
+    if (['www', 'app', 'api'].includes(subdomain)) {
+      return 'bournemouth' // Default for main domain
+    }
+    
+    // Unknown subdomain - this is now a security risk
+    console.warn(`⚠️ Unknown subdomain detected: ${subdomain}`)
+    throw new Error(`Invalid franchise subdomain: ${subdomain}`)
   }
   
-  // Fallback to bournemouth
+  // Fallback to bournemouth for main domain
   return 'bournemouth'
 }
 
 /**
  * Get city from Next.js request headers
  */
-export function getCityFromRequest(headers: Headers): FranchiseCity {
+export async function getCityFromRequest(headers: Headers): Promise<FranchiseCity> {
   const host = headers.get('host') || ''
-  return getCityFromHostname(host)
+  return await getCityFromHostname(host)
 }
 
 /**

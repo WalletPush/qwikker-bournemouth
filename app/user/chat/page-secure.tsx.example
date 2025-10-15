@@ -1,0 +1,111 @@
+/**
+ * EXAMPLE: Secure Chat Page with Tenant Isolation
+ * 
+ * This shows how to migrate from service-role to tenant-aware client
+ * WITHOUT breaking existing functionality.
+ * 
+ * TO MIGRATE:
+ * 1. Apply the tenant security migration first
+ * 2. Replace imports and client creation
+ * 3. Test thoroughly
+ * 4. Rename this file to page.tsx when ready
+ */
+
+import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
+import { UserChatPage } from '@/components/user/user-chat-page'
+import { createServiceRoleClient } from '@/lib/supabase/server' // Keep as fallback
+import { createTenantAwareClient, getSafeCurrentCity, logServiceRoleUsage } from '@/lib/utils/tenant-security'
+import { getWalletPassCookie } from '@/lib/utils/wallet-session'
+
+export default async function ChatPageSecure({
+  searchParams
+}: {
+  searchParams: Promise<{ wallet_pass_id?: string; user_id?: string }>
+}) {
+  // SECURITY: Validate franchise first
+  let currentCity: string
+  try {
+    currentCity = await getSafeCurrentCity()
+  } catch (error) {
+    console.error('❌ Invalid franchise access:', error)
+    // Return error page or redirect
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+          <p className="text-slate-400">Invalid franchise location detected.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Use tenant-aware client instead of service role
+  let supabase
+  try {
+    supabase = await createTenantAwareClient()
+  } catch (error) {
+    console.warn('⚠️ Falling back to service role client:', error)
+    supabase = createServiceRoleClient()
+    logServiceRoleUsage('chat-page', 'tenant-aware client failed')
+  }
+
+  const params = await searchParams
+  const urlWalletPassId = params.wallet_pass_id
+  const urlUserId = params.user_id // Support old system
+  
+  // Get wallet pass ID from URL or cookie
+  let cookieWalletPassId = null
+  try {
+    cookieWalletPassId = await getWalletPassCookie()
+  } catch (error) {
+    console.log('Cookie read error (safe to ignore):', error)
+  }
+  
+  // Priority: URL wallet_pass_id > URL user_id > cookie
+  const userId = urlWalletPassId || urlUserId || cookieWalletPassId || null
+  
+  // Get current user for personalized chat
+  let currentUser = null
+  
+  try {
+    // SECURITY: This query now automatically filters by city via RLS
+    const { data: user } = await supabase
+      .from('app_users')
+      .select('name, level, tier, total_points, city, preferred_categories')
+      .eq('wallet_pass_id', userId)
+      .eq('city', currentCity) // Explicit city filter for extra safety
+      .single()
+    
+    currentUser = user
+  } catch (error) {
+    console.log('No user found, using generic chat')
+  }
+  
+  return (
+    <UserDashboardLayout 
+      currentSection="chat" 
+      currentUser={currentUser}
+      walletPassId={userId}
+    >
+      <UserChatPage currentUser={{ ...currentUser, wallet_pass_id: userId }} />
+    </UserDashboardLayout>
+  )
+}
+
+/**
+ * MIGRATION CHECKLIST:
+ * 
+ * ✅ 1. Apply tenant security migration
+ * ✅ 2. Import tenant security utilities  
+ * ✅ 3. Add franchise validation
+ * ✅ 4. Replace service-role with tenant-aware client
+ * ✅ 5. Add explicit city filtering
+ * ✅ 6. Add error handling for invalid franchises
+ * ✅ 7. Keep fallback to service-role for safety
+ * 
+ * TESTING:
+ * - Test with valid franchise (bournemouth.qwikker.com)
+ * - Test with invalid subdomain (should block access)
+ * - Test with existing user data (should work normally)
+ * - Test chat functionality (should work normally)
+ */

@@ -17,9 +17,10 @@ interface UserDashboardHomeProps {
   }
   currentUser?: any
   walletPassId?: string
+  franchiseCity?: string
 }
 
-export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDashboardHomeProps) {
+export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseCity }: UserDashboardHomeProps) {
   
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
@@ -52,7 +53,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
     const loadActivity = async () => {
       // Get real business activity from database
       const { getRecentBusinessActivity } = await import('@/lib/actions/recent-activity-actions')
-      const businessActivity = await getRecentBusinessActivity()
+      const businessActivity = await getRecentBusinessActivity(franchiseCity)
       
       if (typeof window !== 'undefined') {
         // Get actual badge count from badge tracker
@@ -194,14 +195,14 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
             <CardContent className="p-6 text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
                 <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
               </div>
               <h3 className="font-semibold text-slate-100 text-base mb-2">Discover</h3>
               <p className="text-emerald-400 font-bold text-2xl">{businessCount}</p>
               <p className="text-sm text-slate-400">places</p>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
         </Link>
 
         {/* Offers */}
@@ -210,8 +211,8 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
             <CardContent className="p-6 text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
                 <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
               </div>
               <h3 className="font-semibold text-slate-100 text-base mb-2">Offers</h3>
               <p className="text-orange-400 font-bold text-2xl">{offerCount}</p>
@@ -232,8 +233,8 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
               <h3 className="font-semibold text-slate-100 text-base mb-2">Secrets</h3>
               <p className="text-purple-400 font-bold text-2xl">{secretMenuCount}</p>
               <p className="text-sm text-slate-400">hidden</p>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
         </Link>
 
         {/* Achievements */}
@@ -243,7 +244,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
               <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
                 <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                </svg>
+                  </svg>
               </div>
               <h3 className="font-semibold text-slate-100 text-base mb-2">Badges</h3>
               <p className="text-yellow-400 font-bold text-2xl">{badgeCount}</p>
@@ -251,7 +252,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
             </CardContent>
           </Card>
         </Link>
-      </div>
+              </div>
 
       {/* Activity Feed */}
       <Card className="bg-slate-800/40 border border-slate-700/50">
@@ -316,21 +317,21 @@ export function UserDashboardHome({ stats, currentUser, walletPassId }: UserDash
                 </Link>
               )
             })}
-          </div>
-
+              </div>
+              
           {/* View All Activity Button */}
           <div className="mt-4 pt-3 border-t border-slate-600/30">
             <Button asChild variant="ghost" className="w-full text-slate-400 hover:text-slate-300 hover:bg-slate-700/50">
               <Link href={getNavUrl("/user/chat")}>
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+                    </svg>
                 Ask AI about recent updates
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
     </div>
   )
 }

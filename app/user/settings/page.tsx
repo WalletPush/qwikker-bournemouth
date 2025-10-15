@@ -1,6 +1,7 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserSettingsPage } from '@/components/user/user-settings-page'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 
 interface SettingsPageProps {
@@ -10,6 +11,22 @@ interface SettingsPageProps {
 }
 
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
+  // SECURITY: Validate franchise first
+  let currentCity: string
+  try {
+    currentCity = await getSafeCurrentCity()
+  } catch (error) {
+    console.error('❌ Invalid franchise access:', error)
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+          <p className="text-slate-400">Invalid franchise location detected.</p>
+        </div>
+      </div>
+    )
+  }
+
   const resolvedSearchParams = await searchParams
   const urlWalletPassId = resolvedSearchParams.wallet_pass_id
   
@@ -23,8 +40,15 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   
   const walletPassId = urlWalletPassId || cookieWalletPassId || null
   
-  // Get user data
-  const supabase = createServiceRoleClient()
+  // Use tenant-aware client instead of service role
+  let supabase
+  try {
+    supabase = await createTenantAwareClient()
+  } catch (error) {
+    console.warn('⚠️ Falling back to service role client:', error)
+    supabase = createServiceRoleClient()
+  }
+  
   let currentUser = null
   
   if (walletPassId) {
@@ -34,6 +58,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         .select('*')
         .eq('wallet_pass_id', walletPassId)
         .eq('wallet_pass_status', 'active')
+        .eq('city', currentCity) // Explicit city filter for extra safety
         .single()
       
       if (user) {
@@ -57,7 +82,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       wallet_pass_id: walletPassId,
       name: 'Qwikker User',
       email: 'user@qwikker.com',
-      city: 'bournemouth'
+      city: currentCity // Use validated city instead of hardcoded 'bournemouth'
     }
   }
   

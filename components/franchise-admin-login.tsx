@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { FranchiseCity } from '@/lib/utils/city-detection'
+import type { FranchiseCity } from '@/lib/utils/client-city-detection'
 
 interface FranchiseAdminLoginProps {
   city: FranchiseCity
