@@ -2,6 +2,8 @@ import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserSettingsPage } from '@/components/user/user-settings-page'
 // Removed service role import for security
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+
+export const dynamic = 'force-dynamic'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 
 interface SettingsPageProps {

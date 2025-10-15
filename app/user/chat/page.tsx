@@ -1,5 +1,7 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserChatPage } from '@/components/user/user-chat-page'
+
+export const dynamic = 'force-dynamic'
 // Removed service role import for security
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'

@@ -1,6 +1,8 @@
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { UserDiscoverPage } from '@/components/user/user-discover-page'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
+
+export const dynamic = 'force-dynamic'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'

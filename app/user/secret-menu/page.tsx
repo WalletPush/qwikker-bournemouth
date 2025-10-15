@@ -1,6 +1,8 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserSecretMenuPage } from '@/components/user/user-secret-menu-page'
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+
+export const dynamic = 'force-dynamic'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { Suspense } from 'react'
 

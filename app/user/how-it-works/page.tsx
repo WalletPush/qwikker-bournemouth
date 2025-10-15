@@ -3,6 +3,8 @@ import { UserHowItWorksPage } from '@/components/user/user-how-it-works-page'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 // Removed service role import for security
 
+export const dynamic = 'force-dynamic'
+
 interface HowItWorksPageProps {
   searchParams: Promise<{
     wallet_pass_id?: string
