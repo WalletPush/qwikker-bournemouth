@@ -82,8 +82,8 @@ export async function getFranchiseCity(franchiseKey: string): Promise<string> {
   const isValid = await isValidFranchiseCity(city)
   
   if (!isValid) {
-    console.warn(`⚠️ Unknown franchise: ${franchiseKey}, defaulting to Bournemouth`)
-    return 'bournemouth'
+    console.error(`🚨 SECURITY: Unknown franchise blocked: ${franchiseKey}`)
+    throw new Error(`Access denied: Unknown franchise '${franchiseKey}'`)
   }
   return city
 }
@@ -163,11 +163,12 @@ export function getFranchiseAreasFromHostname(hostname: string): string[] {
 /**
  * @deprecated Use getFranchiseCityFromRequest instead
  */
-export function getFranchiseAreasFromRequest(): string[] {
+export async function getFranchiseAreasFromRequest(): Promise<string[]> {
   console.warn('⚠️ getFranchiseAreasFromRequest is deprecated - use getFranchiseCityFromRequest instead')
   // Can't await in sync function, so use hostname directly
   const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
-  return [getFranchiseFromHostname(host)]
+  const city = await getFranchiseFromHostname(host)
+  return [city]
 }
 
 /**
@@ -203,8 +204,8 @@ export function getAllFranchiseKeys(): string[] {
 /**
  * 🎯 SIMPLIFIED: Debug function for franchise detection
  */
-export function debugFranchiseDetection(hostname: string) {
-  const franchise = getFranchiseFromHostname(hostname)
+export async function debugFranchiseDetection(hostname: string) {
+  const franchise = await getFranchiseFromHostname(hostname)
   const displayName = getFranchiseDisplayName(franchise)
   
   console.log(`🔍 Franchise Debug:`, {

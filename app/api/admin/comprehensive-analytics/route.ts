@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const supabase = createAdminClient()
     
     // 🎯 SIMPLIFIED FRANCHISE SYSTEM: Get franchise city
-    const franchiseCity = getFranchiseCity(city)
+    const franchiseCity = await getFranchiseCity(city)
     console.log(`📊 Comprehensive Analytics for ${city} franchise city: ${franchiseCity}`)
 
     // Get offer claim trends (last 30 days)
