@@ -1,57 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
 
+/**
+ * LEGACY WEBHOOK ENDPOINT
+ * 
+ * This endpoint is deprecated and redirects to the secure version.
+ * It's kept for backward compatibility during the transition period.
+ * 
+ * @deprecated Use /api/ghl-webhook/user-creation-secure instead
+ */
 export async function POST(request: NextRequest) {
+  console.log('⚠️ DEPRECATED: Legacy webhook called - redirecting to secure endpoint')
+  
   try {
-    console.log('🎫 SIMPLE user creation webhook')
+    // Get the request body
+    const body = await request.text()
     
-    const data = await request.json()
-    console.log('Data received:', JSON.stringify(data, null, 2))
+    // Forward to secure endpoint
+    const secureUrl = new URL('/api/ghl-webhook/user-creation-secure', request.url)
     
-    // Extract basic data
-    const first_name = data.customData?.first_name || data.first_name || 'Unknown'
-    const last_name = data.customData?.last_name || data.last_name || 'User'
-    const email = data.customData?.email || data.email || 'user@qwikker.com'
-    const serialNumber = data.customData?.serialNumber || data.serialNumber
-    
-    if (!serialNumber) {
-      console.error('No serialNumber found')
-      return NextResponse.json({ error: 'No serialNumber' }, { status: 400 })
-    }
-    
-    const supabase = createServiceRoleClient()
-    
-    // Simple user creation with minimal data
-    const { data: newUser, error } = await supabase
-      .from('app_users')
-      .insert({
-        user_id: crypto.randomUUID(),
-        wallet_pass_id: serialNumber,
-        name: `${first_name} ${last_name}`,
-        email: email,
-        city: 'bournemouth',
-        tier: 'explorer',
-        level: 1,
-        wallet_pass_status: 'active',
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-    
-    if (error) {
-      console.error('Database error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-    
-    console.log('✅ User created:', newUser.name)
-    
-    return NextResponse.json({
-      success: true,
-      user: newUser
+    const response = await fetch(secureUrl.toString(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Forward any authentication headers
+        ...(request.headers.get('authorization') && {
+          'authorization': request.headers.get('authorization')!
+        }),
+        ...(request.headers.get('x-webhook-signature') && {
+          'x-webhook-signature': request.headers.get('x-webhook-signature')!
+        }),
+        ...(request.headers.get('x-ghl-signature') && {
+          'x-ghl-signature': request.headers.get('x-ghl-signature')!
+        })
+      },
+      body: body
     })
     
+    const result = await response.json()
+    
+    console.log('✅ Forwarded to secure endpoint:', result)
+    
+    return NextResponse.json(result, { status: response.status })
+    
   } catch (error) {
-    console.error('Webhook error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('❌ Error forwarding to secure endpoint:', error)
+    return NextResponse.json({ 
+      error: 'Webhook processing failed',
+      deprecated: true,
+      message: 'Please update to use /api/ghl-webhook/user-creation-secure'
+    }, { status: 500 })
   }
 }
