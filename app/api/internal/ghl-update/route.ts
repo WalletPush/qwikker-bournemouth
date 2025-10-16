@@ -11,7 +11,7 @@ import { withRateLimit, RATE_LIMIT_PRESETS } from '@/lib/utils/rate-limiting'
 export async function POST(request: NextRequest) {
   try {
     // SECURITY: Rate limiting
-    const rateLimitResult = withRateLimit(
+    const rateLimitResult = await withRateLimit(
       RATE_LIMIT_PRESETS.API_MODERATE,
       'ghl_update'
     )(request)

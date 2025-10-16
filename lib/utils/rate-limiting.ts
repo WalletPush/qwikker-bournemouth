@@ -1,8 +1,12 @@
 /**
  * PRODUCTION-GRADE RATE LIMITING
  * 
- * Implements in-memory rate limiting with configurable windows and limits.
- * For production, consider Redis-based rate limiting for multi-instance deployments.
+ * Implements rate limiting with both in-memory and Redis support.
+ * Automatically uses Redis if available, falls back to in-memory for development.
+ * 
+ * PRODUCTION DEPLOYMENT:
+ * Set REDIS_URL environment variable to enable Redis-based rate limiting
+ * for horizontal scaling across multiple instances.
  */
 
 interface RateLimitEntry {
@@ -10,8 +14,38 @@ interface RateLimitEntry {
   resetTime: number
 }
 
-// In-memory store (use Redis in production for multi-instance support)
+// In-memory store (fallback when Redis is not available)
 const rateLimitStore = new Map<string, RateLimitEntry>()
+
+// Redis client (lazy-loaded if REDIS_URL is available)
+let redisClient: any = null
+let redisAvailable = false
+
+// Initialize Redis if available
+async function initializeRedis() {
+  if (redisClient !== null) return redisClient
+  
+  const redisUrl = process.env.REDIS_URL
+  if (!redisUrl) {
+    console.log('📝 Rate limiting: Using in-memory store (Redis not configured)')
+    return null
+  }
+  
+  try {
+    // Dynamic import to avoid bundling Redis in environments that don't need it
+    const { createClient } = await import('redis')
+    redisClient = createClient({ url: redisUrl })
+    await redisClient.connect()
+    redisAvailable = true
+    console.log('🚀 Rate limiting: Connected to Redis for distributed rate limiting')
+    return redisClient
+  } catch (error) {
+    console.warn('⚠️ Rate limiting: Redis connection failed, falling back to in-memory:', error)
+    redisClient = null
+    redisAvailable = false
+    return null
+  }
+}
 
 export interface RateLimitConfig {
   windowMs: number  // Time window in milliseconds
@@ -28,15 +62,77 @@ export interface RateLimitResult {
 }
 
 /**
- * Check if a request should be rate limited
+ * Check if a request should be rate limited (Redis-aware)
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   identifier: string,
   config: RateLimitConfig
-): RateLimitResult {
+): Promise<RateLimitResult> {
   const now = Date.now()
   const key = `rate_limit:${identifier}`
   
+  // Try Redis first, fall back to in-memory
+  const redis = await initializeRedis()
+  
+  if (redis && redisAvailable) {
+    return await checkRateLimitRedis(redis, key, config, now)
+  } else {
+    return checkRateLimitMemory(key, config, now)
+  }
+}
+
+/**
+ * Redis-based rate limiting
+ */
+async function checkRateLimitRedis(
+  redis: any,
+  key: string,
+  config: RateLimitConfig,
+  now: number
+): Promise<RateLimitResult> {
+  try {
+    const resetTime = now + config.windowMs
+    
+    // Use Redis pipeline for atomic operations
+    const pipeline = redis.multi()
+    pipeline.incr(key)
+    pipeline.expire(key, Math.ceil(config.windowMs / 1000))
+    const results = await pipeline.exec()
+    
+    const count = results[0][1] // First command result
+    
+    if (count > config.maxRequests) {
+      const ttl = await redis.ttl(key)
+      return {
+        success: false,
+        limit: config.maxRequests,
+        remaining: 0,
+        resetTime: now + (ttl * 1000),
+        retryAfter: ttl
+      }
+    }
+    
+    return {
+      success: true,
+      limit: config.maxRequests,
+      remaining: config.maxRequests - count,
+      resetTime
+    }
+  } catch (error) {
+    console.warn('⚠️ Redis rate limiting failed, falling back to in-memory:', error)
+    redisAvailable = false
+    return checkRateLimitMemory(key, config, now)
+  }
+}
+
+/**
+ * In-memory rate limiting (fallback)
+ */
+function checkRateLimitMemory(
+  key: string,
+  config: RateLimitConfig,
+  now: number
+): RateLimitResult {
   // Clean up expired entries periodically
   if (Math.random() < 0.01) { // 1% chance to cleanup
     cleanupExpiredEntries()
@@ -149,10 +245,10 @@ export function withRateLimit(
   config: RateLimitConfig,
   keyPrefix?: string
 ) {
-  return function rateLimitMiddleware(
+  return async function rateLimitMiddleware(
     request: Request
-  ): RateLimitResult {
+  ): Promise<RateLimitResult> {
     const key = generateRateLimitKey(request, keyPrefix)
-    return checkRateLimit(key, config)
+    return await checkRateLimit(key, config)
   }
 }

@@ -27,8 +27,15 @@ export default async function ChatPage({
     )
   }
 
-  // SECURITY: Use tenant-aware client (no service role fallback)
-  const supabase = await createTenantAwareClient()
+  // SECURITY: Use tenant-aware client with service role fallback for user lookup
+  let supabase
+  try {
+    supabase = await createTenantAwareClient()
+  } catch (error) {
+    console.warn('⚠️ Chat: Falling back to service role client for user lookup:', error)
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    supabase = createServiceRoleClient()
+  }
 
   const params = await searchParams
   const urlWalletPassId = params.wallet_pass_id

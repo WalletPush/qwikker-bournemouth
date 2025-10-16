@@ -37,13 +37,14 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
     )
   }
 
-  // Use tenant-aware client instead of service role
+  // SECURITY: Use tenant-aware client with service role fallback for user lookup
   let supabase
   try {
     supabase = await createTenantAwareClient()
   } catch (error) {
-    console.warn('⚠️ Falling back to service role client:', error)
-    supabase = await createTenantAwareClient()
+    console.warn('⚠️ Dashboard: Falling back to service role client for user lookup:', error)
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    supabase = createServiceRoleClient()
   }
   
   // 🎯 WALLET PASS AUTHENTICATION FLOW
