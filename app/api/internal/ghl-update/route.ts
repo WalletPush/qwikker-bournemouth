@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
+import { withRateLimit, RATE_LIMIT_PRESETS } from '@/lib/utils/rate-limiting'
 
 /**
  * SECURE SERVER-ONLY GHL UPDATE WEBHOOK SENDER
@@ -9,6 +10,26 @@ import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
  */
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Rate limiting
+    const rateLimitResult = withRateLimit(
+      RATE_LIMIT_PRESETS.API_MODERATE,
+      'ghl_update'
+    )(request)
+    
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded', retryAfter: rateLimitResult.retryAfter },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': rateLimitResult.retryAfter?.toString() || '60',
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString()
+          }
+        }
+      )
+    }
+    
     const { formData, city } = await request.json()
     
     // Detect city from request or use provided city

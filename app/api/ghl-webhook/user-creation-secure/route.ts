@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
 import { validateWebhookSignature } from '@/lib/utils/webhook-security'
+import { withRateLimit, RATE_LIMIT_PRESETS } from '@/lib/utils/rate-limiting'
 
 /**
  * SECURE USER CREATION WEBHOOK
@@ -45,6 +46,31 @@ function detectCityFromWebhookData(data: Record<string, unknown>): string | null
 export async function POST(request: NextRequest) {
   try {
     console.log('🔐 SECURE user creation webhook')
+    
+    // SECURITY: Rate limiting
+    const rateLimitResult = withRateLimit(
+      RATE_LIMIT_PRESETS.WEBHOOK_STRICT,
+      'webhook_user_creation'
+    )(request)
+    
+    if (!rateLimitResult.success) {
+      console.warn(`🚫 Rate limit exceeded for webhook: ${rateLimitResult.retryAfter}s retry`)
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded',
+          retryAfter: rateLimitResult.retryAfter 
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': rateLimitResult.retryAfter?.toString() || '60',
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
+          }
+        }
+      )
+    }
     
     // Get raw body for signature validation
     const body = await request.text()
@@ -99,10 +125,12 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Final fallback with explicit logging
+    // SECURITY: No fallbacks - reject if city cannot be determined
     if (!city) {
-      city = 'bournemouth'
-      console.warn(`⚠️ Using fallback city: ${city} - consider improving city detection`)
+      console.error('❌ Could not determine franchise city from webhook data or request')
+      return NextResponse.json({ 
+        error: 'Unable to determine franchise city. Please ensure webhook includes city/domain information.' 
+      }, { status: 400 })
     }
     
     console.log(`🏙️ Final city for user creation: ${city}`)
