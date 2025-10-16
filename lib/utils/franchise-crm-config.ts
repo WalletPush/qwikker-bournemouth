@@ -17,7 +17,7 @@ export interface FranchiseCRMConfig {
     phone?: string
   }
   // Optional: Custom CRM settings
-  custom_fields?: Record<string, any>
+  custom_fields?: Record<string, unknown>
   timezone: string
 }
 

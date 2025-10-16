@@ -154,7 +154,7 @@ export async function getFranchiseCityFromRequest(): Promise<string> {
 /**
  * @deprecated Use getFranchiseCityFromHostname instead
  */
-export function getFranchiseAreasFromHostname(hostname: string): string[] {
+export function getFranchiseAreasFromHostname(_hostname: string): string[] {
   console.warn('⚠️ getFranchiseAreasFromHostname is deprecated - use getFranchiseCityFromHostname instead')
   // This function is deprecated and should not be used
   return ['bournemouth'] // Fallback

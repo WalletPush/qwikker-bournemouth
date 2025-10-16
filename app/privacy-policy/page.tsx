@@ -33,7 +33,7 @@ export default function PrivacyPolicyPage() {
             <section>
               <h2 className="text-2xl font-semibold text-white mb-4">1. Introduction</h2>
               <p className="mb-4">
-                Welcome to Qwikker ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform, mobile application, and related services (collectively, the "Service").
+                Welcome to Qwikker (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform, mobile application, and related services (collectively, the &quot;Service&quot;).
               </p>
               <p>
                 This Privacy Policy applies to all information collected through our Service and any related services, sales, marketing, or events. By using our Service, you consent to the data practices described in this policy.

@@ -50,7 +50,7 @@ export default async function WalletInstallPage({ searchParams }: WalletInstallP
           <div className="space-y-3 text-sm text-gray-300">
             <div className="flex items-start space-x-2">
               <span className="text-[#00d083] font-bold">iOS:</span>
-              <span>Use Safari browser and ensure you're on WiFi (not cellular)</span>
+              <span>Use Safari browser and ensure you&apos;re on WiFi (not cellular)</span>
             </div>
             
             <div className="flex items-start space-x-2">
