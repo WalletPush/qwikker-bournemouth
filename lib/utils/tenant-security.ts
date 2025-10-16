@@ -8,7 +8,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
-import { headers } from 'next/headers'
+// headers import removed - not used in current implementation
 
 /**
  * Creates a tenant-aware Supabase client for user-facing pages
@@ -101,11 +101,11 @@ export async function validateTenantWrite(
  * Adds city filter to existing queries (non-breaking helper)
  * Use this to gradually migrate existing service-role queries
  */
-export function addCityFilter<T>(
-  query: any,
+export function addCityFilter(
+  query: unknown,
   city?: string,
   cityColumn: string = 'city'
-): any {
+): unknown {
   if (city && city !== 'all') {
     return query.eq(cityColumn, city)
   }

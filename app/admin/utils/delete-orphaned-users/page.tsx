@@ -63,7 +63,7 @@ export default async function DeleteOrphanedUsersPage() {
               <ol className="list-decimal list-inside space-y-1 text-sm text-red-700">
                 <li>Go to <a href="https://supabase.com/dashboard/project/iiiciapavjonpmldytxf/auth/users" target="_blank" className="underline font-medium">Supabase Dashboard → Authentication → Users</a></li>
                 <li>Find each user listed above</li>
-                <li>Click the "..." menu → "Delete user"</li>
+                <li>Click the &quot;...&quot; menu → &quot;Delete user&quot;</li>
                 <li>Confirm deletion</li>
               </ol>
             </div>

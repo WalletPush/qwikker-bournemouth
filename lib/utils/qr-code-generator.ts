@@ -77,7 +77,7 @@ export function generateQRCodeTemplateName(config: QRCodeConfig, sequence: numbe
  * Validate QR code assignment to prevent conflicts
  */
 export function validateQRAssignment(
-  qrCode: { id: string, qr_type: string, current_assignment?: any },
+  qrCode: { id: string, qr_type: string, current_assignment?: unknown },
   targetBusiness: { id: string, business_name: string, status: string }
 ): { valid: boolean, errors: string[], warnings: string[] } {
   const errors: string[] = []
@@ -142,7 +142,7 @@ export interface QRAnalyticsSummary {
   last_scan: string | null
 }
 
-export function calculateQRAnalytics(analyticsData: any[]): QRAnalyticsSummary {
+export function calculateQRAnalytics(analyticsData: unknown[]): QRAnalyticsSummary {
   if (analyticsData.length === 0) {
     return {
       total_scans: 0,

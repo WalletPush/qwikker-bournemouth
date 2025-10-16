@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
+import { validateWebhookSignature } from '@/lib/utils/webhook-security'
 
 /**
  * SECURE USER CREATION WEBHOOK
@@ -12,24 +13,7 @@ import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
  * 4. Rate limiting considerations
  */
 
-/**
- * Simple webhook signature validation
- * In production, you should use proper HMAC validation with a secret
- */
-function validateWebhookSignature(signature: string | null, body: string): boolean {
-  // For now, just check if signature exists
-  // TODO: Implement proper HMAC-SHA256 validation with webhook secret
-  if (!signature) {
-    console.warn('⚠️ No webhook signature provided - consider adding signature validation')
-    return true // Allow for now, but log warning
-  }
-  
-  // TODO: Implement actual signature validation
-  // const expectedSignature = crypto.createHmac('sha256', WEBHOOK_SECRET).update(body).digest('hex')
-  // return signature === expectedSignature
-  
-  return true // Temporary - accept all signatures
-}
+// Using imported validateWebhookSignature from lib/utils/webhook-security.ts
 
 /**
  * Detect franchise city from webhook data or request
@@ -66,17 +50,29 @@ export async function POST(request: NextRequest) {
     const body = await request.text()
     const data = JSON.parse(body)
     
-    // SECURITY: Validate webhook signature
+    // SECURITY: Validate webhook signature with proper HMAC
     const signature = request.headers.get('x-webhook-signature') || 
                      request.headers.get('x-ghl-signature') ||
                      request.headers.get('authorization')
     
-    if (!validateWebhookSignature(signature, body)) {
-      console.error('❌ Invalid webhook signature')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const webhookSecret = process.env.GHL_WEBHOOK_SECRET
+    
+    if (!webhookSecret) {
+      console.error('❌ Webhook secret not configured')
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 })
     }
     
-    console.log('✅ Webhook signature validated')
+    if (!signature) {
+      console.error('❌ No webhook signature provided')
+      return NextResponse.json({ error: 'Unauthorized: Missing signature' }, { status: 401 })
+    }
+    
+    if (!validateWebhookSignature(body, signature, webhookSecret)) {
+      console.error('❌ Invalid webhook signature')
+      return NextResponse.json({ error: 'Unauthorized: Invalid signature' }, { status: 401 })
+    }
+    
+    console.log('✅ Webhook signature validated with HMAC')
     console.log('Data received:', JSON.stringify(data, null, 2))
     
     // Extract basic data

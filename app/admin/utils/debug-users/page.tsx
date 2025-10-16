@@ -16,7 +16,7 @@ export default async function DebugAppUsersPage() {
             
             {result.data && result.data.length > 0 ? (
               <div className="space-y-4">
-                {result.data.map((user: any) => (
+                {result.data.map((user: { id: string; email?: string; created_at?: string; last_sign_in_at?: string; user_metadata?: Record<string, unknown> }) => (
                   <div key={user.id} className="bg-slate-800 p-6 rounded-lg border border-slate-700">
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div>

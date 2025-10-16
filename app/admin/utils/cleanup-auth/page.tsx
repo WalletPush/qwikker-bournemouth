@@ -95,7 +95,7 @@ export default async function CleanupAuthPage() {
               <h3 className="font-semibold text-yellow-800">⚠️ Recommendation:</h3>
               <p className="text-yellow-700 text-sm">
                 These orphaned users should be removed to prevent authentication confusion.
-                They can cause "empty profile" issues when logging in.
+                They can cause &quot;empty profile&quot; issues when logging in.
               </p>
             </div>
           </div>
@@ -105,7 +105,7 @@ export default async function CleanupAuthPage() {
           <h3 className="font-semibold mb-2">Next Steps:</h3>
           <ol className="list-decimal list-inside space-y-1 text-sm">
             <li>Review the orphaned users above</li>
-            <li>Confirm they're from old deployments</li>
+            <li>Confirm they&apos;re from old deployments</li>
             <li>Use Supabase Dashboard to manually delete them from auth.users</li>
             <li>Or create matching business profiles if they should exist</li>
           </ol>
