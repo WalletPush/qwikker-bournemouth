@@ -151,7 +151,7 @@ export class SimpleBadgeTracker {
   }
 
   // Track specific actions
-  trackAction(action: string, data?: any) {
+  trackAction(action: string, data?: unknown) {
     switch (action) {
       case 'offer_claimed':
         this.awardBadge('first_offer')
