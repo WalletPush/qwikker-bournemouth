@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
           .single()
         
         // Check current offer count for this business
-        const { data: existingOffers, count: offerCount } = await supabaseAdmin
+        const { count: offerCount } = await supabaseAdmin
           .from('business_offers')
           .select('*', { count: 'exact' })
           .eq('business_id', change.business_id)
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
         }
         
         // Create NEW offer in business_offers table
-        const { data: newOffer, error: offerError } = await supabaseAdmin
+        const { error: offerError } = await supabaseAdmin
           .from('business_offers')
           .insert({
             business_id: change.business_id,
@@ -192,12 +192,12 @@ export async function POST(request: NextRequest) {
         if (currentProfile?.additional_notes) {
           try {
             existingNotes = JSON.parse(currentProfile.additional_notes)
-          } catch (e) {
+          } catch {
             existingNotes = {}
           }
         }
         
-        const secretMenuItems = (existingNotes as any).secret_menu_items || []
+        const secretMenuItems = (existingNotes as Record<string, unknown>).secret_menu_items as unknown[] || []
         secretMenuItems.push(change.change_data)
         
         updateData = {

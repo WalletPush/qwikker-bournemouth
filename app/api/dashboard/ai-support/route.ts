@@ -64,7 +64,7 @@ Always be helpful, encouraging, and specific. Provide actionable advice tailored
         role: 'system',
         content: businessContext
       },
-      ...conversationHistory.map((msg: any) => ({
+      ...conversationHistory.map((msg: { role: string; content: string }) => ({
         role: msg.role,
         content: msg.content
       })),
@@ -76,7 +76,7 @@ Always be helpful, encouraging, and specific. Provide actionable advice tailored
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: messages as any,
+      messages: messages as Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
       max_tokens: 500,
       temperature: 0.7,
     })

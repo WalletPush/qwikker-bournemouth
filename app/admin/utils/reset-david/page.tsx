@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createMockUserMember } from '@/lib/actions/create-mock-user'
-import { redirect } from 'next/navigation'
+// redirect import removed - not used
 
 export default async function ResetDavidPage() {
   const supabase = await createClient()
@@ -13,7 +13,7 @@ export default async function ResetDavidPage() {
       .eq('wallet_pass_id', 'QWIK-BOURNEMOUTH-DAVID-2024')
     
     // Recreate fresh David
-    const result = await createMockUserMember()
+    await createMockUserMember() // Result not used
     
     return (
       <div className="min-h-screen bg-slate-900 text-white p-8">
@@ -65,7 +65,7 @@ export default async function ResetDavidPage() {
             <p className="text-sm text-blue-200">
               <strong>Same User = Shared Progress:</strong> You and your dad will see the SAME David. 
               If one person earns a badge or points, the other will see it too. This is because 
-              you're both using the same wallet pass ID.
+              you&apos;re both using the same wallet pass ID.
             </p>
           </div>
         </div>

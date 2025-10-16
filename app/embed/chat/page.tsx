@@ -10,7 +10,7 @@ function EmbedChatContent() {
   const businessName = searchParams.get('business');
   const topic = searchParams.get('topic');
   
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<{ first_name?: string; last_name?: string; wallet_pass_id?: string } | null>(null);
 
   useEffect(() => {
     // Fetch user data if wallet_pass_id provided

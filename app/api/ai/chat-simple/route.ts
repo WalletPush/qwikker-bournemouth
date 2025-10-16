@@ -60,13 +60,13 @@ export async function POST(request: NextRequest) {
       }))
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ AI Chat error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-function generateSimpleResponse(message: string, knowledge: any[], city: string): string {
+function generateSimpleResponse(message: string, knowledge: Array<{ content: string; business_profiles?: { business_name?: string } }>, city: string): string {
   const lowerMessage = message.toLowerCase()
   
   if (knowledge.length === 0) {
@@ -145,7 +145,7 @@ function extractBasicInfo(content: string): string {
   return lines.join(' ').substring(0, 100) + '...'
 }
 
-function generateQuickReplies(message: string, knowledge: any[]): string[] {
+function generateQuickReplies(message: string, knowledge: Array<{ content: string; business_profiles?: { business_name?: string } }>): string[] {
   const lowerMessage = message.toLowerCase()
   
   if (knowledge.length === 0) {

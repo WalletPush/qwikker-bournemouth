@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Convert to object format for easy access
-    shortlinks.forEach((link: any) => {
+    shortlinks.forEach((link: { link_type: string; short_code: string; created_at: string }) => {
       response.shortlinks[link.link_type] = {
         code: link.shortlink_code,
         url: link.shortlink_url,

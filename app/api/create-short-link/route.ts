@@ -12,13 +12,12 @@ export async function POST(request: NextRequest) {
     
     // Extract contact data from GHL
     const {
-      contact_id,
-      first_name,
-      last_name,
-      email,
       serial_number,
       link_type = 'offers' // 'offers' or 'chat'
     } = data
+    
+    // These fields are available but not currently used
+    // const { contact_id, first_name, last_name, email } = data
     
     if (!serial_number) {
       return NextResponse.json({
