@@ -2,11 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   eslint: {
-    // Re-enabling ESLint to check current error count
+    // Re-enabled ESLint after fixing critical issues
     ignoreDuringBuilds: false,
   },
   typescript: {
-    // TypeScript checking enabled for production builds - prevents type errors
+    // Re-enabled TypeScript checking after fixing critical issues
     ignoreBuildErrors: false,
   },
   // Removed compiler config to avoid styled-jsx issues

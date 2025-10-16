@@ -92,7 +92,7 @@ export async function detectLocationFromIP(): Promise<LocationInfo> {
     const region = data.region?.toLowerCase()
     
     // Try to match the detected location to our franchise areas
-    for (const [key, locationInfo] of Object.entries(FRANCHISE_LOCATIONS)) {
+    for (const [, locationInfo] of Object.entries(FRANCHISE_LOCATIONS)) {
       if (
         locationInfo.availableTowns.some(town => 
           city?.includes(town) || region?.includes(town)
@@ -156,7 +156,7 @@ export function mapTownToCity(town: string, locationInfo: LocationInfo): string 
   }
   
   // Otherwise, try to map to the closest franchise location
-  for (const [key, location] of Object.entries(FRANCHISE_LOCATIONS)) {
+  for (const [, location] of Object.entries(FRANCHISE_LOCATIONS)) {
     if (location.availableTowns.includes(normalizedTown)) {
       return location.city
     }

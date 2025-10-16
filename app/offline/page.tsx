@@ -20,9 +20,9 @@ export default function OfflinePage() {
             </svg>
           </div>
           
-          <h2 className="text-xl font-bold text-white mb-2">You're Offline</h2>
+          <h2 className="text-xl font-bold text-white mb-2">You&apos;re Offline</h2>
           <p className="text-slate-400 mb-4">
-            No internet connection detected. Some features may not be available until you're back online.
+            No internet connection detected. Some features may not be available until you&apos;re back online.
           </p>
         </div>
 

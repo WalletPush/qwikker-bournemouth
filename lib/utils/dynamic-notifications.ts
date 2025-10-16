@@ -7,7 +7,7 @@ export interface NotificationData {
   message: string
   city: string
   type: 'business_signup' | 'offer_created' | 'user_signup' | 'error' | 'info'
-  data?: any
+  data?: Record<string, unknown>
 }
 
 /**
@@ -76,7 +76,7 @@ export async function sendCitySlackNotification(notification: NotificationData) 
 /**
  * Send GHL webhook notification (city-specific)
  */
-export async function sendCityGHLWebhook(city: string, data: any) {
+export async function sendCityGHLWebhook(city: string, data: Record<string, unknown>) {
   try {
     const config = await getFranchiseConfig(city)
     

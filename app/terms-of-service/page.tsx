@@ -141,7 +141,7 @@ export default function TermsOfServicePage() {
               <ul className="list-disc list-inside space-y-2 mb-4 ml-4">
                 <li>Redeem valid offers according to stated terms</li>
                 <li>Receive the advertised products or services</li>
-                <li>Report businesses that don't honor offers</li>
+                <li>Report businesses that don&apos;t honor offers</li>
                 <li>Request assistance with offer-related disputes</li>
               </ul>
 

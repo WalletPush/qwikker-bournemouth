@@ -42,7 +42,7 @@ function SuccessContent({ email }: { email?: string }) {
             </p>
             {email && (
               <p className="text-gray-400">
-                We've sent a confirmation email to <span className="text-green-400 font-medium">{email}</span>
+                We&apos;ve sent a confirmation email to <span className="text-green-400 font-medium">{email}</span>
               </p>
             )}
           </div>
