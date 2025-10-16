@@ -4,9 +4,9 @@ import { headers } from 'next/headers'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { qrId: string } }
+  { params }: { params: Promise<{ qrId: string }> }
 ) {
-  const { qrId } = params
+  const { qrId } = await params
   
   try {
     // Get request information
@@ -71,9 +71,9 @@ export async function GET(
 // Handle POST requests for API-based tracking
 export async function POST(
   request: NextRequest,
-  { params }: { params: { qrId: string } }
+  { params }: { params: Promise<{ qrId: string }> }
 ) {
-  const { qrId } = params
+  const { qrId } = await params
   
   try {
     const body = await request.json()
