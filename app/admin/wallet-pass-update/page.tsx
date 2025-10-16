@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 
 export default function WalletPassUpdatePage() {
   const [isUpdating, setIsUpdating] = useState(false);
-  const [updateResult, setUpdateResult] = useState<any>(null);
+  const [updateResult, setUpdateResult] = useState<{ success: boolean; message: string; updated?: number } | null>(null);
   const [error, setError] = useState<string>('');
 
   const updateExistingPasses = async () => {
@@ -60,7 +60,7 @@ export default function WalletPassUpdatePage() {
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
               <h3 className="text-blue-400 font-semibold mb-2">What this does:</h3>
               <ul className="text-slate-300 text-sm space-y-1">
-                <li>• Adds "🚀 QWIKKER PHASE 2 DEMO" link to ALL existing wallet passes</li>
+                <li>• Adds &quot;🚀 QWIKKER PHASE 2 DEMO&quot; link to ALL existing wallet passes</li>
                 <li>• Users will see the new link on the back of their pass</li>
                 <li>• Link directs to password gate page for Phase 2 access</li>
                 <li>• No reinstall required - updates happen automatically</li>

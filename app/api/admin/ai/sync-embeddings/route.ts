@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get embeddings stats for the current franchise
     const franchiseCity = await getFranchiseCityFromRequest()

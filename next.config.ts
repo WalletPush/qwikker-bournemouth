@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   eslint: {
-    // Temporarily disabled for deployment - too many lint errors to fix quickly
-    ignoreDuringBuilds: true,
+    // Re-enabling ESLint to check current error count
+    ignoreDuringBuilds: false,
   },
   typescript: {
     // TypeScript checking enabled for production builds - prevents type errors

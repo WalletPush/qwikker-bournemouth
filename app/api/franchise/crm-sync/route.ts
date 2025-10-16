@@ -3,7 +3,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
 interface FranchiseCRMRequest {
-  businessData: any
+  businessData: Record<string, unknown>
   crmConfig: {
     city: string
     franchise_owner_email: string

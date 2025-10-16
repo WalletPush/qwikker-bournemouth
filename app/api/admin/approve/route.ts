@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     // Update business status using admin client
     const supabaseAdmin = createAdminClient()
     let newStatus: string
-    let updateData: any = {}
+    let updateData: Record<string, unknown> = {}
     
     switch (action) {
       case 'approve':

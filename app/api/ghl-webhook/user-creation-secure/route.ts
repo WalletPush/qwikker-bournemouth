@@ -18,7 +18,7 @@ import { validateWebhookSignature } from '@/lib/utils/webhook-security'
 /**
  * Detect franchise city from webhook data or request
  */
-function detectCityFromWebhookData(data: any): string | null {
+function detectCityFromWebhookData(data: Record<string, unknown>): string | null {
   // Try to get city from webhook data
   const cityFromData = data.customData?.franchise_city || 
                       data.franchise_city || 

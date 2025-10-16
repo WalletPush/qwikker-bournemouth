@@ -43,7 +43,7 @@ export default async function SupportPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-gray-300">
-            Our support team is here to help you get the most out of QWIKKER. Whether you need help setting up your account, uploading files, or understanding features, we're here for you.
+            Our support team is here to help you get the most out of QWIKKER. Whether you need help setting up your account, uploading files, or understanding features, we&apos;re here for you.
           </p>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-3">
@@ -89,7 +89,7 @@ export default async function SupportPage() {
             <div className="border-l-2 border-[#00d083] pl-4">
               <h4 className="font-semibold text-white mb-2">How do I upload my business logo?</h4>
               <p className="text-gray-300 text-sm mb-2">
-                Go to the Files page in your dashboard and click "Upload Logo". Supported formats: PNG, JPG, SVG (max 5MB).
+                Go to the Files page in your dashboard and click &quot;Upload Logo&quot;. Supported formats: PNG, JPG, SVG (max 5MB).
               </p>
               <Button asChild variant="link" className="text-[#00d083] p-0 h-auto">
                 <Link href="/dashboard/files">Go to Files →</Link>

@@ -5,7 +5,7 @@ import { storeKnowledgeWithEmbedding } from '@/lib/ai/embeddings'
 /**
  * Format structured business hours for AI consumption
  */
-function formatStructuredHoursForAI(hoursStructured: any): string {
+function formatStructuredHoursForAI(hoursStructured: Record<string, unknown>): string {
   if (!hoursStructured) return ""
   
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
@@ -217,11 +217,11 @@ ${activeOffers.map(offer => `
       results: results
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error in auto-populate:', error)
     return NextResponse.json({ 
       success: false, 
-      error: error.message || 'Internal server error' 
+      error: (error as Error).message || 'Internal server error' 
     }, { status: 500 })
   }
 }

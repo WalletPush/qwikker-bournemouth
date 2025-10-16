@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateAdmin } from '@/lib/utils/admin-auth'
-import type { FranchiseCity } from '@/lib/utils/city-detection'
+// FranchiseCity type import removed - not used
 
 export async function POST(request: NextRequest) {
   try {

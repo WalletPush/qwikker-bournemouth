@@ -3,7 +3,8 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userWalletPassId, offerId, businessName } = await request.json()
+    const { userWalletPassId, offerId } = await request.json()
+    // businessName available but not currently used
 
     if (!userWalletPassId || !offerId) {
       return NextResponse.json({ 

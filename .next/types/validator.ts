@@ -956,6 +956,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/ghl-webhook/user-creation-secure/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/ghl-webhook/user-creation-secure">> = Specific
+  const handler = {} as typeof import("../../app/api/ghl-webhook/user-creation-secure/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/ghl-webhook/user-creation-simple/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/ghl-webhook/user-creation-simple">> = Specific
@@ -969,6 +978,24 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/ghl-webhook/user-creation">> = Specific
   const handler = {} as typeof import("../../app/api/ghl-webhook/user-creation/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/internal/ghl-send/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/internal/ghl-send">> = Specific
+  const handler = {} as typeof import("../../app/api/internal/ghl-send/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/internal/ghl-update/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/internal/ghl-update">> = Specific
+  const handler = {} as typeof import("../../app/api/internal/ghl-update/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
