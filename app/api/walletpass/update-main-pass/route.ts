@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
+import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,7 +47,21 @@ export async function POST(request: NextRequest) {
     const passTypeId = user.pass_type_identifier || 'pass.com.qwikker'
     const serialNumber = userWalletPassId
 
-    const credentials = await getWalletPushCredentials(user.city || 'bournemouth')
+    // SECURITY: Use validated city from user record or request context
+    let userCity = user.city
+    if (!userCity) {
+      try {
+        userCity = await getSafeCurrentCity()
+      } catch (error) {
+        console.error('❌ Could not determine franchise city for wallet pass update:', error)
+        return NextResponse.json(
+          { error: 'Unable to determine franchise city for wallet pass update' },
+          { status: 400 }
+        )
+      }
+    }
+    
+    const credentials = await getWalletPushCredentials(userCity)
     const appKey = credentials.apiKey
 
     if (!appKey) {

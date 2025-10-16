@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     console.log('🔐 SECURE user creation webhook')
     
     // SECURITY: Rate limiting
-    const rateLimitResult = withRateLimit(
+    const rateLimitResult = await withRateLimit(
       RATE_LIMIT_PRESETS.WEBHOOK_STRICT,
       'webhook_user_creation'
     )(request)
