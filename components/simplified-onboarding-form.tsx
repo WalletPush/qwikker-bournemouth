@@ -185,7 +185,7 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
       }
 
       // Send to external services (non-blocking) - CRITICAL FOR GHL CONTACT CREATION
-      const { sendToGoHighLevel } = await import('@/lib/integrations')
+      const { sendToGoHighLevel } = await import('@/lib/integrations-secure')
       
       const normalizePhoneNumber = (phone: string): string => {
         const cleaned = phone.trim()
