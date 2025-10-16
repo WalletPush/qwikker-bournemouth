@@ -150,6 +150,7 @@ export async function POST(request: NextRequest) {
         tier: 'explorer',
         level: 1,
         wallet_pass_status: 'active',
+        referral_code: crypto.randomUUID().split('-')[0].toUpperCase(), // Generate referral code
         created_at: new Date().toISOString()
       })
       .select()
