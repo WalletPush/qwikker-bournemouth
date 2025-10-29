@@ -3,7 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { BusinessCarousel } from '@/components/ui/business-carousel'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import React from 'react'
 import Link from 'next/link'
 
@@ -85,7 +85,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
     const welcomeMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'ai',
-      content: `Hey ${userName}! 👋 I'm your local Bournemouth guide and I'm here to make your experience amazing. I know all the best spots, current deals, and can even add offers straight to your wallet! What are you in the mood for?`,
+      content: `Hi ${userName}! I'm here to help you discover the best of Bournemouth. I can show you great restaurants, exclusive offers, and even add deals straight to your wallet! What are you looking for?`,
       timestamp: new Date().toISOString(),
       quickReplies: [
         "Show me Qwikker Picks",
@@ -123,6 +123,14 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
     setIsTyping(true)
 
     try {
+      // 🚨 CRITICAL FIX: Include the current user message in conversation history!
+      const fullConversationHistory = [...messages, userMessage].slice(-6).map(msg => ({
+        role: msg.type === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      }))
+      
+      console.log(`💬 Sending conversation history with ${fullConversationHistory.length} messages:`, fullConversationHistory)
+
       // Call the real AI API
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -132,10 +140,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
         body: JSON.stringify({
           message,
           walletPassId: currentUser?.wallet_pass_id,
-          conversationHistory: messages.slice(-6).map(msg => ({
-            role: msg.type === 'user' ? 'user' : 'assistant',
-            content: msg.content
-          }))
+          conversationHistory: fullConversationHistory
         })
       })
 
@@ -308,18 +313,36 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
       .filter(source => source.type === 'business' && source.businessName)
       .map(source => source.businessName)
 
+    // 🎯 ENHANCED: Add known business names even if not in sources
+    const knownBusinessNames = [
+      "David's Grill Shack", "Julie's Sports Pub", "Orchid & Ivy", 
+      "Mike's Pool Bar", "Venezy Burgers", "David's grill shack", 
+      "Julie's sports pub", "davids grill shack", "julies sports pub"
+    ]
+    
+    // Merge sources with known business names (remove duplicates)
+    const allBusinessNames = [...new Set([...businessNames, ...knownBusinessNames])]
+
     // Convert **text** to bold and make business names clickable
     processedContent = processedContent.replace(/\*\*(.*?)\*\*/g, (match, text) => {
       // Check if this bold text is a business name
-      const isBusinessName = businessNames.some(name => 
+      const isBusinessName = allBusinessNames.some(name => 
         text.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(text.toLowerCase())
       )
       
       if (isBusinessName) {
-        // Find the actual business name
-        const businessName = businessNames.find(name => 
-          text.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(text.toLowerCase())
+        // Find the actual business name (prefer exact matches)
+        let businessName = allBusinessNames.find(name => 
+          text.toLowerCase() === name.toLowerCase()
         )
+        
+        // Fallback to partial matches
+        if (!businessName) {
+          businessName = allBusinessNames.find(name => 
+            text.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(text.toLowerCase())
+          )
+        }
+        
         // Return as clickable business link
         return `<strong class="business-link cursor-pointer text-[#00d083] hover:text-[#00b86f] underline" data-business="${businessName}">${text}</strong>`
       } else {
@@ -331,10 +354,20 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
     return processedContent
   }
 
+  // 🚀 PERFORMANCE FIX: Memoize processed messages to avoid re-processing on every render
+  const processedMessages = useMemo(() => {
+    return messages.map(message => ({
+      ...message,
+      processedContent: message.type === 'ai' 
+        ? processAIResponse(message.content, message.sources)
+        : message.content
+    }))
+  }, [messages])
+
   // Handle business name clicks
   const handleBusinessClick = (businessName: string) => {
-    // Convert business name to slug format (lowercase, spaces to hyphens)
-    const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    // Convert business name to slug format (match business page generation)
+    const slug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-')
     const url = `/user/business/${slug}${currentUser?.wallet_pass_id ? `?wallet_pass_id=${currentUser.wallet_pass_id}` : ''}`
     window.location.href = url
   }
@@ -348,7 +381,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
       const welcomeMessage: ChatMessage = {
         id: Date.now().toString(),
         type: 'ai',
-        content: `Hey ${userName}! 👋 I'm your local Bournemouth guide and I'm here to make your experience amazing. I know all the best spots, current deals, and can even add offers straight to your wallet! What are you in the mood for?`,
+        content: `Hi ${userName}! I'm here to help you discover the best of Bournemouth. I can show you great restaurants, exclusive offers, and even add deals straight to your wallet! What are you looking for?`,
         timestamp: new Date().toISOString(),
         quickReplies: [
           "Show me Qwikker Picks",
@@ -420,7 +453,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
         
         {/* Chat Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
-          {messages.map((message) => (
+          {processedMessages.map((message) => (
             <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] sm:max-w-[75%] ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
                 
@@ -434,12 +467,14 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
                     <div 
                       className="text-sm leading-relaxed whitespace-pre-wrap"
                       dangerouslySetInnerHTML={{ 
-                        __html: processAIResponse(message.content, message.sources) 
+                        __html: message.processedContent 
                       }}
                       onClick={(e) => {
                         const target = e.target as HTMLElement
+                        console.log('🖱️ Click detected on:', target.tagName, target.className)
                         if (target.classList.contains('business-link')) {
                           const businessName = target.getAttribute('data-business')
+                          console.log('🏢 Business link clicked:', businessName)
                           if (businessName) {
                             handleBusinessClick(businessName)
                           }

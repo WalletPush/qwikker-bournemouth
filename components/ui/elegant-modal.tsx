@@ -255,7 +255,7 @@ export function useElegantModal() {
           label: 'Confirm',
           onClick: () => {
             hideModal()
-            onConfirm()
+            onConfirm?.()
           },
           variant: 'destructive'
         }

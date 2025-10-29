@@ -420,8 +420,8 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
             <Input
               type="number"
               step="0.01"
-              value={config.tax_rate * 100}
-              onChange={(e) => setConfig({...config, tax_rate: parseFloat(e.target.value) / 100})}
+              value={(config.tax_rate * 100) || ''}
+              onChange={(e) => setConfig({...config, tax_rate: (parseFloat(e.target.value) || 0) / 100})}
               className="bg-slate-700 border-slate-600 text-white"
             />
           </div>
@@ -475,7 +475,7 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
                   type="number"
                   min="0"
                   max="100"
-                  value={config.founding_member_discount}
+                  value={config.founding_member_discount || ''}
                   onChange={(e) => setConfig({...config, founding_member_discount: parseInt(e.target.value) || 0})}
                   className="bg-slate-700 border-slate-600 text-white"
                   placeholder="20"
@@ -556,8 +556,8 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
               <Input
                 type="number"
                 step="0.01"
-                value={config.pricing_cards[selectedCard].price}
-                onChange={(e) => updateCard(selectedCard, 'price', parseFloat(e.target.value))}
+                value={config.pricing_cards[selectedCard].price || ''}
+                onChange={(e) => updateCard(selectedCard, 'price', parseFloat(e.target.value) || 0)}
                 className="bg-slate-700 border-slate-600 text-white"
               />
             </div>
@@ -567,8 +567,8 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
               <Input
                 type="number"
                 step="0.01"
-                value={config.pricing_cards[selectedCard].annual_price}
-                onChange={(e) => updateCard(selectedCard, 'annual_price', parseFloat(e.target.value))}
+                value={config.pricing_cards[selectedCard].annual_price || ''}
+                onChange={(e) => updateCard(selectedCard, 'annual_price', parseFloat(e.target.value) || 0)}
                 className="bg-slate-700 border-slate-600 text-white"
               />
             </div>

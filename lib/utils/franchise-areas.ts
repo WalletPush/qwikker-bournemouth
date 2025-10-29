@@ -111,6 +111,18 @@ export async function getFranchiseFromHostname(hostname: string): Promise<string
     return 'bournemouth' // Default for local development
   }
   
+  // 🧪 LOCAL TESTING: Handle .local domains for testing custom domains
+  if (hostname.includes('.local')) {
+    const parts = hostname.split('.')
+    if (parts.length >= 2) {
+      const subdomain = parts[0].toLowerCase()
+      
+      // Allow any subdomain for .local testing (bypass database validation)
+      console.log(`🧪 LOCAL TESTING: Using franchise ${subdomain} from ${hostname}`)
+      return subdomain
+    }
+  }
+  
   // Handle Vercel URLs (e.g., qwikkerdashboard-theta.vercel.app, qwikker-calgary-git-main.vercel.app)
   if (hostname.includes('vercel.app')) {
     console.log('🌐 Vercel deployment detected - defaulting to Bournemouth')
