@@ -82,6 +82,26 @@ export async function POST(request: NextRequest) {
 
     for (const business of businesses) {
       try {
+        // 🔍 CHECK FOR EXISTING ENTRIES: Prevent duplicates
+        const { data: existingEntries, error: checkError } = await supabase
+          .from('knowledge_base')
+          .select('id, title')
+          .eq('business_id', business.id)
+          .eq('city', business.city)
+
+        if (checkError) {
+          console.error(`❌ Error checking existing entries for ${business.business_name}:`, checkError)
+          errors++
+          results.push({ type: 'check_error', business: business.business_name, success: false, error: checkError.message })
+          continue
+        }
+
+        if (existingEntries && existingEntries.length > 0) {
+          console.log(`⏭️ Skipping ${business.business_name} - already has ${existingEntries.length} knowledge entries`)
+          results.push({ type: 'skipped', business: business.business_name, success: true, reason: 'Already exists' })
+          continue
+        }
+
         // 1. Create main business info knowledge entry
         const businessInfo = `
 Business: ${business.business_name}

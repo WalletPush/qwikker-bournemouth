@@ -5,7 +5,7 @@ import { getCityFromRequest } from '@/lib/utils/city-detection'
 export async function GET(request: Request) {
   try {
     const supabaseAdmin = createAdminClient()
-    const city = getCityFromRequest(new Headers(request.headers))
+    const city = await getCityFromRequest(new Headers(request.headers))
     
     console.log(`📞 Fetching contacts for ${city}`)
     

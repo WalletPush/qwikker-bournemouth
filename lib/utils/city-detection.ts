@@ -21,6 +21,18 @@ export async function getCityFromHostname(hostname: string): Promise<FranchiseCi
     return 'bournemouth' // Default for local development
   }
   
+  // 🧪 LOCAL TESTING: Handle .local domains for testing custom domains
+  if (hostname.includes('.local')) {
+    const parts = hostname.split('.')
+    if (parts.length >= 2) {
+      const subdomain = parts[0].toLowerCase()
+      
+      // Allow any subdomain for .local testing (bypass database validation)
+      console.log(`🧪 LOCAL TESTING: Using ${subdomain} from ${hostname}`)
+      return subdomain
+    }
+  }
+  
   // Handle Vercel deployments
   if (hostname.includes('vercel.app')) {
     return 'bournemouth' // Default for Vercel deployments

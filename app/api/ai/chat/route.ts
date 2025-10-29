@@ -35,9 +35,8 @@ export async function POST(request: NextRequest) {
     const result = await generateAIResponse(message, {
       city,
       userName,
-      walletPassId,
-      conversationHistory: conversationHistory || []
-    })
+      walletPassId
+    }, conversationHistory || [])
 
     if (!result.success) {
       console.error('❌ AI response generation failed:', result.error)

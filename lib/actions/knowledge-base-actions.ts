@@ -9,6 +9,22 @@ export async function addBasicBusinessKnowledge(businessId: string, adminId: str
   const supabaseAdmin = createAdminClient()
 
   try {
+    // 🔍 CHECK FOR EXISTING ENTRIES: Prevent duplicates on approval
+    const { data: existingEntries, error: checkError } = await supabaseAdmin
+      .from('knowledge_base')
+      .select('id, title')
+      .eq('business_id', businessId)
+
+    if (checkError) {
+      console.error('❌ Error checking existing knowledge entries:', checkError)
+      return { success: false, error: 'Failed to check existing entries' }
+    }
+
+    if (existingEntries && existingEntries.length > 0) {
+      console.log(`⏭️ Business ${businessId} already has ${existingEntries.length} knowledge entries - skipping auto-population`)
+      return { success: true, message: 'Business already in knowledge base' }
+    }
+
   // Get business details and all their offers
   const { data: business, error: businessError } = await supabaseAdmin
     .from('business_profiles')

@@ -1,7 +1,4 @@
-'use server'
-
-import pdfParse from 'pdf-parse'
-import { generateEmbedding, storeBusinessEmbedding, storeCityEmbedding } from './embeddings'
+import { generateEmbedding, storeKnowledgeWithEmbedding } from './embeddings'
 
 interface ProcessedPDF {
   success: boolean
@@ -18,6 +15,14 @@ interface ProcessedPDF {
 export async function extractTextFromPDF(buffer: Buffer): Promise<ProcessedPDF> {
   try {
     console.log(`📄 Processing PDF (${buffer.length} bytes)...`)
+    
+    // Use dynamic import for pdf-parse (Turbopack compatible)
+    const pdfParseModule = await import('pdf-parse')
+    const pdfParse = pdfParseModule.pdf || pdfParseModule.default
+    
+    if (typeof pdfParse !== 'function') {
+      throw new Error('pdf-parse module not available')
+    }
     
     const data = await pdfParse(buffer)
     
@@ -46,13 +51,14 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<ProcessedPDF> 
 }
 
 /**
- * Clean and chunk text for better embeddings
+ * Clean and chunk text for better embeddings - MENU AWARE
+ * Preserves complete menu items, prices, and logical sections
  */
 export function chunkText(text: string, maxChunkSize: number = 1000): string[] {
-  // Clean the text
+  // Clean the text but preserve important structure
   const cleanText = text
     .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-    .replace(/\n+/g, '\n') // Replace multiple newlines with single newline
+    .replace(/\n{3,}/g, '\n\n') // Replace 3+ newlines with double newline (section breaks)
     .trim()
 
   if (cleanText.length <= maxChunkSize) {
@@ -60,22 +66,58 @@ export function chunkText(text: string, maxChunkSize: number = 1000): string[] {
   }
 
   const chunks: string[] = []
-  const sentences = cleanText.split(/[.!?]+/)
+  
+  // First, try to split by major sections (double newlines)
+  const sections = cleanText.split(/\n\n+/)
   let currentChunk = ''
 
-  for (const sentence of sentences) {
-    const trimmedSentence = sentence.trim()
-    if (!trimmedSentence) continue
+  for (const section of sections) {
+    const trimmedSection = section.trim()
+    if (!trimmedSection) continue
 
-    // If adding this sentence would exceed the limit, save current chunk
-    if (currentChunk.length + trimmedSentence.length + 1 > maxChunkSize) {
-      if (currentChunk) {
+    // If this section alone is too big, we need to split it further
+    if (trimmedSection.length > maxChunkSize) {
+      // Save current chunk if it exists
+      if (currentChunk.trim()) {
         chunks.push(currentChunk.trim())
         currentChunk = ''
       }
+      
+      // Split large section by menu items (lines that likely contain prices)
+      const lines = trimmedSection.split('\n')
+      let sectionChunk = ''
+      
+      for (const line of lines) {
+        const trimmedLine = line.trim()
+        if (!trimmedLine) continue
+        
+        // If adding this line would exceed limit, save current chunk
+        if (sectionChunk.length + trimmedLine.length + 1 > maxChunkSize) {
+          if (sectionChunk.trim()) {
+            chunks.push(sectionChunk.trim())
+            sectionChunk = ''
+          }
+        }
+        
+        sectionChunk += (sectionChunk ? '\n' : '') + trimmedLine
+      }
+      
+      // Add remaining section chunk
+      if (sectionChunk.trim()) {
+        chunks.push(sectionChunk.trim())
+      }
+      
+    } else {
+      // If adding this section would exceed the limit, save current chunk
+      if (currentChunk.length + trimmedSection.length + 2 > maxChunkSize) {
+        if (currentChunk.trim()) {
+          chunks.push(currentChunk.trim())
+          currentChunk = ''
+        }
+      }
+      
+      currentChunk += (currentChunk ? '\n\n' : '') + trimmedSection
     }
-
-    currentChunk += (currentChunk ? '. ' : '') + trimmedSentence
   }
 
   // Add the last chunk if it exists
@@ -83,6 +125,217 @@ export function chunkText(text: string, maxChunkSize: number = 1000): string[] {
     chunks.push(currentChunk.trim())
   }
 
+  return chunks.length > 0 ? chunks : [cleanText]
+}
+
+/**
+ * Specialized chunking for menu PDFs - preserves pricing and menu items
+ */
+export function chunkMenuText(text: string, maxChunkSize: number = 1200): string[] {
+  // Clean text while preserving menu structure
+  const cleanText = text
+    .replace(/\s+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+  console.log(`🔍 Menu text length: ${cleanText.length} chars, max chunk size: ${maxChunkSize}`)
+
+  // CONSERVATIVE CHUNKING: Only split if content is much larger than chunk size
+  if (cleanText.length <= maxChunkSize * 2) {
+    console.log(`📝 Content fits in one chunk (${cleanText.length} chars), preserving menu integrity`)
+    return [cleanText]
+  }
+
+  console.log(`🔄 Content is large (${cleanText.length} chars), using semantic chunking...`)
+
+  const chunks: string[] = []
+  
+  // Split by menu sections (usually separated by double newlines or headers)
+  const sections = cleanText.split(/\n\n+/)
+  let currentChunk = ''
+
+  for (const section of sections) {
+    const trimmedSection = section.trim()
+    if (!trimmedSection) continue
+
+    // Check if this looks like a menu section header
+    const isHeader = /^[A-Z\s&-]{3,}$/.test(trimmedSection) || 
+                    trimmedSection.length < 50 && 
+                    !(/£|\$|€|\d+\.\d{2}/.test(trimmedSection))
+
+    // If section is too large, split by menu items (lines)
+    if (trimmedSection.length > maxChunkSize) {
+      // Save current chunk first
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim())
+        currentChunk = ''
+      }
+
+      const lines = trimmedSection.split('\n')
+      let sectionChunk = ''
+      
+      for (const line of lines) {
+        const trimmedLine = line.trim()
+        if (!trimmedLine) continue
+
+        // Never split a line that contains pricing
+        const containsPrice = /£|\$|€|\d+\.\d{2}/.test(trimmedLine)
+        const wouldExceed = sectionChunk.length + trimmedLine.length + 1 > maxChunkSize
+
+        if (wouldExceed && !containsPrice && sectionChunk.trim()) {
+          chunks.push(sectionChunk.trim())
+          sectionChunk = ''
+        } else if (wouldExceed && containsPrice && sectionChunk.trim()) {
+          // If we must split and this line has pricing, save current and start new
+          chunks.push(sectionChunk.trim())
+          sectionChunk = trimmedLine
+          continue
+        }
+
+        sectionChunk += (sectionChunk ? '\n' : '') + trimmedLine
+      }
+
+      if (sectionChunk.trim()) {
+        chunks.push(sectionChunk.trim())
+      }
+
+    } else {
+      // Normal section handling
+      if (currentChunk.length + trimmedSection.length + 2 > maxChunkSize) {
+        if (currentChunk.trim()) {
+          chunks.push(currentChunk.trim())
+          currentChunk = ''
+        }
+      }
+
+      currentChunk += (currentChunk ? '\n\n' : '') + trimmedSection
+    }
+  }
+
+  // Add final chunk
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim())
+  }
+
+  // AGGRESSIVE CHUNKING: If we still only have 1 chunk and content is long enough, force split by lines
+  if (chunks.length <= 1 && cleanText.length > 200) {
+    console.log(`🔄 Sections didn't split well, trying AGGRESSIVE line-by-line chunking...`)
+    const lines = cleanText.split('\n')
+    const lineChunks: string[] = []
+    let currentLineChunk = ''
+    
+    // Use a smaller chunk size for aggressive splitting
+    const aggressiveChunkSize = Math.min(maxChunkSize, 300) // Even smaller chunks
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim()
+      if (!trimmedLine) continue
+      
+      // RECIPE-AWARE SPLITTING: Don't split in the middle of cocktail ingredients
+      const isIngredientLine = trimmedLine.toLowerCase().includes('muddled') ||
+                              trimmedLine.toLowerCase().includes('topped') ||
+                              trimmedLine.toLowerCase().includes('served') ||
+                              trimmedLine.toLowerCase().includes('garnished') ||
+                              trimmedLine.toLowerCase().includes('mixed') ||
+                              trimmedLine.toLowerCase().includes('shaken') ||
+                              trimmedLine.toLowerCase().includes('stirred') ||
+                              trimmedLine.toLowerCase().includes('oz') ||
+                              trimmedLine.toLowerCase().includes('ml')
+      
+      const wouldExceed = currentLineChunk.length + trimmedLine.length + 1 > aggressiveChunkSize
+      
+      // If we would exceed the limit and this isn't an ingredient line, split here
+      if (wouldExceed && !isIngredientLine && currentLineChunk.trim()) {
+        lineChunks.push(currentLineChunk.trim())
+        currentLineChunk = trimmedLine
+      } 
+      // If it's an ingredient line, keep it with the current chunk even if it exceeds the limit slightly
+      else {
+        currentLineChunk += (currentLineChunk ? '\n' : '') + trimmedLine
+      }
+    }
+    
+    if (currentLineChunk.trim()) {
+      lineChunks.push(currentLineChunk.trim())
+    }
+    
+    // SMART MENU SPLITTING: If we still have only 1 chunk, try to split at menu item boundaries
+    if (lineChunks.length <= 1 && cleanText.length > 400) {
+      console.log(`🔄 Still only 1 chunk, trying SMART menu item splitting...`)
+      
+      // Look for natural menu item boundaries (cocktail names, section headers, etc.)
+      const menuItemBoundaries = []
+      const lines = cleanText.split('\n')
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim()
+        
+        // Detect cocktail/item names (usually short lines without prices that aren't ingredients)
+        const isItemName = line.length < 50 && 
+                          line.length > 3 &&
+                          !line.includes('£') && 
+                          !line.includes('$') && 
+                          !line.includes('€') &&
+                          !line.toLowerCase().includes('muddled') &&
+                          !line.toLowerCase().includes('topped') &&
+                          !line.toLowerCase().includes('served') &&
+                          !line.toLowerCase().includes('garnished') &&
+                          !line.toLowerCase().includes('mixed') &&
+                          !line.toLowerCase().includes('shaken') &&
+                          !line.toLowerCase().includes('stirred')
+        
+        if (isItemName && i > 0) {
+          const textUpToHere = lines.slice(0, i).join('\n')
+          if (textUpToHere.length > 200 && textUpToHere.length < cleanText.length - 100) {
+            menuItemBoundaries.push(i)
+          }
+        }
+      }
+      
+      // If we found good boundaries, split there
+      if (menuItemBoundaries.length > 0) {
+        const bestBoundary = menuItemBoundaries[Math.floor(menuItemBoundaries.length / 2)]
+        const firstPart = lines.slice(0, bestBoundary).join('\n').trim()
+        const secondPart = lines.slice(bestBoundary).join('\n').trim()
+        
+        if (firstPart && secondPart) {
+          console.log(`✅ Smart menu split at item boundary: ${firstPart.length} + ${secondPart.length} chars`)
+          return [firstPart, secondPart]
+        }
+      }
+      
+      // Fallback: split at paragraph breaks, avoiding mid-recipe splits
+      const paragraphs = cleanText.split(/\n\n+/)
+      if (paragraphs.length > 1) {
+        const midPoint = Math.floor(paragraphs.length / 2)
+        const firstHalf = paragraphs.slice(0, midPoint).join('\n\n').trim()
+        const secondHalf = paragraphs.slice(midPoint).join('\n\n').trim()
+        
+        if (firstHalf && secondHalf) {
+          console.log(`✅ Paragraph-based split: ${firstHalf.length} + ${secondHalf.length} chars`)
+          return [firstHalf, secondHalf]
+        }
+      }
+      
+      // Last resort: character-based split (original behavior)
+      console.log(`🔄 No good boundaries found, using character split...`)
+      const halfPoint = Math.floor(cleanText.length / 2)
+      const firstHalf = cleanText.substring(0, halfPoint).trim()
+      const secondHalf = cleanText.substring(halfPoint).trim()
+      
+      if (firstHalf && secondHalf) {
+        console.log(`✅ Character-split created 2 chunks: ${firstHalf.length} + ${secondHalf.length} chars`)
+        return [firstHalf, secondHalf]
+      }
+    }
+    
+    if (lineChunks.length > 1) {
+      console.log(`✅ Aggressive line-based chunking created ${lineChunks.length} chunks`)
+      return lineChunks
+    }
+  }
+
+  console.log(`📝 Final result: ${chunks.length} chunks created`)
   return chunks.length > 0 ? chunks : [cleanText]
 }
 
@@ -140,12 +393,14 @@ export async function processPDFForBusiness({
       }
 
       // Store as embedding
-      const result = await storeBusinessEmbedding({
-        businessId,
+      const result = await storeKnowledgeWithEmbedding({
         city,
-        contentType,
+        businessId,
+        knowledgeType: 'pdf_document',
+        title: `Menu Content (Chunk ${i + 1})`,
         content: chunk,
-        metadata: chunkMetadata
+        metadata: chunkMetadata,
+        tags: ['menu', 'pdf', 'business', contentType]
       })
 
       if (result.success) {
@@ -234,13 +489,15 @@ export async function processPDFForCity({
       }
 
       // Store as embedding
-      const result = await storeCityEmbedding({
+      const result = await storeKnowledgeWithEmbedding({
         city,
-        contentType,
+        businessId: null,
+        knowledgeType: 'pdf_document',
         title: chunkTitle,
         content: chunk,
         metadata: chunkMetadata,
-        sourceUrl
+        sourceUrl,
+        tags: ['pdf', 'city', contentType]
       })
 
       if (result.success) {

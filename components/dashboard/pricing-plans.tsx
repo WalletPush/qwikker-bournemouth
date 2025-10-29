@@ -19,6 +19,19 @@ interface DynamicPricing {
   starter_yearly: number
   featured_yearly: number
   spotlight_yearly: number
+  // Text fields from admin settings
+  starter_title: string
+  featured_title: string
+  spotlight_title: string
+  starter_subtitle: string
+  featured_subtitle: string
+  spotlight_subtitle: string
+  starter_cta: string
+  featured_cta: string
+  spotlight_cta: string
+  starter_features: string[]
+  featured_features: string[]
+  spotlight_features: string[]
   founding_member_enabled: boolean
   founding_member_discount: number
   founding_member_title: string
@@ -54,6 +67,19 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
               starter_yearly: cards.starter?.annual_price || 290,
               featured_yearly: cards.featured?.annual_price || 590,
               spotlight_yearly: cards.spotlight?.annual_price || 890,
+              // Include text fields from admin settings
+              starter_title: cards.starter?.title || 'Starter',
+              featured_title: cards.featured?.title || 'Featured',
+              spotlight_title: cards.spotlight?.title || 'Spotlight',
+              starter_subtitle: cards.starter?.subtitle || 'Get started',
+              featured_subtitle: cards.featured?.subtitle || 'Most popular',
+              spotlight_subtitle: cards.spotlight?.subtitle || 'Maximum visibility',
+              starter_cta: cards.starter?.cta_text || 'Start Free Trial',
+              featured_cta: cards.featured?.cta_text || 'Upgrade to Featured',
+              spotlight_cta: cards.spotlight?.cta_text || 'Upgrade to Spotlight',
+              starter_features: cards.starter?.features || [],
+              featured_features: cards.featured?.features || [],
+              spotlight_features: cards.spotlight?.features || [],
               founding_member_enabled: data.config.founding_member_enabled ?? true,
               founding_member_discount: data.config.founding_member_discount || 20,
               founding_member_title: data.config.founding_member_title || 'Founding Member Benefit',
@@ -73,6 +99,19 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
             starter_yearly: 290,
             featured_yearly: 590,
             spotlight_yearly: 890,
+            // Fallback text fields
+            starter_title: 'Starter',
+            featured_title: 'Featured',
+            spotlight_title: 'Spotlight',
+            starter_subtitle: 'Get started',
+            featured_subtitle: 'Most popular',
+            spotlight_subtitle: 'Maximum visibility',
+            starter_cta: 'Start Free Trial',
+            featured_cta: 'Upgrade to Featured',
+            spotlight_cta: 'Upgrade to Spotlight',
+            starter_features: ['Basic features', 'Email support'],
+            featured_features: ['All Starter features', 'Priority support', 'Advanced analytics'],
+            spotlight_features: ['All Featured features', 'White-label options', 'Custom integrations'],
             founding_member_enabled: true,
             founding_member_discount: 20,
             founding_member_title: 'Founding Member Benefit',
@@ -90,6 +129,19 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
           starter_yearly: 290,
           featured_yearly: 590,
           spotlight_yearly: 890,
+          // Fallback text fields
+          starter_title: 'Starter',
+          featured_title: 'Featured',
+          spotlight_title: 'Spotlight',
+          starter_subtitle: 'Get started',
+          featured_subtitle: 'Most popular',
+          spotlight_subtitle: 'Maximum visibility',
+          starter_cta: 'Start Free Trial',
+          featured_cta: 'Upgrade to Featured',
+          spotlight_cta: 'Upgrade to Spotlight',
+          starter_features: ['Basic features', 'Email support'],
+          featured_features: ['All Starter features', 'Priority support', 'Advanced analytics'],
+          spotlight_features: ['All Featured features', 'White-label options', 'Custom integrations'],
           founding_member_enabled: true,
           founding_member_discount: 20,
           founding_member_title: 'Founding Member Benefit',
@@ -118,7 +170,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
   const plans = [
     {
       id: 'starter',
-      name: 'Starter',
+      name: dynamicPricing?.starter_title || 'Starter',
+      subtitle: dynamicPricing?.starter_subtitle || 'Get started',
+      cta: dynamicPricing?.starter_cta || 'Start Free Trial',
       price: dynamicPricing?.starter_price || 29,
       yearlyPrice: dynamicPricing?.starter_yearly || 290,
       yearlyDiscount: Math.round((dynamicPricing?.starter_yearly || 290) * discountMultiplier),
@@ -127,7 +181,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       ),
-      features: [
+      features: dynamicPricing?.starter_features || [
         'AI-powered discovery listings',
         'Menu/service indexing', 
         'Up to 3 active offers',
@@ -138,7 +192,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
     },
     {
       id: 'featured',
-      name: 'Featured',
+      name: dynamicPricing?.featured_title || 'Featured',
+      subtitle: dynamicPricing?.featured_subtitle || 'Most popular',
+      cta: dynamicPricing?.featured_cta || 'Upgrade to Featured',
       price: dynamicPricing?.featured_price || 59,
       yearlyPrice: dynamicPricing?.featured_yearly || 590,
       yearlyDiscount: Math.round((dynamicPricing?.featured_yearly || 590) * discountMultiplier),
@@ -148,7 +204,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
         </svg>
       ),
-      features: [
+      features: dynamicPricing?.featured_features || [
         'Everything in Starter, plus:',
         'Priority AI placement',
         'Advanced menu indexing',
@@ -159,7 +215,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
     },
     {
       id: 'spotlight',
-      name: 'Spotlight',
+      name: dynamicPricing?.spotlight_title || 'Spotlight',
+      subtitle: dynamicPricing?.spotlight_subtitle || 'Maximum visibility',
+      cta: dynamicPricing?.spotlight_cta || 'Upgrade to Spotlight',
       price: dynamicPricing?.spotlight_price || 89,
       yearlyPrice: dynamicPricing?.spotlight_yearly || 890,
       yearlyDiscount: Math.round((dynamicPricing?.spotlight_yearly || 890) * discountMultiplier),
@@ -169,7 +227,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      features: [
+      features: dynamicPricing?.spotlight_features || [
         'Everything in Featured, plus:',
         'White-label loyalty system',
         'Advanced AI insights',
@@ -216,6 +274,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
                 {plan.icon}
               </div>
               <CardTitle className="text-xl font-bold text-white">{plan.name}</CardTitle>
+              {plan.subtitle && (
+                <p className="text-sm text-gray-400 mt-1">{plan.subtitle}</p>
+              )}
               <div className="mt-4">
                 {/* Clean Pricing Display */}
                 <div className="text-3xl font-bold text-white mb-2">
@@ -288,7 +349,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
                       'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 hover:shadow-yellow-500/25'
                     }`}
                   >
-                    Upgrade to {plan.name}
+                    {plan.cta}
                   </Button>
                 )}
               </div>
