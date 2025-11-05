@@ -51,6 +51,36 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
     // Get business IDs for fetching related data
     const businessIds = businesses.map(b => b.id)
 
+    // Fetch menus separately - now working correctly
+    let menusByBusiness = new Map()
+    try {
+      const { data: allMenus, error: menusError } = await supabaseAdmin
+        .from('menus')
+        .select('*')
+
+      if (allMenus && allMenus.length > 0) {
+        // Match menus to businesses by business_id (proper foreign key relationship)
+        businesses.forEach(business => {
+          const matchingMenus = allMenus.filter(menu => menu.business_id === business.id)
+          
+          if (matchingMenus.length > 0) {
+            menusByBusiness.set(business.id, matchingMenus.map(menu => ({
+              id: menu.id,
+              menu_name: menu.menu_name,
+              menu_type: menu.menu_type || 'unknown',
+              status: menu.status || 'unknown',
+              uploaded_at: menu.created_at, // Use created_at since uploaded_at column doesn't exist
+              admin_notes: menu.admin_notes,
+              menu_url: menu.menu_url // Include the URL for direct access
+            })))
+          }
+        })
+      }
+
+    } catch (error) {
+      console.log('📄 MENUS ERROR:', error)
+    }
+
     // Fetch pending changes count (business_changes table should exist)
     let pendingChangesByBusiness = new Map()
     try {
@@ -140,12 +170,20 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         approved_at: business.approved_at,
         admin_notes: business.admin_notes,
         
+        // GHL sync tracking
+        last_ghl_sync: null, // TODO: Implement GHL sync tracking
+        ghl_contact_id: null, // TODO: Implement GHL contact ID tracking
+        
+        // Business assets
+        logo: business.logo,
+        
         subscription: null, // Will be populated when billing system is implemented
         tier: null,
         recent_payments: [], // Will be populated when billing system is implemented
         
         menu_url: business.menu_url,
         business_images: business.business_images as string[] | null,
+        business_menus: menusByBusiness.get(business.id) || null,
         offer_name: business.offer_name,
         offer_type: business.offer_type,
         secret_menu_items: secretMenuItems,

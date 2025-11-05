@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ElegantModal } from '@/components/ui/elegant-modal'
 
@@ -10,13 +10,49 @@ interface AnalyticsPageClientProps {
 
 export function AnalyticsPageClient({ profile }: AnalyticsPageClientProps) {
   const [showModal, setShowModal] = useState(true)
+  const [hasAnalyticsAccess, setHasAnalyticsAccess] = useState(false)
+  const [loading, setLoading] = useState(true)
   
-  // Check if user has Spotlight or Pro subscription
-  const hasSpotlightAccess = profile?.plan === 'spotlight' || profile?.plan === 'pro'
+  useEffect(() => {
+    checkAnalyticsAccess()
+  }, [profile])
+
+  const checkAnalyticsAccess = async () => {
+    if (!profile?.id) {
+      setLoading(false)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/user/feature-access?feature=analytics')
+      
+      if (response.ok) {
+        const data = await response.json()
+        setHasAnalyticsAccess(data.hasAccess)
+      } else {
+        // Fallback to old system
+        setHasAnalyticsAccess(profile?.plan === 'spotlight' || profile?.plan === 'pro')
+      }
+    } catch (error) {
+      console.error('Error checking analytics access:', error)
+      // Fallback to old system
+      setHasAnalyticsAccess(profile?.plan === 'spotlight' || profile?.plan === 'pro')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin w-8 h-8 border-4 border-[#00d083] border-t-transparent rounded-full" />
+      </div>
+    )
+  }
   return (
     <div className="space-y-6">
       {/* Show upgrade modal for non-Spotlight users */}
-      {!hasSpotlightAccess && (
+      {!hasAnalyticsAccess && (
         <ElegantModal
           isOpen={showModal}
           onClose={() => {
@@ -67,7 +103,7 @@ export function AnalyticsPageClient({ profile }: AnalyticsPageClientProps) {
       )}
 
       {/* Content - blurred for non-Spotlight users */}
-      <div className={!hasSpotlightAccess && showModal ? "blur-[8px] select-none pointer-events-none" : ""}>
+      <div className={!hasAnalyticsAccess && showModal ? "blur-[8px] select-none pointer-events-none" : ""}>
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Analytics Overview</h1>
           <p className="text-gray-400">Track your business performance and customer engagement</p>

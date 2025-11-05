@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingButton } from '@/components/ui/loading-button'
 import { useRouter } from 'next/navigation'
-import { updateProfileFile } from '@/lib/actions/file-actions'
+import { updateProfileFile, deleteBusinessImage, reorderBusinessImages, uploadMultipleBusinessImages } from '@/lib/actions/file-actions'
 import { uploadToCloudinary } from '@/lib/integrations'
+import { MultipleMenuUpload } from './multiple-menu-upload'
+import { EnhancedImageManager } from './enhanced-image-manager'
+import { ImageTransform } from '@/types/profiles'
 
 interface FilesPageProps {
   profile?: any
@@ -41,13 +44,12 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
     }
   }, [])
 
-  const handleFileUpload = async (file: File, type: 'logo' | 'menu' | 'offer' | 'business_images') => {
+  const handleFileUpload = async (file: File, type: 'logo' | 'offer' | 'business_images') => {
     if (!file) return
 
     // Validate file type
     const validTypes = {
       logo: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
-      menu: ['application/pdf'],
       offer: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
       business_images: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
     }
@@ -55,7 +57,7 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
     if (!validTypes[type].includes(file.type)) {
       setUploadMessage({
         type: 'error',
-        text: `Invalid file type for ${type}. ${type === 'menu' ? 'Only PDF files allowed.' : 'Only image files allowed.'}`
+        text: 'Invalid file type. Only image files allowed.'
       })
       return
     }
@@ -106,6 +108,94 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
   const triggerFileInput = (inputId: string) => {
     document.getElementById(inputId)?.click()
   }
+
+  // Enhanced image management handlers
+  const handleMultipleImageUpload = async (files: File[]) => {
+    if (!profile?.user_id) return
+
+    setUploading('business_images')
+    setUploadMessage(null)
+
+    try {
+      const result = await uploadMultipleBusinessImages(profile.user_id, files)
+      
+      if (result.success) {
+        setUploadMessage({
+          type: 'success',
+          text: result.message
+        })
+        // Refresh the page to show updated images
+        router.refresh()
+      } else {
+        setUploadMessage({
+          type: 'error',
+          text: result.message || 'Failed to upload images'
+        })
+      }
+    } catch (error) {
+      setUploadMessage({
+        type: 'error',
+        text: 'Upload failed. Please try again.'
+      })
+    } finally {
+      setUploading(null)
+    }
+  }
+
+  const handleImageDelete = async (imageUrl: string, index: number) => {
+    if (!profile?.user_id) return
+
+    try {
+      const result = await deleteBusinessImage(profile.user_id, imageUrl, index)
+      
+      if (result.success) {
+        setUploadMessage({
+          type: 'success',
+          text: result.message
+        })
+        // Refresh the page to show updated images
+        router.refresh()
+      } else {
+        setUploadMessage({
+          type: 'error',
+          text: result.error || 'Failed to delete image'
+        })
+      }
+    } catch (error) {
+      setUploadMessage({
+        type: 'error',
+        text: 'Delete failed. Please try again.'
+      })
+    }
+  }
+
+  const handleImageReorder = async (fromIndex: number, toIndex: number) => {
+    if (!profile?.user_id) return
+
+    try {
+      const result = await reorderBusinessImages(profile.user_id, fromIndex, toIndex)
+      
+      if (result.success) {
+        setUploadMessage({
+          type: 'success',
+          text: result.message
+        })
+        // Refresh the page to show updated images
+        router.refresh()
+      } else {
+        setUploadMessage({
+          type: 'error',
+          text: result.error || 'Failed to reorder images'
+        })
+      }
+    } catch (error) {
+      setUploadMessage({
+        type: 'error',
+        text: 'Reorder failed. Please try again.'
+      })
+    }
+  }
+
 
   return (
     <div className="space-y-6">
@@ -212,88 +302,10 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
         </CardContent>
       </Card>
 
-      {/* Menu/Price List */}
-      <Card id="menu" className="bg-slate-800/50 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Menu & Price List
-            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">RECOMMENDED</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {profile?.menu_url ? (
-              <div className="flex items-center gap-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-                <div className="w-16 h-16 bg-slate-600 rounded-lg flex items-center justify-center">
-                  <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-white font-medium">Menu/Price List Uploaded</p>
-                  </div>
-                  <p className="text-green-400 text-sm">RECOMMENDED COMPLETE</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => window.open(profile.menu_url, '_blank')}
-                    className="border-slate-600 text-gray-300 hover:bg-slate-700"
-                  >
-                    View
-                  </Button>
-                  <LoadingButton 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => triggerFileInput('menuUpload')}
-                    loading={uploading === 'menu'}
-                    loadingText="Uploading..."
-                    className="border-slate-600 text-gray-300 hover:bg-slate-700"
-                  >
-                    Replace
-                  </LoadingButton>
-                </div>
-              </div>
-            ) : (
-              <div 
-                className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-[#00d083] transition-colors"
-                onClick={() => triggerFileInput('menuUpload')}
-              >
-                <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-white mb-2">Upload Menu or Price List</h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Upload your menu or service price list. This helps our AI recommend your business accurately.
-                </p>
-                <p className="text-xs text-gray-500">
-                  PDF files only, up to 10MB
-                </p>
-              </div>
-            )}
-            <input
-              id="menuUpload"
-              type="file"
-              accept=".pdf"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) handleFileUpload(file, 'menu')
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Multiple Menus & Services */}
+      <div id="menus">
+        <MultipleMenuUpload businessId={profile?.id} />
+      </div>
 
       {/* Offer Images - Hidden in Profile page */}
       {!hideOfferImage && (
@@ -312,7 +324,7 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
               {profile?.offer_image ? (
                 <div className="flex items-center gap-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
                   <div className="w-16 h-16 bg-slate-600 rounded-lg flex items-center justify-center overflow-hidden">
-                    <img src={profile.offer_image} alt="Offer Image" className="w-full h-full object-cover" />
+                    <img src={profile.offer_image} alt="Offer Image" className="w-full h-full object-contain" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
@@ -368,88 +380,20 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
         </Card>
       )}
 
-      {/* Business Photos */}
-      <Card id="business-images" className="bg-slate-800/50 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            Business Photos
-            <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full">HIGH PRIORITY</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {profile?.business_images && Array.isArray(profile.business_images) && profile.business_images.length > 0 ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <p className="text-white font-medium">Business Photos Uploaded ({profile.business_images.length})</p>
-                  <p className="text-green-400 text-sm">HIGH PRIORITY COMPLETE</p>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {profile.business_images.map((imageUrl: string, index: number) => (
-                    <div key={index} className="relative group">
-                      <img 
-                        src={imageUrl} 
-                        alt={`Business Photo ${index + 1}`} 
-                        className="w-full h-32 object-cover rounded-lg border border-slate-600"
-                      />
-                    </div>
-                  ))}
-                </div>
-                <LoadingButton 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => triggerFileInput('businessImagesUpload')}
-                  loading={uploading === 'business_images'}
-                  loadingText="Uploading..."
-                  className="border-slate-600 text-gray-300 hover:bg-slate-700"
-                >
-                  Add More Photos
-                </LoadingButton>
-              </div>
-            ) : (
-              <div 
-                className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-[#00d083] transition-colors"
-                onClick={() => triggerFileInput('businessImagesUpload')}
-              >
-                <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-white mb-2">Upload Business Photos</h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Upload high-quality photos of your business. These will be the hero images customers see on your business card.
-                </p>
-                <p className="text-xs text-gray-500 mb-2">
-                  Recommended: 1200x800px or larger
-                </p>
-                <p className="text-xs text-gray-500">
-                  PNG, JPG, WEBP up to 10MB
-                </p>
-              </div>
-            )}
-            <input
-              id="businessImagesUpload"
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                const files = Array.from(e.target.files || [])
-                files.forEach(file => {
-                  if (file) handleFileUpload(file, 'business_images')
-                })
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Enhanced Business Photos Manager */}
+      <div id="business-images">
+        <EnhancedImageManager
+          images={profile?.business_images || []}
+          businessStatus={profile?.status || 'approved'}
+          onUpload={handleMultipleImageUpload}
+          onDelete={handleImageDelete}
+          onReorder={handleImageReorder}
+          isUploading={uploading === 'business_images'}
+          maxImages={10}
+          title="Business Photos"
+          description="Upload high-quality photos of your business in 16:9 aspect ratio (1920×1080px recommended). These will be the hero images customers see on your business card."
+        />
+      </div>
 
       {/* Help Section */}
       <Card className="bg-slate-800/50 border-slate-700">
@@ -464,7 +408,7 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
               <h3 className="font-semibold text-white mb-1">File Upload Tips</h3>
               <p className="text-sm text-gray-400">
                 • Logo: High-resolution images work best for branding<br/>
-                • Menu: PDF format ensures text stays readable<br/>
+                • Menus: Upload multiple menus using the dedicated section above<br/>
                 • Offers: Eye-catching images drive more engagement
               </p>
             </div>

@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
+import { filterActiveOffers } from '@/lib/utils/offer-helpers'
 
 interface DiscoverPageProps {
   searchParams: Promise<{
@@ -143,10 +144,12 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       description: business.business_description || '',
       hours: formatBusinessHours(business.business_hours, business.business_hours_structured), // For cards
       fullSchedule: formatBusinessHours(business.business_hours, business.business_hours_structured, true), // For hero view
-      images: business.business_images || ['/placeholder-business.jpg'],
+      images: business.business_images && business.business_images.length > 0 
+        ? business.business_images 
+        : [business.logo || '/placeholder-business.jpg'],
       logo: business.logo || '/placeholder-logo.jpg',
       slug: business.business_name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || business.id,
-      offers: business.business_offers?.filter(offer => offer.status === 'approved').map(offer => ({
+      offers: filterActiveOffers(business.business_offers || []).map(offer => ({
         id: offer.id,
         title: offer.offer_name,
         type: offer.offer_type,

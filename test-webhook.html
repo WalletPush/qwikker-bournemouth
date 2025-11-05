@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Slack Webhook Tester</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .container { background: #f5f5f5; padding: 20px; border-radius: 8px; }
+        input[type="url"] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #45a049; }
+        .result { margin-top: 20px; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Slack Webhook Tester</h1>
+        <p>Paste your Slack webhook URL here to test it:</p>
+        
+        <input type="url" id="webhookUrl" placeholder="https://hooks.slack.com/services/T.../B.../..." />
+        <button onclick="testWebhook()">Test Webhook</button>
+        
+        <div id="result"></div>
+        
+        <div class="info" style="margin-top: 30px;">
+            <h3>📍 How to Find Your Webhook URL:</h3>
+            <ol>
+                <li>Go to <a href="https://api.slack.com/apps" target="_blank">https://api.slack.com/apps</a></li>
+                <li>Click on your app (or create one)</li>
+                <li>Click "Incoming Webhooks" in the left sidebar</li>
+                <li>Toggle "Activate Incoming Webhooks" to ON</li>
+                <li>Click "Add New Webhook to Workspace"</li>
+                <li>Choose a channel and click "Allow"</li>
+                <li>Copy the webhook URL that appears</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        async function testWebhook() {
+            const webhookUrl = document.getElementById('webhookUrl').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!webhookUrl) {
+                resultDiv.innerHTML = '<div class="error">Please enter a webhook URL</div>';
+                return;
+            }
+            
+            if (!webhookUrl.startsWith('https://hooks.slack.com/services/')) {
+                resultDiv.innerHTML = '<div class="error">Invalid webhook URL format. Should start with: https://hooks.slack.com/services/</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="info">Testing webhook...</div>';
+            
+            try {
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: '🧪 Webhook Test from Qwikker',
+                        blocks: [
+                            {
+                                type: 'section',
+                                text: {
+                                    type: 'mrkdwn',
+                                    text: '*🧪 Webhook Test Success!*\n\nYour Slack webhook is working correctly! 🎉\n\n*Time:* ' + new Date().toLocaleString()
+                                }
+                            }
+                        ]
+                    })
+                });
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Success!</h3>
+                            <p>Check your Slack channel - you should see a test message!</p>
+                            <p><strong>Your webhook URL is working:</strong><br><code>${webhookUrl}</code></p>
+                            <p><strong>Add this to your .env.local file:</strong><br><code>BOURNEMOUTH_SLACK_WEBHOOK_URL="${webhookUrl}"</code></p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Error ${response.status}</h3>
+                            <p>The webhook URL might be invalid or expired.</p>
+                            <p>Try creating a new webhook in your Slack app settings.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Network Error</h3>
+                        <p>Could not connect to Slack. Error: ${error.message}</p>
+                        <p>Check your internet connection and webhook URL.</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

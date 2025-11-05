@@ -59,9 +59,10 @@ interface AdminDashboardProps {
   cityDisplayName: string
   pendingChangesCount: number
   pendingChanges: any[]
+  pendingMenus: any[]
 }
 
-export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisplayName, pendingChangesCount, pendingChanges }: AdminDashboardProps) {
+export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisplayName, pendingChangesCount, pendingChanges, pendingMenus }: AdminDashboardProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -83,6 +84,9 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterTier, setFilterTier] = useState('all')
+  
+  // Menu processing state
+  const [processingMenuId, setProcessingMenuId] = useState<string | null>(null)
   
   const { showSuccess, showError, showConfirm, ModalComponent } = useElegantModal()
   
@@ -391,7 +395,7 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
       id: 'updates', 
       label: 'Pending Updates', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>, 
-      count: pendingChangesCount 
+      count: pendingChangesCount + pendingMenus.length 
     },
     { 
       id: 'live', 
@@ -1208,7 +1212,10 @@ Qwikker Admin Team`
                     </div>
                   ) : (
                     liveBusinesses.map((business) => {
-                      // Convert business data to CRM format
+                      // Get menus from CRM data but keep original business data
+                      const crmMenus = crmData.find(crm => crm.id === business.id)?.business_menus || null
+                      
+                      // Convert business data to CRM format (original working version)
                       const crmBusiness = {
                         id: business.id,
                         business_name: business.business_name || 'Unnamed Business',
@@ -1243,6 +1250,7 @@ Qwikker Admin Team`
                         recent_payments: [],
                         menu_url: business.menu_url,
                         business_images: business.business_images as string[] | null,
+                        business_menus: crmMenus,
                         offer_name: business.offer_name,
                         offer_type: business.offer_type,
                         offer_image: business.offer_image,
@@ -1349,20 +1357,219 @@ Qwikker Admin Team`
               )}
 
               {activeTab === 'updates' && (
-                <div className="grid gap-6">
-                  {pendingChanges.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="space-y-6">
+                  {/* Pending Menus Section */}
+                  {pendingMenus.length > 0 && (
+                    <div className="space-y-4">
+                      <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                        <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Pending Menu Approvals ({pendingMenus.length})
+                      </h2>
+                      
+                      <div className="grid gap-4">
+                        {pendingMenus.map((menu) => (
+                          <div key={menu.id} className="bg-slate-800/50 backdrop-blur border border-orange-500/30 rounded-2xl overflow-hidden hover:border-orange-400/50 transition-all duration-300">
+                            <div className="p-6">
+                              <div className="flex items-start gap-4 mb-4">
+                                <div className="flex-shrink-0">
+                                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-orange-500/20 to-red-500/20 border-2 border-orange-500/30 flex items-center justify-center">
+                                    <svg className="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                  </div>
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1 min-w-0">
+                                      <h3 className="text-xl font-bold text-white mb-1 truncate">
+                                        {menu.business_profiles?.business_name || 'Unknown Business'}
+                                      </h3>
+                                      <p className="text-slate-300 text-sm mb-2">
+                                        {menu.business_profiles?.first_name} {menu.business_profiles?.last_name} • {menu.business_profiles?.email}
+                                      </p>
+                                      <div className="flex items-center gap-3 mb-3">
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-500/20 text-orange-300 border border-orange-500/30">
+                                          📄 {menu.menu_name}
+                                        </span>
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                          {menu.menu_type}
+                                        </span>
+                                        <span className="text-xs text-slate-400">
+                                          Uploaded {new Date(menu.created_at).toLocaleDateString()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Menu Actions */}
+                                  <div className="flex gap-3 mt-4">
+                                    <button
+                                      onClick={() => window.open(menu.menu_url, '_blank')}
+                                      className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                      </svg>
+                                      View PDF
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        console.log('🚀 APPROVE BUTTON CLICKED!')
+                                        console.log('🔍 Menu:', menu.menu_name)
+                                        
+                                        const confirmed = await showConfirm(
+                                          `Approve "${menu.menu_name}" and add to Knowledge Base?\n\nThis will:\n• Parse the PDF content\n• Create text chunks for AI search\n• Add to the knowledge base for chat queries`
+                                        )
+                                        
+                                        console.log('🔍 User confirmed:', confirmed)
+                                        if (!confirmed) return
+
+                                        // Set loading state
+                                        setProcessingMenuId(menu.id)
+
+                                        try {
+                                          console.log('🔄 Approving menu:', menu.id)
+                                          console.log('🔄 Admin email:', adminEmail)
+                                          console.log('🔄 Menu data:', menu)
+                                          
+                                          const response = await fetch('/api/admin/menus/approve', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                              menuId: menu.id,
+                                              action: 'approve',
+                                              adminUserId: adminEmail,
+                                              adminNotes: 'Approved via admin dashboard'
+                                            })
+                                          })
+                                          
+                                          const result = await response.json()
+                                          console.log('📄 Menu approval response:', result)
+                                          
+                                          if (response.ok && result.success) {
+                                            showSuccess(`Menu approved and added to Knowledge Base!\n\n• PDF processed successfully\n• ${result.chunksCreated || 'Multiple'} text chunks created\n• Available for AI chat queries`)
+                                            setTimeout(() => window.location.reload(), 2000)
+                                          } else {
+                                            console.error('❌ Menu approval failed:', result)
+                                            showError(`Failed to approve menu: ${result.error || 'Unknown error'}`)
+                                          }
+                                        } catch (error) {
+                                          console.error('❌ Menu approval error:', error)
+                                          showError(`Error approving menu: ${error.message}`)
+                                        } finally {
+                                          setProcessingMenuId(null)
+                                        }
+                                      }}
+                                      disabled={processingMenuId === menu.id}
+                                      className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {processingMenuId === menu.id ? (
+                                        <>
+                                          <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                          </svg>
+                                          Processing...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                          </svg>
+                                          Approve
+                                        </>
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        const confirmed = await showConfirm('Are you sure you want to reject this menu?')
+                                        if (!confirmed) return
+                                        
+                                        setProcessingMenuId(menu.id)
+                                        
+                                        try {
+                                          const response = await fetch('/api/admin/menus/approve', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                              menuId: menu.id,
+                                              action: 'reject',
+                                              adminUserId: adminEmail,
+                                              adminNotes: 'Rejected via admin dashboard'
+                                            })
+                                          })
+                                          
+                                          if (response.ok) {
+                                            showSuccess('Menu rejected')
+                                            window.location.reload()
+                                          } else {
+                                            showError('Failed to reject menu')
+                                          }
+                                        } catch (error) {
+                                          showError('Error rejecting menu')
+                                        } finally {
+                                          setProcessingMenuId(null)
+                                        }
+                                      }}
+                                      disabled={processingMenuId === menu.id}
+                                      className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {processingMenuId === menu.id ? (
+                                        <>
+                                          <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                          </svg>
+                                          Processing...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                          </svg>
+                                          Reject
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pending Business Changes Section */}
+                  <div className="space-y-4">
+                    {pendingChanges.length > 0 && (
+                      <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                        <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                      </div>
-                      <h3 className="text-xl font-semibold text-white mb-2">No pending updates</h3>
-                      <p className="text-slate-400">
-                        All business changes have been reviewed. New offers and updates from approved businesses will appear here.
-                      </p>
-                    </div>
-                  ) : (
+                        Pending Business Changes ({pendingChanges.length})
+                      </h2>
+                    )}
+                    
+                    <div className="grid gap-6">
+                      {pendingChanges.length === 0 && pendingMenus.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          </div>
+                          <h3 className="text-xl font-semibold text-white mb-2">No pending updates</h3>
+                          <p className="text-slate-400">
+                            All business changes and menu uploads have been reviewed.
+                          </p>
+                        </div>
+                      ) : (
                     pendingChanges.map((change) => (
                       <div key={change.id} className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl overflow-hidden hover:border-slate-600 transition-all duration-300">
                         <div className="p-6">
@@ -1543,7 +1750,9 @@ Qwikker Admin Team`
                         </div>
                       </div>
                     ))
-                  )}
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1579,6 +1788,9 @@ Qwikker Admin Team`
                     </div>
                   ) : (
                     expiredTrialBusinesses.map((business) => {
+                      // Get menus from CRM data but keep original business data
+                      const crmMenus = crmData.find(crm => crm.id === business.id)?.business_menus || null
+                      
                       // Convert business data to CRM format (same as live businesses)
                       const crmBusiness = {
                         id: business.id,
@@ -1600,6 +1812,7 @@ Qwikker Admin Team`
                         recent_payments: [],
                         menu_url: business.menu_url,
                         business_images: business.business_images as string[] | null,
+                        business_menus: crmMenus,
                         offer_name: business.offer_name,
                         offer_type: business.offer_type,
                         offer_image: business.offer_image,

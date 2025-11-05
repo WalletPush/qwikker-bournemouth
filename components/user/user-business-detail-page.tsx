@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ImageCarousel } from '@/components/ui/image-carousel'
 import { mockBusinesses, mockOffers, mockSecretMenus, mockClaimedOffers } from '@/lib/mock-data/user-mock-data'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -219,12 +220,14 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
         </Button>
       </div>
 
-      {/* Hero Section */}
+      {/* Hero Section with Image Carousel */}
       <div className="relative h-64 md:h-80 rounded-xl overflow-hidden">
-        <img 
-          src={business.images[0]} 
+        <ImageCarousel
+          images={business.images || []}
           alt={business.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full"
+          showArrows={true}
+          showDots={true}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
         

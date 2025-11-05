@@ -164,6 +164,30 @@ export async function POST(request: NextRequest) {
         
         console.log(`✅ NEW OFFER CREATED: ${change.change_data.offer_name} for ${change.business?.business_name} (${currentOfferCount + 1}/${maxOffers})`)
         
+        // 📧 SEND EMAIL NOTIFICATION: Offer approved
+        try {
+          const { sendOfferApprovalNotification } = await import('@/lib/notifications/email-notifications')
+          
+          if (change.business?.email) {
+            const emailResult = await sendOfferApprovalNotification({
+              firstName: change.business.first_name || 'Business Owner',
+              businessName: change.business.business_name || 'Your Business',
+              offerName: change.change_data.offer_name,
+              offerValue: change.change_data.offer_value,
+              city: change.business.city || 'bournemouth',
+              dashboardUrl: `https://${change.business.city || 'bournemouth'}.qwikker.com/dashboard`
+            })
+            
+            if (emailResult.success) {
+              console.log(`📧 Offer approval email sent to ${change.business.email}`)
+            } else {
+              console.error(`❌ Failed to send offer approval email: ${emailResult.error}`)
+            }
+          }
+        } catch (error) {
+          console.error('⚠️ Offer approval email error (non-critical):', error)
+        }
+        
         // Update business_profiles with the FIRST offer for backward compatibility
         if (currentOfferCount === 0) {
           updateData = {

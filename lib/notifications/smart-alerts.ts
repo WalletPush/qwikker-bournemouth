@@ -346,11 +346,37 @@ export class SmartNotificationSystem {
   }
 
   /**
-   * Send email notification (placeholder)
+   * Send email notification using Resend
    */
   private async sendEmailNotification(notification: any, severity: string): Promise<void> {
-    console.log('📧 Email notification (not implemented):', notification.title)
-    // TODO: Implement email notifications using Resend/SendGrid
+    try {
+      const { sendSystemNotificationEmail } = await import('./email-notifications')
+      const { getAdminEmailsForCity } = await import('../utils/city-detection')
+      
+      // Get admin emails for the relevant city
+      const adminEmails = getAdminEmailsForCity('bournemouth') // TODO: Make this dynamic based on notification context
+      
+      if (adminEmails.length === 0) {
+        console.warn('📧 No admin emails configured for notifications')
+        return
+      }
+      
+      const result = await sendSystemNotificationEmail(
+        adminEmails,
+        notification.title,
+        notification.message || notification.description || 'System notification triggered',
+        severity as 'critical' | 'high' | 'medium' | 'low'
+      )
+      
+      if (result.success) {
+        console.log(`✅ Email notification sent successfully: ${result.messageId}`)
+      } else {
+        console.error(`❌ Failed to send email notification: ${result.error}`)
+      }
+      
+    } catch (error) {
+      console.error('❌ Error sending email notification:', error)
+    }
   }
 
   /**

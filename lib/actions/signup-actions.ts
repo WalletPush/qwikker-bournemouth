@@ -262,6 +262,23 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
 
     console.log('Profile created:', profile.id)
 
+    // 📢 SEND SLACK NOTIFICATION: New business registered
+    try {
+      const { sendBusinessRegisteredNotification } = await import('@/lib/notifications/business-slack-notifications')
+      
+      await sendBusinessRegisteredNotification(
+        formData.businessName,
+        formData.businessType,
+        locationInfo.city,
+        formData.email,
+        'starter'
+      )
+      
+      console.log(`📢 Slack notification sent for new business: ${formData.businessName}`)
+    } catch (error) {
+      console.error('⚠️ Slack notification error (non-critical):', error)
+    }
+
     // 5. Track referral if provided
     if (referralCode) {
       try {

@@ -71,7 +71,7 @@ const FALLBACK_FRANCHISE_CRM_CONFIGS: Record<FranchiseCity, FranchiseCRMConfig> 
     displayName: 'Bournemouth',
     ghl_webhook_url: 'https://services.leadconnectorhq.com/hooks/IkBldqzvQG4XkoSxkCq8/webhook-trigger/582275ed-27fe-4374-808b-9f8403f820e3',
     ghl_update_webhook_url: undefined, // Will use main webhook for now
-    slack_webhook_url: 'https://hooks.slack.com/services/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',
+    slack_webhook_url: undefined, // Will be set via environment variable BOURNEMOUTH_SLACK_WEBHOOK_URL
     franchise_owner: {
       name: 'Qwikker Bournemouth',
       email: 'bournemouth@qwikker.com',

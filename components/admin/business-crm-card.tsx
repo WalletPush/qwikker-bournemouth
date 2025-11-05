@@ -775,13 +775,31 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
                 )}
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-400">Menu</label>
-                {business.menu_url ? (
-                  <a href={business.menu_url} target="_blank" className="text-purple-400 hover:text-purple-300 text-sm block mt-1">
-                    View Menu PDF
-                  </a>
+                <label className="text-sm font-medium text-slate-400">Menus & Files</label>
+                {business.business_menus && business.business_menus.length > 0 ? (
+                  <div className="mt-1 space-y-1">
+                    {business.business_menus.map((menu, index) => (
+                      <div key={index} className="text-sm">
+                        <span className="text-purple-400 hover:text-purple-300">
+                          📄 {menu.menu_name} ({menu.menu_type})
+                        </span>
+                        <span className={`ml-2 text-xs px-1 py-0.5 rounded ${
+                          menu.status === 'approved' ? 'bg-green-500/20 text-green-400' :
+                          menu.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                          menu.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                          'bg-blue-500/20 text-blue-400'
+                        }`}>
+                          {menu.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : business.menu_url ? (
+                  <p className="text-purple-400 hover:text-purple-300 text-sm mt-1">
+                    📄 Legacy Menu
+                  </p>
                 ) : (
-                  <p className="text-slate-500 text-sm mt-1">Not uploaded</p>
+                  <p className="text-slate-500 text-sm mt-1">No menus uploaded</p>
                 )}
               </div>
               <div>

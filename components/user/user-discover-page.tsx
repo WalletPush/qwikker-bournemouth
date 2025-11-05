@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ImageCarousel } from '@/components/ui/image-carousel'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import Link from 'next/link'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
@@ -117,12 +118,14 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
     return (
     <Link href={getNavUrl(`/user/business/${business.slug}`)} className="block">
       <Card className="bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden">
-      {/* Business Image */}
+      {/* Business Image Carousel */}
       <div className="relative h-48 overflow-hidden">
-        <img 
-          src={business.images[0]} 
+        <ImageCarousel
+          images={business.images || []}
           alt={business.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full"
+          showArrows={true}
+          showDots={false}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
         

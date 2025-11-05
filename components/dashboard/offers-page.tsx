@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { createOffer, deleteOffer } from '@/lib/actions/business-actions'
+import { createOffer, deleteBusinessOffer, deleteLegacyOffer } from '@/lib/actions/business-actions'
+import { useElegantModal } from '@/components/ui/elegant-modal'
 import { Profile, OFFER_TYPE_OPTIONS, OFFER_CLAIM_AMOUNT_OPTIONS } from '@/types/profiles'
 
 interface OffersPageProps {
@@ -19,6 +20,8 @@ export function OffersPage({ profile }: OffersPageProps) {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
+  
+  const { showConfirm, ModalComponent } = useElegantModal()
 
   const [formData, setFormData] = useState({
     offerName: '',
@@ -209,12 +212,44 @@ export function OffersPage({ profile }: OffersPageProps) {
     setEditingOfferId(null) // Clear editing state
   }
 
-  const handleDeleteOffer = async () => {
+  // Handle individual business offer deletion
+  const handleDeleteBusinessOffer = async (offerId: string, offerName: string) => {
+    const confirmed = await showConfirm(
+      `Are you sure you want to delete "${offerName}"? This action cannot be undone. If users have already claimed this offer, deletion will be prevented.`
+    )
+    
+    if (!confirmed) return
+
+    setMessage(null)
+
+    try {
+      const result = await deleteBusinessOffer(profile.user_id, offerId)
+      
+      if (result.success) {
+        setMessage({
+          type: 'success',
+          text: result.message || 'Offer deleted successfully!'
+        })
+        router.refresh()
+      } else {
+        throw new Error(result.error || 'Failed to delete offer')
+      }
+    } catch (error) {
+      console.error('Offer deletion error:', error)
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to delete offer. Please try again.'
+      })
+    }
+  }
+
+  // Handle legacy offer deletion (for backward compatibility)
+  const handleDeleteLegacyOffer = async () => {
     setIsDeleting(true)
     setMessage(null)
 
     try {
-      const result = await deleteOffer(profile.user_id)
+      const result = await deleteLegacyOffer(profile.user_id)
       
       if (result.success) {
         setMessage({
@@ -414,6 +449,14 @@ export function OffersPage({ profile }: OffersPageProps) {
                           }}
                         >
                           Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white text-xs"
+                          onClick={() => handleDeleteBusinessOffer(offer.id, offer.offer_name)}
+                        >
+                          Delete
                         </Button>
                       </div>
                     </div>
@@ -1035,7 +1078,7 @@ Examples:
                   Cancel
                 </Button>
                 <Button
-                  onClick={handleDeleteOffer}
+                  onClick={handleDeleteLegacyOffer}
                   disabled={isDeleting}
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
@@ -1063,6 +1106,9 @@ Examples:
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ModalComponent />
     </div>
   )
 }

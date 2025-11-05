@@ -16,9 +16,20 @@ export interface NotificationData {
  */
 export async function sendCitySlackNotification(notification: NotificationData) {
   try {
-    const config = await getFranchiseConfig(notification.city)
+    // Try CRM config first (supports environment variables)
+    const { getFranchiseCRMConfigWithEnvOverrides } = await import('./franchise-crm-config')
+    const crmConfig = getFranchiseCRMConfigWithEnvOverrides(notification.city)
     
-    if (!config?.slack_webhook_url) {
+    let config = null
+    let webhookUrl = crmConfig?.slack_webhook_url
+    
+    // Fallback to franchise config if no CRM config
+    if (!webhookUrl) {
+      config = await getFranchiseConfig(notification.city)
+      webhookUrl = config?.slack_webhook_url
+    }
+    
+    if (!webhookUrl) {
       console.warn(`No Slack webhook configured for ${notification.city}`)
       return { success: false, error: 'No Slack webhook configured' }
     }
@@ -30,7 +41,7 @@ export async function sendCitySlackNotification(notification: NotificationData) 
           type: 'header',
           text: {
             type: 'plain_text',
-            text: `🏙️ ${config.display_name} Alert`
+            text: `🏙️ ${crmConfig?.displayName || config?.display_name || notification.city.charAt(0).toUpperCase() + notification.city.slice(1)} Alert`
           }
         },
         {
@@ -52,7 +63,7 @@ export async function sendCitySlackNotification(notification: NotificationData) 
       ]
     }
 
-    const response = await fetch(config.slack_webhook_url, {
+    const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
