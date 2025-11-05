@@ -27,25 +27,26 @@ export async function trackBusinessVisit({ businessId, visitorName, visitorWalle
       }
     }
     
-    // Check if this is a first visit (if we have a user_id)
+    // Check if this is a first visit (check by user_id OR wallet_pass_id)
     let isFirstVisit = false
-    if (visitorUserId) {
+    if (visitorUserId || visitorWalletPassId) {
       const { data: existingVisit } = await supabase
         .from('user_business_visits')
         .select('id')
-        .eq('user_id', visitorUserId)
         .eq('business_id', businessId)
+        .or(`user_id.eq.${visitorUserId || 'null'},wallet_pass_id.eq.${visitorWalletPassId || 'null'}`)
         .single()
       
       isFirstVisit = !existingVisit
     }
     
-    // Only record the visit if we have a valid user_id (registered users only)
-    if (visitorUserId) {
+    // Record the visit for both registered AND anonymous users
+    if (visitorUserId || visitorWalletPassId) {
       const { error: visitError } = await supabase
         .from('user_business_visits')
         .insert({
-          user_id: visitorUserId,
+          user_id: visitorUserId, // Can be null for anonymous users
+          wallet_pass_id: visitorWalletPassId, // Track anonymous users by wallet pass
           business_id: businessId,
           visit_date: new Date().toISOString(),
           is_first_visit: isFirstVisit,
@@ -56,9 +57,10 @@ export async function trackBusinessVisit({ businessId, visitorName, visitorWalle
         console.error('Error tracking business visit:', visitError)
         return { success: false, error: visitError.message }
       }
+      
+      console.log(`✅ Business visit tracked: ${visitorName || 'Anonymous'} visited business ${businessId} (first visit: ${isFirstVisit})`)
     } else {
-      // For anonymous users, we could track in a separate table or just log
-      console.log(`📊 Anonymous user viewed business ${businessId}`)
+      console.log(`⚠️ No tracking data provided for business visit to ${businessId}`)
     }
     
     // Award points if user is registered

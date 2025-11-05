@@ -264,15 +264,20 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
 
     // 📢 SEND SLACK NOTIFICATION: New business registered
     try {
-      const { sendBusinessRegisteredNotification } = await import('@/lib/notifications/business-slack-notifications')
+      const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
       
-      await sendBusinessRegisteredNotification(
-        formData.businessName,
-        formData.businessType,
-        locationInfo.city,
-        formData.email,
-        'starter'
-      )
+      await sendCitySlackNotification({
+        city: locationInfo.city,
+        type: 'business_registered',
+        title: '🎉 New Business Registration',
+        message: `**${formData.businessName}** (${formData.businessType}) has registered in ${locationInfo.city}`,
+        details: [
+          `📧 Email: ${formData.email}`,
+          `📍 Location: ${locationInfo.city}`,
+          `💼 Type: ${formData.businessType}`,
+          `📦 Plan: Starter`
+        ]
+      })
       
       console.log(`📢 Slack notification sent for new business: ${formData.businessName}`)
     } catch (error) {

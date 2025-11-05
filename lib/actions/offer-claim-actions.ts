@@ -12,34 +12,67 @@ export async function claimOffer(data: {
   businessId?: string
   visitorWalletPassId?: string
 }) {
+    console.log('🎯 claimOffer called with data:', data)
+    
+    // Also log to browser console via return data for debugging
+    const debugLogs: string[] = []
+    debugLogs.push(`🎯 claimOffer called with data: ${JSON.stringify(data)}`)
+  
   try {
     const supabase = createServiceRoleClient()
     
     // If we have a wallet pass ID, try to find the user
     let userId = null
     if (data.visitorWalletPassId) {
-      const { data: user } = await supabase
+      console.log('🔍 Looking up user by wallet_pass_id:', data.visitorWalletPassId)
+      
+      const { data: user, error: userError } = await supabase
         .from('app_users')
         .select('user_id')
         .eq('wallet_pass_id', data.visitorWalletPassId)
         .single()
       
+      console.log('👤 User lookup result:', { user, userError })
+      
       if (user) {
         userId = user.user_id
+        console.log('✅ Found user_id:', userId)
+      } else {
+        console.log('⚠️ No user found for wallet_pass_id:', data.visitorWalletPassId)
       }
     }
     
-    // Store the claim in database
+    // Get the real business_id from the offer
+    let realBusinessId = null
+    if (data.offerId) {
+      console.log('🔍 Looking up business_id for offer:', data.offerId)
+      const { data: offerData, error: offerError } = await supabase
+        .from('business_offers')
+        .select('business_id')
+        .eq('id', data.offerId)
+        .single()
+      
+      if (offerData && !offerError) {
+        realBusinessId = offerData.business_id
+        console.log('✅ Found business_id:', realBusinessId)
+      } else {
+        console.log('⚠️ Could not find business_id for offer:', data.offerId, offerError)
+      }
+    }
+
+    // Store the claim in database with REAL business relationship
     const claimData = {
       offer_id: data.offerId,
       offer_title: data.offerTitle,
       business_name: data.businessName,
-      business_id: data.businessId,
+      business_id: realBusinessId, // Use REAL business_id for proper analytics
       user_id: userId,
       wallet_pass_id: data.visitorWalletPassId,
       claimed_at: new Date().toISOString(),
       status: 'claimed'
     }
+    
+    console.log('💾 Attempting to insert claim data:', claimData)
     
     const { data: claimRecord, error } = await supabase
       .from('user_offer_claims')
@@ -48,14 +81,17 @@ export async function claimOffer(data: {
       .single()
     
     if (error) {
-      console.error('Error storing offer claim:', error)
+      console.error('❌ Error storing offer claim:', error)
+      console.error('❌ Full error details:', JSON.stringify(error, null, 2))
       // Don't fail the request - localStorage backup will still work
       return { 
         success: true, 
         message: 'Offer claimed successfully!',
-        data: { stored_in_db: false, claim_id: null }
+        data: { stored_in_db: false, claim_id: null, error: error }
       }
     }
+    
+    console.log('✅ Claim stored successfully:', claimRecord)
     
     // 🎫 CRITICAL: Trigger GHL "Redemption Made" workflow
     if (data.visitorWalletPassId) {

@@ -51,6 +51,10 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
   
   useEffect(() => {
     const loadActivity = async () => {
+      // Get real user activity from database
+      const { getUserActivity } = await import('@/lib/actions/user-activity-actions')
+      const userActivity = await getUserActivity(walletPassId, 8)
+      
       // Get real business activity from database
       const { getRecentBusinessActivity } = await import('@/lib/actions/recent-activity-actions')
       const businessActivity = await getRecentBusinessActivity(franchiseCity)
@@ -63,36 +67,35 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         const earnedCount = progress.filter(b => b.earned).length
         setBadgeCount(earnedCount)
         
-        // Get claimed offers count from localStorage
+        // Get claimed offers count from real database data
+        const claimedCount = userActivity.filter(activity => activity.type === 'offer_claim').length
+        setClaimedOffersCount(claimedCount)
+        
+        // Convert user activity to display format
+        const formattedUserActivity = userActivity.map(activity => ({
+          id: activity.id,
+          type: activity.type,
+          icon: activity.iconType,
+          text: activity.message,
+          subtext: activity.business_name ? `at ${activity.business_name}` : '',
+          color: activity.color.replace('text-', '').replace('-400', ''),
+          href: activity.type === 'offer_claim' ? '/user/offers?filter=claimed' : 
+                activity.type === 'business_visit' ? '/user/discover' : 
+                activity.type === 'secret_unlock' ? '/user/discover' : '#',
+          time: activity.time,
+          timestamp: activity.timestamp
+        }))
+        
+        // Legacy localStorage fallback for badges and other features
         const userId = walletPassId || 'anonymous-user'
         const claimedKey = `qwikker-claimed-${userId}`
         const claimed = JSON.parse(localStorage.getItem(claimedKey) || '[]')
-        setClaimedOffersCount(claimed.length)
         
-        // Combine business activity with user activity
-        const userActivity = []
-        
-        // Recent offer claims
-        const claimedOffers = JSON.parse(localStorage.getItem(claimedKey) || '[]')
-        if (claimedOffers.length > 0) {
-          userActivity.push({
-            id: 'recent-claim',
-            type: 'offer',
-            icon: 'tag',
-            text: `You claimed ${claimedOffers.length} offer${claimedOffers.length > 1 ? 's' : ''}`,
-            subtext: 'View your claimed offers',
-            color: 'orange',
-            href: '/user/offers?filter=claimed',
-            time: 'Recently',
-            timestamp: new Date() // Recent user activity
-          })
-        }
-        
-        // Secret menu unlocks
+        // Secret menu unlocks (still using localStorage until we migrate this)
         const unlockedKey = `qwikker-unlocked-secrets-${userId}`
         const unlocked = JSON.parse(localStorage.getItem(unlockedKey) || '[]')
-        if (unlocked.length > 0) {
-          userActivity.push({
+        if (unlocked.length > 0 && !formattedUserActivity.some(a => a.type === 'secret_unlock')) {
+          formattedUserActivity.push({
             id: 'recent-secrets',
             type: 'secret',
             icon: 'lock',
@@ -107,7 +110,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         
         // Badge achievements
         if (earnedCount > 0) {
-          userActivity.push({
+          formattedUserActivity.push({
             id: 'recent-badges',
             type: 'achievement',
             icon: 'badge',
@@ -121,7 +124,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         }
         
         // Mix business activity with user activity
-        const allActivity = [...businessActivity, ...userActivity]
+        const allActivity = [...businessActivity, ...formattedUserActivity]
         
         // Sort by timestamp (most recent first)
         allActivity.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0))
@@ -191,7 +194,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Discover Places */}
         <Link href={getNavUrl("/user/discover")} className="group">
-          <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/40 transition-all duration-200 hover:scale-105 cursor-pointer">
+          <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/40 transition-colors duration-200 cursor-pointer">
             <CardContent className="p-6 text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
                 <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,7 +210,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
 
         {/* Offers */}
         <Link href={getNavUrl("/user/offers")} className="group">
-          <Card className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 hover:border-orange-500/40 transition-all duration-200 hover:scale-105 cursor-pointer">
+          <Card className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 hover:border-orange-500/40 transition-colors duration-200 cursor-pointer">
             <CardContent className="p-6 text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
                 <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,7 +226,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
 
         {/* Secret Menu */}
         <Link href={getNavUrl("/user/secret-menu")} className="group">
-          <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 hover:border-purple-500/40 transition-all duration-200 hover:scale-105 cursor-pointer">
+          <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 hover:border-purple-500/40 transition-colors duration-200 cursor-pointer">
             <CardContent className="p-6 text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,7 +242,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
 
         {/* Achievements */}
         <Link href={getNavUrl("/user/badges")} className="group">
-          <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20 hover:border-yellow-500/40 transition-all duration-200 hover:scale-105 cursor-pointer">
+          <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20 hover:border-yellow-500/40 transition-colors duration-200 cursor-pointer">
             <CardContent className="p-6 text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
                 <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">

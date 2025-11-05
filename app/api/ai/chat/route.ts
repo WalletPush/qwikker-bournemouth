@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate AI response using RAG
+    // Generate AI response using original system
     const result = await generateAIResponse(message, {
       city,
       userName,
@@ -52,7 +52,8 @@ export async function POST(request: NextRequest) {
       message,
       result.sources?.filter(s => s.type === 'business') || [],
       result.sources?.filter(s => s.type === 'city') || [],
-      result.response // Pass the AI response for context
+      result.response, // Pass the AI response for context
+      conversationHistory // Pass conversation history for context-aware suggestions
     )
 
     // Categorize the message for analytics

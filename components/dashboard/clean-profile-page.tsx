@@ -250,29 +250,15 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
     <Button
       onClick={onClick}
       disabled={saving}
-      className={`px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg ${
+      className={`px-6 py-2.5 rounded-lg font-medium transition-colors duration-200 min-w-[140px] ${
         saved 
-          ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-green-500/25' 
+          ? 'bg-green-600 hover:bg-green-700 text-white' 
           : saving
-            ? 'bg-slate-600 text-slate-300 cursor-not-allowed shadow-none'
-            : 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white shadow-[#00d083]/25'
+            ? 'bg-slate-600 text-slate-300 cursor-not-allowed'
+            : 'bg-[#00d083] hover:bg-[#00b86f] text-white'
       }`}
     >
-      {saved ? (
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          Saved!
-        </div>
-      ) : saving ? (
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Saving...
-        </div>
-      ) : children}
+      {saved ? 'Saved!' : saving ? 'Saving...' : children}
     </Button>
   )
 
@@ -283,7 +269,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
         <div className="relative flex items-center gap-8 max-w-4xl mx-auto">
           <div className="relative group">
             {profile.logo ? (
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-slate-600 shadow-xl group-hover:scale-105 transition-transform duration-300">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-slate-600 shadow-xl transition-colors duration-300">
                 <img 
                   src={profile.logo} 
                   alt="Profile Picture" 
@@ -291,7 +277,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
                 />
               </div>
             ) : (
-              <div className="w-20 h-20 bg-slate-700/50 rounded-full flex items-center justify-center border-2 border-slate-600 shadow-xl group-hover:scale-105 transition-transform duration-300">
+              <div className="w-20 h-20 bg-slate-700/50 rounded-full flex items-center justify-center border-2 border-slate-600 shadow-xl transition-colors duration-300">
                 <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
@@ -311,7 +297,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
                 input.click()
               }}
               disabled={uploading === 'logo'}
-              className="absolute -bottom-1 -right-1 w-7 h-7 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-600 rounded-full border-2 border-slate-800 flex items-center justify-center transition-all duration-300 shadow-lg hover:scale-110"
+              className="absolute -bottom-1 -right-1 w-7 h-7 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-600 rounded-full border-2 border-slate-800 flex items-center justify-center transition-colors duration-300 shadow-lg"
             >
               <svg className="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />

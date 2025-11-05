@@ -173,6 +173,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       
       // Show success message - wallet pass should be updated
       console.log('✅ Offer claimed and wallet pass updated:', result)
+      console.log('📊 Full result data:', JSON.stringify(result, null, 2))
     } catch (error) {
       console.error('Failed to claim offer:', error)
       // UI already updated, so don't fail the user experience
@@ -196,14 +197,14 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         <p class="text-slate-300 text-sm mb-6">What would you like to do next?</p>
         
         <div class="space-y-3">
-          <button id="view-claimed" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center gap-2">
+          <button id="view-claimed" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
             </svg>
             View Claimed Offers
           </button>
           
-          <button id="add-to-wallet" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-95 flex items-center justify-center gap-2">
+          <button id="add-to-wallet" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
             </svg>
@@ -215,7 +216,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             <p class="text-amber-100 text-xs text-center">Once added to your wallet, this offer will automatically expire after 12 hours</p>
           </div>
           
-          <button id="modal-dismiss" class="w-full bg-slate-600 hover:bg-slate-500 text-slate-200 font-medium py-2.5 px-6 rounded-xl transition-all duration-200 active:scale-95">
+          <button id="modal-dismiss" class="w-full bg-slate-600 hover:bg-slate-500 text-slate-200 font-medium py-2.5 px-6 rounded-xl transition-colors duration-200">
             Dismiss
           </button>
         </div>
@@ -569,7 +570,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           <img 
             src={businessImage} 
             alt={businessName}
-            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover object-center transition-opacity duration-300"
             loading="lazy"
           />
           
@@ -726,7 +727,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       {/* Clickable Filter Cards - Mobile First */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
             selectedFilter === 'all' 
               ? 'bg-gradient-to-br from-blue-600/30 to-blue-500/30 border-blue-400/50 ring-2 ring-blue-400/30' 
               : 'bg-gradient-to-br from-blue-900/20 to-blue-800/20 border-blue-700/30 hover:border-blue-600/50'
@@ -741,7 +742,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
             selectedFilter === 'percentage_off' 
               ? 'bg-gradient-to-br from-green-600/30 to-green-500/30 border-green-400/50 ring-2 ring-green-400/30' 
               : 'bg-gradient-to-br from-green-900/20 to-green-800/20 border-green-700/30 hover:border-green-600/50'
@@ -756,7 +757,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
             selectedFilter === 'two_for_one' 
               ? 'bg-gradient-to-br from-purple-600/30 to-purple-500/30 border-purple-400/50 ring-2 ring-purple-400/30' 
               : 'bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-700/30 hover:border-purple-600/50'
@@ -771,7 +772,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
             selectedFilter === 'ending_soon' 
               ? 'bg-gradient-to-br from-red-600/30 to-red-500/30 border-red-400/50 ring-2 ring-red-400/30' 
               : 'bg-gradient-to-br from-red-900/20 to-red-800/20 border-red-700/30 hover:border-red-600/50'
@@ -786,7 +787,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
             selectedFilter === 'claimed' 
               ? 'bg-gradient-to-br from-amber-600/30 to-amber-500/30 border-amber-400/50 ring-2 ring-amber-400/30' 
               : 'bg-gradient-to-br from-amber-900/20 to-amber-800/20 border-amber-700/30 hover:border-amber-600/50'
@@ -801,7 +802,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
             selectedFilter === 'favorites' 
               ? 'bg-gradient-to-br from-pink-600/30 to-pink-500/30 border-pink-400/50 ring-2 ring-pink-400/30' 
               : 'bg-gradient-to-br from-pink-900/20 to-pink-800/20 border-pink-700/30 hover:border-pink-600/50'

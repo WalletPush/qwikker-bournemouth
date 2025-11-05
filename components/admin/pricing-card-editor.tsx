@@ -201,7 +201,7 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
   }
 
   const getCardColorClasses = (colorScheme: string, isPopular: boolean) => {
-    const baseClasses = "relative overflow-hidden transition-all duration-300 hover:scale-105"
+    const baseClasses = "relative overflow-hidden transition-colors duration-300"
     
     switch (colorScheme) {
       case 'blue':
@@ -245,7 +245,7 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
         className={`cursor-pointer transition-all duration-300 ${isSelected ? 'ring-2 ring-blue-400' : ''}`}
         onClick={() => setSelectedCard(tier)}
       >
-        <Card className={`relative bg-slate-800/50 border transition-all duration-300 hover:scale-[1.02] flex flex-col ${
+        <Card className={`relative bg-slate-800/50 border transition-colors duration-300 flex flex-col ${
           tier === 'featured' ? 'border-blue-500/50' : 
           tier === 'spotlight' ? 'border-yellow-500/50' : 
           'border-slate-700'

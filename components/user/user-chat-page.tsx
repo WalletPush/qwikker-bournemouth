@@ -124,7 +124,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
 
     try {
       // 🚨 CRITICAL FIX: Include the current user message in conversation history!
-      const fullConversationHistory = [...messages, userMessage].slice(-6).map(msg => ({
+      const fullConversationHistory = [...messages, userMessage].slice(-8).map(msg => ({
         role: msg.type === 'user' ? 'user' : 'assistant',
         content: msg.content
       }))
@@ -515,7 +515,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
                           </div>
                           <div className="flex items-center">
                             <span className="text-xs mr-2 opacity-80">Add to Wallet</span>
-                            <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
                           </div>
@@ -598,7 +598,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
               <Button 
                 onClick={() => handleSendMessage(inputValue)}
                 disabled={!inputValue.trim() || isTyping}
-              className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-4 py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 self-end"
+              className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-4 py-3 rounded-xl font-semibold transition-colors duration-300 disabled:opacity-50 self-end"
               >
                 {isTyping ? (
                     <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>

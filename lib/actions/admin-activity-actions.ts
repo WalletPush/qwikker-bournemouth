@@ -8,6 +8,7 @@ export interface AdminActivity {
   type: 'application' | 'update' | 'approval' | 'rejection' | 'signup' | 'trial_expiry' | 'pass_install' | 'offer_claim' | 'business_visit'
   message: string
   time: string
+  timestamp: Date // Add actual timestamp for accurate sorting
   business_name?: string
   user_name?: string
   iconType: string
@@ -111,6 +112,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
           type: 'pass_install',
           message: `${install.name || 'User'} installed wallet pass in ${install.city || 'Unknown City'}`,
           time: timeAgo,
+          timestamp: installDate,
           user_name: install.name,
           iconType: 'wallet',
           color: 'bg-purple-500'
@@ -129,6 +131,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
           type: 'application',
           message: `New business application: ${app.business_name || 'Unnamed Business'} in ${app.business_town || 'Unknown City'}`,
           time: timeAgo,
+          timestamp: createdAt,
           business_name: app.business_name,
           iconType: 'plus',
           color: 'bg-green-500'
@@ -201,6 +204,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
           type,
           message,
           time: timeAgo,
+          timestamp: activityDate,
           business_name: change.business_name,
           iconType,
           color
@@ -232,6 +236,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
           type: 'offer_claim',
           message: `${userName} claimed "${claim.offer_title}" at ${claim.business_name}`,
           time: claimTimeAgo,
+          timestamp: claimDate,
           user_name: userName,
           business_name: claim.business_name,
           iconType: 'gift',
@@ -248,6 +253,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
             type: 'offer_claim',
             message: `${userName} redeemed "${claim.offer_title}" at ${claim.business_name}`,
             time: updateTimeAgo,
+            timestamp: updateDate,
             user_name: userName,
             business_name: claim.business_name,
             iconType: 'wallet',
@@ -285,6 +291,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
           type: 'business_visit',
           message: `${userName} visited ${businessName} in ${businessTown}`,
           time: timeAgo,
+          timestamp: visitDate,
           user_name: userName,
           business_name: businessName,
           iconType: 'mapPin',
@@ -319,6 +326,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
             type: 'trial_expiry',
             message: `${trial.business_name} trial expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`,
             time: `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`,
+            timestamp: trialEndDate,
             business_name: trial.business_name,
             iconType: 'clock',
             color: 'bg-orange-500'
@@ -327,13 +335,13 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
       }
     }
 
-    // Sort all activities by time (most recent first) and limit
+    // Sort all activities by actual timestamp (most recent first) and limit
     const sortedActivities = activities
       .sort((a, b) => {
-        // Convert time strings back to comparable values for sorting
-        const timeA = parseTimeAgo(a.time)
-        const timeB = parseTimeAgo(b.time)
-        return timeA - timeB
+        // Use actual timestamps for accurate sorting
+        const timestampA = getTimestampFromActivity(a)
+        const timestampB = getTimestampFromActivity(b)
+        return timestampB - timestampA // Most recent first
       })
       .slice(0, limit)
 
@@ -362,8 +370,13 @@ function getTimeAgo(date: Date): string {
   return `${diffInWeeks} week${diffInWeeks !== 1 ? 's' : ''} ago`
 }
 
+function getTimestampFromActivity(activity: AdminActivity): number {
+  // Return timestamp as milliseconds for accurate sorting
+  return activity.timestamp.getTime()
+}
+
 function parseTimeAgo(timeString: string): number {
-  // Convert time ago string back to minutes for sorting
+  // Convert time ago string back to minutes for sorting (legacy fallback)
   if (timeString === 'Just now') return 0
   
   const match = timeString.match(/(\d+)\s+(minute|hour|day|week)s?\s+ago/)

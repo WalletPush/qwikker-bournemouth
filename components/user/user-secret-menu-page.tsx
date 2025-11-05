@@ -173,9 +173,29 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
     document.addEventListener('keydown', handleEsc)
   }
 
-  const unlockSecretItem = (businessId: string, itemName: string) => {
+  const unlockSecretItem = async (businessId: string, itemName: string) => {
     const itemKey = `${businessId}-${itemName}`
     const newCount = unlockedItems.size + 1
+    
+    // Track in database if user is logged in
+    if (walletPassId) {
+      try {
+        const { trackSecretUnlock } = await import('@/lib/actions/secret-unlock-actions')
+        const result = await trackSecretUnlock({
+          businessId,
+          itemName,
+          visitorWalletPassId: walletPassId
+        })
+        
+        if (result.success) {
+          console.log('🤫 ✅ Secret unlock tracked in database:', result.message)
+        } else {
+          console.error('🤫 ❌ Failed to track secret unlock:', result.error)
+        }
+      } catch (error) {
+        console.error('🤫 ❌ Error calling trackSecretUnlock:', error)
+      }
+    }
     
     setUnlockedItems(prev => {
       const newUnlocked = new Set([...prev, itemKey])

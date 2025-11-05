@@ -495,7 +495,7 @@ Qwikker Admin Team`
                             alt={`${business.business_name} logo`}
                             width={128}
                             height={128}
-                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                            className="w-full h-full object-contain transition-opacity duration-300"
                           />
                         </div>
                         <button
@@ -540,7 +540,7 @@ Qwikker Admin Team`
                               alt={`Business photo ${index + 1}`}
                               width={150}
                               height={150}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              className="w-full h-full object-cover transition-opacity duration-300"
                             />
                           </div>
                           <button
