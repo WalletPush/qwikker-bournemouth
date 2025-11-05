@@ -38,7 +38,7 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-20">
               <Link 
                 href="/onboarding"
-                className="group relative bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold py-4 px-12 rounded-2xl transition-all duration-300 shadow-2xl hover:shadow-[#00d083]/25 transform hover:scale-105 flex items-center gap-3 text-lg"
+                className="group relative bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold py-4 px-12 rounded-2xl transition-colors duration-300 shadow-2xl hover:shadow-[#00d083]/25 flex items-center gap-3 text-lg"
               >
                 <span>Start Free Trial</span>
                 <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">

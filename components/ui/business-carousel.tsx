@@ -90,7 +90,7 @@ export function BusinessCarousel({ businesses, currentUser, className = '', onSh
           {sortedBusinesses.map((business) => (
             <Card 
               key={business.id} 
-              className={`flex-shrink-0 w-[280px] h-[320px] ${getTierStyling(business.business_tier)} hover:scale-105 transition-all duration-200`}
+              className={`flex-shrink-0 w-[280px] h-[320px] ${getTierStyling(business.business_tier)} transition-colors duration-200`}
             >
               <CardContent className="p-0 h-full flex flex-col">
                 {/* Business Image Carousel */}

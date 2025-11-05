@@ -279,7 +279,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
       {/* Clickable Filter Cards - Mobile First */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
             selectedFilter === 'qwikker_picks' 
               ? 'bg-gradient-to-br from-yellow-400/30 to-amber-500/30 border-yellow-300/50 ring-2 ring-yellow-300/30' 
               : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
@@ -294,7 +294,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
             selectedFilter === 'featured' 
               ? 'bg-gradient-to-br from-green-600/30 to-green-500/30 border-green-400/50 ring-2 ring-green-400/30' 
               : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
@@ -309,7 +309,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
             selectedFilter === 'recommended' 
               ? 'bg-gradient-to-br from-purple-600/30 to-purple-500/30 border-purple-400/50 ring-2 ring-purple-400/30' 
               : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
@@ -324,7 +324,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-3 sm:p-4 hover:scale-105 ${
+          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
             selectedFilter === 'all' 
               ? 'bg-gradient-to-br from-blue-600/30 to-blue-500/30 border-blue-400/50 ring-2 ring-blue-400/30' 
               : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'

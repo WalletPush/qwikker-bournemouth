@@ -176,15 +176,18 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
   
   // Get visitor info and business ID for client-side tracking
   let trackingData = null
-  if (viewedBusiness) {
+  if (viewedBusiness && walletPassId) {
+    // Try to find real business first, then fall back to mock business
     const realBusiness = realBusinesses.find(rb => rb.slug === slug)
-    if (realBusiness) {
-      const visitorWalletPassId = await getWalletPassCookie()
-      trackingData = {
-        businessId: realBusiness.id,
-        visitorWalletPassId: visitorWalletPassId || undefined
-      }
+    const businessId = realBusiness ? realBusiness.id : viewedBusiness.id
+    
+    trackingData = {
+      businessId: businessId,
+      visitorName: currentUser?.name || 'Anonymous User',
+      visitorWalletPassId: walletPassId
     }
+    
+    console.log('🔍 Business visit tracking data:', trackingData)
   }
   
   return (

@@ -782,7 +782,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
           <Button
             onClick={saveConfig}
             disabled={saveStatus === 'saving'}
-            className={`px-12 py-4 text-lg font-bold text-white transition-all duration-300 transform hover:scale-105 ${
+            className={`px-12 py-4 text-lg font-bold text-white transition-colors duration-300 ${
               saveStatus === 'saved' 
                 ? 'bg-green-500 hover:bg-green-600 shadow-green-500/25' 
                 : saveStatus === 'error'

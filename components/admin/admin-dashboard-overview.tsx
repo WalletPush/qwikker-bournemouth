@@ -252,7 +252,7 @@ export function AdminDashboardOverview({
               className="p-4 sm:p-6 bg-slate-800/50 border border-slate-700/50 cursor-pointer hover:bg-slate-700/50 transition-all duration-200 group"
               onClick={action.action}
             >
-              <div className={`w-12 h-12 bg-gradient-to-r ${action.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200`}>
+              <div className={`w-12 h-12 bg-gradient-to-r ${action.color} rounded-xl flex items-center justify-center mb-4 transition-colors duration-200`}>
                 <div className="text-white">
                   {action.icon}
                 </div>

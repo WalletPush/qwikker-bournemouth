@@ -209,7 +209,7 @@ export default function AddToWalletButton({
     <button 
       onClick={addOfferToWallet}
       disabled={isAdding}
-      className={`${sizeClasses[size]} ${variantClasses[variant]} rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 ${className}`}
+      className={`${sizeClasses[size]} ${variantClasses[variant]} rounded-lg font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
     >
       {isAdding ? (
         <span className="flex items-center justify-center gap-2">

@@ -92,7 +92,7 @@ export function SyncStatusBadge({
     <div className="relative">
       {/* Compact Status Badge */}
       <div 
-        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-all hover:scale-105 ${
+        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-colors duration-200 ${
           hasFailures 
             ? 'bg-red-500/20 text-red-400 border-red-500/30' 
             : isPending

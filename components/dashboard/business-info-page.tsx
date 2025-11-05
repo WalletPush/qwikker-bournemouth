@@ -282,23 +282,9 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
                 type="button"
                 onClick={saveBasicInfo}
                 disabled={isSavingBasicInfo}
-                className="bg-[#00d083] hover:bg-[#00b86f] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-[#00d083] hover:bg-[#00b86f] disabled:bg-slate-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors duration-200 min-w-[180px]"
               >
-                {isSavingBasicInfo ? (
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Saving...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Save Business Details
-                  </div>
-                )}
+                {isSavingBasicInfo ? 'Saving...' : 'Save Business Details'}
               </Button>
             </div>
           </CardContent>
@@ -561,23 +547,9 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
                 type="button"
                 onClick={saveMenuItems}
                 disabled={isSavingMenuItems}
-                className="bg-[#00d083] hover:bg-[#00b86f] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-[#00d083] hover:bg-[#00b86f] disabled:bg-slate-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors duration-200 min-w-[160px]"
               >
-                {isSavingMenuItems ? (
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Saving...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Save Featured Items
-                  </div>
-                )}
+                {isSavingMenuItems ? 'Saving...' : 'Save Featured Items'}
               </Button>
             </div>
           </CardContent>

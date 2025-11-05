@@ -35,15 +35,19 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
   // Track business visit after component mounts
   useEffect(() => {
     if (trackingData) {
+      console.log('🔍 Tracking business visit with data:', trackingData)
       const trackVisit = async () => {
         try {
           const { trackBusinessVisit } = await import('@/lib/actions/business-visit-actions')
-          await trackBusinessVisit(trackingData)
+          const result = await trackBusinessVisit(trackingData)
+          console.log('✅ Business visit tracked:', result)
         } catch (error) {
-          console.error('Failed to track business visit:', error)
+          console.error('❌ Failed to track business visit:', error)
         }
       }
       trackVisit()
+    } else {
+      console.log('⚠️ No tracking data provided for business visit')
     }
   }, [trackingData])
 
@@ -128,7 +132,7 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
         <p class="text-slate-400 text-sm mb-2">from ${businessName}</p>
         <p class="text-slate-300 text-sm mb-2">Your wallet pass has been updated with this offer.</p>
         <p class="text-sm text-slate-400 mb-6">Check your mobile wallet to view the updated pass.</p>
-        <button id="modal-close" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 active:scale-95">
+        <button id="modal-close" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200">
           Got it!
         </button>
       </div>

@@ -150,6 +150,47 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         } catch (error) {
           console.error('Error loading business changes for activity feed:', error)
         }
+        
+        // Get real business analytics data via server action
+        try {
+          const { getBusinessActivityData } = await import('@/lib/actions/business-analytics-actions')
+          const businessAnalytics = await getBusinessActivityData(profile.id)
+          
+          // Add recent claims activity
+          if (businessAnalytics.recentClaims > 0) {
+            realActivity.push({
+              id: `recent_claims_${profile.id}`,
+              type: 'offer_claimed',
+              message: `${businessAnalytics.recentClaims} offer${businessAnalytics.recentClaims > 1 ? 's' : ''} claimed this week`,
+              timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday for sorting
+              icon: (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+              ),
+              color: 'text-orange-400'
+            })
+          }
+          
+          // Add recent visits activity
+          if (businessAnalytics.recentVisits > 0) {
+            realActivity.push({
+              id: `recent_visits_${profile.id}`,
+              type: 'business_visit',
+              message: `${businessAnalytics.recentVisits} customer visit${businessAnalytics.recentVisits > 1 ? 's' : ''} this week`,
+              timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12 hours ago for sorting
+              icon: (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              ),
+              color: 'text-blue-400'
+            })
+          }
+        } catch (error) {
+          console.error('Error loading business analytics for activity feed:', error)
+        }
       
       // Profile creation event
       if (profile.created_at) {
@@ -167,13 +208,13 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         })
       }
       
-      // Profile submission event (if submitted)
+      // Profile submission event (if submitted) - use created_at for initial submission
       if (profile.status === 'pending_review' || profile.status === 'approved') {
         realActivity.push({
           id: 'profile_submitted',
           type: 'profile_submitted', 
           message: 'Profile submitted for review',
-          timestamp: new Date(profile.updated_at || profile.created_at),
+          timestamp: new Date(profile.created_at), // Use created_at for submission time
           icon: (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -183,20 +224,26 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         })
       }
       
-      // Approval event (if approved)
+      // Approval event (if approved) - use approved_at or updated_at for approval time
       if (profile.status === 'approved') {
-        realActivity.push({
-          id: 'listing_approved',
-          type: 'listing_approved',
-          message: 'Listing approved by Qwikker',
-          timestamp: new Date(profile.approved_at || profile.updated_at),
-          icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          ),
-          color: 'text-green-400'
-        })
+        // Only show approval if it happened after submission (avoid showing approval before submission)
+        const approvalTime = new Date(profile.approved_at || profile.updated_at)
+        const submissionTime = new Date(profile.created_at)
+        
+        if (approvalTime > submissionTime) {
+          realActivity.push({
+            id: 'listing_approved',
+            type: 'listing_approved',
+            message: 'Listing approved by Qwikker',
+            timestamp: approvalTime,
+            icon: (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ),
+            color: 'text-green-400'
+          })
+        }
       }
       
       // Logo upload event
@@ -270,90 +317,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         }
       }
       
-      // Add business visits to activity feed
-            businessVisits.forEach((visit) => {
-              const visitorName = `${visit.app_users?.first_name || ''} ${visit.app_users?.last_name || ''}`.trim() || 'Someone'
-        realActivity.push({
-          id: `visit_${visit.id}`,
-          type: 'business_viewed',
-          message: `${visitorName} viewed your business${visit.is_first_visit ? ' (first time!)' : ''}`,
-          timestamp: new Date(visit.visit_date),
-          icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-          ),
-          color: visit.is_first_visit ? 'text-green-400' : 'text-blue-400'
-        })
-      })
 
-      // Add offer claims and redemptions for THIS business
-      try {
-        const { data: offerClaims } = await supabase
-          .from('user_offer_claims')
-          .select(`
-            id,
-            offer_title,
-            claimed_at,
-            status,
-            updated_at,
-            wallet_pass_id
-          `)
-          .eq('business_name', profile.business_name)
-          .order('claimed_at', { ascending: false })
-          .limit(10)
-
-        if (offerClaims) {
-          for (const claim of offerClaims) {
-            // Get user name
-            let userName = 'Someone'
-            if (claim.wallet_pass_id) {
-              const { data: user } = await supabase
-                .from('app_users')
-                .select('first_name, last_name, name')
-                .eq('wallet_pass_id', claim.wallet_pass_id)
-                .single()
-              
-              if (user) {
-                userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.name || 'Someone'
-              }
-            }
-
-            // Add claim activity
-            realActivity.push({
-              id: `claim_${claim.id}`,
-              type: 'offer_claimed',
-              message: `${userName} claimed YOUR "${claim.offer_title}" offer`,
-              timestamp: new Date(claim.claimed_at),
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-              ),
-              color: 'text-blue-400'
-            })
-
-            // Add redemption activity if redeemed
-            if (claim.status === 'wallet_added' || claim.status === 'redeemed') {
-              realActivity.push({
-                id: `redeem_${claim.id}`,
-                type: 'offer_redeemed',
-                message: `${userName} redeemed YOUR "${claim.offer_title}" offer`,
-                timestamp: new Date(claim.updated_at || claim.claimed_at),
-                icon: (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                ),
-                color: 'text-green-400'
-              })
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error loading offer claims for business activity:', error)
-      }
       
         // Sort by timestamp (newest first) and take top 4
         const sortedActivity = realActivity
@@ -562,7 +526,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-[#00d083] to-[#00b86f] rounded-xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
           <Link href="/dashboard/offers">
-            <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer hover:scale-105 transition-transform duration-200">
+            <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer transition-colors duration-200">
               <CardContent className="p-4 text-center">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-lg flex items-center justify-center mx-auto mb-3">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -580,7 +544,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
           <Link href="/dashboard/secret-menu">
-            <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer hover:scale-105 transition-transform duration-200">
+            <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer transition-colors duration-200">
               <CardContent className="p-4 text-center">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -598,7 +562,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
           <Link href="/dashboard/profile#featured-items">
-            <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer hover:scale-105 transition-transform duration-200">
+            <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer transition-colors duration-200">
               <CardContent className="p-4 text-center">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -616,7 +580,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
           <Link href="/dashboard/profile#business-info">
-            <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer hover:scale-105 transition-transform duration-200">
+            <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer transition-colors duration-200">
               <CardContent className="p-4 text-center">
                 <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

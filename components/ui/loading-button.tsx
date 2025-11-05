@@ -27,10 +27,10 @@ const LoadingButton = forwardRef<HTMLButtonElement, LoadingButtonProps>(
     const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed'
     
     const variantClasses = {
-      primary: 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-semibold shadow-lg hover:shadow-xl active:scale-[0.98]',
+      primary: 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-semibold shadow-lg hover:shadow-xl',
       secondary: 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-slate-600 active:bg-slate-600',
-      danger: 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl active:scale-[0.98]',
-      success: 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl active:scale-[0.98]',
+      danger: 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl',
+      success: 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl',
       outline: 'border border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white active:bg-slate-700'
     }
     

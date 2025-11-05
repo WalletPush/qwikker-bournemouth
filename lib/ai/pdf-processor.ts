@@ -16,9 +16,8 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<ProcessedPDF> 
   try {
     console.log(`📄 Processing PDF (${buffer.length} bytes)...`)
     
-    // Use dynamic import for pdf-parse (Turbopack compatible)
-    const pdfParseModule = await import('pdf-parse')
-    const pdfParse = pdfParseModule.pdf || pdfParseModule.default
+    // Use require for pdf-parse to avoid ESM issues
+    const pdfParse = require('pdf-parse')
     
     if (typeof pdfParse !== 'function') {
       throw new Error('pdf-parse module not available')
