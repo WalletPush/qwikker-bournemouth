@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ImageCarousel } from '@/components/ui/image-carousel'
 import { useState } from 'react'
 import Link from 'next/link'
 
@@ -92,24 +93,18 @@ export function BusinessCarousel({ businesses, currentUser, className = '', onSh
               className={`flex-shrink-0 w-[280px] h-[320px] ${getTierStyling(business.business_tier)} hover:scale-105 transition-all duration-200`}
             >
               <CardContent className="p-0 h-full flex flex-col">
-                {/* Business Image */}
+                {/* Business Image Carousel */}
                 <div className="relative h-[160px] bg-slate-700 rounded-t-lg overflow-hidden">
-                  {business.business_images && business.business_images.length > 0 ? (
-                    <img 
-                      src={business.business_images[0]} 
-                      alt={business.business_name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
-                      <svg className="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0h2M7 7h10M7 11h6" />
-                      </svg>
-                    </div>
-                  )}
+                  <ImageCarousel
+                    images={business.business_images || []}
+                    alt={business.business_name}
+                    className="w-full h-full"
+                    showArrows={true}
+                    showDots={false}
+                  />
                   
                   {/* Tier Badge - Top Right */}
-                  <div className="absolute top-2 right-2">
+                  <div className="absolute top-2 right-2 z-20">
                     {getTierBadge(business.business_tier)}
                   </div>
                 </div>

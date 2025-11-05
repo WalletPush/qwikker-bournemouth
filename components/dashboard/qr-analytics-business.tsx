@@ -29,22 +29,59 @@ interface QRAnalyticsBusinessProps {
 export function QRAnalyticsBusiness({ businessId, businessTier }: QRAnalyticsBusinessProps) {
   const [analytics, setAnalytics] = useState<BusinessQRAnalytics[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Check if business has access to QR analytics
-  const hasAccess = businessTier === 'spotlight'
+  const [hasAccess, setHasAccess] = useState(false)
 
   useEffect(() => {
-    if (hasAccess) {
-      fetchQRAnalytics()
-    } else {
-      setLoading(false)
+    checkAccess()
+  }, [businessId])
+
+  const checkAccess = async () => {
+    try {
+      const response = await fetch('/api/user/feature-access?feature=analytics')
+      
+      if (response.ok) {
+        const data = await response.json()
+        setHasAccess(data.hasAccess)
+        
+        if (data.hasAccess) {
+          fetchQRAnalytics()
+        } else {
+          setLoading(false)
+        }
+      } else {
+        // Fallback to old system
+        const fallbackAccess = businessTier === 'spotlight'
+        setHasAccess(fallbackAccess)
+        
+        if (fallbackAccess) {
+          fetchQRAnalytics()
+        } else {
+          setLoading(false)
+        }
+      }
+    } catch (error) {
+      console.error('Error checking analytics access:', error)
+      // Fallback to old system
+      const fallbackAccess = businessTier === 'spotlight'
+      setHasAccess(fallbackAccess)
+      
+      if (fallbackAccess) {
+        fetchQRAnalytics()
+      } else {
+        setLoading(false)
+      }
     }
-  }, [businessId, hasAccess])
+  }
 
   const fetchQRAnalytics = async () => {
     try {
-      // Mock data for demonstration
-      const mockData: BusinessQRAnalytics[] = [
+      // Fetch real QR analytics data
+      const response = await fetch(`/api/analytics/qr?businessId=${businessId}`)
+      
+      if (!response.ok) {
+        console.warn('QR analytics API not available, using mock data')
+        // Fallback to mock data for demonstration
+        const mockData: BusinessQRAnalytics[] = [
         {
           qr_code_name: 'Table Tent - Explore',
           qr_type: 'explore',
@@ -70,6 +107,16 @@ export function QRAnalyticsBusiness({ businessId, businessTier }: QRAnalyticsBus
       ]
       
       setAnalytics(mockData)
+      return
+    }
+
+    const data = await response.json()
+    if (data.success && data.analytics) {
+      setAnalytics(data.analytics)
+    } else {
+      // No real data available, use empty array
+      setAnalytics([])
+    }
     } catch (error) {
       console.error('Error fetching QR analytics:', error)
     } finally {

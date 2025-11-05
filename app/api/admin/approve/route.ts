@@ -141,6 +141,71 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error('⚠️ Push notification error (non-critical):', error)
       }
+
+      // 📧 SEND EMAIL NOTIFICATIONS: Business approved
+      try {
+        const { sendBusinessApprovalNotification } = await import('@/lib/notifications/email-notifications')
+        
+        if (data.email && data.business_name) {
+          const emailResult = await sendBusinessApprovalNotification({
+            firstName: data.first_name || 'Business Owner',
+            businessName: data.business_name,
+            city: requestCity,
+            dashboardUrl: `https://${requestCity}.qwikker.com/dashboard`,
+            supportEmail: process.env.SUPPORT_EMAIL || 'support@qwikker.com'
+          })
+          
+          if (emailResult.success) {
+            console.log(`📧 Business approval email sent to ${data.email}`)
+          } else {
+            console.error(`❌ Failed to send approval email: ${emailResult.error}`)
+          }
+        }
+      } catch (error) {
+        console.error('⚠️ Email notification error (non-critical):', error)
+      }
+
+      // 📢 SEND SLACK NOTIFICATION: Business approved
+      try {
+        const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
+        
+        await sendCitySlackNotification({
+          title: `Business Approved: ${data.business_name}`,
+          message: `${data.business_name} has been approved by ${admin.username || 'Admin'} and is now live on the platform.`,
+          city: requestCity,
+          type: 'business_signup',
+          data: { businessName: data.business_name, businessType: data.business_type }
+        })
+        
+        console.log(`📢 Slack notification sent for business approval: ${data.business_name}`)
+      } catch (error) {
+        console.error('⚠️ Slack notification error (non-critical):', error)
+      }
+    }
+    
+    // 📧 SEND EMAIL NOTIFICATIONS: Business rejected
+    if (action === 'reject') {
+      try {
+        const { sendBusinessRejectionNotification } = await import('@/lib/notifications/email-notifications')
+        
+        if (data.email && data.business_name) {
+          const emailResult = await sendBusinessRejectionNotification({
+            firstName: data.first_name || 'Business Owner',
+            businessName: data.business_name,
+            rejectionReason: data.admin_notes || 'Please review and update your business information.',
+            city: requestCity,
+            supportEmail: process.env.SUPPORT_EMAIL || 'support@qwikker.com'
+          })
+          
+          if (emailResult.success) {
+            console.log(`📧 Business rejection email sent to ${data.email}`)
+          } else {
+            console.error(`❌ Failed to send rejection email: ${emailResult.error}`)
+          }
+        }
+      } catch (error) {
+        console.error('⚠️ Email notification error (non-critical):', error)
+      }
     }
     
     // 📞 SYNC STATUS CHANGES TO GHL (for all actions)

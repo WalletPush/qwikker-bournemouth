@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Interactive Image Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1e293b;
+            color: white;
+        }
+        .test-button {
+            background: #3b82f6;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .test-button:hover {
+            background: #2563eb;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            background: #374151;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Interactive Image Editor Test</h1>
+    
+    <div class="status">
+        <h3>Test Steps:</h3>
+        <ol>
+            <li>Go to your business dashboard</li>
+            <li>Navigate to Files & Menus</li>
+            <li>Upload a business image (or use existing ones)</li>
+            <li>Hover over an image in the grid</li>
+            <li>Look for the blue ✏️ (edit) button in the top-right corner</li>
+            <li>Click the ✏️ button to open the interactive editor</li>
+        </ol>
+    </div>
+
+    <div class="status">
+        <h3>Troubleshooting:</h3>
+        <ul>
+            <li><strong>No ✏️ button visible:</strong> Make sure you hover over the image</li>
+            <li><strong>Button doesn't work:</strong> Check browser console for errors</li>
+            <li><strong>Modal doesn't open:</strong> Verify the component is properly imported</li>
+            <li><strong>Database error:</strong> Run the migration to add image_transforms column</li>
+        </ul>
+    </div>
+
+    <div class="status">
+        <h3>Expected Behavior:</h3>
+        <p>When you click the ✏️ button, you should see:</p>
+        <ul>
+            <li>A full-screen modal with dark overlay</li>
+            <li>Left side: Interactive editor with drag & zoom controls</li>
+            <li>Right side: Live business card preview</li>
+            <li>Grid overlay for alignment</li>
+            <li>Center and Reset buttons</li>
+            <li>Save and Cancel buttons at the bottom</li>
+        </ul>
+    </div>
+
+    <button class="test-button" onclick="window.location.href='http://localhost:3000/dashboard/files'">
+        Go to Files & Menus
+    </button>
+
+    <button class="test-button" onclick="checkConsole()">
+        Check for Errors
+    </button>
+
+    <script>
+        function checkConsole() {
+            alert('Open your browser console (F12) and look for any error messages. Common issues:\n\n1. Import errors\n2. Database column missing\n3. TypeScript errors\n4. Component not found');
+        }
+    </script>
+</body>
+</html>

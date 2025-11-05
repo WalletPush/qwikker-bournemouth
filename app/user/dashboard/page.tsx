@@ -7,6 +7,7 @@ import { mockBusinesses, mockOffers } from '@/lib/mock-data/user-mock-data'
 import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
 // Removed unused import
 import { getValidatedUser } from '@/lib/utils/wallet-pass-security'
+import { filterActiveOffers } from '@/lib/utils/offer-helpers'
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -146,6 +147,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
         offer_name,
         offer_type,
         offer_value,
+        offer_end_date,
         status
       )
     `)
@@ -161,9 +163,10 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   const realBusinesses = approvedBusinesses || []
   const totalBusinesses = realBusinesses.length + mockBusinesses.length
   
-  // Count real offers + mock offers
+  // Count real offers + mock offers (only active, non-expired offers)
   const realOffers = realBusinesses.reduce((total, b) => {
-    return total + (b.business_offers?.filter(offer => offer.status === 'approved')?.length || 0)
+    const activeOffers = filterActiveOffers(b.business_offers || [])
+    return total + activeOffers.length
   }, 0)
   const totalOffers = realOffers + mockOffers.length
   

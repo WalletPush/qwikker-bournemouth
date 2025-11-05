@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { sendFileUpdateToGoHighLevel, sendBusinessUpdateNotification } from '@/lib/integrations'
+import { ImageTransform } from '@/types/profiles'
 
 export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu' | 'offer' | 'business_images', fileUrl: string) {
   const supabaseAdmin = createAdminClient()
@@ -106,15 +107,32 @@ export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu
       return { success: false, error: 'Failed to submit file for admin approval' }
     }
 
-    // Send Slack notification for ADMIN APPROVAL
+    // 📢 SEND SLACK NOTIFICATION: File submitted for approval
     try {
-      await sendBusinessUpdateNotification(profile, 'file_pending_approval', {
-        fileType,
-        fileUrl,
-        changeId: changeRecord.id
+      const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
+      
+      const fileTypeLabels = {
+        logo: 'Logo',
+        menu: 'Menu',
+        offer: 'Offer Image', 
+        business_images: 'Business Image'
+      }
+      
+      await sendCitySlackNotification({
+        title: `New ${fileTypeLabels[fileType]} Submitted: ${profile.business_name}`,
+        message: `${profile.business_name} has uploaded a new ${fileTypeLabels[fileType].toLowerCase()} for admin approval.`,
+        city: profile.city || 'bournemouth',
+        type: 'business_signup',
+        data: { 
+          businessName: profile.business_name, 
+          fileType: fileTypeLabels[fileType],
+          changeId: changeRecord.id 
+        }
       })
+      
+      console.log(`📢 Slack notification sent for ${fileType} submission: ${profile.business_name}`)
     } catch (error) {
-      console.error('Slack notification failed (non-critical):', error)
+      console.error('⚠️ Slack notification error (non-critical):', error)
     }
 
     // Revalidate the dashboard and files pages
@@ -238,4 +256,215 @@ async function syncFileUpdateWithGHL(profileData: any, fileType: 'logo' | 'menu'
 
   // Send to GHL using the file update function (won't trigger signup notifications)
   await sendFileUpdateToGoHighLevel(ghlData)
+}
+
+// Delete a specific business image
+export async function deleteBusinessImage(userId: string, imageUrl: string, imageIndex: number) {
+  const supabaseAdmin = createAdminClient()
+
+  try {
+    // Get current profile
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('business_profiles')
+      .select('business_images, status')
+      .eq('user_id', userId)
+      .single()
+
+    if (profileError || !profile) {
+      return { success: false, error: 'Profile not found' }
+    }
+
+    const currentImages = profile.business_images || []
+    
+    // Remove the image at the specified index
+    const updatedImages = currentImages.filter((_, index) => index !== imageIndex)
+
+    // Update the profile
+    const { error: updateError } = await supabaseAdmin
+      .from('business_profiles')
+      .update({ business_images: updatedImages })
+      .eq('user_id', userId)
+
+    if (updateError) {
+      console.error('Error deleting business image:', updateError)
+      return { success: false, error: 'Failed to delete image' }
+    }
+
+    // Revalidate pages
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/files')
+
+    return { 
+      success: true, 
+      data: { updatedImages },
+      message: 'Image deleted successfully'
+    }
+
+  } catch (error) {
+    console.error('Delete image error:', error)
+    return { success: false, error: 'Failed to delete image' }
+  }
+}
+
+// Reorder business images
+export async function reorderBusinessImages(userId: string, fromIndex: number, toIndex: number) {
+  const supabaseAdmin = createAdminClient()
+
+  try {
+    // Get current profile
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('business_profiles')
+      .select('business_images, status')
+      .eq('user_id', userId)
+      .single()
+
+    if (profileError || !profile) {
+      return { success: false, error: 'Profile not found' }
+    }
+
+    const currentImages = [...(profile.business_images || [])]
+    
+    // Reorder the images
+    const [movedImage] = currentImages.splice(fromIndex, 1)
+    currentImages.splice(toIndex, 0, movedImage)
+
+    // Update the profile
+    const { error: updateError } = await supabaseAdmin
+      .from('business_profiles')
+      .update({ business_images: currentImages })
+      .eq('user_id', userId)
+
+    if (updateError) {
+      console.error('Error reordering business images:', updateError)
+      return { success: false, error: 'Failed to reorder images' }
+    }
+
+    // Revalidate pages
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/files')
+
+    return { 
+      success: true, 
+      data: { updatedImages: currentImages },
+      message: 'Images reordered successfully'
+    }
+
+  } catch (error) {
+    console.error('Reorder images error:', error)
+    return { success: false, error: 'Failed to reorder images' }
+  }
+}
+
+// Upload multiple business images
+export async function uploadMultipleBusinessImages(userId: string, files: File[]) {
+  const results = []
+  
+  for (const file of files) {
+    try {
+      // Upload to Cloudinary
+      const uploadResult = await uploadToCloudinary(file, 'qwikker/business_images')
+      
+      if (uploadResult.success && uploadResult.data) {
+        // Update profile with new image
+        const updateResult = await updateProfileFile(userId, 'business_images', uploadResult.data.secure_url)
+        
+        if (updateResult.success) {
+          results.push({
+            success: true,
+            fileName: file.name,
+            url: uploadResult.data.secure_url
+          })
+        } else {
+          results.push({
+            success: false,
+            fileName: file.name,
+            error: updateResult.error
+          })
+        }
+      } else {
+        results.push({
+          success: false,
+          fileName: file.name,
+          error: uploadResult.error
+        })
+      }
+    } catch (error) {
+      results.push({
+        success: false,
+        fileName: file.name,
+        error: error instanceof Error ? error.message : 'Upload failed'
+      })
+    }
+  }
+
+  const successCount = results.filter(r => r.success).length
+  const failCount = results.filter(r => !r.success).length
+
+  return {
+    success: successCount > 0,
+    results,
+    message: `${successCount} images uploaded successfully${failCount > 0 ? `, ${failCount} failed` : ''}`
+  }
+}
+
+// Update image transform (position, scale) for a specific business image
+export async function updateImageTransform(userId: string, imageIndex: number, transform: ImageTransform) {
+  const supabaseAdmin = createAdminClient()
+
+  try {
+    // Get current profile
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('business_profiles')
+      .select('business_images, business_image_transforms')
+      .eq('user_id', userId)
+      .single()
+
+    if (profileError || !profile) {
+      return { success: false, error: 'Profile not found' }
+    }
+
+    const currentImages = profile.business_images || []
+    const currentTransforms = profile.business_image_transforms || []
+
+    // Validate image index
+    if (imageIndex < 0 || imageIndex >= currentImages.length) {
+      return { success: false, error: 'Invalid image index' }
+    }
+
+    // Update transforms array - ensure it matches the images array length
+    const updatedTransforms = [...currentTransforms]
+    
+    // Pad with default transforms if needed
+    while (updatedTransforms.length < currentImages.length) {
+      updatedTransforms.push({ x: 0, y: 0, scale: 1 })
+    }
+    
+    // Update the specific transform
+    updatedTransforms[imageIndex] = transform
+
+    // Update the profile
+    const { error: updateError } = await supabaseAdmin
+      .from('business_profiles')
+      .update({ business_image_transforms: updatedTransforms })
+      .eq('user_id', userId)
+
+    if (updateError) {
+      console.error('Error updating image transform:', updateError)
+      return { success: false, error: 'Failed to update image position' }
+    }
+
+    // Revalidate pages
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/files')
+
+    return { 
+      success: true, 
+      data: { updatedTransforms },
+      message: 'Image position saved successfully'
+    }
+
+  } catch (error) {
+    console.error('Update transform error:', error)
+    return { success: false, error: 'Failed to update image position' }
+  }
 }

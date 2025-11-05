@@ -16,6 +16,7 @@ import {
 import { InitialAvatar } from '@/components/admin/initial-avatar'
 import { formatDate, formatLastSync, formatJoinedDate } from '@/lib/utils/date-formatter'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
+import { OfferDeletionModal } from '@/components/admin/offer-deletion-modal'
 
 interface ComprehensiveBusinessCRMCardProps {
   business: BusinessCRMData
@@ -28,11 +29,44 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [adminNotes, setAdminNotes] = useState(business.admin_notes || '')
+  const [deletionModal, setDeletionModal] = useState<{ isOpen: boolean; offer: any | null }>({
+    isOpen: false,
+    offer: null
+  })
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [isSavingNotes, setIsSavingNotes] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'contact' | 'files' | 'activity' | 'tasks' | 'offers' | 'controls' | 'analytics'>('overview')
   const [newTask, setNewTask] = useState('')
   const [isAddingTask, setIsAddingTask] = useState(false)
+
+  // Handle offer deletion
+  const handleDeleteOffer = async (offerId: string, confirmationText: string) => {
+    try {
+      const response = await fetch('/api/admin/offers/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          offerId,
+          confirmationText,
+          adminUserId: 'admin' // You might want to pass the actual admin user ID
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Refresh the page or update the business data
+        window.location.reload()
+      } else {
+        alert(`Failed to delete offer: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error deleting offer:', error)
+      alert('Failed to delete offer. Please try again.')
+    }
+  }
 
   // Use trial info directly from business data
   const trialInfo = {
@@ -461,7 +495,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <div>
                 <span className="text-slate-400 font-medium">Files:</span>
                 <span className="ml-2 text-white">
-                  {(business.logo ? 1 : 0) + (business.menu_url ? 1 : 0) + (business.business_images?.length || 0)} uploaded
+                  {(business.logo ? 1 : 0) + (business.business_menus?.length || 0) + (business.business_images?.length || 0)} uploaded
                 </span>
               </div>
               <div>
@@ -805,7 +839,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-white">Files & Assets</h3>
                   <div className="text-sm text-slate-400">
-                    {(business.logo ? 1 : 0) + (business.menu_url ? 1 : 0) + (business.business_images?.length || 0)} files
+                    {(business.logo ? 1 : 0) + (business.business_menus?.length || 0) + (business.business_images?.length || 0)} files
                   </div>
                 </div>
 
@@ -847,41 +881,128 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                   </CardContent>
                 </Card>
 
-                {/* Menu */}
+                {/* Menus & Files */}
                 <Card className="bg-slate-800/30 border-slate-700">
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                          <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <div className="font-medium text-white">Menu File</div>
-                          <div className="text-sm text-slate-400">
-                            {business.menu_url ? 'PDF uploaded' : 'Not uploaded'}
-                          </div>
-                        </div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {business.menu_url ? (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-blue-500 text-blue-400 hover:bg-blue-500/20"
-                              onClick={() => window.open(business.menu_url, '_blank')}
-                            >
-                              View PDF
-                            </Button>
-                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                          </>
-                        ) : (
-                          <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                        )}
+                      <div>
+                        <div className="font-medium text-white">Menu Files</div>
+                        <div className="text-sm text-slate-400">
+                          {business.business_menus && business.business_menus.length > 0 
+                            ? `${business.business_menus.length} menu${business.business_menus.length > 1 ? 's' : ''} uploaded`
+                            : business.menu_url 
+                              ? '1 legacy menu uploaded'
+                              : 'No menus uploaded'
+                          }
+                        </div>
                       </div>
                     </div>
+
+                    {/* Multiple Menus Display */}
+                    {business.business_menus && business.business_menus.length > 0 ? (
+                      <div className="space-y-2">
+                        {business.business_menus.map((menu, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 bg-slate-700/30 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-medium text-white">
+                                📄 {menu.menu_name}
+                              </div>
+                              <span className="text-xs text-slate-400">
+                                ({menu.menu_type})
+                              </span>
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                menu.status === 'approved' ? 'bg-green-500/20 text-green-400' :
+                                menu.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                menu.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                                'bg-blue-500/20 text-blue-400'
+                              }`}>
+                                {menu.status}
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              {menu.menu_url && menu.menu_url.includes('cloudinary.com') ? (
+                                // Menu has a proper Cloudinary PDF URL - show View PDF button
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-green-500 text-green-400 hover:bg-green-500/20"
+                                  onClick={() => {
+                                    console.log('🔍 Opening PDF:', menu.menu_url)
+                                    window.open(menu.menu_url, '_blank')
+                                  }}
+                                >
+                                  View PDF
+                                </Button>
+                              ) : (
+                                // Menu doesn't have PDF URL - show View Text button for knowledge base content
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-green-500 text-green-400 hover:bg-green-500/20"
+                                    onClick={() => {
+                                      // Fetch and display menu content from knowledge base
+                                      fetch(`/api/admin/menus/view-text/${menu.id}`)
+                                        .then(res => res.json())
+                                        .then(data => {
+                                          if (data.content) {
+                                            // Create a popup window with the menu content
+                                            const popup = window.open('', '_blank', 'width=600,height=800,scrollbars=yes')
+                                            if (popup) {
+                                              popup.document.write(`
+                                                <html>
+                                                  <head>
+                                                    <title>${data.title}</title>
+                                                    <style>
+                                                      body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+                                                      h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+                                                      pre { white-space: pre-wrap; background: #f5f5f5; padding: 15px; border-radius: 5px; }
+                                                      .note { background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 5px; margin: 10px 0; }
+                                                    </style>
+                                                  </head>
+                                                  <body>
+                                                    <h1>${data.title}</h1>
+                                                    <div class="note">
+                                                      <strong>Note:</strong> This menu was uploaded via knowledge base. Original PDF not available for review. 
+                                                      If you need to check PDF quality for AI parsing, ask the business to re-upload via the new menu system.
+                                                    </div>
+                                                    <pre>${data.content}</pre>
+                                                  </body>
+                                                </html>
+                                              `)
+                                              popup.document.close()
+                                            }
+                                          } else {
+                                            alert('Menu content not found')
+                                          }
+                                        })
+                                        .catch(err => {
+                                          console.error('Error fetching menu content:', err)
+                                          alert('Error loading menu content')
+                                        })
+                                    }}
+                                  >
+                                    View Text
+                                  </Button>
+                                  <div className="text-xs text-orange-400">
+                                    PDF not available (legacy upload)
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-slate-500 p-2">
+                        No menus uploaded yet
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -942,7 +1063,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                         <span className="text-slate-400">Profile Completion:</span>
                         <span className="text-white">
                           {Math.round(((business.logo ? 1 : 0) + 
-                                     (business.menu_url ? 1 : 0) + 
+                                     (business.business_menus?.length > 0 ? 1 : 0) + 
                                      (business.business_images?.length > 0 ? 1 : 0)) / 3 * 100)}%
                         </span>
                       </div>
@@ -951,7 +1072,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                           className="bg-blue-500 h-2 rounded-full" 
                           style={{
                             width: `${Math.round(((business.logo ? 1 : 0) + 
-                                                 (business.menu_url ? 1 : 0) + 
+                                                 (business.business_menus?.length > 0 ? 1 : 0) + 
                                                  (business.business_images?.length > 0 ? 1 : 0)) / 3 * 100)}%`
                           }}
                         ></div>
@@ -1104,8 +1225,10 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                                 <p className="text-slate-400 text-sm mt-2">{offer.offer_terms}</p>
                               )}
                             </div>
-                            <div className="text-right">
-                              <div className="text-yellow-400 text-sm">Active</div>
+                            <div className="text-right space-y-3">
+                              <div className="bg-green-500/20 text-green-400 text-sm font-medium px-3 py-1 rounded-full border border-green-500/30">
+                                Active
+                              </div>
                               {offer.offer_end_date && (
                                 <div className="text-slate-400 text-xs">
                                   Ends: {new Date(offer.offer_end_date).toLocaleDateString('en-GB', { 
@@ -1115,6 +1238,14 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                                   })}
                                 </div>
                               )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white text-xs"
+                                onClick={() => setDeletionModal({ isOpen: true, offer })}
+                              >
+                                Delete
+                              </Button>
                             </div>
                           </div>
                         </CardContent>
@@ -1440,6 +1571,14 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           )}
         </div>
       )}
+
+      {/* Offer Deletion Modal */}
+      <OfferDeletionModal
+        isOpen={deletionModal.isOpen}
+        onClose={() => setDeletionModal({ isOpen: false, offer: null })}
+        offer={deletionModal.offer}
+        onDelete={handleDeleteOffer}
+      />
 
     </div>
   )

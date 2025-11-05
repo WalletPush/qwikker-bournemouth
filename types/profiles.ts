@@ -23,6 +23,31 @@ export interface BusinessOffer {
   created_at: string;
 }
 
+// Image transform structure for positioning business images
+export interface ImageTransform {
+  x: number;
+  y: number;
+  scale: number;
+}
+
+// Menu structure for multiple menus per business
+export interface BusinessMenu {
+  id: string;
+  business_id: string;
+  menu_name: string;
+  menu_type: MenuType;
+  menu_url: string;
+  status: MenuStatus;
+  admin_notes: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  file_size: number | null;
+  original_filename: string | null;
+  uploaded_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Profile {
   id: string;
   user_id: string;
@@ -67,6 +92,9 @@ export interface Profile {
   // Multiple offers (new system)
   business_offers?: BusinessOffer[];
   
+  // Multiple menus (new system)
+  business_menus?: BusinessMenu[];
+  
   // Plan from profiles table (nested relationship)
   profiles?: {
     plan: SubscriptionPlan;
@@ -88,6 +116,7 @@ export interface Profile {
   business_tagline: string | null;
   business_description: string | null;
   business_images: string[] | null; // Array of image URLs
+  business_image_transforms: ImageTransform[] | null; // Array of image positioning data
   menu_preview: MenuPreviewItem[] | null; // Array of featured menu items for quick display
   business_tier: BusinessTier;
   rating: number;
@@ -158,6 +187,26 @@ export type OfferType =
 export type OfferClaimAmount = 
   | 'single'
   | 'multiple';
+
+export type MenuType = 
+  | 'main_menu'
+  | 'drinks'
+  | 'desserts'
+  | 'specials'
+  | 'breakfast'
+  | 'lunch'
+  | 'dinner'
+  | 'wine_list'
+  | 'cocktails'
+  | 'services'
+  | 'events'
+  | 'other';
+
+export type MenuStatus = 
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'needs_revision';
 
 export type SubscriptionPlan = 
   | 'starter'
@@ -295,4 +344,26 @@ export const BUSINESS_TIER_OPTIONS: DropdownOption<BusinessTier>[] = [
   { value: 'qwikker_picks', label: 'Qwikker Picks' },
   { value: 'featured', label: 'Featured' },
   { value: 'recommended', label: 'Recommended' },
+];
+
+export const MENU_TYPE_OPTIONS: DropdownOption<MenuType>[] = [
+  { value: 'main_menu', label: 'Main Menu' },
+  { value: 'drinks', label: 'Drinks Menu' },
+  { value: 'desserts', label: 'Desserts Menu' },
+  { value: 'specials', label: 'Daily Specials' },
+  { value: 'breakfast', label: 'Breakfast Menu' },
+  { value: 'lunch', label: 'Lunch Menu' },
+  { value: 'dinner', label: 'Dinner Menu' },
+  { value: 'wine_list', label: 'Wine List' },
+  { value: 'cocktails', label: 'Cocktail Menu' },
+  { value: 'services', label: 'Services Menu' },
+  { value: 'events', label: 'Events & Activities' },
+  { value: 'other', label: 'Other' },
+];
+
+export const MENU_STATUS_OPTIONS: DropdownOption<MenuStatus>[] = [
+  { value: 'pending', label: 'Pending Review' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'needs_revision', label: 'Needs Revision' },
 ];

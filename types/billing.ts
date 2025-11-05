@@ -133,6 +133,15 @@ export interface BusinessCRMData {
   // Business details
   menu_url: string | null
   business_images: string[] | null
+  business_menus?: Array<{
+    id: string
+    menu_name: string
+    menu_type: string
+    status: string
+    uploaded_at: string
+    admin_notes?: string
+    menu_url?: string
+  }> | null
   offer_name: string | null
   offer_type: string | null
   offer_image: string | null

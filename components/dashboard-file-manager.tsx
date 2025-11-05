@@ -177,7 +177,7 @@ export function DashboardFileManager({ userId, currentFiles }: FileManagerProps)
               <img 
                 src={files.offerImages} 
                 alt="Offer Image" 
-                className="w-16 h-16 object-cover rounded-lg border"
+                className="w-16 h-16 object-contain rounded-lg border"
               />
               <div className="flex-1">
                 <p className="font-medium">Current Offer Image</p>

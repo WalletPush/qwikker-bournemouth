@@ -123,21 +123,21 @@ export async function createOffer(userId: string, offerData: {
     return { success: false, error: `Failed to submit offer for review: ${changeError.message || changeError.code || 'Unknown error'}` }
   }
 
-  // Send Slack notification for ADMIN APPROVAL (not live offer)
+  // 📢 SEND SLACK NOTIFICATION: Offer submitted for approval
   try {
-    await sendBusinessUpdateNotification(profile, 'offer_pending_approval', {
-      offerName: offerData.offerName,
-      offerType: offerData.offerType,
-      offerValue: offerData.offerValue,
-      offerClaimAmount: offerData.offerClaimAmount,
-      offerStartDate: offerData.startDate,
-      offerEndDate: offerData.endDate,
-      offerTerms: offerData.offerTerms,
-      offerImage: offerData.offerImage,
-      changeId: changeRecord.id
+    const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
+    
+    await sendCitySlackNotification({
+      title: `New Offer Submitted: ${offerData.offerName}`,
+      message: `${profile.business_name} has submitted a new offer for admin approval.\n\n**Offer Details:**\n• Value: ${offerData.offerValue}\n• Type: ${offerData.offerType}\n• Claims: ${offerData.offerClaimAmount}`,
+      city: profile.city || 'bournemouth',
+      type: 'offer_created',
+      data: { businessName: profile.business_name, offerName: offerData.offerName }
     })
+    
+    console.log(`📢 Slack notification sent for offer submission: ${offerData.offerName}`)
   } catch (error) {
-    console.error('Slack notification failed (non-critical):', error)
+    console.error('⚠️ Slack notification error (non-critical):', error)
   }
 
     revalidatePath('/dashboard')
@@ -148,6 +148,106 @@ export async function createOffer(userId: string, offerData: {
     }
   } catch (error) {
     console.error('Unexpected error in createOffer:', error)
+    return { 
+      success: false, 
+      error: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }
+  }
+}
+
+/**
+ * Update an existing offer - submits changes for admin approval
+ */
+export async function updateOffer(userId: string, offerId: string, offerData: {
+  offerName?: string
+  offerType?: string
+  offerValue?: string
+  offerClaimAmount?: string
+  offerTerms?: string
+  startDate?: string
+  endDate?: string
+  offerImage?: string | null
+}) {
+  try {
+    const supabaseAdmin = createAdminClient()
+
+    // Get user profile using admin client
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('business_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+
+    if (profileError || !profile) {
+      console.error('Profile lookup error for updateOffer:', profileError)
+      return { success: false, error: `Profile not found: ${profileError?.message || 'Unknown error'}` }
+    }
+
+    // Get the existing offer to check if it exists
+    const { data: existingOffer, error: offerError } = await supabaseAdmin
+      .from('business_offers')
+      .select('*')
+      .eq('id', offerId)
+      .eq('business_id', profile.id)
+      .single()
+
+    if (offerError || !existingOffer) {
+      console.error('Offer lookup error:', offerError)
+      return { success: false, error: 'Offer not found or access denied' }
+    }
+
+    // Create pending change record for the update
+    const { data: changeRecord, error: changeError } = await supabaseAdmin
+      .from('business_changes')
+      .insert({
+        business_id: profile.id,
+        change_type: 'offer_update',
+        change_data: {
+          offer_id: offerId, // Include the offer ID being updated
+          offer_name: offerData.offerName || existingOffer.offer_name,
+          offer_type: offerData.offerType || existingOffer.offer_type,
+          offer_value: offerData.offerValue || existingOffer.offer_value,
+          offer_claim_amount: offerData.offerClaimAmount || existingOffer.offer_claim_amount,
+          offer_terms: offerData.offerTerms || existingOffer.offer_terms,
+          offer_start_date: offerData.startDate && offerData.startDate.trim() !== '' ? offerData.startDate : existingOffer.offer_start_date,
+          offer_end_date: offerData.endDate && offerData.endDate.trim() !== '' ? offerData.endDate : existingOffer.offer_end_date,
+          offer_image: offerData.offerImage !== undefined ? offerData.offerImage : existingOffer.offer_image
+        },
+        status: 'pending'
+      })
+      .select()
+      .single()
+
+    if (changeError) {
+      console.error('Error creating update change record:', changeError)
+      return { success: false, error: `Failed to submit offer update for review: ${changeError.message || 'Unknown error'}` }
+    }
+
+    // 📢 SEND SLACK NOTIFICATION: Offer update submitted
+    try {
+      const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
+      
+      await sendCitySlackNotification({
+        title: `Offer Update Submitted: ${existingOffer.offer_name}`,
+        message: `${profile.business_name} has submitted updates to their offer "${existingOffer.offer_name}" for admin approval.`,
+        city: profile.city || 'bournemouth',
+        type: 'offer_updated',
+        data: { businessName: profile.business_name, offerName: existingOffer.offer_name, offerId }
+      })
+      
+      console.log(`📢 Slack notification sent for offer update: ${existingOffer.offer_name}`)
+    } catch (error) {
+      console.error('⚠️ Slack notification error (non-critical):', error)
+    }
+
+    revalidatePath('/dashboard')
+    return { 
+      success: true, 
+      data: changeRecord,
+      message: 'Offer update submitted for admin approval. You will be notified once it is reviewed.'
+    }
+  } catch (error) {
+    console.error('Unexpected error in updateOffer:', error)
     return { 
       success: false, 
       error: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}` 
@@ -288,9 +388,93 @@ export async function updateBusinessInfo(userId: string, updates: any) {
 }
 
 /**
- * Delete an offer and notify Slack
+ * Delete a specific business offer from the business_offers table
  */
-export async function deleteOffer(userId: string) {
+export async function deleteBusinessOffer(userId: string, offerId: string) {
+  try {
+    const supabaseAdmin = createAdminClient()
+
+    // Get user profile
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('business_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+
+    if (profileError || !profile) {
+      return { success: false, error: 'Profile not found' }
+    }
+
+    // Get the offer details before deletion
+    const { data: offer, error: offerError } = await supabaseAdmin
+      .from('business_offers')
+      .select('*')
+      .eq('id', offerId)
+      .eq('business_id', profile.id)
+      .single()
+
+    if (offerError || !offer) {
+      return { success: false, error: 'Offer not found or access denied' }
+    }
+
+    // Check if offer has been claimed (prevent deletion of claimed offers)
+    // Since the claims system may not be fully implemented yet, we'll make this non-blocking
+    try {
+      const { data: claims, error: claimsError } = await supabaseAdmin
+        .from('user_offer_claims')
+        .select('id')
+        .or(`offer_id.eq.${offerId},offer_id.eq."${offerId}"`)
+        .limit(1)
+
+      if (!claimsError && claims && claims.length > 0) {
+        return { success: false, error: 'Cannot delete offer that has been claimed by users. Contact admin support if deletion is necessary.' }
+      }
+      
+      // If there's an error or no claims found, proceed with deletion
+      if (claimsError) {
+        console.warn('Claims verification failed, but proceeding with deletion:', claimsError.message)
+      }
+    } catch (error) {
+      console.warn('Claims table check failed, proceeding with deletion:', error)
+    }
+
+    // Delete the offer
+    const { error: deleteError } = await supabaseAdmin
+      .from('business_offers')
+      .delete()
+      .eq('id', offerId)
+      .eq('business_id', profile.id) // Extra security check
+
+    if (deleteError) {
+      console.error('Error deleting offer:', deleteError)
+      return { success: false, error: 'Failed to delete offer' }
+    }
+
+    // Send Slack notification about deletion
+    try {
+      await sendBusinessUpdateNotification(profile, 'offer_deleted', {
+        offerName: offer.offer_name,
+        offerType: offer.offer_type,
+        offerValue: offer.offer_value,
+      })
+    } catch (error) {
+      console.error('Slack notification failed (non-critical):', error)
+    }
+
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/offers')
+    return { success: true, message: 'Offer deleted successfully' }
+
+  } catch (error) {
+    console.error('Error in deleteBusinessOffer:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
+/**
+ * Delete legacy offer from business_profiles table (for backward compatibility)
+ */
+export async function deleteLegacyOffer(userId: string) {
   const supabaseAdmin = createAdminClient()
 
   // Get the current offer details for the notification

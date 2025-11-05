@@ -237,29 +237,31 @@ export function useElegantModal() {
     showModal({ title, description, type: 'error', actions })
   }
 
-  const showConfirm = (title: string, description: string, onConfirm: () => void, onCancel?: () => void) => {
-    showModal({
-      title,
-      description,
-      type: 'warning',
-      actions: [
-        {
-          label: 'Cancel',
-          onClick: () => {
-            hideModal()
-            onCancel?.()
+  const showConfirm = (message: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      showModal({
+        title: 'Confirm Action',
+        description: message,
+        type: 'warning',
+        actions: [
+          {
+            label: 'Cancel',
+            onClick: () => {
+              hideModal()
+              resolve(false)
+            },
+            variant: 'outline'
           },
-          variant: 'outline'
-        },
-        {
-          label: 'Confirm',
-          onClick: () => {
-            hideModal()
-            onConfirm?.()
-          },
-          variant: 'destructive'
-        }
-      ]
+          {
+            label: 'Confirm',
+            onClick: () => {
+              hideModal()
+              resolve(true)
+            },
+            variant: 'destructive'
+          }
+        ]
+      })
     })
   }
 
