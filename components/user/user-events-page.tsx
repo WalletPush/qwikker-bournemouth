@@ -198,7 +198,14 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
         {/* AI Companion Card */}
         <div className="mb-6">
           <AiCompanionCard 
-            message="Looking for something to do? I can help you discover upcoming events, find live music, workshops, and special occasions happening around {city}!"
+            title="Ask Your AI Local Guide"
+            description={`Looking for something to do? I can help you discover upcoming events, find live music, workshops, and special occasions happening around ${city}!`}
+            prompts={[
+              `What events are happening this weekend in ${city}?`,
+              `Show me live music events tonight`,
+              `Any free workshops coming up?`,
+              `What's happening today?`
+            ]}
             walletPassId={walletPassId}
           />
         </div>
