@@ -176,7 +176,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         
         // GHL sync tracking (from database)
         last_ghl_sync: business.last_ghl_sync || business.last_crm_sync || null,
-        ghl_contact_id: business.ghl_contact_id || null
+        ghl_contact_id: business.ghl_contact_id || null,
         
         // Business assets
         logo: business.logo,
