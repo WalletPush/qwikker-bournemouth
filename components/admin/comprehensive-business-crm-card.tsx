@@ -382,7 +382,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <SyncStatusBadge
                   businessId={business.id}
                   businessName={business.business_name}
-                  ghlStatus={'synced'}
+                  ghlStatus={business.last_ghl_sync ? 'synced' : 'pending'}
                   lastSync={business.last_ghl_sync}
                   errors={[]}
                   onForceSync={async (businessId) => {

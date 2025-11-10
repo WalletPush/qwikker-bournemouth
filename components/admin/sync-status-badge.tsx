@@ -89,7 +89,7 @@ export function SyncStatusBadge({
   const isPending = supabaseStatus === 'pending' || ghlStatus === 'pending'
 
   return (
-    <div className="relative">
+    <div className="relative inline-block">
       {/* Compact Status Badge */}
       <div 
         className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-colors duration-200 ${
@@ -99,7 +99,10 @@ export function SyncStatusBadge({
             ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
             : 'bg-green-500/20 text-green-400 border-green-500/30'
         }`}
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={(e) => {
+          e.stopPropagation()
+          setIsExpanded(!isExpanded)
+        }}
       >
         {/* Status Icons */}
         <div className="flex items-center gap-1">
