@@ -34,6 +34,7 @@
   "/user/chat/page": "app/user/chat/page.js",
   "/user/dashboard/page": "app/user/dashboard/page.js",
   "/user/discover/page": "app/user/discover/page.js",
+  "/user/events/page": "app/user/events/page.js",
   "/user/how-it-works/page": "app/user/how-it-works/page.js",
   "/user/offers/page": "app/user/offers/page.js"
 }
