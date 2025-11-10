@@ -36,11 +36,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         offer_type,
         additional_notes,
         updated_at,
-        created_at,
-        last_ghl_sync,
-        last_crm_sync,
-        crm_sync_status,
-        ghl_contact_id
+        created_at
       `)
       .eq('city', city)
       .order('created_at', { ascending: false })
@@ -48,6 +44,23 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
     if (error) {
       console.error('Error fetching business CRM data:', error)
       return []
+    }
+
+    // Separately fetch sync fields (these columns might not exist in all environments)
+    let businessSyncData = new Map()
+    try {
+      const { data: syncData } = await supabaseAdmin
+        .from('business_profiles')
+        .select('id, last_ghl_sync, last_crm_sync, crm_sync_status, ghl_contact_id')
+        .eq('city', city)
+      
+      if (syncData) {
+        syncData.forEach(sync => {
+          businessSyncData.set(sync.id, sync)
+        })
+      }
+    } catch (syncError) {
+      console.log('⚠️ Sync columns not available, using defaults')
     }
 
     if (!businesses) return []
@@ -158,6 +171,9 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         }
       }
 
+      // Get sync data for this business
+      const syncData = businessSyncData.get(business.id)
+      
       return {
         id: business.id,
         business_name: business.business_name || 'Unnamed Business',
@@ -174,9 +190,9 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         approved_at: business.approved_at,
         admin_notes: business.admin_notes,
         
-        // GHL sync tracking (from database)
-        last_ghl_sync: business.last_ghl_sync || business.last_crm_sync || null,
-        ghl_contact_id: business.ghl_contact_id || null,
+        // GHL sync tracking (from database, fallback to null if columns don't exist)
+        last_ghl_sync: syncData?.last_ghl_sync || syncData?.last_crm_sync || null,
+        ghl_contact_id: syncData?.ghl_contact_id || null,
         
         // Business assets
         logo: business.logo,
