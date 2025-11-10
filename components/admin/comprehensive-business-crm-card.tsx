@@ -354,9 +354,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   }
 
   return (
-    <div className={`bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl overflow-hidden hover:border-slate-600 transition-all duration-300 ${className}`}>
+    <div className={`bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl hover:border-slate-600 transition-all duration-300 ${className}`}>
       {/* Header Section */}
-      <div className={`bg-gradient-to-r ${getHeaderColor()} px-4 sm:px-6 py-4 overflow-visible relative`}>
+      <div className={`bg-gradient-to-r ${getHeaderColor()} px-4 sm:px-6 py-4 overflow-visible relative rounded-t-2xl`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="flex-shrink-0">

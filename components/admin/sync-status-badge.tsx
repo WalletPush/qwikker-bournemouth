@@ -137,7 +137,7 @@ export function SyncStatusBadge({
 
       {/* Expanded Details - Portal to prevent overflow issues */}
       {isExpanded && (
-        <div className="absolute top-full left-0 mt-2 bg-slate-800 border border-slate-700 rounded-lg p-5 shadow-2xl z-[9999] min-w-[320px] max-w-sm">
+        <div className="absolute top-full left-0 mt-2 bg-slate-800 border-2 border-green-500 rounded-lg p-5 shadow-2xl z-[9999] min-w-[320px] max-w-sm max-h-[500px] overflow-y-auto">
           <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
