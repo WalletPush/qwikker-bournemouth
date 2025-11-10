@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 
 interface SyncStatusBadgeProps {
@@ -24,6 +25,23 @@ export function SyncStatusBadge({
 }: SyncStatusBadgeProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 })
+  const buttonRef = useRef<HTMLDivElement>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (isExpanded && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setModalPosition({
+        top: rect.bottom + window.scrollY + 8,
+        left: rect.left + window.scrollX
+      })
+    }
+  }, [isExpanded])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -88,11 +106,105 @@ export function SyncStatusBadge({
   const hasFailures = supabaseStatus === 'failed' || ghlStatus === 'failed'
   const isPending = supabaseStatus === 'pending' || ghlStatus === 'pending'
 
+  const modalContent = isExpanded && mounted ? (
+    <div 
+      className="fixed bg-slate-800 border-2 border-green-500 rounded-lg p-5 shadow-2xl min-w-[320px] max-w-sm"
+      style={{
+        top: `${modalPosition.top}px`,
+        left: `${modalPosition.left}px`,
+        zIndex: 999999
+      }}
+    >
+      <div className="space-y-3">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="font-medium text-white">Sync Status</h4>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsExpanded(false)
+            }}
+            className="text-slate-400 hover:text-white transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        {/* Clean Force Sync Button */}
+        <div className="mb-4">
+          <Button
+            onClick={handleForceSync}
+            disabled={isSyncing}
+            className="w-full text-sm px-4 py-2 bg-[#00d083] hover:bg-[#00b86f] text-white border-0 rounded-lg font-medium transition-all"
+          >
+            {isSyncing ? (
+              <div className="flex items-center justify-center gap-2">
+                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Syncing to GHL...</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Force Sync to GHL</span>
+              </div>
+            )}
+          </Button>
+        </div>
+
+        {/* System Status */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-300">Supabase:</span>
+            <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${getStatusColor(supabaseStatus)}`}>
+              {getStatusIcon(supabaseStatus)}
+              <span className="capitalize">{supabaseStatus}</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-300">GoHighLevel:</span>
+            <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${getStatusColor(ghlStatus)}`}>
+              {getStatusIcon(ghlStatus)}
+              <span className="capitalize">{ghlStatus}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Last Sync */}
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-slate-300">Last Sync:</span>
+          <span className="text-slate-400">{formatLastSync(lastSync)}</span>
+        </div>
+
+        {/* Errors */}
+        {hasErrors && (
+          <div className="space-y-1">
+            <span className="text-sm text-red-400 font-medium">Errors:</span>
+            <div className="space-y-1 max-h-20 overflow-y-auto">
+              {errors.map((error, index) => (
+                <div key={index} className="text-xs text-red-300 bg-red-500/10 p-2 rounded">
+                  {error}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  ) : null
+
   return (
-    <div className="relative inline-block">
-      {/* Compact Status Badge */}
-      <div 
-        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-colors duration-200 ${
+    <>
+      <div className="relative inline-block" ref={buttonRef}>
+        {/* Compact Status Badge */}
+        <div 
+          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-colors duration-200 ${
           hasFailures 
             ? 'bg-red-500/20 text-red-400 border-red-500/30' 
             : isPending
@@ -134,100 +246,10 @@ export function SyncStatusBadge({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </div>
-
-      {/* Expanded Details - Portal to prevent overflow issues */}
-      {isExpanded && (
-        <div 
-          className="absolute left-0 mt-2 bg-slate-800 border-2 border-green-500 rounded-lg p-5 shadow-2xl min-w-[320px] max-w-sm"
-          style={{
-            top: '100%',
-            zIndex: 99999,
-            maxHeight: 'none'
-          }}
-        >
-          <div className="space-y-3">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-medium text-white">Sync Status</h4>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setIsExpanded(false)
-                }}
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            {/* Clean Force Sync Button */}
-            <div className="mb-4">
-              <Button
-                onClick={handleForceSync}
-                disabled={isSyncing}
-                className="w-full text-sm px-4 py-2 bg-[#00d083] hover:bg-[#00b86f] text-white border-0 rounded-lg font-medium transition-all"
-              >
-                {isSyncing ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <span>Syncing to GHL...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <span>Force Sync to GHL</span>
-                  </div>
-                )}
-              </Button>
-            </div>
-
-            {/* System Status */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-300">Supabase:</span>
-                <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${getStatusColor(supabaseStatus)}`}>
-                  {getStatusIcon(supabaseStatus)}
-                  <span className="capitalize">{supabaseStatus}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-300">GoHighLevel:</span>
-                <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${getStatusColor(ghlStatus)}`}>
-                  {getStatusIcon(ghlStatus)}
-                  <span className="capitalize">{ghlStatus}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Last Sync */}
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-300">Last Sync:</span>
-              <span className="text-slate-400">{formatLastSync(lastSync)}</span>
-            </div>
-
-            {/* Errors */}
-            {hasErrors && (
-              <div className="space-y-1">
-                <span className="text-sm text-red-400 font-medium">Errors:</span>
-                <div className="space-y-1 max-h-20 overflow-y-auto">
-                  {errors.map((error, index) => (
-                    <div key={index} className="text-xs text-red-300 bg-red-500/10 p-2 rounded">
-                      {error}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
+    
+    {/* Portal Modal - Render at document root to avoid z-index issues */}
+    {mounted && modalContent && createPortal(modalContent, document.body)}
+  </>
   )
 }
