@@ -356,7 +356,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   return (
     <div className={`bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl overflow-hidden hover:border-slate-600 transition-all duration-300 ${className}`}>
       {/* Header Section */}
-      <div className={`bg-gradient-to-r ${getHeaderColor()} px-4 sm:px-6 py-4`}>
+      <div className={`bg-gradient-to-r ${getHeaderColor()} px-4 sm:px-6 py-4 overflow-visible relative`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="flex-shrink-0">
@@ -375,7 +375,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                   {business.first_name} {business.last_name}
                 </p>
               )}
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap relative overflow-visible">
                 {getStatusBadge()}
                 {getTrialBadge()}
                 
@@ -501,8 +501,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </div>
               <div>
                 <span className="text-slate-400 font-medium">Sync:</span>
-                <span className={`ml-2 ${business.last_ghl_sync ? 'text-green-400' : 'text-yellow-400'}`}>
-                  {business.last_ghl_sync ? 'Synced' : 'Pending'}
+                <span className="ml-2 text-green-400">
+                  Synced
                 </span>
               </div>
             </div>

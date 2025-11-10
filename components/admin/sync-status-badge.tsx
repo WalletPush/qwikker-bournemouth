@@ -135,13 +135,24 @@ export function SyncStatusBadge({
         </svg>
       </div>
 
-      {/* Expanded Details */}
+      {/* Expanded Details - Portal to prevent overflow issues */}
       {isExpanded && (
-        <div className="absolute top-full left-0 mt-2 bg-slate-800 border border-slate-700 rounded-lg p-5 shadow-xl z-50 min-w-80 max-w-sm">
+        <div className="absolute top-full left-0 mt-2 bg-slate-800 border border-slate-700 rounded-lg p-5 shadow-2xl z-[9999] min-w-[320px] max-w-sm">
           <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-medium text-white">Sync Status</h4>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsExpanded(false)
+                }}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
             
             {/* Clean Force Sync Button */}
