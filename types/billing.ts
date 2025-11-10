@@ -142,6 +142,24 @@ export interface BusinessCRMData {
     admin_notes?: string
     menu_url?: string
   }> | null
+  business_events?: Array<{
+    id: string
+    event_name: string
+    event_type: string
+    event_description: string
+    event_short_description?: string
+    event_date: string
+    event_start_time?: string
+    event_end_time?: string
+    is_recurring: boolean
+    recurrence_pattern?: string
+    requires_booking: boolean
+    booking_url?: string
+    price_info?: string
+    event_image?: string
+    status: string
+    created_at: string
+  }> | null
   offer_name: string | null
   offer_type: string | null
   offer_image: string | null

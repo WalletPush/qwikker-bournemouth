@@ -98,6 +98,27 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       console.log('📄 MENUS ERROR:', error)
     }
 
+    // Fetch events separately
+    let eventsByBusiness = new Map()
+    try {
+      const { data: allEvents, error: eventsError } = await supabaseAdmin
+        .from('business_events')
+        .select('*')
+        .in('business_id', businessIds)
+        .order('event_date', { ascending: true })
+
+      if (allEvents && allEvents.length > 0) {
+        businesses.forEach(business => {
+          const matchingEvents = allEvents.filter(event => event.business_id === business.id)
+          if (matchingEvents.length > 0) {
+            eventsByBusiness.set(business.id, matchingEvents)
+          }
+        })
+      }
+    } catch (error) {
+      console.log('📅 EVENTS ERROR:', error)
+    }
+
     // Fetch pending changes count (business_changes table should exist)
     let pendingChangesByBusiness = new Map()
     try {
@@ -204,6 +225,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         menu_url: business.menu_url,
         business_images: business.business_images as string[] | null,
         business_menus: menusByBusiness.get(business.id) || null,
+        business_events: eventsByBusiness.get(business.id) || null,
         offer_name: business.offer_name,
         offer_type: business.offer_type,
         secret_menu_items: secretMenuItems,

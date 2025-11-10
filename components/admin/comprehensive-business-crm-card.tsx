@@ -35,7 +35,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   })
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [isSavingNotes, setIsSavingNotes] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'contact' | 'files' | 'activity' | 'tasks' | 'offers' | 'controls' | 'analytics'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'contact' | 'files' | 'activity' | 'tasks' | 'offers' | 'events' | 'controls' | 'analytics'>('overview')
   const [newTask, setNewTask] = useState('')
   const [isAddingTask, setIsAddingTask] = useState(false)
 
@@ -567,6 +567,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 { id: 'activity', label: 'Activity Feed', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
                 { id: 'tasks', label: 'Tasks', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
                 { id: 'offers', label: 'Offers & Content', icon: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z' },
+                { id: 'events', label: 'Events', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
                 { id: 'controls', label: 'Business Controls', icon: 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4' },
                 { id: 'analytics', label: 'Performance', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' }
               ].map((tab) => (
@@ -1333,6 +1334,144 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     </div>
                   </CardContent>
                 </Card>
+              </div>
+            )}
+
+            {/* Events Tab */}
+            {activeTab === 'events' && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-white">Events</h3>
+                
+                {business.business_events && business.business_events.length > 0 ? (
+                  <div className="space-y-3">
+                    {business.business_events
+                      .filter((event: any) => event.status === 'pending' || event.status === 'approved')
+                      .sort((a: any, b: any) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
+                      .map((event: any, index: number) => (
+                      <Card key={event.id || index} className={`${
+                        event.status === 'pending' 
+                          ? 'bg-gradient-to-r from-orange-900/20 to-yellow-900/20 border-orange-700/30'
+                          : 'bg-gradient-to-r from-blue-900/20 to-purple-900/20 border-blue-700/30'
+                      }`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <h4 className={`font-semibold ${event.status === 'pending' ? 'text-orange-300' : 'text-blue-300'}`}>
+                                    {event.event_name}
+                                  </h4>
+                                  <p className="text-slate-300 text-sm mt-1">
+                                    {event.event_type?.replace('_', ' ').toUpperCase()}
+                                  </p>
+                                </div>
+                                <div className={`text-sm font-medium px-3 py-1 rounded-full border ${
+                                  event.status === 'pending'
+                                    ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                                    : 'bg-green-500/20 text-green-400 border-green-500/30'
+                                }`}>
+                                  {event.status === 'pending' ? 'Pending Approval' : 'Approved'}
+                                </div>
+                              </div>
+
+                              <div className="flex flex-wrap gap-3 text-sm text-slate-400 mb-2">
+                                <div className="flex items-center gap-1">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  {new Date(event.event_date).toLocaleDateString('en-GB', { 
+                                    weekday: 'short',
+                                    day: 'numeric', 
+                                    month: 'short',
+                                    year: 'numeric' 
+                                  })}
+                                </div>
+                                {event.event_start_time && (
+                                  <div className="flex items-center gap-1">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    {new Date(`2000-01-01T${event.event_start_time}`).toLocaleTimeString('en-GB', {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </div>
+                                )}
+                                {event.price_info && (
+                                  <div className="text-blue-300 font-medium">
+                                    {event.price_info}
+                                  </div>
+                                )}
+                              </div>
+
+                              {event.event_short_description && (
+                                <p className="text-slate-300 text-sm mb-3">
+                                  {event.event_short_description}
+                                </p>
+                              )}
+
+                              {event.status === 'pending' && (
+                                <div className="flex gap-2 mt-3">
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white text-xs"
+                                    onClick={async () => {
+                                      try {
+                                        const { approveEvent } = await import('@/lib/actions/event-actions')
+                                        await approveEvent(event.id)
+                                        window.location.reload()
+                                      } catch (error) {
+                                        console.error('Error approving event:', error)
+                                      }
+                                    }}
+                                  >
+                                    Approve Event
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white text-xs"
+                                    onClick={async () => {
+                                      const reason = prompt('Reason for rejection:')
+                                      if (reason) {
+                                        try {
+                                          const { rejectEvent } = await import('@/lib/actions/event-actions')
+                                          await rejectEvent(event.id, reason)
+                                          window.location.reload()
+                                        } catch (error) {
+                                          console.error('Error rejecting event:', error)
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+
+                            {event.event_image && (
+                              <div className="flex-shrink-0">
+                                <img
+                                  src={event.event_image}
+                                  alt={event.event_name}
+                                  className="w-24 h-24 object-cover rounded-lg border border-slate-600"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="bg-slate-800/30 border-slate-700 border-dashed">
+                    <CardContent className="p-6 text-center">
+                      <div className="text-slate-400 mb-2">No events</div>
+                      <div className="text-slate-500 text-sm">Business hasn't created any events yet</div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
 
