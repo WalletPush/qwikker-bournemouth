@@ -374,6 +374,26 @@ export async function updateBusinessInfo(userId: string, updates: any) {
     }
   }
 
+  // 🔥 SYNC TO KNOWLEDGE BASE if description/details changed
+  const knowledgeFields = ['business_name', 'business_description', 'business_tagline', 'business_address', 
+    'business_town', 'business_postcode', 'phone', 'website_url', 'instagram_handle', 'facebook_url', 
+    'business_hours', 'business_hours_structured', 'business_category', 'business_type']
+  const needsKnowledgeSync = Object.keys(updates).some(key => knowledgeFields.includes(key))
+  
+  if (needsKnowledgeSync && profile?.id) {
+    try {
+      const { syncBusinessProfileToKnowledgeBase } = await import('@/lib/ai/embeddings')
+      const syncResult = await syncBusinessProfileToKnowledgeBase(profile.id)
+      if (syncResult.success) {
+        console.log(`✅ Knowledge base synced for: ${profile.business_name}`)
+      } else {
+        console.error(`⚠️ Knowledge base sync failed: ${syncResult.error}`)
+      }
+    } catch (error) {
+      console.error('Knowledge base sync error (non-critical):', error)
+    }
+  }
+
   // 🔥 REFRESH ALL AFFECTED SYSTEMS IMMEDIATELY
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/personal') 

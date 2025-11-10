@@ -4,18 +4,20 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
-  // 🎯 TEMPORARY: Allow public access to user dashboard for demos
-  if (request.nextUrl.pathname.startsWith('/user')) {
-    return supabaseResponse
-  }
-
-  // 🔐 Allow admin routes to handle their own authentication
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    return supabaseResponse
-  }
-
-  // 🔐 Allow API routes to handle their own authentication
-  if (request.nextUrl.pathname.startsWith('/api')) {
+  // 🎯 PUBLIC ROUTES: Allow access without Supabase auth session
+  const publicPaths = [
+    '/user',       // User dashboard (uses wallet_pass_id, not auth)
+    '/admin',      // Admin routes handle their own authentication
+    '/api',        // API routes handle their own authentication
+    '/s/',         // Shortlinks
+    '/c/',         // Chat shortlinks
+    '/welcome',    // Welcome page
+    '/onboarding', // Onboarding flow
+    '/wallet-pass' // Wallet pass pages
+  ]
+  
+  // Check if current path matches any public path
+  if (publicPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
     return supabaseResponse
   }
 

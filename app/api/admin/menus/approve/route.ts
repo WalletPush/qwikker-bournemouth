@@ -177,6 +177,8 @@ export async function POST(request: NextRequest) {
         
       } catch (error) {
         console.error('❌ Failed to process menu for knowledge base:', error)
+        console.error('❌ Error details:', error instanceof Error ? error.message : String(error))
+        console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace')
         // Don't fail the approval if knowledge base update fails
         // The menu is still approved, just not in the knowledge base yet
       }

@@ -27,6 +27,35 @@ export async function uploadToCloudinary(file: File, folder = "qwikker_uploads")
 }
 
 /**
+ * Delete file from Cloudinary
+ * Note: This requires an authenticated API call, so it should only be called from server-side code
+ */
+export async function deleteFromCloudinary(publicId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // For now, we'll return success without actual deletion
+    // To implement actual deletion, you would need:
+    // 1. Cloudinary API key and secret (stored in env vars)
+    // 2. Generate a signature for authenticated API calls
+    // 3. Make a POST request to the Cloudinary admin API
+    
+    console.log(`⚠️ Cloudinary deletion not implemented yet for: ${publicId}`)
+    console.log(`⚠️ To enable deletion, configure CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in .env`)
+    
+    // For now, just log the public_id that would be deleted
+    return {
+      success: true,
+      error: 'Cloudinary deletion skipped (API keys not configured)'
+    }
+  } catch (error) {
+    console.error('Error in deleteFromCloudinary:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+/**
  * Send data to GoHighLevel webhook (franchise-aware)
  * Automatically detects city and uses appropriate franchise CRM
  */

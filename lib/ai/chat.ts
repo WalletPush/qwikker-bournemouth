@@ -131,12 +131,13 @@ function extractBusinessNamesFromText(text: string): string[] {
   
   // 🎯 PRECISE BUSINESS DETECTION: Use exact business name matching
   const businessMap = [
-    { names: ["David's Grill Shack"], keywords: ['david', 'grill shack', "david's grill", "grill shack"] },
-    { names: ["Julie's Sports Pub"], keywords: ['julie', 'sports pub', "julie's sports", "sports pub"] },
-    { names: ["Alexandra's Café"], keywords: ['alexandra', 'café', 'cafe', "alexandra's café", "alexandra's cafe"] },
+    { names: ["David's Grill Shack"], keywords: ['david', 'grill shack', "david's grill", "grill shack", "davids"] },
+    { names: ["Julie's Sports Pub"], keywords: ['julie', 'sports pub', "julie's sports", "sports pub", "julies"] },
+    { names: ["Alexandra's Café"], keywords: ['alexandra', 'café', 'cafe', "alexandra's café", "alexandra's cafe", "alexandras"] },
     { names: ["Orchid & Ivy"], keywords: ['orchid', 'ivy', 'orchid & ivy', 'orchid and ivy'] },
-    { names: ["Mike's Pool Bar"], keywords: ['mike', 'pool bar', "mike's pool", "pool bar"] },
-    { names: ["Venezy Burgers"], keywords: ['venezy', 'venezy burgers'] }
+    { names: ["Mike's Pool Bar"], keywords: ['mike', 'pool bar', "mike's pool", "pool bar", "mikes"] },
+    { names: ["Venezy Burgers"], keywords: ['venezy', 'venezy burgers'] },
+    { names: ["Adams Cocktail Bar"], keywords: ['adams', 'adams cocktail', 'adams bar', 'adams cocktail bar', 'adam'] }
   ]
   
   // Check each business for matches
@@ -295,13 +296,24 @@ function detectDetailRequest(text: string): DetailRequest | null {
   if (!text) return null
   const lower = text.toLowerCase()
 
-  if (/(cocktail|drink|bevv|bevvy|bar|pint|wine)/.test(lower)) return 'drinks'
-  if (/(menu|food|eat|dish|course|starter|dessert)/.test(lower)) return 'menu'
-  if (/(offer|deal|discount|wallet|voucher)/.test(lower)) return 'offers'
-  if (/(open|hour|time|closing)/.test(lower)) return 'hours'
-  if (/(kid|child|family)/.test(lower)) return 'kids'
-  if (/(veggie|vegetarian|vegan|plant)/.test(lower)) return 'vegetarian'
-  if (/(price|cost|expensive|cheap|affordable)/.test(lower)) return 'pricing'
+  // 🎯 SMART: Only check the last sentence (where the AI asks the question)
+  // This prevents false matches from mentions in earlier parts of the message
+  const sentences = lower.split(/[.!?]+/).filter(Boolean)
+  const lastSentence = sentences.length > 0 ? sentences[sentences.length - 1].trim() : lower
+
+  // Check for explicit offers/prompts in the last sentence
+  if (/(want|fancy|shall|grab|pull|show|get).*?(cocktail|drink|bevv|bevvy|bar menu|cocktail list)/.test(lastSentence)) return 'drinks'
+  if (/(want|fancy|shall|grab|pull|show|get).*?(menu|full menu)/.test(lastSentence)) return 'menu'
+  if (/(want|fancy|shall|grab|pull|show|get).*?(offer|deal|discount|wallet)/.test(lastSentence)) return 'offers'
+  
+  // Fallback: check broader patterns in last sentence only
+  if (/(cocktail|cocktail list|drinks menu|bar menu)/.test(lastSentence)) return 'drinks'
+  if (/(full menu|food menu|their menu)/.test(lastSentence)) return 'menu'
+  if (/(offer|deal|discount|wallet|voucher)/.test(lastSentence)) return 'offers'
+  if (/(open|hour|time|closing)/.test(lastSentence)) return 'hours'
+  if (/(kid|child|family)/.test(lastSentence)) return 'kids'
+  if (/(veggie|vegetarian|vegan|plant)/.test(lastSentence)) return 'vegetarian'
+  if (/(price|cost|expensive|cheap|affordable)/.test(lastSentence)) return 'pricing'
 
   return null
 }
@@ -355,7 +367,13 @@ export async function generateAIResponse(
     const { city, userName = 'there', conversationHistory = [] } = context
 
   // 🎯 ENHANCED CONTEXT AWARENESS: Detect mentioned businesses from conversation history
-  console.log(`🔍 RAW CONVERSATION HISTORY:`, conversationHistory)
+  console.log(`\n🔍 ============================================`)
+  console.log(`🔍 RAW CONVERSATION HISTORY (${conversationHistory.length} messages):`)
+  conversationHistory.forEach((msg, i) => {
+    const preview = msg.content.substring(0, 80).replace(/\n/g, ' ')
+    console.log(`  ${i}: [${msg.role}] "${preview}..."`)
+  })
+  console.log(`🔍 ============================================\n`)
   
   // 🚨 CRITICAL FIX: Track the MOST RECENT business mentioned by AI (not user)
   let currentBusinessContext = ''
@@ -380,9 +398,15 @@ export async function generateAIResponse(
   // 2. AI was just talking about a business (for follow-ups like "do they sell anything else?")
   const mentionedBusinesses = userMentionedBusinesses.length > 0 ? userMentionedBusinesses : aiMentionedBusinesses
   
-  console.log(`🎯 Context check: mentioned businesses: ${mentionedBusinesses?.join(', ') || 'none'}`)
-  console.log(`🔍 DEBUG: userMessage="${userMessage}"`)
-  console.log(`🔍 DEBUG: recentAIMessages="${recentAIMessages}"`)
+  console.log(`\n═══════════════════════════════════════`)
+  console.log(`🎯 BUSINESS CONTEXT EXTRACTION`)
+  console.log(`═══════════════════════════════════════`)
+  console.log(`👤 User said: "${userMessage}"`)
+  console.log(`🤖 AI's last message: "${recentAIMessages.substring(0, 100)}..."`)
+  console.log(`📋 User mentioned: [${userMentionedBusinesses?.join(', ') || 'NONE'}]`)
+  console.log(`📋 AI mentioned: [${aiMentionedBusinesses?.join(', ') || 'NONE'}]`)
+  console.log(`🎯 FINAL CONTEXT: [${mentionedBusinesses?.join(', ') || 'NONE'}]`)
+  console.log(`═══════════════════════════════════════\n`)
 
   const lowerMessage = userMessage.toLowerCase()
   const inferredTopic = inferConversationTopic(conversationHistory, userMessage)
@@ -422,16 +446,36 @@ export async function generateAIResponse(
     return clarifierPhrases.some(phrase => content.includes(phrase)) ? count + 1 : count
   }, 0)
 
-  const lastAssistantDetailRequest = detectDetailRequest(lastAssistantMessage)
+  // 🚨 CRITICAL: Only use detail request detection for SIMPLE affirmatives, NOT for "what else" or contextual questions
+  const isAskingWhatElse = userMessage.toLowerCase().includes('what else') ||
+                          userMessage.toLowerCase().includes('what do they') ||
+                          userMessage.toLowerCase().includes('what about') ||
+                          userMessage.toLowerCase().includes('tell me more') ||
+                          userMessage.toLowerCase().includes('tell me about')
+  
+  // 🚨 CRITICAL: If user just got a detailed answer about something specific, don't force a detail request on "yeah"
+  const lastAIGaveDetailedAnswer = lastAssistantMessage.length > 200 || 
+                                   lastAssistantMessage.includes('£') || 
+                                   lastAssistantMessage.includes('•') ||
+                                   lastAssistantMessage.toLowerCase().includes('this') && lastAssistantMessage.toLowerCase().includes('is')
+  
+  const lastAssistantDetailRequest = (isAskingWhatElse || lastAIGaveDetailedAnswer) ? null : detectDetailRequest(lastAssistantMessage)
   const simpleAffirmative = /^(yeah!?|yes!?|yep!?|sure!?|ok!?|okay!?|alright!?|do it|go on|please do|sounds good!?|perfect!?|cool!?|let's do it|why not)$/i.test(userMessage.trim())
-  const forceDetailForCurrentBusiness = simpleAffirmative && lastAssistantDetailRequest && mentionedBusinesses.length > 0
+  
+  // 🚨 CRITICAL: Don't force detail if user gave explicit instructions (like "no grab the menu")
+  const userGaveExplicitInstruction = userMessage.toLowerCase().includes('no ') || 
+                                      userMessage.toLowerCase().includes('actually') ||
+                                      userMessage.toLowerCase().includes('instead') ||
+                                      (userMessage.split(/\s+/).length > 3 && !simpleAffirmative)
+  
+  const forceDetailForCurrentBusiness = simpleAffirmative && lastAssistantDetailRequest && mentionedBusinesses.length > 0 && !userGaveExplicitInstruction
 
   const userGaveOpenChoice = /(whatever|anything|either|you decide|surprise me|not fussed|not bothered|up to you|whatever\'s good|whatever good|whatever you think|i trust you|something else|happy with anything|you pick)/i.test(lowerMessage)
   const isShortAnswer = lowerMessage.replace(/[^a-z\s]/g, '').trim().split(/\s+/).filter(Boolean).length <= 4 && !lowerMessage.includes('?')
   console.log(`🎯 Topic inference: ${inferredTopic}, assistantClarifying=${assistantWasClarifying}, userOpenChoice=${userGaveOpenChoice}, shortAnswer=${isShortAnswer}`)
  
   // 🎯 SMART: Detect simple follow-up responses that need context
-  const isSimpleFollowUp = /^(yeah!?|yes!?|yep!?|sure!?|okay!?|ok!?|tell me more!?|more info!?|sounds good!?|that sounds great!?|perfect!?|awesome!?)$/i.test(userMessage.trim()) ||
+  const isSimpleFollowUp = /^(yeah!?|yes!?|yep!?|sure!?|okay!?|ok!?|alright!?|go on!?|tell me more!?|more info!?|sounds good!?|that sounds great!?|perfect!?|awesome!?|do it!?|please!?)$/i.test(userMessage.trim()) ||
                            /^(what about|tell me about|how about) (them|it|that|those)(\?)?$/i.test(userMessage.trim()) ||
                            userMessage.toLowerCase().trim() === 'more' ||
                            userMessage.toLowerCase().trim() === 'details' ||
@@ -441,10 +485,24 @@ export async function generateAIResponse(
   const isCurrentBusinessQuery = userMessage.toLowerCase().includes('what else do they') ||
                                  userMessage.toLowerCase().includes('what else does it') ||
                                  userMessage.toLowerCase().includes('what else can they') ||
+                                 userMessage.toLowerCase().includes('what else do you') ||
+                                 userMessage.toLowerCase().includes('what else have they') ||
                                  userMessage.toLowerCase().includes('what do they') ||
                                  userMessage.toLowerCase().includes('do they') ||
                                  userMessage.toLowerCase().includes('are they') ||
+                                 userMessage.toLowerCase().trim() === 'what else?' ||
                                  isSimpleFollowUp
+
+  // 🎯 SMART: Detect "show me more" type queries (looking for EXPANDED results)
+  const isExpandedListQuery = userMessage.toLowerCase().includes('list all') ||
+                             userMessage.toLowerCase().includes('show all') ||
+                             userMessage.toLowerCase().includes('all the offers') ||
+                             userMessage.toLowerCase().includes('all offers') ||
+                             userMessage.toLowerCase().includes('any more offers') ||
+                             userMessage.toLowerCase().includes('are there any more') ||
+                             userMessage.toLowerCase().includes('any other offers') ||
+                             userMessage.toLowerCase().includes('more deals') ||
+                             userMessage.toLowerCase().includes('other deals')
 
   // 🎯 SMART: Detect "anywhere else?" type queries (looking for DIFFERENT businesses)
   const isAnywhereElseQuery = userMessage.toLowerCase().includes('anywhere else') ||
@@ -509,24 +567,29 @@ export async function generateAIResponse(
       pricing: 'pricing'
     }[lastAssistantDetailRequest!] || 'details'
 
-    contextualGuidance += `\n- ✅ The user just confirmed they want the ${detailLabel} for ${targetBusiness}. Give them those details immediately using the knowledge base. No more clarifying questions.`
-    contextualGuidance += `\n- ❗ Stay with ${targetBusiness}. Do NOT pivot to other businesses unless they ask.`
+    contextualGuidance += `\n- 🚨🚨🚨 ABSOLUTE LOCK: User just confirmed with "${userMessage}" - they want ${detailLabel} for ${targetBusiness}. Give them ONLY ${targetBusiness} details. NO OTHER BUSINESSES ALLOWED!`
+    contextualGuidance += `\n- ❗ FORBIDDEN: Do NOT mention Julie's Sports Pub, David's Grill Shack, Adams Cocktail Bar, Orchid & Ivy, Venezy Burgers, or ANY other venue unless it's ${targetBusiness}!`
+    contextualGuidance += `\n- 📋 DELIVER: Give 2–3 concrete ${detailLabel} highlights with prices, flavours, or timings. If the knowledge base is thin, say so plainly and suggest calling ahead or viewing the menu, then offer the next action (e.g., add to wallet, pull menu).`
   }
     
     // 🚨 CRITICAL: Handle current business context (what AI was just talking about)
     if (isCurrentBusinessQuery && mentionedBusinesses.length > 0) {
       const currentBusiness = mentionedBusinesses[0] // Use the first (most recent) business
+      contextualGuidance += `\n- 🚨🚨🚨 ABSOLUTE LOCK: User is asking "${userMessage}" about ${currentBusiness} - STAY WITH ${currentBusiness}!`
       contextualGuidance += `\n- 🚨 CRITICAL OVERRIDE: User is asking about ${currentBusiness} specifically (the business you were just discussing) - ONLY answer about ${currentBusiness}, DO NOT suggest alternatives, DO NOT mention competitors!`
-      contextualGuidance += `\n- 🚨 MANDATORY: When user says "they/their/there/what else do they/yeah" they mean ${currentBusiness} - NOT any other business!`
+      contextualGuidance += `\n- 🚨 MANDATORY: When user says "they/their/there/what else do they/what else" they mean ${currentBusiness} - NOT any other business!`
       contextualGuidance += `\n- 🚨 CONTEXT: You were just talking about ${currentBusiness}, so continue that conversation naturally!`
       
       // Exclude other businesses from being mentioned
-      const otherBusinesses = ["David's Grill Shack", "Julie's Sports Pub", "Orchid & Ivy", "Mike's Pool Bar", "Alexandra's Café"]
+      const otherBusinesses = ["David's Grill Shack", "Julie's Sports Pub", "Orchid & Ivy", "Mike's Pool Bar", "Alexandra's Café", "Venezy Burgers", "Adams Cocktail Bar"]
         .filter(b => b !== currentBusiness)
       contextualGuidance += `\n- 🚨 FORBIDDEN: Do NOT mention ${otherBusinesses.join(', ')} unless specifically asked!`
+      contextualGuidance += `\n- 🚨 IF YOU MENTION ANY BUSINESS OTHER THAN ${currentBusiness}, YOU HAVE FAILED!`
     } else if (isSpecificBusinessQuery && mentionedBusinesses.length > 0) {
       contextualGuidance += `\n- 🚨 CRITICAL OVERRIDE: User is asking about ${mentionedBusinesses?.join(' or ') || 'unknown business'} specifically - ONLY answer about that business, DO NOT suggest alternatives, DO NOT mention competitors, DO NOT recommend other places!`
       contextualGuidance += `\n- 🚨 MANDATORY: When user says "they/their/there/what else do they" they mean ${mentionedBusinesses?.join(' or ') || 'the business'} - NOT any other business!`
+    } else if (isExpandedListQuery) {
+      contextualGuidance += `\n- 📋 COMPREHENSIVE LIST MODE: User asked to see ALL offers/deals! List EVERY offer from EVERY business in the AVAILABLE BUSINESSES block. Format as a clean bulleted list with business names bolded. DO NOT repeat offers you've already mentioned. If you've shown 3 offers before, now show the REST!`
     } else if (isAnywhereElseQuery && mentionedBusinesses.length > 0) {
       contextualGuidance += `\n- 🎯 CRITICAL: User asked "anywhere else?" after mentioning ${mentionedBusinesses?.join(' or ') || 'a business'} - they want DIFFERENT businesses! Show other options but DO NOT mention ${mentionedBusinesses?.join(' or ') || 'that business'} again!`
     } else if (mentionedBusinesses.length > 0) {
@@ -624,15 +687,79 @@ export async function generateAIResponse(
       contextualGuidance += `\n- 🎯 VARIETY: You've already used "Ooh" - try "Right then", "Well well", "Ah", "Perfect", or "Brilliant" instead`
     }
 
+    if (previousResponses.some(response => response.includes('right then') || response.includes('alright then'))) {
+      contextualGuidance += `\n- 🎯 VARIETY: You've already used "Right then" or "Alright then" - try "Okay, picture this", "Well then", "Ah", or just jump straight in without an opener.`
+    }
+
+    if (previousResponses.some(response => response.includes("here's the move") || response.includes("here's the play"))) {
+      contextualGuidance += `\n- 🎯 VARIETY: You've already used "Here's the move/play" - try "Sounds like", "Perfect", "Well then", or just start naturally without a canned phrase.`
+    }
+
     if (previousResponses.length > 0) {
       contextualGuidance += `\n- 🎯 VARIETY: Vary your greeting and tone from previous responses - don't repeat the same opening phrases`
     }
 
-    // 1. Search for relevant knowledge using vector similarity (increased for accuracy)
-    const [businessResults, cityResults] = await Promise.all([
-      searchBusinessKnowledge(userMessage, city, { matchCount: 12 }), // Increased for chunked content
-      searchCityKnowledge(userMessage, city, { matchCount: 6 })       // Increased for better coverage
-    ])
+    const detailQueryHints: Record<string, string> = {
+      drinks: 'cocktail list signature drinks bar menu',
+      menu: 'menu highlights signature dishes food recommendations',
+      offers: 'current offers deals promotions discounts',
+      hours: 'opening hours closing time schedule',
+      kids: 'kids menu family friendly options',
+      vegetarian: 'vegetarian vegan plant-based options',
+      pricing: 'pricing average spend cost',
+      general: 'top picks highlights'
+    }
+
+    const cleanedLowerMessage = lowerMessage.replace(/[^a-z0-9\s]/g, '').trim()
+    const isLowSignalMessage = cleanedLowerMessage.length <= 3
+
+    let knowledgeQuery = userMessage
+    
+    // 🎯 CRITICAL: If user is asking about "they/their/it" (current business), LOCK the search to that business!
+    if ((forceDetailForCurrentBusiness || isSimpleFollowUp || isLowSignalMessage || isCurrentBusinessQuery) && mentionedBusinesses.length > 0) {
+      const detailHintKey = lastAssistantDetailRequest || 'general'
+      const hint = detailQueryHints[detailHintKey] || detailQueryHints.general
+      knowledgeQuery = `${mentionedBusinesses[0]} ${hint}`.trim()
+      console.log(`🔒 LOCKED SEARCH to business: "${mentionedBusinesses[0]}" (reason: ${forceDetailForCurrentBusiness ? 'forceDetail' : isCurrentBusinessQuery ? 'currentBusinessQuery' : 'simpleFollowUp'})`)
+    } else if ((userGaveOpenChoice || isShortAnswer) && inferredTopic !== 'general') {
+      knowledgeQuery = `${friendlyTopicLabel} in ${city}`.trim()
+    }
+
+    console.log(`🧠 Knowledge query resolved to: "${knowledgeQuery}" (user message: "${userMessage}")`)
+
+    // 🎯 SMART: If user wants ALL offers/businesses, increase the search limit
+    const searchLimit = isExpandedListQuery ? 30 : 12
+    const runBusinessSearch = async (query: string) => searchBusinessKnowledge(query, city, { matchCount: searchLimit })
+    let businessResults = await runBusinessSearch(knowledgeQuery)
+    
+    console.log(`🔍 Search mode: ${isExpandedListQuery ? 'EXPANDED (30 results)' : 'NORMAL (12 results)'} for query: "${knowledgeQuery}"`)
+    
+    // 🚨 FALLBACK: If no results and a business was mentioned, try searching for that business name directly
+    if (businessResults.success && businessResults.results.length === 0 && mentionedBusinesses.length > 0) {
+      console.log(`⚠️ No results for "${knowledgeQuery}", trying direct business name search for: ${mentionedBusinesses[0]}`)
+      const directBusinessResults = await runBusinessSearch(mentionedBusinesses[0])
+      if (directBusinessResults.success && directBusinessResults.results.length > 0) {
+        console.log(`✅ Found ${directBusinessResults.results.length} results with direct business name search`)
+        businessResults = directBusinessResults
+      }
+    }
+    
+    // Original fallback to user message
+    if (businessResults.success && businessResults.results.length === 0 && knowledgeQuery !== userMessage) {
+      const fallbackResults = await runBusinessSearch(userMessage)
+      if (fallbackResults.success) {
+        businessResults = fallbackResults
+      }
+    }
+
+    const runCitySearch = async (query: string) => searchCityKnowledge(query, city, { matchCount: 6 })
+    let cityResults = await runCitySearch(knowledgeQuery)
+    if (cityResults.success && cityResults.results.length === 0 && knowledgeQuery !== userMessage) {
+      const fallbackCity = await runCitySearch(userMessage)
+      if (fallbackCity.success) {
+        cityResults = fallbackCity
+      }
+    }
  
     const uniqueBusinessResults = collectUniqueBusinessResults(businessResults.results || [])
     const sources = buildKnowledgeSources(businessResults, cityResults)
@@ -656,34 +783,38 @@ export async function generateAIResponse(
 
     console.log(`🎯 FINAL CONTEXTUAL GUIDANCE: ${contextualGuidance}`)
     
-    const systemPrompt = `You're the Bournemouth Local—the easy-going mate who always knows where to head next. Talk like you're texting a friend: confident, helpful, a bit cheeky when it fits. Never sound like a call centre script.${contextualGuidance ? `\n\nCONTEXT: ${contextualGuidance}` : ''}
+    const systemPrompt = `You're the Bournemouth Local—Qwikker's cheeky concierge who mixes real hospitality with seaside swagger. Speak like a trusted mate, never like a call centre script, and NEVER open with "Hi Explorer" or any robotic greeting.${contextualGuidance ? `\n\nCONTEXT: ${contextualGuidance}` : ''}
 
-${isSimpleFollowUp ? `\nUser just said "${userMessage}" — they're replying to what you told them a moment ago. Pick up the thread naturally.` : ''}
+${isSimpleFollowUp ? `\nUser just said "${userMessage}" — they’re clearly replying to your last point. Pick up that thread naturally and keep the vibe flowing.` : ''}
 
 VOICE & VIBE:
-- Keep responses to 1–2 punchy sentences. Switch up your openers — "Right then", "Sounds like", "If you fancy", "Alright then" — so it never feels copy-pasted.
-- Sprinkle in Bournemouth flavour (seafront strolls, beachy sunsets, cosy town-centre vibes) when it helps paint the picture.
-- Emojis sparingly (max two) to add warmth: 🍔 for food, 🍻 for drinks, 💰 for deals, ⏰ for timing. No emojis inside business names or facts.
-- Always finish your sentences; never leave the message hanging mid-thought.
+- Keep it brief—2-3 sentences max. Rotate your openers naturally: "Sounds like", "Okay, picture this", "Well then", "Ah", "Perfect". Avoid repeating "Right then", "Alright then", "Here's the move", or "Here's the play" if you've used them recently.
+- Never use "Hi Explorer", "Hi there", "Greetings", or similar canned intros. Dive straight into the good stuff.
+- Slip in Bournemouth flavour (pier walks, salty breezes, cosy old-town vibes) or a playful quip occasionally—but stay natural, don't force it.
+- Mirror their mood: hype them up if they're buzzing, soften things if they're stressed, show real empathy when they vent.
+- Emojis are seasoning, not sauce—max one per response, never inside business names or factual details.
 
 FLOW GUARDRAILS:
-- One clarifier max. As soon as they give you anything ("something else", "whatever's good", "hearty"), dive straight into recommendations.
-- If they confirm with "yeah", "sure", "go on" after you offer more detail, deliver that detail immediately — stay on the same business until they change topic.
-- Never ask the same question twice. Acknowledge their answer, build on it, and keep momentum.
+- One clarifier max. The moment they give you anything ("something sweet", "surprise me"), swing straight into recommendations.
+- 🚨 CRITICAL: If they say "yeah", "sure", "ok", "go on" RIGHT AFTER you asked them something about a specific business (like cocktails at David's), STAY WITH THAT EXACT BUSINESS. Do NOT switch to different businesses! Give them the detail they confirmed they want.
+- Never repeat the same question. Acknowledge, build, keep momentum.
+- 🚨 CONTEXT LOCK: When discussing a specific business, ONLY switch to another business if the user explicitly asks "anywhere else?" or names a different venue. Otherwise STAY PUT.
 
 LOCAL PLAYBOOK:
-- Highlight 2–3 Bournemouth picks with quick reasons. Lead with Qwikker Picks or standout locals, then offer to pull menus, add to wallet, or line up more options.
-- When someone asks for kids menus, veggie dishes, pricing, etc., stick to the knowledge base facts and stay with the current business unless they ask to branch out.
-- If they say "anywhere else?", pivot to fresh venues — don't repeat yourself.
+- Spotlight 2–3 Bournemouth gems with punchy reasons. Lead with Qwikker Picks or true standouts, then offer to pull menus, add to wallet, or fetch another idea.
+- When they mention kids menus, veggie bits, pricing, accessibility, or timetables, stick to the knowledge base facts and keep the focus on the current venue unless they ask to branch out.
+- If they say "anywhere else?", bring fresh names—don’t rinse and repeat.
 
 AFTERCARE & NEXT STEPS:
-- Close each response with a gentle next move: offer to pull cards, add to wallet, fetch more options, or drill into menus. Think "Want me to grab their cocktail list?" or "Need another idea up the coast?".
-- Quick replies should always suggest the next logical tap (e.g., "Show drinks menu", "Add this offer to my wallet", "Any veggie dishes?").
+- Wrap with an easy next move: "Want me to grab their menu?", "Want me to pull up their drinks list?", "Fancy checking out their offers?".
+- Quick replies should always tee up the next logical tap ("Show drinks menu", "Add this offer to my wallet", "Any veggie dishes?").
 
-KNOWLEDGE GUARDRAILS:
-- Only use the information in the AVAILABLE BUSINESSES block. If the knowledge base lists menu items or offers, mention them accurately with prices where possible.
-- If a business isn't in the list, admit it and nudge them back to Discover — never invent details.
-- Always bold business names like **Julie's Sports Pub** so they become tappable.
+🚨 KNOWLEDGE GUARDRAILS (CRITICAL - NEVER VIOLATE):
+- 🚨 ONLY use facts from the AVAILABLE BUSINESSES block below. DO NOT make up, assume, or infer ANY details.
+- 🚨 If information is NOT in the AVAILABLE BUSINESSES block, DO NOT mention it. Say "I don't have that info right now" instead.
+- 🚨 NEVER invent amenities (wifi, parking, accessibility) unless explicitly listed in the business data.
+- 🚨 If a venue isn't listed in AVAILABLE BUSINESSES, admit it plainly: "I don't have info on that one yet—check out the Discover page!"
+- Always bold business names like **Julie's Sports Pub** so they're tappable.
 
 AVAILABLE BUSINESSES:
 ${businessContext || 'No business data available right now.'}
@@ -746,11 +877,11 @@ ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
       openai.chat.completions.create({
         model: 'gpt-4o-mini', // Fast model
         messages,
-        max_tokens: isSimpleFollowUp ? 120 : 80, // Much shorter, punchier responses
-        temperature: 0.8, // Much higher for natural, varied responses
-        presence_penalty: 0.3, // Avoid repetitive phrases
-        frequency_penalty: 0.4, // Encourage varied vocabulary
-        top_p: 0.9 // More focused but still natural
+        max_tokens: isSimpleFollowUp ? 160 : 240,
+        temperature: 0.95,
+        presence_penalty: 0.5,
+        frequency_penalty: 0.6,
+        top_p: 0.92
       }),
       new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Chat completion timeout after 15 seconds')), 15000)
@@ -919,11 +1050,32 @@ ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
 
     console.log(`✅ Generated AI response for "${userMessage}" in ${city} with ${sources.length} sources${businessCarousel.length > 0 ? ` and ${businessCarousel.length} carousel businesses` : ''}${walletActions.length > 0 ? ` and ${walletActions.length} wallet actions` : ''}`)
 
-    // 🚨 POST-PROCESSING FIX: Ensure David's Grill Shack is always bold
-    let processedResponse = response
-    if (processedResponse.includes("David's Grill Shack") && !processedResponse.includes("**David's Grill Shack**")) {
-      console.log("🔧 POST-PROCESSING: Fixing David's Grill Shack formatting")
-      processedResponse = processedResponse.replace(/David's Grill Shack/g, "**David's Grill Shack**")
+    // 🚨 POST-PROCESSING FIX: Ensure business names are always bold
+    let processedResponse = response.trim()
+    
+    // Bold all business names
+    const businessNames = ["David's Grill Shack", "Julie's Sports Pub", "Alexandra's Café", "Orchid & Ivy", "Mike's Pool Bar", "Venezy Burgers"]
+    businessNames.forEach(name => {
+      if (processedResponse.includes(name) && !processedResponse.includes(`**${name}**`)) {
+        console.log(`🔧 POST-PROCESSING: Fixing ${name} formatting`)
+        processedResponse = processedResponse.replace(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), `**${name}**`)
+      }
+    })
+    
+    // 🎯 EMOJI FILTER: Remove excessive emojis (max 1 per response)
+    const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu
+    const emojis = processedResponse.match(emojiRegex) || []
+    if (emojis.length > 1) {
+      console.log(`🔧 POST-PROCESSING: Removing ${emojis.length - 1} excessive emojis`)
+      let emojiCount = 0
+      processedResponse = processedResponse.replace(emojiRegex, (match) => {
+        emojiCount++
+        return emojiCount === 1 ? match : '' // Keep only the first emoji
+      })
+    }
+
+    if (!/[.!?…)]$/.test(processedResponse)) {
+      processedResponse = `${processedResponse}.`
     }
 
     return {
@@ -1009,11 +1161,21 @@ export async function generateQuickReplies(
   const lastUserMessage = conversationHistory?.filter(msg => msg.role === 'user').slice(-1)[0]?.content.toLowerCase() || ''
 
   const recentConversation = conversationHistory?.slice(-4)?.map(msg => msg.content.toLowerCase()).join(' ') || ''
-  const hasRecentBusinessMentions = recentConversation.includes('david') || recentConversation.includes('julie') || recentConversation.includes('orchid')
+  const hasRecentBusinessMentions = recentConversation.includes('david') || recentConversation.includes('julie') || recentConversation.includes('orchid') || recentConversation.includes('adams')
   const hasRecentOfferMentions = recentConversation.includes('offer') || recentConversation.includes('deal') || recentConversation.includes('discount')
-  const hasRecentFoodMentions = recentConversation.includes('food') || recentConversation.includes('burger') || recentConversation.includes('menu')
+  
+  // 🎯 CURRENT USER INTENT (prioritize this over conversation history!)
+  const isCurrentlyAskingLocation = /\b(how do i get|where is|address|location|directions|get there|find it|parking)\b/i.test(lowerMessage)
+  const isCurrentlyAskingHours = /\b(what time|when.*open|hours|opening time|close|closing time)\b/i.test(lowerMessage)
+  const isCurrentlyAskingMenu = /\b(menu|what.*have|show.*food|dishes|mains|dessert|breakfast)\b/i.test(lowerMessage) && !lowerMessage.includes('cocktail')
+  const isCurrentlyAskingDrinks = /\b(cocktail|drink|wine|beer|alcohol|cacha[çc]a|liquor|spirit|mojito|margarita|gin|vodka|rum|whiskey|what.*drink|show.*drink|anywhere.*sell|where.*get)\b/i.test(lowerMessage)
+  const isCurrentlyAskingOffers = /\b(deal|offer|discount|promo|bargain|coupon|save|cheap|list.*offer|show.*deal|current deal|what'?s on)\b/i.test(lowerMessage)
+  
+  // 🎯 CONVERSATION CONTEXT (only use if current intent is unclear)
+  const isCocktailConversation = recentConversation.includes('cocktail') || recentConversation.includes('drink') || lowerAIResponse.includes('cocktail')
+  const hasRecentFoodMentions = !isCocktailConversation && (recentConversation.includes('food') || recentConversation.includes('burger') || (recentConversation.includes('menu') && !recentConversation.includes('cocktail')))
 
-  const detailIntent = detectDetailRequest(userMessage) || detectDetailRequest(aiResponse || '') || detectDetailRequest(recentConversation)
+  const detailIntent = detectDetailRequest(userMessage) || detectDetailRequest(aiResponse || '')
 
   const tidy = (options: string[]) => {
     const seen = new Set<string>()
@@ -1030,6 +1192,48 @@ export async function generateQuickReplies(
       .slice(0, 3)
   }
 
+  // ⚡ PRIORITY 1: Current user intent (overrides conversation history!)
+  if (isCurrentlyAskingLocation) {
+    return tidy([
+      'What time do they open?',
+      'Any parking nearby?',
+      'Tell me about their vibe'
+    ])
+  }
+
+  if (isCurrentlyAskingHours) {
+    return tidy([
+      'What\'s the address?',
+      'Show me their menu',
+      'Any current deals?'
+    ])
+  }
+
+  if (isCurrentlyAskingMenu && !isCurrentlyAskingDrinks) {
+    return tidy([
+      'What about drinks?',
+      'Any signature dishes?',
+      'Tell me their opening hours'
+    ])
+  }
+
+  if (isCurrentlyAskingDrinks) {
+    return tidy([
+      'Any signature cocktails?',
+      'What food pairs well with this?',
+      'Show me the full drinks menu'
+    ])
+  }
+
+  if (isCurrentlyAskingOffers) {
+    return tidy([
+      'Stack this offer in my wallet',
+      'Any other bargains going?',
+      'Compare this with other deals'
+    ])
+  }
+
+  // ⚡ PRIORITY 2: Detail intent from AI parsing
   if (detailIntent) {
     const possessive = primaryBusiness ? `${primaryBusiness}'s` : 'their'
     switch (detailIntent) {
@@ -1088,11 +1292,22 @@ export async function generateQuickReplies(
     ])
   }
 
-  if (hasRecentOfferMentions) {
+  // 🍹 COCKTAIL-SPECIFIC QUICK REPLIES (moved up before offer mentions)
+  if (isCocktailConversation) {
+    // If AI just explained a specific cocktail, offer related suggestions
+    if (lowerAIResponse.includes('this') || lowerAIResponse.includes('brazilian') || lowerAIResponse.includes('mix') || lowerAIResponse.includes('zesty')) {
+      return tidy([
+        'Any other similar cocktails?',
+        'What food pairs well with this?',
+        'Show me the full cocktail menu'
+      ])
+    }
+    
+    // General cocktail conversation
     return tidy([
-      'Stack this offer in my wallet',
-      'Any other bargains going?',
-      'Compare this with other deals'
+      'Any signature cocktails?',
+      'What\'s the strongest one?',
+      'Best cocktail for my mood?'
     ])
   }
 
@@ -1101,6 +1316,17 @@ export async function generateQuickReplies(
       'Show me the mains',
       'What about dessert options?',
       'Any veggie-friendly picks?'
+    ])
+  }
+
+  // Only suggest offer-related replies if BOTH:
+  // 1. Recent conversation mentions offers
+  // 2. AI response explicitly talks about a specific offer/discount
+  if (hasRecentOfferMentions && (lowerAIResponse.includes('% off') || lowerAIResponse.includes('discount'))) {
+    return tidy([
+      'Stack this offer in my wallet',
+      'Any other bargains going?',
+      'Compare this with other deals'
     ])
   }
 

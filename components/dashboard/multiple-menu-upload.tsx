@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, Upload, FileText, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
+import { Trash2, Upload, FileText, CheckCircle, XCircle, Clock, AlertCircle, Eye, X } from 'lucide-react'
 import { BusinessMenu, MENU_TYPE_OPTIONS, MenuType } from '@/types/profiles'
 
 interface MultipleMenuUploadProps {
@@ -31,6 +31,9 @@ export function MultipleMenuUpload({ businessId }: MultipleMenuUploadProps) {
     type: '' as MenuType | '',
     file: null as File | null
   })
+  const [showViewModal, setShowViewModal] = useState<BusinessMenu | null>(null)
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<BusinessMenu | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Load existing menus
   useEffect(() => {
@@ -136,18 +139,17 @@ export function MultipleMenuUpload({ businessId }: MultipleMenuUploadProps) {
     }
   }
 
-  const handleDelete = async (menuId: string, menuName: string) => {
-    if (!confirm(`Are you sure you want to delete "${menuName}"? This action cannot be undone.`)) {
-      return
-    }
+  const handleDelete = async () => {
+    if (!showDeleteConfirmation) return
 
+    setIsDeleting(true)
     try {
       const response = await fetch('/api/menus/delete', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ menuId })
+        body: JSON.stringify({ menuId: showDeleteConfirmation.id })
       })
 
       const data = await response.json()
@@ -155,14 +157,15 @@ export function MultipleMenuUpload({ businessId }: MultipleMenuUploadProps) {
       if (data.success) {
         setUploadMessage({
           type: 'success',
-          text: data.message
+          text: data.message || 'Menu deleted successfully from all systems'
         })
+        setShowDeleteConfirmation(null)
         await loadMenus()
         router.refresh()
       } else {
         setUploadMessage({
           type: 'error',
-          text: data.error
+          text: data.error || 'Failed to delete menu'
         })
       }
     } catch (error) {
@@ -171,6 +174,8 @@ export function MultipleMenuUpload({ businessId }: MultipleMenuUploadProps) {
         type: 'error',
         text: 'Failed to delete menu. Please try again.'
       })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -329,15 +334,27 @@ export function MultipleMenuUpload({ businessId }: MultipleMenuUploadProps) {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      {menu.status === 'pending' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(menu.id, menu.menu_name)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      {/* View Button - Opens PDF in modal */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowViewModal(menu)}
+                        className="border-slate-600 text-gray-300 hover:bg-slate-700"
+                        title="View PDF"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      
+                      {/* Delete Button - Available for all menus */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowDeleteConfirmation(menu)}
+                        className="border-slate-600 hover:bg-red-900/20 hover:border-red-600 text-red-400"
+                        title="Delete menu"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
 
@@ -359,6 +376,106 @@ export function MultipleMenuUpload({ businessId }: MultipleMenuUploadProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* View PDF Modal */}
+      {showViewModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <Card className="bg-slate-800 border-slate-700 max-w-6xl w-full h-[90vh] flex flex-col">
+            <CardHeader className="flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  {showViewModal.menu_name}
+                  <Badge className={getStatusColor(showViewModal.status)} style={{ marginLeft: '8px' }}>
+                    {showViewModal.status.replace('_', ' ')}
+                  </Badge>
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowViewModal(null)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <p className="text-sm text-gray-400 capitalize">
+                {showViewModal.menu_type.replace('_', ' ')} • {showViewModal.original_filename}
+              </p>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-hidden p-0">
+              <iframe
+                src={showViewModal.file_url}
+                className="w-full h-full border-0"
+                title={showViewModal.menu_name}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="bg-slate-800 border-slate-700 max-w-md w-full mx-4">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.98-.833-2.75 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                Delete Menu
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-gray-300">
+                  Are you sure you want to delete <strong className="text-white">&quot;{showDeleteConfirmation.menu_name}&quot;</strong>?
+                </p>
+                <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+                  <p className="text-sm text-red-300">
+                    <strong>⚠️ Warning:</strong> This will permanently delete the menu from:
+                  </p>
+                  <ul className="text-sm text-red-300 mt-2 ml-4 space-y-1">
+                    <li>• Database</li>
+                    <li>• Knowledge Base (AI will no longer see this menu)</li>
+                    <li>• Cloudinary (file storage)</li>
+                  </ul>
+                  <p className="text-sm text-red-300 mt-2">
+                    This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirmation(null)}
+                  disabled={isDeleting}
+                  className="border-slate-600 text-gray-300 hover:bg-slate-700"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Menu
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

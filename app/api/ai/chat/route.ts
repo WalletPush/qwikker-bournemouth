@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateAIResponse, generateQuickReplies, categorizeUserMessage } from '@/lib/ai/chat'
+import { generateHybridAIResponse } from '@/lib/ai/hybrid-chat'
+import { generateQuickReplies, categorizeUserMessage } from '@/lib/ai/chat'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
 import { getValidatedUser } from '@/lib/utils/wallet-pass-security'
 
@@ -31,8 +32,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate AI response using original system
-    const result = await generateAIResponse(message, {
+    // 🚀 Generate AI response using HYBRID system (GPT-4o-mini + GPT-4o)
+    const result = await generateHybridAIResponse(message, {
       city,
       userName,
       walletPassId
@@ -70,7 +71,9 @@ export async function POST(request: NextRequest) {
         city,
         userName,
         category: messageCategory.category,
-        sourceCount: result.sources?.length || 0
+        sourceCount: result.sources?.length || 0,
+        modelUsed: result.modelUsed,
+        complexity: result.classification?.complexity
       }
     })
 

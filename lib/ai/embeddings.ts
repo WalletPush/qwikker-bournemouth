@@ -36,6 +36,172 @@ export async function generateEmbedding(text: string): Promise<number[] | null> 
 }
 
 /**
+ * Regenerate business profile knowledge base entry when profile is updated
+ */
+export async function syncBusinessProfileToKnowledgeBase(businessId: string): Promise<{
+  success: boolean
+  message: string
+  error?: string
+}> {
+  try {
+    const supabase = createServiceRoleClient()
+    
+    // Fetch the latest business profile
+    const { data: business, error: businessError } = await supabase
+      .from('business_profiles')
+      .select('*')
+      .eq('id', businessId)
+      .single()
+    
+    if (businessError || !business) {
+      return {
+        success: false,
+        message: 'Business not found',
+        error: businessError?.message
+      }
+    }
+    
+    // Generate the updated content
+    const formattedHours = business.business_hours_structured
+      ? Object.entries(business.business_hours_structured)
+          .filter(([key]) => !['timezone', 'last_updated'].includes(key))
+          .map(([day, hours]: [string, any]) => {
+            const dayName = day.charAt(0).toUpperCase() + day.slice(1)
+            if (hours.closed) return `${dayName}: Closed`
+            if (!hours.open || !hours.close) return `${dayName}: null - null`
+            return `${dayName}: ${hours.open} - ${hours.close}`
+          })
+          .join('\n')
+      : business.business_hours || 'Not specified'
+    
+    const content = `Business Name: ${business.business_name}
+Tagline: ${business.business_tagline || 'N/A'}
+Description: ${business.business_description || 'No description provided'}
+Category: ${business.business_category}
+Type: ${business.business_type}
+City: ${business.city}
+Tier: ${business.business_tier}
+Address: ${business.business_address || 'Not specified'}
+Town: ${business.business_town || business.city}
+Postcode: ${business.business_postcode || 'Not specified'}
+Phone: ${business.phone || 'Not specified'}
+Website: ${business.website_url || 'Not specified'}
+Instagram: ${business.instagram_handle ? '@' + business.instagram_handle : 'Not specified'}
+Facebook: ${business.facebook_url || 'Not specified'}
+Hours:
+${formattedHours}
+Timezone: ${business.business_hours_structured?.timezone || 'Europe/London'}
+This business is ${business.status} and ${business.status === 'approved' ? 'live on' : 'not yet live on'} the Qwikker platform in ${business.city}.`
+
+    const title = `${business.business_name} - Basic Information`
+    
+    // Generate new embedding
+    const fullText = `${title}\n\n${content}`
+    const embedding = await generateEmbedding(fullText)
+    
+    if (!embedding) {
+      return {
+        success: false,
+        message: 'Failed to generate embedding',
+        error: 'OpenAI embedding generation failed'
+      }
+    }
+    
+    // Check if a "Basic Information" entry already exists
+    const { data: existingEntry } = await supabase
+      .from('knowledge_base')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('title', title)
+      .single()
+    
+    if (existingEntry) {
+      // Update existing entry
+      const { error: updateError } = await supabase
+        .from('knowledge_base')
+        .update({
+          content,
+          embedding,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingEntry.id)
+      
+      if (updateError) {
+        return {
+          success: false,
+          message: 'Failed to update knowledge base',
+          error: updateError.message
+        }
+      }
+      
+      console.log(`✅ Updated knowledge base for: ${business.business_name}`)
+      return {
+        success: true,
+        message: `Updated knowledge base for ${business.business_name}`
+      }
+    } else {
+      // Create new entry (shouldn't happen, but fallback)
+      const { error: insertError } = await supabase
+        .from('knowledge_base')
+        .insert({
+          city: business.city.toLowerCase(),
+          business_id: businessId,
+          knowledge_type: 'custom_knowledge',
+          title,
+          content,
+          embedding,
+          metadata: {
+            auto_generated: true,
+            business_type: business.business_type,
+            business_category: business.business_category,
+            tier: business.business_tier,
+            address: business.business_address,
+            town: business.business_town,
+            postcode: business.business_postcode,
+            phone: business.phone,
+            website: business.website_url,
+            instagram: business.instagram_handle,
+            facebook: business.facebook_url,
+            hours: business.business_hours,
+            hours_structured: business.business_hours_structured,
+            rating: business.rating
+          },
+          tags: [
+            business.business_category?.toLowerCase(),
+            business.business_type,
+            business.city.toLowerCase(),
+            'basic_info',
+            'auto_generated'
+          ],
+          status: 'active'
+        })
+      
+      if (insertError) {
+        return {
+          success: false,
+          message: 'Failed to create knowledge base entry',
+          error: insertError.message
+        }
+      }
+      
+      console.log(`✅ Created knowledge base entry for: ${business.business_name}`)
+      return {
+        success: true,
+        message: `Created knowledge base entry for ${business.business_name}`
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error syncing business to knowledge base:', error)
+    return {
+      success: false,
+      message: 'Internal error syncing knowledge base',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+/**
  * Store content in knowledge_base with vector embedding
  */
 export async function storeKnowledgeWithEmbedding({

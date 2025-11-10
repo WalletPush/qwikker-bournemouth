@@ -82,10 +82,23 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
 
     // Create fresh welcome message if no valid session
     const userName = currentUser?.name?.split(' ')[0] || 'Explorer'
+    
+    // 🎯 DYNAMIC GREETINGS: Rotate through different welcome messages
+    const greetings = [
+      `Hey ${userName}! 👋 Looking for something tasty in Bournemouth? I've got the inside scoop on great restaurants, exclusive offers, and secret menus!`,
+      `${userName}! Ready to discover Bournemouth's best spots? I can show you top-rated restaurants, unbeatable deals, and hidden gems!`,
+      `Alright ${userName}, what's the vibe? Looking for food, drinks, or just somewhere new to explore in Bournemouth?`,
+      `Hey ${userName}! Whether you're after a quick bite, a proper meal, or the best deals in town—I've got you covered!`,
+      `${userName}! Let's find you something brilliant. Restaurants, offers, secret menus—what are you in the mood for?`
+    ]
+    
+    // Pick a random greeting
+    const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)]
+    
     const welcomeMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'ai',
-      content: `Hi ${userName}! I'm here to help you discover the best of Bournemouth. I can show you great restaurants, exclusive offers, and even add deals straight to your wallet! What are you looking for?`,
+      content: randomGreeting,
       timestamp: new Date().toISOString(),
       quickReplies: [
         "Show me Qwikker Picks",

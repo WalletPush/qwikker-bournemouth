@@ -246,13 +246,19 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         }
       }
       
-      // Logo upload event
+      // Logo upload event - use fresh timestamp since logo uploads happen in real-time
       if (profile.logo) {
+        // Check if logo was uploaded recently (within last hour) - if so, use NOW
+        const now = new Date()
+        const updatedAt = new Date(profile.updated_at || profile.created_at)
+        const hoursSinceUpdate = (now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60)
+        
         realActivity.push({
           id: 'logo_uploaded',
           type: 'logo_uploaded',
           message: 'Business logo uploaded',
-          timestamp: new Date(profile.updated_at || profile.created_at),
+          // If updated within last hour, assume it's fresh - use NOW minus a few seconds
+          timestamp: hoursSinceUpdate > 1 ? updatedAt : new Date(now.getTime() - 10000),
           icon: (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -264,11 +270,15 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
       
       // Business hours set event
       if (profile.business_hours_structured) {
+        const hoursTimestamp = profile.business_hours_structured.last_updated 
+          ? new Date(profile.business_hours_structured.last_updated)
+          : new Date(profile.updated_at || profile.created_at)
+        
         realActivity.push({
           id: 'hours_updated',
           type: 'hours_updated', 
           message: 'Business hours updated',
-          timestamp: new Date(profile.business_hours_structured.last_updated || profile.updated_at),
+          timestamp: hoursTimestamp,
           icon: (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -450,6 +460,19 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
       isReadyForReview
     })
     
+    // 🚨 CONFIRMATION: Ask user to confirm before submitting
+    const confirmed = window.confirm(
+      '⚠️ Ready to submit your listing for review?\n\n' +
+      'Once submitted, you won\'t be able to make changes until after the review is complete.\n\n' +
+      '💡 Tip: Click "Preview listing" first to see how customers will see your profile.\n\n' +
+      'Submit now?'
+    )
+    
+    if (!confirmed) {
+      console.log('🚫 DASHBOARD: User cancelled submission')
+      return
+    }
+    
     if (!profile?.user_id || isSubmitting) {
       console.log('❌ DASHBOARD: Early return - no userId or already submitting')
       return
@@ -520,6 +543,58 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         <h1 className="text-3xl font-bold text-white">Dashboard</h1>
         <p className="text-gray-400 mt-1">Welcome back! Here's your business overview.</p>
       </div>
+
+      {currentStatus === 'incomplete' && isReadyForReview && (
+        <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-5 sm:p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <p className="text-emerald-300 font-semibold text-lg">Your listing is ready for review</p>
+            <p className="text-sm text-emerald-100/80">
+              Preview how customers will see your profile, then submit it to the Qwikker team for approval.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              asChild
+              variant="outline"
+              className="border-emerald-400/60 text-emerald-200 hover:bg-emerald-500/20"
+            >
+              <Link href="/dashboard/profile/preview">
+                Preview listing
+              </Link>
+            </Button>
+            <Button
+              onClick={handleSubmitForReview}
+              disabled={isSubmitting}
+              className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold"
+            >
+              {isSubmitting ? 'Submitting…' : 'Submit for review'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 🎯 ALWAYS show preview link when status is pending_review */}
+      {currentStatus === 'pending_review' && (
+        <div className="rounded-2xl border border-blue-500/40 bg-blue-500/10 p-5 sm:p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <p className="text-blue-300 font-semibold text-lg">Your listing is under review</p>
+            <p className="text-sm text-blue-100/80">
+              Our team is reviewing your profile. You can still preview how it will look to customers.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              asChild
+              variant="outline"
+              className="border-blue-400/60 text-blue-200 hover:bg-blue-500/20"
+            >
+              <Link href="/dashboard/profile/preview">
+                Preview listing
+              </Link>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -676,16 +751,6 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </Link>
             </div>
 
-            {/* Submit Button - Only show for incomplete profiles */}
-            {currentStatus === 'incomplete' && isReadyForReview && (
-              <Button 
-                onClick={handleSubmitForReview}
-                disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit for Review'}
-              </Button>
-            )}
           </CardContent>
         </Card>
 
