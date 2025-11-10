@@ -1,6 +1,6 @@
 'use server'
 
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export interface BusinessEvent {
@@ -67,7 +67,7 @@ export async function getBusinessEvents(businessId: string): Promise<{
   error?: string
 }> {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('business_events')
