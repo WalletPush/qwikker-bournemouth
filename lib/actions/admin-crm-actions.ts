@@ -36,7 +36,11 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         offer_type,
         additional_notes,
         updated_at,
-        created_at
+        created_at,
+        last_ghl_sync,
+        last_crm_sync,
+        crm_sync_status,
+        ghl_contact_id
       `)
       .eq('city', city)
       .order('created_at', { ascending: false })
@@ -170,9 +174,9 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         approved_at: business.approved_at,
         admin_notes: business.admin_notes,
         
-        // GHL sync tracking
-        last_ghl_sync: null, // TODO: Implement GHL sync tracking
-        ghl_contact_id: null, // TODO: Implement GHL contact ID tracking
+        // GHL sync tracking (from database)
+        last_ghl_sync: business.last_ghl_sync || business.last_crm_sync || null,
+        ghl_contact_id: business.ghl_contact_id || null
         
         // Business assets
         logo: business.logo,
