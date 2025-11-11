@@ -270,7 +270,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
             </svg>
           </div>
           <div>
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent mb-2">
+            <h1 className="text-5xl font-bold text-emerald-400 mb-2">
               Discover Bournemouth
             </h1>
             <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-emerald-400 to-transparent rounded-full" />
