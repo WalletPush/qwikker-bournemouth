@@ -171,22 +171,29 @@ export function DynamicPostTheme({
       {/* Accent Elements */}
       {renderAccentElement(style.accentElement)}
       
-      {/* Content Container */}
-      <div className={`absolute inset-0 flex ${getPositionClass(style.textPosition)} p-12`}>
-        <h1 
-          className={`
-            ${getSizeClass(style.textSize)} 
-            ${getFontStyleClass(style.fontStyle)} 
-            ${getTextColorClass(style.textColor)}
-            leading-[0.9] 
-            tracking-tight 
-            max-w-4xl 
-            text-center
-          `}
-          style={getTextEffect(style.textEffect)}
-        >
-          {headline}
-        </h1>
+      {/* Content Container with PROPER SPACING */}
+      <div className={`absolute inset-0 flex ${getPositionClass(style.textPosition)}`}>
+        <div className="px-12 py-12 max-w-5xl">
+          <h1 
+            className={`
+              ${getSizeClass(style.textSize)} 
+              ${getFontStyleClass(style.fontStyle)} 
+              ${getTextColorClass(style.textColor)}
+              leading-[0.95] 
+              tracking-tight
+              break-words
+              hyphens-auto
+            `}
+            style={{
+              ...getTextEffect(style.textEffect),
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
+              wordBreak: 'break-word'
+            }}
+          >
+            {headline}
+          </h1>
+        </div>
       </div>
       
       {/* Business Logo - top left */}
@@ -196,13 +203,17 @@ export function DynamicPostTheme({
         </div>
       )}
       
-      {/* QWIKKER Logo - bottom right corner */}
-      <div className="absolute bottom-5 right-5">
+      {/* QWIKKER Logo - ALWAYS VISIBLE - bottom right corner */}
+      <div className="absolute bottom-6 right-6 z-50 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg">
         <img 
           src="/Qwikker Logo web.svg" 
           alt="QWIKKER" 
-          className="h-6 w-auto max-w-[120px] opacity-90"
-          style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.95))' }}
+          className="h-5 w-auto"
+          style={{ 
+            filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+            minWidth: '80px',
+            maxWidth: '100px'
+          }}
         />
       </div>
     </div>

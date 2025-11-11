@@ -80,13 +80,17 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         </div>
       )}
       
-      {/* QWIKKER Logo - bottom right corner */}
-      <div className="absolute bottom-5 right-5">
+      {/* QWIKKER Logo - ALWAYS VISIBLE - bottom right corner */}
+      <div className="absolute bottom-6 right-6 z-50 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg">
         <img 
           src="/Qwikker Logo web.svg" 
           alt="QWIKKER" 
-          className="h-6 w-auto max-w-[120px] opacity-90"
-          style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.95))' }}
+          className="h-5 w-auto"
+          style={{ 
+            filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+            minWidth: '80px',
+            maxWidth: '100px'
+          }}
         />
       </div>
       </div>
@@ -117,15 +121,24 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             </h1>
           </div>
           
-          {/* Bottom: Branding */}
+          {/* Bottom: Business name */}
           <div className="flex items-center justify-between">
             <span className="text-base font-bold text-gray-500">{businessName}</span>
-            <img 
-              src="/Qwikker Logo web.svg" 
-              alt="QWIKKER" 
-              className="h-6 w-auto max-w-[120px] opacity-90"
-            />
           </div>
+        </div>
+        
+        {/* QWIKKER Logo - ALWAYS VISIBLE - bottom right corner */}
+        <div className="absolute bottom-6 right-6 z-50 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg">
+          <img 
+            src="/Qwikker Logo web.svg" 
+            alt="QWIKKER" 
+            className="h-5 w-auto"
+            style={{ 
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+              minWidth: '80px',
+              maxWidth: '100px'
+            }}
+          />
         </div>
       </div>
     ),
@@ -155,13 +168,17 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             </div>
           )}
           
-          {/* QWIKKER logo - bottom right corner */}
-          <div className="absolute bottom-5 right-5">
+          {/* QWIKKER logo - ALWAYS VISIBLE - bottom right corner */}
+          <div className="absolute bottom-6 right-6 z-50 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg">
             <img 
               src="/Qwikker Logo web.svg" 
               alt="QWIKKER" 
-              className="h-6 w-auto max-w-[120px] opacity-90"
-              style={{ filter: 'brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,0.7))' }}
+              className="h-5 w-auto"
+              style={{ 
+                filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+                minWidth: '80px',
+                maxWidth: '100px'
+              }}
             />
           </div>
         </div>
@@ -198,13 +215,17 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           </div>
         )}
         
-        {/* QWIKKER Logo - bottom right corner */}
-        <div className="absolute bottom-5 right-5">
+        {/* QWIKKER Logo - ALWAYS VISIBLE - bottom right corner */}
+        <div className="absolute bottom-6 right-6 z-50 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg">
           <img 
             src="/Qwikker Logo web.svg" 
             alt="QWIKKER" 
-            className="h-5 w-auto max-w-[100px] opacity-80"
-            style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,1))' }}
+            className="h-5 w-auto"
+            style={{ 
+              filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+              minWidth: '80px',
+              maxWidth: '100px'
+            }}
           />
         </div>
       </div>
@@ -248,13 +269,17 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           </div>
         )}
         
-        {/* QWIKKER Logo - bottom right corner */}
-        <div className="absolute bottom-5 right-5">
+        {/* QWIKKER Logo - ALWAYS VISIBLE - bottom right corner */}
+        <div className="absolute bottom-6 right-6 z-50 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg">
           <img 
             src="/Qwikker Logo web.svg" 
             alt="QWIKKER" 
-            className="h-6 w-auto max-w-[120px] opacity-90"
-            style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.95))' }}
+            className="h-5 w-auto"
+            style={{ 
+              filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+              minWidth: '80px',
+              maxWidth: '100px'
+            }}
           />
         </div>
       </div>
