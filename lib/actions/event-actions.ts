@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { syncEventToKnowledgeBase, removeEventFromKnowledgeBase } from '@/lib/ai/embeddings'
 
