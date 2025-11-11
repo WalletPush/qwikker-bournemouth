@@ -2,8 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import { useState } from 'react'
 
 interface Event {
   id: string
@@ -29,12 +28,8 @@ interface EventCarouselProps {
 
 export function EventCarousel({ events, currentUser, className = '' }: EventCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [showModal, setShowModal] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const getEventTypeBadge = (type: string) => {
     const typeColors: Record<string, string> = {
@@ -171,6 +166,7 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
                         onClick={(e) => {
                           e.stopPropagation()
                           setSelectedEvent(event)
+                          setShowModal(true)
                         }}
                       >
                         More Info
@@ -237,156 +233,97 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
         </div>
       )}
 
-      {/* More Info Modal - Rendered via Portal */}
-      {mounted && selectedEvent && createPortal(
-        <div 
-          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 backdrop-blur-md"
-          style={{ zIndex: 999999 }}
-          onClick={() => setSelectedEvent(null)}
-        >
+      {/* Simple Modal - NO PORTAL, JUST WORKS */}
+      {showModal && selectedEvent && (
+        <>
+          {/* Backdrop */}
           <div 
-            className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl border border-slate-700 shadow-2xl max-w-md w-full max-h-[85vh] overflow-y-auto relative"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 bg-black/70"
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 }}
+            onClick={() => {
+              setShowModal(false)
+              setSelectedEvent(null)
+            }}
+          />
+          
+          {/* Modal Content */}
+          <div 
+            className="fixed top-1/2 left-1/2 w-full max-w-sm bg-slate-800 rounded-lg shadow-xl p-4"
+            style={{ 
+              position: 'fixed',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 51,
+              maxHeight: '80vh',
+              overflowY: 'auto'
+            }}
           >
             {/* Close Button */}
             <button
-              onClick={() => setSelectedEvent(null)}
-              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white flex items-center justify-center transition-colors z-10"
+              onClick={() => {
+                setShowModal(false)
+                setSelectedEvent(null)
+              }}
+              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center text-xl leading-none"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              ×
             </button>
 
-            {/* Event Image */}
-            {selectedEvent.image_url && (
-              <div className="relative h-40 rounded-t-xl overflow-hidden">
-                <img
-                  src={selectedEvent.image_url}
-                  alt={selectedEvent.title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                
-                {/* Event Type Badge */}
-                <div className="absolute top-3 left-3">
-                  {getEventTypeBadge(selectedEvent.event_type)}
+            {/* Content */}
+            <div className="mt-2">
+              <h3 className="text-white font-bold text-lg mb-1 pr-8">{selectedEvent.title}</h3>
+              <p className="text-purple-300 text-sm mb-3">{selectedEvent.business_name}</p>
+              
+              <p className="text-slate-300 text-sm mb-4">{selectedEvent.description}</p>
+              
+              <div className="space-y-2 mb-4 text-sm">
+                <div className="flex items-center gap-2 text-slate-200">
+                  <span className="font-semibold">📅</span>
+                  {formatDate(selectedEvent.start_date)}
                 </div>
-              </div>
-            )}
-
-            {/* Event Content */}
-            <div className="p-5">
-              {/* Title & Business */}
-              <div className="mb-3">
-                <h2 className="text-xl font-bold text-white mb-1 line-clamp-2">{selectedEvent.title}</h2>
-                <p className="text-purple-300 text-sm font-medium flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  {selectedEvent.business_name}
-                </p>
-              </div>
-
-              {/* Description */}
-              <div className="mb-3">
-                <p className="text-slate-300 text-xs leading-relaxed line-clamp-3">
-                  {selectedEvent.description}
-                </p>
-              </div>
-
-              {/* Event Details */}
-              <div className="space-y-2 mb-4 bg-slate-800/50 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-slate-400 text-xs">Date</div>
-                    <div className="text-white text-sm font-medium">{formatDate(selectedEvent.start_date)}</div>
-                  </div>
-                </div>
-
                 {selectedEvent.start_time && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-slate-400 text-xs">Time</div>
-                      <div className="text-white text-sm font-medium">
-                        {selectedEvent.start_time.substring(0, 5)}
-                        {selectedEvent.end_time && ` - ${selectedEvent.end_time.substring(0, 5)}`}
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-2 text-slate-200">
+                    <span className="font-semibold">🕐</span>
+                    {selectedEvent.start_time.substring(0, 5)}
+                    {selectedEvent.end_time && ` - ${selectedEvent.end_time.substring(0, 5)}`}
                   </div>
                 )}
-
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="w-7 h-7 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-slate-400 text-xs">Location</div>
-                    <div className="text-white text-sm font-medium line-clamp-1">{selectedEvent.location}</div>
-                  </div>
+                <div className="flex items-center gap-2 text-slate-200">
+                  <span className="font-semibold">📍</span>
+                  {selectedEvent.location}
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Buttons */}
               <div className="flex gap-2">
-                {selectedEvent.ticket_url && (() => {
-                  // Ensure URL has proper protocol
-                  let ticketUrl = selectedEvent.ticket_url.trim()
-                  if (!ticketUrl.startsWith('http://') && !ticketUrl.startsWith('https://')) {
-                    ticketUrl = `https://${ticketUrl}`
-                  }
-                  console.log('🎫 Ticket URL:', { original: selectedEvent.ticket_url, final: ticketUrl })
-                  
-                  return (
-                    <a 
-                      href={ticketUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1"
-                      onClick={(e) => {
-                        console.log('🎫 Clicking ticket button, URL:', ticketUrl)
-                      }}
-                    >
-                      <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-semibold">
-                        Get Tickets
-                      </Button>
-                    </a>
-                  )
-                })()}
+                {selectedEvent.ticket_url && (
+                  <a 
+                    href={selectedEvent.ticket_url.startsWith('http') ? selectedEvent.ticket_url : `https://${selectedEvent.ticket_url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1"
+                  >
+                    <Button className="w-full bg-green-600 hover:bg-green-700 text-white text-sm">
+                      Get Tickets
+                    </Button>
+                  </a>
+                )}
                 <Button 
                   variant="outline"
-                  className="flex-1 border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-white text-sm font-semibold"
+                  className="flex-1 border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-white text-sm"
                   onClick={() => {
-                    setSelectedEvent(null)
-                    // Navigate to events page with hero card open
                     const walletPassId = currentUser?.wallet_pass_id
-                    const baseUrl = '/user/events'
                     const params = new URLSearchParams()
                     if (walletPassId) params.set('wallet_pass_id', walletPassId)
                     params.set('event', selectedEvent.id)
-                    window.location.href = `${baseUrl}?${params.toString()}`
+                    window.location.href = `/user/events?${params.toString()}`
                   }}
                 >
-                  View Full Details
+                  View Full
                 </Button>
               </div>
             </div>
           </div>
-        </div>,
-        document.body
+        </>
       )}
     </div>
   )
