@@ -6,11 +6,17 @@ const anthropic = new Anthropic({
 })
 
 export async function POST(request: NextRequest) {
+  console.log('🚀 Social Wizard API called')
+  
   try {
-    const { postType, content, businessName, city, businessType } = await request.json()
+    const body = await request.json()
+    const { postType, content, businessName, city, businessType } = body
+    
+    console.log('📥 Request:', { postType, businessName, city, businessType, contentTitle: content?.title })
 
     // Build prompt based on post type and content
     const prompt = buildPrompt(postType, content, businessName, city, businessType)
+    console.log('📝 Prompt built, calling Claude...')
 
     // Generate with Claude 3.5 Sonnet
     const message = await anthropic.messages.create({
@@ -53,12 +59,20 @@ Return ONLY valid JSON: { headline, caption, hashtags, style: { textColor, textE
     })
 
     const textContent = message.content[0].type === 'text' ? message.content[0].text : '{}'
+    console.log('✅ Claude response received:', textContent.substring(0, 200) + '...')
     
     // Extract JSON from response (Claude might wrap it in markdown)
     const jsonMatch = textContent.match(/\{[\s\S]*\}/)
     const generated = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
+    
+    console.log('🎯 Parsed JSON:', { 
+      hasHeadline: !!generated.headline, 
+      hasCaption: !!generated.caption, 
+      hasHashtags: !!generated.hashtags,
+      hasStyle: !!generated.style
+    })
 
-    return NextResponse.json({
+    const response = {
       headline: generated.headline || 'Check this out!',
       caption: generated.caption || '',
       hashtags: generated.hashtags || `#${city?.replace(/\s/g, '')} #${businessName?.replace(/\s/g, '')}`,
@@ -68,12 +82,19 @@ Return ONLY valid JSON: { headline, caption, hashtags, style: { textColor, textE
         layout: 'centered',
         mood: 'energetic'
       }
-    })
+    }
+    
+    console.log('📤 Sending response:', response)
+    return NextResponse.json(response)
 
-  } catch (error) {
-    console.error('Error generating social post:', error)
+  } catch (error: any) {
+    console.error('❌ Error generating social post:', error)
+    console.error('Error details:', error.message, error.stack)
     return NextResponse.json(
-      { error: 'Failed to generate post' },
+      { 
+        error: error.message || 'Failed to generate post',
+        details: error.toString()
+      },
       { status: 500 }
     )
   }
