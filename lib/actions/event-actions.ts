@@ -369,32 +369,40 @@ export async function approveEvent(eventId: string): Promise<{
   error?: string
 }> {
   try {
+    console.log('🎯 approveEvent called for eventId:', eventId)
+    
     // Use service role client for admin actions (bypasses RLS)
     const supabase = createServiceRoleClient()
 
     // Approve the event
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('business_events')
       .update({
         status: 'approved',
         approved_at: new Date().toISOString()
       })
       .eq('id', eventId)
+      .select()
 
     if (error) {
-      console.error('Error approving event:', error)
+      console.error('❌ Error approving event:', error)
       return { success: false, error: error.message }
     }
 
+    console.log('✅ Event approved in database:', data)
+
     revalidatePath('/admin')
     revalidatePath('/user/events')
+    revalidatePath('/dashboard/events')
 
     // Add to knowledge base for AI chat
-    await syncEventToKnowledgeBase(eventId)
+    console.log('📚 Syncing event to knowledge base...')
+    const syncResult = await syncEventToKnowledgeBase(eventId)
+    console.log('📚 Knowledge base sync result:', syncResult)
 
     return { success: true }
   } catch (error) {
-    console.error('Error in approveEvent:', error)
+    console.error('❌ Error in approveEvent:', error)
     return { success: false, error: 'Failed to approve event' }
   }
 }

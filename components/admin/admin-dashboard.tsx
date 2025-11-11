@@ -1774,12 +1774,21 @@ Qwikker Admin Team`
 
                                           try {
                                             const { approveEvent } = await import('@/lib/actions/event-actions')
-                                            await approveEvent(event.id)
-                                            showSuccess(`Event approved successfully!`)
-                                            setTimeout(() => window.location.reload(), 1500)
+                                            const result = await approveEvent(event.id)
+                                            
+                                            if (result.success) {
+                                              showSuccess(`Event approved successfully!`)
+                                              setTimeout(() => {
+                                                router.refresh()
+                                                window.location.reload()
+                                              }, 1500)
+                                            } else {
+                                              console.error('Error approving event:', result.error)
+                                              showError(`Failed to approve event: ${result.error || 'Unknown error'}`)
+                                            }
                                           } catch (error) {
                                             console.error('Error approving event:', error)
-                                            showError(`Failed to approve event`)
+                                            showError(`Failed to approve event: ${error instanceof Error ? error.message : 'Unknown error'}`)
                                           }
                                         }}
                                         className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
@@ -1796,12 +1805,21 @@ Qwikker Admin Team`
 
                                           try {
                                             const { rejectEvent } = await import('@/lib/actions/event-actions')
-                                            await rejectEvent(event.id, reason)
-                                            showSuccess(`Event rejected`)
-                                            setTimeout(() => window.location.reload(), 1500)
+                                            const result = await rejectEvent(event.id, reason)
+                                            
+                                            if (result.success) {
+                                              showSuccess(`Event rejected`)
+                                              setTimeout(() => {
+                                                router.refresh()
+                                                window.location.reload()
+                                              }, 1500)
+                                            } else {
+                                              console.error('Error rejecting event:', result.error)
+                                              showError(`Failed to reject event: ${result.error || 'Unknown error'}`)
+                                            }
                                           } catch (error) {
                                             console.error('Error rejecting event:', error)
-                                            showError(`Failed to reject event`)
+                                            showError(`Failed to reject event: ${error instanceof Error ? error.message : 'Unknown error'}`)
                                           }
                                         }}
                                         className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
