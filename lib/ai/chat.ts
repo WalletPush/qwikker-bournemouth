@@ -787,14 +787,31 @@ export async function generateAIResponse(
 
 ${isSimpleFollowUp ? `\nUser just said "${userMessage}" — they're clearly replying to your last point. Pick up that thread naturally and keep the vibe flowing.` : ''}
 
-🚨 CRITICAL FIRST-MESSAGE RULE - READ THIS CAREFULLY:
+🚨🚨🚨 STOP - READ THIS BEFORE RESPONDING 🚨🚨🚨
+
 The user asked: "${userMessage}"
-${conversationHistory.length <= 2 && !userMessage.toLowerCase().match(/(discount|deal|offer|italian|pizza|burger|chinese|indian|cheap|expensive|fancy|casual|upscale)/i) ? `
-⚠️ THIS IS A BROAD QUERY WITH NO PREFERENCES! 
-YOU MUST ASK CLARIFYING QUESTIONS FIRST. DO NOT GIVE RECOMMENDATIONS YET!
-Ask: "Hey! Quick ones before we dive in: hunting for deals or just want the best spots? Any cuisine you're craving? Casual or fancy vibe?"
-Suggested quick replies: "I want discounts", "Just the best", "Italian", "Surprise me"
-` : 'User has given some preference context, you may proceed with recommendations if appropriate.'}
+Conversation history length: ${conversationHistory.length} messages
+
+${conversationHistory.length <= 2 && (userMessage.toLowerCase().includes('best place') || userMessage.toLowerCase().includes('where should') || userMessage.toLowerCase().includes('find me')) && !userMessage.toLowerCase().match(/(discount|deal|offer|italian|pizza|burger|chinese|indian|thai|mexican|japanese|cheap|expensive|fancy|casual|upscale|cocktail)/i) ? `
+
+❌ DO NOT RECOMMEND BUSINESSES YET ❌
+❌ DO NOT MENTION SPECIFIC RESTAURANT NAMES ❌
+❌ DO NOT GIVE SUGGESTIONS YET ❌
+
+THIS IS YOUR FIRST RESPONSE TO A BROAD QUERY.
+YOU MUST ASK WHAT THEY'RE LOOKING FOR FIRST.
+
+REQUIRED RESPONSE FORMAT:
+"Hey [name]! Before I point you in the right direction—quick question: are you hunting for deals and discounts tonight, or just want me to show you the absolute best spots? Any specific cuisine you're craving?"
+
+REQUIRED QUICK REPLIES:
+- "I want deals/discounts"
+- "Just the best spots"
+- "Italian food"
+- "Surprise me"
+
+DO NOT DEVIATE FROM THIS. ASK FIRST, RECOMMEND SECOND.
+` : `User has given preferences or this is a follow-up. You may proceed with specific recommendations.`}
 
 VOICE & VIBE:
 - Keep it brief—2-3 sentences max. Rotate your openers naturally: "Sounds like", "Okay, picture this", "Well then", "Ah", "Perfect". Avoid repeating "Right then", "Alright then", "Here's the move", or "Here's the play" if you've used them recently.
@@ -1173,6 +1190,16 @@ export async function generateQuickReplies(
   const recentConversation = conversationHistory?.slice(-4)?.map(msg => msg.content.toLowerCase()).join(' ') || ''
   const hasRecentBusinessMentions = recentConversation.includes('david') || recentConversation.includes('julie') || recentConversation.includes('orchid') || recentConversation.includes('adams')
   const hasRecentOfferMentions = recentConversation.includes('offer') || recentConversation.includes('deal') || recentConversation.includes('discount')
+  
+  // 🎯 PRIORITY: Check if AI is asking clarifying questions about preferences
+  if (lowerAIResponse.includes('hunting for deals') || lowerAIResponse.includes('any specific cuisine') || lowerAIResponse.includes('before i point you') || lowerAIResponse.includes('before we dive in')) {
+    return [
+      "I want deals/discounts",
+      "Just the best spots",
+      "Italian food",
+      "Surprise me"
+    ]
+  }
   
   // 🎯 CURRENT USER INTENT (prioritize this over conversation history!)
   const isCurrentlyAskingLocation = /\b(how do i get|where is|address|location|directions|get there|find it|parking)\b/i.test(lowerMessage)
