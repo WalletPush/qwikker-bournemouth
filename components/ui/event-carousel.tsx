@@ -234,7 +234,7 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
       {/* More Info Modal */}
       {selectedEvent && (
         <div 
-          className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"
           onClick={() => setSelectedEvent(null)}
         >
           <div 
