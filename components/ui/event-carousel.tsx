@@ -233,132 +233,87 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
         </div>
       )}
 
-      {/* Enhanced Modal */}
+      {/* Simple Working Modal */}
       {showModal && selectedEvent && (
-        <>
-          {/* Backdrop with blur */}
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4"
+          onClick={() => {
+            setShowModal(false)
+            setSelectedEvent(null)
+          }}
+        >
           <div 
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 }}
-            onClick={() => {
-              setShowModal(false)
-              setSelectedEvent(null)
-            }}
-          />
-          
-          {/* Modal Content - COMPACT HORIZONTAL */}
-          <div 
-            className="fixed top-1/2 left-1/2 w-[450px] max-h-[400px] bg-gradient-to-br from-slate-900 to-slate-800 rounded-lg shadow-2xl border border-slate-700/50 overflow-hidden"
-            style={{ 
-              position: 'fixed',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 51
-            }}
+            className="bg-slate-900 rounded-lg w-full max-w-lg max-h-[80vh] overflow-hidden relative"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
+            {/* Close */}
             <button
               onClick={() => {
                 setShowModal(false)
                 setSelectedEvent(null)
               }}
-              className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-black/70 hover:bg-black/90 text-white flex items-center justify-center transition-colors"
+              className="absolute top-3 right-3 z-10 w-7 h-7 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              ×
             </button>
 
-            <div className="flex h-full">
-              {/* Left: Image */}
-              {selectedEvent.image_url && (
-                <div className="relative w-[180px] flex-shrink-0">
-                  <img 
-                    src={selectedEvent.image_url} 
-                    alt={selectedEvent.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
-                  <div className="absolute bottom-2 left-2">
-                    {getEventTypeBadge(selectedEvent.event_type)}
-                  </div>
-                </div>
-              )}
+            {/* Image */}
+            {selectedEvent.image_url && (
+              <img 
+                src={selectedEvent.image_url} 
+                alt={selectedEvent.title}
+                className="w-full h-48 object-cover"
+              />
+            )}
 
-              {/* Right: Scrollable Content */}
-              <div className="flex-1 overflow-y-auto p-3">
-                <h3 className="text-white font-bold text-sm mb-1 leading-tight pr-6">{selectedEvent.title}</h3>
-                <p className="text-purple-400 text-xs font-medium flex items-center gap-1 mb-2">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  {selectedEvent.business_name}
-                </p>
-                
-                <p className="text-slate-300 text-xs leading-relaxed mb-3">{selectedEvent.description}</p>
-                
-                {/* Details */}
-                <div className="space-y-1.5 mb-3">
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-white font-medium">{formatDate(selectedEvent.start_date)}</span>
+            {/* Content */}
+            <div className="p-4 overflow-y-auto max-h-[calc(80vh-12rem)]">
+              <h2 className="text-white text-lg font-bold mb-1">{selectedEvent.title}</h2>
+              <p className="text-purple-400 text-sm mb-3">{selectedEvent.business_name}</p>
+              
+              <p className="text-slate-300 text-sm mb-4">{selectedEvent.description}</p>
+              
+              <div className="space-y-2 mb-4 text-sm">
+                <div className="text-white">📅 {formatDate(selectedEvent.start_date)}</div>
+                {selectedEvent.start_time && (
+                  <div className="text-white">
+                    🕐 {selectedEvent.start_time.substring(0, 5)}
+                    {selectedEvent.end_time && ` - ${selectedEvent.end_time.substring(0, 5)}`}
                   </div>
-                  
-                  {selectedEvent.start_time && (
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="text-white font-medium">
-                        {selectedEvent.start_time.substring(0, 5)}
-                        {selectedEvent.end_time && ` - ${selectedEvent.end_time.substring(0, 5)}`}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className="text-white font-medium">{selectedEvent.location}</span>
-                  </div>
-                </div>
+                )}
+                <div className="text-white">📍 {selectedEvent.location}</div>
+              </div>
 
-                {/* Buttons */}
-                <div className="flex gap-2">
-                  {selectedEvent.ticket_url && (
-                    <a 
-                      href={selectedEvent.ticket_url.startsWith('http') ? selectedEvent.ticket_url : `https://${selectedEvent.ticket_url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1"
-                    >
-                      <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold text-xs py-1.5">
-                        Get Tickets
-                      </Button>
-                    </a>
-                  )}
-                  <Button 
-                    variant="outline"
-                    className="flex-1 border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-white font-semibold text-xs py-1.5"
-                    onClick={() => {
-                      const walletPassId = currentUser?.wallet_pass_id
-                      const params = new URLSearchParams()
-                      if (walletPassId) params.set('wallet_pass_id', walletPassId)
-                      params.set('event', selectedEvent.id)
-                      window.location.href = `/user/events?${params.toString()}`
-                    }}
+              <div className="flex gap-2">
+                {selectedEvent.ticket_url && (
+                  <a 
+                    href={selectedEvent.ticket_url.startsWith('http') ? selectedEvent.ticket_url : `https://${selectedEvent.ticket_url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1"
                   >
-                    Full Details
-                  </Button>
-                </div>
+                    <Button className="w-full bg-green-600 hover:bg-green-700">
+                      Get Tickets
+                    </Button>
+                  </a>
+                )}
+                <Button 
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    const walletPassId = currentUser?.wallet_pass_id
+                    const params = new URLSearchParams()
+                    if (walletPassId) params.set('wallet_pass_id', walletPassId)
+                    params.set('event', selectedEvent.id)
+                    window.location.href = `/user/events?${params.toString()}`
+                  }}
+                >
+                  Full Details
+                </Button>
               </div>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   )
