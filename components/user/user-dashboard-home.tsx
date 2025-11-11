@@ -190,31 +190,31 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
             {/* Quick Suggestions - Clickable */}
             <div className="flex flex-wrap gap-2 justify-center mb-5">
               <Link 
-                href={getNavUrl("/user/chat") + "&message=" + encodeURIComponent("Best place for dinner tonight")}
+                href={`${getNavUrl("/user/chat")}${walletPassId ? '&' : '?'}message=${encodeURIComponent("Best place for dinner tonight")}`}
                 className="px-3 py-1.5 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60 hover:border-emerald-500/50 rounded-lg text-xs text-slate-300 hover:text-emerald-300 transition-all cursor-pointer"
               >
                 "Best place for dinner tonight"
               </Link>
               <Link 
-                href={getNavUrl("/user/chat") + "&message=" + encodeURIComponent("Where can I get pizza?")}
+                href={`${getNavUrl("/user/chat")}${walletPassId ? '&' : '?'}message=${encodeURIComponent("Where can I get pizza?")}`}
                 className="px-3 py-1.5 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60 hover:border-emerald-500/50 rounded-lg text-xs text-slate-300 hover:text-emerald-300 transition-all cursor-pointer"
               >
                 "Where can I get pizza?"
               </Link>
               <Link 
-                href={getNavUrl("/user/chat") + "&message=" + encodeURIComponent("Show me all current deals")}
+                href={`${getNavUrl("/user/chat")}${walletPassId ? '&' : '?'}message=${encodeURIComponent("Show me all current deals")}`}
                 className="px-3 py-1.5 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60 hover:border-emerald-500/50 rounded-lg text-xs text-slate-300 hover:text-emerald-300 transition-all cursor-pointer"
               >
                 "Show me all current deals"
               </Link>
               <Link 
-                href={getNavUrl("/user/chat") + "&message=" + encodeURIComponent("What's happening this weekend?")}
+                href={`${getNavUrl("/user/chat")}${walletPassId ? '&' : '?'}message=${encodeURIComponent("What's happening this weekend?")}`}
                 className="hidden sm:inline-flex px-3 py-1.5 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60 hover:border-emerald-500/50 rounded-lg text-xs text-slate-300 hover:text-emerald-300 transition-all cursor-pointer"
               >
                 "What's happening this weekend?"
               </Link>
               <Link 
-                href={getNavUrl("/user/chat") + "&message=" + encodeURIComponent("Find me a good cocktail bar")}
+                href={`${getNavUrl("/user/chat")}${walletPassId ? '&' : '?'}message=${encodeURIComponent("Find me a good cocktail bar")}`}
                 className="hidden md:inline-flex px-3 py-1.5 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/60 hover:border-emerald-500/50 rounded-lg text-xs text-slate-300 hover:text-emerald-300 transition-all cursor-pointer"
               >
                 "Find me a good cocktail bar"
