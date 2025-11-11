@@ -173,8 +173,13 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
                         className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold py-2 shadow-md hover:shadow-lg transition-all duration-200"
                         onClick={(e) => {
                           e.stopPropagation()
-                          // TODO: Navigate to events page with hero card
-                          console.log('View Event clicked for:', event.id)
+                          // Navigate to events page with hero card open
+                          const walletPassId = currentUser?.wallet_pass_id
+                          const baseUrl = '/user/events'
+                          const params = new URLSearchParams()
+                          if (walletPassId) params.set('wallet_pass_id', walletPassId)
+                          params.set('event', event.id)
+                          window.location.href = `${baseUrl}?${params.toString()}`
                         }}
                       >
                         View Event

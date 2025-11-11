@@ -21,9 +21,11 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
   const searchParams = useSearchParams()
   const urlWalletPassId = searchParams.get('wallet_pass_id')
   const walletPassId = propWalletPassId || urlWalletPassId
+  const selectedEventId = searchParams.get('event') // For hero card deep linking
   
   const [savedEvents, setSavedEvents] = useState<Set<string>>(new Set())
   const [interestedEvents, setInterestedEvents] = useState<Set<string>>(new Set())
+  const [heroEventId, setHeroEventId] = useState<string | null>(null)
   
   // Load from localStorage after component mounts
   useEffect(() => {
@@ -39,6 +41,13 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
       setInterestedEvents(new Set(JSON.parse(interestedEventsData)))
     }
   }, [walletPassId])
+
+  // Open hero card from URL parameter
+  useEffect(() => {
+    if (selectedEventId) {
+      setHeroEventId(selectedEventId)
+    }
+  }, [selectedEventId])
 
   // Helper function to scroll to results
   const scrollToResults = () => {
@@ -181,8 +190,232 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
     return labels[type] || type
   }
 
+  const handleOpenHeroCard = (eventId: string) => {
+    setHeroEventId(eventId)
+    // Update URL without reload
+    const params = new URLSearchParams(window.location.search)
+    params.set('event', eventId)
+    window.history.pushState({}, '', `?${params.toString()}`)
+  }
+
+  const handleCloseHeroCard = () => {
+    setHeroEventId(null)
+    // Remove event parameter from URL
+    const params = new URLSearchParams(window.location.search)
+    params.delete('event')
+    const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname
+    window.history.pushState({}, '', newUrl)
+  }
+
+  const heroEvent = heroEventId ? events.find(e => e.id === heroEventId) : null
+
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-24">
+      {/* Hero Card Modal - Full Screen Overlay */}
+      {heroEvent && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 overflow-y-auto backdrop-blur-sm"
+          onClick={handleCloseHeroCard}
+        >
+          <div className="min-h-screen px-4 py-8">
+            <div 
+              className="max-w-4xl mx-auto bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-slate-700 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={handleCloseHeroCard}
+                className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm text-white flex items-center justify-center transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Hero Image */}
+              {heroEvent.event_image && (
+                <div className="relative h-80 rounded-t-2xl overflow-hidden">
+                  <img
+                    src={heroEvent.event_image}
+                    alt={heroEvent.event_name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                  
+                  {/* Event Type Badge */}
+                  <div className="absolute top-4 left-4">
+                    <span className="bg-blue-500/90 backdrop-blur-sm text-white text-sm font-semibold px-4 py-2 rounded-full shadow-lg">
+                      {getEventTypeLabel(heroEvent.event_type)}
+                    </span>
+                  </div>
+
+                  {/* Date Badge */}
+                  <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm text-white px-4 py-3 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <div className="text-2xl font-bold">{new Date(heroEvent.event_date).getDate()}</div>
+                        <div className="text-xs uppercase">{new Date(heroEvent.event_date).toLocaleDateString('en-GB', { month: 'short' })}</div>
+                      </div>
+                      {heroEvent.event_start_time && (
+                        <div className="border-l border-slate-500 pl-3">
+                          <div className="text-sm font-semibold">{formatTime(heroEvent.event_start_time)}</div>
+                          {heroEvent.event_end_time && (
+                            <div className="text-xs text-slate-300">to {formatTime(heroEvent.event_end_time)}</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Event Content */}
+              <div className="p-8">
+                {/* Event Name & Business */}
+                <div className="mb-6">
+                  <h1 className="text-3xl font-bold text-white mb-2">{heroEvent.event_name}</h1>
+                  <Link 
+                    href={`/user/business/${heroEvent.business_name?.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+                    className="text-blue-400 hover:text-blue-300 font-medium flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    @ {heroEvent.business_name}
+                  </Link>
+                </div>
+
+                {/* Event Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-6 bg-slate-800/50 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-slate-400">Date</div>
+                      <div className="text-white font-medium">{formatDate(heroEvent.event_date)}</div>
+                    </div>
+                  </div>
+
+                  {heroEvent.event_start_time && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                        <Clock className="w-5 h-5 text-purple-400" />
+                      </div>
+                      <div>
+                        <div className="text-sm text-slate-400">Time</div>
+                        <div className="text-white font-medium">
+                          {formatTime(heroEvent.event_start_time)}
+                          {heroEvent.event_end_time && ` - ${formatTime(heroEvent.event_end_time)}`}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {heroEvent.custom_location_name && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                        <MapPin className="w-5 h-5 text-red-400" />
+                      </div>
+                      <div>
+                        <div className="text-sm text-slate-400">Location</div>
+                        <div className="text-white font-medium">{heroEvent.custom_location_name}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {heroEvent.price_info && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                        <span className="text-lg">💰</span>
+                      </div>
+                      <div>
+                        <div className="text-sm text-slate-400">Price</div>
+                        <div className="text-white font-medium">{heroEvent.price_info}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {heroEvent.requires_booking && heroEvent.max_attendees && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                        <Users className="w-5 h-5 text-amber-400" />
+                      </div>
+                      <div>
+                        <div className="text-sm text-slate-400">Capacity</div>
+                        <div className="text-white font-medium">Limited to {heroEvent.max_attendees} attendees</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Full Description */}
+                {heroEvent.event_description && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-3">About This Event</h3>
+                    <div className="text-slate-300 leading-relaxed whitespace-pre-wrap">
+                      {heroEvent.event_description}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    onClick={() => toggleInterested(heroEvent.id)}
+                    className={`flex-1 min-w-[200px] ${
+                      interestedEvents.has(heroEvent.id)
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600'
+                        : 'bg-slate-700 hover:bg-slate-600'
+                    }`}
+                  >
+                    <Heart 
+                      className="w-5 h-5 mr-2" 
+                      fill={interestedEvents.has(heroEvent.id) ? 'currentColor' : 'none'} 
+                    />
+                    {interestedEvents.has(heroEvent.id) ? "You're Interested" : "I'm Interested"}
+                  </Button>
+
+                  {heroEvent.booking_url && (
+                    <Button
+                      onClick={() => window.open(heroEvent.booking_url, '_blank')}
+                      className="flex-1 min-w-[200px] bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                    >
+                      <ExternalLink className="w-5 h-5 mr-2" />
+                      Get Tickets
+                    </Button>
+                  )}
+
+                  <Button
+                    onClick={() => toggleSaved(heroEvent.id)}
+                    variant="outline"
+                    className={`border-slate-600 ${
+                      savedEvents.has(heroEvent.id)
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <Bookmark 
+                      className="w-5 h-5 mr-2" 
+                      fill={savedEvents.has(heroEvent.id) ? 'currentColor' : 'none'} 
+                    />
+                    {savedEvents.has(heroEvent.id) ? 'Saved' : 'Save Event'}
+                  </Button>
+
+                  <ShareButton
+                    variant="outline"
+                    className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                    title={`${heroEvent.event_name} at ${heroEvent.business_name}`}
+                    text={`Check out this event: ${heroEvent.event_name} at ${heroEvent.business_name} on ${formatDate(heroEvent.event_date)}`}
+                    url={typeof window !== 'undefined' ? window.location.href : ''}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header with Icon */}
         <div className="mb-8 text-center">
@@ -362,7 +595,8 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
             filteredEvents.map((event) => (
               <Card 
                 key={event.id}
-                className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-all duration-300 overflow-hidden group"
+                className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-all duration-300 overflow-hidden group cursor-pointer"
+                onClick={() => handleOpenHeroCard(event.id)}
               >
                 {/* Event Image */}
                 {event.event_image && (
@@ -374,7 +608,10 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                     />
                     <div className="absolute top-2 right-2 flex gap-2">
                       <button
-                        onClick={() => toggleSaved(event.id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleSaved(event.id)
+                        }}
                         className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
                           savedEvents.has(event.id)
                             ? 'bg-blue-500 text-white'
@@ -466,7 +703,10 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                   {/* Actions */}
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => toggleInterested(event.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleInterested(event.id)
+                      }}
                       variant={interestedEvents.has(event.id) ? 'default' : 'outline'}
                       size="sm"
                       className={`flex-1 ${
@@ -484,7 +724,10 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
 
                     {event.booking_url && (
                       <Button
-                        onClick={() => window.open(event.booking_url, '_blank')}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          window.open(event.booking_url, '_blank')
+                        }}
                         size="sm"
                         className="bg-green-600 hover:bg-green-700"
                       >
@@ -492,14 +735,16 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                       </Button>
                     )}
 
-                    <ShareButton
-                      size="sm"
-                      variant="outline"
-                      className="border-slate-700"
-                      title={`${event.event_name} at ${event.business_name}`}
-                      text={`Check out this event: ${event.event_name} at ${event.business_name} on ${formatDate(event.event_date)}`}
-                      url={typeof window !== 'undefined' ? window.location.href : ''}
-                    />
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <ShareButton
+                        size="sm"
+                        variant="outline"
+                        className="border-slate-700"
+                        title={`${event.event_name} at ${event.business_name}`}
+                        text={`Check out this event: ${event.event_name} at ${event.business_name} on ${formatDate(event.event_date)}`}
+                        url={typeof window !== 'undefined' ? window.location.href : ''}
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
