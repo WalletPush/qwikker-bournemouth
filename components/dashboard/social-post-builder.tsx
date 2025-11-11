@@ -68,12 +68,26 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     try {
       let items: ContentItem[] = []
 
+      // General update doesn't need content selection - skip to creation
+      if (postType === 'general') {
+        setIsLoading(false)
+        setStep('generate')
+        setSelectedContent({
+          id: 'general',
+          title: 'General Update',
+          description: 'Create a custom post for your business'
+        })
+        return
+      }
+
       if (postType === 'offer') {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('business_offers')
           .select('id, offer_name, offer_description, offer_image_url, terms_conditions')
           .eq('business_id', profile?.id)
           .eq('is_active', true)
+        
+        if (error) console.error('Offers error:', error)
         
         items = (data || []).map(offer => ({
           id: offer.id,
@@ -83,11 +97,13 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
           terms: offer.terms_conditions
         }))
       } else if (postType === 'secret-menu') {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('secret_menu_items')
           .select('id, item_name, additional_notes, item_image_url')
           .eq('business_id', profile?.id)
           .eq('is_active', true)
+        
+        if (error) console.error('Secret menu error:', error)
         
         items = (data || []).map(item => ({
           id: item.id,
@@ -96,23 +112,39 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
           image_url: item.item_image_url
         }))
       } else if (postType === 'event') {
-        const { data } = await supabase
+        // Try both event_date and start_date to support different schemas
+        const { data, error } = await supabase
           .from('business_events')
-          .select('id, event_name, event_description, image_url, location, event_date')
+          .select('*')
           .eq('business_id', profile?.id)
-          .gte('event_date', new Date().toISOString().split('T')[0])
-          .order('event_date', { ascending: true })
         
-        items = (data || []).map(event => ({
-          id: event.id,
-          title: event.event_name,
-          description: event.event_description,
-          image_url: event.image_url,
-          location: event.location,
-          event_date: event.event_date
-        }))
+        if (error) {
+          console.error('Events error:', error)
+        } else {
+          console.log('📅 Raw events data:', data)
+          
+          // Filter future events and map
+          const now = new Date().toISOString().split('T')[0]
+          items = (data || [])
+            .filter(event => {
+              const eventDate = event.event_date || event.start_date
+              return eventDate && eventDate >= now
+            })
+            .map(event => ({
+              id: event.id,
+              title: event.event_name,
+              description: event.event_description,
+              image_url: event.image_url,
+              location: event.location,
+              event_date: event.event_date || event.start_date
+            }))
+            .sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''))
+          
+          console.log(`📊 Mapped ${items.length} future events`)
+        }
       }
 
+      console.log(`📊 Fetched ${items.length} ${postType} items`)
       setContentItems(items)
     } catch (error) {
       console.error('Error fetching content:', error)
@@ -223,7 +255,19 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                       <p className="text-slate-400 mb-4">
                         You don't have any {getContentLabel(postType).toLowerCase()} yet.
                       </p>
-                      <Button variant="outline" className="border-[#00d083] text-[#00d083]">
+                      <Button 
+                        variant="outline" 
+                        className="border-[#00d083] text-[#00d083]"
+                        onClick={() => {
+                          const routes = {
+                            'offer': '/dashboard/offers',
+                            'secret-menu': '/dashboard/secret-menu',
+                            'event': '/dashboard/events',
+                            'general': '/dashboard'
+                          }
+                          window.location.href = routes[postType as keyof typeof routes]
+                        }}
+                      >
                         Create {getContentLabel(postType)}
                       </Button>
                     </div>
