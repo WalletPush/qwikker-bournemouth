@@ -81,17 +81,17 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* CTA + QWIKKER Logo - Bottom */}
         <div className="absolute bottom-0 inset-x-0 z-50">
-          <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
-            <span className="text-white text-sm font-bold drop-shadow-lg">📱 Install QWIKKER Pass</span>
-            <div className="bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+          <div className="flex items-center justify-between gap-4 px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+            <span className="text-white text-xs sm:text-sm font-bold drop-shadow-lg whitespace-nowrap">📱 Install QWIKKER Pass</span>
+            <div className="bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-lg flex-shrink-0">
               <img 
                 src="/Qwikker Logo web.svg" 
                 alt="QWIKKER" 
-                className="h-4 w-auto"
+                className="h-3.5 w-auto"
                 style={{ 
                   filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-                  minWidth: '70px',
-                  maxWidth: '90px'
+                  minWidth: '60px',
+                  maxWidth: '80px'
                 }}
               />
             </div>
@@ -127,17 +127,17 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* CTA + QWIKKER Logo - Bottom */}
         <div className="absolute bottom-0 inset-x-0 z-50">
-          <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-white via-white/90 to-transparent">
-            <span className="text-black text-sm font-bold">📱 Install QWIKKER Pass</span>
-            <div className="bg-white/60 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between gap-4 px-6 py-4 bg-gradient-to-t from-white via-white/90 to-transparent">
+            <span className="text-black text-xs sm:text-sm font-bold whitespace-nowrap">📱 Install QWIKKER Pass</span>
+            <div className="bg-white/60 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-gray-200 flex-shrink-0">
               <img 
                 src="/Qwikker Logo web.svg" 
                 alt="QWIKKER" 
-                className="h-4 w-auto"
+                className="h-3.5 w-auto"
                 style={{ 
                   filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-                  minWidth: '70px',
-                  maxWidth: '90px'
+                  minWidth: '60px',
+                  maxWidth: '80px'
                 }}
               />
             </div>
@@ -175,7 +175,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           
           {/* CTA + QWIKKER Logo - Bottom */}
           <div className="absolute bottom-0 inset-x-0 z-50">
-            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+            <div className="flex items-center justify-between gap-4 px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
               <span className="text-white text-sm font-bold drop-shadow-lg">📱 Install QWIKKER Pass</span>
               <div className="bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg">
                 <img 
@@ -226,17 +226,17 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* CTA + QWIKKER Logo - Bottom */}
         <div className="absolute bottom-0 inset-x-0 z-50">
-          <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
-            <span className="text-white text-sm font-bold drop-shadow-lg">📱 Install QWIKKER Pass</span>
-            <div className="bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+          <div className="flex items-center justify-between gap-4 px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+            <span className="text-white text-xs sm:text-sm font-bold drop-shadow-lg whitespace-nowrap">📱 Install QWIKKER Pass</span>
+            <div className="bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-lg flex-shrink-0">
               <img 
                 src="/Qwikker Logo web.svg" 
                 alt="QWIKKER" 
-                className="h-4 w-auto"
+                className="h-3.5 w-auto"
                 style={{ 
                   filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-                  minWidth: '70px',
-                  maxWidth: '90px'
+                  minWidth: '60px',
+                  maxWidth: '80px'
                 }}
               />
             </div>
@@ -279,17 +279,17 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* CTA + QWIKKER Logo - Bottom */}
         <div className="absolute bottom-0 inset-x-0 z-50">
-          <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
-            <span className="text-white text-sm font-bold drop-shadow-lg">📱 Install QWIKKER Pass</span>
-            <div className="bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+          <div className="flex items-center justify-between gap-4 px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+            <span className="text-white text-xs sm:text-sm font-bold drop-shadow-lg whitespace-nowrap">📱 Install QWIKKER Pass</span>
+            <div className="bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-lg flex-shrink-0">
               <img 
                 src="/Qwikker Logo web.svg" 
                 alt="QWIKKER" 
-                className="h-4 w-auto"
+                className="h-3.5 w-auto"
                 style={{ 
                   filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-                  minWidth: '70px',
-                  maxWidth: '90px'
+                  minWidth: '60px',
+                  maxWidth: '80px'
                 }}
               />
             </div>

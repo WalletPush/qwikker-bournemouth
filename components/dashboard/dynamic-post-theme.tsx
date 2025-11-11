@@ -211,24 +211,22 @@ export function DynamicPostTheme({
       
       {/* CTA + QWIKKER Logo - Bottom section - ALWAYS VISIBLE */}
       <div className="absolute bottom-0 inset-x-0 z-50">
-        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+        <div className="flex items-center justify-between gap-4 px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
           {/* CTA Text - Left */}
-          <div className="flex items-center gap-2">
-            <span className="text-white text-sm font-bold drop-shadow-lg">
-              📱 Install QWIKKER Pass
-            </span>
-          </div>
+          <span className="text-white text-xs sm:text-sm font-bold drop-shadow-lg whitespace-nowrap">
+            📱 Install QWIKKER Pass
+          </span>
           
           {/* QWIKKER Logo - Right */}
-          <div className="bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+          <div className="bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-lg flex-shrink-0">
             <img 
               src="/Qwikker Logo web.svg" 
               alt="QWIKKER" 
-              className="h-4 w-auto"
+              className="h-3.5 w-auto"
               style={{ 
                 filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-                minWidth: '70px',
-                maxWidth: '90px'
+                minWidth: '60px',
+                maxWidth: '80px'
               }}
             />
           </div>
