@@ -550,7 +550,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                       maxLength={100}
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      {postContent.headline.length}/100 characters
+                      {(postContent.headline || '').length}/100 characters
                     </p>
                   </div>
 
@@ -568,7 +568,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                       maxLength={2200}
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      {postContent.caption.length}/2,200 characters
+                      {(postContent.caption || '').length}/2,200 characters
                     </p>
                   </div>
 
