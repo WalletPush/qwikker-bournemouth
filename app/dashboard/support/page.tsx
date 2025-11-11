@@ -144,33 +144,109 @@ export default async function SupportPage() {
             Follow this checklist to get the most out of your QWIKKER experience:
           </p>
           <div className="space-y-3">
+            {/* Profile Complete */}
             <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
-              <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center">
-                <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span className="text-white">Complete your business profile information</span>
+              {profile?.business_name && profile?.business_type && profile?.business_description ? (
+                <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+              )}
+              <span className={profile?.business_name && profile?.business_type && profile?.business_description ? "text-white" : "text-gray-300"}>
+                Complete your business profile information
+              </span>
             </div>
+
+            {/* Logo */}
             <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
-              <div className="w-6 h-6 border-2 border-gray-400 rounded-full"></div>
-              <span className="text-gray-300">Upload your business logo</span>
+              {profile?.logo ? (
+                <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+              )}
+              <span className={profile?.logo ? "text-white" : "text-gray-300"}>Upload your business logo</span>
             </div>
+
+            {/* Menu */}
             <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
-              <div className="w-6 h-6 border-2 border-gray-400 rounded-full"></div>
-              <span className="text-gray-300">Add your menu or service price list</span>
+              {profile?.menu_url ? (
+                <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+              )}
+              <span className={profile?.menu_url ? "text-white" : "text-gray-300"}>Add your menu or service price list</span>
             </div>
+
+            {/* Offer */}
             <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
-              <div className="w-6 h-6 border-2 border-gray-400 rounded-full"></div>
-              <span className="text-gray-300">Create your first exclusive offer</span>
+              {profile?.offer_name ? (
+                <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+              )}
+              <span className={profile?.offer_name ? "text-white" : "text-gray-300"}>Create your first exclusive offer</span>
             </div>
+
+            {/* Secret Menu */}
             <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
-              <div className="w-6 h-6 border-2 border-gray-400 rounded-full"></div>
-              <span className="text-gray-300">Add a secret menu item</span>
+              {(() => {
+                try {
+                  const notesData = profile?.additional_notes ? JSON.parse(profile.additional_notes) : null
+                  const hasSecretItems = notesData?.secret_menu_items?.length > 0
+                  return hasSecretItems ? (
+                    <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+                  )
+                } catch {
+                  return <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+                }
+              })()}
+              <span className={(() => {
+                try {
+                  const notesData = profile?.additional_notes ? JSON.parse(profile.additional_notes) : null
+                  return notesData?.secret_menu_items?.length > 0 ? "text-white" : "text-gray-300"
+                } catch {
+                  return "text-gray-300"
+                }
+              })()}>
+                Add a secret menu item
+              </span>
             </div>
+
+            {/* Social Media */}
             <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
-              <div className="w-6 h-6 border-2 border-gray-400 rounded-full"></div>
-              <span className="text-gray-300">Complete your social media links</span>
+              {(profile?.instagram_url || profile?.facebook_url || profile?.twitter_url) ? (
+                <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+              )}
+              <span className={(profile?.instagram_url || profile?.facebook_url || profile?.twitter_url) ? "text-white" : "text-gray-300"}>
+                Complete your social media links
+              </span>
             </div>
           </div>
           <Button asChild className="w-full mt-4 bg-[#00d083] hover:bg-[#00b86f] text-black">
