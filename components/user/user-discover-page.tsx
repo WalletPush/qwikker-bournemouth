@@ -262,18 +262,26 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
   return (
     <div className="space-y-6">
       {/* Page Header with Icon */}
-      <div className="text-center">
-        <div className="flex flex-col items-center gap-4 mb-4">
-          <div className="p-3 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 rounded-full border border-emerald-500/30">
-            <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+      <div className="text-center mb-8">
+        <div className="flex flex-col items-center gap-6 mb-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/30 to-teal-500/30 blur-xl rounded-full" />
+            <div className="relative p-4 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-full border border-emerald-400/40 backdrop-blur-sm">
+              <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent">
-            Discover Bournemouth
-          </h1>
+          <div>
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent mb-2">
+              Discover Bournemouth
+            </h1>
+            <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-emerald-400 to-transparent rounded-full" />
+          </div>
         </div>
-        <p className="text-slate-300 text-lg">Find amazing local businesses, exclusive deals, and hidden gems</p>
+        <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+          Find amazing local businesses, exclusive deals, and hidden gems
+        </p>
       </div>
 
       {/* Clickable Filter Cards - Mobile First */}
