@@ -174,10 +174,26 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
   }
 
   const fetchBusinessPhotos = async () => {
-    // Get business photos from profile
+    // Collect ALL available business photos
+    const photos: string[] = []
+    
+    // 1. Business gallery images
     if (profile?.business_images && Array.isArray(profile.business_images)) {
-      setBusinessPhotos(profile.business_images)
+      photos.push(...profile.business_images.filter(img => img && typeof img === 'string'))
     }
+    
+    // 2. Legacy offer image (if exists)
+    if (profile?.offer_image) {
+      photos.push(profile.offer_image)
+    }
+    
+    console.log('📸 Collected business photos:', { 
+      total: photos.length, 
+      fromGallery: profile?.business_images?.length || 0,
+      photos: photos 
+    })
+    
+    setBusinessPhotos(photos)
   }
 
   const generateAIContent = async () => {
@@ -368,7 +384,10 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                       {/* Use Content Image */}
                       {selectedContent.image_url && (
                         <button
-                          onClick={() => setImageSource('content')}
+                          onClick={() => {
+                            setImageSource('content')
+                            setBackgroundImage(selectedContent.image_url)
+                          }}
                           className={`p-4 rounded-lg border-2 transition-all ${
                             imageSource === 'content'
                               ? 'border-[#00d083] bg-[#00d083]/10'
@@ -386,34 +405,49 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                         </button>
                       )}
 
-                      {/* Business Photos */}
-                      <button
-                        onClick={() => setImageSource('business')}
-                        className={`p-4 rounded-lg border-2 transition-all ${
-                          imageSource === 'business'
-                            ? 'border-[#00d083] bg-[#00d083]/10'
-                            : 'border-slate-600 hover:border-slate-500'
-                        }`}
-                      >
-                        {businessPhotos.length > 0 ? (
+                      {/* ALL Business Photos */}
+                      {businessPhotos.map((photo, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setImageSource('business')
+                            setBackgroundImage(photo)
+                          }}
+                          className={`p-4 rounded-lg border-2 transition-all ${
+                            imageSource === 'business' && backgroundImage === photo
+                              ? 'border-[#00d083] bg-[#00d083]/10'
+                              : 'border-slate-600 hover:border-slate-500'
+                          }`}
+                        >
                           <img
-                            src={businessPhotos[0]}
-                            alt="Business"
+                            src={photo}
+                            alt={`Business photo ${index + 1}`}
                             className="w-full aspect-square object-cover rounded-lg mb-3"
                           />
-                        ) : (
+                          <p className="text-white text-sm font-semibold text-center">
+                            Business Photo {index + 1}
+                          </p>
+                        </button>
+                      ))}
+
+                      {/* Show placeholder if no business photos */}
+                      {businessPhotos.length === 0 && (
+                        <div className="p-4 rounded-lg border-2 border-slate-600 opacity-50">
                           <div className="w-full aspect-square bg-slate-700 rounded-lg mb-3 flex items-center justify-center">
                             <span className="text-4xl">🏢</span>
                           </div>
-                        )}
-                        <p className="text-white text-sm font-semibold text-center">
-                          Business Photo
-                        </p>
-                      </button>
+                          <p className="text-slate-400 text-sm text-center">
+                            No business photos
+                          </p>
+                        </div>
+                      )}
 
                       {/* AI Abstract */}
                       <button
-                        onClick={() => setImageSource('abstract')}
+                        onClick={() => {
+                          setImageSource('abstract')
+                          setBackgroundImage('https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=1080')
+                        }}
                         className={`p-4 rounded-lg border-2 transition-all ${
                           imageSource === 'abstract'
                             ? 'border-[#00d083] bg-[#00d083]/10'
