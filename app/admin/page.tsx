@@ -158,6 +158,29 @@ export default async function AdminPage() {
   }
 
   console.log(`📄 Found ${pendingMenus?.length || 0} pending menus for ${currentCity}`)
+
+  // Fetch pending events for the Updates tab
+  const { data: pendingEvents, error: eventsError } = await supabase
+    .from('business_events')
+    .select(`
+      *,
+      business_profiles!inner(
+        business_name,
+        city,
+        email,
+        first_name,
+        last_name
+      )
+    `)
+    .eq('status', 'pending')
+    .eq('business_profiles.city', currentCity)
+    .order('created_at', { ascending: false })
+
+  if (eventsError) {
+    console.error('Error fetching pending events:', eventsError)
+  }
+
+  console.log(`🗓️ Found ${pendingEvents?.length || 0} pending events for ${currentCity}`)
   
   // Fetch comprehensive CRM data
   const crmData = await getBusinessCRMData(currentCity)
@@ -172,6 +195,7 @@ export default async function AdminPage() {
       pendingChangesCount={pendingChangesCount || 0}
       pendingChanges={pendingChanges || []}
       pendingMenus={pendingMenus || []}
+      pendingEvents={pendingEvents || []}
     />
   )
 }

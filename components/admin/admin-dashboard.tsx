@@ -60,9 +60,10 @@ interface AdminDashboardProps {
   pendingChangesCount: number
   pendingChanges: any[]
   pendingMenus: any[]
+  pendingEvents: any[]
 }
 
-export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisplayName, pendingChangesCount, pendingChanges, pendingMenus }: AdminDashboardProps) {
+export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisplayName, pendingChangesCount, pendingChanges, pendingMenus, pendingEvents }: AdminDashboardProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -395,7 +396,7 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
       id: 'updates', 
       label: 'Pending Updates', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>, 
-      count: pendingChangesCount + pendingMenus.length 
+      count: pendingChangesCount + pendingMenus.length + pendingEvents.length 
     },
     { 
       id: 'live', 
@@ -1545,6 +1546,124 @@ Qwikker Admin Team`
                     </div>
                   )}
 
+                  {/* Pending Events Section */}
+                  {pendingEvents.length > 0 && (
+                    <div className="space-y-4">
+                      <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                        <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Pending Event Approvals ({pendingEvents.length})
+                      </h2>
+                      
+                      <div className="grid gap-4">
+                        {pendingEvents.map((event: any) => (
+                          <div key={event.id} className="bg-slate-800/50 backdrop-blur border border-purple-500/30 rounded-2xl overflow-hidden hover:border-purple-400/50 transition-all duration-300">
+                            <div className="p-6">
+                              <div className="flex items-start gap-4 mb-4">
+                                <div className="flex-shrink-0">
+                                  {event.event_image ? (
+                                    <img
+                                      src={event.event_image}
+                                      alt={event.event_name}
+                                      className="w-24 h-24 object-cover rounded-xl border-2 border-purple-500/30"
+                                    />
+                                  ) : (
+                                    <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-purple-500/30 flex items-center justify-center">
+                                      <svg className="w-12 h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1 min-w-0">
+                                      <h3 className="text-xl font-bold text-white mb-1 truncate">
+                                        {event.event_name}
+                                      </h3>
+                                      <p className="text-slate-300 text-sm mb-2">
+                                        {event.business_profiles?.business_name} • {event.business_profiles?.first_name} {event.business_profiles?.last_name}
+                                      </p>
+                                      <div className="flex items-center gap-3 mb-3">
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                          📅 {new Date(event.event_date).toLocaleDateString('en-GB')}
+                                        </span>
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                          {event.event_type?.replace('_', ' ').toUpperCase()}
+                                        </span>
+                                        {event.event_start_time && (
+                                          <span className="text-xs text-slate-400">
+                                            🕐 {event.event_start_time}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-slate-400 text-sm line-clamp-2">
+                                        {event.event_description}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* Event Actions */}
+                                  <div className="flex gap-3 mt-4">
+                                    <button
+                                      onClick={async () => {
+                                        const confirmed = await showConfirm(
+                                          `Approve "${event.event_name}" and add to Knowledge Base?\\n\\nThis will:\\n• Make it visible on user event discovery page\\n• Add to AI chat knowledge base\\n• Allow users to query about this event`
+                                        )
+                                        
+                                        if (!confirmed) return
+
+                                        try {
+                                          const { approveEvent } = await import('@/lib/actions/event-actions')
+                                          await approveEvent(event.id)
+                                          showSuccess(`Event approved successfully!`)
+                                          setTimeout(() => window.location.reload(), 1500)
+                                        } catch (error) {
+                                          console.error('Error approving event:', error)
+                                          showError(`Failed to approve event`)
+                                        }
+                                      }}
+                                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        const reason = prompt('Reason for rejection:')
+                                        if (!reason) return
+
+                                        try {
+                                          const { rejectEvent } = await import('@/lib/actions/event-actions')
+                                          await rejectEvent(event.id, reason)
+                                          showSuccess(`Event rejected`)
+                                          setTimeout(() => window.location.reload(), 1500)
+                                        } catch (error) {
+                                          console.error('Error rejecting event:', error)
+                                          showError(`Failed to reject event`)
+                                        }
+                                      }}
+                                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                      Reject
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Pending Business Changes Section */}
                   <div className="space-y-4">
                     {pendingChanges.length > 0 && (
@@ -1557,7 +1676,7 @@ Qwikker Admin Team`
                     )}
                     
                     <div className="grid gap-6">
-                      {pendingChanges.length === 0 && pendingMenus.length === 0 ? (
+                      {pendingChanges.length === 0 && pendingMenus.length === 0 && pendingEvents.length === 0 ? (
                         <div className="text-center py-12">
                           <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                             <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1566,7 +1685,7 @@ Qwikker Admin Team`
                           </div>
                           <h3 className="text-xl font-semibold text-white mb-2">No pending updates</h3>
                           <p className="text-slate-400">
-                            All business changes and menu uploads have been reviewed.
+                            All business changes, events, and menu uploads have been reviewed.
                           </p>
                         </div>
                       ) : (
