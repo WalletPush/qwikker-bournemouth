@@ -305,7 +305,34 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         console.log(`🎉 FETCHING EVENT CARDS - User wants event details for ${city}`)
         
-        const { data: events, error } = await supabase
+        // Check if user is asking about a specific event mentioned in conversation
+        const specificEventMentioned = conversationHistory
+          .slice(-3)
+          .reverse()
+          .find(msg => msg.role === 'assistant' && /\b(event|tasting|concert|show|gig)\b/i.test(msg.content))
+        
+        let eventTitleFilter: string | null = null
+        
+        if (specificEventMentioned && showingInterest) {
+          // Extract event name from AI's message (look for quoted text or title case phrases)
+          const quotedMatch = specificEventMentioned.content.match(/["']([^"']+)["']/i)
+          const titleCaseMatch = specificEventMentioned.content.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,4})\b/)
+          
+          if (quotedMatch) {
+            eventTitleFilter = quotedMatch[1]
+          } else if (titleCaseMatch) {
+            eventTitleFilter = titleCaseMatch[1]
+          }
+          
+          // Also check for specific event titles we know about
+          if (specificEventMentioned.content.includes('Tasting Experience')) {
+            eventTitleFilter = 'The Tasting Experience'
+          }
+        }
+        
+        console.log(`🔍 Specific event filter:`, eventTitleFilter)
+        
+        let query = supabase
           .from('business_events')
           .select(`
             id,
@@ -326,7 +353,15 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           .eq('business_profiles.city', city)
           .gte('start_date', new Date().toISOString().split('T')[0]) // Only future events
           .order('start_date', { ascending: true })
-          .limit(10)
+        
+        // If specific event mentioned, filter by title
+        if (eventTitleFilter) {
+          query = query.ilike('title', `%${eventTitleFilter}%`)
+        } else {
+          query = query.limit(10)
+        }
+        
+        const { data: events, error } = await query
         
         if (!error && events && events.length > 0) {
           eventCards = events.map(event => ({
@@ -345,7 +380,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             business_id: event.business_id
           }))
           
-          console.log(`🎉 Found ${eventCards.length} event cards to show`)
+          console.log(`🎉 Found ${eventCards.length} event cards to show${eventTitleFilter ? ` (filtered by: ${eventTitleFilter})` : ''}`)
         } else if (error) {
           console.error('❌ Error fetching events:', error)
         } else {
