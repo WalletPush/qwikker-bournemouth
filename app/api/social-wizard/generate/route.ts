@@ -18,13 +18,23 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: 'system',
-          content: `You are a social media expert specializing in creating viral Instagram posts for local businesses. 
+          content: `You are an elite social media creative director specializing in viral Instagram content for premium local businesses. 
+
 Your posts are:
-- Engaging and attention-grabbing
-- Authentic and conversational
-- Optimized for Instagram (use emojis strategically)
-- Action-oriented with clear CTAs
-- Locally focused (mention the city and QWIKKER Pass)
+- BOLD, PUNCHY, and IMPOSSIBLE TO SCROLL PAST
+- Use CREATIVE wordplay, alliteration, and hooks
+- Strategic emoji use (2-3 MAX, only when they add impact)
+- Headlines that DEMAND attention (short, powerful, benefit-focused)
+- Captions that tell a story and create FOMO
+- CTAs that feel exclusive and urgent
+- Make people feel like they're missing out if they don't visit
+
+STYLE RULES:
+- Headlines: 3-7 words MAX, ALL CAPS or Title Case
+- NO generic phrases like "We're excited to bring you" 
+- NO basic descriptions - create DESIRE
+- Make it feel PREMIUM and EXCLUSIVE
+- Every word must earn its place
 
 Always return ONLY a valid JSON object with: headline, caption, hashtags`
         },
@@ -75,15 +85,25 @@ Title: ${content.title}
 Description: ${content.description}
 ${content.terms ? `Terms: ${content.terms}` : ''}
 
-Write a post that:
-- Has a catchy, benefit-focused headline (max 100 chars)
-- Creates urgency and excitement
-- Highlights the value of the offer
-- Mentions this is exclusive to ${city} QWIKKER Pass holders
-- Includes a clear call-to-action
-- Uses 5-8 relevant hashtags including #${city.replace(/\s/g, '')} and #QWIKKER
+HEADLINE: 
+- Make it BOLD and benefit-driven (3-7 words)
+- Examples: "HALF PRICE HAPPINESS", "YOUR £20 JUST BECAME £40", "EXCLUSIVE: 50% OFF EVERYTHING"
+- Focus on the BENEFIT, not the business
 
-Return JSON with: headline, caption (max 2200 chars), hashtags`
+CAPTION:
+- Hook line (1 sentence that creates intrigue)
+- What they get (bullet points work great)
+- Why it matters (create FOMO)
+- How to claim (exclusive ${city} QWIKKER Pass)
+- CTA (urgent and exclusive)
+- Keep it 150-300 words MAX
+
+HASHTAGS:
+- Mix of local (#${city.replace(/\s/g, '')}) + trending + niche
+- Include #QWIKKERExclusive
+- 8-12 hashtags total
+
+Return JSON with: headline, caption, hashtags`
   }
 
   if (postType === 'secret-menu') {
@@ -92,15 +112,24 @@ Create an Instagram post for this SECRET MENU ITEM:
 Name: ${content.title}
 Description: ${content.description}
 
-Write a post that:
-- Creates intrigue and exclusivity
-- Makes people want to try it
-- Emphasizes it's a hidden gem only for QWIKKER Pass holders
-- Has a fun, mysterious vibe
-- Includes relevant food/drink hashtags
-- Uses 5-8 hashtags including #${city.replace(/\s/g, '')} and #SecretMenu
+HEADLINE:
+- Make it MYSTERIOUS and exclusive
+- Examples: "ASK FOR THE [NAME]", "THE SECRET'S OUT 🤫", "HIDDEN MENU UNLOCKED"
+- Create curiosity
 
-Return JSON with: headline, caption (max 2200 chars), hashtags`
+CAPTION:
+- Start with intrigue (hint at something special)
+- Reveal what it is (but keep it exclusive-sounding)
+- Explain why it's special
+- Make it clear this is ONLY for ${city} QWIKKER Pass holders
+- CTA: "Show your pass and ask for..."
+- 100-200 words MAX
+
+HASHTAGS:
+- Include #SecretMenu #HiddenGem #${city.replace(/\s/g, '')}
+- 8-12 total
+
+Return JSON with: headline, caption, hashtags`
   }
 
   if (postType === 'event') {
@@ -111,30 +140,47 @@ Description: ${content.description}
 ${content.event_date ? `Date: ${new Date(content.event_date).toLocaleDateString()}` : ''}
 ${content.location ? `Location: ${content.location}` : ''}
 
-Write a post that:
-- Creates excitement and FOMO
-- Highlights what makes this event special
-- Includes date/time details naturally
-- Encourages people to attend
-- Mentions ${city} QWIKKER Pass holders get priority or special perks
-- Uses event-related hashtags
-- Uses 5-8 hashtags including #${city.replace(/\s/g, '')}Events
+HEADLINE:
+- Create FOMO and excitement
+- Examples: "THIS FRIDAY: [EVENT NAME]", "LIMITED TICKETS LEFT", "YOUR WEEKEND JUST GOT BETTER"
+- Make people want to be there
 
-Return JSON with: headline, caption (max 2200 chars), hashtags`
+CAPTION:
+- Hook: Why this event is unmissable
+- Details: Date, time, what to expect
+- Exclusive angle: QWIKKER Pass perks
+- Urgency: Limited spots/tickets
+- CTA: "Grab your tickets now"
+- 150-250 words MAX
+
+HASHTAGS:
+- #${city.replace(/\s/g, '')}Events #WhatsOn${city.replace(/\s/g, '')}
+- Event-specific tags
+- 8-12 total
+
+Return JSON with: headline, caption, hashtags`
   }
 
   // General update
   return `${baseContext}
 Create a general Instagram post for this business.
 
-Write a post that:
-- Is warm and inviting
-- Showcases the business personality
-- Encourages people to visit
-- Mentions they're on the ${city} QWIKKER Pass
-- Includes a clear CTA
-- Uses 5-8 relevant local hashtags
+HEADLINE:
+- Something inviting and brand-focused
+- Examples: "YOUR NEW LOCAL FAVOURITE", "DISCOVER [BUSINESS NAME]", "WHERE [CITY] COMES TOGETHER"
 
-Return JSON with: headline, caption (max 2200 chars), hashtags`
+CAPTION:
+- What makes this business special
+- Atmosphere/vibe
+- Why people should visit
+- Available on ${city} QWIKKER Pass
+- Warm, inviting CTA
+- 100-200 words MAX
+
+HASHTAGS:
+- Local + niche + lifestyle hashtags
+- 8-12 total
+
+Return JSON with: headline, caption, hashtags`
 }
 

@@ -24,11 +24,11 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         />
         
         {/* Dark overlay for contrast */}
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/60 via-pink-900/50 to-orange-900/60" />
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/70 via-pink-900/60 to-orange-900/70" />
         
         {/* Content - Centered */}
         <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
-          {/* Logo at top */}
+          {/* Business Logo at top */}
           {logoUrl && (
             <div className="mb-8">
               <img 
@@ -39,24 +39,23 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             </div>
           )}
           
-          {/* Main Headline - HUGE */}
-          <h1 className="text-6xl font-black text-white mb-6 leading-tight tracking-tight drop-shadow-2xl">
+          {/* Main Headline */}
+          <h1 className="text-6xl font-black text-white mb-6 leading-tight tracking-tight max-w-4xl" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.9)' }}>
             {headline}
           </h1>
           
-          {/* Subtext - First line of caption */}
-          <p className="text-2xl font-semibold text-white/95 max-w-2xl leading-relaxed drop-shadow-lg">
-            {caption.split('\n')[0]}
+          {/* Subtext - ONLY first sentence */}
+          <p className="text-xl font-semibold text-white/90 max-w-2xl leading-relaxed" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+            {caption.split('.')[0]}.
           </p>
           
-          {/* QWIKKER Logo */}
-          <div className="absolute bottom-6 right-6">
-            <img 
-              src="/Qwikker Logo web.svg" 
-              alt="QWIKKER" 
-              className="h-8 drop-shadow-2xl"
-            />
-          </div>
+          {/* QWIKKER Logo - SMALL */}
+          <img 
+            src="/Qwikker Logo web.svg" 
+            alt="QWIKKER" 
+            className="absolute bottom-6 right-6 h-6 opacity-90"
+            style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))' }}
+          />
         </div>
       </div>
     ),
@@ -65,7 +64,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
     minimalist: (
       <div className="relative w-full h-full overflow-hidden bg-white">
         {/* Small background image in corner */}
-        <div className="absolute top-0 right-0 w-1/2 h-1/2 opacity-20">
+        <div className="absolute top-0 right-0 w-1/2 h-1/2 opacity-15">
           <img 
             src={backgroundImage} 
             alt="Background" 
@@ -75,7 +74,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* Content */}
         <div className="absolute inset-0 p-12 flex flex-col justify-between">
-          {/* Logo */}
+          {/* Business Logo */}
           {logoUrl && (
             <div className="w-16 h-16">
               <img 
@@ -87,12 +86,12 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           )}
           
           {/* Main Content - Left aligned */}
-          <div className="max-w-2xl">
-            <h1 className="text-7xl font-black text-black mb-6 leading-none tracking-tighter">
+          <div className="max-w-3xl">
+            <h1 className="text-6xl font-black text-black mb-5 leading-none tracking-tighter">
               {headline}
             </h1>
-            <p className="text-2xl text-gray-800 font-medium leading-snug">
-              {caption.split('\n')[0]}
+            <p className="text-lg text-gray-800 font-medium leading-snug">
+              {caption.split('.')[0]}.
             </p>
           </div>
           
@@ -102,7 +101,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             <img 
               src="/Qwikker Logo web.svg" 
               alt="QWIKKER" 
-              className="h-7"
+              className="h-6 opacity-80"
             />
           </div>
         </div>
@@ -119,12 +118,12 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             alt="Background" 
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-slate-900/50" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-slate-900/30" />
         </div>
         
         {/* Right side - Content */}
-        <div className="w-1/2 bg-gradient-to-br from-slate-900 to-slate-800 p-10 flex flex-col justify-center">
-          {/* Logo */}
+        <div className="w-1/2 bg-gradient-to-br from-slate-900 to-slate-800 p-10 flex flex-col justify-center relative">
+          {/* Business Logo */}
           {logoUrl && (
             <img 
               src={logoUrl} 
@@ -138,16 +137,17 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             {headline}
           </h1>
           
-          {/* Caption */}
-          <p className="text-lg text-white/90 leading-relaxed mb-8">
-            {caption.split('\n')[0]}
+          {/* Caption - ONLY first sentence */}
+          <p className="text-base text-white/85 leading-relaxed">
+            {caption.split('.')[0]}.
           </p>
           
-          {/* QWIKKER Logo */}
+          {/* QWIKKER Logo - bottom right */}
           <img 
             src="/Qwikker Logo web.svg" 
             alt="QWIKKER" 
-            className="h-7 self-start drop-shadow-xl"
+            className="absolute bottom-6 right-6 h-6 opacity-80"
+            style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))' }}
           />
         </div>
       </div>
@@ -164,41 +164,42 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         />
         
         {/* Strong dark overlay */}
-        <div className="absolute inset-0 bg-black/70" />
+        <div className="absolute inset-0 bg-black/80" />
         
         {/* Content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-16 text-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
+          {/* Business logo top left */}
+          {logoUrl && (
+            <img 
+              src={logoUrl} 
+              alt="Logo" 
+              className="absolute top-8 left-8 w-16 h-16 object-contain rounded-xl bg-white/10 backdrop-blur-md p-2"
+            />
+          )}
+          
           {/* Super bold headline */}
           <h1 
-            className="text-8xl font-black text-white mb-8 leading-none tracking-tighter uppercase"
-            style={{ textShadow: '0 8px 32px rgba(0,0,0,0.8)' }}
+            className="text-7xl font-black text-white mb-6 leading-none tracking-tight uppercase max-w-4xl"
+            style={{ textShadow: '0 4px 20px rgba(0,0,0,0.9)' }}
           >
-            {headline.split(' ').slice(0, 3).join(' ')}
+            {headline}
           </h1>
           
           {/* Accent line */}
-          <div className="w-32 h-2 bg-[#00d083] mb-8" />
+          <div className="w-24 h-1.5 bg-[#00d083] mb-6" />
           
-          {/* Subtitle */}
-          <p className="text-3xl font-bold text-white/95 max-w-3xl">
+          {/* Subtitle - ONLY first line */}
+          <p className="text-xl font-semibold text-white/90 max-w-2xl leading-relaxed" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
             {caption.split('\n')[0]}
           </p>
           
-          {/* Logo and QWIKKER Logo at bottom */}
-          <div className="absolute bottom-12 left-0 right-0 flex items-center justify-between px-12">
-            {logoUrl && (
-              <img 
-                src={logoUrl} 
-                alt="Logo" 
-                className="w-16 h-16 object-contain rounded-full bg-white/20 backdrop-blur-md p-2"
-              />
-            )}
-            <img 
-              src="/Qwikker Logo web.svg" 
-              alt="QWIKKER" 
-              className="h-9 drop-shadow-2xl"
-            />
-          </div>
+          {/* QWIKKER Logo - SMALL bottom right */}
+          <img 
+            src="/Qwikker Logo web.svg" 
+            alt="QWIKKER" 
+            className="absolute bottom-6 right-6 h-6 opacity-90"
+            style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))' }}
+          />
         </div>
       </div>
     ),
@@ -214,28 +215,28 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         />
         
         {/* Gradient overlay - diagonal */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-slate-900 via-slate-900/70 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-slate-900 via-slate-900/75 to-transparent" />
         
         {/* Content - Bottom left heavy */}
         <div className="absolute inset-0 p-12 flex flex-col justify-end">
-          {/* Logo at top left */}
+          {/* Business Logo at top left */}
           {logoUrl && (
-            <div className="absolute top-12 left-12">
+            <div className="absolute top-10 left-10">
               <img 
                 src={logoUrl} 
                 alt="Logo" 
-                className="w-20 h-20 object-contain rounded-2xl bg-white/10 backdrop-blur-xl p-3 border border-white/20"
+                className="w-18 h-18 object-contain rounded-2xl bg-white/10 backdrop-blur-xl p-3 border border-white/20"
               />
             </div>
           )}
           
           {/* Main headline - Bottom left */}
-          <div className="max-w-3xl mb-4">
-            <h1 className="text-7xl font-black text-white leading-tight mb-6" style={{ letterSpacing: '-0.03em' }}>
+          <div className="max-w-4xl mb-4">
+            <h1 className="text-6xl font-black text-white leading-tight mb-5" style={{ letterSpacing: '-0.02em', textShadow: '0 4px 20px rgba(0,0,0,0.9)' }}>
               {headline}
             </h1>
-            <p className="text-2xl text-white/90 font-medium leading-relaxed">
-              {caption.split('\n')[0]}
+            <p className="text-lg text-white/85 font-medium leading-relaxed">
+              {caption.split('.')[0]}.
             </p>
           </div>
           
@@ -245,7 +246,8 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             <img 
               src="/Qwikker Logo web.svg" 
               alt="QWIKKER" 
-              className="h-8 drop-shadow-xl"
+              className="h-6 opacity-80"
+              style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))' }}
             />
           </div>
         </div>

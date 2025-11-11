@@ -607,7 +607,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                       <button
                         key={theme}
                         onClick={() => setSelectedTheme(theme)}
-                        className={`aspect-square rounded-lg border-2 transition-all overflow-hidden ${
+                        className={`h-16 rounded-lg border-2 transition-all overflow-hidden ${
                           selectedTheme === theme
                             ? 'border-[#00d083] ring-2 ring-[#00d083]/50'
                             : 'border-slate-600 hover:border-slate-500'

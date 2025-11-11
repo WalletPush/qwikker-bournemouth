@@ -21,6 +21,7 @@
   "/api/debug/test-hours-search/route": "app/api/debug/test-hours-search/route.js",
   "/api/menus/delete/route": "app/api/menus/delete/route.js",
   "/api/menus/list/route": "app/api/menus/list/route.js",
+  "/api/social-wizard/generate/route": "app/api/social-wizard/generate/route.js",
   "/api/test/sync-event/route": "app/api/test/sync-event/route.js",
   "/api/user/feature-access/route": "app/api/user/feature-access/route.js",
   "/auth/login/page": "app/auth/login/page.js",
