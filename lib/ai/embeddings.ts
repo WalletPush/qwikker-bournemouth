@@ -474,3 +474,225 @@ export async function updateKnowledgeEmbedding(knowledgeId: string) {
     return { success: false, error: error.message }
   }
 }
+
+/**
+ * Sync approved event to knowledge base for AI chat access
+ */
+export async function syncEventToKnowledgeBase(eventId: string): Promise<{
+  success: boolean
+  message: string
+  error?: string
+}> {
+  try {
+    const supabase = createServiceRoleClient()
+
+    // Fetch the event with business details
+    const { data: event, error: eventError } = await supabase
+      .from('business_events')
+      .select(`
+        *,
+        business:business_profiles(business_name, city, business_address, business_town)
+      `)
+      .eq('id', eventId)
+      .single()
+
+    if (eventError || !event) {
+      return {
+        success: false,
+        message: 'Event not found',
+        error: eventError?.message
+      }
+    }
+
+    // Only sync approved events
+    if (event.status !== 'approved') {
+      return {
+        success: false,
+        message: `Event must be approved to sync to knowledge base (current status: ${event.status})`
+      }
+    }
+
+    const business = event.business
+
+    // Format event date and time
+    const eventDate = new Date(event.event_date).toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+
+    const eventTime = event.event_start_time && event.event_end_time
+      ? `${event.event_start_time} - ${event.event_end_time}`
+      : event.event_start_time
+      ? `From ${event.event_start_time}`
+      : 'Time TBC'
+
+    // Build event location info
+    const eventLocation = event.custom_location_name
+      ? `${event.custom_location_name}${event.custom_location_address ? `, ${event.custom_location_address}` : ''}`
+      : `${business.business_name}, ${business.business_address}, ${business.business_town}`
+
+    // Build content for AI
+    const content = `Event Name: ${event.event_name}
+Event Type: ${event.event_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+Date: ${eventDate}
+Time: ${eventTime}
+${event.is_recurring ? `Recurring: ${event.recurrence_pattern?.replace(/_/g, ' ')}` : 'One-time event'}
+Location: ${eventLocation}
+Hosted by: ${business.business_name}
+City: ${business.city}
+Description: ${event.event_description}
+${event.event_short_description ? `Summary: ${event.event_short_description}` : ''}
+${event.price_info ? `Price: ${event.price_info}` : 'Price: Free/Not specified'}
+${event.requires_booking && event.booking_url ? `Tickets/Booking: ${event.booking_url}` : event.requires_booking ? 'Booking required (contact venue)' : 'No booking required'}
+Status: Approved and happening soon in ${business.city}`
+
+    const title = `${event.event_name} at ${business.business_name} - Event`
+
+    // Generate embedding
+    const fullText = `${title}\n\n${content}`
+    const embedding = await generateEmbedding(fullText)
+
+    if (!embedding) {
+      return {
+        success: false,
+        message: 'Failed to generate embedding for event',
+        error: 'Embedding generation returned null'
+      }
+    }
+
+    // Check if knowledge base entry already exists for this event
+    const { data: existing } = await supabase
+      .from('knowledge_base')
+      .select('id')
+      .eq('business_id', event.business_id)
+      .eq('knowledge_type', 'event')
+      .eq('metadata->>event_id', eventId)
+      .single()
+
+    if (existing) {
+      // Update existing entry
+      const { error: updateError } = await supabase
+        .from('knowledge_base')
+        .update({
+          title,
+          content,
+          embedding,
+          metadata: {
+            event_id: eventId,
+            event_name: event.event_name,
+            event_type: event.event_type,
+            event_date: event.event_date,
+            is_recurring: event.is_recurring,
+            requires_booking: event.requires_booking,
+            booking_url: event.booking_url,
+            price_info: event.price_info,
+            custom_location: event.custom_location_name,
+          },
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+
+      if (updateError) {
+        return {
+          success: false,
+          message: 'Failed to update event in knowledge base',
+          error: updateError.message
+        }
+      }
+
+      console.log(`✅ Updated event "${event.event_name}" in knowledge base`)
+      return {
+        success: true,
+        message: 'Event updated in knowledge base successfully'
+      }
+    } else {
+      // Create new entry
+      const { error: insertError } = await supabase
+        .from('knowledge_base')
+        .insert({
+          city: business.city,
+          business_id: event.business_id,
+          knowledge_type: 'event',
+          title,
+          content,
+          embedding,
+          metadata: {
+            event_id: eventId,
+            event_name: event.event_name,
+            event_type: event.event_type,
+            event_date: event.event_date,
+            is_recurring: event.is_recurring,
+            requires_booking: event.requires_booking,
+            booking_url: event.booking_url,
+            price_info: event.price_info,
+            custom_location: event.custom_location_name,
+          },
+          tags: ['event', event.event_type, business.city, 'approved'],
+          status: 'active'
+        })
+
+      if (insertError) {
+        return {
+          success: false,
+          message: 'Failed to add event to knowledge base',
+          error: insertError.message
+        }
+      }
+
+      console.log(`✅ Added event "${event.event_name}" to knowledge base`)
+      return {
+        success: true,
+        message: 'Event added to knowledge base successfully'
+      }
+    }
+
+  } catch (error: any) {
+    console.error('❌ Error in syncEventToKnowledgeBase:', error)
+    return {
+      success: false,
+      message: 'Failed to sync event to knowledge base',
+      error: error.message
+    }
+  }
+}
+
+/**
+ * Remove event from knowledge base (when rejected, cancelled, or completed)
+ */
+export async function removeEventFromKnowledgeBase(eventId: string): Promise<{
+  success: boolean
+  message: string
+}> {
+  try {
+    const supabase = createServiceRoleClient()
+
+    const { error } = await supabase
+      .from('knowledge_base')
+      .delete()
+      .eq('knowledge_type', 'event')
+      .eq('metadata->>event_id', eventId)
+
+    if (error) {
+      console.error('❌ Error removing event from knowledge base:', error)
+      return {
+        success: false,
+        message: `Failed to remove event from knowledge base: ${error.message}`
+      }
+    }
+
+    console.log(`✅ Removed event from knowledge base (ID: ${eventId})`)
+    return {
+      success: true,
+      message: 'Event removed from knowledge base'
+    }
+  } catch (error: any) {
+    console.error('❌ Error in removeEventFromKnowledgeBase:', error)
+    return {
+      success: false,
+      message: `Error: ${error.message}`
+    }
+  }
+}

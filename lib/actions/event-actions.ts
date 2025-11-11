@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { syncEventToKnowledgeBase, removeEventFromKnowledgeBase } from '@/lib/ai/embeddings'
 
 export interface BusinessEvent {
   id: string
@@ -338,7 +339,7 @@ export async function cancelEvent(
       .from('business_events')
       .update({
         status: 'cancelled',
-        cancellation_reason: cancellationReason
+        cancelled_reason: cancellationReason
       })
       .eq('id', eventId)
 
@@ -350,6 +351,9 @@ export async function cancelEvent(
     revalidatePath('/dashboard/events')
     revalidatePath('/admin')
     revalidatePath('/user/events')
+
+    // Remove from knowledge base if it was previously approved
+    await removeEventFromKnowledgeBase(eventId)
 
     return { success: true }
   } catch (error) {
@@ -402,8 +406,8 @@ export async function approveEvent(eventId: string): Promise<{
     revalidatePath('/admin')
     revalidatePath('/user/events')
 
-    // TODO: Add to knowledge base for AI chat
-    // await syncEventToKnowledgeBase(eventId)
+    // Add to knowledge base for AI chat
+    await syncEventToKnowledgeBase(eventId)
 
     return { success: true }
   } catch (error) {
@@ -456,6 +460,9 @@ export async function rejectEvent(
     }
 
     revalidatePath('/admin')
+
+    // Remove from knowledge base if it was previously approved
+    await removeEventFromKnowledgeBase(eventId)
 
     return { success: true }
   } catch (error) {
