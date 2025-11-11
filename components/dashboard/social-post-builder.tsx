@@ -493,7 +493,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
             {/* Left: Instagram Post Preview */}
             <div className="space-y-6">
               {/* REAL Instagram Post Preview */}
-              <Card className="bg-white border-slate-300 overflow-hidden sticky top-8 max-w-md mx-auto">
+              <Card className="bg-white border-slate-300 overflow-hidden sticky top-8 max-w-sm mx-auto shadow-xl">
                 <CardContent className="p-0">
                   {/* Instagram Header */}
                   <div className="flex items-center justify-between p-3 border-b border-gray-200">
@@ -540,15 +540,30 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                     <button className="text-2xl">🔖</button>
                   </div>
 
-                  {/* Instagram Caption */}
-                  <div className="p-3 max-h-[200px] overflow-y-auto bg-white">
+                  {/* Instagram Caption - TRUNCATED like real Instagram */}
+                  <div className="p-3 bg-white">
                     <div className="text-sm">
-                      <span className="font-semibold text-black mr-2">{profile?.business_name || 'yourbusiness'}</span>
-                      <span className="text-black whitespace-pre-wrap">{postContent.caption || 'Your caption will appear here...'}</span>
+                      <span className="font-semibold text-black mr-1">{profile?.business_name || 'yourbusiness'}</span>
+                      <span className="text-black">
+                        {(() => {
+                          const caption = postContent.caption || 'Your caption will appear here...'
+                          const maxLength = 80
+                          if (caption.length > maxLength) {
+                            return (
+                              <>
+                                {caption.slice(0, maxLength)}...{' '}
+                                <button className="text-gray-400">more</button>
+                              </>
+                            )
+                          }
+                          return caption
+                        })()}
+                      </span>
                     </div>
                     {postContent.hashtags && (
-                      <div className="text-sm text-blue-600 mt-2">
-                        {postContent.hashtags}
+                      <div className="text-sm text-blue-600 mt-1">
+                        {postContent.hashtags.split(' ').slice(0, 3).join(' ')}
+                        {postContent.hashtags.split(' ').length > 3 && '...'}
                       </div>
                     )}
                     <div className="text-xs text-gray-400 mt-2 uppercase">2 hours ago</div>
