@@ -15,23 +15,17 @@ export interface BusinessEvent {
   event_end_time?: string
   is_recurring: boolean
   recurrence_pattern?: string
-  recurrence_end_date?: string
   requires_booking: boolean
   booking_url?: string
-  booking_phone?: string
-  max_attendees?: number
-  current_attendees: number
   price_info?: string
   event_image?: string
-  custom_location?: string
-  custom_address?: string
+  custom_location_name?: string
+  custom_location_address?: string
   status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed'
   approved_by?: string
   approved_at?: string
   rejected_reason?: string
-  cancellation_reason?: string
-  is_featured: boolean
-  display_order: number
+  cancelled_reason?: string
   created_at: string
   updated_at: string
 }
@@ -47,15 +41,12 @@ export interface CreateEventInput {
   event_end_time?: string
   is_recurring?: boolean
   recurrence_pattern?: string
-  recurrence_end_date?: string
   requires_booking?: boolean
   booking_url?: string
-  booking_phone?: string
-  max_attendees?: number
   price_info?: string
   event_image?: string
-  custom_location?: string
-  custom_address?: string
+  custom_location_name?: string
+  custom_location_address?: string
 }
 
 /**
@@ -96,7 +87,7 @@ export async function getUpcomingEvents(city?: string, limit?: number): Promise<
   error?: string
 }> {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     let query = supabase
       .from('upcoming_events_with_business')
@@ -134,7 +125,7 @@ export async function createEvent(input: CreateEventInput): Promise<{
   error?: string
 }> {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Verify user owns this business
     const { data: profile, error: profileError } = await supabase
@@ -159,9 +150,6 @@ export async function createEvent(input: CreateEventInput): Promise<{
         ...input,
         is_recurring: input.is_recurring || false,
         requires_booking: input.requires_booking || false,
-        current_attendees: 0,
-        is_featured: false,
-        display_order: 1,
         status: 'pending'
       })
       .select()
@@ -194,7 +182,7 @@ export async function updateEvent(
   error?: string
 }> {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Verify ownership
     const { data: event, error: fetchError } = await supabase
@@ -253,7 +241,7 @@ export async function deleteEvent(eventId: string): Promise<{
   error?: string
 }> {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Verify ownership and status
     const { data: event, error: fetchError } = await supabase
@@ -317,7 +305,7 @@ export async function cancelEvent(
   error?: string
 }> {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Verify ownership
     const { data: event, error: fetchError } = await supabase
@@ -378,7 +366,7 @@ export async function approveEvent(eventId: string): Promise<{
   error?: string
 }> {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Verify admin
     const { data: { user } } = await supabase.auth.getUser()
@@ -435,7 +423,7 @@ export async function rejectEvent(
   error?: string
 }> {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Verify admin
     const { data: { user } } = await supabase.auth.getUser()

@@ -69,14 +69,11 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
     event_end_time: '',
     is_recurring: false,
     recurrence_pattern: '',
-    recurrence_end_date: '',
     requires_booking: false,
     booking_url: '',
-    booking_phone: '',
-    max_attendees: '',
     price_info: '',
-    custom_location: '',
-    custom_address: '',
+    custom_location_name: '',
+    custom_location_address: '',
   })
 
   const [eventImageFile, setEventImageFile] = useState<File | null>(null)
@@ -141,14 +138,11 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
       event_end_time: event.event_end_time || '',
       is_recurring: event.is_recurring,
       recurrence_pattern: event.recurrence_pattern || '',
-      recurrence_end_date: event.recurrence_end_date || '',
       requires_booking: event.requires_booking,
       booking_url: event.booking_url || '',
-      booking_phone: event.booking_phone || '',
-      max_attendees: event.max_attendees?.toString() || '',
       price_info: event.price_info || '',
-      custom_location: event.custom_location || '',
-      custom_address: event.custom_address || '',
+      custom_location_name: event.custom_location_name || '',
+      custom_location_address: event.custom_location_address || '',
     })
     setEventImagePreview(event.event_image || null)
     setEditingEvent(event)
@@ -220,15 +214,12 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
         event_end_time: formData.event_end_time || undefined,
         is_recurring: formData.is_recurring,
         recurrence_pattern: formData.is_recurring ? formData.recurrence_pattern || undefined : undefined,
-        recurrence_end_date: formData.is_recurring ? formData.recurrence_end_date || undefined : undefined,
         requires_booking: formData.requires_booking,
         booking_url: formData.booking_url || undefined,
-        booking_phone: formData.booking_phone || undefined,
-        max_attendees: formData.max_attendees ? parseInt(formData.max_attendees) : undefined,
         price_info: formData.price_info || undefined,
         event_image: eventImageUrl || undefined,
-        custom_location: formData.custom_location || undefined,
-        custom_address: formData.custom_address || undefined,
+        custom_location_name: formData.custom_location_name || undefined,
+        custom_location_address: formData.custom_location_address || undefined,
       }
 
       let result
@@ -510,33 +501,22 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
                 </div>
 
                 {formData.is_recurring && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-[#00d083]">
-                    <div>
-                      <Label htmlFor="recurrence_pattern" className="text-slate-300">Recurrence Pattern</Label>
-                      <select
-                        id="recurrence_pattern"
-                        value={formData.recurrence_pattern}
-                        onChange={(e) => handleInputChange('recurrence_pattern', e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white"
-                      >
-                        <option value="">Select pattern...</option>
-                        {RECURRENCE_OPTIONS.map(option => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="recurrence_end_date" className="text-slate-300">Recurrence End Date</Label>
-                      <Input
-                        id="recurrence_end_date"
-                        type="date"
-                        value={formData.recurrence_end_date}
-                        onChange={(e) => handleInputChange('recurrence_end_date', e.target.value)}
-                        min={formData.event_date}
-                        className="bg-slate-700/50 border-slate-600 text-white"
-                      />
-                    </div>
+                  <div className="pl-6 border-l-2 border-[#00d083]">
+                    <Label htmlFor="recurrence_pattern" className="text-slate-300">Recurrence Pattern</Label>
+                    <select
+                      id="recurrence_pattern"
+                      value={formData.recurrence_pattern}
+                      onChange={(e) => handleInputChange('recurrence_pattern', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white"
+                    >
+                      <option value="">Select pattern...</option>
+                      {RECURRENCE_OPTIONS.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500 mt-1">
+                      How often does this event repeat?
+                    </p>
                   </div>
                 )}
               </div>
@@ -562,43 +542,21 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
                 </div>
 
                 {formData.requires_booking && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-6 border-l-2 border-[#00d083]">
-                    <div>
-                      <Label htmlFor="booking_url" className="text-slate-300">Booking URL</Label>
-                      <Input
-                        id="booking_url"
-                        type="url"
-                        value={formData.booking_url}
-                        onChange={(e) => handleInputChange('booking_url', e.target.value)}
-                        placeholder="https://..."
-                        className="bg-slate-700/50 border-slate-600 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="booking_phone" className="text-slate-300">Booking Phone</Label>
-                      <Input
-                        id="booking_phone"
-                        type="tel"
-                        value={formData.booking_phone}
-                        onChange={(e) => handleInputChange('booking_phone', e.target.value)}
-                        placeholder="01202 123456"
-                        className="bg-slate-700/50 border-slate-600 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="max_attendees" className="text-slate-300">Max Attendees</Label>
-                      <Input
-                        id="max_attendees"
-                        type="number"
-                        value={formData.max_attendees}
-                        onChange={(e) => handleInputChange('max_attendees', e.target.value)}
-                        placeholder="50"
-                        min="1"
-                        className="bg-slate-700/50 border-slate-600 text-white"
-                      />
-                    </div>
+                  <div className="pl-6 border-l-2 border-[#00d083]">
+                    <Label htmlFor="booking_url" className="text-slate-300">
+                      Booking/Ticket URL <span className="text-slate-500">(e.g., Ticketmaster, Eventbrite)</span>
+                    </Label>
+                    <Input
+                      id="booking_url"
+                      type="url"
+                      value={formData.booking_url}
+                      onChange={(e) => handleInputChange('booking_url', e.target.value)}
+                      placeholder="https://www.ticketmaster.co.uk/..."
+                      className="bg-slate-700/50 border-slate-600 text-white"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Link to external ticket provider or booking page
+                    </p>
                   </div>
                 )}
 
@@ -624,22 +582,22 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="custom_location" className="text-slate-300">Location Name</Label>
+                    <Label htmlFor="custom_location_name" className="text-slate-300">Location Name</Label>
                     <Input
-                      id="custom_location"
-                      value={formData.custom_location}
-                      onChange={(e) => handleInputChange('custom_location', e.target.value)}
+                      id="custom_location_name"
+                      value={formData.custom_location_name}
+                      onChange={(e) => handleInputChange('custom_location_name', e.target.value)}
                       placeholder="e.g., Bournemouth Pavilion"
                       className="bg-slate-700/50 border-slate-600 text-white"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="custom_address" className="text-slate-300">Custom Address</Label>
+                    <Label htmlFor="custom_location_address" className="text-slate-300">Custom Address</Label>
                     <Input
-                      id="custom_address"
-                      value={formData.custom_address}
-                      onChange={(e) => handleInputChange('custom_address', e.target.value)}
+                      id="custom_location_address"
+                      value={formData.custom_location_address}
+                      onChange={(e) => handleInputChange('custom_location_address', e.target.value)}
                       placeholder="e.g., 123 High Street"
                       className="bg-slate-700/50 border-slate-600 text-white"
                     />

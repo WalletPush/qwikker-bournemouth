@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { EventsPage } from '@/components/dashboard/events-page'
+import DashboardLayout from '@/components/dashboard/dashboard-layout'
 
 export default async function Events() {
   const supabase = await createClient()
@@ -22,6 +23,10 @@ export default async function Events() {
     redirect('/onboarding')
   }
 
-  return <EventsPage businessId={profile.id} businessName={profile.business_name} />
+  return (
+    <DashboardLayout businessName={profile.business_name} businessId={profile.id}>
+      <EventsPage businessId={profile.id} businessName={profile.business_name} />
+    </DashboardLayout>
+  )
 }
 
