@@ -755,15 +755,9 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               
               // RECOMMENDED items that are missing
               // Check for approved menus (new system) instead of old menu_url
-              // DEBUG: Log the count to understand what's happening
-              console.log('🔍 Menu Count Check:', {
-                approved_menus_count: profile?.approved_menus_count,
-                willShowMenuItem: !profile?.approved_menus_count || profile.approved_menus_count === 0
-              })
-              
               if (!profile?.approved_menus_count || profile.approved_menus_count === 0) {
                 remainingItems.push({ 
-                  title: `Upload menu/service list (DEBUG: count=${profile?.approved_menus_count})`, 
+                  title: 'Upload menu/service list', 
                   priority: 'RECOMMENDED', 
                   href: '/dashboard/files#menus' 
                 })

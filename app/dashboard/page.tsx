@@ -31,19 +31,11 @@ export default async function DashboardPage() {
     .single()
 
   // Get approved menus count for this business
-  const { count: approvedMenusCount, error: menusError } = await supabase
+  const { count: approvedMenusCount } = await supabase
     .from('menus')
     .select('*', { count: 'exact', head: true })
     .eq('business_id', profile?.id)
     .eq('status', 'approved')
-
-  // Debug logging
-  console.log('📊 Dashboard Menu Count Debug:', {
-    businessId: profile?.id,
-    businessName: profile?.business_name,
-    approvedMenusCount,
-    menusError
-  })
 
   // Add menus count to profile for action items logic
   const enrichedProfile = {
