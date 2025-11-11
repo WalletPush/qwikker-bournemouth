@@ -294,35 +294,33 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
         </div>
 
         {/* AI Companion Card */}
-        <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-2xl p-6 mb-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0">
+        <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-2xl p-6 mb-6 text-center">
+          <div className="flex flex-col items-center justify-center max-w-3xl mx-auto">
+            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-4">
               <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-purple-200 mb-2">Find Your Perfect Event</h3>
-              <p className="text-slate-300 text-sm mb-4">
-                Skip the searching - just tell our AI what you're looking for! From live music to workshops, tastings to special occasions, we'll find the perfect events for you instantly.
-              </p>
-              <p className="text-slate-400 text-xs italic mb-3">Try: "What events are happening this weekend?"</p>
-              <Link 
-                href={`/user/chat${walletPassId ? `?wallet_pass_id=${walletPassId}` : ''}`}
-                className="inline-block bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-              >
-                Ask AI
-              </Link>
-            </div>
+            <h3 className="text-lg font-semibold text-purple-200 mb-2">Find Your Perfect Event</h3>
+            <p className="text-slate-300 text-sm mb-4">
+              Skip the searching - just tell our AI what you're looking for! From live music to workshops, tastings to special occasions, we'll find the perfect events for you instantly.
+            </p>
+            <p className="text-slate-400 text-xs italic mb-3">Try: "What events are happening this weekend?"</p>
+            <Link 
+              href={`/user/chat${walletPassId ? `?wallet_pass_id=${walletPassId}` : ''}`}
+              className="inline-block bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+            >
+              Ask AI
+            </Link>
           </div>
         </div>
 
         {/* Category Filter */}
         {eventTypes.length > 2 && (
           <Card className="bg-slate-900 border-slate-800 mb-6">
-            <CardContent className="p-4">
+            <CardContent className="p-4 text-center">
               <p className="text-sm text-slate-400 mb-3">Filter by type:</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 justify-center">
                 {eventTypes.map(type => (
                   <button
                     key={type}
