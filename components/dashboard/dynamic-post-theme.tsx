@@ -214,7 +214,7 @@ export function DynamicPostTheme({
         <div className="flex items-center justify-between gap-4 px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
           {/* CTA Text - Left */}
           <span className="text-white text-xs sm:text-sm font-bold drop-shadow-lg whitespace-nowrap">
-            📱 Install QWIKKER Pass
+            Install QWIKKER Pass
           </span>
           
           {/* QWIKKER Logo - Right */}
