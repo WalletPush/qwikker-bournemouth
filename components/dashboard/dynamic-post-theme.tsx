@@ -171,9 +171,22 @@ export function DynamicPostTheme({
       {/* Accent Elements */}
       {renderAccentElement(style.accentElement)}
       
-      {/* Content Container with PROPER SPACING */}
+      {/* Business Logo - top left - SAFE ZONE */}
+      {logoUrl && (
+        <div className="absolute top-8 left-8 w-20 h-20 rounded-xl bg-black/50 backdrop-blur-md p-2.5 border border-white/20 z-40">
+          <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+        </div>
+      )}
+      
+      {/* Content Container with SAFE ZONES (avoid logo areas) */}
       <div className={`absolute inset-0 flex ${getPositionClass(style.textPosition)}`}>
-        <div className="px-12 py-12 max-w-5xl">
+        <div 
+          className="px-16 py-16 max-w-4xl"
+          style={{
+            paddingTop: '7rem', // Safe zone for business logo
+            paddingBottom: '6rem' // Safe zone for QWIKKER logo + CTA
+          }}
+        >
           <h1 
             className={`
               ${getSizeClass(style.textSize)} 
@@ -196,25 +209,30 @@ export function DynamicPostTheme({
         </div>
       </div>
       
-      {/* Business Logo - top left */}
-      {logoUrl && (
-        <div className="absolute top-8 left-8 w-24 h-24 rounded-xl bg-black/30 backdrop-blur-md p-3 border border-white/20">
-          <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+      {/* CTA + QWIKKER Logo - Bottom section - ALWAYS VISIBLE */}
+      <div className="absolute bottom-0 inset-x-0 z-50">
+        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+          {/* CTA Text - Left */}
+          <div className="flex items-center gap-2">
+            <span className="text-white text-sm font-bold drop-shadow-lg">
+              📱 Install QWIKKER Pass
+            </span>
+          </div>
+          
+          {/* QWIKKER Logo - Right */}
+          <div className="bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+            <img 
+              src="/Qwikker Logo web.svg" 
+              alt="QWIKKER" 
+              className="h-4 w-auto"
+              style={{ 
+                filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+                minWidth: '70px',
+                maxWidth: '90px'
+              }}
+            />
+          </div>
         </div>
-      )}
-      
-      {/* QWIKKER Logo - ALWAYS VISIBLE - bottom right corner */}
-      <div className="absolute bottom-6 right-6 z-50 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg">
-        <img 
-          src="/Qwikker Logo web.svg" 
-          alt="QWIKKER" 
-          className="h-5 w-auto"
-          style={{ 
-            filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-            minWidth: '80px',
-            maxWidth: '100px'
-          }}
-        />
       </div>
     </div>
   )

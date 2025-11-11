@@ -62,37 +62,41 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900/60 via-pink-900/50 to-orange-900/60" />
         
-        {/* Content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-16">
-          {/* Headline - Bold with AI STYLES (sized to fit) */}
+        {/* Business Logo - top left - SAFE ZONE */}
+        {logoUrl && (
+          <div className="absolute top-8 left-8 w-20 h-20 rounded-xl bg-black/50 backdrop-blur-md p-2.5 border border-white/20 z-40">
+            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        )}
+        
+        {/* Content - SAFE ZONES */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-16" style={{ paddingTop: '7rem', paddingBottom: '6rem' }}>
           <h1 
-            className={`text-7xl font-black ${getTextColorClass(textColor)} text-center leading-[0.9] tracking-tight max-w-4xl px-8`}
+            className={`text-7xl font-black ${getTextColorClass(textColor)} text-center leading-[0.9] tracking-tight max-w-4xl`}
             style={getTextEffect(textEffect)}
           >
             {headline}
           </h1>
         </div>
         
-      {/* Business Logo - top left, BIGGER */}
-      {logoUrl && (
-        <div className="absolute top-8 left-8 w-24 h-24 rounded-xl bg-black/30 backdrop-blur-md p-3 border border-white/20">
-          <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+        {/* CTA + QWIKKER Logo - Bottom */}
+        <div className="absolute bottom-0 inset-x-0 z-50">
+          <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+            <span className="text-white text-sm font-bold drop-shadow-lg">📱 Install QWIKKER Pass</span>
+            <div className="bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+              <img 
+                src="/Qwikker Logo web.svg" 
+                alt="QWIKKER" 
+                className="h-4 w-auto"
+                style={{ 
+                  filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+                  minWidth: '70px',
+                  maxWidth: '90px'
+                }}
+              />
+            </div>
+          </div>
         </div>
-      )}
-      
-      {/* QWIKKER Logo - ALWAYS VISIBLE - bottom right corner */}
-      <div className="absolute bottom-6 right-6 z-50 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg">
-        <img 
-          src="/Qwikker Logo web.svg" 
-          alt="QWIKKER" 
-          className="h-5 w-auto"
-          style={{ 
-            filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-            minWidth: '80px',
-            maxWidth: '100px'
-          }}
-        />
-      </div>
       </div>
     ),
 
@@ -105,40 +109,39 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           style={{ backgroundImage: `url(${backgroundImage})` }}
         />
         
-        {/* Content area */}
-        <div className="absolute inset-0 p-16 flex flex-col justify-between">
-          {/* Top: Business logo - BIGGER */}
-          {logoUrl && (
-            <div className="w-24 h-24">
-              <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
-            </div>
-          )}
-          
-          {/* Center: Main content */}
-          <div className="max-w-4xl px-8">
+        {/* Business Logo - top left - SAFE ZONE */}
+        {logoUrl && (
+          <div className="absolute top-8 left-8 w-20 h-20 z-40">
+            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        )}
+        
+        {/* Content - SAFE ZONES */}
+        <div className="absolute inset-0 flex items-center justify-center px-16" style={{ paddingTop: '7rem', paddingBottom: '6rem' }}>
+          <div className="max-w-4xl">
             <h1 className="text-7xl font-black text-black leading-[0.85] tracking-tighter">
               {headline}
             </h1>
           </div>
-          
-          {/* Bottom: Business name */}
-          <div className="flex items-center justify-between">
-            <span className="text-base font-bold text-gray-500">{businessName}</span>
-          </div>
         </div>
         
-        {/* QWIKKER Logo - ALWAYS VISIBLE - bottom right corner */}
-        <div className="absolute bottom-6 right-6 z-50 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg">
-          <img 
-            src="/Qwikker Logo web.svg" 
-            alt="QWIKKER" 
-            className="h-5 w-auto"
-            style={{ 
-              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-              minWidth: '80px',
-              maxWidth: '100px'
-            }}
-          />
+        {/* CTA + QWIKKER Logo - Bottom */}
+        <div className="absolute bottom-0 inset-x-0 z-50">
+          <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-white via-white/90 to-transparent">
+            <span className="text-black text-sm font-bold">📱 Install QWIKKER Pass</span>
+            <div className="bg-white/60 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-gray-200">
+              <img 
+                src="/Qwikker Logo web.svg" 
+                alt="QWIKKER" 
+                className="h-4 w-auto"
+                style={{ 
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+                  minWidth: '70px',
+                  maxWidth: '90px'
+                }}
+              />
+            </div>
+          </div>
         </div>
       </div>
     ),
@@ -155,31 +158,38 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         </div>
         
         {/* Right: Content on dark */}
-        <div className="w-1/2 bg-gradient-to-br from-slate-950 to-slate-900 p-12 flex flex-col justify-center relative">
-          {/* Headline - ONLY text on image */}
-          <h1 className="text-6xl font-black text-white leading-tight px-6">
-            {headline}
-          </h1>
-          
-          {/* Business logo - top of right panel - BIGGER */}
+        <div className="w-1/2 bg-gradient-to-br from-slate-950 to-slate-900 relative">
+          {/* Business logo - top left - SAFE ZONE */}
           {logoUrl && (
-            <div className="w-24 h-24 rounded-lg bg-white/10 p-3 mb-auto">
+            <div className="absolute top-8 left-8 w-20 h-20 rounded-lg bg-white/10 backdrop-blur-md p-2.5 z-40">
               <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
             </div>
           )}
           
-          {/* QWIKKER logo - ALWAYS VISIBLE - bottom right corner */}
-          <div className="absolute bottom-6 right-6 z-50 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg">
-            <img 
-              src="/Qwikker Logo web.svg" 
-              alt="QWIKKER" 
-              className="h-5 w-auto"
-              style={{ 
-                filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-                minWidth: '80px',
-                maxWidth: '100px'
-              }}
-            />
+          {/* Content - SAFE ZONES */}
+          <div className="absolute inset-0 flex items-center justify-center px-12" style={{ paddingTop: '7rem', paddingBottom: '6rem' }}>
+            <h1 className="text-6xl font-black text-white leading-tight">
+              {headline}
+            </h1>
+          </div>
+          
+          {/* CTA + QWIKKER Logo - Bottom */}
+          <div className="absolute bottom-0 inset-x-0 z-50">
+            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+              <span className="text-white text-sm font-bold drop-shadow-lg">📱 Install QWIKKER Pass</span>
+              <div className="bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                <img 
+                  src="/Qwikker Logo web.svg" 
+                  alt="QWIKKER" 
+                  className="h-4 w-auto"
+                  style={{ 
+                    filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+                    minWidth: '70px',
+                    maxWidth: '90px'
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -194,11 +204,17 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           style={{ backgroundImage: `url(${backgroundImage})` }}
         />
         
-        {/* Content centered */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-20 text-center">
-          {/* MASSIVE headline - ONLY text (sized to fit) */}
+        {/* Business logo - top left - SAFE ZONE */}
+        {logoUrl && (
+          <div className="absolute top-8 left-8 w-20 h-20 rounded-xl bg-black/50 backdrop-blur-md p-2.5 border border-white/20 z-40">
+            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        )}
+        
+        {/* Content - SAFE ZONES */}
+        <div className="absolute inset-0 flex items-center justify-center text-center px-16" style={{ paddingTop: '7rem', paddingBottom: '6rem' }}>
           <h1 
-            className="text-8xl font-black text-white leading-[0.85] tracking-tighter max-w-5xl uppercase px-12"
+            className="text-8xl font-black text-white leading-[0.85] tracking-tighter max-w-5xl uppercase"
             style={{ 
               textShadow: '0 20px 80px rgba(0,0,0,1)',
               WebkitTextStroke: '3px rgba(0,0,0,0.5)'
@@ -208,25 +224,23 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           </h1>
         </div>
         
-        {/* Business logo - top left corner */}
-        {logoUrl && (
-          <div className="absolute top-8 left-8 w-16 h-16 rounded-xl bg-white/10 backdrop-blur-md p-2">
-            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+        {/* CTA + QWIKKER Logo - Bottom */}
+        <div className="absolute bottom-0 inset-x-0 z-50">
+          <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+            <span className="text-white text-sm font-bold drop-shadow-lg">📱 Install QWIKKER Pass</span>
+            <div className="bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+              <img 
+                src="/Qwikker Logo web.svg" 
+                alt="QWIKKER" 
+                className="h-4 w-auto"
+                style={{ 
+                  filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+                  minWidth: '70px',
+                  maxWidth: '90px'
+                }}
+              />
+            </div>
           </div>
-        )}
-        
-        {/* QWIKKER Logo - ALWAYS VISIBLE - bottom right corner */}
-        <div className="absolute bottom-6 right-6 z-50 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg">
-          <img 
-            src="/Qwikker Logo web.svg" 
-            alt="QWIKKER" 
-            className="h-5 w-auto"
-            style={{ 
-              filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-              minWidth: '80px',
-              maxWidth: '100px'
-            }}
-          />
         </div>
       </div>
     ),
@@ -243,11 +257,17 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         {/* Gradient overlay - bottom heavy */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
         
-        {/* Content at bottom */}
-        <div className="absolute inset-0 p-14 flex flex-col justify-end">
-          {/* Headline - ONLY text on image */}
+        {/* Business logo - top left - SAFE ZONE */}
+        {logoUrl && (
+          <div className="absolute top-8 left-8 w-20 h-20 rounded-2xl bg-black/50 backdrop-blur-xl p-2.5 border border-white/10 z-40">
+            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        )}
+        
+        {/* Content - SAFE ZONES */}
+        <div className="absolute inset-0 flex items-center justify-center px-16" style={{ paddingTop: '7rem', paddingBottom: '6rem' }}>
           <h1 
-            className="text-6xl font-black text-white leading-tight max-w-4xl px-6"
+            className="text-6xl font-black text-white leading-tight max-w-4xl"
             style={{ 
               textShadow: '0 10px 40px rgba(0,0,0,1)',
               letterSpacing: '-0.02em'
@@ -255,32 +275,25 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           >
             {headline}
           </h1>
-          
-          {/* Bottom bar */}
-          <div className="flex items-center justify-between pt-6 border-t border-white/20">
-            <span className="text-sm font-bold text-white/60">{businessName}</span>
-          </div>
         </div>
         
-        {/* Business logo - top left - BIGGER */}
-        {logoUrl && (
-          <div className="absolute top-8 left-8 w-24 h-24 rounded-2xl bg-black/30 backdrop-blur-xl p-3 border border-white/10">
-            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+        {/* CTA + QWIKKER Logo - Bottom */}
+        <div className="absolute bottom-0 inset-x-0 z-50">
+          <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+            <span className="text-white text-sm font-bold drop-shadow-lg">📱 Install QWIKKER Pass</span>
+            <div className="bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+              <img 
+                src="/Qwikker Logo web.svg" 
+                alt="QWIKKER" 
+                className="h-4 w-auto"
+                style={{ 
+                  filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+                  minWidth: '70px',
+                  maxWidth: '90px'
+                }}
+              />
+            </div>
           </div>
-        )}
-        
-        {/* QWIKKER Logo - ALWAYS VISIBLE - bottom right corner */}
-        <div className="absolute bottom-6 right-6 z-50 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg">
-          <img 
-            src="/Qwikker Logo web.svg" 
-            alt="QWIKKER" 
-            className="h-5 w-auto"
-            style={{ 
-              filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-              minWidth: '80px',
-              maxWidth: '100px'
-            }}
-          />
         </div>
       </div>
     )
