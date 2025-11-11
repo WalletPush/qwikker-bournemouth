@@ -61,6 +61,11 @@ export async function POST(request: NextRequest) {
     const messageCategory = await categorizeUserMessage(message)
     console.log(`📊 Message category: ${messageCategory.category} (confidence: ${messageCategory.confidence})`)
 
+    console.log('🎯 API RESPONSE:', {
+      eventCardsCount: result.eventCards?.length || 0,
+      eventCards: result.eventCards
+    })
+
     return NextResponse.json({
       response: result.response,
       sources: result.sources || [],
@@ -74,7 +79,8 @@ export async function POST(request: NextRequest) {
         category: messageCategory.category,
         sourceCount: result.sources?.length || 0,
         modelUsed: result.modelUsed,
-        complexity: result.classification?.complexity
+        complexity: result.classification?.complexity,
+        debug_eventCardsCount: result.eventCards?.length || 0
       }
     })
 

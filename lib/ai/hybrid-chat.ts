@@ -305,39 +305,11 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         console.log(`🎉 FETCHING EVENT CARDS - User wants event details for ${city}`)
         
-        // Check if user is asking about a specific event mentioned in conversation
-        const specificEventMentioned = conversationHistory
-          .slice(-3)
-          .reverse()
-          .find(msg => msg.role === 'assistant' && /\b(event|tasting|concert|show|gig)\b/i.test(msg.content))
+        // SIMPLIFIED: Just fetch all upcoming events for now
+        // TODO: Add smart filtering later once cards are working
+        console.log(`🔍 Fetching all upcoming events for ${city}`)
         
-        let eventTitleFilter: string | null = null
-        
-        if (specificEventMentioned && showingInterest) {
-          console.log(`🔍 Found AI message mentioning event:`, specificEventMentioned.content.substring(0, 100))
-          
-          // Try multiple extraction methods
-          const quotedMatch = specificEventMentioned.content.match(/["']([^"']+)["']/i)
-          const calledPattern = specificEventMentioned.content.match(/called\s+([A-Z][^\.,!?]+)/i)
-          const tastingMatch = specificEventMentioned.content.match(/(The\s+Tasting\s+Experience)/i)
-          const jazzMatch = specificEventMentioned.content.match(/(Live\s+Jazz\s+Night)/i)
-          
-          if (tastingMatch) {
-            eventTitleFilter = tastingMatch[1]
-          } else if (jazzMatch) {
-            eventTitleFilter = jazzMatch[1]
-          } else if (calledPattern) {
-            eventTitleFilter = calledPattern[1].trim()
-          } else if (quotedMatch) {
-            eventTitleFilter = quotedMatch[1]
-          }
-          
-          console.log(`🔍 Extracted event title:`, eventTitleFilter)
-        }
-        
-        console.log(`🔍 Final event filter:`, eventTitleFilter)
-        
-        let query = supabase
+        const { data: events, error } = await supabase
           .from('business_events')
           .select(`
             id,
@@ -355,20 +327,11 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           `)
           .eq('status', 'approved')
           .eq('business_profiles.city', city)
-          .gte('event_date', new Date().toISOString().split('T')[0]) // Only future events
+          .gte('event_date', new Date().toISOString().split('T')[0])
           .order('event_date', { ascending: true })
+          .limit(10)
         
-        // If specific event mentioned, filter by event_name (trim filter to handle spaces)
-        if (eventTitleFilter) {
-          const trimmedFilter = eventTitleFilter.trim()
-          query = query.ilike('event_name', `%${trimmedFilter}%`)
-          console.log(`🔍 Filtering events with: "${trimmedFilter}"`)
-        } else {
-          query = query.limit(10)
-          console.log(`🔍 No filter - returning up to 10 events`)
-        }
-        
-        const { data: events, error } = await query
+        console.log(`🔍 Query result: ${events?.length || 0} events found, error:`, error)
         
         if (!error && events && events.length > 0) {
           eventCards = events.map(event => ({
