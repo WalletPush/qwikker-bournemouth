@@ -244,7 +244,7 @@ export async function deleteEvent(eventId: string): Promise<{
   try {
     const supabase = await createClient()
 
-    // Verify ownership and status
+    // Verify ownership
     const { data: event, error: fetchError } = await supabase
       .from('business_events')
       .select('business_id, status')
@@ -253,10 +253,6 @@ export async function deleteEvent(eventId: string): Promise<{
 
     if (fetchError || !event) {
       return { success: false, error: 'Event not found' }
-    }
-
-    if (event.status !== 'pending') {
-      return { success: false, error: 'Only pending events can be deleted' }
     }
 
     const { data: profile, error: profileError } = await supabase
@@ -274,6 +270,11 @@ export async function deleteEvent(eventId: string): Promise<{
       return { success: false, error: 'Unauthorized' }
     }
 
+    // Remove from knowledge base if it was approved
+    if (event.status === 'approved') {
+      await removeEventFromKnowledgeBase(eventId)
+    }
+
     // Delete the event
     const { error } = await supabase
       .from('business_events')
@@ -287,6 +288,7 @@ export async function deleteEvent(eventId: string): Promise<{
 
     revalidatePath('/dashboard/events')
     revalidatePath('/admin')
+    revalidatePath('/user/events')
 
     return { success: true }
   } catch (error) {
@@ -334,26 +336,23 @@ export async function cancelEvent(
       return { success: false, error: 'Unauthorized' }
     }
 
-    // Cancel the event
+    // Remove from knowledge base if it was previously approved
+    await removeEventFromKnowledgeBase(eventId)
+
+    // Delete the event from the database
     const { error } = await supabase
       .from('business_events')
-      .update({
-        status: 'cancelled',
-        cancelled_reason: cancellationReason
-      })
+      .delete()
       .eq('id', eventId)
 
     if (error) {
-      console.error('Error cancelling event:', error)
+      console.error('Error deleting event:', error)
       return { success: false, error: error.message }
     }
 
     revalidatePath('/dashboard/events')
     revalidatePath('/admin')
     revalidatePath('/user/events')
-
-    // Remove from knowledge base if it was previously approved
-    await removeEventFromKnowledgeBase(eventId)
 
     return { success: true }
   } catch (error) {
