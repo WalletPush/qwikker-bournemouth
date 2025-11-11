@@ -305,11 +305,14 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         console.log(`🎉 FETCHING EVENT CARDS - User wants event details for ${city}`)
         
-        // SIMPLIFIED: Just fetch all upcoming events for now
-        // TODO: Add smart filtering later once cards are working
-        console.log(`🔍 Fetching all upcoming events for ${city}`)
+        // Check recent conversation for specific event name
+        const recentMessages = conversationHistory.slice(-2).map(m => m.content).join(' ')
+        const tastingMentioned = /tasting experience/i.test(recentMessages)
+        const jazzMentioned = /jazz night/i.test(recentMessages)
         
-        const { data: events, error } = await supabase
+        console.log(`🔍 Event detection: tasting=${tastingMentioned}, jazz=${jazzMentioned}`)
+        
+        let query = supabase
           .from('business_events')
           .select(`
             id,
@@ -329,7 +332,20 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           .eq('business_profiles.city', city)
           .gte('event_date', new Date().toISOString().split('T')[0])
           .order('event_date', { ascending: true })
-          .limit(10)
+        
+        // Filter by specific event if mentioned
+        if (tastingMentioned) {
+          query = query.ilike('event_name', '%tasting%')
+          console.log(`🎯 Filtering for: Tasting Experience`)
+        } else if (jazzMentioned) {
+          query = query.ilike('event_name', '%jazz%')
+          console.log(`🎯 Filtering for: Jazz Night`)
+        } else {
+          query = query.limit(5)
+          console.log(`🎯 No specific filter - showing up to 5 events`)
+        }
+        
+        const { data: events, error } = await query
         
         console.log(`🔍 Query result: ${events?.length || 0} events found, error:`, error)
         

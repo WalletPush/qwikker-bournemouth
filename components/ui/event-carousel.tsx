@@ -81,16 +81,16 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
       <div className="overflow-hidden px-2">
         <div 
           className="flex transition-transform duration-300 ease-in-out gap-3"
-          style={{ transform: `translateX(-${currentIndex * (280 + 12)}px)` }}
+          style={{ transform: `translateX(-${currentIndex * (320 + 12)}px)` }}
         >
           {events.map((event) => (
             <Card 
               key={event.id} 
-              className={`flex-shrink-0 w-[280px] h-[320px] ${getEventTypeStyling(event.event_type)} transition-colors duration-200`}
+              className={`flex-shrink-0 w-[320px] h-[420px] ${getEventTypeStyling(event.event_type)} transition-all duration-300 hover:scale-[1.02]`}
             >
               <CardContent className="p-0 h-full flex flex-col">
-                {/* Event Image */}
-                <div className="relative h-[160px] bg-slate-700 rounded-t-lg overflow-hidden">
+                {/* Event Image - BIGGER */}
+                <div className="relative h-[200px] bg-slate-700 rounded-t-lg overflow-hidden">
                   {event.image_url ? (
                     <img 
                       src={event.image_url} 
@@ -98,72 +98,77 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800">
-                      <svg className="w-16 h-16 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900/40 to-indigo-900/40">
+                      <svg className="w-20 h-20 text-purple-400/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </div>
                   )}
                   
+                  {/* Gradient Overlay at bottom of image */}
+                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-900 to-transparent"></div>
+                  
                   {/* Event Type Badge - Top Right */}
-                  <div className="absolute top-2 right-2 z-20">
+                  <div className="absolute top-3 right-3 z-20">
                     {getEventTypeBadge(event.event_type)}
                   </div>
                 </div>
 
                 {/* Event Info */}
-                <div className="p-4 flex-1 flex flex-col">
-                  {/* Event Title */}
-                  <h3 className="font-bold text-lg text-white mb-1 line-clamp-1">
+                <div className="p-5 flex-1 flex flex-col">
+                  {/* Event Title - BIGGER */}
+                  <h3 className="font-bold text-xl text-white mb-2 line-clamp-2 leading-tight">
                     {event.title}
                   </h3>
                   
                   {/* Business Name */}
-                  <p className="text-slate-300 text-sm mb-2">
-                    at {event.business_name}
+                  <p className="text-purple-300 text-sm mb-3 font-medium flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    {event.business_name}
                   </p>
                   
-                  {/* Date & Time */}
-                  <div className="flex flex-col gap-1 mb-3 text-xs text-slate-400">
-                    <div className="flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span>{formatDate(event.start_date)}</span>
-                      {event.start_time && <span>at {event.start_time}</span>}
+                  {/* Date & Time - BETTER STYLING */}
+                  <div className="flex flex-col gap-2 mb-4 text-sm">
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <div className="p-1.5 bg-purple-600/20 rounded">
+                        <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <span className="font-semibold">{formatDate(event.start_date)}</span>
+                        {event.start_time && <span className="text-slate-400 ml-1">• {event.start_time.substring(0, 5)}</span>}
+                      </div>
                     </div>
                     
-                    <div className="flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <div className="p-1.5 bg-purple-600/20 rounded">
+                        <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
                       <span className="line-clamp-1">{event.location}</span>
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="mt-auto space-y-2">
-                    {event.ticket_url && (
+                  {/* Action Button - ONLY if ticket URL exists */}
+                  {event.ticket_url && (
+                    <div className="mt-auto">
                       <a 
-                        href={event.ticket_url}
+                        href={event.ticket_url.startsWith('http') ? event.ticket_url : `https://${event.ticket_url}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block w-full"
                       >
-                        <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm py-2">
+                        <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold py-3 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-200">
                           Get Tickets
                         </Button>
                       </a>
-                    )}
-                    
-                    <Button 
-                      variant="outline" 
-                      className="w-full border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white text-sm py-2"
-                    >
-                      More Details
-                    </Button>
-                  </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
