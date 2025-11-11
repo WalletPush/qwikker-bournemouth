@@ -102,67 +102,18 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
       const loadActivityFeed = async () => {
         const realActivity = []
         
-        // Fetch business changes (offers, approvals, etc.)
-        try {
-          const { getPendingChanges, getApprovedChanges } = await import('@/lib/actions/pending-changes')
-          
-          // Get pending changes
-          const changesResult = await getPendingChanges(profile.user_id)
-          if (changesResult.success) {
-            changesResult.pendingChanges.forEach((change: any) => {
-              if (change.change_type === 'offer') {
-                realActivity.push({
-                  id: `offer_submitted_${change.id}`,
-                  type: 'offer_submitted',
-                  message: `Offer "${change.change_data?.offer_name || 'New Offer'}" submitted for review`,
-                  timestamp: new Date(change.submitted_at || change.created_at),
-                  icon: (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                  ),
-                  color: 'text-orange-400'
-                })
-              }
-            })
-          }
-          
-          // Get approved changes
-          const approvedResult = await getApprovedChanges(profile.user_id)
-          if (approvedResult.success) {
-            approvedResult.approvedChanges.forEach((change: any) => {
-              if (change.change_type === 'offer') {
-                realActivity.push({
-                  id: `offer_approved_${change.id}`,
-                  type: 'offer_approved',
-                  message: `Offer "${change.change_data?.offer_name || 'Your Offer'}" approved and live!`,
-                  timestamp: new Date(change.approved_at || change.updated_at),
-                  icon: (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  ),
-                  color: 'text-green-400'
-                })
-              }
-            })
-          }
-        } catch (error) {
-          console.error('Error loading business changes for activity feed:', error)
-        }
-        
-        // Get real business analytics data via server action
+        // 1. REAL-TIME ANALYTICS (most recent, highest priority)
         try {
           const { getBusinessActivityData } = await import('@/lib/actions/business-analytics-actions')
           const businessAnalytics = await getBusinessActivityData(profile.id)
           
-          // Add recent claims activity
+          // Recent offer claims (last 7 days)
           if (businessAnalytics.recentClaims > 0) {
             realActivity.push({
               id: `recent_claims_${profile.id}`,
               type: 'offer_claimed',
               message: `${businessAnalytics.recentClaims} offer${businessAnalytics.recentClaims > 1 ? 's' : ''} claimed this week`,
-              timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday for sorting
+              timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago for sorting
               icon: (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -172,7 +123,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             })
           }
           
-          // Add recent visits activity
+          // Recent business visits (last 7 days)
           if (businessAnalytics.recentVisits > 0) {
             realActivity.push({
               id: `recent_visits_${profile.id}`,
@@ -191,143 +142,87 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         } catch (error) {
           console.error('Error loading business analytics for activity feed:', error)
         }
-      
-      // Profile creation event
-      if (profile.created_at) {
-        realActivity.push({
-          id: 'profile_created',
-          type: 'profile_created',
-          message: `${profile.business_name || 'Business'} joined Qwikker`,
-          timestamp: new Date(profile.created_at),
-          icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          ),
-          color: 'text-blue-400'
-        })
-      }
-      
-      // Profile submission event (if submitted) - use created_at for initial submission
-      if (profile.status === 'pending_review' || profile.status === 'approved') {
-        realActivity.push({
-          id: 'profile_submitted',
-          type: 'profile_submitted', 
-          message: 'Profile submitted for review',
-          timestamp: new Date(profile.created_at), // Use created_at for submission time
-          icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-          ),
-          color: 'text-blue-400'
-        })
-      }
-      
-      // Approval event (if approved) - use approved_at or updated_at for approval time
-      if (profile.status === 'approved') {
-        // Only show approval if it happened after submission (avoid showing approval before submission)
-        const approvalTime = new Date(profile.approved_at || profile.updated_at)
-        const submissionTime = new Date(profile.created_at)
         
-        if (approvalTime > submissionTime) {
-          realActivity.push({
-            id: 'listing_approved',
-            type: 'listing_approved',
-            message: 'Listing approved by Qwikker',
-            timestamp: approvalTime,
-            icon: (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            ),
-            color: 'text-green-400'
-          })
-        }
-      }
-      
-      // Logo upload event - use fresh timestamp since logo uploads happen in real-time
-      if (profile.logo) {
-        // Check if logo was uploaded recently (within last hour) - if so, use NOW
-        const now = new Date()
-        const updatedAt = new Date(profile.updated_at || profile.created_at)
-        const hoursSinceUpdate = (now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60)
-        
-        realActivity.push({
-          id: 'logo_uploaded',
-          type: 'logo_uploaded',
-          message: 'Business logo uploaded',
-          // If updated within last hour, assume it's fresh - use NOW minus a few seconds
-          timestamp: hoursSinceUpdate > 1 ? updatedAt : new Date(now.getTime() - 10000),
-          icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          ),
-          color: 'text-purple-400'
-        })
-      }
-      
-      // Business hours set event
-      if (profile.business_hours_structured) {
-        const hoursTimestamp = profile.business_hours_structured.last_updated 
-          ? new Date(profile.business_hours_structured.last_updated)
-          : new Date(profile.updated_at || profile.created_at)
-        
-        realActivity.push({
-          id: 'hours_updated',
-          type: 'hours_updated', 
-          message: 'Business hours updated',
-          timestamp: hoursTimestamp,
-          icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          ),
-          color: 'text-yellow-400'
-        })
-      }
-      
-      // Offer created event
-      if (profile.offer_name) {
-        realActivity.push({
-          id: 'offer_created',
-          type: 'offer_created',
-          message: `Created "${profile.offer_name}" offer`,
-          timestamp: new Date(profile.offer_start_date || profile.updated_at),
-          icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-            </svg>
-          ),
-          color: 'text-orange-400'
-        })
-      }
-      
-      // Secret menu items event
-      if (profile.additional_notes) {
+        // 2. PENDING CHANGES (waiting for approval)
         try {
-          const notesData = JSON.parse(profile.additional_notes)
-          if (notesData.secret_menu_items && notesData.secret_menu_items.length > 0) {
+          const { getPendingChanges } = await import('@/lib/actions/pending-changes')
+          const changesResult = await getPendingChanges(profile.user_id)
+          
+          if (changesResult.success && changesResult.pendingChanges.length > 0) {
+            // Only show the most recent pending change
+            const mostRecentChange = changesResult.pendingChanges[0]
+            
+            if (mostRecentChange.change_type === 'offer') {
+              realActivity.push({
+                id: `pending_offer_${mostRecentChange.id}`,
+                type: 'offer_pending',
+                message: `Offer "${mostRecentChange.change_data?.offer_name || 'New Offer'}" pending approval`,
+                timestamp: new Date(mostRecentChange.submitted_at || mostRecentChange.created_at),
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+                color: 'text-yellow-400'
+              })
+            } else if (mostRecentChange.change_type === 'profile') {
+              realActivity.push({
+                id: `pending_profile_${mostRecentChange.id}`,
+                type: 'profile_pending',
+                message: 'Profile changes pending approval',
+                timestamp: new Date(mostRecentChange.submitted_at || mostRecentChange.created_at),
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+                color: 'text-yellow-400'
+              })
+            }
+          }
+        } catch (error) {
+          console.error('Error loading pending changes for activity feed:', error)
+        }
+        
+        // 3. PROFILE MILESTONES (one-time events)
+        
+        // Listing approval (most important milestone)
+        if (profile.status === 'approved' && profile.approved_at) {
+          const approvalTime = new Date(profile.approved_at)
+          const createdTime = new Date(profile.created_at)
+          
+          // Only show if approval happened after creation (valid timestamp)
+          if (approvalTime > createdTime) {
             realActivity.push({
-              id: 'secret_menu_added',
-              type: 'secret_menu_added',
-              message: `Added ${notesData.secret_menu_items.length} secret menu item${notesData.secret_menu_items.length !== 1 ? 's' : ''}`,
-              timestamp: new Date(profile.updated_at),
+              id: 'listing_approved',
+              type: 'listing_approved',
+              message: `${profile.business_name || 'Business'} approved and live!`,
+              timestamp: approvalTime,
               icon: (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               ),
-              color: 'text-indigo-400'
+              color: 'text-green-400'
             })
           }
-        } catch (e) {
-          // Invalid JSON, ignore
         }
-      }
-      
-
+        
+        // Profile joined (fallback if no other activity)
+        if (profile.created_at) {
+          realActivity.push({
+            id: 'profile_created',
+            type: 'profile_created',
+            message: `${profile.business_name || 'Business'} joined Qwikker`,
+            timestamp: new Date(profile.created_at),
+            icon: (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            ),
+            color: 'text-blue-400'
+          })
+        }
       
         // Sort by timestamp (newest first) and take top 4
         const sortedActivity = realActivity
