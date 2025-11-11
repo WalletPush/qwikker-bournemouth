@@ -8,7 +8,7 @@ export async function GET() {
     // Check all events
     const { data: allEvents, error: allError } = await supabase
       .from('business_events')
-      .select('id, title, status, start_date, business_id')
+      .select('id, event_name, status, event_date, business_id')
       .order('created_at', { ascending: false })
       .limit(10)
     
@@ -17,16 +17,17 @@ export async function GET() {
       .from('business_events')
       .select(`
         id,
-        title,
+        event_name,
+        event_description,
         status,
-        start_date,
+        event_date,
         business_id,
         business_profiles!inner(business_name, city)
       `)
       .eq('status', 'approved')
       .eq('business_profiles.city', 'bournemouth')
-      .gte('start_date', new Date().toISOString().split('T')[0])
-      .order('start_date', { ascending: true })
+      .gte('event_date', new Date().toISOString().split('T')[0])
+      .order('event_date', { ascending: true })
     
     return NextResponse.json({
       allEvents: {
