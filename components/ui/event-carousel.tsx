@@ -335,18 +335,30 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
 
               {/* Action Buttons */}
               <div className="flex gap-2">
-                {selectedEvent.ticket_url && (
-                  <a 
-                    href={selectedEvent.ticket_url.startsWith('http') ? selectedEvent.ticket_url : `https://${selectedEvent.ticket_url}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1"
-                  >
-                    <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-semibold">
-                      Get Tickets
-                    </Button>
-                  </a>
-                )}
+                {selectedEvent.ticket_url && (() => {
+                  // Ensure URL has proper protocol
+                  let ticketUrl = selectedEvent.ticket_url.trim()
+                  if (!ticketUrl.startsWith('http://') && !ticketUrl.startsWith('https://')) {
+                    ticketUrl = `https://${ticketUrl}`
+                  }
+                  console.log('🎫 Ticket URL:', { original: selectedEvent.ticket_url, final: ticketUrl })
+                  
+                  return (
+                    <a 
+                      href={ticketUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1"
+                      onClick={(e) => {
+                        console.log('🎫 Clicking ticket button, URL:', ticketUrl)
+                      }}
+                    >
+                      <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-semibold">
+                        Get Tickets
+                      </Button>
+                    </a>
+                  )
+                })()}
                 <Button 
                   variant="outline"
                   className="flex-1 border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-white text-sm font-semibold"

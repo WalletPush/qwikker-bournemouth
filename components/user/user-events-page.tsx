@@ -378,7 +378,13 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
 
                   {heroEvent.booking_url && (
                     <Button
-                      onClick={() => window.open(heroEvent.booking_url, '_blank')}
+                      onClick={() => {
+                        let url = heroEvent.booking_url.trim()
+                        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                          url = `https://${url}`
+                        }
+                        window.open(url, '_blank')
+                      }}
                       className="flex-1 min-w-[200px] bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
                     >
                       <ExternalLink className="w-5 h-5 mr-2" />
@@ -726,7 +732,11 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                       <Button
                         onClick={(e) => {
                           e.stopPropagation()
-                          window.open(event.booking_url, '_blank')
+                          let url = event.booking_url.trim()
+                          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                            url = `https://${url}`
+                          }
+                          window.open(url, '_blank')
                         }}
                         size="sm"
                         className="bg-green-600 hover:bg-green-700"
