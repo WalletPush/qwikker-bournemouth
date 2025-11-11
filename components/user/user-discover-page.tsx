@@ -264,16 +264,16 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
       {/* Page Header with Icon */}
       <div className="text-center mb-8">
         <div className="flex flex-col items-center gap-6 mb-6">
-          <div className="p-4 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-full border border-emerald-400/50">
-            <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="p-4 bg-slate-800/50 rounded-full border border-slate-700">
+            <svg className="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
           <div>
-            <h1 className="text-5xl font-bold text-emerald-400 mb-2">
+            <h1 className="text-5xl font-bold text-white mb-2">
               Discover Bournemouth
             </h1>
-            <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-emerald-400 to-transparent rounded-full" />
+            <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-slate-600 to-transparent rounded-full" />
           </div>
         </div>
         <p className="text-slate-400 text-lg max-w-2xl mx-auto">
