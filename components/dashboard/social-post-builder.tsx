@@ -24,6 +24,13 @@ interface PostContent {
   hashtags: string
 }
 
+interface PostStyle {
+  textColor: string
+  textEffect: string
+  layout: string
+  mood: string
+}
+
 interface ContentItem {
   id: string
   title: string
@@ -53,6 +60,13 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     headline: '',
     caption: '',
     hashtags: ''
+  })
+  
+  const [postStyle, setPostStyle] = useState<PostStyle>({
+    textColor: 'white',
+    textEffect: 'bold-shadow',
+    layout: 'centered',
+    mood: 'energetic'
   })
 
   // Fetch available content when component mounts
@@ -180,7 +194,17 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
       })
 
       const generated = await response.json()
-      setPostContent(generated)
+      setPostContent({
+        headline: generated.headline,
+        caption: generated.caption,
+        hashtags: generated.hashtags
+      })
+      
+      // Set style from AI response
+      if (generated.style) {
+        setPostStyle(generated.style)
+        console.log('🎨 AI generated style:', generated.style)
+      }
       
       // Set image based on source
       if (imageSource === 'content' && selectedContent.image_url) {
@@ -475,6 +499,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                         backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
                         logoUrl={profile?.logo}
                         businessName={profile?.business_name}
+                        style={postStyle}
                       />
                     )}
                   </div>

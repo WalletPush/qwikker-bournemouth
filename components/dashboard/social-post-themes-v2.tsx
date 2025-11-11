@@ -9,11 +9,45 @@ interface PostThemeProps {
   backgroundImage: string
   logoUrl?: string
   businessName?: string
+  style?: {
+    textColor: string
+    textEffect: string
+    layout: string
+    mood: string
+  }
 }
 
-export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, businessName }: PostThemeProps) {
+export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, businessName, style }: PostThemeProps) {
   // Extract just first sentence from caption
   const firstSentence = caption.split(/[.!?]/)[0] + '.'
+  
+  // Apply AI-generated styles
+  const getTextColorClass = (color: string) => {
+    const colors: Record<string, string> = {
+      'white': 'text-white',
+      'black': 'text-black',
+      'gradient-gold': 'bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent',
+      'neon-green': 'text-[#00ff9d]',
+      'hot-pink': 'text-[#ff006e]',
+      'electric-blue': 'text-[#00d4ff]'
+    }
+    return colors[color] || 'text-white'
+  }
+  
+  const getTextEffect = (effect: string) => {
+    const effects: Record<string, React.CSSProperties> = {
+      'bold-shadow': { textShadow: '0 10px 40px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.5)' },
+      'outline-glow': { textShadow: '0 0 20px currentColor, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000', WebkitTextStroke: '1px rgba(0,0,0,0.5)' },
+      '3d-pop': { textShadow: '3px 3px 0 rgba(0,0,0,0.3), 6px 6px 0 rgba(0,0,0,0.2), 9px 9px 0 rgba(0,0,0,0.1)' },
+      'neon': { textShadow: '0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor, 0 0 40px currentColor' },
+      'vintage': { textShadow: '2px 2px 0 rgba(139,69,19,0.5), 4px 4px 0 rgba(0,0,0,0.3)', filter: 'sepia(0.3)' },
+      'graffiti': { textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 10px currentColor', transform: 'skew(-2deg)' }
+    }
+    return effects[effect] || effects['bold-shadow']
+  }
+  
+  const textColor = style?.textColor || 'white'
+  const textEffect = style?.textEffect || 'bold-shadow'
   
   const themes = {
     // 1. VIBRANT - Bold centered design
@@ -30,13 +64,10 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* Content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center p-16">
-          {/* Headline - HUGE and bold */}
+          {/* Headline - HUGE and bold with AI STYLES */}
           <h1 
-            className="text-8xl font-black text-white text-center leading-[0.9] tracking-tight mb-8 max-w-5xl"
-            style={{ 
-              textShadow: '0 10px 40px rgba(0,0,0,0.9)',
-              WebkitTextStroke: '2px rgba(0,0,0,0.3)'
-            }}
+            className={`text-8xl font-black ${getTextColorClass(textColor)} text-center leading-[0.9] tracking-tight mb-8 max-w-5xl`}
+            style={getTextEffect(textEffect)}
           >
             {headline}
           </h1>
@@ -45,26 +76,26 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           <div className="w-20 h-1 bg-[#00d083] mb-8" />
           
           {/* Subtext - minimal */}
-          <p className="text-2xl font-bold text-white/95 text-center max-w-3xl leading-tight"
+          <p className={`text-2xl font-bold ${getTextColorClass(textColor)} opacity-90 text-center max-w-3xl leading-tight`}
              style={{ textShadow: '0 4px 20px rgba(0,0,0,0.9)' }}>
             {firstSentence}
           </p>
         </div>
         
-        {/* Business Logo - top left, SMALL */}
+        {/* Business Logo - top left */}
         {logoUrl && (
-          <div className="absolute top-8 left-8 w-20 h-20 rounded-xl bg-black/30 backdrop-blur-md p-3 border border-white/20">
+          <div className="absolute top-8 left-8 w-16 h-16 rounded-xl bg-black/30 backdrop-blur-md p-2 border border-white/20">
             <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
           </div>
         )}
         
-        {/* QWIKKER Logo - bottom right, TINY */}
-        <div className="absolute bottom-6 right-6">
+        {/* QWIKKER Logo - bottom right corner, SMALL but visible */}
+        <div className="absolute bottom-5 right-5">
           <img 
             src="/Qwikker Logo web.svg" 
             alt="QWIKKER" 
-            className="h-4 w-auto max-w-[80px] opacity-70"
-            style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.9))' }}
+            className="h-5 w-auto max-w-[100px] opacity-80"
+            style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.9))' }}
           />
         </div>
       </div>
@@ -83,7 +114,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         <div className="absolute inset-0 p-16 flex flex-col justify-between">
           {/* Top: Business logo */}
           {logoUrl && (
-            <div className="w-20 h-20">
+            <div className="w-16 h-16">
               <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
             </div>
           )}
@@ -104,7 +135,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             <img 
               src="/Qwikker Logo web.svg" 
               alt="QWIKKER" 
-              className="h-4 w-auto max-w-[80px] opacity-60"
+              className="h-5 w-auto max-w-[100px] opacity-70"
             />
           </div>
         </div>
@@ -134,20 +165,22 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             {firstSentence}
           </p>
           
-          {/* Business logo */}
+          {/* Business logo - top of right panel */}
           {logoUrl && (
-            <div className="w-16 h-16 rounded-lg bg-white/10 p-3 mb-auto">
+            <div className="w-16 h-16 rounded-lg bg-white/10 p-2 mb-auto">
               <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
             </div>
           )}
           
-          {/* QWIKKER logo - bottom */}
-          <img 
-            src="/Qwikker Logo web.svg" 
-            alt="QWIKKER" 
-            className="h-4 w-auto max-w-[80px] opacity-60 mt-8"
-            style={{ filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}
-          />
+          {/* QWIKKER logo - bottom right corner */}
+          <div className="absolute bottom-5 right-5">
+            <img 
+              src="/Qwikker Logo web.svg" 
+              alt="QWIKKER" 
+              className="h-5 w-auto max-w-[100px] opacity-70"
+              style={{ filter: 'brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,0.7))' }}
+            />
+          </div>
         </div>
       </div>
     ),
@@ -186,18 +219,20 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* Business logo - top left corner */}
         {logoUrl && (
-          <div className="absolute top-10 left-10 w-20 h-20 rounded-xl bg-white/10 backdrop-blur-md p-3">
+          <div className="absolute top-8 left-8 w-16 h-16 rounded-xl bg-white/10 backdrop-blur-md p-2">
             <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
           </div>
         )}
         
-        {/* QWIKKER - tiny bottom right */}
-        <img 
-          src="/Qwikker Logo web.svg" 
-          alt="QWIKKER" 
-          className="absolute bottom-6 right-6 h-4 w-auto max-w-[80px] opacity-60"
-          style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,1))' }}
-        />
+        {/* QWIKKER Logo - bottom right corner */}
+        <div className="absolute bottom-5 right-5">
+          <img 
+            src="/Qwikker Logo web.svg" 
+            alt="QWIKKER" 
+            className="h-5 w-auto max-w-[100px] opacity-80"
+            style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,1))' }}
+          />
+        </div>
       </div>
     ),
 
@@ -235,21 +270,25 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           {/* Bottom bar */}
           <div className="flex items-center justify-between pt-6 border-t border-white/20">
             <span className="text-sm font-bold text-white/60">{businessName}</span>
-            <img 
-              src="/Qwikker Logo web.svg" 
-              alt="QWIKKER" 
-              className="h-4 w-auto max-w-[80px] opacity-60"
-              style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.9))' }}
-            />
           </div>
         </div>
         
         {/* Business logo - top left */}
         {logoUrl && (
-          <div className="absolute top-10 left-10 w-20 h-20 rounded-2xl bg-black/30 backdrop-blur-xl p-3 border border-white/10">
+          <div className="absolute top-8 left-8 w-16 h-16 rounded-2xl bg-black/30 backdrop-blur-xl p-2 border border-white/10">
             <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
           </div>
         )}
+        
+        {/* QWIKKER Logo - bottom right corner */}
+        <div className="absolute bottom-5 right-5">
+          <img 
+            src="/Qwikker Logo web.svg" 
+            alt="QWIKKER" 
+            className="h-5 w-auto max-w-[100px] opacity-80"
+            style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.9))' }}
+          />
+        </div>
       </div>
     )
   }

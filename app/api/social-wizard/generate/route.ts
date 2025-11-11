@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY
 })
 
 export async function POST(request: NextRequest) {
@@ -12,48 +12,62 @@ export async function POST(request: NextRequest) {
     // Build prompt based on post type and content
     const prompt = buildPrompt(postType, content, businessName, city, businessType)
 
-    // Generate with GPT-4
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an elite social media creative director specializing in viral Instagram content for premium local businesses. 
+    // Generate with Claude 3.5 Sonnet
+    const message = await anthropic.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 1024,
+      temperature: 0.9,
+      system: `You are an elite creative director at a top advertising agency, specializing in viral Instagram content for premium local businesses. 
+
+Your superpower: Creating posts that STOP THE SCROLL.
 
 Your posts are:
-- BOLD, PUNCHY, and IMPOSSIBLE TO SCROLL PAST
-- Use CREATIVE wordplay, alliteration, and hooks
-- Strategic emoji use (2-3 MAX, only when they add impact)
-- Headlines that DEMAND attention (short, powerful, benefit-focused)
-- Captions that tell a story and create FOMO
-- CTAs that feel exclusive and urgent
-- Make people feel like they're missing out if they don't visit
+- BOLD, PUNCHY, and dripping with personality
+- Use unexpected wordplay, alliteration, and hooks
+- Minimal emojis (1-2 MAX) - only when they amplify the message
+- Headlines that create instant FOMO
+- Captions that feel like a conversation with a witty friend
+- Make people think "I NEED to check this out"
 
 STYLE RULES:
-- Headlines: 3-7 words MAX, ALL CAPS or Title Case
-- NO generic phrases like "We're excited to bring you" 
-- NO basic descriptions - create DESIRE
-- Make it feel PREMIUM and EXCLUSIVE
-- Every word must earn its place
+- Headlines: 3-6 words MAX, mix of ALL CAPS and Title Case
+- NO corporate speak ("We're excited...", "Join us for...")
+- Create DESIRE and INTRIGUE, not descriptions
+- Sound human, not like a brand
+- Every word must punch
 
-Always return ONLY a valid JSON object with: headline, caption, hashtags`
-        },
+DESIGN INSTRUCTIONS:
+You also specify visual styling to make each post unique:
+- textColor: "white" | "black" | "gradient-gold" | "neon-green" | "hot-pink" | "electric-blue"
+- textEffect: "bold-shadow" | "outline-glow" | "3d-pop" | "neon" | "vintage" | "graffiti"
+- layout: "centered" | "top-left" | "bottom-right" | "diagonal" | "stacked"
+- mood: "energetic" | "elegant" | "playful" | "mysterious" | "bold" | "minimal"
+
+Return ONLY valid JSON: { headline, caption, hashtags, style: { textColor, textEffect, layout, mood } }`,
+      messages: [
         {
           role: 'user',
           content: prompt
         }
-      ],
-      temperature: 0.8,
-      max_tokens: 500,
-      response_format: { type: 'json_object' }
+      ]
     })
 
-    const generated = JSON.parse(completion.choices[0].message.content || '{}')
+    const textContent = message.content[0].type === 'text' ? message.content[0].text : '{}'
+    
+    // Extract JSON from response (Claude might wrap it in markdown)
+    const jsonMatch = textContent.match(/\{[\s\S]*\}/)
+    const generated = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
 
     return NextResponse.json({
       headline: generated.headline || 'Check this out!',
       caption: generated.caption || '',
-      hashtags: generated.hashtags || `#${city?.replace(/\s/g, '')} #${businessName?.replace(/\s/g, '')}`
+      hashtags: generated.hashtags || `#${city?.replace(/\s/g, '')} #${businessName?.replace(/\s/g, '')}`,
+      style: generated.style || {
+        textColor: 'white',
+        textEffect: 'bold-shadow',
+        layout: 'centered',
+        mood: 'energetic'
+      }
     })
 
   } catch (error) {
