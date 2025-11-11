@@ -42,6 +42,12 @@ interface ContentItem {
 }
 
 export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuilderProps) {
+  console.log('🎨 Social Post Builder - Profile:', { 
+    hasLogo: !!profile?.logo, 
+    logoUrl: profile?.logo,
+    businessName: profile?.business_name 
+  })
+  
   const [step, setStep] = useState<'select' | 'generate'>('select')
   const [isLoading, setIsLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -493,9 +499,9 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                   <div className="flex items-center justify-between p-3 border-b border-gray-200">
                     <div className="flex items-center gap-3">
                       {profile?.logo ? (
-                        <img src={profile.logo} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-gray-300" />
+                        <img src={profile.logo} alt="Profile" className="w-10 h-10 rounded-full object-cover border border-gray-300" />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-300" />
+                        <div className="w-10 h-10 rounded-full bg-gray-300" />
                       )}
                       <span className="text-black font-semibold text-sm">{profile?.business_name || 'yourbusiness'}</span>
                     </div>

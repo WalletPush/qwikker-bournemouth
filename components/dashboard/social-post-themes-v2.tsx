@@ -73,22 +73,22 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           </h1>
         </div>
         
-        {/* Business Logo - top left */}
-        {logoUrl && (
-          <div className="absolute top-8 left-8 w-16 h-16 rounded-xl bg-black/30 backdrop-blur-md p-2 border border-white/20">
-            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
-          </div>
-        )}
-        
-        {/* QWIKKER Logo - bottom right corner, SMALL but visible */}
-        <div className="absolute bottom-5 right-5">
-          <img 
-            src="/Qwikker Logo web.svg" 
-            alt="QWIKKER" 
-            className="h-5 w-auto max-w-[100px] opacity-80"
-            style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.9))' }}
-          />
+      {/* Business Logo - top left, BIGGER */}
+      {logoUrl && (
+        <div className="absolute top-8 left-8 w-24 h-24 rounded-xl bg-black/30 backdrop-blur-md p-3 border border-white/20">
+          <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
         </div>
+      )}
+      
+      {/* QWIKKER Logo - bottom right corner */}
+      <div className="absolute bottom-5 right-5">
+        <img 
+          src="/Qwikker Logo web.svg" 
+          alt="QWIKKER" 
+          className="h-6 w-auto max-w-[120px] opacity-90"
+          style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.95))' }}
+        />
+      </div>
       </div>
     ),
 
@@ -103,9 +103,9 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* Content area */}
         <div className="absolute inset-0 p-16 flex flex-col justify-between">
-          {/* Top: Business logo */}
+          {/* Top: Business logo - BIGGER */}
           {logoUrl && (
-            <div className="w-16 h-16">
+            <div className="w-24 h-24">
               <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
             </div>
           )}
@@ -123,7 +123,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             <img 
               src="/Qwikker Logo web.svg" 
               alt="QWIKKER" 
-              className="h-5 w-auto max-w-[100px] opacity-70"
+              className="h-6 w-auto max-w-[120px] opacity-90"
             />
           </div>
         </div>
@@ -148,9 +148,9 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             {headline}
           </h1>
           
-          {/* Business logo - top of right panel */}
+          {/* Business logo - top of right panel - BIGGER */}
           {logoUrl && (
-            <div className="w-16 h-16 rounded-lg bg-white/10 p-2 mb-auto">
+            <div className="w-24 h-24 rounded-lg bg-white/10 p-3 mb-auto">
               <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
             </div>
           )}
@@ -160,7 +160,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             <img 
               src="/Qwikker Logo web.svg" 
               alt="QWIKKER" 
-              className="h-5 w-auto max-w-[100px] opacity-70"
+              className="h-6 w-auto max-w-[120px] opacity-90"
               style={{ filter: 'brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,0.7))' }}
             />
           </div>
@@ -241,9 +241,9 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           </div>
         </div>
         
-        {/* Business logo - top left */}
+        {/* Business logo - top left - BIGGER */}
         {logoUrl && (
-          <div className="absolute top-8 left-8 w-16 h-16 rounded-2xl bg-black/30 backdrop-blur-xl p-2 border border-white/10">
+          <div className="absolute top-8 left-8 w-24 h-24 rounded-2xl bg-black/30 backdrop-blur-xl p-3 border border-white/10">
             <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
           </div>
         )}
@@ -253,8 +253,8 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           <img 
             src="/Qwikker Logo web.svg" 
             alt="QWIKKER" 
-            className="h-5 w-auto max-w-[100px] opacity-80"
-            style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.9))' }}
+            className="h-6 w-auto max-w-[120px] opacity-90"
+            style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.95))' }}
           />
         </div>
       </div>
