@@ -780,6 +780,21 @@
       },
       "filename": "lib/actions/referral-actions.ts",
       "exportedName": "getUserReferrals"
+    },
+    "404c9dadd367c1a024a28b0f955a6129342e11e90f": {
+      "workers": {
+        "app/user/secret-menu/page": {
+          "moduleId": "[project]/.next-internal/server/app/user/secret-menu/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/secret-unlock-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "trackSecretUnlock",
+          "filename": "lib/actions/secret-unlock-actions.ts"
+        }
+      },
+      "layer": {
+        "app/user/secret-menu/page": "action-browser"
+      },
+      "filename": "lib/actions/secret-unlock-actions.ts",
+      "exportedName": "trackSecretUnlock"
     }
   },
   "edge": {},

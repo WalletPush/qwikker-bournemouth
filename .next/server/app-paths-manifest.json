@@ -43,5 +43,6 @@
   "/user/discover/page": "app/user/discover/page.js",
   "/user/events/page": "app/user/events/page.js",
   "/user/how-it-works/page": "app/user/how-it-works/page.js",
-  "/user/offers/page": "app/user/offers/page.js"
+  "/user/offers/page": "app/user/offers/page.js",
+  "/user/secret-menu/page": "app/user/secret-menu/page.js"
 }
