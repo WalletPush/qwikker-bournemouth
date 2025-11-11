@@ -389,6 +389,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/dashboard/social-wizard/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/dashboard/social-wizard">> = Specific
+  const handler = {} as typeof import("../../app/dashboard/social-wizard/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/dashboard/support/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/dashboard/support">> = Specific
