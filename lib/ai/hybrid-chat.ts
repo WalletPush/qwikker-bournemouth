@@ -314,23 +314,28 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         let eventTitleFilter: string | null = null
         
         if (specificEventMentioned && showingInterest) {
-          // Extract event name from AI's message (look for quoted text or title case phrases)
+          console.log(`🔍 Found AI message mentioning event:`, specificEventMentioned.content.substring(0, 100))
+          
+          // Try multiple extraction methods
           const quotedMatch = specificEventMentioned.content.match(/["']([^"']+)["']/i)
-          const titleCaseMatch = specificEventMentioned.content.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,4})\b/)
+          const calledPattern = specificEventMentioned.content.match(/called\s+([A-Z][^\.,!?]+)/i)
+          const tastingMatch = specificEventMentioned.content.match(/(The\s+Tasting\s+Experience)/i)
+          const jazzMatch = specificEventMentioned.content.match(/(Live\s+Jazz\s+Night)/i)
           
-          if (quotedMatch) {
+          if (tastingMatch) {
+            eventTitleFilter = tastingMatch[1]
+          } else if (jazzMatch) {
+            eventTitleFilter = jazzMatch[1]
+          } else if (calledPattern) {
+            eventTitleFilter = calledPattern[1].trim()
+          } else if (quotedMatch) {
             eventTitleFilter = quotedMatch[1]
-          } else if (titleCaseMatch) {
-            eventTitleFilter = titleCaseMatch[1]
           }
           
-          // Also check for specific event titles we know about
-          if (specificEventMentioned.content.includes('Tasting Experience')) {
-            eventTitleFilter = 'The Tasting Experience'
-          }
+          console.log(`🔍 Extracted event title:`, eventTitleFilter)
         }
         
-        console.log(`🔍 Specific event filter:`, eventTitleFilter)
+        console.log(`🔍 Final event filter:`, eventTitleFilter)
         
         let query = supabase
           .from('business_events')
@@ -353,11 +358,14 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           .gte('event_date', new Date().toISOString().split('T')[0]) // Only future events
           .order('event_date', { ascending: true })
         
-        // If specific event mentioned, filter by event_name
+        // If specific event mentioned, filter by event_name (trim filter to handle spaces)
         if (eventTitleFilter) {
-          query = query.ilike('event_name', `%${eventTitleFilter}%`)
+          const trimmedFilter = eventTitleFilter.trim()
+          query = query.ilike('event_name', `%${trimmedFilter}%`)
+          console.log(`🔍 Filtering events with: "${trimmedFilter}"`)
         } else {
           query = query.limit(10)
+          console.log(`🔍 No filter - returning up to 10 events`)
         }
         
         const { data: events, error } = await query
