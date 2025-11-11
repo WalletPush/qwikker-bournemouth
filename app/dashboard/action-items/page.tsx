@@ -24,7 +24,19 @@ export default async function DashboardActionItemsPage() {
     redirect('/onboarding')
   }
 
-  const profile: Profile = profileData
+  // Get approved menus count for this business
+  const { count: approvedMenusCount } = await supabase
+    .from('menus')
+    .select('*', { count: 'exact', head: true })
+    .eq('business_id', profileData?.id)
+    .eq('status', 'approved')
+
+  // Add menus count to profile for action items logic
+  const profile: Profile = {
+    ...profileData,
+    approved_menus_count: approvedMenusCount || 0
+  }
+  
   const actionItemsCount = calculateActionItemsCount(profile)
 
   return (

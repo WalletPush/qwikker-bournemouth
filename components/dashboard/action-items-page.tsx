@@ -168,11 +168,11 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     })
   }
   
-  // Recommended menu/service list upload
-  if (!profile?.menu_url) {
+  // Recommended menu/service list upload (check new menus system)
+  if (!profile?.approved_menus_count || profile.approved_menus_count === 0) {
     optionalTodos.push({ 
       title: 'Upload full menu/service list (PDF)', 
-      href: '/dashboard/files#menu',
+      href: '/dashboard/files#menus',
       priority: 'RECOMMENDED',
       description: 'Critical for AI responses. Allows QWIKKER to recommend your business accurately.',
       icon: (

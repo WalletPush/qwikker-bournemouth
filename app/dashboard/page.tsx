@@ -30,12 +30,25 @@ export default async function DashboardPage() {
     .eq('user_id', data.claims.sub)
     .single()
 
+  // Get approved menus count for this business
+  const { count: approvedMenusCount } = await supabase
+    .from('menus')
+    .select('*', { count: 'exact', head: true })
+    .eq('business_id', profile?.id)
+    .eq('status', 'approved')
+
+  // Add menus count to profile for action items logic
+  const enrichedProfile = {
+    ...profile,
+    approved_menus_count: approvedMenusCount || 0
+  }
+
   // Calculate action items count using shared utility
-  const actionItemsCount = calculateActionItemsCount(profile)
+  const actionItemsCount = calculateActionItemsCount(enrichedProfile)
 
   return (
-    <DashboardLayout currentSection="dashboard" profile={profile} actionItemsCount={actionItemsCount}>
-      <ImprovedDashboardHome profile={profile} />
+    <DashboardLayout currentSection="dashboard" profile={enrichedProfile} actionItemsCount={actionItemsCount}>
+      <ImprovedDashboardHome profile={enrichedProfile} />
     </DashboardLayout>
   )
 }
