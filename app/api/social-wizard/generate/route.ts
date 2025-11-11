@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
     const prompt = buildPrompt(postType, content, businessName, city, businessType)
     console.log('📝 Prompt built, calling Claude...')
 
-    // Generate with Claude 3.5 Sonnet
+    // Generate with Claude 3.5 Sonnet (using latest available version)
     const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-5-sonnet-20240620',
       max_tokens: 1024,
       temperature: 0.9,
       system: `You are an elite creative director at a top advertising agency, specializing in viral Instagram content for premium local businesses. 
