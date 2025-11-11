@@ -277,12 +277,14 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
               <button
                 onClick={() => {
                   const walletPassId = currentUser?.wallet_pass_id
-                  const params = new URLSearchParams()
-                  if (walletPassId) params.set('wallet_pass_id', walletPassId)
-                  params.set('business', selectedEvent.business_id)
-                  window.location.href = `/user/discover?${params.toString()}`
+                  // Create slug from business name
+                  const slug = selectedEvent.business_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                  const url = walletPassId 
+                    ? `/user/business/${slug}?wallet_pass_id=${walletPassId}`
+                    : `/user/business/${slug}`
+                  window.location.href = url
                 }}
-                className="text-purple-400 hover:text-purple-300 text-sm mb-4 underline"
+                className="text-purple-400 hover:text-purple-300 text-sm mb-4 underline cursor-pointer"
               >
                 {selectedEvent.business_name}
               </button>
