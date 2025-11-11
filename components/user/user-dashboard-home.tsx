@@ -160,74 +160,60 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         <p className="text-slate-400">Your AI companion is ready to help you discover Bournemouth</p>
       </div>
 
-      {/* AI Companion - Compact & Engaging */}
-      <Link href={getNavUrl("/user/chat")} className="block group">
-        <Card className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-2 border-emerald-500/30 hover:border-emerald-400/60 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20 relative overflow-hidden">
-          {/* Subtle animated background */}
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          
-          <CardContent className="relative p-4">
-            <div className="flex items-center justify-between gap-4">
-              {/* Left: Icon + Text */}
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                {/* Glowing AI Icon */}
-                <div className="relative flex-shrink-0">
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-teal-400 rounded-xl blur-md opacity-50 group-hover:opacity-70 transition-opacity"></div>
-                  <div className="relative p-2.5 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl">
-                    <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                </div>
-                
-                {/* Text */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-bold text-white mb-0.5 flex items-center gap-2">
-                    AI Local Expert
-                    <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                      LIVE
-                    </span>
-                  </h3>
-                  <p className="text-slate-400 text-xs sm:text-sm">
-                    Ask about restaurants, deals, events & more
-                  </p>
-                </div>
-              </div>
-              
-              {/* Right: CTA Arrow */}
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/30 transition-colors">
-                  <svg className="w-4 h-4 text-emerald-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
+      {/* AI Companion - Beautiful & Engaging */}
+      <Card className="bg-gradient-to-br from-slate-900/50 via-emerald-900/20 to-slate-900/50 border border-emerald-500/40 relative overflow-hidden group hover:border-emerald-400/60 transition-all duration-300">
+        {/* Animated gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-transparent to-emerald-500/10 animate-pulse"></div>
+        
+        <CardContent className="relative p-6">
+          <div className="text-center max-w-2xl mx-auto">
+            {/* Icon */}
+            <div className="relative inline-block mb-4">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-teal-400 rounded-2xl blur-xl opacity-60 animate-pulse"></div>
+              <div className="relative p-4 bg-gradient-to-br from-emerald-500/30 to-teal-500/30 rounded-2xl border-2 border-emerald-400/50 backdrop-blur-sm">
+                <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
               </div>
             </div>
             
-            {/* Quick prompts row */}
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-800/40 rounded-md text-[11px] text-slate-400 border border-slate-700/50">
-                <svg className="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Best pizza?
+            {/* Title */}
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Your AI Local Guide
+            </h2>
+            
+            {/* Description */}
+            <p className="text-slate-300 text-sm mb-5">
+              Instant answers about {franchiseCity || 'your city'}. Find restaurants, grab exclusive deals, discover events, and get personalized recommendations.
+            </p>
+            
+            {/* Quick Suggestions */}
+            <div className="flex flex-wrap gap-2 justify-center mb-5">
+              <span className="px-3 py-1.5 bg-slate-800/60 border border-slate-700/60 rounded-lg text-xs text-slate-300">
+                "Where can I get pizza tonight?"
               </span>
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-800/40 rounded-md text-[11px] text-slate-400 border border-slate-700/50">
-                <svg className="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Show deals
+              <span className="px-3 py-1.5 bg-slate-800/60 border border-slate-700/60 rounded-lg text-xs text-slate-300">
+                "Show me all current deals"
               </span>
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-slate-800/40 rounded-md text-[11px] text-slate-400 border border-slate-700/50">
-                <svg className="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Events tonight?
+              <span className="hidden sm:inline-block px-3 py-1.5 bg-slate-800/60 border border-slate-700/60 rounded-lg text-xs text-slate-300">
+                "What's happening this weekend?"
               </span>
             </div>
-          </CardContent>
-        </Card>
-      </Link>
+            
+            {/* CTA Button */}
+            <Button asChild className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-bold px-8 py-6 text-base rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all duration-200 hover:scale-105">
+              <Link href={getNavUrl("/user/chat")}>
+                <span className="flex items-center gap-2">
+                  Start Chatting
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </span>
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Navigation Cards - Bigger */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
