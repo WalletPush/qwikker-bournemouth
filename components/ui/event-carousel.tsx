@@ -274,7 +274,18 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
             {/* Scrollable Content */}
             <div style={{ padding: '20px', maxHeight: '400px', overflowY: 'auto' }}>
               <h2 className="text-white text-xl font-bold mb-1">{selectedEvent.title}</h2>
-              <p className="text-purple-400 text-sm mb-4">📍 {selectedEvent.business_name}</p>
+              <button
+                onClick={() => {
+                  const walletPassId = currentUser?.wallet_pass_id
+                  const params = new URLSearchParams()
+                  if (walletPassId) params.set('wallet_pass_id', walletPassId)
+                  params.set('business', selectedEvent.business_id)
+                  window.location.href = `/user/discover?${params.toString()}`
+                }}
+                className="text-purple-400 hover:text-purple-300 text-sm mb-4 underline"
+              >
+                {selectedEvent.business_name}
+              </button>
               
               <div className="mb-4">
                 <h3 className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Description</h3>
@@ -284,14 +295,14 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
               <div className="border-t border-slate-700 pt-4 mb-4">
                 <h3 className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">Event Details</h3>
                 <div className="space-y-2 text-sm text-white">
-                  <div>📅 {formatDate(selectedEvent.start_date)}</div>
+                  <div>{formatDate(selectedEvent.start_date)}</div>
                   {selectedEvent.start_time && (
                     <div>
-                      🕐 {selectedEvent.start_time.substring(0, 5)}
+                      {selectedEvent.start_time.substring(0, 5)}
                       {selectedEvent.end_time && ` - ${selectedEvent.end_time.substring(0, 5)}`}
                     </div>
                   )}
-                  <div>📍 {selectedEvent.location}</div>
+                  <div>{selectedEvent.location}</div>
                 </div>
               </div>
 
