@@ -169,10 +169,12 @@ KNOWLEDGE RULES:
 - Never make up amenities, addresses, or hours
 - Always bold business names like **David's Grill Shack**
 
-EVENT MENTIONS:
-- When asked about events, describe them conversationally first (what, when, where)
-- After mentioning events, suggest they can see full details: "Want me to show you the event cards?"
-- Cards only appear when they ask for more info, say yes, or show interest
+EVENT HANDLING:
+- When asked about events, describe them briefly and conversationally (name, venue, day)
+- DO NOT format event details with "Event:", "Date:", "Time:", etc - that's ugly!
+- After mentioning, say: "Want me to pull up the event card with full details?"
+- When they say yes/interested, just say "Here you go!" - the visual card will appear automatically
+- NEVER manually format event info with dashes or structured text - let the cards do that!
 
 FLOW:
 ${state.currentBusiness ? 
@@ -277,19 +279,31 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     // 🎯 STEP 8: Fetch event cards ONLY if user is asking for details/more info
     // Don't show cards on first mention - let them show interest first!
     let eventCards: ChatResponse['eventCards'] = []
-    const wantsEventDetails = /\b(show me|tell me more|details|interested|sounds good|yes|yeah|sure|go on|what about|which one)\b/i.test(userMessage) &&
-                               conversationHistory.some(msg => 
-                                 msg.role === 'assistant' && 
-                                 /\b(event|show|concert|gig|happening)\b/i.test(msg.content)
-                               )
     
-    const isFollowUpEventQuery = /\b(show (me )?the event|see the event|event details|more about|tell me more)\b/i.test(userMessage)
+    // Check if AI mentioned events in recent conversation
+    const aiMentionedEvents = conversationHistory.some(msg => 
+      msg.role === 'assistant' && 
+      /\b(event|show|concert|gig|happening|tasting experience)\b/i.test(msg.content)
+    )
+    
+    // Check if user is showing interest or asking for details
+    const wantsEventDetails = aiMentionedEvents && /\b(show me|tell me more|details|interested|sounds good|yes|yeah|yep|sure|go on|what about|which one|pull up|card|full details)\b/i.test(userMessage)
+    
+    const isFollowUpEventQuery = /\b(show (me )?the event|see the event|event (details|card)|more about|tell me more|pull up)\b/i.test(userMessage)
+    
+    console.log(`🎉 EVENT CARD CHECK:`, {
+      userMessage,
+      aiMentionedEvents,
+      wantsEventDetails,
+      isFollowUpEventQuery,
+      willFetchCards: wantsEventDetails || isFollowUpEventQuery
+    })
     
     if (wantsEventDetails || isFollowUpEventQuery) {
       try {
         const supabase = createServiceRoleClient()
         
-        console.log(`🎉 User wants event details - fetching approved events for ${city}`)
+        console.log(`🎉 FETCHING EVENT CARDS - User wants event details for ${city}`)
         
         const { data: events, error } = await supabase
           .from('business_events')

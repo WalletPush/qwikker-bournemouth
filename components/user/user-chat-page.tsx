@@ -144,12 +144,17 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
     if (prefilledMessage && !hasAutoSent && messages.length > 0) {
       console.log('📨 Auto-sending pre-filled message:', prefilledMessage)
       setHasAutoSent(true)
+      
+      // Clear the URL parameter immediately
+      const newUrl = window.location.pathname + (currentUser?.wallet_pass_id ? `?wallet_pass_id=${currentUser.wallet_pass_id}` : '')
+      window.history.replaceState({}, '', newUrl)
+      
       // Wait a moment for welcome message to render, then send
       setTimeout(() => {
         handleSendMessage(prefilledMessage)
       }, 500)
     }
-  }, [searchParams, hasAutoSent, messages.length])
+  }, [searchParams, hasAutoSent, messages.length, currentUser])
 
   const handleSendMessage = async (message: string) => {
     if (!message.trim() || isTyping) return
