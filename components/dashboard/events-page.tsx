@@ -333,10 +333,45 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
     <div className="space-y-6">
       <ModalComponent />
 
+      {/* Events Promotion Banner */}
+      <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl p-6 mb-6">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-3">
+            <Calendar className="w-8 h-8 text-white" />
+          </div>
+          <div className="flex justify-center mb-3">
+            <span className="bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+              COMMUNITY EVENTS
+            </span>
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">
+            Promote Your Events to Local Customers
+          </h3>
+          <p className="text-slate-300 mb-4 leading-relaxed max-w-3xl mx-auto">
+            Connect with the community by promoting your events on Qwikker. From live music and workshops to special occasions, 
+            make sure your customers never miss what's happening at your venue.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
+            <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+              <Users className="w-4 h-4 text-purple-400 flex-shrink-0" />
+              <span>Increase foot traffic</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+              <Calendar className="w-4 h-4 text-purple-400 flex-shrink-0" />
+              <span>Build community engagement</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+              <Clock className="w-4 h-4 text-purple-400 flex-shrink-0" />
+              <span>Boost event attendance</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Events</h2>
+          <h2 className="text-2xl font-bold text-white">Events Management</h2>
           <p className="text-slate-400 mt-1">
             Create and manage events for {businessName}
           </p>
