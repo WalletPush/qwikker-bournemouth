@@ -82,6 +82,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [eventPreviewModal, setEventPreviewModal] = useState<{ open: boolean; event: any; businessName: string } | null>(null)
+  const [expandedEventDetails, setExpandedEventDetails] = useState<Set<string>>(new Set())
   
   // 🔍 SEARCH & FILTER STATE
   const [searchTerm, setSearchTerm] = useState('')
@@ -1623,6 +1624,132 @@ Qwikker Admin Team`
                                       </p>
                                     </div>
                                   </div>
+
+                                  {/* View Full Details Toggle */}
+                                  <button
+                                    onClick={() => {
+                                      const newExpanded = new Set(expandedEventDetails)
+                                      if (newExpanded.has(event.id)) {
+                                        newExpanded.delete(event.id)
+                                      } else {
+                                        newExpanded.add(event.id)
+                                      }
+                                      setExpandedEventDetails(newExpanded)
+                                    }}
+                                    className="text-sm text-purple-400 hover:text-purple-300 font-medium flex items-center gap-1 mt-2"
+                                  >
+                                    {expandedEventDetails.has(event.id) ? (
+                                      <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                        </svg>
+                                        Hide Full Details
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                        View Full Details
+                                      </>
+                                    )}
+                                  </button>
+
+                                  {/* Expanded Details Section */}
+                                  {expandedEventDetails.has(event.id) && (
+                                    <div className="mt-4 p-4 bg-slate-900/50 border border-purple-500/20 rounded-xl space-y-3 text-sm">
+                                      {/* Full Description */}
+                                      <div>
+                                        <h4 className="text-purple-300 font-semibold mb-1">Full Description</h4>
+                                        <p className="text-slate-300 whitespace-pre-wrap">{event.event_description}</p>
+                                      </div>
+
+                                      {/* Short Description */}
+                                      {event.event_short_description && (
+                                        <div>
+                                          <h4 className="text-purple-300 font-semibold mb-1">Short Description</h4>
+                                          <p className="text-slate-300">{event.event_short_description}</p>
+                                        </div>
+                                      )}
+
+                                      {/* Time Details */}
+                                      {(event.event_start_time || event.event_end_time) && (
+                                        <div>
+                                          <h4 className="text-purple-300 font-semibold mb-1">Time</h4>
+                                          <p className="text-slate-300">
+                                            {event.event_start_time && `Start: ${event.event_start_time}`}
+                                            {event.event_start_time && event.event_end_time && ' • '}
+                                            {event.event_end_time && `End: ${event.event_end_time}`}
+                                          </p>
+                                        </div>
+                                      )}
+
+                                      {/* Recurring Event Info */}
+                                      {event.is_recurring && (
+                                        <div>
+                                          <h4 className="text-purple-300 font-semibold mb-1">Recurring Event</h4>
+                                          <p className="text-slate-300">{event.recurrence_pattern || 'Pattern not specified'}</p>
+                                        </div>
+                                      )}
+
+                                      {/* Price Info */}
+                                      {event.price_info && (
+                                        <div>
+                                          <h4 className="text-purple-300 font-semibold mb-1">Price</h4>
+                                          <p className="text-slate-300">{event.price_info}</p>
+                                        </div>
+                                      )}
+
+                                      {/* Booking Information */}
+                                      {event.requires_booking && (
+                                        <div>
+                                          <h4 className="text-purple-300 font-semibold mb-1">Booking Required</h4>
+                                          {event.booking_url ? (
+                                            <a 
+                                              href={event.booking_url} 
+                                              target="_blank" 
+                                              rel="noopener noreferrer"
+                                              className="text-[#00d083] hover:text-[#00b86f] font-medium flex items-center gap-1"
+                                            >
+                                              {event.booking_url}
+                                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                              </svg>
+                                            </a>
+                                          ) : (
+                                            <p className="text-slate-400">Yes (no booking link provided)</p>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Custom Location */}
+                                      {(event.custom_location_name || event.custom_location_address) && (
+                                        <div>
+                                          <h4 className="text-purple-300 font-semibold mb-1">Custom Location</h4>
+                                          {event.custom_location_name && (
+                                            <p className="text-slate-300 font-medium">{event.custom_location_name}</p>
+                                          )}
+                                          {event.custom_location_address && (
+                                            <p className="text-slate-400 text-xs">{event.custom_location_address}</p>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Created Date */}
+                                      <div>
+                                        <h4 className="text-purple-300 font-semibold mb-1">Submitted</h4>
+                                        <p className="text-slate-400 text-xs">
+                                          {new Date(event.created_at).toLocaleDateString('en-GB', { 
+                                            day: 'numeric', 
+                                            month: 'long', 
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          })}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
 
                                   {/* Event Actions */}
                                   <div className="space-y-3 mt-4">
