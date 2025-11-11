@@ -333,24 +333,30 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         console.log(`🔍 Query result: ${events?.length || 0} events found, error:`, error)
         
+        console.log('🔍 Raw events data:', JSON.stringify(events, null, 2))
+        
         if (!error && events && events.length > 0) {
-          eventCards = events.map(event => ({
-            id: event.id,
-            title: event.event_name,
-            description: event.event_description,
-            event_type: event.event_type,
-            start_date: event.event_date,
-            start_time: event.event_start_time,
-            end_date: null, // Not in schema
-            end_time: event.event_end_time,
-            location: event.custom_location || event.business_profiles.business_name,
-            ticket_url: event.booking_url,
-            image_url: event.event_image,
-            business_name: event.business_profiles.business_name,
-            business_id: event.business_id
-          }))
+          eventCards = events.map(event => {
+            console.log('🔄 Mapping event:', event.event_name)
+            return {
+              id: event.id,
+              title: event.event_name?.trim() || 'Untitled Event',
+              description: event.event_description || 'No description',
+              event_type: event.event_type || 'Other',
+              start_date: event.event_date,
+              start_time: event.event_start_time || null,
+              end_date: null, // Not in schema
+              end_time: event.event_end_time || null,
+              location: event.custom_location || event.business_profiles?.business_name || 'TBA',
+              ticket_url: event.booking_url || null,
+              image_url: event.event_image || null,
+              business_name: event.business_profiles?.business_name || 'Unknown Business',
+              business_id: event.business_id
+            }
+          })
           
-          console.log(`🎉 Found ${eventCards.length} event cards to show${eventTitleFilter ? ` (filtered by: ${eventTitleFilter})` : ''}`)
+          console.log(`✅ Successfully mapped ${eventCards.length} event cards`)
+          console.log('📦 Event cards data:', JSON.stringify(eventCards, null, 2))
         } else if (error) {
           console.error('❌ Error fetching events:', error)
         } else {
