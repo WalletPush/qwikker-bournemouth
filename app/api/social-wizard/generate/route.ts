@@ -46,16 +46,25 @@ STYLE RULES:
 - Sound human, not like a brand
 - Every word must punch
 
-DESIGN INSTRUCTIONS:
-You MUST specify DIFFERENT visual styling each time to make every post unique:
-- textColor: "white" | "black" | "gradient-gold" | "neon-green" | "hot-pink" | "electric-blue"
-- textEffect: "bold-shadow" | "outline-glow" | "3d-pop" | "neon" | "vintage" | "graffiti"
-- layout: "centered" | "top-left" | "bottom-right" | "diagonal" | "stacked"
-- mood: "energetic" | "elegant" | "playful" | "mysterious" | "bold" | "minimal"
+DESIGN INSTRUCTIONS - CREATE A UNIQUE DESIGN EVERY TIME:
+You MUST specify COMPLETELY DIFFERENT visual styling each time. Think like a creative director with unlimited design options.
 
-IMPORTANT: Be creative! Don't always use white text with bold-shadow. Mix it up! Try gradient-gold with neon effect, or hot-pink with 3d-pop, etc.
+VARY EVERYTHING:
+- textColor: "white" | "black" | "gradient-gold" | "gradient-purple" | "gradient-sunset" | "neon-green" | "neon-pink" | "neon-blue" | "hot-pink" | "electric-blue" | "coral" | "mint" | "lavender" | "crimson"
+- textEffect: "bold-shadow" | "outline-glow" | "3d-pop" | "neon" | "vintage" | "graffiti" | "double-stroke" | "glitch" | "metallic" | "glass" | "fire" | "ice"
+- textPosition: "top-center" | "center" | "bottom-center" | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "diagonal-topleft" | "diagonal-topright"
+- textSize: "massive" | "large" | "medium" | "compact"
+- fontStyle: "ultra-bold" | "bold" | "black" | "condensed" | "wide" | "italic-bold"
+- backgroundOverlay: "dark-gradient" | "light-gradient" | "blur-heavy" | "blur-light" | "vignette" | "split-tone" | "duotone" | "none"
+- accentElement: "none" | "corner-badge" | "side-stripe" | "top-banner" | "bottom-banner" | "geometric-shapes" | "confetti"
 
-Return ONLY valid JSON: { headline, caption, hashtags, style: { textColor, textEffect, layout, mood } }`,
+IMPORTANT: 
+- BE WILDLY CREATIVE! Every regeneration should look COMPLETELY different
+- Mix unexpected combinations (e.g., lavender text + metallic effect + diagonal layout)
+- Don't default to the same safe choices
+- Make each post visually distinct from the last
+
+Return ONLY valid JSON: { headline, caption, hashtags, style: { textColor, textEffect, textPosition, textSize, fontStyle, backgroundOverlay, accentElement } }`,
       messages: [
         {
           role: 'user',

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { PostTheme, ThemeThumbnail, type ThemeType } from './social-post-themes-v2'
+import { DynamicPostTheme } from './dynamic-post-theme'
 import { createClient } from '@/lib/supabase/client'
 
 type PostType = 'offer' | 'secret-menu' | 'event' | 'general'
@@ -68,11 +69,14 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     hashtags: ''
   })
   
-  const [postStyle, setPostStyle] = useState<PostStyle>({
+  const [postStyle, setPostStyle] = useState<any>({
     textColor: 'white',
     textEffect: 'bold-shadow',
-    layout: 'centered',
-    mood: 'energetic'
+    textPosition: 'center',
+    textSize: 'large',
+    fontStyle: 'ultra-bold',
+    backgroundOverlay: 'dark-gradient',
+    accentElement: 'none'
   })
 
   // Fetch available content when component mounts (only on select step)
@@ -600,6 +604,22 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                           <p className="text-slate-400">Generating your post...</p>
                         </div>
                       </div>
+                    ) : postStyle.textPosition ? (
+                      <DynamicPostTheme
+                        headline={postContent.headline || 'Your headline will appear here'}
+                        backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                        logoUrl={profile?.logo}
+                        businessName={profile?.business_name}
+                        style={{
+                          textColor: postStyle.textColor,
+                          textEffect: postStyle.textEffect,
+                          textPosition: postStyle.textPosition,
+                          textSize: postStyle.textSize,
+                          fontStyle: postStyle.fontStyle,
+                          backgroundOverlay: postStyle.backgroundOverlay,
+                          accentElement: postStyle.accentElement
+                        }}
+                      />
                     ) : (
                       <PostTheme
                         theme={selectedTheme}
