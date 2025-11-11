@@ -188,11 +188,11 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
       if (eventImageFile) {
         const formDataImg = new FormData()
         formDataImg.append('file', eventImageFile)
-        formDataImg.append('upload_preset', 'qwikker_unsigned')
-        formDataImg.append('cloud_name', 'djctnst0t')
+        formDataImg.append('upload_preset', 'unsigned_qwikker')
+        formDataImg.append('folder', 'qwikker/events')
 
         const response = await fetch(
-          'https://api.cloudinary.com/v1_1/djctnst0t/image/upload',
+          'https://api.cloudinary.com/v1_1/dsh32kke7/image/upload',
           {
             method: 'POST',
             body: formDataImg,
@@ -200,6 +200,8 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
         )
 
         if (!response.ok) {
+          const errorText = await response.text()
+          console.error('Cloudinary upload error:', errorText)
           throw new Error('Failed to upload image')
         }
 
