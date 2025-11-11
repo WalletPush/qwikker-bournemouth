@@ -240,7 +240,8 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
       {/* More Info Modal - Rendered via Portal */}
       {mounted && selectedEvent && createPortal(
         <div 
-          className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 backdrop-blur-md"
+          style={{ zIndex: 999999 }}
           onClick={() => setSelectedEvent(null)}
         >
           <div 
