@@ -2,7 +2,8 @@
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface Event {
   id: string
@@ -29,6 +30,11 @@ interface EventCarouselProps {
 export function EventCarousel({ events, currentUser, className = '' }: EventCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const getEventTypeBadge = (type: string) => {
     const typeColors: Record<string, string> = {
@@ -231,8 +237,8 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
         </div>
       )}
 
-      {/* More Info Modal */}
-      {selectedEvent && (
+      {/* More Info Modal - Rendered via Portal */}
+      {mounted && selectedEvent && createPortal(
         <div 
           className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"
           onClick={() => setSelectedEvent(null)}
@@ -378,7 +384,8 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
