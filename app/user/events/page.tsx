@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { UserEventsPage } from '@/components/user/user-events-page'
+import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { cookies } from 'next/headers'
 
 export default async function Events() {
@@ -20,6 +21,10 @@ export default async function Events() {
   // Get city from first event or default to Bournemouth
   const city = events[0]?.city || 'Bournemouth'
 
-  return <UserEventsPage events={events} walletPassId={walletPassId} city={city} />
+  return (
+    <UserDashboardLayout currentSection="events" walletPassId={walletPassId}>
+      <UserEventsPage events={events} walletPassId={walletPassId} city={city} />
+    </UserDashboardLayout>
+  )
 }
 
