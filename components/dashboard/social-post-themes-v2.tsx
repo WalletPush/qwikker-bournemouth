@@ -18,8 +18,8 @@ interface PostThemeProps {
 }
 
 export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, businessName, style }: PostThemeProps) {
-  // Extract just first sentence from caption
-  const firstSentence = caption.split(/[.!?]/)[0] + '.'
+  // NOTE: Caption is NOT shown on the image - it's for the Instagram post text below!
+  // Only the HEADLINE appears on the image
   
   // Apply AI-generated styles
   const getTextColorClass = (color: string) => {
@@ -66,20 +66,11 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         <div className="absolute inset-0 flex flex-col items-center justify-center p-16">
           {/* Headline - HUGE and bold with AI STYLES */}
           <h1 
-            className={`text-8xl font-black ${getTextColorClass(textColor)} text-center leading-[0.9] tracking-tight mb-8 max-w-5xl`}
+            className={`text-9xl font-black ${getTextColorClass(textColor)} text-center leading-[0.85] tracking-tight max-w-5xl`}
             style={getTextEffect(textEffect)}
           >
             {headline}
           </h1>
-          
-          {/* Small accent bar */}
-          <div className="w-20 h-1 bg-[#00d083] mb-8" />
-          
-          {/* Subtext - minimal */}
-          <p className={`text-2xl font-bold ${getTextColorClass(textColor)} opacity-90 text-center max-w-3xl leading-tight`}
-             style={{ textShadow: '0 4px 20px rgba(0,0,0,0.9)' }}>
-            {firstSentence}
-          </p>
         </div>
         
         {/* Business Logo - top left */}
@@ -121,12 +112,9 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           
           {/* Center: Main content */}
           <div className="max-w-4xl">
-            <h1 className="text-8xl font-black text-black leading-[0.85] tracking-tighter mb-8">
+            <h1 className="text-9xl font-black text-black leading-[0.8] tracking-tighter">
               {headline}
             </h1>
-            <p className="text-2xl text-gray-700 font-medium leading-snug">
-              {firstSentence}
-            </p>
           </div>
           
           {/* Bottom: Branding */}
@@ -155,15 +143,10 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* Right: Content on dark */}
         <div className="w-1/2 bg-gradient-to-br from-slate-950 to-slate-900 p-12 flex flex-col justify-center relative">
-          {/* Headline */}
-          <h1 className="text-6xl font-black text-white leading-tight mb-6">
+          {/* Headline - ONLY text on image */}
+          <h1 className="text-7xl font-black text-white leading-tight">
             {headline}
           </h1>
-          
-          {/* Subtext */}
-          <p className="text-lg text-white/80 leading-relaxed mb-8">
-            {firstSentence}
-          </p>
           
           {/* Business logo - top of right panel */}
           {logoUrl && (
@@ -196,25 +179,16 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* Content centered */}
         <div className="absolute inset-0 flex flex-col items-center justify-center p-20 text-center">
-          {/* MASSIVE headline */}
+          {/* MASSIVE headline - ONLY text */}
           <h1 
-            className="text-9xl font-black text-white leading-[0.85] tracking-tighter mb-10 max-w-6xl uppercase"
+            className="text-[10rem] font-black text-white leading-[0.8] tracking-tighter max-w-6xl uppercase"
             style={{ 
-              textShadow: '0 15px 60px rgba(0,0,0,1)',
-              WebkitTextStroke: '3px rgba(0,0,0,0.5)'
+              textShadow: '0 20px 80px rgba(0,0,0,1)',
+              WebkitTextStroke: '4px rgba(0,0,0,0.5)'
             }}
           >
             {headline}
           </h1>
-          
-          {/* Accent line */}
-          <div className="w-32 h-2 bg-[#00d083] mb-10" />
-          
-          {/* Minimal subtext */}
-          <p className="text-2xl font-bold text-white/90 max-w-3xl"
-             style={{ textShadow: '0 4px 20px rgba(0,0,0,1)' }}>
-            {firstSentence}
-          </p>
         </div>
         
         {/* Business logo - top left corner */}
@@ -250,22 +224,16 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* Content at bottom */}
         <div className="absolute inset-0 p-14 flex flex-col justify-end">
-          {/* Headline */}
+          {/* Headline - ONLY text on image */}
           <h1 
-            className="text-7xl font-black text-white leading-tight mb-6 max-w-5xl"
+            className="text-8xl font-black text-white leading-tight max-w-5xl"
             style={{ 
-              textShadow: '0 8px 32px rgba(0,0,0,1)',
+              textShadow: '0 10px 40px rgba(0,0,0,1)',
               letterSpacing: '-0.02em'
             }}
           >
             {headline}
           </h1>
-          
-          {/* Subtext */}
-          <p className="text-xl text-white/85 font-medium leading-relaxed max-w-3xl mb-8"
-             style={{ textShadow: '0 4px 16px rgba(0,0,0,0.9)' }}>
-            {firstSentence}
-          </p>
           
           {/* Bottom bar */}
           <div className="flex items-center justify-between pt-6 border-t border-white/20">
