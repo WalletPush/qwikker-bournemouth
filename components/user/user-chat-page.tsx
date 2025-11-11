@@ -40,6 +40,21 @@ interface ChatMessage {
     businessName: string
     businessId: string
   }>
+  eventCards?: Array<{
+    id: string
+    title: string
+    description: string
+    event_type: string
+    start_date: string
+    start_time?: string
+    end_date?: string
+    end_time?: string
+    location: string
+    ticket_url?: string
+    image_url?: string
+    business_name: string
+    business_id: string
+  }>
 }
 
 export function UserChatPage({ currentUser }: { currentUser?: any }) {
@@ -184,7 +199,8 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
         sources: data.sources || [],
         quickReplies: data.quickReplies || [],
         businessCarousel: data.businessCarousel,
-        walletActions: data.walletActions
+        walletActions: data.walletActions,
+        eventCards: data.eventCards
       }
 
       setMessages(prev => [...prev, aiMessage])
@@ -551,6 +567,65 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Event Cards */}
+                {message.eventCards && message.eventCards.length > 0 && (
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs text-slate-400 mb-2 px-2">🎉 Upcoming Events:</p>
+                    {message.eventCards.map((event, index) => (
+                      <Card key={index} className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 border-purple-500/30 overflow-hidden">
+                        {event.image_url && (
+                          <div className="relative h-32 w-full overflow-hidden">
+                            <img 
+                              src={event.image_url} 
+                              alt={event.title}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600/90 text-white text-xs font-semibold rounded-full">
+                              {event.event_type}
+                            </div>
+                          </div>
+                        )}
+                        <CardContent className="p-4">
+                          <h3 className="font-bold text-white mb-1">{event.title}</h3>
+                          <p className="text-xs text-purple-300 mb-2">by {event.business_name}</p>
+                          <p className="text-sm text-slate-300 mb-3 line-clamp-2">{event.description}</p>
+                          
+                          <div className="flex flex-col gap-2 text-xs text-slate-400 mb-3">
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              <span>{new Date(event.start_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                              {event.start_time && <span>at {event.start_time}</span>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <span className="line-clamp-1">{event.location}</span>
+                            </div>
+                          </div>
+
+                          {event.ticket_url && (
+                            <a 
+                              href={event.ticket_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                            >
+                              <span>Get Tickets</span>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                            </a>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 )}
 

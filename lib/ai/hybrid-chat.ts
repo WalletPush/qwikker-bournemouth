@@ -56,6 +56,21 @@ interface ChatResponse {
     businessName: string
     businessId: string
   }>
+  eventCards?: Array<{
+    id: string
+    title: string
+    description: string
+    event_type: string
+    start_date: string
+    start_time?: string
+    end_date?: string
+    end_time?: string
+    location: string
+    ticket_url?: string
+    image_url?: string
+    business_name: string
+    business_id: string
+  }>
 }
 
 /**
@@ -153,6 +168,11 @@ KNOWLEDGE RULES:
 - Only say "I don't have that info" if you've genuinely checked the business entry and it's missing
 - Never make up amenities, addresses, or hours
 - Always bold business names like **David's Grill Shack**
+
+EVENT MENTIONS:
+- When asked about events, describe them conversationally first (what, when, where)
+- After mentioning events, suggest they can see full details: "Want me to show you the event cards?"
+- Cards only appear when they ask for more info, say yes, or show interest
 
 FLOW:
 ${state.currentBusiness ? 
@@ -254,6 +274,74 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       }
     }
     
+    // 🎯 STEP 8: Fetch event cards ONLY if user is asking for details/more info
+    // Don't show cards on first mention - let them show interest first!
+    let eventCards: ChatResponse['eventCards'] = []
+    const wantsEventDetails = /\b(show me|tell me more|details|interested|sounds good|yes|yeah|sure|go on|what about|which one)\b/i.test(userMessage) &&
+                               conversationHistory.some(msg => 
+                                 msg.role === 'assistant' && 
+                                 /\b(event|show|concert|gig|happening)\b/i.test(msg.content)
+                               )
+    
+    const isFollowUpEventQuery = /\b(show (me )?the event|see the event|event details|more about|tell me more)\b/i.test(userMessage)
+    
+    if (wantsEventDetails || isFollowUpEventQuery) {
+      try {
+        const supabase = createServiceRoleClient()
+        
+        console.log(`🎉 User wants event details - fetching approved events for ${city}`)
+        
+        const { data: events, error } = await supabase
+          .from('business_events')
+          .select(`
+            id,
+            title,
+            description,
+            event_type,
+            start_date,
+            start_time,
+            end_date,
+            end_time,
+            location,
+            ticket_url,
+            image_url,
+            business_id,
+            business_profiles!inner(business_name, city)
+          `)
+          .eq('status', 'approved')
+          .eq('business_profiles.city', city)
+          .gte('start_date', new Date().toISOString().split('T')[0]) // Only future events
+          .order('start_date', { ascending: true })
+          .limit(10)
+        
+        if (!error && events && events.length > 0) {
+          eventCards = events.map(event => ({
+            id: event.id,
+            title: event.title,
+            description: event.description,
+            event_type: event.event_type,
+            start_date: event.start_date,
+            start_time: event.start_time,
+            end_date: event.end_date,
+            end_time: event.end_time,
+            location: event.location,
+            ticket_url: event.ticket_url,
+            image_url: event.image_url,
+            business_name: event.business_profiles.business_name,
+            business_id: event.business_id
+          }))
+          
+          console.log(`🎉 Found ${eventCards.length} event cards to show`)
+        } else if (error) {
+          console.error('❌ Error fetching events:', error)
+        } else {
+          console.log('ℹ️ No upcoming events found')
+        }
+      } catch (error) {
+        console.error('❌ Error fetching event cards:', error)
+      }
+    }
+    
     console.log(`✅ Response generated (${aiResponse.length} chars) using ${modelToUse}`)
     
     return {
@@ -261,6 +349,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       response: aiResponse,
       sources,
       walletActions,
+      eventCards,
       modelUsed: modelToUse,
       classification
     }

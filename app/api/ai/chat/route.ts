@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
       quickReplies,
       businessCarousel: result.businessCarousel,
       walletActions: result.walletActions,
+      eventCards: result.eventCards,
       metadata: {
         city,
         userName,
