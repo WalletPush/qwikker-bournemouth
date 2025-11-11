@@ -296,8 +296,11 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-3xl font-bold text-white mb-2">
-                  ✨ Select Your Content
+                <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+                  <svg className="w-8 h-8 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Select Your Content
                 </h2>
                 <p className="text-slate-400">
                   {getPostTypeLabel(postType)}
@@ -530,7 +533,12 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                       Generating with AI...
                     </>
                   ) : (
-                    <>✨ Generate Post with AI</>
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Generate Post with AI
+                    </>
                   )}
                 </Button>
               )}
@@ -549,8 +557,11 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-3xl font-bold text-white mb-2">
-                ✨ Edit Your Post
+              <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+                <svg className="w-8 h-8 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Your Post
               </h2>
               <p className="text-slate-400">
                 {selectedContent?.title}
@@ -755,9 +766,12 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                       size="sm"
                       onClick={handleRegenerate}
                       disabled={isGenerating}
-                      className="border-[#00d083] text-[#00d083] hover:bg-[#00d083] hover:text-black"
+                      className="border-[#00d083] text-[#00d083] hover:bg-[#00d083] hover:text-black flex items-center gap-2"
                     >
-                      ✨ Regenerate
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Regenerate
                     </Button>
                     <Button
                       variant="outline"
@@ -783,7 +797,10 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
                   <CardTitle className="text-white text-sm flex items-center gap-2">
-                    🎨 Current Style
+                    <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                    </svg>
+                    Current Style
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -795,9 +812,12 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                     <Button
                       onClick={() => setStep('select')}
                       variant="outline"
-                      className="border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10"
+                      className="border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10 flex items-center gap-2"
                     >
-                      🔄 Try Different Style
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Try Different Style
                     </Button>
                   </div>
                 </CardContent>
@@ -807,16 +827,22 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
               <div className="flex gap-3">
                 <Button
                   onClick={handleDownload}
-                  className="flex-1 bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold"
+                  className="flex-1 bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold flex items-center justify-center gap-2"
                 >
-                  ⬇️ Download Post
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download Post
                 </Button>
                 <Button
                   variant="outline"
-                  className="border-slate-600 text-slate-300"
+                  className="border-slate-600 text-slate-300 flex items-center gap-2"
                   disabled
                 >
-                  💾 Save Draft
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                  </svg>
+                  Save Draft
                 </Button>
               </div>
             </div>
