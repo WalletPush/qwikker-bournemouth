@@ -233,12 +233,12 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
         </div>
       )}
 
-      {/* Simple Modal - NO PORTAL, JUST WORKS */}
+      {/* Enhanced Modal */}
       {showModal && selectedEvent && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop with blur */}
           <div 
-            className="fixed inset-0 bg-black/70"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 }}
             onClick={() => {
               setShowModal(false)
@@ -248,52 +248,103 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
           
           {/* Modal Content */}
           <div 
-            className="fixed top-1/2 left-1/2 w-full max-w-sm bg-slate-800 rounded-lg shadow-xl p-4"
+            className="fixed top-1/2 left-1/2 w-[90%] max-w-md bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden"
             style={{ 
               position: 'fixed',
               transform: 'translate(-50%, -50%)',
               zIndex: 51,
-              maxHeight: '80vh',
+              maxHeight: '85vh',
               overflowY: 'auto'
             }}
           >
-            {/* Close Button */}
-            <button
-              onClick={() => {
-                setShowModal(false)
-                setSelectedEvent(null)
-              }}
-              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center text-xl leading-none"
-            >
-              ×
-            </button>
+            {/* Header with Image */}
+            {selectedEvent.image_url && (
+              <div className="relative h-32 w-full">
+                <img 
+                  src={selectedEvent.image_url} 
+                  alt={selectedEvent.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
+                
+                {/* Event Type Badge */}
+                <div className="absolute top-3 left-3">
+                  {getEventTypeBadge(selectedEvent.event_type)}
+                </div>
+                
+                {/* Close Button */}
+                <button
+                  onClick={() => {
+                    setShowModal(false)
+                    setSelectedEvent(null)
+                  }}
+                  className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-sm text-white flex items-center justify-center transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
 
             {/* Content */}
-            <div className="mt-2">
-              <h3 className="text-white font-bold text-lg mb-1 pr-8">{selectedEvent.title}</h3>
-              <p className="text-purple-300 text-sm mb-3">{selectedEvent.business_name}</p>
+            <div className="p-5">
+              <h3 className="text-white font-bold text-xl mb-1 leading-tight">{selectedEvent.title}</h3>
+              <p className="text-purple-400 text-sm font-medium mb-4 flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                {selectedEvent.business_name}
+              </p>
               
-              <p className="text-slate-300 text-sm mb-4">{selectedEvent.description}</p>
+              <p className="text-slate-300 text-sm leading-relaxed mb-4">{selectedEvent.description}</p>
               
-              <div className="space-y-2 mb-4 text-sm">
-                <div className="flex items-center gap-2 text-slate-200">
-                  <span className="font-semibold">📅</span>
-                  {formatDate(selectedEvent.start_date)}
+              {/* Details Grid */}
+              <div className="grid gap-2 mb-5 bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-slate-400 text-xs">Date</div>
+                    <div className="text-white font-medium">{formatDate(selectedEvent.start_date)}</div>
+                  </div>
                 </div>
+                
                 {selectedEvent.start_time && (
-                  <div className="flex items-center gap-2 text-slate-200">
-                    <span className="font-semibold">🕐</span>
-                    {selectedEvent.start_time.substring(0, 5)}
-                    {selectedEvent.end_time && ` - ${selectedEvent.end_time.substring(0, 5)}`}
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-slate-400 text-xs">Time</div>
+                      <div className="text-white font-medium">
+                        {selectedEvent.start_time.substring(0, 5)}
+                        {selectedEvent.end_time && ` - ${selectedEvent.end_time.substring(0, 5)}`}
+                      </div>
+                    </div>
                   </div>
                 )}
-                <div className="flex items-center gap-2 text-slate-200">
-                  <span className="font-semibold">📍</span>
-                  {selectedEvent.location}
+                
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-slate-400 text-xs">Location</div>
+                    <div className="text-white font-medium">{selectedEvent.location}</div>
+                  </div>
                 </div>
               </div>
 
-              {/* Buttons */}
+              {/* Action Buttons */}
               <div className="flex gap-2">
                 {selectedEvent.ticket_url && (
                   <a 
@@ -302,14 +353,14 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
                     rel="noopener noreferrer"
                     className="flex-1"
                   >
-                    <Button className="w-full bg-green-600 hover:bg-green-700 text-white text-sm">
+                    <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg shadow-green-500/20">
                       Get Tickets
                     </Button>
                   </a>
                 )}
                 <Button 
                   variant="outline"
-                  className="flex-1 border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-white text-sm"
+                  className="flex-1 border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-white font-semibold"
                   onClick={() => {
                     const walletPassId = currentUser?.wallet_pass_id
                     const params = new URLSearchParams()
@@ -318,7 +369,7 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
                     window.location.href = `/user/events?${params.toString()}`
                   }}
                 >
-                  View Full
+                  Full Details
                 </Button>
               </div>
             </div>
