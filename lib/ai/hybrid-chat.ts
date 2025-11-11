@@ -310,9 +310,35 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         const tastingMentioned = /tasting experience|tasting night|cocktail tasting/i.test(recentMessages)
         const jazzMentioned = /jazz night|live jazz/i.test(recentMessages)
         
+        // 🆕 Check for date mentions in the CURRENT user message and AI response
+        const allRelevantText = `${userMessage} ${aiResponse} ${recentMessages}`
+        const dateMatch = allRelevantText.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(?:december|dec|november|nov|january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|october|oct)\b/i)
+        
+        let specificDate: string | null = null
+        if (dateMatch) {
+          // Parse the date from the match
+          const day = parseInt(dateMatch[1])
+          const monthStr = dateMatch[0].match(/(december|dec|november|nov|january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|october|oct)/i)?.[1].toLowerCase()
+          
+          const monthMap: Record<string, number> = {
+            'january': 0, 'jan': 0, 'february': 1, 'feb': 1, 'march': 2, 'mar': 2,
+            'april': 3, 'apr': 3, 'may': 4, 'june': 5, 'jun': 5,
+            'july': 6, 'jul': 6, 'august': 7, 'aug': 7, 'september': 8, 'sep': 8,
+            'october': 9, 'oct': 9, 'november': 10, 'nov': 10, 'december': 11, 'dec': 11
+          }
+          
+          if (monthStr && monthMap[monthStr] !== undefined) {
+            const year = new Date().getFullYear()
+            const date = new Date(year, monthMap[monthStr], day)
+            specificDate = date.toISOString().split('T')[0]
+            console.log(`📅 Detected specific date in message: ${specificDate} (${dateMatch[0]})`)
+          }
+        }
+        
         console.log(`🔍 Event detection in last 4 messages:`)
         console.log(`   - Tasting mentioned: ${tastingMentioned}`)
         console.log(`   - Jazz mentioned: ${jazzMentioned}`)
+        console.log(`   - Specific date detected: ${specificDate}`)
         console.log(`   - Recent messages:`, conversationHistory.slice(-4).map(m => m.content.substring(0, 50)))
         
         let query = supabase
@@ -336,8 +362,13 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           .gte('event_date', new Date().toISOString().split('T')[0])
           .order('event_date', { ascending: true })
         
-        // Filter by specific event if mentioned in recent conversation
-        if (tastingMentioned) {
+        // 🎯 PRIORITY 1: Filter by specific date if mentioned
+        if (specificDate) {
+          query = query.eq('event_date', specificDate)
+          console.log(`🎯 Filtering for events on: ${specificDate}`)
+        }
+        // 🎯 PRIORITY 2: Filter by specific event type if mentioned
+        else if (tastingMentioned) {
           query = query.ilike('event_name', '%tasting%')
           console.log(`🎯 Filtering for: Tasting Experience`)
         } else if (jazzMentioned) {
