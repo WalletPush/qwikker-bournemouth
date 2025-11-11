@@ -424,19 +424,23 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header with Icon */}
-        <div className="mb-8 text-center">
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-center mb-8">
+          <div className="flex flex-col items-center gap-6 mb-6">
+            <div className="p-4 bg-[#00d083]/10 rounded-full border border-[#00d083]/30">
+              <svg className="w-10 h-10 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-purple-400">
-              Upcoming Events
-            </h1>
+            <div>
+              <h1 className="text-5xl font-bold text-[#00d083] mb-2">
+                Upcoming Events
+              </h1>
+              <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-[#00d083] to-transparent rounded-full" />
+            </div>
           </div>
-          <p className="text-lg text-slate-300 mb-2">Discover live music, workshops, tastings, and special occasions</p>
-          <p className="text-slate-400">All events are happening around {city}</p>
+          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+            Discover live music, workshops, tastings, and special occasions around {city}
+          </p>
         </div>
 
         {/* Clickable Filter Cards - Mobile First */}
