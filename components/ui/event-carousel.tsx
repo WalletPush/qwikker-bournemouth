@@ -133,22 +133,18 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
                       <span className="line-clamp-1">{event.business_name}</span>
                     </p>
                     
+                    {/* Description - NEW */}
+                    <p className="text-xs text-slate-400 mb-3 line-clamp-2 leading-relaxed">
+                      {event.description}
+                    </p>
+                    
                     {/* Date & Time - Compact */}
-                    <div className="flex items-start gap-2 text-xs text-slate-300 mb-2">
-                      <div className="flex items-center gap-1 flex-1">
-                        <svg className="w-3 h-3 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span className="line-clamp-1">{formatDate(event.start_date)}</span>
-                      </div>
-                      {event.start_time && (
-                        <div className="flex items-center gap-1">
-                          <svg className="w-3 h-3 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>{event.start_time.substring(0, 5)}</span>
-                        </div>
-                      )}
+                    <div className="flex items-center gap-1 text-xs text-slate-300 mb-1">
+                      <svg className="w-3 h-3 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="line-clamp-1">{formatDate(event.start_date)}</span>
+                      {event.start_time && <span className="text-slate-400">• {event.start_time.substring(0, 5)}</span>}
                     </div>
                     
                     {/* Location - Compact */}
@@ -160,20 +156,30 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
                       <span className="line-clamp-1">{event.location}</span>
                     </div>
 
-                    {/* Ticket Button - Compact */}
-                    {event.ticket_url && (
-                      <a 
-                        href={event.ticket_url.startsWith('http') ? event.ticket_url : `https://${event.ticket_url}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="block w-full"
+                    {/* Action Buttons - NEW */}
+                    <div className="space-y-1.5">
+                      <Button 
+                        variant="outline"
+                        className="w-full border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold py-2 transition-all duration-200"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // TODO: Open modal
+                          console.log('More Info clicked for:', event.id)
+                        }}
                       >
-                        <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold py-2 shadow-md hover:shadow-lg transition-all duration-200">
-                          Get Tickets
-                        </Button>
-                      </a>
-                    )}
+                        More Info
+                      </Button>
+                      <Button 
+                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold py-2 shadow-md hover:shadow-lg transition-all duration-200"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // TODO: Navigate to events page with hero card
+                          console.log('View Event clicked for:', event.id)
+                        }}
+                      >
+                        View Event
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
