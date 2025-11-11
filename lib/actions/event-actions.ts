@@ -372,9 +372,12 @@ export async function approveEvent(eventId: string): Promise<{
     console.log('🎯 approveEvent called for eventId:', eventId)
     
     // Use service role client for admin actions (bypasses RLS)
+    console.log('🔧 Creating service role client...')
     const supabase = createServiceRoleClient()
+    console.log('✅ Service role client created')
 
     // Approve the event
+    console.log('📝 Updating event status to approved...')
     const { data, error } = await supabase
       .from('business_events')
       .update({
@@ -385,25 +388,42 @@ export async function approveEvent(eventId: string): Promise<{
       .select()
 
     if (error) {
-      console.error('❌ Error approving event:', error)
+      console.error('❌ Error approving event in database:', error)
       return { success: false, error: error.message }
+    }
+
+    if (!data || data.length === 0) {
+      console.error('❌ No event found with ID:', eventId)
+      return { success: false, error: 'Event not found' }
     }
 
     console.log('✅ Event approved in database:', data)
 
+    console.log('🔄 Revalidating paths...')
     revalidatePath('/admin')
     revalidatePath('/user/events')
     revalidatePath('/dashboard/events')
+    console.log('✅ Paths revalidated')
 
     // Add to knowledge base for AI chat
     console.log('📚 Syncing event to knowledge base...')
     const syncResult = await syncEventToKnowledgeBase(eventId)
     console.log('📚 Knowledge base sync result:', syncResult)
 
+    if (!syncResult.success) {
+      console.error('⚠️ Knowledge base sync failed, but event was approved:', syncResult.error)
+      // Don't fail the whole operation, just warn
+      // The event is still approved in the database
+    }
+
+    console.log('🎉 Event approval complete!')
     return { success: true }
   } catch (error) {
-    console.error('❌ Error in approveEvent:', error)
-    return { success: false, error: 'Failed to approve event' }
+    console.error('❌ EXCEPTION in approveEvent:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('❌ Error details:', errorMessage)
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack')
+    return { success: false, error: `Failed to approve event: ${errorMessage}` }
   }
 }
 
