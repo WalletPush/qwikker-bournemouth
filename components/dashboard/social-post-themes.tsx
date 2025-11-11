@@ -49,9 +49,13 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             {caption.split('\n')[0]}
           </p>
           
-          {/* QWIKKER Badge */}
-          <div className="absolute bottom-8 right-8 bg-[#00d083] text-black px-4 py-2 rounded-full font-bold text-sm shadow-xl">
-            QWIKKER
+          {/* QWIKKER Logo */}
+          <div className="absolute bottom-6 right-6">
+            <img 
+              src="/Qwikker Logo web.svg" 
+              alt="QWIKKER" 
+              className="h-8 drop-shadow-2xl"
+            />
           </div>
         </div>
       </div>
@@ -92,12 +96,14 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             </p>
           </div>
           
-          {/* Bottom bar with QWIKKER */}
+          {/* Bottom bar with QWIKKER Logo */}
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-gray-600">{businessName}</span>
-            <div className="bg-[#00d083] text-white px-4 py-2 rounded-full font-bold text-sm">
-              QWIKKER
-            </div>
+            <img 
+              src="/Qwikker Logo web.svg" 
+              alt="QWIKKER" 
+              className="h-7"
+            />
           </div>
         </div>
       </div>
@@ -137,10 +143,12 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             {caption.split('\n')[0]}
           </p>
           
-          {/* QWIKKER Badge */}
-          <div className="inline-block bg-[#00d083] text-black px-4 py-2 rounded-full font-bold text-sm self-start">
-            QWIKKER
-          </div>
+          {/* QWIKKER Logo */}
+          <img 
+            src="/Qwikker Logo web.svg" 
+            alt="QWIKKER" 
+            className="h-7 self-start drop-shadow-xl"
+          />
         </div>
       </div>
     ),
@@ -176,7 +184,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             {caption.split('\n')[0]}
           </p>
           
-          {/* Logo and Badge at bottom */}
+          {/* Logo and QWIKKER Logo at bottom */}
           <div className="absolute bottom-12 left-0 right-0 flex items-center justify-between px-12">
             {logoUrl && (
               <img 
@@ -185,9 +193,11 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
                 className="w-16 h-16 object-contain rounded-full bg-white/20 backdrop-blur-md p-2"
               />
             )}
-            <div className="bg-[#00d083] text-black px-5 py-2 rounded-full font-black text-base shadow-2xl">
-              QWIKKER
-            </div>
+            <img 
+              src="/Qwikker Logo web.svg" 
+              alt="QWIKKER" 
+              className="h-9 drop-shadow-2xl"
+            />
           </div>
         </div>
       </div>
@@ -229,12 +239,14 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             </p>
           </div>
           
-          {/* Bottom row */}
+          {/* Bottom row with QWIKKER Logo */}
           <div className="flex items-center justify-between pt-6 border-t border-white/20">
             <span className="text-sm font-semibold text-white/70">{businessName}</span>
-            <div className="bg-[#00d083] text-black px-5 py-2 rounded-full font-black text-sm">
-              QWIKKER
-            </div>
+            <img 
+              src="/Qwikker Logo web.svg" 
+              alt="QWIKKER" 
+              className="h-8 drop-shadow-xl"
+            />
           </div>
         </div>
       </div>

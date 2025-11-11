@@ -1298,6 +1298,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/social-wizard/generate/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/social-wizard/generate">> = Specific
+  const handler = {} as typeof import("../../app/api/social-wizard/generate/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/test-contact-update/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/test-contact-update">> = Specific

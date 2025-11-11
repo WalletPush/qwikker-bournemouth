@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { PostTheme, ThemeThumbnail, type ThemeType } from './social-post-themes'
+import { createClient } from '@/lib/supabase/client'
 
 type PostType = 'offer' | 'secret-menu' | 'event' | 'general'
+type ImageSource = 'content' | 'business' | 'abstract'
 
 interface SocialPostBuilderProps {
   postType: PostType
@@ -22,43 +24,154 @@ interface PostContent {
   hashtags: string
 }
 
+interface ContentItem {
+  id: string
+  title: string
+  description?: string
+  image_url?: string
+  terms?: string
+  location?: string
+  event_date?: string
+}
+
 export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuilderProps) {
+  const [step, setStep] = useState<'select' | 'generate'>('select')
+  const [isLoading, setIsLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [selectedTheme, setSelectedTheme] = useState<ThemeType>('vibrant')
   const [backgroundImage, setBackgroundImage] = useState<string>('')
+  const [imageSource, setImageSource] = useState<ImageSource>('content')
+  
+  // Content selection
+  const [contentItems, setContentItems] = useState<ContentItem[]>([])
+  const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null)
+  
+  // Business photos
+  const [businessPhotos, setBusinessPhotos] = useState<string[]>([])
+  
   const [postContent, setPostContent] = useState<PostContent>({
     headline: '',
     caption: '',
     hashtags: ''
   })
 
-  // Auto-generate content when component mounts
+  // Fetch available content when component mounts
   useEffect(() => {
-    generateContent()
+    fetchContentItems()
+    fetchBusinessPhotos()
   }, [postType])
 
-  const generateContent = async () => {
+  const fetchContentItems = async () => {
+    setIsLoading(true)
+    const supabase = createClient()
+
+    try {
+      let items: ContentItem[] = []
+
+      if (postType === 'offer') {
+        const { data } = await supabase
+          .from('business_offers')
+          .select('id, offer_name, offer_description, offer_image_url, terms_conditions')
+          .eq('business_id', profile?.id)
+          .eq('is_active', true)
+        
+        items = (data || []).map(offer => ({
+          id: offer.id,
+          title: offer.offer_name,
+          description: offer.offer_description,
+          image_url: offer.offer_image_url,
+          terms: offer.terms_conditions
+        }))
+      } else if (postType === 'secret-menu') {
+        const { data } = await supabase
+          .from('secret_menu_items')
+          .select('id, item_name, additional_notes, item_image_url')
+          .eq('business_id', profile?.id)
+          .eq('is_active', true)
+        
+        items = (data || []).map(item => ({
+          id: item.id,
+          title: item.item_name,
+          description: item.additional_notes,
+          image_url: item.item_image_url
+        }))
+      } else if (postType === 'event') {
+        const { data } = await supabase
+          .from('business_events')
+          .select('id, event_name, event_description, image_url, location, event_date')
+          .eq('business_id', profile?.id)
+          .gte('event_date', new Date().toISOString().split('T')[0])
+          .order('event_date', { ascending: true })
+        
+        items = (data || []).map(event => ({
+          id: event.id,
+          title: event.event_name,
+          description: event.event_description,
+          image_url: event.image_url,
+          location: event.location,
+          event_date: event.event_date
+        }))
+      }
+
+      setContentItems(items)
+    } catch (error) {
+      console.error('Error fetching content:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const fetchBusinessPhotos = async () => {
+    // Get business photos from profile
+    if (profile?.business_images && Array.isArray(profile.business_images)) {
+      setBusinessPhotos(profile.business_images)
+    }
+  }
+
+  const generateAIContent = async () => {
+    if (!selectedContent) return
+
     setIsGenerating(true)
     
     try {
-      // TODO: Call AI generation API
-      // For now, use smart templates based on post type
-      const generated = await generateSmartContent(postType, profile)
+      // Call AI generation API
+      const response = await fetch('/api/social-wizard/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postType,
+          content: selectedContent,
+          businessName: profile?.business_name,
+          city: profile?.city,
+          businessType: profile?.business_type
+        })
+      })
+
+      const generated = await response.json()
       setPostContent(generated)
       
-      // Auto-select background from business photos
-      if (profile?.business_images && profile.business_images.length > 0) {
-        setBackgroundImage(profile.business_images[0])
+      // Set image based on source
+      if (imageSource === 'content' && selectedContent.image_url) {
+        setBackgroundImage(selectedContent.image_url)
+      } else if (imageSource === 'business' && businessPhotos.length > 0) {
+        setBackgroundImage(businessPhotos[0])
+      } else if (imageSource === 'abstract') {
+        // TODO: Generate abstract background
+        setBackgroundImage('https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=1080')
       }
+
+      // Move to generate step
+      setStep('generate')
     } catch (error) {
       console.error('Error generating content:', error)
+      alert('Failed to generate post. Please try again.')
     } finally {
       setIsGenerating(false)
     }
   }
 
   const handleRegenerate = async () => {
-    await generateContent()
+    await generateAIContent()
   }
 
   const handleDownload = () => {
@@ -66,6 +179,193 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     console.log('Downloading post...')
   }
 
+  // STEP 1: Content Selection
+  if (step === 'select') {
+    return (
+      <div className="fixed inset-0 bg-black/80 z-50 overflow-y-auto backdrop-blur-sm">
+        <div className="min-h-screen px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-2">
+                  ✨ Select Your Content
+                </h2>
+                <p className="text-slate-400">
+                  {getPostTypeLabel(postType)}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="border-slate-600 text-white hover:bg-slate-700"
+              >
+                ✕ Close
+              </Button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Step 1: Select Content */}
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-white">
+                    Step 1: Choose {getContentLabel(postType)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00d083] mx-auto mb-4"></div>
+                      <p className="text-slate-400">Loading your content...</p>
+                    </div>
+                  ) : contentItems.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-slate-400 mb-4">
+                        You don't have any {getContentLabel(postType).toLowerCase()} yet.
+                      </p>
+                      <Button variant="outline" className="border-[#00d083] text-[#00d083]">
+                        Create {getContentLabel(postType)}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {contentItems.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => setSelectedContent(item)}
+                          className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                            selectedContent?.id === item.id
+                              ? 'border-[#00d083] bg-[#00d083]/10'
+                              : 'border-slate-600 hover:border-slate-500'
+                          }`}
+                        >
+                          <div className="flex items-start gap-4">
+                            {item.image_url && (
+                              <img
+                                src={item.image_url}
+                                alt={item.title}
+                                className="w-20 h-20 object-cover rounded-lg"
+                              />
+                            )}
+                            <div className="flex-1">
+                              <h3 className="text-white font-semibold mb-1">{item.title}</h3>
+                              {item.description && (
+                                <p className="text-slate-400 text-sm line-clamp-2">{item.description}</p>
+                              )}
+                              {item.event_date && (
+                                <p className="text-[#00d083] text-sm mt-1">
+                                  📅 {new Date(item.event_date).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Step 2: Select Image Source */}
+              {selectedContent && (
+                <Card className="bg-slate-800/50 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="text-white">
+                      Step 2: Choose Image Source
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-4">
+                      {/* Use Content Image */}
+                      {selectedContent.image_url && (
+                        <button
+                          onClick={() => setImageSource('content')}
+                          className={`p-4 rounded-lg border-2 transition-all ${
+                            imageSource === 'content'
+                              ? 'border-[#00d083] bg-[#00d083]/10'
+                              : 'border-slate-600 hover:border-slate-500'
+                          }`}
+                        >
+                          <img
+                            src={selectedContent.image_url}
+                            alt="Content"
+                            className="w-full aspect-square object-cover rounded-lg mb-3"
+                          />
+                          <p className="text-white text-sm font-semibold text-center">
+                            Use {getContentLabel(postType)} Image
+                          </p>
+                        </button>
+                      )}
+
+                      {/* Business Photos */}
+                      <button
+                        onClick={() => setImageSource('business')}
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          imageSource === 'business'
+                            ? 'border-[#00d083] bg-[#00d083]/10'
+                            : 'border-slate-600 hover:border-slate-500'
+                        }`}
+                      >
+                        {businessPhotos.length > 0 ? (
+                          <img
+                            src={businessPhotos[0]}
+                            alt="Business"
+                            className="w-full aspect-square object-cover rounded-lg mb-3"
+                          />
+                        ) : (
+                          <div className="w-full aspect-square bg-slate-700 rounded-lg mb-3 flex items-center justify-center">
+                            <span className="text-4xl">🏢</span>
+                          </div>
+                        )}
+                        <p className="text-white text-sm font-semibold text-center">
+                          Business Photo
+                        </p>
+                      </button>
+
+                      {/* AI Abstract */}
+                      <button
+                        onClick={() => setImageSource('abstract')}
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          imageSource === 'abstract'
+                            ? 'border-[#00d083] bg-[#00d083]/10'
+                            : 'border-slate-600 hover:border-slate-500'
+                        }`}
+                      >
+                        <div className="w-full aspect-square bg-gradient-to-br from-purple-600 via-pink-600 to-orange-600 rounded-lg mb-3"></div>
+                        <p className="text-white text-sm font-semibold text-center">
+                          AI Abstract Background
+                        </p>
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Generate Button */}
+              {selectedContent && (
+                <Button
+                  onClick={generateAIContent}
+                  disabled={isGenerating}
+                  className="w-full bg-[#00d083] hover:bg-[#00b86f] text-black font-bold text-lg py-6"
+                >
+                  {isGenerating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black mr-3"></div>
+                      Generating with AI...
+                    </>
+                  ) : (
+                    <>✨ Generate Post with AI</>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // STEP 2: Edit & Preview
   return (
     <div className="fixed inset-0 bg-black/80 z-50 overflow-y-auto backdrop-blur-sm">
       <div className="min-h-screen px-4 py-8">
@@ -74,19 +374,28 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-3xl font-bold text-white mb-2">
-                ✨ Create Your Post
+                ✨ Edit Your Post
               </h2>
               <p className="text-slate-400">
-                {getPostTypeLabel(postType)}
+                {selectedContent?.title}
               </p>
             </div>
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="border-slate-600 text-white hover:bg-slate-700"
-            >
-              ✕ Close
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setStep('select')}
+                className="border-slate-600 text-white hover:bg-slate-700"
+              >
+                ← Back
+              </Button>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="border-slate-600 text-white hover:bg-slate-700"
+              >
+                ✕ Close
+              </Button>
+            </div>
           </div>
 
           {/* Main Content Grid */}
@@ -309,36 +618,13 @@ function getPostTypeLabel(type: PostType): string {
   return labels[type]
 }
 
-async function generateSmartContent(type: PostType, profile: any): Promise<PostContent> {
-  // Smart template-based generation (will be replaced with AI later)
-  await new Promise(resolve => setTimeout(resolve, 1500)) // Simulate AI delay
-  
-  const city = profile?.city || 'your city'
-  const businessName = profile?.business_name || 'Our Business'
-  
-  const templates = {
-    'offer': {
-      headline: `🎉 Special Offer at ${businessName}!`,
-      caption: `We're excited to bring you an exclusive offer! 🌟\n\nVisit us and enjoy amazing savings. This limited-time offer is only available through the ${city} QWIKKER Pass.\n\n📍 ${businessName}\n⏰ Limited time only\n🎟 Download the QWIKKER Pass to claim!`,
-      hashtags: `#${city.replace(/\s/g, '')} #LocalDeals #SpecialOffer #${businessName.replace(/\s/g, '')}`
-    },
-    'secret-menu': {
-      headline: `🤫 Secret Menu Alert!`,
-      caption: `Psst... we've got something special for our QWIKKER members! 👀\n\nAsk about our secret menu item - it's exclusive to ${city} QWIKKER Pass holders only. Trust us, you don't want to miss this! 🔥\n\n📍 ${businessName}\n🎟 Get the ${city} QWIKKER Pass to unlock!`,
-      hashtags: `#SecretMenu #${city.replace(/\s/g, '')} #Exclusive #${businessName.replace(/\s/g, '')}`
-    },
-    'event': {
-      headline: `🎊 Join Us for an Amazing Event!`,
-      caption: `Something special is happening at ${businessName}! 🎉\n\nMark your calendars and join us for an unforgettable experience. Limited spots available!\n\n📍 ${businessName}\n📅 Coming soon\n🎟 QWIKKER Pass holders get priority access!`,
-      hashtags: `#${city.replace(/\s/g, '')}Events #LocalEvents #${businessName.replace(/\s/g, '')}`
-    },
-    'general': {
-      headline: `📣 News from ${businessName}`,
-      caption: `Hey ${city}! We've got some exciting news to share! 🌟\n\nStay tuned for more updates and don't forget to follow us on the ${city} QWIKKER Pass for exclusive perks and insider access.\n\n📍 ${businessName}\n🎟 Download the QWIKKER Pass today!`,
-      hashtags: `#${city.replace(/\s/g, '')} #LocalBusiness #${businessName.replace(/\s/g, '')}`
-    }
+function getContentLabel(type: PostType): string {
+  const labels = {
+    'offer': 'an Offer',
+    'secret-menu': 'a Secret Menu Item',
+    'event': 'an Event',
+    'general': 'Content Type'
   }
-  
-  return templates[type]
+  return labels[type]
 }
 
