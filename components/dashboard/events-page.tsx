@@ -599,7 +599,14 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
                     id="requires_booking"
                     type="checkbox"
                     checked={formData.requires_booking}
-                    onChange={(e) => handleInputChange('requires_booking', e.target.checked)}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked
+                      handleInputChange('requires_booking', isChecked)
+                      // Clear booking URL when unchecked to avoid validation issues
+                      if (!isChecked) {
+                        handleInputChange('booking_url', '')
+                      }
+                    }}
                     className="rounded border-slate-600"
                   />
                   <Label htmlFor="requires_booking" className="text-slate-300 cursor-pointer">
