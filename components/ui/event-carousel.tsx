@@ -272,21 +272,27 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
             )}
 
             {/* Scrollable Content */}
-            <div style={{ padding: '16px', maxHeight: '400px', overflowY: 'auto' }}>
-              <h2 className="text-white text-xl font-bold mb-2">{selectedEvent.title}</h2>
-              <p className="text-purple-400 text-sm mb-3">📍 {selectedEvent.business_name}</p>
+            <div style={{ padding: '20px', maxHeight: '400px', overflowY: 'auto' }}>
+              <h2 className="text-white text-xl font-bold mb-1">{selectedEvent.title}</h2>
+              <p className="text-purple-400 text-sm mb-4">📍 {selectedEvent.business_name}</p>
               
-              <p className="text-slate-300 text-sm mb-4 leading-relaxed">{selectedEvent.description}</p>
+              <div className="mb-4">
+                <h3 className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Description</h3>
+                <p className="text-slate-300 text-sm leading-relaxed">{selectedEvent.description}</p>
+              </div>
               
-              <div className="space-y-2 mb-4 text-sm text-white">
-                <div>📅 {formatDate(selectedEvent.start_date)}</div>
-                {selectedEvent.start_time && (
-                  <div>
-                    🕐 {selectedEvent.start_time.substring(0, 5)}
-                    {selectedEvent.end_time && ` - ${selectedEvent.end_time.substring(0, 5)}`}
-                  </div>
-                )}
-                <div>📍 {selectedEvent.location}</div>
+              <div className="border-t border-slate-700 pt-4 mb-4">
+                <h3 className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">Event Details</h3>
+                <div className="space-y-2 text-sm text-white">
+                  <div>📅 {formatDate(selectedEvent.start_date)}</div>
+                  {selectedEvent.start_time && (
+                    <div>
+                      🕐 {selectedEvent.start_time.substring(0, 5)}
+                      {selectedEvent.end_time && ` - ${selectedEvent.end_time.substring(0, 5)}`}
+                    </div>
+                  )}
+                  <div>📍 {selectedEvent.location}</div>
+                </div>
               </div>
 
               <div className="flex gap-2">
