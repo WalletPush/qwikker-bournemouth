@@ -93,8 +93,8 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
               <Card 
                 className={`h-full ${getEventTypeStyling(event.event_type)} transition-all duration-200 hover:shadow-2xl cursor-pointer`}
                 onClick={() => {
-                  // TODO: Open event hero modal/page
-                  console.log('Event clicked:', event.id)
+                  setSelectedEvent(event)
+                  setShowModal(true)
                 }}
               >
                 <CardContent className="p-0 h-full">
