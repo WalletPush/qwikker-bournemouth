@@ -253,7 +253,7 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
               position: 'fixed',
               transform: 'translate(-50%, -50%)',
               zIndex: 51,
-              maxHeight: '90vh',
+              maxHeight: '80vh',
               overflowY: 'auto'
             }}
             onClick={(e) => e.stopPropagation()}
@@ -264,16 +264,16 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
                 setShowModal(false)
                 setSelectedEvent(null)
               }}
-              className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-sm text-white flex items-center justify-center transition-colors"
+              className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-sm text-white flex items-center justify-center transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            {/* Image Header - Compact */}
+            {/* Image Header - Smaller */}
             {selectedEvent.image_url && (
-              <div className="relative h-36 w-full">
+              <div className="relative h-28 w-full">
                 <img 
                   src={selectedEvent.image_url} 
                   alt={selectedEvent.title}
@@ -282,16 +282,16 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent" />
                 
                 {/* Event Type Badge */}
-                <div className="absolute top-3 left-3">
+                <div className="absolute top-2 left-2">
                   {getEventTypeBadge(selectedEvent.event_type)}
                 </div>
               </div>
             )}
 
-            {/* Content - Compact Padding */}
-            <div className="p-4 space-y-3">
+            {/* Content - Compact */}
+            <div className="p-3 space-y-2">
               <div>
-                <h3 className="text-white font-bold text-base mb-1 leading-tight">{selectedEvent.title}</h3>
+                <h3 className="text-white font-bold text-sm mb-0.5 leading-tight">{selectedEvent.title}</h3>
                 <p className="text-purple-400 text-xs font-medium flex items-center gap-1">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -300,46 +300,46 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
                 </p>
               </div>
               
-              <p className="text-slate-300 text-xs leading-relaxed line-clamp-4">{selectedEvent.description}</p>
+              <p className="text-slate-300 text-xs leading-relaxed line-clamp-3">{selectedEvent.description}</p>
               
-              {/* Details Grid - Inline Style */}
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-xs">
-                  <div className="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {/* Details Grid - Compact */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs">
+                  <div className="w-5 h-5 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <span className="text-white font-medium">{formatDate(selectedEvent.start_date)}</span>
+                  <span className="text-white font-medium text-xs">{formatDate(selectedEvent.start_date)}</span>
                 </div>
                 
                 {selectedEvent.start_time && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <div className="w-6 h-6 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <div className="w-5 h-5 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-3 h-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
-                    <span className="text-white font-medium">
+                    <span className="text-white font-medium text-xs">
                       {selectedEvent.start_time.substring(0, 5)}
                       {selectedEvent.end_time && ` - ${selectedEvent.end_time.substring(0, 5)}`}
                     </span>
                   </div>
                 )}
                 
-                <div className="flex items-center gap-2 text-xs">
-                  <div className="w-6 h-6 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center gap-1.5 text-xs">
+                  <div className="w-5 h-5 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
-                  <span className="text-white font-medium truncate">{selectedEvent.location}</span>
+                  <span className="text-white font-medium text-xs truncate">{selectedEvent.location}</span>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 pt-1">
+              <div className="flex gap-2">
                 {selectedEvent.ticket_url && (
                   <a 
                     href={selectedEvent.ticket_url.startsWith('http') ? selectedEvent.ticket_url : `https://${selectedEvent.ticket_url}`}
@@ -347,14 +347,14 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
                     rel="noopener noreferrer"
                     className="flex-1"
                   >
-                    <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg shadow-green-500/20 text-xs py-2">
+                    <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg shadow-green-500/20 text-xs py-1.5">
                       Get Tickets
                     </Button>
                   </a>
                 )}
                 <Button 
                   variant="outline"
-                  className="flex-1 border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-white font-semibold text-xs py-2"
+                  className="flex-1 border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-white font-semibold text-xs py-1.5"
                   onClick={() => {
                     const walletPassId = currentUser?.wallet_pass_id
                     const params = new URLSearchParams()
