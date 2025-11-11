@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { PostTheme, ThemeThumbnail, type ThemeType } from './social-post-themes'
 
 type PostType = 'offer' | 'secret-menu' | 'event' | 'general'
-type ThemeType = 'vibrant' | 'minimalist' | 'split' | 'bold' | 'blurred'
 
 interface SocialPostBuilderProps {
   postType: PostType
@@ -108,53 +108,21 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                   {/* Instagram Post Preview (1080x1080) */}
                   <div className="relative aspect-square bg-slate-900 rounded-lg overflow-hidden">
                     {isGenerating ? (
-                      <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
                         <div className="text-center">
                           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00d083] mx-auto mb-4"></div>
                           <p className="text-slate-400">Generating your post...</p>
                         </div>
                       </div>
                     ) : (
-                      <>
-                        {/* Background */}
-                        {backgroundImage && (
-                          <img 
-                            src={backgroundImage} 
-                            alt="Background" 
-                            className="absolute inset-0 w-full h-full object-cover"
-                          />
-                        )}
-                        
-                        {/* Overlay based on theme */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                        
-                        {/* Content */}
-                        <div className="absolute inset-0 p-8 flex flex-col justify-end">
-                          {/* Logo */}
-                          {profile?.logo && (
-                            <img 
-                              src={profile.logo} 
-                              alt="Logo" 
-                              className="absolute top-8 left-8 w-16 h-16 object-contain rounded-lg bg-white/10 backdrop-blur-sm p-2"
-                            />
-                          )}
-                          
-                          {/* Headline */}
-                          <h2 className="text-3xl font-bold text-white mb-4 leading-tight">
-                            {postContent.headline || 'Your headline will appear here'}
-                          </h2>
-                          
-                          {/* Caption Preview (first 2 lines) */}
-                          <p className="text-white/90 text-sm line-clamp-2 mb-4">
-                            {postContent.caption || 'Your caption will appear here...'}
-                          </p>
-                          
-                          {/* QWIKKER Badge */}
-                          <div className="absolute bottom-4 right-4 bg-[#00d083] text-black px-3 py-1 rounded-full text-xs font-bold">
-                            QWIKKER
-                          </div>
-                        </div>
-                      </>
+                      <PostTheme
+                        theme={selectedTheme}
+                        headline={postContent.headline || 'Your headline will appear here'}
+                        caption={postContent.caption || 'Your caption will appear here...'}
+                        backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                        logoUrl={profile?.logo}
+                        businessName={profile?.business_name}
+                      />
                     )}
                   </div>
                   
@@ -271,29 +239,37 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                 </CardContent>
               </Card>
 
-              {/* Theme Selector (Coming Soon) */}
+              {/* Theme Selector */}
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
-                  <CardTitle className="text-white text-sm">Theme Templates</CardTitle>
+                  <CardTitle className="text-white text-sm flex items-center gap-2">
+                    🎨 Theme Templates
+                    <span className="text-xs font-normal text-slate-400">(5 Premium Designs)</span>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-slate-400 text-sm mb-3">Choose a layout style</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['vibrant', 'minimalist', 'bold'].map((theme) => (
+                  <p className="text-slate-400 text-sm mb-3">Choose your post layout style</p>
+                  <div className="grid grid-cols-5 gap-2">
+                    {(['vibrant', 'minimalist', 'split', 'bold', 'modern'] as ThemeType[]).map((theme) => (
                       <button
                         key={theme}
-                        onClick={() => setSelectedTheme(theme as ThemeType)}
-                        className={`aspect-square rounded-lg border-2 transition-all ${
+                        onClick={() => setSelectedTheme(theme)}
+                        className={`aspect-square rounded-lg border-2 transition-all overflow-hidden ${
                           selectedTheme === theme
-                            ? 'border-[#00d083] bg-[#00d083]/10'
+                            ? 'border-[#00d083] ring-2 ring-[#00d083]/50'
                             : 'border-slate-600 hover:border-slate-500'
                         }`}
+                        title={theme.charAt(0).toUpperCase() + theme.slice(1)}
                       >
-                        <span className="text-xs text-slate-300 capitalize">{theme}</span>
+                        <ThemeThumbnail theme={theme} />
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-slate-500 mt-2">More themes coming soon</p>
+                  <div className="mt-3 text-center">
+                    <p className="text-xs text-slate-400">
+                      Selected: <span className="text-[#00d083] font-semibold capitalize">{selectedTheme}</span>
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
 
