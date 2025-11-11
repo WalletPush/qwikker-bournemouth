@@ -512,6 +512,23 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
               </div>
             )}
             
+            {/* Preview Listing Button */}
+            <button
+              onClick={() => {
+                const slug = business.business_name
+                  ? business.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
+                  : business.id
+                window.open(`/user/business/${slug}`, '_blank')
+              }}
+              className="w-full bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Preview Listing
+            </button>
+            
             {/* Inspect Before Approval Button */}
             <button
               onClick={() => setInspectionModal({ open: true, business })}
@@ -1608,63 +1625,96 @@ Qwikker Admin Team`
                                   </div>
 
                                   {/* Event Actions */}
-                                  <div className="flex gap-3 mt-4">
+                                  <div className="space-y-3 mt-4">
+                                    <div className="flex gap-3">
+                                      <button
+                                        onClick={() => setEventPreviewModal({ open: true, event, businessName: event.business_profiles?.business_name || 'Unknown Business' })}
+                                        className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        Preview
+                                      </button>
+                                      <button
+                                        onClick={async () => {
+                                          const confirmed = await showConfirm(
+                                            `Approve "${event.event_name}" and add to Knowledge Base?\\n\\nThis will:\\n• Make it visible on user event discovery page\\n• Add to AI chat knowledge base\\n• Allow users to query about this event`
+                                          )
+                                          
+                                          if (!confirmed) return
+
+                                          try {
+                                            const { approveEvent } = await import('@/lib/actions/event-actions')
+                                            await approveEvent(event.id)
+                                            showSuccess(`Event approved successfully!`)
+                                            setTimeout(() => window.location.reload(), 1500)
+                                          } catch (error) {
+                                            console.error('Error approving event:', error)
+                                            showError(`Failed to approve event`)
+                                          }
+                                        }}
+                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        Approve
+                                      </button>
+                                      <button
+                                        onClick={async () => {
+                                          const reason = prompt('Reason for rejection:')
+                                          if (!reason) return
+
+                                          try {
+                                            const { rejectEvent } = await import('@/lib/actions/event-actions')
+                                            await rejectEvent(event.id, reason)
+                                            showSuccess(`Event rejected`)
+                                            setTimeout(() => window.location.reload(), 1500)
+                                          } catch (error) {
+                                            console.error('Error rejecting event:', error)
+                                            showError(`Failed to reject event`)
+                                          }
+                                        }}
+                                        className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Reject
+                                      </button>
+                                    </div>
+                                    {/* Contact Business Button */}
                                     <button
-                                      onClick={() => setEventPreviewModal({ open: true, event, businessName: event.business_profiles?.business_name || 'Unknown Business' })}
-                                      className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                                    >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                      </svg>
-                                      Preview
-                                    </button>
-                                    <button
-                                      onClick={async () => {
-                                        const confirmed = await showConfirm(
-                                          `Approve "${event.event_name}" and add to Knowledge Base?\\n\\nThis will:\\n• Make it visible on user event discovery page\\n• Add to AI chat knowledge base\\n• Allow users to query about this event`
-                                        )
+                                      onClick={() => {
+                                        const eventDate = new Date(event.event_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                                        const subject = `Qwikker Event Submission - ${event.event_name}`
+                                        const body = `Dear ${event.business_profiles?.first_name || 'Business Owner'},
+
+Thank you for submitting your event "${event.event_name}" (${eventDate}) to Qwikker.
+
+We're reviewing your submission and may have some questions or feedback to share.
+
+Event Details:
+• Name: ${event.event_name}
+• Type: ${event.event_type?.replace('_', ' ').toUpperCase()}
+• Date: ${eventDate}
+${event.event_start_time ? `• Time: ${event.event_start_time}` : ''}
+
+If you have any questions or would like to discuss your event, please don't hesitate to reach out.
+
+Best regards,
+Qwikker Admin Team`
                                         
-                                        if (!confirmed) return
-
-                                        try {
-                                          const { approveEvent } = await import('@/lib/actions/event-actions')
-                                          await approveEvent(event.id)
-                                          showSuccess(`Event approved successfully!`)
-                                          setTimeout(() => window.location.reload(), 1500)
-                                        } catch (error) {
-                                          console.error('Error approving event:', error)
-                                          showError(`Failed to approve event`)
-                                        }
+                                        window.open(`mailto:${event.business_profiles?.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank')
                                       }}
-                                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                      className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-medium py-2 px-4 rounded-lg transition-all shadow-lg shadow-amber-600/20 hover:shadow-amber-600/30 flex items-center justify-center gap-2"
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                       </svg>
-                                      Approve
-                                    </button>
-                                    <button
-                                      onClick={async () => {
-                                        const reason = prompt('Reason for rejection:')
-                                        if (!reason) return
-
-                                        try {
-                                          const { rejectEvent } = await import('@/lib/actions/event-actions')
-                                          await rejectEvent(event.id, reason)
-                                          showSuccess(`Event rejected`)
-                                          setTimeout(() => window.location.reload(), 1500)
-                                        } catch (error) {
-                                          console.error('Error rejecting event:', error)
-                                          showError(`Failed to reject event`)
-                                        }
-                                      }}
-                                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                                    >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                      </svg>
-                                      Reject
+                                      Contact Business
                                     </button>
                                   </div>
                                 </div>
