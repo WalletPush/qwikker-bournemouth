@@ -478,21 +478,26 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
           {/* Main Content Grid */}
           <div className="grid lg:grid-cols-2 gap-6">
             
-            {/* Left: Live Preview */}
-            <div>
-              <Card className="bg-slate-800/50 border-slate-700 sticky top-8">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    Live Preview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {/* Instagram Post Preview (1080x1080) */}
-                  <div className="relative aspect-square bg-slate-900 rounded-lg overflow-hidden">
+            {/* Left: Instagram Post Preview */}
+            <div className="space-y-6">
+              {/* REAL Instagram Post Preview */}
+              <Card className="bg-white border-slate-300 overflow-hidden sticky top-8">
+                <CardContent className="p-0">
+                  {/* Instagram Header */}
+                  <div className="flex items-center justify-between p-3 border-b border-gray-200">
+                    <div className="flex items-center gap-3">
+                      {profile?.logo ? (
+                        <img src={profile.logo} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-gray-300" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-300" />
+                      )}
+                      <span className="text-black font-semibold text-sm">{profile?.business_name || 'yourbusiness'}</span>
+                    </div>
+                    <button className="text-black font-bold text-xl">⋯</button>
+                  </div>
+
+                  {/* Instagram Post Image */}
+                  <div className="relative bg-black aspect-square">
                     {isGenerating ? (
                       <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
                         <div className="text-center">
@@ -512,43 +517,6 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                       />
                     )}
                   </div>
-                  
-                  {/* Size Info */}
-                  <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-                    <span>Instagram Feed (1080×1080)</span>
-                    <span>Theme: {selectedTheme}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* REAL Instagram Post Preview */}
-              <Card className="bg-white border-slate-300 overflow-hidden">
-                <CardContent className="p-0">
-                  {/* Instagram Header */}
-                  <div className="flex items-center justify-between p-3 border-b border-gray-200">
-                    <div className="flex items-center gap-3">
-                      {profile?.logo ? (
-                        <img src={profile.logo} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-gray-300" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-300" />
-                      )}
-                      <span className="text-black font-semibold text-sm">{profile?.business_name || 'yourbusiness'}</span>
-                    </div>
-                    <button className="text-black font-bold text-xl">⋯</button>
-                  </div>
-
-                  {/* Instagram Post Image (SMALLER) */}
-                  <div className="relative bg-black" style={{ height: '400px' }}>
-                    <PostTheme
-                      theme={selectedTheme}
-                      headline={postContent.headline || 'Your headline will appear here'}
-                      caption={postContent.caption || 'Your caption will appear here...'}
-                      backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
-                      logoUrl={profile?.logo}
-                      businessName={profile?.business_name}
-                      style={postStyle}
-                    />
-                  </div>
 
                   {/* Instagram Actions */}
                   <div className="flex items-center justify-between p-3 border-b border-gray-200">
@@ -561,7 +529,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                   </div>
 
                   {/* Instagram Caption */}
-                  <div className="p-3 max-h-[200px] overflow-y-auto">
+                  <div className="p-3 max-h-[200px] overflow-y-auto bg-white">
                     <div className="text-sm">
                       <span className="font-semibold text-black mr-2">{profile?.business_name || 'yourbusiness'}</span>
                       <span className="text-black whitespace-pre-wrap">{postContent.caption || 'Your caption will appear here...'}</span>
@@ -571,7 +539,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                         {postContent.hashtags}
                       </div>
                     )}
-                    <div className="text-xs text-gray-400 mt-2">2 HOURS AGO</div>
+                    <div className="text-xs text-gray-400 mt-2 uppercase">2 hours ago</div>
                   </div>
                 </CardContent>
               </Card>
