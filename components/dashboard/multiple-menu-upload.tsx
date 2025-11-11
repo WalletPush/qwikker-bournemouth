@@ -359,9 +359,9 @@ export function MultipleMenuUpload({ businessId }: MultipleMenuUploadProps) {
                   </div>
 
                   {menu.admin_notes && (
-                    <div className="bg-gray-50 p-3 rounded-md">
-                      <p className="text-sm font-medium text-gray-700">Admin Notes:</p>
-                      <p className="text-sm text-gray-600">{menu.admin_notes}</p>
+                    <div className="bg-blue-900/20 border border-blue-500/30 p-3 rounded-md">
+                      <p className="text-sm font-medium text-blue-300">Admin Notes:</p>
+                      <p className="text-sm text-blue-200">{menu.admin_notes}</p>
                     </div>
                   )}
 
