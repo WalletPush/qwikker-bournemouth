@@ -160,17 +160,19 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
 
                     {/* Action Buttons - NEW */}
                     <div className="space-y-1.5">
-                      <Button 
-                        variant="outline"
-                        className="w-full border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold py-2 transition-all duration-200"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedEvent(event)
-                          setShowModal(true)
-                        }}
-                      >
-                        More Info
-                      </Button>
+                <Button 
+                  variant="outline"
+                  className="w-full border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold py-2 transition-all duration-200"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    console.log('🔵 More Info clicked:', event.title)
+                    setSelectedEvent(event)
+                    setShowModal(true)
+                    console.log('🔵 State set:', { showModal: true, event: event.title })
+                  }}
+                >
+                  More Info
+                </Button>
                       <Button 
                         className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold py-2 shadow-md hover:shadow-lg transition-all duration-200"
                         onClick={(e) => {
@@ -233,55 +235,58 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
         </div>
       )}
 
-      {/* Simple Working Modal */}
+      {/* Modal - Compact Fixed Size */}
       {showModal && selectedEvent && (
         <div 
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
           onClick={() => {
             setShowModal(false)
             setSelectedEvent(null)
           }}
         >
           <div 
-            className="bg-slate-900 rounded-lg w-full max-w-lg max-h-[80vh] overflow-hidden relative"
+            className="bg-slate-900 rounded-lg relative"
+            style={{ width: '500px', maxHeight: '600px' }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close */}
+            {/* Close Button */}
             <button
               onClick={() => {
                 setShowModal(false)
                 setSelectedEvent(null)
               }}
-              className="absolute top-3 right-3 z-10 w-7 h-7 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white"
+              className="absolute top-2 right-2 z-10 w-8 h-8 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-white font-bold text-xl"
             >
               ×
             </button>
 
-            {/* Image */}
+            {/* Image - SMALL */}
             {selectedEvent.image_url && (
               <img 
                 src={selectedEvent.image_url} 
                 alt={selectedEvent.title}
-                className="w-full h-48 object-cover"
+                style={{ width: '100%', height: '160px', objectFit: 'cover' }}
+                className="rounded-t-lg"
               />
             )}
 
-            {/* Content */}
-            <div className="p-4 overflow-y-auto max-h-[calc(80vh-12rem)]">
-              <h2 className="text-white text-lg font-bold mb-1">{selectedEvent.title}</h2>
-              <p className="text-purple-400 text-sm mb-3">{selectedEvent.business_name}</p>
+            {/* Scrollable Content */}
+            <div style={{ padding: '16px', maxHeight: '400px', overflowY: 'auto' }}>
+              <h2 className="text-white text-xl font-bold mb-2">{selectedEvent.title}</h2>
+              <p className="text-purple-400 text-sm mb-3">📍 {selectedEvent.business_name}</p>
               
-              <p className="text-slate-300 text-sm mb-4">{selectedEvent.description}</p>
+              <p className="text-slate-300 text-sm mb-4 leading-relaxed">{selectedEvent.description}</p>
               
-              <div className="space-y-2 mb-4 text-sm">
-                <div className="text-white">📅 {formatDate(selectedEvent.start_date)}</div>
+              <div className="space-y-2 mb-4 text-sm text-white">
+                <div>📅 {formatDate(selectedEvent.start_date)}</div>
                 {selectedEvent.start_time && (
-                  <div className="text-white">
+                  <div>
                     🕐 {selectedEvent.start_time.substring(0, 5)}
                     {selectedEvent.end_time && ` - ${selectedEvent.end_time.substring(0, 5)}`}
                   </div>
                 )}
-                <div className="text-white">📍 {selectedEvent.location}</div>
+                <div>📍 {selectedEvent.location}</div>
               </div>
 
               <div className="flex gap-2">
@@ -290,16 +295,16 @@ export function EventCarousel({ events, currentUser, className = '' }: EventCaro
                     href={selectedEvent.ticket_url.startsWith('http') ? selectedEvent.ticket_url : `https://${selectedEvent.ticket_url}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1"
+                    style={{ flex: 1 }}
                   >
-                    <Button className="w-full bg-green-600 hover:bg-green-700">
+                    <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
                       Get Tickets
                     </Button>
                   </a>
                 )}
                 <Button 
                   variant="outline"
-                  className="flex-1"
+                  style={{ flex: 1 }}
                   onClick={() => {
                     const walletPassId = currentUser?.wallet_pass_id
                     const params = new URLSearchParams()
