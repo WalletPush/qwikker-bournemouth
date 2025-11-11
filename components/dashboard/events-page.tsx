@@ -77,6 +77,8 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
     custom_location_name: '',
     custom_location_address: '',
   })
+  
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   const [eventImageFile, setEventImageFile] = useState<File | null>(null)
   const [eventImagePreview, setEventImagePreview] = useState<string | null>(null)
@@ -232,14 +234,39 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
       }
 
       if (result.success) {
-        setMessage({
-          type: 'success',
-          text: editingEvent 
-            ? 'Event updated successfully! It will be reviewed by admin.'
-            : 'Event created successfully! It will be reviewed by admin.'
-        })
+        // Show success modal for new events
+        if (!editingEvent) {
+          setShowSuccessModal(true)
+        } else {
+          setMessage({
+            type: 'success',
+            text: 'Event updated successfully! It will be reviewed by admin.'
+          })
+        }
+        
         setShowCreateForm(false)
         setEditingEvent(null)
+        
+        // Reset form
+        setFormData({
+          event_name: '',
+          event_type: '',
+          event_description: '',
+          event_short_description: '',
+          event_date: '',
+          event_start_time: '',
+          event_end_time: '',
+          is_recurring: false,
+          recurrence_pattern: '',
+          requires_booking: false,
+          booking_url: '',
+          price_info: '',
+          custom_location_name: '',
+          custom_location_address: '',
+        })
+        setEventImageFile(null)
+        setEventImagePreview(null)
+        
         await loadEvents()
         router.refresh()
       } else {
@@ -906,6 +933,55 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
                   Users will see this after admin approval!
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowSuccessModal(false)}
+        >
+          <div 
+            className="relative max-w-md w-full bg-slate-800 rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Success Icon */}
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              
+              <h3 className="text-xl font-bold text-white mb-2">
+                Event Submitted for Approval!
+              </h3>
+              
+              <p className="text-slate-300 mb-4">
+                Your event has been successfully submitted and is now awaiting admin review.
+              </p>
+              
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6 text-left">
+                <p className="text-sm text-blue-300 mb-2">
+                  <strong>What happens next?</strong>
+                </p>
+                <ul className="text-sm text-slate-400 space-y-1 list-disc list-inside">
+                  <li>Admin will review your event details</li>
+                  <li>You'll receive a notification on your dashboard</li>
+                  <li>You'll get an email when it's approved</li>
+                  <li>Approval usually takes 24-48 hours</li>
+                </ul>
+              </div>
+              
+              <Button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white"
+              >
+                Got it!
+              </Button>
             </div>
           </div>
         </div>
