@@ -202,7 +202,9 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     setIsGenerating(true)
     
     try {
-      // Call AI generation API
+      // Call AI generation API with selected theme
+      console.log('🎨 Generating content for theme:', selectedTheme)
+      
       const response = await fetch('/api/social-wizard/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -211,7 +213,8 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
           content: selectedContent,
           businessName: profile?.business_name,
           city: profile?.city,
-          businessType: profile?.business_type
+          businessType: profile?.business_type,
+          theme: selectedTheme // Pass the selected theme to AI
         })
       })
 
@@ -464,6 +467,44 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                 </Card>
               )}
 
+              {/* Theme Selector - BEFORE GENERATION */}
+              {selectedContent && (
+                <Card className="bg-slate-800/50 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="text-white">
+                      Step 3: Choose Your Style
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-5 gap-3">
+                      {(['vibrant', 'minimalist', 'split', 'bold', 'modern'] as ThemeType[]).map((theme) => (
+                        <button
+                          key={theme}
+                          onClick={() => setSelectedTheme(theme)}
+                          className={`relative rounded-lg overflow-hidden border-2 transition-all ${
+                            selectedTheme === theme
+                              ? 'border-[#00d083] ring-2 ring-[#00d083]/50'
+                              : 'border-slate-600 hover:border-slate-500'
+                          }`}
+                        >
+                          <div className="aspect-square">
+                            <ThemeThumbnail theme={theme} />
+                          </div>
+                          <div className="absolute bottom-0 inset-x-0 bg-black/80 backdrop-blur-sm px-2 py-1">
+                            <p className="text-white text-xs font-semibold text-center capitalize">
+                              {theme}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-slate-400 text-sm mt-3">
+                      AI will generate content optimized for this style
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Generate Button */}
               {selectedContent && (
                 <Button
@@ -710,36 +751,26 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                 </CardContent>
               </Card>
 
-              {/* Theme Selector */}
+              {/* Current Style Display */}
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
                   <CardTitle className="text-white text-sm flex items-center gap-2">
-                    🎨 Theme Templates
-                    <span className="text-xs font-normal text-slate-400">(5 Premium Designs)</span>
+                    🎨 Current Style
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-slate-400 text-sm mb-3">Choose your post layout style</p>
-                  <div className="grid grid-cols-5 gap-2">
-                    {(['vibrant', 'minimalist', 'split', 'bold', 'modern'] as ThemeType[]).map((theme) => (
-                      <button
-                        key={theme}
-                        onClick={() => setSelectedTheme(theme)}
-                        className={`h-16 rounded-lg border-2 transition-all overflow-hidden ${
-                          selectedTheme === theme
-                            ? 'border-[#00d083] ring-2 ring-[#00d083]/50'
-                            : 'border-slate-600 hover:border-slate-500'
-                        }`}
-                        title={theme.charAt(0).toUpperCase() + theme.slice(1)}
-                      >
-                        <ThemeThumbnail theme={theme} />
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3 text-center">
-                    <p className="text-xs text-slate-400">
-                      Selected: <span className="text-[#00d083] font-semibold capitalize">{selectedTheme}</span>
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white font-semibold capitalize mb-1">{selectedTheme}</p>
+                      <p className="text-slate-400 text-xs">Want a different vibe?</p>
+                    </div>
+                    <Button
+                      onClick={() => setStep('select')}
+                      variant="outline"
+                      className="border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10"
+                    >
+                      🔄 Try Different Style
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

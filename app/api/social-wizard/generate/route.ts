@@ -10,12 +10,12 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json()
-    const { postType, content, businessName, city, businessType } = body
+    const { postType, content, businessName, city, businessType, theme } = body
     
-    console.log('📥 Request:', { postType, businessName, city, businessType, contentTitle: content?.title })
+    console.log('📥 Request:', { postType, businessName, city, businessType, theme, contentTitle: content?.title })
 
     // Build prompt based on post type and content
-    const prompt = buildPrompt(postType, content, businessName, city, businessType)
+    const prompt = buildPrompt(postType, content, businessName, city, businessType, theme)
     console.log('📝 Prompt built, calling Claude...')
 
     // Generate with Claude Sonnet 4 (latest and best!)
@@ -24,9 +24,12 @@ export async function POST(request: NextRequest) {
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
       temperature: 1.0, // Maximum creativity for different results each time
-      system: `You are an elite creative director at a top advertising agency, specializing in viral Instagram content for premium local businesses. 
+      system: `You are an elite creative director at a top advertising agency, specializing in viral Instagram content for premium local businesses.
 
-Your superpower: Creating posts that STOP THE SCROLL.
+SELECTED THEME: "${theme}"
+${getThemeGuidance(theme)}
+
+Your superpower: Creating posts that STOP THE SCROLL and match the chosen theme perfectly.
 
 Your posts are:
 - BOLD, PUNCHY, and dripping with personality
@@ -103,12 +106,59 @@ Return ONLY valid JSON: { headline, caption, hashtags, style: { textColor, textE
   }
 }
 
+function getThemeGuidance(theme: string): string {
+  const themeGuides = {
+    vibrant: `
+VIBRANT THEME GUIDANCE:
+- Headline should be EXPLOSIVE and attention-grabbing
+- Use ALL CAPS or mix of caps for impact
+- Think bold colors, high energy, excitement
+- Text style: gradient-gold, hot-pink, or electric-blue with 3d-pop or neon effects
+- Mood: ENERGETIC and BOLD`,
+
+    minimalist: `
+MINIMALIST THEME GUIDANCE:
+- Headline should be clean, short, sophisticated (2-5 words)
+- Think luxury brands - say more with less
+- Elegant, refined, premium feel
+- Text style: black text, simple but powerful
+- Mood: ELEGANT and MINIMAL`,
+
+    split: `
+SPLIT THEME GUIDANCE:
+- Headline should be impactful and well-structured
+- Perfect for before/after or dual concepts
+- Modern, professional vibe
+- Text style: white with bold-shadow or outline-glow
+- Mood: MODERN and PROFESSIONAL`,
+
+    bold: `
+BOLD THEME GUIDANCE:
+- Headline should be MASSIVE and unmissable
+- Maximum impact, fearless, unapologetic
+- Think festival posters and street art
+- Text style: white, gradient-gold, or hot-pink with bold-shadow or 3d-pop
+- Mood: BOLD and FEARLESS`,
+
+    modern: `
+MODERN THEME GUIDANCE:
+- Headline should be sleek and contemporary
+- Tech-forward, innovative, fresh
+- Clean but dynamic
+- Text style: Any color works, prefer neon or gradient effects
+- Mood: MODERN and INNOVATIVE`
+  }
+
+  return themeGuides[theme as keyof typeof themeGuides] || themeGuides.vibrant
+}
+
 function buildPrompt(
   postType: string,
   content: any,
   businessName: string,
   city: string,
-  businessType: string
+  businessType: string,
+  theme?: string
 ): string {
   const baseContext = `
 Business: ${businessName}
