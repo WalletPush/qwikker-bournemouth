@@ -6,6 +6,7 @@ import { BusinessCarousel } from '@/components/ui/business-carousel'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import React from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 interface ChatMessage {
   id: string
@@ -42,10 +43,12 @@ interface ChatMessage {
 }
 
 export function UserChatPage({ currentUser }: { currentUser?: any }) {
+  const searchParams = useSearchParams()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [hasAutoSent, setHasAutoSent] = useState(false)
   
   // Session storage key for chat memory
   const chatSessionKey = `qwikker-chat-session-${currentUser?.wallet_pass_id || 'guest'}`
@@ -119,6 +122,19 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
       }
     }
   }, [messages, chatSessionKey])
+
+  // Handle pre-filled message from URL parameter
+  useEffect(() => {
+    const prefilledMessage = searchParams.get('message')
+    if (prefilledMessage && !hasAutoSent && messages.length > 0) {
+      console.log('📨 Auto-sending pre-filled message:', prefilledMessage)
+      setHasAutoSent(true)
+      // Wait a moment for welcome message to render, then send
+      setTimeout(() => {
+        handleSendMessage(prefilledMessage)
+      }, 500)
+    }
+  }, [searchParams, hasAutoSent, messages.length])
 
   const handleSendMessage = async (message: string) => {
     if (!message.trim() || isTyping) return
