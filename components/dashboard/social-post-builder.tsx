@@ -75,11 +75,13 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     mood: 'energetic'
   })
 
-  // Fetch available content when component mounts
+  // Fetch available content when component mounts (only on select step)
   useEffect(() => {
-    fetchContentItems()
-    fetchBusinessPhotos()
-  }, [postType])
+    if (step === 'select') {
+      fetchContentItems()
+      fetchBusinessPhotos()
+    }
+  }, [postType, step])
 
   const fetchContentItems = async () => {
     setIsLoading(true)
@@ -107,7 +109,10 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
           .eq('business_id', profile?.id)
           .eq('is_active', true)
         
-        if (error) console.error('Offers error:', error)
+        if (error) {
+          console.error('❌ Offers error:', error)
+          console.error('Error details:', { message: error.message, details: error.details, hint: error.hint })
+        }
         
         items = (data || []).map(offer => ({
           id: offer.id,
@@ -123,7 +128,10 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
           .eq('business_id', profile?.id)
           .eq('is_active', true)
         
-        if (error) console.error('Secret menu error:', error)
+        if (error) {
+          console.error('❌ Secret menu error:', error)
+          console.error('Error details:', { message: error.message, details: error.details, hint: error.hint })
+        }
         
         items = (data || []).map(item => ({
           id: item.id,
