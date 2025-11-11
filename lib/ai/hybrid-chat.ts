@@ -336,27 +336,26 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           .from('business_events')
           .select(`
             id,
-            title,
-            description,
+            event_name,
+            event_description,
             event_type,
-            start_date,
-            start_time,
-            end_date,
-            end_time,
-            location,
-            ticket_url,
-            image_url,
+            event_date,
+            event_start_time,
+            event_end_time,
+            custom_location,
+            booking_url,
+            event_image,
             business_id,
             business_profiles!inner(business_name, city)
           `)
           .eq('status', 'approved')
           .eq('business_profiles.city', city)
-          .gte('start_date', new Date().toISOString().split('T')[0]) // Only future events
-          .order('start_date', { ascending: true })
+          .gte('event_date', new Date().toISOString().split('T')[0]) // Only future events
+          .order('event_date', { ascending: true })
         
-        // If specific event mentioned, filter by title
+        // If specific event mentioned, filter by event_name
         if (eventTitleFilter) {
-          query = query.ilike('title', `%${eventTitleFilter}%`)
+          query = query.ilike('event_name', `%${eventTitleFilter}%`)
         } else {
           query = query.limit(10)
         }
@@ -366,16 +365,16 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         if (!error && events && events.length > 0) {
           eventCards = events.map(event => ({
             id: event.id,
-            title: event.title,
-            description: event.description,
+            title: event.event_name,
+            description: event.event_description,
             event_type: event.event_type,
-            start_date: event.start_date,
-            start_time: event.start_time,
-            end_date: event.end_date,
-            end_time: event.end_time,
-            location: event.location,
-            ticket_url: event.ticket_url,
-            image_url: event.image_url,
+            start_date: event.event_date,
+            start_time: event.event_start_time,
+            end_date: null, // Not in schema
+            end_time: event.event_end_time,
+            location: event.custom_location || event.business_profiles.business_name,
+            ticket_url: event.booking_url,
+            image_url: event.event_image,
             business_name: event.business_profiles.business_name,
             business_id: event.business_id
           }))
