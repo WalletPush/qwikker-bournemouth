@@ -589,6 +589,15 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
                 )}
 
                 {/* Event Carousel */}
+                {(() => {
+                  console.log(`🎨 RENDER CHECK for message ${message.id}:`, {
+                    hasEventCards: !!message.eventCards,
+                    eventCardsLength: message.eventCards?.length || 0,
+                    eventCards: message.eventCards,
+                    willRender: message.eventCards && message.eventCards.length > 0
+                  })
+                  return null
+                })()}
                 {message.eventCards && message.eventCards.length > 0 && (
                   <div className="mt-3 -mx-2 sm:mx-0">
                     <EventCarousel 
