@@ -276,38 +276,30 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       }
     }
     
-    // 🎯 STEP 8: Fetch event cards ONLY if user is asking for details/more info
-    // Don't show cards on first mention - let them show interest first!
+    // 🎯 STEP 8: Fetch event cards if user is asking about events OR conversation contains events
     let eventCards: ChatResponse['eventCards'] = []
     
-    // Check if AI mentioned events in recent conversation
-    const recentAssistantMessages = conversationHistory
-      .filter(msg => msg.role === 'assistant')
-      .slice(-3) // Last 3 AI messages
-      .map(msg => msg.content)
+    // Check current message
+    const currentMessageMentionsEvents = /\b(event|show|concert|gig|happening|what'?s on|things to do|this weekend|tonight|tasting)\b/i.test(userMessage)
     
-    console.log(`🔍 Recent AI messages:`, recentAssistantMessages)
+    // Check if events were discussed in recent conversation
+    const recentConversation = conversationHistory.slice(-4).map(m => m.content).join(' ')
+    const conversationMentionsEvents = /\b(event|show|concert|gig|happening|tasting experience)\b/i.test(recentConversation)
     
-    const aiMentionedEvents = conversationHistory.some(msg => 
-      msg.role === 'assistant' && 
-      /\b(event|show|concert|gig|happening|tasting experience)\b/i.test(msg.content)
-    )
+    // Check if user is showing interest (yes, yeah, sure, etc) after events were mentioned
+    const showingInterest = /\b(yes|yeah|yep|sure|sounds good|go on|interested|tell me more|show me|pull up)\b/i.test(userMessage)
     
-    // Check if user is showing interest or asking for details
-    const wantsEventDetails = aiMentionedEvents && /\b(show me|tell me more|details|interested|sounds good|yes|yeah|yep|sure|go on|what about|which one|pull up|card|full details)\b/i.test(userMessage)
+    const shouldFetchEvents = currentMessageMentionsEvents || (conversationMentionsEvents && showingInterest)
     
-    const isFollowUpEventQuery = /\b(show (me )?the event|see the event|event (details|card)|more about|tell me more|pull up)\b/i.test(userMessage)
-    
-    console.log(`🎉 EVENT CARD CHECK:`, {
+    console.log(`🎉 EVENT QUERY CHECK:`, {
       userMessage,
-      conversationHistoryLength: conversationHistory.length,
-      aiMentionedEvents,
-      wantsEventDetails,
-      isFollowUpEventQuery,
-      willFetchCards: wantsEventDetails || isFollowUpEventQuery
+      currentMessageMentionsEvents,
+      conversationMentionsEvents,
+      showingInterest,
+      shouldFetchEvents
     })
     
-    if (wantsEventDetails || isFollowUpEventQuery) {
+    if (shouldFetchEvents) {
       try {
         const supabase = createServiceRoleClient()
         
