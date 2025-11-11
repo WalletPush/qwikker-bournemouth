@@ -1329,6 +1329,42 @@ export async function generateQuickReplies(
     ])
   }
 
+  // 🎉 EVENT-SPECIFIC QUICK REPLIES (check first!)
+  const isEventConversation = lowerAIResponse.includes('event') || 
+                              lowerAIResponse.includes('happening') || 
+                              lowerAIResponse.includes('tasting experience') ||
+                              lowerAIResponse.includes('jazz night') ||
+                              lowerAIResponse.includes('workshop') ||
+                              lowerAIResponse.includes('gig') ||
+                              recentConversation.includes('event')
+  
+  if (isEventConversation) {
+    // If AI just showed event cards or mentioned specific events
+    if (lowerAIResponse.includes('here you go') || lowerAIResponse.includes('pull up') || lowerAIResponse.includes('check out')) {
+      return tidy([
+        'Any other events?',
+        'Who else is hosting events?',
+        'What about this weekend?'
+      ])
+    }
+    
+    // If AI mentioned an event but hasn't shown details yet
+    if (lowerAIResponse.includes('tasting') || lowerAIResponse.includes('jazz') || lowerAIResponse.includes('workshop')) {
+      return tidy([
+        'Yes, show me details',
+        'What else is on?',
+        'Any similar events?'
+      ])
+    }
+    
+    // General event conversation
+    return tidy([
+      'What events are coming up?',
+      'Any live music?',
+      'Show me tasting events'
+    ])
+  }
+
   // 🍹 COCKTAIL-SPECIFIC QUICK REPLIES (moved up before offer mentions)
   if (isCocktailConversation) {
     // If AI just explained a specific cocktail, offer related suggestions
