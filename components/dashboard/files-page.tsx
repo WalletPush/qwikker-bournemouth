@@ -199,26 +199,22 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Review Process Banner */}
-      <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4 mb-6">
-        <div className="flex items-start gap-3">
-          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+      {/* Page Header */}
+      <div className="text-center mb-8">
+        <div className="flex flex-col items-center gap-6 mb-6">
+          <div className="p-4 bg-[#00d083]/10 rounded-full border border-[#00d083]/30">
+            <svg className="w-10 h-10 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-blue-200 mb-1">Review Process</h3>
-            <p className="text-blue-100 text-sm leading-relaxed">
-              Offers, menus, secret menu items, and images can take <strong>up to 48 hours</strong> to be reviewed and go live on the QWIKKER database. You'll see the status update here once reviewed.
-            </p>
+            <h1 className="text-5xl font-bold text-[#00d083] mb-2">Files & Media</h1>
+            <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-[#00d083] to-transparent rounded-full" />
           </div>
         </div>
-      </div>
-
-      <div>
-        <h1 className="text-2xl font-bold text-white mb-2">Files Management</h1>
-        <p className="text-gray-400">Upload and manage your business files</p>
+        <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+          Upload and manage your business files, menus, and images
+        </p>
       </div>
 
       {uploadMessage && (
@@ -415,6 +411,23 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Review Process Banner - Bottom */}
+      <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-blue-200 mb-1">Review Process</h3>
+            <p className="text-blue-100 text-sm leading-relaxed">
+              Offers, menus, secret menu items, and images can take <strong>up to 48 hours</strong> to be reviewed and go live on the QWIKKER database. You'll see the status update here once reviewed.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
