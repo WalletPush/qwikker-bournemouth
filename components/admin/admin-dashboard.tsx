@@ -20,6 +20,7 @@ import { QRAnalyticsDashboard } from './qr-analytics-dashboard'
 import { AdminDashboardOverview } from './admin-dashboard-overview'
 import { PricingCardEditor } from './pricing-card-editor'
 import { AdminSetupPage } from './admin-setup-page'
+import { EventPreviewCard } from '@/components/ui/event-preview-card'
 
 interface Business {
   id: string
@@ -80,6 +81,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [processingChangeId, setProcessingChangeId] = useState<string | null>(null)
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [eventPreviewModal, setEventPreviewModal] = useState<{ open: boolean; event: any; businessName: string } | null>(null)
   
   // 🔍 SEARCH & FILTER STATE
   const [searchTerm, setSearchTerm] = useState('')
@@ -1608,6 +1610,16 @@ Qwikker Admin Team`
                                   {/* Event Actions */}
                                   <div className="flex gap-3 mt-4">
                                     <button
+                                      onClick={() => setEventPreviewModal({ open: true, event, businessName: event.business_profiles?.business_name || 'Unknown Business' })}
+                                      className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                      </svg>
+                                      Preview
+                                    </button>
+                                    <button
                                       onClick={async () => {
                                         const confirmed = await showConfirm(
                                           `Approve "${event.event_name}" and add to Knowledge Base?\\n\\nThis will:\\n• Make it visible on user event discovery page\\n• Add to AI chat knowledge base\\n• Allow users to query about this event`
@@ -2344,6 +2356,39 @@ Qwikker Admin Team`
       
       {/* Elegant Modal System */}
       <ModalComponent />
+
+      {/* Event Preview Modal */}
+      {eventPreviewModal?.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="relative bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Close Button */}
+            <button
+              onClick={() => setEventPreviewModal(null)}
+              className="absolute top-4 right-4 z-10 bg-slate-800 hover:bg-slate-700 text-white rounded-full p-2 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-b border-purple-500/30 p-6">
+              <h2 className="text-2xl font-bold text-white">Event Preview</h2>
+              <p className="text-slate-300 text-sm mt-1">
+                This is exactly how users will see this event
+              </p>
+            </div>
+
+            {/* Preview Content */}
+            <div className="p-6">
+              <EventPreviewCard 
+                event={eventPreviewModal.event} 
+                businessName={eventPreviewModal.businessName} 
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
