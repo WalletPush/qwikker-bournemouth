@@ -64,9 +64,9 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* Content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center p-16">
-          {/* Headline - HUGE and bold with AI STYLES */}
+          {/* Headline - Bold with AI STYLES (sized to fit) */}
           <h1 
-            className={`text-9xl font-black ${getTextColorClass(textColor)} text-center leading-[0.85] tracking-tight max-w-5xl`}
+            className={`text-7xl font-black ${getTextColorClass(textColor)} text-center leading-[0.9] tracking-tight max-w-4xl px-8`}
             style={getTextEffect(textEffect)}
           >
             {headline}
@@ -111,8 +111,8 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           )}
           
           {/* Center: Main content */}
-          <div className="max-w-4xl">
-            <h1 className="text-9xl font-black text-black leading-[0.8] tracking-tighter">
+          <div className="max-w-4xl px-8">
+            <h1 className="text-7xl font-black text-black leading-[0.85] tracking-tighter">
               {headline}
             </h1>
           </div>
@@ -144,7 +144,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         {/* Right: Content on dark */}
         <div className="w-1/2 bg-gradient-to-br from-slate-950 to-slate-900 p-12 flex flex-col justify-center relative">
           {/* Headline - ONLY text on image */}
-          <h1 className="text-7xl font-black text-white leading-tight">
+          <h1 className="text-6xl font-black text-white leading-tight px-6">
             {headline}
           </h1>
           
@@ -179,12 +179,12 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         
         {/* Content centered */}
         <div className="absolute inset-0 flex flex-col items-center justify-center p-20 text-center">
-          {/* MASSIVE headline - ONLY text */}
+          {/* MASSIVE headline - ONLY text (sized to fit) */}
           <h1 
-            className="text-[10rem] font-black text-white leading-[0.8] tracking-tighter max-w-6xl uppercase"
+            className="text-8xl font-black text-white leading-[0.85] tracking-tighter max-w-5xl uppercase px-12"
             style={{ 
               textShadow: '0 20px 80px rgba(0,0,0,1)',
-              WebkitTextStroke: '4px rgba(0,0,0,0.5)'
+              WebkitTextStroke: '3px rgba(0,0,0,0.5)'
             }}
           >
             {headline}
@@ -226,7 +226,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
         <div className="absolute inset-0 p-14 flex flex-col justify-end">
           {/* Headline - ONLY text on image */}
           <h1 
-            className="text-8xl font-black text-white leading-tight max-w-5xl"
+            className="text-6xl font-black text-white leading-tight max-w-4xl px-6"
             style={{ 
               textShadow: '0 10px 40px rgba(0,0,0,1)',
               letterSpacing: '-0.02em'

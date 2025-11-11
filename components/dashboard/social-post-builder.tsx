@@ -521,36 +521,57 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                 </CardContent>
               </Card>
 
-              {/* Instagram Post Preview */}
-              <Card className="bg-slate-800/50 border-slate-700">
-                <CardHeader>
-                  <CardTitle className="text-white text-sm flex items-center gap-2">
-                    📱 Instagram Post Preview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-slate-900 rounded-lg p-4 space-y-3">
-                    {/* Username */}
-                    <div className="flex items-center gap-2">
+              {/* REAL Instagram Post Preview */}
+              <Card className="bg-white border-slate-300 overflow-hidden">
+                <CardContent className="p-0">
+                  {/* Instagram Header */}
+                  <div className="flex items-center justify-between p-3 border-b border-gray-200">
+                    <div className="flex items-center gap-3">
                       {profile?.logo ? (
-                        <img src={profile.logo} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+                        <img src={profile.logo} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-gray-300" />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-slate-700" />
+                        <div className="w-8 h-8 rounded-full bg-gray-300" />
                       )}
-                      <span className="text-white font-semibold text-sm">{profile?.business_name || 'Your Business'}</span>
+                      <span className="text-black font-semibold text-sm">{profile?.business_name || 'yourbusiness'}</span>
                     </div>
-                    
-                    {/* Caption */}
-                    <div className="text-white text-sm leading-relaxed">
-                      <p className="whitespace-pre-wrap">
-                        {postContent.caption || 'Your caption will appear here...'}
-                      </p>
-                      {postContent.hashtags && (
-                        <p className="text-blue-400 mt-2">
-                          {postContent.hashtags}
-                        </p>
-                      )}
+                    <button className="text-black font-bold text-xl">⋯</button>
+                  </div>
+
+                  {/* Instagram Post Image (SMALLER) */}
+                  <div className="relative bg-black" style={{ height: '400px' }}>
+                    <PostTheme
+                      theme={selectedTheme}
+                      headline={postContent.headline || 'Your headline will appear here'}
+                      caption={postContent.caption || 'Your caption will appear here...'}
+                      backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                      logoUrl={profile?.logo}
+                      businessName={profile?.business_name}
+                      style={postStyle}
+                    />
+                  </div>
+
+                  {/* Instagram Actions */}
+                  <div className="flex items-center justify-between p-3 border-b border-gray-200">
+                    <div className="flex items-center gap-4">
+                      <button className="text-2xl">♡</button>
+                      <button className="text-2xl">💬</button>
+                      <button className="text-2xl">✈️</button>
                     </div>
+                    <button className="text-2xl">🔖</button>
+                  </div>
+
+                  {/* Instagram Caption */}
+                  <div className="p-3 max-h-[200px] overflow-y-auto">
+                    <div className="text-sm">
+                      <span className="font-semibold text-black mr-2">{profile?.business_name || 'yourbusiness'}</span>
+                      <span className="text-black whitespace-pre-wrap">{postContent.caption || 'Your caption will appear here...'}</span>
+                    </div>
+                    {postContent.hashtags && (
+                      <div className="text-sm text-blue-600 mt-2">
+                        {postContent.hashtags}
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-400 mt-2">2 HOURS AGO</div>
                   </div>
                 </CardContent>
               </Card>
