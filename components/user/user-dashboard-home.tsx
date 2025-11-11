@@ -160,32 +160,105 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         <p className="text-slate-400">Your AI companion is ready to help you discover Bournemouth</p>
       </div>
 
-      {/* AI Companion Hero - Streamlined */}
-      <Card className="bg-gradient-to-br from-slate-900/60 to-slate-800/40 border border-slate-700/50 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-emerald-500/5"></div>
+      {/* AI Companion Hero - Interactive & Cool */}
+      <Card className="bg-gradient-to-br from-slate-900/90 to-emerald-900/20 border border-emerald-500/30 relative overflow-hidden group hover:border-emerald-400/50 transition-all duration-300">
+        {/* Animated background effects */}
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-emerald-500/10 animate-pulse"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(16,185,129,0.1),transparent)]"></div>
         
-        <CardContent className="relative p-4 sm:p-6">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="flex-shrink-0 hidden xs:block">
+        {/* Floating particles effect */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute w-2 h-2 bg-emerald-400/20 rounded-full animate-float" style={{ top: '20%', left: '10%', animationDelay: '0s', animationDuration: '4s' }}></div>
+          <div className="absolute w-1.5 h-1.5 bg-teal-400/20 rounded-full animate-float" style={{ top: '60%', left: '80%', animationDelay: '1s', animationDuration: '5s' }}></div>
+          <div className="absolute w-1 h-1 bg-emerald-400/30 rounded-full animate-float" style={{ top: '40%', left: '70%', animationDelay: '2s', animationDuration: '6s' }}></div>
+        </div>
+        
+        <CardContent className="relative p-6">
+          {/* Main Content */}
+          <div className="flex items-start gap-4 mb-4">
+            {/* Glowing AI Icon */}
+            <div className="flex-shrink-0">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur-md opacity-30 animate-pulse"></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur-xl opacity-20 animate-ping"></div>
-                <div className="relative p-2 sm:p-3 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-2xl border border-emerald-500/20 backdrop-blur-sm">
-                  <svg className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur-xl opacity-40 animate-pulse"></div>
+                <div className="relative p-3 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-2xl border-2 border-emerald-400/40 backdrop-blur-sm">
+                  <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
                 </div>
               </div>
             </div>
+            
+            {/* Text Content */}
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-100 mb-1">Your AI Companion</h2>
-              <p className="text-slate-300 text-xs sm:text-sm">Ask me anything about Bournemouth</p>
+              <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                Your AI Local Expert
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Live
+                </span>
+              </h2>
+              <p className="text-slate-300 text-sm mb-3">
+                Instant answers about {franchiseCity || 'your city'} - restaurants, events, offers & more
+              </p>
+              
+              {/* Quick action prompts */}
+              <div className="flex flex-wrap gap-2">
+                <Link 
+                  href={getNavUrl("/user/chat")} 
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 hover:border-emerald-500/50 rounded-lg text-xs text-slate-300 hover:text-emerald-300 transition-all duration-200 group"
+                >
+                  <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                  Best restaurants tonight?
+                </Link>
+                <Link 
+                  href={getNavUrl("/user/chat")} 
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 hover:border-emerald-500/50 rounded-lg text-xs text-slate-300 hover:text-emerald-300 transition-all duration-200 group"
+                >
+                  <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  Show me deals
+                </Link>
+                <Link 
+                  href={getNavUrl("/user/chat")} 
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 hover:border-emerald-500/50 rounded-lg text-xs text-slate-300 hover:text-emerald-300 transition-all duration-200 group"
+                >
+                  <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Events this weekend?
+                </Link>
+              </div>
             </div>
-            <div className="flex-shrink-0">
-              <Button asChild className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-black font-bold px-3 sm:px-4 md:px-6 py-2 sm:py-3 rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-200 hover:shadow-emerald-500/30 touch-manipulation min-h-[40px] sm:min-h-[44px] text-xs sm:text-sm md:text-base">
-                <Link href={getNavUrl("/user/chat")}>Chat</Link>
+            
+            {/* CTA Button */}
+            <div className="flex-shrink-0 hidden sm:block">
+              <Button asChild className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-bold px-6 py-3 rounded-xl shadow-lg shadow-emerald-500/30 transition-all duration-200 hover:shadow-emerald-500/50 hover:scale-105">
+                <Link href={getNavUrl("/user/chat")}>
+                  <span className="flex items-center gap-2">
+                    Ask AI
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </span>
+                </Link>
               </Button>
             </div>
+          </div>
+          
+          {/* Mobile CTA */}
+          <div className="sm:hidden">
+            <Button asChild className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-bold py-3 rounded-xl shadow-lg shadow-emerald-500/30">
+              <Link href={getNavUrl("/user/chat")}>
+                <span className="flex items-center justify-center gap-2">
+                  Ask AI Anything
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </span>
+              </Link>
+            </Button>
           </div>
         </CardContent>
       </Card>
