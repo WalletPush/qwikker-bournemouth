@@ -66,14 +66,11 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
   
   // Filter counts
   const getFilters = () => [
-    { id: 'upcoming', label: 'Upcoming', count: upcomingEvents.length },
+    { id: 'upcoming', label: 'All Events', count: upcomingEvents.length },
     { id: 'today', label: 'Today', count: todayEvents.length },
     { id: 'this_week', label: 'This Week', count: thisWeekEvents.length },
     { id: 'saved', label: 'My Saved', count: savedEvents.size },
     { id: 'interested', label: "I'm Interested", count: interestedEvents.size },
-    { id: 'live_music', label: '🎵 Live Music', count: events.filter(e => e.event_type === 'live_music').length },
-    { id: 'workshop', label: '🎨 Workshops', count: events.filter(e => e.event_type === 'workshop').length },
-    { id: 'tasting', label: '🍷 Tastings', count: events.filter(e => e.event_type === 'tasting').length },
     { id: 'free', label: 'Free Events', count: events.filter(e => e.price_info?.toLowerCase().includes('free')).length },
   ]
 
@@ -168,18 +165,18 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
 
   const getEventTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      live_music: '🎵 Live Music',
-      workshop: '🎨 Workshop',
-      tasting: '🍷 Tasting',
-      special_occasion: '🎉 Special',
-      sports_viewing: '⚽ Sports',
-      quiz_night: '🧠 Quiz',
-      comedy: '😂 Comedy',
-      open_mic: '🎤 Open Mic',
-      themed_night: '🎭 Themed',
-      holiday_event: '🎄 Holiday',
-      class: '📚 Class',
-      other: '📅 Event'
+      live_music: 'Live Music',
+      workshop: 'Workshop',
+      tasting: 'Tasting',
+      special_occasion: 'Special',
+      sports_viewing: 'Sports',
+      quiz_night: 'Quiz',
+      comedy: 'Comedy',
+      open_mic: 'Open Mic',
+      themed_night: 'Themed',
+      holiday_event: 'Holiday',
+      class: 'Class',
+      other: 'Event'
     }
     return labels[type] || type
   }
@@ -187,75 +184,162 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Events in {city}</h1>
-          <p className="text-slate-400">
-            Discover live music, workshops, tastings, and more happening around you
-          </p>
+        {/* Header with Icon */}
+        <div className="mb-8 text-center">
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-purple-400">
+              Upcoming Events
+            </h1>
+          </div>
+          <p className="text-lg text-slate-300 mb-2">Discover live music, workshops, tastings, and special occasions</p>
+          <p className="text-slate-400">All events are happening around {city}</p>
+        </div>
+
+        {/* Clickable Filter Cards - Mobile First */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
+          <Card 
+            className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
+              selectedFilter === 'upcoming' 
+                ? 'bg-gradient-to-br from-purple-600/30 to-purple-500/30 border-purple-400/50 ring-2 ring-purple-400/30' 
+                : 'bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-700/30 hover:border-purple-600/50'
+            }`}
+            onClick={() => {
+              setSelectedFilter('upcoming')
+              scrollToResults()
+            }}
+          >
+            <p className="text-base sm:text-lg font-semibold text-purple-300 mb-1">All Events</p>
+            <p className="text-lg font-bold text-purple-400">{upcomingEvents.length}</p>
+          </Card>
+          
+          <Card 
+            className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
+              selectedFilter === 'today' 
+                ? 'bg-gradient-to-br from-blue-600/30 to-blue-500/30 border-blue-400/50 ring-2 ring-blue-400/30' 
+                : 'bg-gradient-to-br from-blue-900/20 to-blue-800/20 border-blue-700/30 hover:border-blue-600/50'
+            }`}
+            onClick={() => {
+              setSelectedFilter('today')
+              scrollToResults()
+            }}
+          >
+            <p className="text-base sm:text-lg font-semibold text-blue-300 mb-1">Today</p>
+            <p className="text-lg font-bold text-blue-400">{todayEvents.length}</p>
+          </Card>
+          
+          <Card 
+            className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
+              selectedFilter === 'this_week' 
+                ? 'bg-gradient-to-br from-cyan-600/30 to-cyan-500/30 border-cyan-400/50 ring-2 ring-cyan-400/30' 
+                : 'bg-gradient-to-br from-cyan-900/20 to-cyan-800/20 border-cyan-700/30 hover:border-cyan-600/50'
+            }`}
+            onClick={() => {
+              setSelectedFilter('this_week')
+              scrollToResults()
+            }}
+          >
+            <p className="text-base sm:text-lg font-semibold text-cyan-300 mb-1">This Week</p>
+            <p className="text-lg font-bold text-cyan-400">{thisWeekEvents.length}</p>
+          </Card>
+          
+          <Card 
+            className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
+              selectedFilter === 'free' 
+                ? 'bg-gradient-to-br from-green-600/30 to-green-500/30 border-green-400/50 ring-2 ring-green-400/30' 
+                : 'bg-gradient-to-br from-green-900/20 to-green-800/20 border-green-700/30 hover:border-green-600/50'
+            }`}
+            onClick={() => {
+              setSelectedFilter('free')
+              scrollToResults()
+            }}
+          >
+            <p className="text-base sm:text-lg font-semibold text-green-300 mb-1">Free Events</p>
+            <p className="text-lg font-bold text-green-400">{events.filter(e => e.price_info?.toLowerCase().includes('free')).length}</p>
+          </Card>
+          
+          <Card 
+            className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
+              selectedFilter === 'saved' 
+                ? 'bg-gradient-to-br from-amber-600/30 to-amber-500/30 border-amber-400/50 ring-2 ring-amber-400/30' 
+                : 'bg-gradient-to-br from-amber-900/20 to-amber-800/20 border-amber-700/30 hover:border-amber-600/50'
+            }`}
+            onClick={() => {
+              setSelectedFilter('saved')
+              scrollToResults()
+            }}
+          >
+            <p className="text-base sm:text-lg font-semibold text-amber-300 mb-1">My Saved</p>
+            <p className="text-lg font-bold text-amber-400">{savedEvents.size}</p>
+          </Card>
+          
+          <Card 
+            className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
+              selectedFilter === 'interested' 
+                ? 'bg-gradient-to-br from-pink-600/30 to-pink-500/30 border-pink-400/50 ring-2 ring-pink-400/30' 
+                : 'bg-gradient-to-br from-pink-900/20 to-pink-800/20 border-pink-700/30 hover:border-pink-600/50'
+            }`}
+            onClick={() => {
+              setSelectedFilter('interested')
+              scrollToResults()
+            }}
+          >
+            <p className="text-base sm:text-lg font-semibold text-pink-300 mb-1">Interested</p>
+            <p className="text-lg font-bold text-pink-400">{interestedEvents.size}</p>
+          </Card>
         </div>
 
         {/* AI Companion Card */}
-        <div className="mb-6">
-          <AiCompanionCard 
-            title="Ask Your AI Local Guide"
-            description={`Looking for something to do? I can help you discover upcoming events, find live music, workshops, and special occasions happening around ${city}!`}
-            prompts={[
-              `What events are happening this weekend in ${city}?`,
-              `Show me live music events tonight`,
-              `Any free workshops coming up?`,
-              `What's happening today?`
-            ]}
-            walletPassId={walletPassId}
-          />
+        <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-2xl p-6 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0">
+              <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-purple-200 mb-2">Find Your Perfect Event</h3>
+              <p className="text-slate-300 text-sm mb-4">
+                Skip the searching - just tell our AI what you're looking for! From live music to workshops, tastings to special occasions, we'll find the perfect events for you instantly.
+              </p>
+              <p className="text-slate-400 text-xs italic mb-3">Try: "What events are happening this weekend?"</p>
+              <Link 
+                href={`/user/chat${walletPassId ? `?wallet_pass_id=${walletPassId}` : ''}`}
+                className="inline-block bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+              >
+                Ask AI
+              </Link>
+            </div>
+          </div>
         </div>
 
-        {/* Filters */}
-        <Card className="bg-slate-900 border-slate-800 mb-6">
-          <CardContent className="p-4">
-            <div className="flex flex-wrap gap-2">
-              {getFilters().map(filter => (
-                <button
-                  key={filter.id}
-                  onClick={() => {
-                    setSelectedFilter(filter.id)
-                    scrollToResults()
-                  }}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    selectedFilter === filter.id
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  {filter.label}
-                  <span className="ml-2 text-xs opacity-75">({filter.count})</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Category Filter */}
-            {eventTypes.length > 2 && (
-              <div className="mt-4 pt-4 border-t border-slate-800">
-                <p className="text-sm text-slate-400 mb-2">Filter by type:</p>
-                <div className="flex flex-wrap gap-2">
-                  {eventTypes.map(type => (
-                    <button
-                      key={type}
-                      onClick={() => setSelectedCategory(type)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        selectedCategory === type
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                      }`}
-                    >
-                      {type === 'all' ? 'All' : getEventTypeLabel(type)}
-                    </button>
-                  ))}
-                </div>
+        {/* Category Filter */}
+        {eventTypes.length > 2 && (
+          <Card className="bg-slate-900 border-slate-800 mb-6">
+            <CardContent className="p-4">
+              <p className="text-sm text-slate-400 mb-3">Filter by type:</p>
+              <div className="flex flex-wrap gap-2">
+                {eventTypes.map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setSelectedCategory(type)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                      selectedCategory === type
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    }`}
+                  >
+                    {type === 'all' ? 'All' : getEventTypeLabel(type)}
+                  </button>
+                ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Events Grid */}
         <div data-events-results className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -263,7 +347,11 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
             <div className="col-span-full">
               <Card className="bg-slate-900 border-slate-800">
                 <CardContent className="py-12 text-center">
-                  <div className="text-6xl mb-4">📅</div>
+                  <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
                   <h3 className="text-xl font-semibold text-white mb-2">No events found</h3>
                   <p className="text-slate-400">
                     {selectedFilter === 'saved' 
