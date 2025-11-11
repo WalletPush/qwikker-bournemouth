@@ -281,6 +281,13 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     let eventCards: ChatResponse['eventCards'] = []
     
     // Check if AI mentioned events in recent conversation
+    const recentAssistantMessages = conversationHistory
+      .filter(msg => msg.role === 'assistant')
+      .slice(-3) // Last 3 AI messages
+      .map(msg => msg.content)
+    
+    console.log(`🔍 Recent AI messages:`, recentAssistantMessages)
+    
     const aiMentionedEvents = conversationHistory.some(msg => 
       msg.role === 'assistant' && 
       /\b(event|show|concert|gig|happening|tasting experience)\b/i.test(msg.content)
@@ -293,6 +300,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     
     console.log(`🎉 EVENT CARD CHECK:`, {
       userMessage,
+      conversationHistoryLength: conversationHistory.length,
       aiMentionedEvents,
       wantsEventDetails,
       isFollowUpEventQuery,

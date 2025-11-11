@@ -195,6 +195,13 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
 
       const data = await response.json()
 
+      console.log('📦 AI Response Data:', {
+        hasResponse: !!data.response,
+        hasEventCards: !!data.eventCards,
+        eventCardsCount: data.eventCards?.length || 0,
+        eventCards: data.eventCards
+      })
+
       // Add AI response
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -207,6 +214,11 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
         walletActions: data.walletActions,
         eventCards: data.eventCards
       }
+
+      console.log('💬 AI Message created:', {
+        hasEventCards: !!aiMessage.eventCards,
+        eventCardsCount: aiMessage.eventCards?.length || 0
+      })
 
       setMessages(prev => [...prev, aiMessage])
 
