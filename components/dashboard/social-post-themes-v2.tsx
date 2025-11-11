@@ -1,0 +1,276 @@
+import React from 'react'
+
+export type ThemeType = 'vibrant' | 'minimalist' | 'split' | 'bold' | 'modern'
+
+interface PostThemeProps {
+  theme: ThemeType
+  headline: string
+  caption: string
+  backgroundImage: string
+  logoUrl?: string
+  businessName?: string
+}
+
+export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, businessName }: PostThemeProps) {
+  // Extract just first sentence from caption
+  const firstSentence = caption.split(/[.!?]/)[0] + '.'
+  
+  const themes = {
+    // 1. VIBRANT - Bold centered design
+    vibrant: (
+      <div className="relative w-full h-full overflow-hidden bg-black">
+        {/* Background with heavy blur */}
+        <div 
+          className="absolute inset-0 w-full h-full bg-cover bg-center blur-md scale-110 opacity-40"
+          style={{ backgroundImage: `url(${backgroundImage})` }}
+        />
+        
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/60 via-pink-900/50 to-orange-900/60" />
+        
+        {/* Content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-16">
+          {/* Headline - HUGE and bold */}
+          <h1 
+            className="text-8xl font-black text-white text-center leading-[0.9] tracking-tight mb-8 max-w-5xl"
+            style={{ 
+              textShadow: '0 10px 40px rgba(0,0,0,0.9)',
+              WebkitTextStroke: '2px rgba(0,0,0,0.3)'
+            }}
+          >
+            {headline}
+          </h1>
+          
+          {/* Small accent bar */}
+          <div className="w-20 h-1 bg-[#00d083] mb-8" />
+          
+          {/* Subtext - minimal */}
+          <p className="text-2xl font-bold text-white/95 text-center max-w-3xl leading-tight"
+             style={{ textShadow: '0 4px 20px rgba(0,0,0,0.9)' }}>
+            {firstSentence}
+          </p>
+        </div>
+        
+        {/* Business Logo - top left, SMALL */}
+        {logoUrl && (
+          <div className="absolute top-8 left-8 w-20 h-20 rounded-xl bg-black/30 backdrop-blur-md p-3 border border-white/20">
+            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        )}
+        
+        {/* QWIKKER Logo - bottom right, TINY */}
+        <div className="absolute bottom-6 right-6">
+          <img 
+            src="/Qwikker Logo web.svg" 
+            alt="QWIKKER" 
+            className="h-4 w-auto max-w-[80px] opacity-70"
+            style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.9))' }}
+          />
+        </div>
+      </div>
+    ),
+
+    // 2. MINIMALIST - Clean and modern
+    minimalist: (
+      <div className="relative w-full h-full overflow-hidden bg-white">
+        {/* Subtle background pattern */}
+        <div 
+          className="absolute top-0 right-0 w-2/5 h-2/5 bg-cover bg-center opacity-8"
+          style={{ backgroundImage: `url(${backgroundImage})` }}
+        />
+        
+        {/* Content area */}
+        <div className="absolute inset-0 p-16 flex flex-col justify-between">
+          {/* Top: Business logo */}
+          {logoUrl && (
+            <div className="w-20 h-20">
+              <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+            </div>
+          )}
+          
+          {/* Center: Main content */}
+          <div className="max-w-4xl">
+            <h1 className="text-8xl font-black text-black leading-[0.85] tracking-tighter mb-8">
+              {headline}
+            </h1>
+            <p className="text-2xl text-gray-700 font-medium leading-snug">
+              {firstSentence}
+            </p>
+          </div>
+          
+          {/* Bottom: Branding */}
+          <div className="flex items-center justify-between">
+            <span className="text-base font-bold text-gray-500">{businessName}</span>
+            <img 
+              src="/Qwikker Logo web.svg" 
+              alt="QWIKKER" 
+              className="h-4 w-auto max-w-[80px] opacity-60"
+            />
+          </div>
+        </div>
+      </div>
+    ),
+
+    // 3. SPLIT - Image + Content side by side
+    split: (
+      <div className="relative w-full h-full overflow-hidden flex">
+        {/* Left: Full image */}
+        <div className="w-1/2 relative">
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${backgroundImage})` }}
+          />
+        </div>
+        
+        {/* Right: Content on dark */}
+        <div className="w-1/2 bg-gradient-to-br from-slate-950 to-slate-900 p-12 flex flex-col justify-center relative">
+          {/* Headline */}
+          <h1 className="text-6xl font-black text-white leading-tight mb-6">
+            {headline}
+          </h1>
+          
+          {/* Subtext */}
+          <p className="text-lg text-white/80 leading-relaxed mb-8">
+            {firstSentence}
+          </p>
+          
+          {/* Business logo */}
+          {logoUrl && (
+            <div className="w-16 h-16 rounded-lg bg-white/10 p-3 mb-auto">
+              <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+            </div>
+          )}
+          
+          {/* QWIKKER logo - bottom */}
+          <img 
+            src="/Qwikker Logo web.svg" 
+            alt="QWIKKER" 
+            className="h-4 w-auto max-w-[80px] opacity-60 mt-8"
+            style={{ filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}
+          />
+        </div>
+      </div>
+    ),
+
+    // 4. BOLD - Massive impact
+    bold: (
+      <div className="relative w-full h-full overflow-hidden bg-black">
+        {/* Background image - darkened */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center opacity-30"
+          style={{ backgroundImage: `url(${backgroundImage})` }}
+        />
+        
+        {/* Content centered */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-20 text-center">
+          {/* MASSIVE headline */}
+          <h1 
+            className="text-9xl font-black text-white leading-[0.85] tracking-tighter mb-10 max-w-6xl uppercase"
+            style={{ 
+              textShadow: '0 15px 60px rgba(0,0,0,1)',
+              WebkitTextStroke: '3px rgba(0,0,0,0.5)'
+            }}
+          >
+            {headline}
+          </h1>
+          
+          {/* Accent line */}
+          <div className="w-32 h-2 bg-[#00d083] mb-10" />
+          
+          {/* Minimal subtext */}
+          <p className="text-2xl font-bold text-white/90 max-w-3xl"
+             style={{ textShadow: '0 4px 20px rgba(0,0,0,1)' }}>
+            {firstSentence}
+          </p>
+        </div>
+        
+        {/* Business logo - top left corner */}
+        {logoUrl && (
+          <div className="absolute top-10 left-10 w-20 h-20 rounded-xl bg-white/10 backdrop-blur-md p-3">
+            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        )}
+        
+        {/* QWIKKER - tiny bottom right */}
+        <img 
+          src="/Qwikker Logo web.svg" 
+          alt="QWIKKER" 
+          className="absolute bottom-6 right-6 h-4 w-auto max-w-[80px] opacity-60"
+          style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,1))' }}
+        />
+      </div>
+    ),
+
+    // 5. MODERN - Sleek gradient
+    modern: (
+      <div className="relative w-full h-full overflow-hidden">
+        {/* Background */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${backgroundImage})` }}
+        />
+        
+        {/* Gradient overlay - bottom heavy */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+        
+        {/* Content at bottom */}
+        <div className="absolute inset-0 p-14 flex flex-col justify-end">
+          {/* Headline */}
+          <h1 
+            className="text-7xl font-black text-white leading-tight mb-6 max-w-5xl"
+            style={{ 
+              textShadow: '0 8px 32px rgba(0,0,0,1)',
+              letterSpacing: '-0.02em'
+            }}
+          >
+            {headline}
+          </h1>
+          
+          {/* Subtext */}
+          <p className="text-xl text-white/85 font-medium leading-relaxed max-w-3xl mb-8"
+             style={{ textShadow: '0 4px 16px rgba(0,0,0,0.9)' }}>
+            {firstSentence}
+          </p>
+          
+          {/* Bottom bar */}
+          <div className="flex items-center justify-between pt-6 border-t border-white/20">
+            <span className="text-sm font-bold text-white/60">{businessName}</span>
+            <img 
+              src="/Qwikker Logo web.svg" 
+              alt="QWIKKER" 
+              className="h-4 w-auto max-w-[80px] opacity-60"
+              style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.9))' }}
+            />
+          </div>
+        </div>
+        
+        {/* Business logo - top left */}
+        {logoUrl && (
+          <div className="absolute top-10 left-10 w-20 h-20 rounded-2xl bg-black/30 backdrop-blur-xl p-3 border border-white/10">
+            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return themes[theme] || themes.vibrant
+}
+
+// Theme preview thumbnails
+export function ThemeThumbnail({ theme }: { theme: ThemeType }) {
+  const styles = {
+    vibrant: 'bg-gradient-to-br from-purple-600 via-pink-600 to-orange-600',
+    minimalist: 'bg-white border-2 border-gray-300',
+    split: 'bg-gradient-to-r from-slate-400 to-slate-900',
+    bold: 'bg-black',
+    modern: 'bg-gradient-to-t from-black via-slate-700 to-slate-400'
+  }
+
+  return (
+    <div className={`w-full h-full rounded-md ${styles[theme]} flex items-center justify-center p-2`}>
+      <span className="text-[10px] font-bold text-white capitalize tracking-wide">{theme}</span>
+    </div>
+  )
+}
+

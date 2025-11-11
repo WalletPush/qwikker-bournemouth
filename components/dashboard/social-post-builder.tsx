@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { PostTheme, ThemeThumbnail, type ThemeType } from './social-post-themes'
+import { PostTheme, ThemeThumbnail, type ThemeType } from './social-post-themes-v2'
 import { createClient } from '@/lib/supabase/client'
 
 type PostType = 'offer' | 'secret-menu' | 'event' | 'general'
