@@ -157,7 +157,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         <h1 className="text-3xl font-bold text-slate-100 mb-2">
           Hello, <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent">{userName}</span>
         </h1>
-        <p className="text-slate-400">Your AI companion is ready to help you discover {franchiseCity || 'your city'}</p>
+        <p className="text-slate-400">Your AI companion is ready to help you discover {franchiseCity ? franchiseCity.charAt(0).toUpperCase() + franchiseCity.slice(1) : 'your city'}</p>
       </div>
 
       {/* AI Companion - Beautiful & Engaging */}
@@ -184,7 +184,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
             
             {/* Description */}
             <p className="text-slate-300 text-sm mb-5">
-              Instant answers about {franchiseCity || 'your city'}. Find restaurants, grab exclusive deals, discover events, and get personalized recommendations.
+              Instant answers about {franchiseCity ? franchiseCity.charAt(0).toUpperCase() + franchiseCity.slice(1) : 'your city'}. Find restaurants, grab exclusive deals, discover events, and get personalized recommendations.
             </p>
             
             {/* Quick Suggestions */}
