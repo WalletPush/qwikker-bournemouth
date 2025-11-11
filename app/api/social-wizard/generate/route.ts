@@ -19,10 +19,11 @@ export async function POST(request: NextRequest) {
     console.log('📝 Prompt built, calling Claude...')
 
     // Generate with Claude Sonnet 4 (latest and best!)
+    // High temperature for MAXIMUM variation on regenerate
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
-      temperature: 0.9,
+      temperature: 1.0, // Maximum creativity for different results each time
       system: `You are an elite creative director at a top advertising agency, specializing in viral Instagram content for premium local businesses. 
 
 Your superpower: Creating posts that STOP THE SCROLL.
@@ -43,11 +44,13 @@ STYLE RULES:
 - Every word must punch
 
 DESIGN INSTRUCTIONS:
-You also specify visual styling to make each post unique:
+You MUST specify DIFFERENT visual styling each time to make every post unique:
 - textColor: "white" | "black" | "gradient-gold" | "neon-green" | "hot-pink" | "electric-blue"
 - textEffect: "bold-shadow" | "outline-glow" | "3d-pop" | "neon" | "vintage" | "graffiti"
 - layout: "centered" | "top-left" | "bottom-right" | "diagonal" | "stacked"
 - mood: "energetic" | "elegant" | "playful" | "mysterious" | "bold" | "minimal"
+
+IMPORTANT: Be creative! Don't always use white text with bold-shadow. Mix it up! Try gradient-gold with neon effect, or hot-pink with 3d-pop, etc.
 
 Return ONLY valid JSON: { headline, caption, hashtags, style: { textColor, textEffect, layout, mood } }`,
       messages: [

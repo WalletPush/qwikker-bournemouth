@@ -236,6 +236,12 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
   }
 
   const handleRegenerate = async () => {
+    setIsGenerating(true)
+    
+    // Add a small delay so user sees it's regenerating
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // Force a fresh generation
     await generateAIContent()
   }
 
@@ -481,7 +487,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
             {/* Left: Instagram Post Preview */}
             <div className="space-y-6">
               {/* REAL Instagram Post Preview */}
-              <Card className="bg-white border-slate-300 overflow-hidden sticky top-8">
+              <Card className="bg-white border-slate-300 overflow-hidden sticky top-8 max-w-md mx-auto">
                 <CardContent className="p-0">
                   {/* Instagram Header */}
                   <div className="flex items-center justify-between p-3 border-b border-gray-200">
