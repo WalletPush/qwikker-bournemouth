@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useElegantModal } from '@/components/ui/elegant-modal'
+import { EventPreviewCard } from '@/components/ui/event-preview-card'
 import {
   createEvent,
   updateEvent,
@@ -16,7 +17,7 @@ import {
   getBusinessEvents,
   BusinessEvent
 } from '@/lib/actions/event-actions'
-import { Calendar, Clock, MapPin, Users, ExternalLink, Plus, Pencil, Trash2, X, XCircle } from 'lucide-react'
+import { Calendar, Clock, MapPin, Users, ExternalLink, Plus, Pencil, Trash2, X, XCircle, Eye } from 'lucide-react'
 
 const EVENT_TYPE_OPTIONS = [
   { value: 'live_music', label: 'Live Music' },
@@ -55,6 +56,7 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingEvent, setEditingEvent] = useState<BusinessEvent | null>(null)
+  const [showPreview, setShowPreview] = useState(false)
   
   const { showConfirm, ModalComponent } = useElegantModal()
   const formRef = useRef<HTMLDivElement>(null)
@@ -669,9 +671,18 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
               {/* Submit Buttons */}
               <div className="flex gap-3 pt-4 border-t border-slate-700">
                 <Button
+                  type="button"
+                  onClick={() => setShowPreview(true)}
+                  variant="outline"
+                  className="border-blue-500 text-blue-400 hover:bg-blue-500/10"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview Event
+                </Button>
+                <Button
                   type="submit"
                   disabled={isLoading}
-                  className="bg-[#00d083] hover:bg-[#00b86f] text-white"
+                  className="bg-[#00d083] hover:bg-[#00b86f] text-white flex-1"
                 >
                   {isLoading ? 'Saving...' : editingEvent ? 'Update Event' : 'Create Event'}
                 </Button>
@@ -844,6 +855,60 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
             </div>
           )}
         </>
+      )}
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowPreview(false)}
+        >
+          <div 
+            className="relative max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowPreview(false)}
+              className="absolute -top-12 right-0 text-white hover:text-slate-300 transition-colors"
+            >
+              <X className="w-8 h-8" />
+            </button>
+
+            {/* Preview Header */}
+            <div className="bg-slate-800 rounded-t-xl p-4 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                  <Eye className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Event Preview</h3>
+                  <p className="text-sm text-slate-400">
+                    This is exactly how users will see your event
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview Content */}
+            <div className="bg-slate-900 p-6 rounded-b-xl">
+              <EventPreviewCard
+                event={{
+                  ...formData,
+                  event_image: eventImagePreview || undefined
+                }}
+                businessName={businessName}
+              />
+              
+              <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <p className="text-sm text-blue-300 text-center">
+                  💡 <strong>Tip:</strong> Make sure your event image is high quality and your description is clear. 
+                  Users will see this after admin approval!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
