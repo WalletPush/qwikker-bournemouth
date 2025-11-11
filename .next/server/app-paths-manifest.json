@@ -17,6 +17,7 @@
   "/api/debug/adams/route": "app/api/debug/adams/route.js",
   "/api/debug/check-adams/route": "app/api/debug/check-adams/route.js",
   "/api/debug/events/route": "app/api/debug/events/route.js",
+  "/api/debug/test-event-fetch/route": "app/api/debug/test-event-fetch/route.js",
   "/api/debug/test-hours-search/route": "app/api/debug/test-hours-search/route.js",
   "/api/menus/delete/route": "app/api/menus/delete/route.js",
   "/api/menus/list/route": "app/api/menus/list/route.js",

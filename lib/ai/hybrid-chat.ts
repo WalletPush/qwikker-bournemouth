@@ -319,7 +319,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             event_date,
             event_start_time,
             event_end_time,
-            custom_location,
+            custom_location_name,
             booking_url,
             event_image,
             business_id,
@@ -347,7 +347,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
               start_time: event.event_start_time || null,
               end_date: null, // Not in schema
               end_time: event.event_end_time || null,
-              location: event.custom_location || event.business_profiles?.business_name || 'TBA',
+              location: event.custom_location_name || event.business_profiles?.business_name || 'TBA',
               ticket_url: event.booking_url || null,
               image_url: event.event_image || null,
               business_name: event.business_profiles?.business_name || 'Unknown Business',
