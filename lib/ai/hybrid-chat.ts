@@ -305,12 +305,15 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         console.log(`🎉 FETCHING EVENT CARDS - User wants event details for ${city}`)
         
-        // Check recent conversation for specific event name
-        const recentMessages = conversationHistory.slice(-2).map(m => m.content).join(' ')
-        const tastingMentioned = /tasting experience/i.test(recentMessages)
-        const jazzMentioned = /jazz night/i.test(recentMessages)
+        // Check LAST 4 messages for specific event name (more context)
+        const recentMessages = conversationHistory.slice(-4).map(m => m.content).join(' ')
+        const tastingMentioned = /tasting experience|tasting night|cocktail tasting/i.test(recentMessages)
+        const jazzMentioned = /jazz night|live jazz/i.test(recentMessages)
         
-        console.log(`🔍 Event detection: tasting=${tastingMentioned}, jazz=${jazzMentioned}`)
+        console.log(`🔍 Event detection in last 4 messages:`)
+        console.log(`   - Tasting mentioned: ${tastingMentioned}`)
+        console.log(`   - Jazz mentioned: ${jazzMentioned}`)
+        console.log(`   - Recent messages:`, conversationHistory.slice(-4).map(m => m.content.substring(0, 50)))
         
         let query = supabase
           .from('business_events')
@@ -333,7 +336,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           .gte('event_date', new Date().toISOString().split('T')[0])
           .order('event_date', { ascending: true })
         
-        // Filter by specific event if mentioned
+        // Filter by specific event if mentioned in recent conversation
         if (tastingMentioned) {
           query = query.ilike('event_name', '%tasting%')
           console.log(`🎯 Filtering for: Tasting Experience`)
@@ -341,8 +344,9 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           query = query.ilike('event_name', '%jazz%')
           console.log(`🎯 Filtering for: Jazz Night`)
         } else {
-          query = query.limit(5)
-          console.log(`🎯 No specific filter - showing up to 5 events`)
+          // Default: show only next upcoming event (not all 5)
+          query = query.limit(1)
+          console.log(`🎯 No specific mention - showing only next upcoming event`)
         }
         
         const { data: events, error } = await query
