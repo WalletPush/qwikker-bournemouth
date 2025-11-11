@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { SocialPostBuilder } from './social-post-builder'
 
 type PostType = 'offer' | 'secret-menu' | 'event' | 'general' | null
 
@@ -13,6 +14,17 @@ interface SocialWizardPageProps {
 
 export function SocialWizardPage({ profile }: SocialWizardPageProps) {
   const [selectedPostType, setSelectedPostType] = useState<PostType>(null)
+
+  // If a post type is selected, show the builder
+  if (selectedPostType) {
+    return (
+      <SocialPostBuilder
+        postType={selectedPostType}
+        profile={profile}
+        onClose={() => setSelectedPostType(null)}
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">

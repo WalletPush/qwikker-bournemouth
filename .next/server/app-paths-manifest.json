@@ -35,6 +35,7 @@
   "/dashboard/referrals/page": "app/dashboard/referrals/page.js",
   "/dashboard/secret-menu/page": "app/dashboard/secret-menu/page.js",
   "/dashboard/settings/page": "app/dashboard/settings/page.js",
+  "/dashboard/social-wizard/page": "app/dashboard/social-wizard/page.js",
   "/dashboard/support/page": "app/dashboard/support/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/page": "app/page.js",
