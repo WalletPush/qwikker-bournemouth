@@ -317,26 +317,23 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
 
         {/* Category Filter */}
         {eventTypes.length > 2 && (
-          <Card className="bg-slate-900 border-slate-800 mb-6">
-            <CardContent className="p-4 text-center">
-              <p className="text-sm text-slate-400 mb-3">Filter by type:</p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {eventTypes.map(type => (
-                  <button
-                    key={type}
-                    onClick={() => setSelectedCategory(type)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                      selectedCategory === type
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                    }`}
-                  >
-                    {type === 'all' ? 'All' : getEventTypeLabel(type)}
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mb-6">
+            <div className="flex flex-wrap gap-2 justify-center">
+              {eventTypes.map(type => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedCategory(type)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    selectedCategory === type
+                      ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30'
+                      : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 border border-slate-700/50'
+                  }`}
+                >
+                  {type === 'all' ? 'All Types' : getEventTypeLabel(type)}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Events Grid */}
