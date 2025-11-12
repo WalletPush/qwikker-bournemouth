@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { PostTheme, ThemeThumbnail, type ThemeType } from './social-post-themes-v2'
 import { DynamicPostTheme } from './dynamic-post-theme'
-import { InteractivePostCanvas } from './interactive-post-canvas'
+import { AdvancedPostCanvas } from './advanced-post-canvas'
 import { createClient } from '@/lib/supabase/client'
 
 type PostType = 'offer' | 'secret-menu' | 'event' | 'general'
@@ -610,7 +610,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                     <button className="text-black font-bold text-xl">⋯</button>
                   </div>
 
-                  {/* Interactive Canvas - Drag & Drop Editor */}
+                  {/* Advanced Generative Canvas */}
                   {isGenerating ? (
                     <div className="aspect-square flex items-center justify-center bg-slate-900">
                       <div className="text-center">
@@ -619,13 +619,13 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                       </div>
                     </div>
                   ) : (
-                    <InteractivePostCanvas
+                    <AdvancedPostCanvas
                       backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
                       headline={postContent.headline || 'Your headline will appear here'}
+                      caption={postContent.caption || 'Your caption will appear here'}
                       logoUrl={profile?.logo}
                       businessName={profile?.business_name}
                       style={postStyle}
-                      onRegenerateBackground={() => setStep('select')}
                     />
                   )}
 
@@ -669,6 +669,18 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Change Background Button */}
+              <Button
+                onClick={() => setStep('select')}
+                variant="outline"
+                className="w-full border-slate-600 text-slate-300 hover:bg-slate-700 flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Change Background Image
+              </Button>
             </div>
 
             {/* Right: Editor */}

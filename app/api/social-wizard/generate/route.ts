@@ -65,22 +65,66 @@ STYLE RULES:
 DESIGN INSTRUCTIONS - CREATE A UNIQUE DESIGN EVERY TIME:
 You MUST specify COMPLETELY DIFFERENT visual styling each time. Think like a creative director with unlimited design options.
 
-VARY EVERYTHING:
-- textColor: "white" | "black" | "gradient-gold" | "gradient-purple" | "gradient-sunset" | "neon-green" | "neon-pink" | "neon-blue" | "hot-pink" | "electric-blue" | "coral" | "mint" | "lavender" | "crimson"
-- textEffect: "bold-shadow" | "outline-glow" | "3d-pop" | "neon" | "vintage" | "graffiti" | "double-stroke" | "glitch" | "metallic" | "glass" | "fire" | "ice"
-- textPosition: "top-center" | "center" | "bottom-center" | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "diagonal-topleft" | "diagonal-topright"
-- textSize: "massive" | "large" | "medium" | "compact"
-- fontStyle: "ultra-bold" | "bold" | "black" | "condensed" | "wide" | "italic-bold"
-- backgroundOverlay: "dark-gradient" | "light-gradient" | "blur-heavy" | "blur-light" | "vignette" | "split-tone" | "duotone" | "none"
-- accentElement: "none" | "corner-badge" | "side-stripe" | "top-banner" | "bottom-banner" | "geometric-shapes" | "confetti"
+THIS IS A PREMIUM DESIGN TOOL - THINK LIKE A PROFESSIONAL CREATIVE DIRECTOR!
 
-IMPORTANT: 
-- BE WILDLY CREATIVE! Every regeneration should look COMPLETELY different
-- Mix unexpected combinations (e.g., lavender text + metallic effect + diagonal layout)
-- Don't default to the same safe choices
-- Make each post visually distinct from the last
+Generate COMPLETELY DIFFERENT designs each time by varying ALL of these:
 
-Return ONLY valid JSON: { headline, caption, hashtags, style: { textColor, textEffect, textPosition, textSize, fontStyle, backgroundOverlay, accentElement } }`,
+🎨 LAYOUT (how the canvas is divided):
+- "full-bleed" - text overlays the full image
+- "split-screen" - image on one side, colored panel on the other
+- "corner-focus" - image in corner with geometric crop
+- "diagonal-slice" - dramatic diagonal composition
+- "center-burst" - circular crop with text around
+- "framed" - border with inset image
+
+🖼️ IMAGE EFFECT (transform the background photo):
+- "blur-heavy" - heavy blur with bright text (nightclub vibe)
+- "duotone" - convert to two-color effect (retro poster)
+- "vignette-dark" - dark edges, bright center (dramatic)
+- "high-contrast" - punchy, saturated colors (festival poster)
+- "desaturate" - muted, elegant (luxury brand)
+- "gradient-overlay" - colored gradient over image (modern)
+- "pattern-overlay" - geometric patterns on image (edgy)
+
+📍 TEXT PLACEMENT (where/how text appears):
+- "overlay" - centered on image
+- "side-panel" - text in solid colored sidebar
+- "top-bar" - text in bar across top
+- "bottom-bar" - text in bar across bottom
+- "diagonal" - text on diagonal stripe
+- "circular" - text in circular frame
+
+🎨 TEXT COLOR:
+- "white" | "black" | "gradient-gold" | "gradient-purple" | "gradient-sunset" | "gradient-ocean" | "gradient-fire"
+- "neon-green" | "neon-pink" | "neon-blue" | "hot-pink" | "electric-blue" | "coral" | "mint" | "lavender" | "crimson"
+
+✨ TEXT EFFECT:
+- "bold-shadow" | "outline-glow" | "3d-pop" | "neon" | "metallic" | "glass"
+
+🎯 ACCENT COLOR (for panels/overlays):
+- Any hex color that matches the vibe
+
+CRITICAL RULES:
+1. Every generation must use DIFFERENT layout, imageEffect, and textPlacement
+2. Don't repeat the same combinations
+3. Think: "What would make someone STOP SCROLLING?"
+4. Mix unexpected styles (e.g., blur-heavy + neon + side-panel = club night poster)
+5. Consider the theme but BE BOLD with interpretation
+
+Return ONLY valid JSON: 
+{ 
+  headline, 
+  caption, 
+  hashtags, 
+  style: { 
+    layout, 
+    imageEffect, 
+    textPlacement, 
+    textColor, 
+    textEffect, 
+    accentColor 
+  } 
+}`,
       messages: [
         {
           role: 'user',
