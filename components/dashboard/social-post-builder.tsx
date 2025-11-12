@@ -215,8 +215,9 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     setIsGenerating(true)
     
     try {
-      // Call AI generation API with selected theme
+      // Call AI generation API with selected theme and background
       console.log('🎨 Generating content for theme:', selectedTheme)
+      console.log('🖼️ Using background image:', backgroundImage)
       
       const response = await fetch('/api/social-wizard/generate', {
         method: 'POST',
@@ -227,7 +228,8 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
           businessName: profile?.business_name,
           city: profile?.city,
           businessType: profile?.business_type,
-          theme: selectedTheme // Pass the selected theme to AI
+          theme: selectedTheme, // Pass the selected theme to AI
+          timestamp: Date.now() // Force unique generation each time
         })
       })
 
@@ -429,11 +431,12 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                         <button
                           key={index}
                           onClick={() => {
+                            console.log('📸 Selected business photo #' + (index + 1) + ':', photo)
                             setImageSource('business')
                             setBackgroundImage(photo)
                           }}
                           className={`p-4 rounded-lg border-2 transition-all ${
-                            imageSource === 'business' && backgroundImage === photo
+                            backgroundImage === photo
                               ? 'border-[#00d083] bg-[#00d083]/10'
                               : 'border-slate-600 hover:border-slate-500'
                           }`}

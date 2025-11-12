@@ -10,13 +10,26 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json()
-    const { postType, content, businessName, city, businessType, theme } = body
+    const { postType, content, businessName, city, businessType, theme, timestamp } = body
     
-    console.log('📥 Request:', { postType, businessName, city, businessType, theme, contentTitle: content?.title })
+    console.log('📥 Request:', { postType, businessName, city, businessType, theme, contentTitle: content?.title, timestamp })
+
+    // Generate a random variation seed to force different outputs
+    const variationSeeds = [
+      'Make it EXPLOSIVE and MAXIMALIST - think festival poster energy',
+      'Go MINIMAL and LUXURY - think high-end fashion campaign', 
+      'Make it EDGY and STREET - think underground venue vibes',
+      'Go ELEGANT and SOPHISTICATED - think Michelin star restaurant',
+      'Make it FUN and PLAYFUL - think trendy brunch spot',
+      'Go BOLD and DRAMATIC - think Broadway poster',
+      'Make it COOL and MYSTERIOUS - think speakeasy vibe',
+      'Go WARM and INVITING - think cozy neighborhood gem'
+    ]
+    const randomSeed = variationSeeds[Math.floor(Math.random() * variationSeeds.length)]
 
     // Build prompt based on post type and content
-    const prompt = buildPrompt(postType, content, businessName, city, businessType, theme)
-    console.log('📝 Prompt built, calling Claude...')
+    const prompt = buildPrompt(postType, content, businessName, city, businessType, theme, randomSeed)
+    console.log('📝 Prompt built with seed:', randomSeed)
 
     // Generate with Claude Sonnet 4 (latest and best!)
     // High temperature for MAXIMUM variation on regenerate
@@ -25,6 +38,9 @@ export async function POST(request: NextRequest) {
       max_tokens: 1024,
       temperature: 1.0, // Maximum creativity for different results each time
       system: `You are an elite creative director at a top advertising agency, specializing in viral Instagram content for premium local businesses.
+
+🎲 VARIATION DIRECTIVE: ${randomSeed}
+This is instruction #${timestamp || Date.now()} - make it COMPLETELY UNIQUE from any previous generation.
 
 SELECTED THEME: "${theme}"
 ${getThemeGuidance(theme)}
@@ -167,12 +183,14 @@ function buildPrompt(
   businessName: string,
   city: string,
   businessType: string,
-  theme?: string
+  theme?: string,
+  variationSeed?: string
 ): string {
   const baseContext = `
 Business: ${businessName}
 Type: ${businessType}
 Location: ${city}
+${variationSeed ? `\n🎨 CREATIVE DIRECTION: ${variationSeed}\n` : ''}
 `
 
   if (postType === 'offer') {
