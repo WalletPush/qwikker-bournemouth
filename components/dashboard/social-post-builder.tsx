@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { PostTheme, ThemeThumbnail, type ThemeType } from './social-post-themes-v2'
 import { DynamicPostTheme } from './dynamic-post-theme'
+import { InteractivePostCanvas } from './interactive-post-canvas'
 import { createClient } from '@/lib/supabase/client'
 
 type PostType = 'offer' | 'secret-menu' | 'event' | 'general'
@@ -606,40 +607,26 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                     <button className="text-black font-bold text-xl">⋯</button>
                   </div>
 
-                  {/* Instagram Post Image */}
-                  <div className="relative bg-black aspect-square">
+                  {/* Interactive Canvas - Drag & Drop Editor */}
+                  <div className="bg-black">
                     {isGenerating ? (
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
+                      <div className="aspect-square flex items-center justify-center bg-slate-900">
                         <div className="text-center">
                           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00d083] mx-auto mb-4"></div>
                           <p className="text-slate-400">Generating your post...</p>
                         </div>
                       </div>
-                    ) : postStyle.textPosition ? (
-                      <DynamicPostTheme
-                        headline={postContent.headline || 'Your headline will appear here'}
-                        backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
-                        logoUrl={profile?.logo}
-                        businessName={profile?.business_name}
-                        style={{
-                          textColor: postStyle.textColor,
-                          textEffect: postStyle.textEffect,
-                          textPosition: postStyle.textPosition,
-                          textSize: postStyle.textSize,
-                          fontStyle: postStyle.fontStyle,
-                          backgroundOverlay: postStyle.backgroundOverlay,
-                          accentElement: postStyle.accentElement
-                        }}
-                      />
                     ) : (
-                      <PostTheme
-                        theme={selectedTheme}
-                        headline={postContent.headline || 'Your headline will appear here'}
-                        caption={postContent.caption || 'Your caption will appear here...'}
+                      <InteractivePostCanvas
                         backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                        headline={postContent.headline || 'Your headline will appear here'}
                         logoUrl={profile?.logo}
                         businessName={profile?.business_name}
                         style={postStyle}
+                        onRegenerateBackground={() => {
+                          // TODO: Implement background regeneration
+                          console.log('Regenerate background')
+                        }}
                       />
                     )}
                   </div>
