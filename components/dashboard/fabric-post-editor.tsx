@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { Canvas, Textbox, Image as FabricImage, Rect, Group, Text, Shadow, Gradient } from 'fabric'
+import { fabric } from 'fabric'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -33,8 +33,8 @@ export function FabricPostEditor({
   })
   
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const fabricCanvasRef = useRef<Canvas | null>(null)
-  const [selectedObject, setSelectedObject] = useState<any>(null)
+  const fabricCanvasRef = useRef<fabric.Canvas | null>(null)
+  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null)
   const [textColor, setTextColor] = useState('#ffffff')
   const [fontSize, setFontSize] = useState(80)
   const [isLoading, setIsLoading] = useState(true)
@@ -43,7 +43,7 @@ export function FabricPostEditor({
     if (!canvasRef.current) return
 
     // Initialize Fabric canvas
-    const canvas = new Canvas(canvasRef.current, {
+    const canvas = new fabric.Canvas(canvasRef.current, {
       width: 1080,
       height: 1080,
       backgroundColor: '#000'
@@ -77,7 +77,7 @@ export function FabricPostEditor({
     }
   }, [backgroundImage, headline, logoUrl])
 
-  const setupCanvas = async (canvas: Canvas) => {
+  const setupCanvas = async (canvas: fabric.Canvas) => {
     try {
       console.log('🎨 Setting up Fabric canvas with:', { backgroundImage, headline, logoUrl })
       
@@ -103,7 +103,7 @@ export function FabricPostEditor({
       console.log('✅ Background image added to canvas')
 
       // 2. Add subtle vignette overlay
-      const vignette = new Rect({
+      const vignette = new fabric.Rect({
         left: 0,
         top: 0,
         width: 1080,
@@ -116,7 +116,7 @@ export function FabricPostEditor({
       console.log('✅ Vignette overlay added')
 
       // 3. Add headline text (editable)
-      const text = new Textbox(headline, {
+      const text = new fabric.Textbox(headline, {
         left: 540,
         top: 500,
         width: 880,
@@ -127,7 +127,7 @@ export function FabricPostEditor({
         textAlign: 'center',
         originX: 'center',
         originY: 'center',
-        shadow: new Shadow({
+        shadow: new fabric.Shadow({
           color: 'rgba(0,0,0,0.8)',
           blur: 20,
           offsetX: 0,
@@ -170,7 +170,7 @@ export function FabricPostEditor({
       })
       canvas.add(ctaButton)
 
-      console.log('✅ Canvas setup complete! Objects:', canvas._objects?.length || 0)
+      console.log('✅ Canvas setup complete! Objects:', canvas.getObjects().length)
       setIsLoading(false)
       canvas.renderAll()
     } catch (error) {
@@ -184,24 +184,24 @@ export function FabricPostEditor({
     if (!canvas) return
 
     // Update text
-    const textObject = canvas._objects?.find((obj: any) => obj.type === 'textbox')
+    const textObject = canvas.getObjects().find(obj => obj.type === 'textbox') as fabric.Textbox
     if (textObject) {
       textObject.set('text', headline)
       canvas.renderAll()
     }
   }
 
-  const loadImage = (url: string): Promise<FabricImage> => {
+  const loadImage = (url: string): Promise<fabric.Image> => {
     return new Promise((resolve, reject) => {
-      FabricImage.fromURL(url, { crossOrigin: 'anonymous' }).then((img: any) => {
+      fabric.Image.fromURL(url, (img) => {
         if (img) resolve(img)
         else reject(new Error('Failed to load image'))
-      })
+      }, { crossOrigin: 'anonymous' })
     })
   }
 
-  const createQwikkerBadge = async (): Promise<Group> => {
-    const rect = new Rect({
+  const createQwikkerBadge = async (): Promise<fabric.Group> => {
+    const rect = new fabric.Rect({
       width: 120,
       height: 40,
       fill: 'rgba(0,0,0,0.8)',
@@ -209,7 +209,7 @@ export function FabricPostEditor({
       ry: 8
     })
 
-    const text = new Text('QWIKKER', {
+    const text = new fabric.Text('QWIKKER', {
       fontSize: 14,
       fontFamily: 'Arial',
       fontWeight: 'bold',
@@ -218,14 +218,14 @@ export function FabricPostEditor({
       top: 12
     })
 
-    return new Group([rect, text], {
+    return new fabric.Group([rect, text], {
       selectable: true,
       hasControls: false
     })
   }
 
-  const createCTAButton = async (): Promise<Group> => {
-    const rect = new Rect({
+  const createCTAButton = async (): Promise<fabric.Group> => {
+    const rect = new fabric.Rect({
       width: 200,
       height: 44,
       fill: 'rgba(255,255,255,0.95)',
@@ -233,7 +233,7 @@ export function FabricPostEditor({
       ry: 10
     })
 
-    const text = new Text('Install QWIKKER Pass', {
+    const text = new fabric.Text('Install QWIKKER Pass', {
       fontSize: 13,
       fontFamily: 'Arial',
       fontWeight: 'bold',
@@ -242,7 +242,7 @@ export function FabricPostEditor({
       top: 14
     })
 
-    return new Group([rect, text], {
+    return new fabric.Group([rect, text], {
       selectable: true,
       hasControls: false
     })
@@ -251,7 +251,7 @@ export function FabricPostEditor({
   // Editor controls
   const handleTextColorChange = (color: string) => {
     if (selectedObject && selectedObject.type === 'textbox') {
-      (selectedObject as Textbox).set('fill', color)
+      (selectedObject as fabric.Textbox).set('fill', color)
       fabricCanvasRef.current?.renderAll()
       setTextColor(color)
     }
@@ -259,7 +259,7 @@ export function FabricPostEditor({
 
   const handleFontSizeChange = (size: number[]) => {
     if (selectedObject && selectedObject.type === 'textbox') {
-      (selectedObject as Textbox).set('fontSize', size[0])
+      (selectedObject as fabric.Textbox).set('fontSize', size[0])
       fabricCanvasRef.current?.renderAll()
       setFontSize(size[0])
     }
@@ -269,7 +269,7 @@ export function FabricPostEditor({
     const canvas = fabricCanvasRef.current
     if (!canvas) return
 
-    const text = new Textbox('New Text', {
+    const text = new fabric.Textbox('New Text', {
       left: 540,
       top: 300,
       width: 600,
@@ -280,7 +280,7 @@ export function FabricPostEditor({
       textAlign: 'center',
       originX: 'center',
       originY: 'center',
-      shadow: new Shadow({
+      shadow: new fabric.Shadow({
         color: 'rgba(0,0,0,0.8)',
         blur: 20
       })
