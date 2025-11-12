@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { fabric } from 'fabric'
+import { Canvas, Textbox, Image as FabricImage, Rect, Group, Text, Shadow, Gradient } from 'fabric'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,8 +25,8 @@ export function FabricPostEditor({
   onExport
 }: FabricPostEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const fabricCanvasRef = useRef<fabric.Canvas | null>(null)
-  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null)
+  const fabricCanvasRef = useRef<Canvas | null>(null)
+  const [selectedObject, setSelectedObject] = useState<any>(null)
   const [textColor, setTextColor] = useState('#ffffff')
   const [fontSize, setFontSize] = useState(80)
   const [isLoading, setIsLoading] = useState(true)
@@ -35,7 +35,7 @@ export function FabricPostEditor({
     if (!canvasRef.current) return
 
     // Initialize Fabric canvas
-    const canvas = new fabric.Canvas(canvasRef.current, {
+    const canvas = new Canvas(canvasRef.current, {
       width: 1080,
       height: 1080,
       backgroundColor: '#000'
@@ -69,7 +69,7 @@ export function FabricPostEditor({
     }
   }, [backgroundImage, headline, logoUrl])
 
-  const setupCanvas = async (canvas: fabric.Canvas) => {
+  const setupCanvas = async (canvas: Canvas) => {
     try {
       // 1. Add background image
       const bgImage = await loadImage(backgroundImage)
@@ -82,12 +82,12 @@ export function FabricPostEditor({
       canvas.setBackgroundImage(bgImage, canvas.renderAll.bind(canvas))
 
       // 2. Add subtle vignette overlay
-      const vignette = new fabric.Rect({
+      const vignette = new Rect({
         left: 0,
         top: 0,
         width: 1080,
         height: 1080,
-        fill: new fabric.Gradient({
+        fill: new Gradient({
           type: 'radial',
           coords: {
             r1: 200,
@@ -108,7 +108,7 @@ export function FabricPostEditor({
       canvas.add(vignette)
 
       // 3. Add headline text (editable)
-      const text = new fabric.Textbox(headline, {
+      const text = new Textbox(headline, {
         left: analysis?.textPlacement?.includes('left') ? 100 : 540,
         top: analysis?.textPlacement?.includes('top') ? 200 : 
              analysis?.textPlacement?.includes('bottom') ? 800 : 500,
@@ -120,7 +120,7 @@ export function FabricPostEditor({
         textAlign: 'center',
         originX: 'center',
         originY: 'center',
-        shadow: new fabric.Shadow({
+        shadow: new Shadow({
           color: 'rgba(0,0,0,0.8)',
           blur: 20,
           offsetX: 0,
@@ -181,17 +181,17 @@ export function FabricPostEditor({
     }
   }
 
-  const loadImage = (url: string): Promise<fabric.Image> => {
+  const loadImage = (url: string): Promise<FabricImage> => {
     return new Promise((resolve, reject) => {
-      fabric.Image.fromURL(url, (img) => {
+      FabricImage.fromURL(url, { crossOrigin: 'anonymous' }).then((img: any) => {
         if (img) resolve(img)
         else reject(new Error('Failed to load image'))
-      }, { crossOrigin: 'anonymous' })
+      })
     })
   }
 
-  const createQwikkerBadge = async (): Promise<fabric.Group> => {
-    const rect = new fabric.Rect({
+  const createQwikkerBadge = async (): Promise<Group> => {
+    const rect = new Rect({
       width: 120,
       height: 40,
       fill: 'rgba(0,0,0,0.8)',
@@ -199,7 +199,7 @@ export function FabricPostEditor({
       ry: 8
     })
 
-    const text = new fabric.Text('QWIKKER', {
+    const text = new Text('QWIKKER', {
       fontSize: 14,
       fontFamily: 'Arial',
       fontWeight: 'bold',
@@ -208,14 +208,14 @@ export function FabricPostEditor({
       top: 12
     })
 
-    return new fabric.Group([rect, text], {
+    return new Group([rect, text], {
       selectable: true,
       hasControls: false
     })
   }
 
-  const createCTAButton = async (): Promise<fabric.Group> => {
-    const rect = new fabric.Rect({
+  const createCTAButton = async (): Promise<Group> => {
+    const rect = new Rect({
       width: 200,
       height: 44,
       fill: 'rgba(255,255,255,0.95)',
@@ -223,7 +223,7 @@ export function FabricPostEditor({
       ry: 10
     })
 
-    const text = new fabric.Text('Install QWIKKER Pass', {
+    const text = new Text('Install QWIKKER Pass', {
       fontSize: 13,
       fontFamily: 'Arial',
       fontWeight: 'bold',
@@ -232,7 +232,7 @@ export function FabricPostEditor({
       top: 14
     })
 
-    return new fabric.Group([rect, text], {
+    return new Group([rect, text], {
       selectable: true,
       hasControls: false
     })
@@ -241,7 +241,7 @@ export function FabricPostEditor({
   // Editor controls
   const handleTextColorChange = (color: string) => {
     if (selectedObject && selectedObject.type === 'textbox') {
-      (selectedObject as fabric.Textbox).set('fill', color)
+      (selectedObject as Textbox).set('fill', color)
       fabricCanvasRef.current?.renderAll()
       setTextColor(color)
     }
@@ -249,7 +249,7 @@ export function FabricPostEditor({
 
   const handleFontSizeChange = (size: number[]) => {
     if (selectedObject && selectedObject.type === 'textbox') {
-      (selectedObject as fabric.Textbox).set('fontSize', size[0])
+      (selectedObject as Textbox).set('fontSize', size[0])
       fabricCanvasRef.current?.renderAll()
       setFontSize(size[0])
     }
@@ -259,7 +259,7 @@ export function FabricPostEditor({
     const canvas = fabricCanvasRef.current
     if (!canvas) return
 
-    const text = new fabric.Textbox('New Text', {
+    const text = new Textbox('New Text', {
       left: 540,
       top: 300,
       width: 600,
@@ -270,7 +270,7 @@ export function FabricPostEditor({
       textAlign: 'center',
       originX: 'center',
       originY: 'center',
-      shadow: new fabric.Shadow({
+      shadow: new Shadow({
         color: 'rgba(0,0,0,0.8)',
         blur: 20
       })
