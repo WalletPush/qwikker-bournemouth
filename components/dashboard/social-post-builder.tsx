@@ -11,7 +11,7 @@ import { DynamicPostTheme } from './dynamic-post-theme'
 import { AdvancedPostCanvas } from './advanced-post-canvas'
 import { SmartPostCanvas } from './smart-post-canvas'
 import { InstagramPreview } from './instagram-preview'
-import { FabricPostEditor } from './fabric-post-editor'
+import { SimplePostEditor } from './simple-post-editor'
 import { SocialPreviewSwitcher } from './social-preview-switcher'
 import { createClient } from '@/lib/supabase/client'
 
@@ -672,78 +672,58 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
               </div>
             </div>
 
-            {/* Editor Layout */}
-            <div className="grid lg:grid-cols-2 gap-8">
-              {/* Left: Fabric Editor */}
-              <div>
-                <FabricPostEditor
-                  key={backgroundImage} // Force re-render when image changes
-                  backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
-                  headline={postContent.headline || 'Your headline'}
-                  logoUrl={profile?.logo}
-                  businessName={profile?.business_name}
-                  analysis={imageAnalysis}
-                  onExport={(imageData) => {
-                    console.log('Image exported:', imageData)
-                    // TODO: Save to state or upload
-                  }}
-                />
-              </div>
+            {/* Simple Editor - No complex canvas, just works! */}
+            <div className="space-y-8">
+              {/* Post Preview */}
+              <SimplePostEditor
+                backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                headline={postContent.headline || 'Your headline'}
+                logoUrl={profile?.logo}
+                businessName={profile?.business_name}
+              />
 
-              {/* Right: Preview & Actions */}
-              <div className="space-y-6">
-                <SocialPreviewSwitcher
-                  businessName={profile?.business_name || 'yourbusiness'}
-                  businessLogo={profile?.logo}
-                  postImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
-                  caption={postContent.caption || 'Your caption...'}
-                  hashtags={postContent.hashtags || `#${profile?.city?.replace(/\s/g, '')} #${profile?.business_name?.replace(/\s/g, '')}`}
-                  isLoading={false}
-                />
+              {/* Caption & Hashtags Editor */}
+              <Card className="bg-slate-800 border-slate-700 max-w-4xl mx-auto">
+                <CardHeader>
+                  <CardTitle className="text-white">Caption & Hashtags</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label className="text-slate-300 mb-2 block">Caption</Label>
+                    <Textarea
+                      value={postContent.caption}
+                      onChange={(e) => setPostContent({ ...postContent, caption: e.target.value })}
+                      placeholder="Write your caption..."
+                      className="bg-slate-900 border-slate-600 text-white min-h-[120px]"
+                      maxLength={2200}
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      {postContent.caption.length}/2200 characters
+                    </p>
+                  </div>
 
-                {/* Caption Editor */}
-                <Card className="bg-slate-800 border-slate-700">
-                  <CardHeader>
-                    <CardTitle className="text-white">Caption & Hashtags</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label className="text-slate-300 mb-2 block">Caption</Label>
-                      <Textarea
-                        value={postContent.caption}
-                        onChange={(e) => setPostContent({ ...postContent, caption: e.target.value })}
-                        placeholder="Write your caption..."
-                        className="bg-slate-900 border-slate-600 text-white min-h-[120px]"
-                        maxLength={2200}
-                      />
-                      <p className="text-xs text-slate-500 mt-1">
-                        {postContent.caption.length}/2200 characters
-                      </p>
-                    </div>
+                  <div>
+                    <Label className="text-slate-300 mb-2 block">Hashtags</Label>
+                    <Input
+                      value={postContent.hashtags}
+                      onChange={(e) => setPostContent({ ...postContent, hashtags: e.target.value })}
+                      placeholder="#YourHashtags #Here"
+                      className="bg-slate-900 border-slate-600 text-white"
+                    />
+                  </div>
 
-                    <div>
-                      <Label className="text-slate-300 mb-2 block">Hashtags</Label>
-                      <Input
-                        value={postContent.hashtags}
-                        onChange={(e) => setPostContent({ ...postContent, hashtags: e.target.value })}
-                        placeholder="#YourHashtags #Here"
-                        className="bg-slate-900 border-slate-600 text-white"
-                      />
-                    </div>
-
-                    <Button
-                      onClick={handleRegenerate}
-                      variant="outline"
-                      className="w-full border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10"
-                    >
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      Regenerate Caption & Hashtags
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
+                  <Button
+                    onClick={handleRegenerate}
+                    variant="outline"
+                    className="w-full border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Regenerate Caption & Hashtags
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
