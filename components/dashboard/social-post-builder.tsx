@@ -601,7 +601,115 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     )
   }
 
-  // STEP 2: Edit & Preview
+  // STEP 3: Advanced Fabric Editor
+  if (step === 'edit') {
+    return (
+      <div className="fixed inset-0 bg-black/90 z-50 overflow-y-auto">
+        <div className="min-h-screen px-4 py-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-2">Advanced Post Editor</h2>
+                <p className="text-slate-400">Drag, resize, and perfect your post design</p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep('generate')}
+                  className="border-slate-600 text-white hover:bg-slate-700"
+                >
+                  ← Back to Preview
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="border-slate-600 text-white hover:bg-slate-700"
+                >
+                  ✕ Close
+                </Button>
+              </div>
+            </div>
+
+            {/* Editor Layout */}
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* Left: Fabric Editor */}
+              <div>
+                <FabricPostEditor
+                  backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                  headline={postContent.headline || 'Your headline'}
+                  logoUrl={profile?.logo}
+                  businessName={profile?.business_name}
+                  analysis={imageAnalysis}
+                  onExport={(imageData) => {
+                    console.log('Image exported:', imageData)
+                    // TODO: Save to state or upload
+                  }}
+                />
+              </div>
+
+              {/* Right: Preview & Actions */}
+              <div className="space-y-6">
+                <SocialPreviewSwitcher
+                  businessName={profile?.business_name || 'yourbusiness'}
+                  businessLogo={profile?.logo}
+                  postImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                  caption={postContent.caption || 'Your caption...'}
+                  hashtags={postContent.hashtags || `#${profile?.city?.replace(/\s/g, '')} #${profile?.business_name?.replace(/\s/g, '')}`}
+                  isLoading={false}
+                />
+
+                {/* Caption Editor */}
+                <Card className="bg-slate-800 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="text-white">Caption & Hashtags</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="text-slate-300 mb-2 block">Caption</Label>
+                      <Textarea
+                        value={postContent.caption}
+                        onChange={(e) => setPostContent({ ...postContent, caption: e.target.value })}
+                        placeholder="Write your caption..."
+                        className="bg-slate-900 border-slate-600 text-white min-h-[120px]"
+                        maxLength={2200}
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        {postContent.caption.length}/2200 characters
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label className="text-slate-300 mb-2 block">Hashtags</Label>
+                      <Input
+                        value={postContent.hashtags}
+                        onChange={(e) => setPostContent({ ...postContent, hashtags: e.target.value })}
+                        placeholder="#YourHashtags #Here"
+                        className="bg-slate-900 border-slate-600 text-white"
+                      />
+                    </div>
+
+                    <Button
+                      onClick={handleRegenerate}
+                      variant="outline"
+                      className="w-full border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Regenerate Caption & Hashtags
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // STEP 2: Edit & Preview (Generate step)
   return (
     <div className="fixed inset-0 bg-black/80 z-50 overflow-y-auto backdrop-blur-sm">
       <div className="min-h-screen px-4 py-8">
@@ -912,114 +1020,6 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                   Save Draft
                 </Button>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// STEP 3: Advanced Fabric Editor
-if (step === 'edit') {
-  return (
-    <div className="fixed inset-0 bg-black/90 z-50 overflow-y-auto">
-      <div className="min-h-screen px-4 py-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-3xl font-bold text-white mb-2">Advanced Post Editor</h2>
-              <p className="text-slate-400">Drag, resize, and perfect your post design</p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setStep('generate')}
-                className="border-slate-600 text-white hover:bg-slate-700"
-              >
-                ← Back to Preview
-              </Button>
-              <Button
-                variant="outline"
-                onClick={onClose}
-                className="border-slate-600 text-white hover:bg-slate-700"
-              >
-                ✕ Close
-              </Button>
-            </div>
-          </div>
-
-          {/* Editor Layout */}
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Left: Fabric Editor */}
-            <div>
-              <FabricPostEditor
-                backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
-                headline={postContent.headline || 'Your headline'}
-                logoUrl={profile?.logo}
-                businessName={profile?.business_name}
-                analysis={imageAnalysis}
-                onExport={(imageData) => {
-                  console.log('Image exported:', imageData)
-                  // TODO: Save to state or upload
-                }}
-              />
-            </div>
-
-            {/* Right: Preview & Actions */}
-            <div className="space-y-6">
-              <SocialPreviewSwitcher
-                businessName={profile?.business_name || 'yourbusiness'}
-                businessLogo={profile?.logo}
-                postImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
-                caption={postContent.caption || 'Your caption...'}
-                hashtags={postContent.hashtags || `#${profile?.city?.replace(/\s/g, '')} #${profile?.business_name?.replace(/\s/g, '')}`}
-                isLoading={false}
-              />
-
-              {/* Caption Editor */}
-              <Card className="bg-slate-800 border-slate-700">
-                <CardHeader>
-                  <CardTitle className="text-white">Caption & Hashtags</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-slate-300 mb-2 block">Caption</Label>
-                    <Textarea
-                      value={postContent.caption}
-                      onChange={(e) => setPostContent({ ...postContent, caption: e.target.value })}
-                      placeholder="Write your caption..."
-                      className="bg-slate-900 border-slate-600 text-white min-h-[120px]"
-                      maxLength={2200}
-                    />
-                    <p className="text-xs text-slate-500 mt-1">
-                      {postContent.caption.length}/2200 characters
-                    </p>
-                  </div>
-
-                  <div>
-                    <Label className="text-slate-300 mb-2 block">Hashtags</Label>
-                    <Input
-                      value={postContent.hashtags}
-                      onChange={(e) => setPostContent({ ...postContent, hashtags: e.target.value })}
-                      placeholder="#YourHashtags #Here"
-                      className="bg-slate-900 border-slate-600 text-white"
-                    />
-                  </div>
-
-                  <Button
-                    onClick={handleRegenerate}
-                    variant="outline"
-                    className="w-full border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10"
-                  >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Regenerate Caption & Hashtags
-                  </Button>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>

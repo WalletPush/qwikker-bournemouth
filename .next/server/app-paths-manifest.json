@@ -1,1 +1,16 @@
-{}
+{
+  "/admin/login/page": "app/admin/login/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/api/admin/login/route": "app/api/admin/login/route.js",
+  "/api/social-wizard/analyze-image/route": "app/api/social-wizard/analyze-image/route.js",
+  "/api/social-wizard/generate/route": "app/api/social-wizard/generate/route.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/business/page": "app/business/page.js",
+  "/dashboard/loyalty/page": "app/dashboard/loyalty/page.js",
+  "/dashboard/notifications/page": "app/dashboard/notifications/page.js",
+  "/dashboard/offers/page": "app/dashboard/offers/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/social-wizard/page": "app/dashboard/social-wizard/page.js",
+  "/page": "app/page.js",
+  "/protected/page": "app/protected/page.js"
+}
