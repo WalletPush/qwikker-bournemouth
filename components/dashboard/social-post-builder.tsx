@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { PostTheme, ThemeThumbnail, type ThemeType } from './social-post-themes-v2'
 import { DynamicPostTheme } from './dynamic-post-theme'
 import { AdvancedPostCanvas } from './advanced-post-canvas'
+import { SmartPostCanvas } from './smart-post-canvas'
 import { InstagramPreview } from './instagram-preview'
 import { createClient } from '@/lib/supabase/client'
 
@@ -80,6 +81,8 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     backgroundOverlay: 'dark-gradient',
     accentElement: 'none'
   })
+  const [imageAnalysis, setImageAnalysis] = useState<any>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   // Fetch available content when component mounts (only on select step)
   useEffect(() => {
@@ -238,10 +241,28 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     if (!selectedContent) return
 
     setIsGenerating(true)
+    setIsAnalyzing(true)
     
     try {
-      // Call AI generation API with selected theme and background
-      console.log('🎨 Generating content for theme:', selectedTheme)
+      // Step 1: Analyze the image with Claude Vision
+      console.log('🔍 Analyzing image:', backgroundImage)
+      const analysisResponse = await fetch('/api/social-wizard/analyze-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrl: backgroundImage,
+          businessName: profile?.business_name,
+          offerText: selectedContent.title
+        })
+      })
+
+      const analysis = await analysisResponse.json()
+      console.log('🎨 Image analysis complete:', analysis)
+      setImageAnalysis(analysis)
+      setIsAnalyzing(false)
+
+      // Step 2: Generate copy with AI
+      console.log('✍️ Generating content for theme:', selectedTheme)
       console.log('🖼️ Using background image:', backgroundImage)
       
       const response = await fetch('/api/social-wizard/generate', {
@@ -623,18 +644,28 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                 businessName={profile?.business_name || 'yourbusiness'}
                 businessLogo={profile?.logo}
                 postImage={
-                  <AdvancedPostCanvas
-                    backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
-                    headline={postContent.headline || 'Your headline will appear here'}
-                    caption={postContent.caption || 'Your caption will appear here'}
-                    logoUrl={profile?.logo}
-                    businessName={profile?.business_name}
-                    style={postStyle}
-                  />
+                  imageAnalysis ? (
+                    <SmartPostCanvas
+                      backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                      headline={postContent.headline || 'Your headline will appear here'}
+                      logoUrl={profile?.logo}
+                      businessName={profile?.business_name}
+                      analysis={imageAnalysis}
+                    />
+                  ) : (
+                    <AdvancedPostCanvas
+                      backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                      headline={postContent.headline || 'Your headline will appear here'}
+                      caption={postContent.caption || 'Your caption will appear here'}
+                      logoUrl={profile?.logo}
+                      businessName={profile?.business_name}
+                      style={postStyle}
+                    />
+                  )
                 }
                 caption={postContent.caption || 'Your caption will appear here...'}
                 hashtags={postContent.hashtags || `#${profile?.city?.replace(/\s/g, '')} #${profile?.business_name?.replace(/\s/g, '')}`}
-                isLoading={isGenerating}
+                isLoading={isGenerating || isAnalyzing}
               />
 
               {/* REMOVE OLD CARD - DELETE EVERYTHING FROM HERE */}
