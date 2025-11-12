@@ -247,7 +247,7 @@ export function AdvancedPostCanvas({
   }
 
   return (
-    <div className="relative w-full aspect-square overflow-hidden bg-black">
+    <div className="relative w-full aspect-square overflow-hidden bg-black" style={{ display: 'block' }}>
       {/* Background Image with Effects */}
       <div 
         className="absolute inset-0"
@@ -257,7 +257,7 @@ export function AdvancedPostCanvas({
           src={backgroundImage}
           alt="Background"
           className="w-full h-full object-cover"
-          style={{ filter: getImageEffect() }}
+          style={{ filter: getImageEffect(), display: 'block' }}
         />
       </div>
 

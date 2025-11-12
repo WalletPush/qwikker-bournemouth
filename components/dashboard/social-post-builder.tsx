@@ -611,23 +611,25 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                   </div>
 
                   {/* Advanced Generative Canvas */}
-                  {isGenerating ? (
-                    <div className="aspect-square flex items-center justify-center bg-slate-900">
-                      <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00d083] mx-auto mb-4"></div>
-                        <p className="text-slate-400">Generating your post...</p>
+                  <div className="w-full">
+                    {isGenerating ? (
+                      <div className="aspect-square flex items-center justify-center bg-slate-900">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00d083] mx-auto mb-4"></div>
+                          <p className="text-slate-400">Generating your post...</p>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <AdvancedPostCanvas
-                      backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
-                      headline={postContent.headline || 'Your headline will appear here'}
-                      caption={postContent.caption || 'Your caption will appear here'}
-                      logoUrl={profile?.logo}
-                      businessName={profile?.business_name}
-                      style={postStyle}
-                    />
-                  )}
+                    ) : (
+                      <AdvancedPostCanvas
+                        backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                        headline={postContent.headline || 'Your headline will appear here'}
+                        caption={postContent.caption || 'Your caption will appear here'}
+                        logoUrl={profile?.logo}
+                        businessName={profile?.business_name}
+                        style={postStyle}
+                      />
+                    )}
+                  </div>
 
                   {/* Instagram Actions */}
                   <div className="flex items-center justify-between p-3 border-b border-gray-200">
