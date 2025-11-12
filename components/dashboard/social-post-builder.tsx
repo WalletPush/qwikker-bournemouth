@@ -226,7 +226,8 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
       business_images_isArray: Array.isArray(profile?.business_images),
       business_images_length: profile?.business_images?.length,
       offer_image: profile?.offer_image,
-      logo: profile?.logo
+      logo: profile?.logo,
+      selectedContent_image: selectedContent?.image_url
     })
     
     // 1. Business gallery images
@@ -245,9 +246,20 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     console.log('📸 Photos BEFORE deduplication:', photos)
     
     // Remove duplicates using Set
-    const uniquePhotos = Array.from(new Set(photos))
+    let uniquePhotos = Array.from(new Set(photos))
     
-    console.log('📸 Photos AFTER deduplication:', uniquePhotos)
+    // ALSO remove the currently selected content image from business photos
+    // to avoid showing the same image twice (once as "Use Offer Image", once as "Business Photo")
+    if (selectedContent?.image_url) {
+      const beforeFilter = uniquePhotos.length
+      uniquePhotos = uniquePhotos.filter(photo => photo !== selectedContent.image_url)
+      console.log('📸 Removed content image from business photos:', {
+        contentImage: selectedContent.image_url,
+        removedCount: beforeFilter - uniquePhotos.length
+      })
+    }
+    
+    console.log('📸 Photos AFTER deduplication & content filter:', uniquePhotos)
     console.log('📸 Final summary:', { 
       total: uniquePhotos.length,
       rawCount: photos.length,
