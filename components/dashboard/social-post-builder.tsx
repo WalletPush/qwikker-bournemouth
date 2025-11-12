@@ -115,10 +115,9 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
         
         const { data, error, count } = await supabase
           .from('business_offers')
-          .select('id, offer_name, offer_description, offer_image_url, terms_conditions, is_active, status', { count: 'exact' })
+          .select('id, offer_name, offer_value, offer_type, offer_terms, offer_image, status', { count: 'exact' })
           .eq('business_id', profile?.id)
           .eq('status', 'approved') // RLS policy requires status = 'approved'
-          .eq('is_active', true)
         
         console.log('📊 Offers query result:', { 
           hasError: !!error,
@@ -138,17 +137,18 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
         if (data) {
           console.log('📋 Offers found:', data.map(o => ({ 
             id: o.id,
-            name: o.offer_name, 
-            active: o.is_active 
+            name: o.offer_name,
+            value: o.offer_value,
+            status: o.status
           })))
         }
         
         items = (data || []).map(offer => ({
           id: offer.id,
           title: offer.offer_name,
-          description: offer.offer_description,
-          image_url: offer.offer_image_url,
-          terms: offer.terms_conditions
+          description: offer.offer_value, // "20% off", "Buy 2 get 1 free", etc.
+          image_url: offer.offer_image,
+          terms: offer.offer_terms
         }))
       } else if (postType === 'secret-menu') {
         const { data, error } = await supabase
