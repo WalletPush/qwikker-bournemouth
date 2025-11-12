@@ -81,9 +81,14 @@ export function FabricPostEditor({
         selectable: false,
         evented: false,
         scaleX: 1080 / (bgImage.width || 1080),
-        scaleY: 1080 / (bgImage.height || 1080)
+        scaleY: 1080 / (bgImage.height || 1080),
+        left: 0,
+        top: 0
       })
-      canvas.setBackgroundImage(bgImage, canvas.renderAll.bind(canvas))
+      
+      // In Fabric v6, backgroundImage is a property, not a method
+      canvas.backgroundImage = bgImage
+      canvas.renderAll()
 
       // 2. Add subtle vignette overlay (simplified for v6)
       const vignette = new Rect({
@@ -152,7 +157,7 @@ export function FabricPostEditor({
       })
       canvas.add(ctaButton)
 
-      console.log('✅ Canvas setup complete! Objects:', canvas.getObjects().length)
+      console.log('✅ Canvas setup complete! Objects:', canvas._objects?.length || 0)
       setIsLoading(false)
       canvas.renderAll()
     } catch (error) {
@@ -166,7 +171,7 @@ export function FabricPostEditor({
     if (!canvas) return
 
     // Update text
-    const textObject = canvas.getObjects().find(obj => obj.type === 'textbox') as fabric.Textbox
+    const textObject = canvas._objects?.find((obj: any) => obj.type === 'textbox')
     if (textObject) {
       textObject.set('text', headline)
       canvas.renderAll()
