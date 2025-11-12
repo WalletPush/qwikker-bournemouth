@@ -71,8 +71,12 @@ export function FabricPostEditor({
 
   const setupCanvas = async (canvas: Canvas) => {
     try {
+      console.log('🎨 Setting up Fabric canvas with:', { backgroundImage, headline, logoUrl })
+      
       // 1. Add background image
       const bgImage = await loadImage(backgroundImage)
+      console.log('✅ Background image loaded:', bgImage.width, 'x', bgImage.height)
+      
       bgImage.set({
         selectable: false,
         evented: false,
@@ -81,27 +85,13 @@ export function FabricPostEditor({
       })
       canvas.setBackgroundImage(bgImage, canvas.renderAll.bind(canvas))
 
-      // 2. Add subtle vignette overlay
+      // 2. Add subtle vignette overlay (simplified for v6)
       const vignette = new Rect({
         left: 0,
         top: 0,
         width: 1080,
         height: 1080,
-        fill: new Gradient({
-          type: 'radial',
-          coords: {
-            r1: 200,
-            r2: 700,
-            x1: 540,
-            y1: 540,
-            x2: 540,
-            y2: 540
-          },
-          colorStops: [
-            { offset: 0, color: 'rgba(0,0,0,0)' },
-            { offset: 1, color: 'rgba(0,0,0,0.4)' }
-          ]
-        }),
+        fill: 'rgba(0,0,0,0.3)', // Simple semi-transparent overlay
         selectable: false,
         evented: false
       })
@@ -128,6 +118,7 @@ export function FabricPostEditor({
         }),
         editable: true
       })
+      console.log('✅ Adding headline text:', headline)
       canvas.add(text)
       canvas.setActiveObject(text)
 
@@ -161,10 +152,11 @@ export function FabricPostEditor({
       })
       canvas.add(ctaButton)
 
+      console.log('✅ Canvas setup complete! Objects:', canvas.getObjects().length)
       setIsLoading(false)
       canvas.renderAll()
     } catch (error) {
-      console.error('Error setting up canvas:', error)
+      console.error('❌ Error setting up canvas:', error)
       setIsLoading(false)
     }
   }
