@@ -113,21 +113,35 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
           businessName: profile?.business_name 
         })
         
-        const { data, error } = await supabase
+        const { data, error, count } = await supabase
           .from('business_offers')
-          .select('id, offer_name, offer_description, offer_image_url, terms_conditions, is_active')
+          .select('id, offer_name, offer_description, offer_image_url, terms_conditions, is_active, status', { count: 'exact' })
           .eq('business_id', profile?.id)
+          .eq('status', 'approved') // RLS policy requires status = 'approved'
           .eq('is_active', true)
         
+        console.log('📊 Offers query result:', { 
+          hasError: !!error,
+          errorObject: error,
+          dataCount: data?.length || 0,
+          totalCount: count,
+          hasData: !!data,
+          businessId: profile?.id
+        })
+        
         if (error) {
-          console.error('❌ Offers error:', error)
-          console.error('Error details:', { message: error.message, details: error.details, hint: error.hint })
+          console.error('❌ Offers error:', JSON.stringify(error, null, 2))
+          console.error('Error code:', error.code)
+          console.error('Error message:', error.message)
         }
         
-        console.log('📊 Offers data:', { 
-          count: data?.length || 0, 
-          offers: data?.map(o => ({ name: o.offer_name, active: o.is_active })) 
-        })
+        if (data) {
+          console.log('📋 Offers found:', data.map(o => ({ 
+            id: o.id,
+            name: o.offer_name, 
+            active: o.is_active 
+          })))
+        }
         
         items = (data || []).map(offer => ({
           id: offer.id,
