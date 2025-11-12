@@ -144,7 +144,8 @@ Return ONLY valid JSON:
       hasHeadline: !!generated.headline, 
       hasCaption: !!generated.caption, 
       hasHashtags: !!generated.hashtags,
-      hasStyle: !!generated.style
+      hasStyle: !!generated.style,
+      styleDetails: generated.style
     })
 
     const response = {
@@ -152,10 +153,12 @@ Return ONLY valid JSON:
       caption: generated.caption || '',
       hashtags: generated.hashtags || `#${city?.replace(/\s/g, '')} #${businessName?.replace(/\s/g, '')}`,
       style: generated.style || {
+        layout: 'full-bleed',
+        imageEffect: 'vignette-dark',
+        textPlacement: 'overlay',
         textColor: 'white',
         textEffect: 'bold-shadow',
-        layout: 'centered',
-        mood: 'energetic'
+        accentColor: '#000000'
       }
     }
     

@@ -67,7 +67,7 @@ export function AdvancedPostCanvas({
         effects.push('grayscale(100%)', 'contrast(1.2)', `hue-rotate(${Math.random() * 360}deg)`)
         break
       case 'vignette-dark':
-        effects.push('brightness(0.8)', 'contrast(1.1)')
+        effects.push('brightness(0.95)', 'contrast(1.05)')
         break
       case 'high-contrast':
         effects.push('contrast(1.5)', 'saturate(1.3)')
@@ -151,21 +151,34 @@ export function AdvancedPostCanvas({
   }
 
   const renderOverlay = () => {
+    // Always add a subtle vignette for text readability
+    const baseVignette = (
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{ 
+          background: 'radial-gradient(circle at 50% 50%, transparent 40%, rgba(0,0,0,0.3) 100%)'
+        }}
+      />
+    )
+
     if (style.imageEffect === 'gradient-overlay') {
       const gradients = [
-        'linear-gradient(135deg, rgba(255,0,150,0.6) 0%, rgba(0,204,255,0.6) 100%)',
-        'linear-gradient(135deg, rgba(255,165,0,0.7) 0%, rgba(255,0,0,0.7) 100%)',
-        'linear-gradient(135deg, rgba(0,255,157,0.6) 0%, rgba(0,100,255,0.6) 100%)',
-        'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%)',
-        'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 70%)'
+        'linear-gradient(135deg, rgba(255,0,150,0.5) 0%, rgba(0,204,255,0.5) 100%)',
+        'linear-gradient(135deg, rgba(255,165,0,0.6) 0%, rgba(255,0,0,0.6) 100%)',
+        'linear-gradient(135deg, rgba(0,255,157,0.5) 0%, rgba(0,100,255,0.5) 100%)',
+        'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 100%)',
+        'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 70%)'
       ]
       const randomGradient = gradients[Math.floor(Math.random() * gradients.length)]
       
       return (
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: randomGradient }}
-        />
+        <>
+          {baseVignette}
+          <div 
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: randomGradient }}
+          />
+        </>
       )
     }
 
@@ -179,14 +192,17 @@ export function AdvancedPostCanvas({
       const randomPattern = patterns[Math.floor(Math.random() * patterns.length)]
       
       return (
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: randomPattern }}
-        />
+        <>
+          {baseVignette}
+          <div 
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: randomPattern }}
+          />
+        </>
       )
     }
 
-    return null
+    return baseVignette
   }
 
   const renderTextPlacement = () => {
@@ -201,8 +217,8 @@ export function AdvancedPostCanvas({
 
     const placements: Record<string, JSX.Element> = {
       'overlay': (
-        <div className="absolute inset-0 flex items-center justify-center p-12 text-center">
-          <h1 style={textStyle}>{headline}</h1>
+        <div className="absolute inset-0 flex items-center justify-center p-8 text-center">
+          <h1 style={{...textStyle, maxWidth: '90%', wordWrap: 'break-word', overflowWrap: 'break-word'}}>{headline}</h1>
         </div>
       ),
       'side-panel': (

@@ -1,4 +1,7 @@
 {
+  "/admin/login/page": "app/admin/login/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/api/admin/login/route": "app/api/admin/login/route.js",
   "/api/social-wizard/generate/route": "app/api/social-wizard/generate/route.js",
   "/dashboard/loyalty/page": "app/dashboard/loyalty/page.js",
   "/dashboard/notifications/page": "app/dashboard/notifications/page.js",
