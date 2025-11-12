@@ -603,6 +603,13 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
 
   // STEP 3: Advanced Fabric Editor
   if (step === 'edit') {
+    console.log('🎨 Rendering Fabric Editor with:', {
+      backgroundImage,
+      headline: postContent.headline,
+      logoUrl: profile?.logo,
+      hasAnalysis: !!imageAnalysis
+    })
+    
     return (
       <div className="fixed inset-0 bg-black/90 z-50 overflow-y-auto">
         <div className="min-h-screen px-4 py-8">
@@ -636,6 +643,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
               {/* Left: Fabric Editor */}
               <div>
                 <FabricPostEditor
+                  key={backgroundImage} // Force re-render when image changes
                   backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
                   headline={postContent.headline || 'Your headline'}
                   logoUrl={profile?.logo}

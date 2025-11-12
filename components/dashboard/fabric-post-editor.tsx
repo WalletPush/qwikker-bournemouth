@@ -73,45 +73,49 @@ export function FabricPostEditor({
     try {
       console.log('🎨 Setting up Fabric canvas with:', { backgroundImage, headline, logoUrl })
       
-      // 1. Add background image
+      // 1. Add background image directly to the canvas (not as background property)
       const bgImage = await loadImage(backgroundImage)
       console.log('✅ Background image loaded:', bgImage.width, 'x', bgImage.height)
       
+      const scaleX = 1080 / (bgImage.width || 1080)
+      const scaleY = 1080 / (bgImage.height || 1080)
+      
       bgImage.set({
-        selectable: false,
-        evented: false,
-        scaleX: 1080 / (bgImage.width || 1080),
-        scaleY: 1080 / (bgImage.height || 1080),
         left: 0,
-        top: 0
+        top: 0,
+        scaleX,
+        scaleY,
+        selectable: false,
+        evented: false
       })
       
-      // In Fabric v6, backgroundImage is a property, not a method
-      canvas.backgroundImage = bgImage
-      canvas.renderAll()
+      // Add as a regular object, not background
+      canvas.add(bgImage)
+      canvas.sendToBack(bgImage) // Send to back so text appears on top
+      console.log('✅ Background image added to canvas')
 
-      // 2. Add subtle vignette overlay (simplified for v6)
+      // 2. Add subtle vignette overlay
       const vignette = new Rect({
         left: 0,
         top: 0,
         width: 1080,
         height: 1080,
-        fill: 'rgba(0,0,0,0.3)', // Simple semi-transparent overlay
+        fill: 'rgba(0,0,0,0.3)',
         selectable: false,
         evented: false
       })
       canvas.add(vignette)
+      console.log('✅ Vignette overlay added')
 
       // 3. Add headline text (editable)
       const text = new Textbox(headline, {
-        left: analysis?.textPlacement?.includes('left') ? 100 : 540,
-        top: analysis?.textPlacement?.includes('top') ? 200 : 
-             analysis?.textPlacement?.includes('bottom') ? 800 : 500,
+        left: 540,
+        top: 500,
         width: 880,
         fontSize: 80,
         fontFamily: 'Arial Black, sans-serif',
         fontWeight: 900,
-        fill: analysis?.textColor || '#ffffff',
+        fill: '#ffffff',
         textAlign: 'center',
         originX: 'center',
         originY: 'center',
@@ -125,6 +129,7 @@ export function FabricPostEditor({
       })
       console.log('✅ Adding headline text:', headline)
       canvas.add(text)
+      canvas.bringToFront(text) // Ensure text is on top
       canvas.setActiveObject(text)
 
       // 4. Add business logo (draggable)
