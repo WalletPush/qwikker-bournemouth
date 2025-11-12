@@ -108,9 +108,14 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
       }
 
       if (postType === 'offer') {
+        console.log('🔍 Fetching offers for business:', { 
+          businessId: profile?.id, 
+          businessName: profile?.business_name 
+        })
+        
         const { data, error } = await supabase
           .from('business_offers')
-          .select('id, offer_name, offer_description, offer_image_url, terms_conditions')
+          .select('id, offer_name, offer_description, offer_image_url, terms_conditions, is_active')
           .eq('business_id', profile?.id)
           .eq('is_active', true)
         
@@ -118,6 +123,11 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
           console.error('❌ Offers error:', error)
           console.error('Error details:', { message: error.message, details: error.details, hint: error.hint })
         }
+        
+        console.log('📊 Offers data:', { 
+          count: data?.length || 0, 
+          offers: data?.map(o => ({ name: o.offer_name, active: o.is_active })) 
+        })
         
         items = (data || []).map(offer => ({
           id: offer.id,
