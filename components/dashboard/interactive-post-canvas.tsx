@@ -35,10 +35,10 @@ export function InteractivePostCanvas({
 }: InteractivePostCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [elements, setElements] = useState<CanvasElement[]>([
-    { id: 'headline', type: 'headline', x: 50, y: 50, width: 80, height: 20, content: headline },
-    { id: 'business-logo', type: 'business-logo', x: 5, y: 5, width: 15, height: 15 },
-    { id: 'qwikker-logo', type: 'qwikker-logo', x: 80, y: 90, width: 15, height: 5 },
-    { id: 'cta', type: 'cta', x: 5, y: 90, width: 30, height: 5, content: 'Install QWIKKER Pass' }
+    { id: 'headline', type: 'headline', x: 10, y: 40, width: 80, height: 25, content: headline },
+    { id: 'business-logo', type: 'business-logo', x: 3, y: 3, width: 12, height: 12 },
+    { id: 'qwikker-logo', type: 'qwikker-logo', x: 75, y: 87, width: 20, height: 8 },
+    { id: 'cta', type: 'cta', x: 3, y: 87, width: 40, height: 8, content: 'Install QWIKKER Pass' }
   ])
   
   const [dragging, setDragging] = useState<string | null>(null)
@@ -163,17 +163,19 @@ export function InteractivePostCanvas({
             key={element.id}
             style={baseStyle}
             onMouseDown={(e) => handleMouseDown(e, element.id)}
-            className="flex items-center justify-center p-4"
+            className="flex items-center justify-center p-6 bg-transparent"
           >
             <h1
-              className="text-4xl font-black leading-tight text-center break-words"
+              className="font-black leading-tight text-center break-words w-full"
               style={{
                 color: textColor.startsWith('linear-gradient') ? undefined : textColor,
                 background: textColor.startsWith('linear-gradient') ? textColor : undefined,
                 WebkitBackgroundClip: textColor.startsWith('linear-gradient') ? 'text' : undefined,
                 WebkitTextFillColor: textColor.startsWith('linear-gradient') ? 'transparent' : undefined,
                 ...getTextStyle(style?.textEffect || 'bold-shadow'),
-                fontSize: 'clamp(1.5rem, 4vw, 3rem)'
+                fontSize: 'clamp(1.5rem, 5vw, 4rem)',
+                wordWrap: 'break-word',
+                overflowWrap: 'break-word'
               }}
             >
               {element.content}
@@ -254,13 +256,6 @@ export function InteractivePostCanvas({
 
         {/* Draggable Elements */}
         {elements.map(renderElement)}
-
-        {/* Instructions Overlay */}
-        {!dragging && (
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-sm text-white text-xs px-4 py-2 rounded-full pointer-events-none">
-            💡 Drag elements to reposition
-          </div>
-        )}
       </div>
 
       {/* Controls */}
@@ -278,11 +273,12 @@ export function InteractivePostCanvas({
           onClick={() => {
             // Reset to default positions
             setElements([
-              { id: 'headline', type: 'headline', x: 50, y: 50, width: 80, height: 20, content: headline },
-              { id: 'business-logo', type: 'business-logo', x: 5, y: 5, width: 15, height: 15 },
-              { id: 'qwikker-logo', type: 'qwikker-logo', x: 80, y: 90, width: 15, height: 5 },
-              { id: 'cta', type: 'cta', x: 5, y: 90, width: 30, height: 5, content: 'Install QWIKKER Pass' }
+              { id: 'headline', type: 'headline', x: 10, y: 40, width: 80, height: 25, content: headline },
+              { id: 'business-logo', type: 'business-logo', x: 3, y: 3, width: 12, height: 12 },
+              { id: 'qwikker-logo', type: 'qwikker-logo', x: 75, y: 87, width: 20, height: 8 },
+              { id: 'cta', type: 'cta', x: 3, y: 87, width: 40, height: 8, content: 'Install QWIKKER Pass' }
             ])
+            setSelected(null)
           }}
           variant="outline"
           className="border-slate-600 text-slate-300 hover:bg-slate-700 flex items-center gap-2"

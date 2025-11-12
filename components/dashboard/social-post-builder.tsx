@@ -623,10 +623,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                         logoUrl={profile?.logo}
                         businessName={profile?.business_name}
                         style={postStyle}
-                        onRegenerateBackground={() => {
-                          // TODO: Implement background regeneration
-                          console.log('Regenerate background')
-                        }}
+                        onRegenerateBackground={() => setStep('select')}
                       />
                     )}
                   </div>
