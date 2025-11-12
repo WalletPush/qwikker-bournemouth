@@ -37,8 +37,8 @@ export function InteractivePostCanvas({
   const [elements, setElements] = useState<CanvasElement[]>([
     { id: 'headline', type: 'headline', x: 10, y: 40, width: 80, height: 25, content: headline },
     { id: 'business-logo', type: 'business-logo', x: 3, y: 3, width: 12, height: 12 },
-    { id: 'qwikker-logo', type: 'qwikker-logo', x: 75, y: 87, width: 20, height: 8 },
-    { id: 'cta', type: 'cta', x: 3, y: 87, width: 40, height: 8, content: 'Install QWIKKER Pass' }
+    { id: 'qwikker-logo', type: 'qwikker-logo', x: 75, y: 92, width: 20, height: 5 },
+    { id: 'cta', type: 'cta', x: 3, y: 92, width: 40, height: 5, content: 'Install QWIKKER Pass' }
   ])
   
   const [dragging, setDragging] = useState<string | null>(null)
@@ -218,9 +218,9 @@ export function InteractivePostCanvas({
             key={element.id}
             style={baseStyle}
             onMouseDown={(e) => handleMouseDown(e, element.id)}
-            className="bg-gradient-to-t from-black/80 via-black/60 to-transparent px-4 py-2 flex items-center justify-center"
+            className="bg-black/40 backdrop-blur-sm rounded-lg px-3 py-1 flex items-center justify-center"
           >
-            <span className="text-white text-sm font-bold drop-shadow-lg whitespace-nowrap">
+            <span className="text-white text-xs font-bold drop-shadow-lg whitespace-nowrap">
               {element.content}
             </span>
           </div>
@@ -251,8 +251,8 @@ export function InteractivePostCanvas({
           draggable={false}
         />
 
-        {/* Background Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60 pointer-events-none" />
+        {/* Background Overlay - subtle vignette only */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30 pointer-events-none" />
 
         {/* Draggable Elements */}
         {elements.map(renderElement)}
