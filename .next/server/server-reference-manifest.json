@@ -392,6 +392,12 @@
     },
     "7036662a2d3404b75503dccd5291fe76a13c1f1641": {
       "workers": {
+        "app/dashboard/files/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "updateProfileFile",
+          "filename": "lib/actions/file-actions.ts"
+        },
         "app/dashboard/profile/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/profile/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
@@ -400,10 +406,56 @@
         }
       },
       "layer": {
+        "app/dashboard/files/page": "action-browser",
         "app/dashboard/profile/page": "action-browser"
       },
       "filename": "lib/actions/file-actions.ts",
       "exportedName": "updateProfileFile"
+    },
+    "70d118430c9c7e94e35e0e543e56b667de5ee5e26d": {
+      "workers": {
+        "app/dashboard/files/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "deleteBusinessImage",
+          "filename": "lib/actions/file-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/files/page": "action-browser"
+      },
+      "filename": "lib/actions/file-actions.ts",
+      "exportedName": "deleteBusinessImage"
+    },
+    "7035ec47fcc8d15b156e66df40f6a3cfc1c9e8bcd7": {
+      "workers": {
+        "app/dashboard/files/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "reorderBusinessImages",
+          "filename": "lib/actions/file-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/files/page": "action-browser"
+      },
+      "filename": "lib/actions/file-actions.ts",
+      "exportedName": "reorderBusinessImages"
+    },
+    "605fe83a7d616efdf1dc94e196d710ed53d84fbb06": {
+      "workers": {
+        "app/dashboard/files/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "uploadMultipleBusinessImages",
+          "filename": "lib/actions/file-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/files/page": "action-browser"
+      },
+      "filename": "lib/actions/file-actions.ts",
+      "exportedName": "uploadMultipleBusinessImages"
     }
   },
   "edge": {},

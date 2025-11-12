@@ -220,23 +220,33 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     // Collect ALL available business photos
     const photos: string[] = []
     
+    console.log('📸 Fetching business photos from profile:', {
+      business_images: profile?.business_images,
+      offer_image: profile?.offer_image,
+      logo: profile?.logo
+    })
+    
     // 1. Business gallery images
     if (profile?.business_images && Array.isArray(profile.business_images)) {
       photos.push(...profile.business_images.filter(img => img && typeof img === 'string'))
     }
     
-    // 2. Legacy offer image (if exists)
-    if (profile?.offer_image) {
+    // 2. Legacy offer image (if exists and not already included)
+    if (profile?.offer_image && !photos.includes(profile.offer_image)) {
       photos.push(profile.offer_image)
     }
     
-    console.log('📸 Collected business photos:', { 
-      total: photos.length, 
-      fromGallery: profile?.business_images?.length || 0,
-      photos: photos 
+    // Remove duplicates using Set
+    const uniquePhotos = Array.from(new Set(photos))
+    
+    console.log('📸 Business photos collected:', { 
+      total: uniquePhotos.length,
+      rawCount: photos.length,
+      duplicatesRemoved: photos.length - uniquePhotos.length,
+      photos: uniquePhotos
     })
     
-    setBusinessPhotos(photos)
+    setBusinessPhotos(uniquePhotos)
   }
 
   const generateAIContent = async () => {
