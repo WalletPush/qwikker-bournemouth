@@ -232,11 +232,11 @@ export function InteractivePostCanvas({
   }
 
   return (
-    <div className="space-y-4">
+    <div>
       {/* Canvas */}
       <div
         ref={canvasRef}
-        className="relative aspect-square bg-black rounded-lg overflow-hidden"
+        className="relative w-full aspect-square bg-black overflow-hidden"
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
@@ -247,60 +247,16 @@ export function InteractivePostCanvas({
         <img
           src={backgroundImage}
           alt="Background"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           draggable={false}
         />
 
         {/* Background Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60 pointer-events-none" />
 
         {/* Draggable Elements */}
         {elements.map(renderElement)}
       </div>
-
-      {/* Controls */}
-      <div className="flex gap-3">
-        <Button
-          onClick={onRegenerateBackground}
-          className="flex-1 bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          Change Background
-        </Button>
-        <Button
-          onClick={() => {
-            // Reset to default positions
-            setElements([
-              { id: 'headline', type: 'headline', x: 10, y: 40, width: 80, height: 25, content: headline },
-              { id: 'business-logo', type: 'business-logo', x: 3, y: 3, width: 12, height: 12 },
-              { id: 'qwikker-logo', type: 'qwikker-logo', x: 75, y: 87, width: 20, height: 8 },
-              { id: 'cta', type: 'cta', x: 3, y: 87, width: 40, height: 8, content: 'Install QWIKKER Pass' }
-            ])
-            setSelected(null)
-          }}
-          variant="outline"
-          className="border-slate-600 text-slate-300 hover:bg-slate-700 flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Reset Layout
-        </Button>
-      </div>
-
-      {/* Selected Element Info */}
-      {selected && (
-        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
-          <p className="text-white text-sm font-semibold mb-2">
-            Selected: {elements.find(el => el.id === selected)?.type.replace('-', ' ').toUpperCase()}
-          </p>
-          <p className="text-slate-400 text-xs">
-            Drag to reposition • Click outside to deselect
-          </p>
-        </div>
-      )}
     </div>
   )
 }

@@ -592,7 +592,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
             {/* Left: Instagram Post Preview */}
             <div className="space-y-6">
               {/* REAL Instagram Post Preview */}
-              <Card className="bg-white border-slate-300 overflow-hidden sticky top-8 max-w-sm mx-auto shadow-xl">
+              <Card className="bg-white border-slate-300 overflow-hidden sticky top-8 max-w-xs mx-auto shadow-xl">
                 <CardContent className="p-0">
                   {/* Instagram Header */}
                   <div className="flex items-center justify-between p-3 border-b border-gray-200">
@@ -608,25 +608,23 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                   </div>
 
                   {/* Interactive Canvas - Drag & Drop Editor */}
-                  <div className="bg-black">
-                    {isGenerating ? (
-                      <div className="aspect-square flex items-center justify-center bg-slate-900">
-                        <div className="text-center">
-                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00d083] mx-auto mb-4"></div>
-                          <p className="text-slate-400">Generating your post...</p>
-                        </div>
+                  {isGenerating ? (
+                    <div className="aspect-square flex items-center justify-center bg-slate-900">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00d083] mx-auto mb-4"></div>
+                        <p className="text-slate-400">Generating your post...</p>
                       </div>
-                    ) : (
-                      <InteractivePostCanvas
-                        backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
-                        headline={postContent.headline || 'Your headline will appear here'}
-                        logoUrl={profile?.logo}
-                        businessName={profile?.business_name}
-                        style={postStyle}
-                        onRegenerateBackground={() => setStep('select')}
-                      />
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <InteractivePostCanvas
+                      backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                      headline={postContent.headline || 'Your headline will appear here'}
+                      logoUrl={profile?.logo}
+                      businessName={profile?.business_name}
+                      style={postStyle}
+                      onRegenerateBackground={() => setStep('select')}
+                    />
+                  )}
 
                   {/* Instagram Actions */}
                   <div className="flex items-center justify-between p-3 border-b border-gray-200">
