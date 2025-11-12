@@ -367,9 +367,32 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     await generateAIContent()
   }
 
-  const handleDownload = () => {
-    // TODO: Implement download functionality
-    console.log('Downloading post...')
+  const handleDownload = async () => {
+    const postElement = document.querySelector('[data-post-preview]') as HTMLElement
+    if (!postElement) {
+      alert('Preview not found. Please try regenerating the post.')
+      return
+    }
+
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(postElement, {
+        width: 1080,
+        height: 1080,
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#000'
+      })
+
+      const link = document.createElement('a')
+      link.download = `${profile?.business_name?.replace(/\s/g, '-')}-post-${Date.now()}.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    } catch (error) {
+      console.error('Error generating image:', error)
+      alert('Failed to download. Please try again.')
+    }
   }
 
   // STEP 1: Content Selection
@@ -635,101 +658,7 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     )
   }
 
-  // STEP 3: Advanced Fabric Editor
-  if (step === 'edit') {
-    console.log('🎨 Rendering Fabric Editor with:', {
-      backgroundImage,
-      headline: postContent.headline,
-      logoUrl: profile?.logo,
-      hasAnalysis: !!imageAnalysis
-    })
-    
-    return (
-      <div className="fixed inset-0 bg-black/90 z-50 overflow-y-auto">
-        <div className="min-h-screen px-4 py-8">
-          <div className="max-w-7xl mx-auto">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-3xl font-bold text-white mb-2">Advanced Post Editor</h2>
-                <p className="text-slate-400">Drag, resize, and perfect your post design</p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep('generate')}
-                  className="border-slate-600 text-white hover:bg-slate-700"
-                >
-                  ← Back to Preview
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={onClose}
-                  className="border-slate-600 text-white hover:bg-slate-700"
-                >
-                  ✕ Close
-                </Button>
-              </div>
-            </div>
-
-            {/* Simple Editor - No complex canvas, just works! */}
-            <div className="space-y-8">
-              {/* Post Preview */}
-              <SimplePostEditor
-                backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
-                headline={postContent.headline || 'Your headline'}
-                logoUrl={profile?.logo}
-                businessName={profile?.business_name}
-              />
-
-              {/* Caption & Hashtags Editor */}
-              <Card className="bg-slate-800 border-slate-700 max-w-4xl mx-auto">
-                <CardHeader>
-                  <CardTitle className="text-white">Caption & Hashtags</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-slate-300 mb-2 block">Caption</Label>
-                    <Textarea
-                      value={postContent.caption}
-                      onChange={(e) => setPostContent({ ...postContent, caption: e.target.value })}
-                      placeholder="Write your caption..."
-                      className="bg-slate-900 border-slate-600 text-white min-h-[120px]"
-                      maxLength={2200}
-                    />
-                    <p className="text-xs text-slate-500 mt-1">
-                      {postContent.caption.length}/2200 characters
-                    </p>
-                  </div>
-
-                  <div>
-                    <Label className="text-slate-300 mb-2 block">Hashtags</Label>
-                    <Input
-                      value={postContent.hashtags}
-                      onChange={(e) => setPostContent({ ...postContent, hashtags: e.target.value })}
-                      placeholder="#YourHashtags #Here"
-                      className="bg-slate-900 border-slate-600 text-white"
-                    />
-                  </div>
-
-                  <Button
-                    onClick={handleRegenerate}
-                    variant="outline"
-                    className="w-full border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10"
-                  >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Regenerate Caption & Hashtags
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Remove the edit step entirely - just show generate step
 
   // STEP 2: Edit & Preview (Generate step)
   return (
@@ -807,14 +736,16 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
                         </div>
                       </div>
                     ) : (
-                      <AdvancedPostCanvas
-                        backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
-                        headline={postContent.headline || 'Your headline will appear here'}
-                        caption={postContent.caption || 'Your caption will appear here'}
-                        logoUrl={profile?.logo}
-                        businessName={profile?.business_name}
-                        style={postStyle}
-                      />
+                      <div data-post-preview>
+                        <AdvancedPostCanvas
+                          backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                          headline={postContent.headline || 'Your headline will appear here'}
+                          caption={postContent.caption || 'Your caption will appear here'}
+                          logoUrl={profile?.logo}
+                          businessName={profile?.business_name}
+                          style={postStyle}
+                        />
+                      </div>
                     )}
                   </div>
 
@@ -862,13 +793,13 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
               {/* Action Buttons */}
               <div className="space-y-2">
                 <Button
-                  onClick={() => setStep('edit')}
+                  onClick={handleDownload}
                   className="w-full bg-[#00d083] hover:bg-[#00b870] text-white font-semibold h-12"
                 >
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Open Advanced Editor
+                  Download Post (1080x1080)
                 </Button>
                 <Button
                   onClick={() => setStep('select')}
