@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { PostTheme, ThemeThumbnail, type ThemeType } from './social-post-themes-v2'
 import { DynamicPostTheme } from './dynamic-post-theme'
 import { AdvancedPostCanvas } from './advanced-post-canvas'
+import { InstagramPreview } from './instagram-preview'
 import { createClient } from '@/lib/supabase/client'
 
 type PostType = 'offer' | 'secret-menu' | 'event' | 'general'
@@ -617,9 +618,27 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
           <div className="grid lg:grid-cols-2 gap-6">
             
             {/* Left: Instagram Post Preview */}
-            <div className="space-y-6">
-              {/* REAL Instagram Post Preview */}
-              <Card className="bg-white border-slate-300 overflow-hidden sticky top-8 max-w-xs mx-auto shadow-xl">
+            <div className="space-y-6 sticky top-8">
+              <InstagramPreview
+                businessName={profile?.business_name || 'yourbusiness'}
+                businessLogo={profile?.logo}
+                postImage={
+                  <AdvancedPostCanvas
+                    backgroundImage={backgroundImage || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1080'}
+                    headline={postContent.headline || 'Your headline will appear here'}
+                    caption={postContent.caption || 'Your caption will appear here'}
+                    logoUrl={profile?.logo}
+                    businessName={profile?.business_name}
+                    style={postStyle}
+                  />
+                }
+                caption={postContent.caption || 'Your caption will appear here...'}
+                hashtags={postContent.hashtags || `#${profile?.city?.replace(/\s/g, '')} #${profile?.business_name?.replace(/\s/g, '')}`}
+                isLoading={isGenerating}
+              />
+
+              {/* REMOVE OLD CARD - DELETE EVERYTHING FROM HERE */}
+              <Card className="bg-white border-slate-300 overflow-hidden sticky top-8 max-w-xs mx-auto shadow-xl" style={{display: 'none'}}>
                 <CardContent className="p-0">
                   {/* Instagram Header */}
                   <div className="flex items-center justify-between p-3 border-b border-gray-200">
