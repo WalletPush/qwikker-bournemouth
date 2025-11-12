@@ -16,14 +16,22 @@ interface FabricPostEditorProps {
   onExport?: (imageData: string) => void
 }
 
-export function FabricPostEditor({
-  backgroundImage,
-  headline,
+export function FabricPostEditor({ 
+  backgroundImage, 
+  headline, 
   logoUrl,
   businessName,
   analysis,
   onExport
 }: FabricPostEditorProps) {
+  console.log('🎨 FabricPostEditor received props:', { 
+    backgroundImage, 
+    headline, 
+    logoUrl, 
+    businessName,
+    hasAnalysis: !!analysis 
+  })
+  
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fabricCanvasRef = useRef<Canvas | null>(null)
   const [selectedObject, setSelectedObject] = useState<any>(null)

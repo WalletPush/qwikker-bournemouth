@@ -303,15 +303,19 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
         console.log('🎨 AI generated style:', generated.style)
       }
       
-      // Set image based on source
-      if (imageSource === 'content' && selectedContent.image_url) {
-        setBackgroundImage(selectedContent.image_url)
-      } else if (imageSource === 'business' && businessPhotos.length > 0) {
-        setBackgroundImage(businessPhotos[0])
-      } else if (imageSource === 'abstract') {
-        // TODO: Generate abstract background
-        setBackgroundImage('https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=1080')
+      // Don't override backgroundImage - user already selected it!
+      // Only set if not already set
+      if (!backgroundImage) {
+        if (imageSource === 'content' && selectedContent.image_url) {
+          setBackgroundImage(selectedContent.image_url)
+        } else if (imageSource === 'business' && businessPhotos.length > 0) {
+          setBackgroundImage(businessPhotos[0])
+        } else if (imageSource === 'abstract') {
+          setBackgroundImage('https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=1080')
+        }
       }
+      
+      console.log('✅ Using selected background image:', backgroundImage)
 
       // Move to generate step
       setStep('generate')
