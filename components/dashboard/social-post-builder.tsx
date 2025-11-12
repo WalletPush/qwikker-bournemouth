@@ -220,30 +220,38 @@ export function SocialPostBuilder({ postType, profile, onClose }: SocialPostBuil
     // Collect ALL available business photos
     const photos: string[] = []
     
-    console.log('📸 Fetching business photos from profile:', {
+    console.log('📸 RAW profile data:', {
       business_images: profile?.business_images,
+      business_images_type: typeof profile?.business_images,
+      business_images_isArray: Array.isArray(profile?.business_images),
+      business_images_length: profile?.business_images?.length,
       offer_image: profile?.offer_image,
       logo: profile?.logo
     })
     
     // 1. Business gallery images
     if (profile?.business_images && Array.isArray(profile.business_images)) {
-      photos.push(...profile.business_images.filter(img => img && typeof img === 'string'))
+      const validImages = profile.business_images.filter(img => img && typeof img === 'string')
+      console.log('📸 Valid images from business_images:', validImages)
+      photos.push(...validImages)
     }
     
     // 2. Legacy offer image (if exists and not already included)
     if (profile?.offer_image && !photos.includes(profile.offer_image)) {
+      console.log('📸 Adding offer_image:', profile.offer_image)
       photos.push(profile.offer_image)
     }
+    
+    console.log('📸 Photos BEFORE deduplication:', photos)
     
     // Remove duplicates using Set
     const uniquePhotos = Array.from(new Set(photos))
     
-    console.log('📸 Business photos collected:', { 
+    console.log('📸 Photos AFTER deduplication:', uniquePhotos)
+    console.log('📸 Final summary:', { 
       total: uniquePhotos.length,
       rawCount: photos.length,
-      duplicatesRemoved: photos.length - uniquePhotos.length,
-      photos: uniquePhotos
+      duplicatesRemoved: photos.length - uniquePhotos.length
     })
     
     setBusinessPhotos(uniquePhotos)
