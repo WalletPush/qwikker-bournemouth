@@ -194,7 +194,20 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
       // Filter by business_type ONLY (clean standardized values)
       const matchesCategory = filterCategory === 'all' || business.business_type === filterCategory
       
-      const matchesTier = filterTier === 'all' || business.business_tier === filterTier
+      // Filter by tier - Check CRM subscription data
+      let matchesTier = false
+      if (filterTier === 'all') {
+        matchesTier = true
+      } else {
+        const crm = crmData.find(c => c.id === business.id)
+        if (filterTier === 'trial') {
+          matchesTier = crm?.subscription?.is_in_free_trial === true
+        } else if (filterTier === 'synced') {
+          matchesTier = !!crm?.last_ghl_sync
+        } else {
+          matchesTier = crm?.subscription?.tier_name === filterTier
+        }
+      }
 
       
       return matchesSearch && matchesCategory && matchesTier
