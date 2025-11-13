@@ -380,7 +380,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   return (
     <>
       {/* Main Card - COMPLETELY REDESIGNED */}
-      <div className={`relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 backdrop-blur-xl border-2 ${getTierBorderColor()} rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-black/60 transition-all duration-300 ${className}`}>
+      <div className={`relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 backdrop-blur-xl border-2 ${getTierBorderColor()} rounded-2xl overflow-hidden shadow-xl shadow-black/40 hover:shadow-2xl hover:shadow-black/80 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 ${className}`}>
 
         {/* Main Content */}
         <div className="p-6">
