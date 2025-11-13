@@ -377,15 +377,6 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     return 'border-slate-700/30 hover:border-slate-600/50'
   }
 
-  // Get tier-specific accent color for decorative line
-  const getTierAccentGradient = () => {
-    if (business.subscription?.tier_name === 'spotlight') return 'from-purple-500/50 via-purple-500/20 to-transparent'
-    if (business.subscription?.tier_name === 'featured') return 'from-blue-500/50 via-blue-500/20 to-transparent'
-    if (business.subscription?.tier_name === 'starter') return 'from-slate-500/50 via-slate-500/20 to-transparent'
-    if (business.subscription?.is_in_free_trial) return 'from-amber-500/50 via-amber-500/20 to-transparent'
-    return 'from-slate-500/50 via-slate-500/20 to-transparent'
-  }
-
   return (
     <>
       {/* Main Card - COMPLETELY REDESIGNED */}
