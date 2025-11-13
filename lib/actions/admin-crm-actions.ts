@@ -119,6 +119,27 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       console.log('📅 EVENTS ERROR:', error)
     }
 
+    // Fetch offers separately
+    let offersByBusiness = new Map()
+    try {
+      const { data: allOffers, error: offersError } = await supabaseAdmin
+        .from('business_offers')
+        .select('*')
+        .in('business_id', businessIds)
+        .order('created_at', { ascending: false })
+
+      if (allOffers && allOffers.length > 0) {
+        businesses.forEach(business => {
+          const matchingOffers = allOffers.filter(offer => offer.business_id === business.id)
+          if (matchingOffers.length > 0) {
+            offersByBusiness.set(business.id, matchingOffers)
+          }
+        })
+      }
+    } catch (error) {
+      console.log('💰 OFFERS ERROR:', error)
+    }
+
     // Fetch subscriptions data
     let subscriptionsByBusiness = new Map()
     try {
