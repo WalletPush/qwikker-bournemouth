@@ -212,19 +212,17 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
 
       console.log('✅ Found tier:', { tierName, tierId: tierData.id })
 
-      // Step 2: Update business_profiles with plan and features
+      // Step 2: Update business_profiles with plan only (features are managed separately)
       const profileUpdate: any = {
         plan: selectedTier,
-        features: features,
         updated_at: new Date().toISOString()
       }
 
-      console.log('📝 Attempting profile update:', { profileUpdate, businessId: business.id })
-
-      const { error: profileError } = await supabase
+      const { error: profileError, data: profileData } = await supabase
         .from('business_profiles')
         .update(profileUpdate)
         .eq('id', business.id)
+        .select()
 
       if (profileError) {
         console.error('❌ Profile update error:', {
@@ -238,7 +236,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         throw profileError
       }
 
-      console.log('✅ Profile updated successfully')
+      console.log('✅ Profile updated successfully:', profileData)
 
       // Step 3: Update or create business_subscriptions
       const subscriptionUpdate: any = {
