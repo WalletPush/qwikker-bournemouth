@@ -1,8 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getSyncHealthMetrics } from '@/lib/sync/sync-monitor'
+import { requireAdminAuth, createUnauthorizedResponse } from '@/lib/utils/admin-api-auth'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Require admin authentication
+    const authResult = await requireAdminAuth(request)
+    if (!authResult.authenticated) {
+      return createUnauthorizedResponse(authResult.error)
+    }
+
     const metrics = await getSyncHealthMetrics()
     return NextResponse.json(metrics)
   } catch (error) {
