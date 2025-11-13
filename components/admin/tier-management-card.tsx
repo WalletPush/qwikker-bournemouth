@@ -192,7 +192,8 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
       console.log('🔄 Starting tier update...', { businessId: business.id, selectedTier, features })
 
       // Step 1: Get tier ID from subscription_tiers
-      const tierName = selectedTier === 'trial' ? 'free' : selectedTier
+      // For trial, use 'starter' tier but mark as trial in subscription
+      const tierName = selectedTier === 'trial' ? 'starter' : selectedTier
       const { data: tierData, error: tierError } = await supabase
         .from('subscription_tiers')
         .select('id')
@@ -200,8 +201,13 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         .single()
 
       if (tierError) {
-        console.error('❌ Error fetching tier:', tierError)
-        throw new Error(`Could not find tier: ${tierName}`)
+        console.error('❌ Error fetching tier:', {
+          tierError,
+          tierName,
+          selectedTier,
+          message: `Could not find tier: ${tierName}`
+        })
+        throw new Error(`Could not find tier: ${tierName}. Please ensure the subscription_tiers table has this tier.`)
       }
 
       console.log('✅ Found tier:', { tierName, tierId: tierData.id })

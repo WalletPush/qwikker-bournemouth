@@ -1435,9 +1435,9 @@ Qwikker Admin Team`
               )}
 
               {activeTab === 'live' && (
-                <div className="grid gap-6">
+                <div className="grid lg:grid-cols-2 gap-6">
                   {allLiveBusinesses.length === 0 ? (
-                    <div className="text-center py-12">
+                    <div className="text-center py-12 col-span-full">
                       <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

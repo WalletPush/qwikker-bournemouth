@@ -359,8 +359,17 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     return colors[business.business_type as keyof typeof colors] || colors['other']
   }
 
+  // Get tier-specific border color
+  const getTierBorderColor = () => {
+    if (business.subscription?.tier_name === 'spotlight') return 'border-purple-500/40 hover:border-purple-500/60'
+    if (business.subscription?.tier_name === 'featured') return 'border-blue-500/40 hover:border-blue-500/60'
+    if (business.subscription?.tier_name === 'starter') return 'border-slate-600/40 hover:border-slate-600/60'
+    if (business.subscription?.is_in_free_trial) return 'border-amber-500/40 hover:border-amber-500/60'
+    return 'border-slate-700/50 hover:border-slate-600/70'
+  }
+
   return (
-    <div className={`bg-gradient-to-br from-slate-800/40 to-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-xl overflow-hidden hover:border-slate-600/70 hover:shadow-xl hover:shadow-slate-900/20 transition-all duration-300 ${className}`}>
+    <div className={`bg-gradient-to-br from-slate-800/40 to-slate-900/60 backdrop-blur-xl border-2 ${getTierBorderColor()} rounded-xl overflow-hidden hover:shadow-xl hover:shadow-slate-900/20 transition-all duration-300 ${className}`}>
       {/* Header Section - Redesigned with cleaner layout */}
       <div className="px-5 py-4 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/30 to-slate-900/30">
         <div className="flex items-start justify-between gap-4">
