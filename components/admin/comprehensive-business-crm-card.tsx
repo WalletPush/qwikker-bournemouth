@@ -369,164 +369,253 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   }
 
   return (
-    <div className={`bg-gradient-to-br from-slate-800/40 to-slate-900/60 backdrop-blur-xl border-2 ${getTierBorderColor()} rounded-xl overflow-hidden hover:shadow-xl hover:shadow-slate-900/20 transition-all duration-300 ${className}`}>
-      {/* Header Section - Redesigned with cleaner layout */}
-      <div className="px-5 py-4 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/30 to-slate-900/30">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4 min-w-0 flex-1">
-            {/* Business Avatar */}
-            <div className="flex-shrink-0 mt-1">
+    <>
+      {/* Main Card - Darker with Better Glassmorphism */}
+      <div className={`bg-slate-900/80 backdrop-blur-xl border-2 ${getTierBorderColor()} rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-black/40 transition-all duration-300 ${className}`}>
+        {/* Compact Header */}
+        <div className="px-6 py-5">
+          <div className="flex items-center justify-between gap-4">
+            {/* Left: Avatar + Info */}
+            <div className="flex items-center gap-4 min-w-0 flex-1">
               <InitialAvatar 
                 businessName={business.business_name} 
-                className="w-14 h-14 rounded-xl border-2 border-slate-600/50 shadow-lg text-lg font-bold"
+                className="w-16 h-16 rounded-xl border-2 border-slate-600/50 shadow-lg text-lg font-bold flex-shrink-0"
               />
-            </div>
-            
-            {/* Business Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-xl font-bold text-white mb-0.5 truncate">
-                    {business.business_name}
-                  </h3>
-                  {(business.first_name || business.last_name) && (
-                    <p className="text-slate-300 text-sm font-medium mb-2">
-                      {business.first_name} {business.last_name}
-                    </p>
+              
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xl font-bold text-white mb-1 truncate">
+                  {business.business_name}
+                </h3>
+                {(business.first_name || business.last_name) && (
+                  <p className="text-slate-400 text-sm mb-2">
+                    {business.first_name} {business.last_name}
+                  </p>
+                )}
+                
+                {/* Compact Status Badges */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {getStatusBadge()}
+                  {getTrialBadge()}
+                  
+                  {/* Simplified Sync Indicator - NO BIG GREEN BADGE */}
+                  {business.last_ghl_sync && (
+                    <span className="px-2 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-400 rounded-md border border-emerald-500/20">
+                      Last sync: {new Date(business.last_ghl_sync).toLocaleDateString()}
+                    </span>
+                  )}
+                  
+                  {business.has_pending_changes && (
+                    <span className="px-2 py-1 text-xs font-semibold text-orange-300 bg-orange-500/20 rounded-md border border-orange-500/30">
+                      {business.pending_changes_count} pending
+                    </span>
                   )}
                 </div>
               </div>
-              
-              {/* Status Badges Row */}
-              <div className="flex items-center gap-2 flex-wrap mb-3">
-                {getStatusBadge()}
-                {getTrialBadge()}
-                
-                <SyncStatusBadge
-                  businessId={business.id}
-                  businessName={business.business_name}
-                  supabaseStatus={'synced'}
-                  ghlStatus={'synced'}
-                  lastSync={business.last_ghl_sync || undefined}
-                  errors={[]}
-                  onForceSync={async (businessId) => {
-                    // Force sync implementation
-                  }}
-                />
-                
-                {business.has_pending_changes && (
-                  <span className="px-2.5 py-1 text-xs font-semibold text-orange-900 bg-orange-400/90 rounded-lg shadow-sm">
-                    {business.pending_changes_count} pending
-                  </span>
-                )}
-              </div>
-
-              {/* Quick Stats Grid - Inline with header */}
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 text-xs">
-                <div className="bg-slate-700/30 px-3 py-2 rounded-lg">
-                  <span className="text-slate-400 block mb-0.5">Tier</span>
-                  <span className={`font-bold ${
-                    business.subscription?.tier_display_name === 'Spotlight' ? 'text-purple-400' :
-                    business.subscription?.tier_display_name === 'Featured' ? 'text-blue-400' :
-                    business.subscription?.tier_display_name === 'Starter' ? 'text-slate-300' :
-                    business.subscription?.is_in_free_trial ? 'text-amber-400' : 'text-slate-300'
-                  }`}>
-                    {business.subscription?.tier_display_name || 
-                     (business.subscription?.is_in_free_trial ? 'Free Trial' : 
-                     business.plan ? business.plan.charAt(0).toUpperCase() + business.plan.slice(1) : 'Unknown')}
-                  </span>
-                </div>
-
-                <div className="bg-slate-700/30 px-3 py-2 rounded-lg">
-                  <span className="text-slate-400 block mb-0.5">Billing</span>
-                  <span className="font-bold text-white">
-                    {business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date
-                      ? formatDate(business.subscription.free_trial_end_date).split(',')[0]
-                      : business.subscription?.current_period_end
-                      ? formatDate(business.subscription.current_period_end).split(',')[0]
-                      : '—'}
-                  </span>
-                </div>
-
-                <div className="bg-slate-700/30 px-3 py-2 rounded-lg">
-                  <span className="text-slate-400 block mb-0.5">Joined</span>
-                  <span className="font-bold text-white">{formatJoinedDate(business.created_at)}</span>
-                </div>
-
-                <div className="bg-slate-700/30 px-3 py-2 rounded-lg">
-                  <span className="text-slate-400 block mb-0.5">Status</span>
-                  <span className={`font-bold ${
-                    business.subscription?.status === 'active' ? 'text-[#00d083]' :
-                    business.subscription?.status === 'trialing' ? 'text-amber-400' :
-                    business.subscription?.status === 'paused' ? 'text-slate-400' :
-                    'text-red-400'
-                  }`}>
-                    {business.subscription?.status === 'active' ? 'Live' : 
-                     business.subscription?.status === 'trialing' ? 'Trial' :
-                     business.subscription?.status || '—'}
-                  </span>
-                </div>
-
-                <div className="bg-slate-700/30 px-3 py-2 rounded-lg">
-                  <span className="text-slate-400 block mb-0.5">Files</span>
-                  <span className="font-bold text-white">
-                    {(business.business_menus?.length || 0) + (business.business_images?.length || 0)} uploaded
-                  </span>
-                </div>
-
-                <div className="bg-slate-700/30 px-3 py-2 rounded-lg">
-                  <span className="text-slate-400 block mb-0.5">Sync</span>
-                  <span className={`font-bold ${business.last_ghl_sync ? 'text-[#00d083]' : 'text-slate-400'}`}>
-                    {business.last_ghl_sync ? 'Synced' : 'Pending'}
-                  </span>
-                </div>
-              </div>
             </div>
-          </div>
-          
-          {/* Action Buttons - Redesigned */}
-          <div className="flex flex-col gap-2 flex-shrink-0">
-            <div className="flex gap-2">
+
+            {/* Right: Action Buttons */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => window.open(`mailto:${business.email}`)}
-                className="p-2.5 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/50 rounded-lg transition-all hover:scale-105"
+                className="p-3 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
                 title="Send Email"
               >
-                <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </button>
               <button
                 onClick={() => window.open(`tel:${business.phone}`)}
-                className="p-2.5 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/50 rounded-lg transition-all hover:scale-105"
+                className="p-3 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
                 title="Call Phone"
               >
-                <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
               </button>
-            </div>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="bg-slate-700/50 text-slate-200 border-slate-600/50 hover:bg-slate-600/50 hover:border-slate-500/50 font-semibold"
-            >
-              {isExpanded ? 'Close CRM' : 'Open CRM'}
-            </Button>
-            
-            {business.status === 'pending_review' && onInspect && (
+              
+              {/* CRM Button - Opens Modal */}
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onInspect(business)}
-                className="bg-[#00d083]/10 text-[#00d083] border-[#00d083]/30 hover:bg-[#00d083]/20 hover:border-[#00d083]/50 font-semibold"
+                size="lg"
+                onClick={() => setIsExpanded(true)}
+                className="bg-gradient-to-r from-[#00d083] to-emerald-600 hover:from-[#00d083]/90 hover:to-emerald-600/90 text-white font-semibold px-6 shadow-lg hover:shadow-xl transition-all"
               >
-                Inspect
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                CRM
               </Button>
-            )}
+              
+              {business.status === 'pending_review' && onInspect && (
+                <Button
+                  size="lg"
+                  onClick={() => onInspect(business)}
+                  className="bg-blue-600/20 text-blue-400 border-2 border-blue-500/40 hover:bg-blue-600/30 hover:border-blue-500/60 font-semibold px-6"
+                >
+                  Inspect
+                </Button>
+              )}
+            </div>
           </div>
+
+          {/* Stats Grid - Cleaner Design */}
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mt-5">
+            <div className="bg-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/30">
+              <span className="text-slate-500 text-xs block mb-1">Tier</span>
+              <span className={`font-bold text-sm ${
+                business.subscription?.tier_display_name === 'Spotlight' ? 'text-purple-400' :
+                business.subscription?.tier_display_name === 'Featured' ? 'text-blue-400' :
+                business.subscription?.tier_display_name === 'Starter' ? 'text-slate-300' :
+                business.subscription?.is_in_free_trial ? 'text-amber-400' : 'text-slate-300'
+              }`}>
+                {business.subscription?.tier_display_name || 
+                 (business.subscription?.is_in_free_trial ? 'Free Trial' : 
+                 business.plan ? business.plan.charAt(0).toUpperCase() + business.plan.slice(1) : 'Unknown')}
+              </span>
+            </div>
+
+            <div className="bg-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/30">
+              <span className="text-slate-500 text-xs block mb-1">Billing</span>
+              <span className="font-bold text-white text-sm">
+                {business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date
+                  ? formatDate(business.subscription.free_trial_end_date).split(',')[0]
+                  : business.subscription?.current_period_end
+                  ? formatDate(business.subscription.current_period_end).split(',')[0]
+                  : '—'}
+              </span>
+            </div>
+
+            <div className="bg-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/30">
+              <span className="text-slate-500 text-xs block mb-1">Joined</span>
+              <span className="font-bold text-white text-sm">{formatJoinedDate(business.created_at)}</span>
+            </div>
+
+            <div className="bg-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/30">
+              <span className="text-slate-500 text-xs block mb-1">Status</span>
+              <span className={`font-bold text-sm ${
+                business.subscription?.status === 'active' ? 'text-[#00d083]' :
+                business.subscription?.status === 'trialing' ? 'text-amber-400' :
+                business.subscription?.status === 'paused' ? 'text-slate-400' :
+                'text-red-400'
+              }`}>
+                {business.subscription?.status === 'active' ? 'Live' : 
+                 business.subscription?.status === 'trialing' ? 'Trial' :
+                 business.subscription?.status || '—'}
+              </span>
+            </div>
+
+            <div className="bg-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/30">
+              <span className="text-slate-500 text-xs block mb-1">Files</span>
+              <span className="font-bold text-white text-sm">
+                {(business.business_menus?.length || 0) + (business.business_images?.length || 0)}
+              </span>
+            </div>
+
+            <div className="bg-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/30">
+              <span className="text-slate-500 text-xs block mb-1">Last Contact</span>
+              <span className="font-bold text-white text-sm">
+                {business.updated_at ? new Date(business.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CRM Control Panel Modal - IMPRESSIVE! */}
+      {isExpanded && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          {/* Backdrop Blur */}
+          <div 
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
+            onClick={() => setIsExpanded(false)}
+          />
+          
+          {/* Modal Content */}
+          <div className="relative w-full max-w-7xl max-h-[90vh] bg-slate-900/95 backdrop-blur-2xl border-2 border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Modal Header */}
+            <div className="sticky top-0 z-10 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/50 px-8 py-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <InitialAvatar 
+                    businessName={business.business_name} 
+                    className="w-14 h-14 rounded-xl border-2 border-slate-600/50 shadow-lg text-lg font-bold"
+                  />
+                  <div>
+                    <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                      {business.business_name}
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${
+                        business.subscription?.tier_name === 'spotlight' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                        business.subscription?.tier_name === 'featured' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                        business.subscription?.is_in_free_trial ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                        'bg-slate-700/50 text-slate-400 border border-slate-600/30'
+                      }`}>
+                        {business.subscription?.tier_display_name || (business.subscription?.is_in_free_trial ? 'Free Trial' : 'Starter')}
+                      </span>
+                    </h2>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Business Control Panel
+                    </p>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => setIsExpanded(false)}
+                  className="p-3 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/50 rounded-lg transition-all hover:scale-105 group"
+                  title="Close"
+                >
+                  <svg className="w-6 h-6 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body - Scrollable */}
+            <div className="overflow-y-auto max-h-[calc(90vh-120px)] p-8">
+
+
+      {/* CRM Content Moved Into Modal */}
+      {/* CRM Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleCall}
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            Call
+          </Button>
+          <Button
+            onClick={handleEmail}
+            size="sm"
+            variant="outline"
+            className="border-blue-500 text-blue-400 hover:bg-blue-500/20 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            Email
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-purple-500 text-purple-400 hover:bg-purple-500/20 flex items-center gap-2"
+            onClick={() => {
+              // Quick sync button
+            }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Sync
+          </Button>
+        </div>
+        
+        <div className="text-sm text-slate-400">
+          Last updated: {business.updated_at ? new Date(business.updated_at).toLocaleString() : 'Unknown'}
         </div>
       </div>
 
@@ -597,38 +686,6 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </div>
             </div>
           </div>
-
-
-      {/* Comprehensive CRM Interface */}
-      {isExpanded && (
-        <div className="border-t border-slate-600">
-          {/* CRM Action Bar */}
-          <div className="px-6 py-4 bg-slate-700/20 border-b border-slate-600">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={handleCall}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  Call
-                </Button>
-                <Button
-                  onClick={handleEmail}
-                  size="sm"
-                  variant="outline"
-                  className="border-blue-500 text-blue-400 hover:bg-blue-500/20 flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Email
-                </Button>
-                <Button
-                  size="sm"
                   variant="outline"
                   className="border-purple-500 text-purple-400 hover:bg-purple-500/20 flex items-center gap-2"
                 >
