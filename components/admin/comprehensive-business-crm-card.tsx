@@ -397,28 +397,44 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 />
               </div>
               
-              {(business.first_name || business.last_name) && (
-                <p className="text-slate-400 text-sm mb-3">
-                  {business.first_name} {business.last_name}
-                </p>
-              )}
-              
-              {/* Compact Badges Row */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {getStatusBadge()}
-                {getTrialBadge()}
-                
-                {business.last_ghl_sync && (
-                  <span className="px-2.5 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
-                    Synced {new Date(business.last_ghl_sync).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              {/* Info Row - Owner + Badges */}
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Owner Name */}
+                {(business.first_name || business.last_name) && (
+                  <span className="text-slate-400 text-sm">
+                    {business.first_name} {business.last_name}
                   </span>
                 )}
                 
-                {business.has_pending_changes && (
-                  <span className="px-2.5 py-1 text-xs font-semibold text-orange-300 bg-orange-500/20 rounded-lg border border-orange-500/30">
-                    {business.pending_changes_count} updates
-                  </span>
+                {/* Vertical Divider */}
+                {(business.first_name || business.last_name) && (
+                  <div className="h-4 w-px bg-slate-700" />
                 )}
+                
+                {/* Status Badges - Horizontal Layout */}
+                <div className="flex items-center gap-2">
+                  {getStatusBadge()}
+                  
+                  {getTrialBadge()}
+                  
+                  {business.last_ghl_sync && (
+                    <span className="px-3 py-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/30 flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Synced {new Date(business.last_ghl_sync).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    </span>
+                  )}
+                  
+                  {business.has_pending_changes && (
+                    <span className="px-3 py-1.5 text-xs font-semibold text-orange-300 bg-orange-500/20 rounded-lg border border-orange-500/30 flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      {business.pending_changes_count} updates
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
