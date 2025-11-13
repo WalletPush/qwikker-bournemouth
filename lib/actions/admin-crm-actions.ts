@@ -122,7 +122,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
     // Fetch subscriptions data
     let subscriptionsByBusiness = new Map()
     try {
-      const { data: subscriptions } = await supabaseAdmin
+      const { data: subscriptions, error: subError } = await supabaseAdmin
         .from('business_subscriptions')
         .select(`
           business_id,
@@ -131,23 +131,39 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
           is_in_free_trial,
           free_trial_start_date,
           free_trial_end_date,
-          current_period_end,
-          subscription_tiers!inner(tier_name, tier_display_name)
+          current_period_end
         `)
         .in('business_id', businessIds)
 
-      if (subscriptions) {
+      if (subError) {
+        console.log('⚠️ Error fetching subscriptions:', subError)
+      }
+
+      if (subscriptions && subscriptions.length > 0) {
+        // Fetch tier names separately
+        const tierIds = subscriptions.map(s => s.tier_id)
+        const { data: tiers } = await supabaseAdmin
+          .from('subscription_tiers')
+          .select('id, tier_name, tier_display_name')
+          .in('id', tierIds)
+
+        const tierMap = new Map(tiers?.map(t => [t.id, t]) || [])
+
         subscriptions.forEach(sub => {
-          subscriptionsByBusiness.set(sub.business_id, {
-            tier_id: sub.tier_id,
-            tier_name: sub.subscription_tiers.tier_name,
-            tier_display_name: sub.subscription_tiers.tier_display_name,
-            status: sub.status,
-            is_in_free_trial: sub.is_in_free_trial,
-            free_trial_start_date: sub.free_trial_start_date,
-            free_trial_end_date: sub.free_trial_end_date,
-            current_period_end: sub.current_period_end
-          })
+          const tier = tierMap.get(sub.tier_id)
+          if (tier) {
+            subscriptionsByBusiness.set(sub.business_id, {
+              tier_id: sub.tier_id,
+              tier_name: tier.tier_name,
+              tier_display_name: tier.tier_display_name,
+              status: sub.status,
+              is_in_free_trial: sub.is_in_free_trial,
+              free_trial_start_date: sub.free_trial_start_date,
+              free_trial_end_date: sub.free_trial_end_date,
+              current_period_end: sub.current_period_end
+            })
+            console.log('✅ Loaded subscription for business:', sub.business_id, tier.tier_display_name)
+          }
         })
       }
     } catch (error) {
