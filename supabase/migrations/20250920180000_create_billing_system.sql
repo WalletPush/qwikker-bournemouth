@@ -25,7 +25,7 @@ ON CONFLICT DO NOTHING;
 -- Create business_subscriptions table
 CREATE TABLE IF NOT EXISTS public.business_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  business_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  business_id UUID REFERENCES public.business_profiles(id) ON DELETE CASCADE,
   tier_id UUID REFERENCES public.subscription_tiers(id),
   billing_cycle TEXT CHECK (billing_cycle IN ('monthly', 'yearly')) DEFAULT 'monthly',
   
