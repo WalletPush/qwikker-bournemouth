@@ -413,11 +413,27 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
           <Label className="text-slate-300 mb-3 block">Individual Feature Access</Label>
           <div className="space-y-2">
             {[
-              { key: 'social_wizard' as const, label: 'Social Wizard' },
-              { key: 'loyalty_cards' as const, label: 'Loyalty Cards' },
-              { key: 'analytics' as const, label: 'Analytics' },
-              { key: 'push_notifications' as const, label: 'Push Notifications' }
-            ].map(({ key, label }) => {
+              { 
+                key: 'social_wizard' as const, 
+                label: 'Social Wizard',
+                icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+              },
+              { 
+                key: 'loyalty_cards' as const, 
+                label: 'Loyalty Cards',
+                icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+              },
+              { 
+                key: 'analytics' as const, 
+                label: 'Analytics',
+                icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              },
+              { 
+                key: 'push_notifications' as const, 
+                label: 'Push Notifications',
+                icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 12a8 8 0 1116 0c0 3-2 5-2 5H6s-2-2-2-5zM9 21h6" /></svg>
+              }
+            ].map(({ key, label, icon }) => {
               const isEnabled = features[key]
               
               return (
@@ -431,6 +447,9 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
                   }`}
                 >
                   <div className="flex items-center gap-3">
+                    <span className={isEnabled ? 'text-[#00d083]' : 'text-slate-400'}>
+                      {icon}
+                    </span>
                     <span className={`font-medium ${isEnabled ? 'text-white' : 'text-slate-400'}`}>
                       {label}
                     </span>
