@@ -11,7 +11,7 @@ interface TierManagementCardProps {
   onUpdate: () => void
 }
 
-type PlanTier = 'starter' | 'trial' | 'featured' | 'spotlight'
+type PlanTier = 'trial' | 'starter' | 'featured' | 'spotlight'
 
 interface FeatureAccess {
   social_wizard: boolean
@@ -52,20 +52,6 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
   }
 
   const tierDetails = {
-    starter: {
-      name: 'Starter',
-      color: 'border-slate-500',
-      bgColor: 'bg-slate-500/10',
-      textColor: 'text-slate-400',
-      features: [
-        'AI-powered discovery listings',
-        'Basic menu/service indexing',
-        'Up to 3 active offers',
-        'Social media welcome',
-        'Secret Menu Club (3 items)',
-        'Dashboard with support'
-      ]
-    },
     trial: {
       name: 'Free Trial',
       color: 'border-amber-500',
@@ -79,6 +65,20 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         'Up to 5 exclusive offers',
         'Social media featuring',
         'Full Secret Menu Club'
+      ]
+    },
+    starter: {
+      name: 'Starter',
+      color: 'border-slate-500',
+      bgColor: 'bg-slate-500/10',
+      textColor: 'text-slate-400',
+      features: [
+        'AI-powered discovery listings',
+        'Basic menu/service indexing',
+        'Up to 3 active offers',
+        'Social media welcome',
+        'Secret Menu Club (3 items)',
+        'Dashboard with support'
       ]
     },
     featured: {
@@ -210,7 +210,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         <div>
           <Label className="text-slate-300 mb-3 block">Select Subscription Tier</Label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {(['starter', 'trial', 'featured', 'spotlight'] as PlanTier[]).map((tier) => {
+            {(['trial', 'starter', 'featured', 'spotlight'] as PlanTier[]).map((tier) => {
               const details = tierDetails[tier]
               const isSelected = selectedTier === tier
               
@@ -228,8 +228,8 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
                     {details.name}
                   </div>
                   <div className="text-xs text-slate-500">
-                    {tier === 'starter' && 'Basic features'}
                     {tier === 'trial' && '90-day free trial'}
+                    {tier === 'starter' && 'Basic features'}
                     {tier === 'featured' && 'Priority placement'}
                     {tier === 'spotlight' && 'All premium features'}
                   </div>
