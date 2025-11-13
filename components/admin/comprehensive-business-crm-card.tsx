@@ -507,17 +507,17 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
       {/* CRM Control Panel Modal - IMPRESSIVE! */}
       {isExpanded && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          {/* Backdrop Blur */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
+          {/* Backdrop Blur - Dark & Beautiful */}
           <div 
-            className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
+            className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"
             onClick={() => setIsExpanded(false)}
           />
           
-          {/* Modal Content */}
-          <div className="relative w-full max-w-7xl max-h-[90vh] bg-slate-900/95 backdrop-blur-2xl border-2 border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col">
-            {/* Modal Header */}
-            <div className="flex-shrink-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/50 px-8 py-6">
+          {/* Modal Content - Card Style */}
+          <div className="relative w-full max-w-6xl max-h-[85vh] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 backdrop-blur-xl border-2 border-slate-700/50 rounded-2xl shadow-2xl shadow-black/60 overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col">
+            {/* Modal Header - Card Style */}
+            <div className="flex-shrink-0 bg-gradient-to-br from-slate-900/60 to-slate-800/60 backdrop-blur-sm border-b border-slate-700/30 px-8 py-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <InitialAvatar 
@@ -544,7 +544,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 
                 <button
                   onClick={() => setIsExpanded(false)}
-                  className="p-3 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/50 rounded-lg transition-all hover:scale-105 group"
+                  className="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/50 rounded-xl transition-all hover:scale-105 group shadow-lg"
                   title="Close"
                 >
                   <svg className="w-6 h-6 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -554,8 +554,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </div>
             </div>
 
-            {/* Modal Body - Scrollable */}
-            <div className="flex-1 overflow-y-auto p-8">
+            {/* Modal Body - Scrollable - Card Style Background */}
+            <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-b from-slate-900/40 to-slate-950/40">
 
 
       {/* CRM Content Moved Into Modal */}
@@ -672,7 +672,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           </div>
 
           {/* CRM Tab Navigation */}
-          <div className="px-6 py-3 bg-slate-800/30 border-b border-slate-600">
+          <div className="px-6 py-4 bg-slate-800/20 backdrop-blur-sm border-y border-slate-700/30">
             <div className="flex flex-wrap gap-1">
               {[
                 { id: 'overview', label: 'Overview', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
@@ -690,10 +690,10 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                   onClick={() => setActiveTab(tab.id as any)}
                   variant={activeTab === tab.id ? 'default' : 'ghost'}
                   size="sm"
-                  className={`text-xs flex items-center gap-2 ${
+                  className={`text-xs flex items-center gap-2 rounded-xl transition-all ${
                     activeTab === tab.id 
-                      ? 'bg-slate-700 text-white' 
-                      : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                      ? 'bg-slate-800/80 text-white shadow-lg border border-slate-600/30' 
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                   }`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -760,25 +760,25 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <Card className="bg-slate-800/50 border-slate-700">
+                  <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur-sm shadow-lg">
                     <CardContent className="p-4 text-center">
                       <div className="text-2xl font-bold text-blue-400 mb-1">{businessMetrics.trialDays}</div>
                       <div className="text-xs text-slate-400">Trial Days Left</div>
                     </CardContent>
                   </Card>
-                  <Card className="bg-slate-800/50 border-slate-700">
+                  <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur-sm shadow-lg">
                     <CardContent className="p-4 text-center">
                       <div className="text-2xl font-bold text-green-400 mb-1">{businessMetrics.offers}</div>
                       <div className="text-xs text-slate-400">Active Offers</div>
                     </CardContent>
                   </Card>
-                  <Card className="bg-slate-800/50 border-slate-700">
+                  <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur-sm shadow-lg">
                     <CardContent className="p-4 text-center">
                       <div className="text-2xl font-bold text-purple-400 mb-1">{businessMetrics.secretItems}</div>
                       <div className="text-xs text-slate-400">Secret Items</div>
                     </CardContent>
                   </Card>
-                  <Card className="bg-slate-800/50 border-slate-700">
+                  <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur-sm shadow-lg">
                     <CardContent className="p-4 text-center">
                       <div className="text-2xl font-bold text-yellow-400 mb-1">{businessMetrics.walletPasses}</div>
                       <div className="text-xs text-slate-400">Wallet Passes</div>
@@ -787,7 +787,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="bg-slate-800/50 border-slate-700">
+                  <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur-sm shadow-lg">
                     <CardHeader>
                       <CardTitle className="text-white text-sm">Contact Information</CardTitle>
                     </CardHeader>
@@ -855,7 +855,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-slate-800/50 border-slate-700">
+                  <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur-sm shadow-lg">
                     <CardHeader>
                       <CardTitle className="text-white text-sm">Business Status</CardTitle>
                     </CardHeader>
