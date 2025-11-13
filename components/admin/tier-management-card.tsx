@@ -52,23 +52,19 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     push_notifications: business?.features?.push_notifications ?? false
   })
 
-  // Free trial state - use subscription data if available
+  // Free trial state - ONLY use subscription data (NOT business_profiles)
   const [freeTrialEnabled, setFreeTrialEnabled] = useState(
-    business?.subscription?.is_in_free_trial ?? business?.free_trial_enabled ?? false
+    business?.subscription?.is_in_free_trial ?? false
   )
   const [trialStartDate, setTrialStartDate] = useState(
     business?.subscription?.free_trial_start_date 
       ? new Date(business.subscription.free_trial_start_date).toISOString().split('T')[0]
-      : business?.trial_start_date 
-        ? new Date(business.trial_start_date).toISOString().split('T')[0] 
-        : ''
+      : ''
   )
   const [trialEndDate, setTrialEndDate] = useState(
     business?.subscription?.free_trial_end_date 
       ? new Date(business.subscription.free_trial_end_date).toISOString().split('T')[0]
-      : business?.trial_end_date 
-        ? new Date(business.trial_end_date).toISOString().split('T')[0] 
-        : ''
+      : ''
   )
 
   // Calculate trial days remaining
