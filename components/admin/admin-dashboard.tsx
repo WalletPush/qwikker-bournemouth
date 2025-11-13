@@ -1242,7 +1242,15 @@ Qwikker Admin Team`
                           <ComprehensiveBusinessCRMCard
                             key={business.id}
                             business={crmRecord}
-                            onUpdate={onUpdate}
+                            onApprove={handleApproval}
+                            onInspect={(business) => {
+                              // Find the original business data from allBusinesses to get complete info
+                              const fullBusinessData = allBusinesses.find(b => b.id === business.id)
+                              if (fullBusinessData) {
+                                setSelectedBusiness(fullBusinessData)
+                                setInspectionModalOpen(true)
+                              }
+                            }}
                           />
                         )
                       }
