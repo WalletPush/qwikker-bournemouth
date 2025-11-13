@@ -303,18 +303,18 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
   const getStatusBadge = () => {
     const statusConfig = {
-      'incomplete': { bg: 'bg-orange-500/20', text: 'text-orange-300', label: 'INCOMPLETE' },
-      'pending_review': { bg: 'bg-yellow-500/20', text: 'text-yellow-300', label: 'PENDING REVIEW' },
-      'approved': { bg: 'bg-green-500/20', text: 'text-green-300', label: 'APPROVED' },
-      'rejected': { bg: 'bg-red-500/20', text: 'text-red-300', label: 'REJECTED' },
-      'trial_expired': { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'TRIAL EXPIRED' },
-      'inactive': { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'INACTIVE' }
+      'incomplete': { bg: 'bg-orange-500/20', text: 'text-orange-300', border: 'border-orange-500/30', label: 'INCOMPLETE' },
+      'pending_review': { bg: 'bg-yellow-500/20', text: 'text-yellow-300', border: 'border-yellow-500/30', label: 'PENDING REVIEW' },
+      'approved': { bg: 'bg-green-500/20', text: 'text-green-300', border: 'border-green-500/30', label: 'APPROVED' },
+      'rejected': { bg: 'bg-red-500/20', text: 'text-red-300', border: 'border-red-500/30', label: 'REJECTED' },
+      'trial_expired': { bg: 'bg-gray-500/20', text: 'text-gray-300', border: 'border-gray-500/30', label: 'TRIAL EXPIRED' },
+      'inactive': { bg: 'bg-gray-500/20', text: 'text-gray-300', border: 'border-gray-500/30', label: 'INACTIVE' }
     }
     
     const config = statusConfig[business.status] || statusConfig['incomplete']
     
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${config.bg} ${config.text}`}>
+      <span className={`h-8 px-3 text-xs font-semibold rounded-lg border ${config.bg} ${config.text} ${config.border} flex items-center`}>
         {config.label}
       </span>
     )
@@ -330,14 +330,14 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     }
     
     const badgeConfig = {
-      'active': { bg: 'bg-amber-500/20', text: 'text-amber-300', label: `${trialInfo.trial_days_remaining} days left` },
-      'expired': { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Trial ended - Hidden from users' }
+      'active': { bg: 'bg-amber-500/20', text: 'text-amber-300', border: 'border-amber-500/30', label: `${trialInfo.trial_days_remaining} days left` },
+      'expired': { bg: 'bg-gray-500/20', text: 'text-gray-300', border: 'border-gray-500/30', label: 'Trial ended - Hidden from users' }
     }
     
     const config = badgeConfig[trialInfo.trial_status] || badgeConfig['active']
     
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${config.bg} ${config.text}`}>
+      <span className={`h-8 px-3 text-xs font-semibold rounded-lg border ${config.bg} ${config.text} ${config.border} flex items-center`}>
         {config.label}
       </span>
     )
@@ -401,25 +401,25 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <div className="flex items-center gap-4 flex-wrap">
                 {/* Owner Name */}
                 {(business.first_name || business.last_name) && (
-                  <span className="text-slate-400 text-sm">
+                  <span className="text-slate-400 text-sm h-8 flex items-center">
                     {business.first_name} {business.last_name}
                   </span>
                 )}
                 
                 {/* Vertical Divider */}
                 {(business.first_name || business.last_name) && (
-                  <div className="h-4 w-px bg-slate-700" />
+                  <div className="h-5 w-px bg-slate-700/50" />
                 )}
                 
-                {/* Status Badges - Horizontal Layout */}
-                <div className="flex items-center gap-2">
+                {/* Status Badges - Horizontal Layout with Uniform Height */}
+                <div className="flex items-center gap-2.5">
                   {getStatusBadge()}
                   
                   {getTrialBadge()}
                   
                   {business.last_ghl_sync && (
-                    <span className="px-3 py-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/30 flex items-center gap-1.5">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span className="h-8 px-3 text-xs font-semibold bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/30 flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                       Synced {new Date(business.last_ghl_sync).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
@@ -427,8 +427,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                   )}
                   
                   {business.has_pending_changes && (
-                    <span className="px-3 py-1.5 text-xs font-semibold text-orange-300 bg-orange-500/20 rounded-lg border border-orange-500/30 flex items-center gap-1.5">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span className="h-8 px-3 text-xs font-semibold text-orange-300 bg-orange-500/20 rounded-lg border border-orange-500/30 flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                       </svg>
                       {business.pending_changes_count} updates
@@ -481,17 +481,17 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
           </div>
 
-          {/* Stats Grid - 2 Row Layout with Better Proportions */}
-          <div className="grid grid-cols-4 gap-3">
-            {/* Row 1: Main Stats */}
-            <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-4 py-4 rounded-xl border border-purple-500/20">
-              <div className="flex items-center gap-2 mb-1">
+          {/* Stats Grid - 4 Column Layout with Proper Sizing */}
+          <div className="grid grid-cols-4 gap-4">
+            {/* Tier */}
+            <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-4 py-3.5 rounded-xl border border-purple-500/20">
+              <div className="flex items-center gap-2 mb-2">
                 <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                 </svg>
                 <span className="text-slate-400 text-xs font-medium">Tier</span>
               </div>
-              <span className={`font-bold text-base ${
+              <span className={`font-bold text-base leading-tight block ${
                 business.subscription?.tier_display_name === 'Spotlight' ? 'text-purple-400' :
                 business.subscription?.tier_display_name === 'Featured' ? 'text-blue-400' :
                 business.subscription?.tier_display_name === 'Starter' ? 'text-slate-300' :
@@ -503,30 +503,32 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </span>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-950/40 to-blue-900/20 backdrop-blur-sm px-4 py-4 rounded-xl border border-blue-500/20">
-              <div className="flex items-center gap-2 mb-1">
+            {/* Billing */}
+            <div className="bg-gradient-to-br from-blue-950/40 to-blue-900/20 backdrop-blur-sm px-4 py-3.5 rounded-xl border border-blue-500/20">
+              <div className="flex items-center gap-2 mb-2">
                 <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span className="text-slate-400 text-xs font-medium">Billing</span>
               </div>
-              <span className="font-bold text-white text-base">
+              <span className="font-bold text-white text-sm leading-tight block">
                 {business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date
-                  ? formatDate(business.subscription.free_trial_end_date).split(',')[0]
+                  ? new Date(business.subscription.free_trial_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ')
                   : business.subscription?.current_period_end
-                  ? formatDate(business.subscription.current_period_end).split(',')[0]
+                  ? new Date(business.subscription.current_period_end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ')
                   : 'N/A'}
               </span>
             </div>
 
-            <div className="bg-gradient-to-br from-emerald-950/40 to-emerald-900/20 backdrop-blur-sm px-4 py-4 rounded-xl border border-emerald-500/20">
-              <div className="flex items-center gap-2 mb-1">
+            {/* Status */}
+            <div className="bg-gradient-to-br from-emerald-950/40 to-emerald-900/20 backdrop-blur-sm px-4 py-3.5 rounded-xl border border-emerald-500/20">
+              <div className="flex items-center gap-2 mb-2">
                 <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span className="text-slate-400 text-xs font-medium">Status</span>
               </div>
-              <span className={`font-bold text-base ${
+              <span className={`font-bold text-base leading-tight block ${
                 business.subscription?.status === 'active' ? 'text-[#00d083]' :
                 business.subscription?.status === 'trialing' ? 'text-amber-400' :
                 business.subscription?.status === 'paused' ? 'text-slate-400' :
@@ -538,14 +540,17 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </span>
             </div>
 
-            <div className="bg-gradient-to-br from-amber-950/40 to-amber-900/20 backdrop-blur-sm px-4 py-4 rounded-xl border border-amber-500/20">
-              <div className="flex items-center gap-2 mb-1">
+            {/* Joined */}
+            <div className="bg-gradient-to-br from-amber-950/40 to-amber-900/20 backdrop-blur-sm px-4 py-3.5 rounded-xl border border-amber-500/20">
+              <div className="flex items-center gap-2 mb-2">
                 <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <span className="text-slate-400 text-xs font-medium">Joined</span>
               </div>
-              <span className="font-bold text-white text-base">{formatJoinedDate(business.created_at)}</span>
+              <span className="font-bold text-white text-sm leading-tight block">
+                {new Date(business.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ')}
+              </span>
             </div>
           </div>
         </div>
