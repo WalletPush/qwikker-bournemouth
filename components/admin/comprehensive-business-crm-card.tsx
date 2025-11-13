@@ -345,11 +345,11 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
   // Get tier-specific accent gradient for decorative line
   const getTierAccentGradient = () => {
-    if (business.subscription?.tier_name === 'spotlight') return 'from-transparent via-purple-500/50 to-transparent'
-    if (business.subscription?.tier_name === 'featured') return 'from-transparent via-blue-500/50 to-transparent'
-    if (business.subscription?.tier_name === 'starter') return 'from-transparent via-slate-500/30 to-transparent'
-    if (business.subscription?.is_in_free_trial) return 'from-transparent via-amber-500/50 to-transparent'
-    return 'from-transparent via-slate-500/30 to-transparent'
+    if (business.subscription?.tier_name === 'spotlight') return 'from-purple-500/40 via-purple-500 to-purple-500/40'
+    if (business.subscription?.tier_name === 'featured') return 'from-blue-500/40 via-blue-500 to-blue-500/40'
+    if (business.subscription?.tier_name === 'starter') return 'from-slate-500/40 via-slate-500 to-slate-500/40'
+    if (business.subscription?.is_in_free_trial) return 'from-amber-500/40 via-amber-500 to-amber-500/40'
+    return 'from-slate-500/40 via-slate-500 to-slate-500/40'
   }
 
   const getHeaderColor = () => {
@@ -407,19 +407,19 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             <div className="flex items-center gap-2 flex-shrink-0 ml-4">
               <button
                 onClick={() => window.open(`mailto:${business.email}`)}
-                className="p-2.5 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
+                className="p-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
                 title="Email"
               >
-                <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </button>
               <button
                 onClick={() => window.open(`tel:${business.phone}`)}
-                className="p-2.5 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
+                className="p-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
                 title="Call"
               >
-                <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
               </button>
@@ -427,9 +427,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               {/* CRM Button */}
               <Button
                 onClick={() => setIsExpanded(true)}
-                className="bg-gradient-to-r from-[#00d083] to-emerald-600 hover:from-[#00d083]/90 hover:to-emerald-600/90 text-white font-semibold px-4 py-2.5 shadow-lg hover:shadow-xl transition-all text-sm"
+                className="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-3 py-2 shadow-lg hover:shadow-xl transition-all text-xs"
               >
-                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 CRM
@@ -449,12 +449,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           {/* Stats Grid - Centered Icons & Text */}
           <div className="grid grid-cols-4 gap-5">
             {/* Tier */}
-            <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-5 py-6 rounded-xl border border-purple-500/20 text-center">
-              <svg className="w-6 h-6 text-purple-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
+            <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-purple-500/20 text-center">
               <span className="text-slate-400 text-xs font-medium block mb-2">Tier</span>
-              <span className={`font-semibold text-base leading-tight block ${
+              <span className={`font-semibold text-xl leading-tight block ${
                 business.subscription?.tier_display_name === 'Spotlight' ? 'text-purple-400' :
                 business.subscription?.tier_display_name === 'Featured' ? 'text-blue-400' :
                 business.subscription?.tier_display_name === 'Starter' ? 'text-slate-300' :
@@ -467,12 +464,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Billing */}
-            <div className="bg-gradient-to-br from-blue-950/40 to-blue-900/20 backdrop-blur-sm px-5 py-6 rounded-xl border border-blue-500/20 text-center">
-              <svg className="w-6 h-6 text-blue-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div className="bg-gradient-to-br from-blue-950/40 to-blue-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-blue-500/20 text-center">
               <span className="text-slate-400 text-xs font-medium block mb-2">Billing</span>
-              <span className="font-medium text-white text-sm leading-tight block">
+              <span className="font-medium text-white text-base leading-tight block">
                 {business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date
                   ? new Date(business.subscription.free_trial_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ')
                   : business.subscription?.current_period_end
@@ -482,12 +476,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Status */}
-            <div className="bg-gradient-to-br from-emerald-950/40 to-emerald-900/20 backdrop-blur-sm px-5 py-6 rounded-xl border border-emerald-500/20 text-center">
-              <svg className="w-6 h-6 text-emerald-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div className="bg-gradient-to-br from-emerald-950/40 to-emerald-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-emerald-500/20 text-center">
               <span className="text-slate-400 text-xs font-medium block mb-2">Status</span>
-              <span className={`font-semibold text-base leading-tight block ${
+              <span className={`font-semibold text-xl leading-tight block ${
                 business.subscription?.status === 'active' || business.subscription?.is_in_free_trial ? 'text-[#00d083]' :
                 business.subscription?.status === 'paused' ? 'text-slate-400' :
                 'text-red-400'
@@ -499,12 +490,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Joined */}
-            <div className="bg-gradient-to-br from-amber-950/40 to-amber-900/20 backdrop-blur-sm px-5 py-6 rounded-xl border border-amber-500/20 text-center">
-              <svg className="w-6 h-6 text-amber-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+            <div className="bg-gradient-to-br from-amber-950/40 to-amber-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-amber-500/20 text-center">
               <span className="text-slate-400 text-xs font-medium block mb-2">Joined</span>
-              <span className="font-medium text-white text-sm leading-tight block">
+              <span className="font-medium text-white text-base leading-tight block">
                 {new Date(business.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ')}
               </span>
             </div>
