@@ -159,7 +159,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
     const now = new Date()
     const diffTime = now.getTime() - createdDate.getTime()
     const daysSinceSignup = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-    return Math.max(0, 120 - daysSinceSignup)
+    return Math.max(0, 90 - daysSinceSignup)
   })() : 0
   
   const showDiscountPricing = isInFreeTrial && trialDaysLeft > 0 && isFoundingMember && dynamicPricing?.founding_member_enabled

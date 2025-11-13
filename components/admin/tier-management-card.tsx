@@ -11,7 +11,7 @@ interface TierManagementCardProps {
   onUpdate: () => void
 }
 
-type PlanTier = 'starter' | 'featured' | 'spotlight'
+type PlanTier = 'starter' | 'trial' | 'featured' | 'spotlight'
 
 interface FeatureAccess {
   social_wizard: boolean
@@ -32,6 +32,25 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     push_notifications: business?.features?.push_notifications ?? false
   })
 
+  // Free trial state
+  const [freeTrialEnabled, setFreeTrialEnabled] = useState(business?.free_trial_enabled ?? false)
+  const [trialStartDate, setTrialStartDate] = useState(
+    business?.trial_start_date ? new Date(business.trial_start_date).toISOString().split('T')[0] : ''
+  )
+  const [trialEndDate, setTrialEndDate] = useState(
+    business?.trial_end_date ? new Date(business.trial_end_date).toISOString().split('T')[0] : ''
+  )
+
+  // Calculate trial days remaining
+  const calculateTrialDays = () => {
+    if (!trialEndDate) return 0
+    const end = new Date(trialEndDate)
+    const now = new Date()
+    const diffTime = end.getTime() - now.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return Math.max(0, diffDays)
+  }
+
   const tierDetails = {
     starter: {
       name: 'Starter',
@@ -45,6 +64,21 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         'Social media welcome',
         'Secret Menu Club (3 items)',
         'Dashboard with support'
+      ]
+    },
+    trial: {
+      name: 'Free Trial',
+      color: 'border-amber-500',
+      bgColor: 'bg-amber-500/10',
+      textColor: 'text-amber-400',
+      features: [
+        'All Featured features included',
+        '90-day free trial period',
+        'Priority AI placement',
+        'Advanced menu/service indexing',
+        'Up to 5 exclusive offers',
+        'Social media featuring',
+        'Full Secret Menu Club'
       ]
     },
     featured: {
@@ -88,7 +122,8 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         analytics: true,
         push_notifications: true
       })
-    } else if (tier === 'featured') {
+    } else if (tier === 'trial' || tier === 'featured') {
+      // Trial and Featured have same features, just different billing
       setFeatures({
         social_wizard: false,
         loyalty_cards: false,
@@ -96,12 +131,23 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         push_notifications: false
       })
     } else {
+      // Starter
       setFeatures({
         social_wizard: false,
         loyalty_cards: false,
         analytics: false,
         push_notifications: false
       })
+    }
+
+    // Auto-set trial dates if switching to trial tier
+    if (tier === 'trial' && !trialStartDate) {
+      const start = new Date()
+      const end = new Date()
+      end.setDate(end.getDate() + 90) // 90-day trial
+      setTrialStartDate(start.toISOString().split('T')[0])
+      setTrialEndDate(end.toISOString().split('T')[0])
+      setFreeTrialEnabled(true)
     }
   }
 
@@ -117,18 +163,30 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     const supabase = createClient()
 
     try {
+      const updateData: any = {
+        plan: selectedTier,
+        features: features,
+        updated_at: new Date().toISOString()
+      }
+
+      // Add trial dates if trial tier is selected
+      if (selectedTier === 'trial') {
+        updateData.trial_start_date = trialStartDate || new Date().toISOString()
+        updateData.trial_end_date = trialEndDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+        updateData.free_trial_enabled = true
+      } else {
+        // Clear trial dates if not on trial
+        updateData.free_trial_enabled = false
+      }
+
       const { error } = await supabase
         .from('business_profiles')
-        .update({
-          plan: selectedTier,
-          features: features,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', business.id)
 
       if (error) throw error
 
-      console.log('✅ Tier updated:', { tier: selectedTier, features })
+      console.log('✅ Tier updated:', { tier: selectedTier, features, trialDates: selectedTier === 'trial' ? { start: trialStartDate, end: trialEndDate } : null })
       alert('✅ Tier and features updated successfully!')
       onUpdate()
     } catch (error) {
@@ -151,8 +209,8 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         {/* Tier Selection */}
         <div>
           <Label className="text-slate-300 mb-3 block">Select Subscription Tier</Label>
-          <div className="grid grid-cols-3 gap-3">
-            {(['starter', 'featured', 'spotlight'] as PlanTier[]).map((tier) => {
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {(['starter', 'trial', 'featured', 'spotlight'] as PlanTier[]).map((tier) => {
               const details = tierDetails[tier]
               const isSelected = selectedTier === tier
               
@@ -171,6 +229,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
                   </div>
                   <div className="text-xs text-slate-500">
                     {tier === 'starter' && 'Basic features'}
+                    {tier === 'trial' && '90-day free trial'}
                     {tier === 'featured' && 'Priority placement'}
                     {tier === 'spotlight' && 'All premium features'}
                   </div>
@@ -199,6 +258,46 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
             ))}
           </ul>
         </div>
+
+        {/* Free Trial Management - Only shown when trial tier is selected */}
+        {selectedTier === 'trial' && (
+          <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+            <div className="flex items-center gap-2 mb-3">
+              <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h4 className="font-medium text-amber-400">Free Trial Period</h4>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <Label className="text-slate-300 text-xs mb-1 block">Trial Start Date</Label>
+                <input
+                  type="date"
+                  value={trialStartDate}
+                  onChange={(e) => setTrialStartDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-slate-300 text-xs mb-1 block">Trial End Date</Label>
+                <input
+                  type="date"
+                  value={trialEndDate}
+                  onChange={(e) => setTrialEndDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                />
+              </div>
+            </div>
+
+            {trialEndDate && (
+              <div className="p-2 bg-slate-700/50 rounded text-center">
+                <span className="text-amber-400 font-semibold text-lg">{calculateTrialDays()}</span>
+                <span className="text-slate-400 text-sm ml-2">days remaining</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Individual Feature Control */}
         <div>

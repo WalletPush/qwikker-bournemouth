@@ -63,8 +63,8 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
       const diffTime = now.getTime() - createdDate.getTime()
       const daysSinceSignup = Math.floor(diffTime / (1000 * 60 * 60 * 24))
       
-      // Trial is 120 days, so countdown from 120
-      const daysLeft = Math.max(0, 120 - daysSinceSignup)
+      // Trial is 90 days, so countdown from 90
+      const daysLeft = Math.max(0, 90 - daysSinceSignup)
       setTrialDaysLeft(daysLeft)
     }
   }, [profile])
