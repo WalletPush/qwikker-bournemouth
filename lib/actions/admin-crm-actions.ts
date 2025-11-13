@@ -119,6 +119,41 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       console.log('📅 EVENTS ERROR:', error)
     }
 
+    // Fetch subscriptions data
+    let subscriptionsByBusiness = new Map()
+    try {
+      const { data: subscriptions } = await supabaseAdmin
+        .from('business_subscriptions')
+        .select(`
+          business_id,
+          tier_id,
+          status,
+          is_in_free_trial,
+          free_trial_start_date,
+          free_trial_end_date,
+          current_period_end,
+          subscription_tiers!inner(tier_name, tier_display_name)
+        `)
+        .in('business_id', businessIds)
+
+      if (subscriptions) {
+        subscriptions.forEach(sub => {
+          subscriptionsByBusiness.set(sub.business_id, {
+            tier_id: sub.tier_id,
+            tier_name: sub.subscription_tiers.tier_name,
+            tier_display_name: sub.subscription_tiers.tier_display_name,
+            status: sub.status,
+            is_in_free_trial: sub.is_in_free_trial,
+            free_trial_start_date: sub.free_trial_start_date,
+            free_trial_end_date: sub.free_trial_end_date,
+            current_period_end: sub.current_period_end
+          })
+        })
+      }
+    } catch (error) {
+      console.log('⚠️ business_subscriptions table not available, using legacy trial calculation')
+    }
+
     // Fetch pending changes count (business_changes table should exist)
     let pendingChangesByBusiness = new Map()
     try {
@@ -172,22 +207,45 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       let trial_status: 'active' | 'expired' | 'upgraded' | 'not_applicable' = 'not_applicable'
       let billing_starts_date: string | null = null
 
-      // Calculate trial status based on approval date (120 days free trial)
-      // NOTE: When trial expires, business status changes to 'trial_expired' and gets hidden from user dashboards/chat
-      // Business data stays in database for potential reactivation
-      if (business.approved_at) {
+      // Calculate trial status from business_subscriptions table (proper source of truth)
+      if (business.subscription) {
+        const subscription = business.subscription
+        
+        // Check if on active trial
+        if (subscription.is_in_free_trial && subscription.free_trial_end_date) {
+          const trialEndDate = new Date(subscription.free_trial_end_date)
+          const now = new Date()
+          const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+          
+          if (daysRemaining > 0) {
+            trial_days_remaining = daysRemaining
+            trial_status = 'active'
+            billing_starts_date = trialEndDate.toISOString()
+          } else {
+            trial_days_remaining = 0
+            trial_status = 'expired'
+            billing_starts_date = trialEndDate.toISOString()
+          }
+        } else if (subscription.status === 'active') {
+          // Paid subscription - not on trial
+          trial_status = 'upgraded'
+          trial_days_remaining = null
+          billing_starts_date = subscription.current_period_end || null
+        }
+      } else if (business.approved_at) {
+        // Fallback to old calculation if no subscription exists (legacy businesses)
         const approvalDate = new Date(business.approved_at)
-        const trialEndDate = new Date(approvalDate.getTime() + (120 * 24 * 60 * 60 * 1000))
+        const trialEndDate = new Date(approvalDate.getTime() + (90 * 24 * 60 * 60 * 1000)) // 90 days now
         const now = new Date()
         const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
         
         if (daysRemaining > 0) {
           trial_days_remaining = daysRemaining
           trial_status = 'active'
-          billing_starts_date = trialEndDate.toISOString() // This is actually trial END date
+          billing_starts_date = trialEndDate.toISOString()
         } else {
           trial_days_remaining = 0
-          trial_status = 'expired' // Business becomes hidden from users but data preserved
+          trial_status = 'expired'
           billing_starts_date = trialEndDate.toISOString()
         }
       }
@@ -218,7 +276,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         // Business assets
         logo: business.logo,
         
-        subscription: null, // Will be populated when billing system is implemented
+        subscription: subscriptionsByBusiness.get(business.id) || null,
         tier: null,
         recent_payments: [], // Will be populated when billing system is implemented
         

@@ -1288,25 +1288,41 @@ Qwikker Admin Team`
                               return []
                             }
                           })() : [],
-                        // Calculate trial info for live businesses
-                        trial_days_remaining: business.approved_at ? 
-                          (() => {
-                            const approvalDate = new Date(business.approved_at)
-                            const trialEndDate = new Date(approvalDate.getTime() + (120 * 24 * 60 * 60 * 1000))
+                        // Calculate trial info from subscription or fallback to approved_at
+                        trial_days_remaining: (() => {
+                          if (business.subscription?.is_in_free_trial && business.subscription.free_trial_end_date) {
+                            const trialEndDate = new Date(business.subscription.free_trial_end_date)
                             const now = new Date()
                             const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
                             return daysRemaining > 0 ? daysRemaining : 0
-                          })() : null,
-                        trial_status: business.approved_at ? 
-                          (() => {
+                          } else if (business.approved_at) {
                             const approvalDate = new Date(business.approved_at)
-                            const trialEndDate = new Date(approvalDate.getTime() + (120 * 24 * 60 * 60 * 1000))
+                            const trialEndDate = new Date(approvalDate.getTime() + (90 * 24 * 60 * 60 * 1000)) // 90 days
                             const now = new Date()
                             const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-                            return daysRemaining > 0 ? 'active' : 'expired'
-                          })() as 'active' | 'expired' | 'upgraded' | 'not_applicable' : 'not_applicable',
-                        billing_starts_date: business.approved_at ? 
-                          new Date(new Date(business.approved_at).getTime() + (120 * 24 * 60 * 60 * 1000)).toISOString() : null,
+                            return daysRemaining > 0 ? daysRemaining : 0
+                          }
+                          return null
+                        })(),
+                        trial_status: (() => {
+                          if (business.subscription?.status === 'active' && !business.subscription.is_in_free_trial) {
+                            return 'upgraded' as const
+                          }
+                          if (business.subscription?.is_in_free_trial && business.subscription.free_trial_end_date) {
+                            const trialEndDate = new Date(business.subscription.free_trial_end_date)
+                            const now = new Date()
+                            return now < trialEndDate ? 'active' as const : 'expired' as const
+                          }
+                          if (business.approved_at) {
+                            const approvalDate = new Date(business.approved_at)
+                            const trialEndDate = new Date(approvalDate.getTime() + (90 * 24 * 60 * 60 * 1000))
+                            const now = new Date()
+                            return now < trialEndDate ? 'active' as const : 'expired' as const
+                          }
+                          return 'not_applicable' as const
+                        })(),
+                        billing_starts_date: business.subscription?.free_trial_end_date || 
+                          (business.approved_at ? new Date(new Date(business.approved_at).getTime() + (90 * 24 * 60 * 60 * 1000)).toISOString() : null),
                         last_updated: business.updated_at || business.created_at,
                         has_pending_changes: false,
                         pending_changes_count: 0
