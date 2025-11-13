@@ -510,8 +510,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
         <div className="fixed inset-0 z-50 flex items-center justify-center p-12 animate-in fade-in duration-200">
           {/* Backdrop Blur - Deep Black */}
           <div 
-            className="absolute inset-0 bg-black/95 backdrop-blur-3xl"
+            className="absolute inset-0 bg-black/90 backdrop-blur-xl"
             onClick={() => setIsExpanded(false)}
+            style={{ backdropFilter: 'blur(20px)' }}
           />
           
           {/* Modal Content - Large Centered Popup with Color Accent */}
