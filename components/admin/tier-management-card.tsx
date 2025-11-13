@@ -23,15 +23,26 @@ interface FeatureAccess {
 export function TierManagementCard({ business, onUpdate }: TierManagementCardProps) {
   // Get current tier from subscription or fallback to business profile
   const getCurrentTier = (): PlanTier => {
+    console.log('🔍 Getting current tier:', {
+      subscription_tier_name: business?.subscription?.tier_name,
+      profile_plan: business?.plan
+    })
+    
     if (business?.subscription?.tier_name) {
       if (business.subscription.tier_name === 'free') return 'trial'
       return business.subscription.tier_name as PlanTier
     }
-    return (business?.plan || 'starter') as PlanTier
+    if (business?.plan) {
+      return business.plan as PlanTier
+    }
+    return 'starter'
   }
 
   const [selectedTier, setSelectedTier] = useState<PlanTier>(getCurrentTier())
   const [isSaving, setIsSaving] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
   
   // Feature access state
   const [features, setFeatures] = useState<FeatureAccess>({
@@ -240,22 +251,46 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         subscriptionUpdate.free_trial_end_date = null
       }
 
-      // Upsert subscription
-      const { error: subscriptionError } = await supabase
+      // Check if subscription exists, then update or insert
+      const { data: existingSub, error: checkError } = await supabase
         .from('business_subscriptions')
-        .upsert(subscriptionUpdate, {
-          onConflict: 'business_id'
-        })
+        .select('id')
+        .eq('business_id', business.id)
+        .single()
+
+      let subscriptionError
+
+      if (existingSub) {
+        // Update existing subscription
+        const { error } = await supabase
+          .from('business_subscriptions')
+          .update(subscriptionUpdate)
+          .eq('business_id', business.id)
+        subscriptionError = error
+      } else {
+        // Insert new subscription
+        const { error } = await supabase
+          .from('business_subscriptions')
+          .insert(subscriptionUpdate)
+        subscriptionError = error
+      }
 
       if (subscriptionError) {
-        console.error('❌ Subscription update error:', subscriptionError)
+        console.error('❌ Subscription update error:', {
+          code: subscriptionError.code,
+          message: subscriptionError.message,
+          details: subscriptionError.details,
+          hint: subscriptionError.hint
+        })
         throw subscriptionError
       }
 
       console.log('✅ Subscription updated')
       console.log('🎉 Tier updated successfully:', { tier: selectedTier, features })
-      alert('✅ Tier and features updated successfully!')
-      onUpdate()
+      setShowSuccessModal(true)
+      setTimeout(() => {
+        onUpdate()
+      }, 1500)
     } catch (error: any) {
       console.error('❌ Error updating tier:', {
         error,
@@ -264,7 +299,8 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         details: error?.details,
         hint: error?.hint
       })
-      alert(`Failed to update tier: ${error?.message || 'Unknown error'}`)
+      setErrorMessage(error?.message || 'Unknown error occurred')
+      setShowErrorModal(true)
     } finally {
       setIsSaving(false)
     }
@@ -457,6 +493,62 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
           </p>
         </div>
       </CardContent>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-md mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-[#00d083]/10 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Success!</h3>
+                <p className="text-sm text-slate-400">Tier updated successfully</p>
+              </div>
+            </div>
+            <p className="text-slate-300 text-sm mb-4">
+              The subscription tier and features have been updated. Changes will be visible immediately.
+            </p>
+            <Button
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold"
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-md mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Error</h3>
+                <p className="text-sm text-slate-400">Failed to update tier</p>
+              </div>
+            </div>
+            <p className="text-slate-300 text-sm mb-4">
+              {errorMessage}
+            </p>
+            <Button
+              onClick={() => setShowErrorModal(false)}
+              className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold"
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
