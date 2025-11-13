@@ -217,10 +217,17 @@
           "async": false,
           "exportedName": "getBusinessEvents",
           "filename": "lib/actions/event-actions.ts"
+        },
+        "app/dashboard/events/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/events/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getBusinessEvents",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/admin/page": "action-browser"
+        "app/admin/page": "action-browser",
+        "app/dashboard/events/page": "action-browser"
       },
       "filename": "lib/actions/event-actions.ts",
       "exportedName": "getBusinessEvents"
@@ -247,10 +254,17 @@
           "async": false,
           "exportedName": "createEvent",
           "filename": "lib/actions/event-actions.ts"
+        },
+        "app/dashboard/events/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/events/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "createEvent",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/admin/page": "action-browser"
+        "app/admin/page": "action-browser",
+        "app/dashboard/events/page": "action-browser"
       },
       "filename": "lib/actions/event-actions.ts",
       "exportedName": "createEvent"
@@ -262,10 +276,17 @@
           "async": false,
           "exportedName": "updateEvent",
           "filename": "lib/actions/event-actions.ts"
+        },
+        "app/dashboard/events/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/events/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "updateEvent",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/admin/page": "action-browser"
+        "app/admin/page": "action-browser",
+        "app/dashboard/events/page": "action-browser"
       },
       "filename": "lib/actions/event-actions.ts",
       "exportedName": "updateEvent"
@@ -277,10 +298,17 @@
           "async": false,
           "exportedName": "deleteEvent",
           "filename": "lib/actions/event-actions.ts"
+        },
+        "app/dashboard/events/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/events/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "deleteEvent",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/admin/page": "action-browser"
+        "app/admin/page": "action-browser",
+        "app/dashboard/events/page": "action-browser"
       },
       "filename": "lib/actions/event-actions.ts",
       "exportedName": "deleteEvent"
@@ -292,10 +320,17 @@
           "async": false,
           "exportedName": "cancelEvent",
           "filename": "lib/actions/event-actions.ts"
+        },
+        "app/dashboard/events/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/events/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "cancelEvent",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/admin/page": "action-browser"
+        "app/admin/page": "action-browser",
+        "app/dashboard/events/page": "action-browser"
       },
       "filename": "lib/actions/event-actions.ts",
       "exportedName": "cancelEvent"
@@ -456,6 +491,36 @@
       },
       "filename": "lib/actions/file-actions.ts",
       "exportedName": "uploadMultipleBusinessImages"
+    },
+    "600cea68aa577e510d2c0718c91c09102123464cdc": {
+      "workers": {
+        "app/dashboard/secret-menu/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/secret-menu/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "addSecretMenuItem",
+          "filename": "lib/actions/business-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/secret-menu/page": "action-browser"
+      },
+      "filename": "lib/actions/business-actions.ts",
+      "exportedName": "addSecretMenuItem"
+    },
+    "60e4b6ecc38c21b6e05d60eb7098e4aa51ecf1fef4": {
+      "workers": {
+        "app/dashboard/secret-menu/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/secret-menu/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "deleteSecretMenuItem",
+          "filename": "lib/actions/business-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/secret-menu/page": "action-browser"
+      },
+      "filename": "lib/actions/business-actions.ts",
+      "exportedName": "deleteSecretMenuItem"
     }
   },
   "edge": {},

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
-import { SocialWizardPage } from '@/components/dashboard/social-wizard-page'
+import { SocialWizardPageClient } from '@/components/dashboard/social-wizard-page-client'
 import { Profile } from '@/types/profiles'
 import { calculateActionItemsCount } from '@/lib/utils/action-items-count'
 
@@ -40,7 +40,7 @@ export default async function SocialWizardRoute() {
 
   return (
     <DashboardLayout currentSection="social-wizard" profile={profile} actionItemsCount={actionItemsCount}>
-      <SocialWizardPage profile={profile} />
+      <SocialWizardPageClient profile={profile} />
     </DashboardLayout>
   )
 }
