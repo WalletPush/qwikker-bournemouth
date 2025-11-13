@@ -321,12 +321,17 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   }
 
   const getTrialBadge = () => {
-    if (trialInfo.trial_status === 'not_applicable') return null
+    // Don't show badge if user is on paid plan (upgraded status)
+    if (trialInfo.trial_status === 'not_applicable' || trialInfo.trial_status === 'upgraded') return null
+    
+    // Check if business has an active subscription (not on trial)
+    if (business.subscription && business.subscription.status === 'active' && !business.subscription.is_in_free_trial) {
+      return null // Don't show badge for paid subscribers
+    }
     
     const badgeConfig = {
-      'active': { bg: 'bg-blue-500/20', text: 'text-blue-300', label: `${trialInfo.trial_days_remaining} days left` },
-      'expired': { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Trial ended - Hidden from users' },
-      'upgraded': { bg: 'bg-purple-500/20', text: 'text-purple-300', label: 'Signed up for paid plan' }
+      'active': { bg: 'bg-amber-500/20', text: 'text-amber-300', label: `${trialInfo.trial_days_remaining} days left` },
+      'expired': { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Trial ended - Hidden from users' }
     }
     
     const config = badgeConfig[trialInfo.trial_status] || badgeConfig['active']
@@ -453,13 +458,19 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <div>
                 <span className="text-slate-400 font-medium">Tier:</span>
                 <span className={`ml-2 font-semibold ${
-                  trialInfo.trial_status === 'active' ? 'text-blue-400' :
+                  business.subscription?.tier_name === 'spotlight' ? 'text-purple-400' :
+                  business.subscription?.tier_name === 'featured' ? 'text-blue-400' :
+                  business.subscription?.tier_name === 'starter' ? 'text-slate-400' :
+                  business.subscription?.tier_name === 'free' ? 'text-amber-400' :
+                  trialInfo.trial_status === 'active' ? 'text-amber-400' :
                   trialInfo.trial_status === 'expired' ? 'text-red-400' :
                   'text-green-400'
                 }`}>
-                  {trialInfo.trial_status === 'active' ? 'Trial' :
-                   trialInfo.trial_status === 'expired' ? 'Expired' :
-                   trialInfo.trial_status === 'upgraded' ? 'Paid' : 'Free'}
+                  {business.subscription?.tier_display_name || 
+                   (trialInfo.trial_status === 'active' ? 'Trial' :
+                    trialInfo.trial_status === 'expired' ? 'Expired' :
+                    trialInfo.trial_status === 'upgraded' ? 'Paid' : 
+                    business.plan?.charAt(0).toUpperCase() + business.plan?.slice(1) || 'Starter')}
                 </span>
               </div>
               <div>
@@ -913,7 +924,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                           <div key={index} className="flex items-center justify-between p-2 bg-slate-700/30 rounded-lg">
                             <div className="flex items-center gap-2">
                               <div className="text-sm font-medium text-white">
-                                📄 {menu.menu_name}
+                                {menu.menu_name}
                               </div>
                               <span className="text-xs text-slate-400">
                                 ({menu.menu_type})
@@ -1540,13 +1551,18 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       <div>
                         <div className="text-slate-400 text-sm mb-1">Current Tier</div>
                         <div className={`font-semibold ${
-                          trialInfo.trial_status === 'active' ? 'text-blue-400' :
+                          business.subscription?.tier_display_name === 'Spotlight' ? 'text-purple-400' :
+                          business.subscription?.tier_display_name === 'Featured' ? 'text-blue-400' :
+                          business.subscription?.tier_display_name === 'Starter' ? 'text-slate-400' :
+                          trialInfo.trial_status === 'active' ? 'text-amber-400' :
                           trialInfo.trial_status === 'expired' ? 'text-red-400' :
                           'text-green-400'
                         }`}>
-                          {trialInfo.trial_status === 'active' ? 'Free Trial' :
-                           trialInfo.trial_status === 'expired' ? 'Trial Expired' :
-                           trialInfo.trial_status === 'upgraded' ? 'Paid Plan' : 'Free'}
+                          {business.subscription?.tier_display_name || 
+                           (trialInfo.trial_status === 'active' ? 'Free Trial' :
+                            trialInfo.trial_status === 'expired' ? 'Trial Expired' :
+                            trialInfo.trial_status === 'upgraded' ? 'Paid Plan' : 
+                            business.plan?.charAt(0).toUpperCase() + business.plan?.slice(1) || 'Starter')}
                         </div>
                       </div>
                       <div>

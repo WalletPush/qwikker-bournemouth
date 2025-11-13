@@ -22,6 +22,7 @@
   "/dashboard/page": "app/dashboard/page.js",
   "/dashboard/profile/page": "app/dashboard/profile/page.js",
   "/dashboard/secret-menu/page": "app/dashboard/secret-menu/page.js",
+  "/dashboard/settings/page": "app/dashboard/settings/page.js",
   "/dashboard/social-wizard/page": "app/dashboard/social-wizard/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/page": "app/page.js",
