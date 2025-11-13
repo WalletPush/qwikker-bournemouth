@@ -4,6 +4,7 @@
   "/admin/page": "app/admin/page.js",
   "/api/admin/contacts/route": "app/api/admin/contacts/route.js",
   "/api/admin/login/route": "app/api/admin/login/route.js",
+  "/api/admin/logout/route": "app/api/admin/logout/route.js",
   "/api/admin/pricing-cards/route": "app/api/admin/pricing-cards/route.js",
   "/api/admin/sync/health/route": "app/api/admin/sync/health/route.js",
   "/api/menus/list/route": "app/api/menus/list/route.js",

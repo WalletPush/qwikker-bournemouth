@@ -179,19 +179,35 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         updateData.free_trial_enabled = false
       }
 
+      console.log('🔄 Updating business with data:', updateData)
+      
       const { error } = await supabase
         .from('business_profiles')
         .update(updateData)
         .eq('id', business.id)
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Supabase error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        })
+        throw error
+      }
 
       console.log('✅ Tier updated:', { tier: selectedTier, features, trialDates: selectedTier === 'trial' ? { start: trialStartDate, end: trialEndDate } : null })
       alert('✅ Tier and features updated successfully!')
       onUpdate()
-    } catch (error) {
-      console.error('❌ Error updating tier:', error)
-      alert('Failed to update tier. Please try again.')
+    } catch (error: any) {
+      console.error('❌ Error updating tier:', {
+        error,
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint
+      })
+      alert(`Failed to update tier: ${error?.message || 'Unknown error'}`)
     } finally {
       setIsSaving(false)
     }
