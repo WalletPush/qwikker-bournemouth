@@ -17,6 +17,7 @@ import { InitialAvatar } from '@/components/admin/initial-avatar'
 import { formatDate, formatLastSync, formatJoinedDate } from '@/lib/utils/date-formatter'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { OfferDeletionModal } from '@/components/admin/offer-deletion-modal'
+import { TierManagementCard } from './tier-management-card'
 
 interface ComprehensiveBusinessCRMCardProps {
   business: BusinessCRMData
@@ -1479,6 +1480,15 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             {activeTab === 'controls' && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white">Business Controls</h3>
+                
+                {/* Tier & Feature Management */}
+                <TierManagementCard 
+                  business={business} 
+                  onUpdate={() => {
+                    // Refresh the page to show updated data
+                    window.location.reload()
+                  }} 
+                />
                 
                 {/* Listing Controls */}
                 <Card className="bg-slate-800/30 border-slate-700">

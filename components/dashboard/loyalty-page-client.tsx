@@ -12,12 +12,12 @@ interface LoyaltyPageClientProps {
 export function LoyaltyPageClient({ profile }: LoyaltyPageClientProps) {
   const [showModal, setShowModal] = useState(true)
   
-  // Check if user has Spotlight or Pro subscription
-  const hasSpotlightAccess = profile?.plan === 'spotlight' || profile?.plan === 'pro'
+  // Check if feature is enabled (either through tier or manual override)
+  const hasAccess = profile?.features?.loyalty_cards === true || profile?.plan === 'spotlight' || profile?.plan === 'pro'
   return (
     <div className="space-y-6">
-      {/* Show upgrade modal for non-Spotlight users */}
-      {!hasSpotlightAccess && (
+      {/* Show upgrade modal for users without access */}
+      {!hasAccess && (
         <ElegantModal
           isOpen={showModal}
           onClose={() => {
@@ -67,8 +67,8 @@ export function LoyaltyPageClient({ profile }: LoyaltyPageClientProps) {
         </ElegantModal>
       )}
 
-      {/* Content - blurred for non-Spotlight users */}
-      <div className={!hasSpotlightAccess && showModal ? "blur-[8px] select-none pointer-events-none" : ""}>
+      {/* Content - blurred for users without access */}
+      <div className={!hasAccess && showModal ? "blur-[8px] select-none pointer-events-none" : ""}>
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Loyalty Program</h1>
           <p className="text-gray-400">Build customer loyalty with digital rewards</p>

@@ -11,13 +11,13 @@ interface SocialWizardPageClientProps {
 export function SocialWizardPageClient({ profile }: SocialWizardPageClientProps) {
   const [showModal, setShowModal] = useState(true)
   
-  // Check if user has Spotlight subscription
-  const hasSpotlightAccess = profile?.plan === 'spotlight'
+  // Check if feature is enabled (either through tier or manual override)
+  const hasAccess = profile?.features?.social_wizard === true || profile?.plan === 'spotlight'
 
   return (
     <div className="space-y-6">
-      {/* Show upgrade modal for non-Spotlight users */}
-      {!hasSpotlightAccess && (
+      {/* Show upgrade modal for users without access */}
+      {!hasAccess && (
         <ElegantModal
           isOpen={showModal}
           onClose={() => {
@@ -67,8 +67,8 @@ export function SocialWizardPageClient({ profile }: SocialWizardPageClientProps)
         </ElegantModal>
       )}
 
-      {/* Content - blurred for non-Spotlight users */}
-      <div className={!hasSpotlightAccess && showModal ? "blur-[8px] select-none pointer-events-none" : ""}>
+      {/* Content - blurred for users without access */}
+      <div className={!hasAccess && showModal ? "blur-[8px] select-none pointer-events-none" : ""}>
         <SocialWizardPage profile={profile} />
       </div>
     </div>
