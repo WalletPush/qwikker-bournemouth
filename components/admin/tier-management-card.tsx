@@ -219,17 +219,26 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         updated_at: new Date().toISOString()
       }
 
+      console.log('📝 Attempting profile update:', { profileUpdate, businessId: business.id })
+
       const { error: profileError } = await supabase
         .from('business_profiles')
         .update(profileUpdate)
         .eq('id', business.id)
 
       if (profileError) {
-        console.error('❌ Profile update error:', profileError)
+        console.error('❌ Profile update error:', {
+          error: profileError,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint,
+          code: profileError.code,
+          profileUpdate
+        })
         throw profileError
       }
 
-      console.log('✅ Profile updated')
+      console.log('✅ Profile updated successfully')
 
       // Step 3: Update or create business_subscriptions
       const subscriptionUpdate: any = {
