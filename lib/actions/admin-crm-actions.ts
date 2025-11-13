@@ -46,21 +46,22 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       return []
     }
 
-    // Separately fetch sync fields (these columns might not exist in all environments)
+    // Separately fetch sync fields (only last_ghl_sync and ghl_contact_id exist)
     let businessSyncData = new Map()
     try {
       const { data: syncData } = await supabaseAdmin
         .from('business_profiles')
-        .select('id, last_ghl_sync, last_crm_sync, crm_sync_status, ghl_contact_id')
+        .select('id, last_ghl_sync, ghl_contact_id')
         .eq('city', city)
       
       if (syncData) {
         syncData.forEach(sync => {
           businessSyncData.set(sync.id, sync)
         })
+        console.log(`✅ Loaded sync data for ${syncData.length} businesses`)
       }
     } catch (syncError) {
-      console.log('⚠️ Sync columns not available, using defaults')
+      console.log('⚠️ Sync columns not available:', syncError)
     }
 
     if (!businesses) return []
@@ -317,10 +318,10 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         updated_at: business.updated_at,
         admin_notes: business.admin_notes,
         
-        // GHL sync tracking (from database, fallback to null if columns don't exist)
-        last_ghl_sync: syncData?.last_ghl_sync || syncData?.last_crm_sync || null,
-        last_crm_sync: syncData?.last_crm_sync || null,
-        crm_sync_status: (syncData?.last_ghl_sync || syncData?.last_crm_sync) ? 'synced' : 'pending',
+        // GHL sync tracking (from database)
+        last_ghl_sync: syncData?.last_ghl_sync || null,
+        last_crm_sync: syncData?.last_ghl_sync || null, // Use last_ghl_sync as last_crm_sync
+        crm_sync_status: syncData?.last_ghl_sync ? 'synced' : 'pending',
         ghl_contact_id: syncData?.ghl_contact_id || null,
         
         subscription: subscriptionsByBusiness.get(business.id) || null,
