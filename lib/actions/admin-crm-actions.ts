@@ -11,46 +11,10 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
   const supabaseAdmin = createAdminClient()
 
   try {
-    // Fetch businesses with basic data first (billing tables might not exist yet)
+    // Fetch businesses with ALL fields (some may not exist in all databases)
     const { data: businesses, error } = await supabaseAdmin
       .from('business_profiles')
-      .select(`
-        id,
-        business_name,
-        first_name,
-        last_name,
-        business_category,
-        business_type,
-        business_address,
-        business_town,
-        business_postcode,
-        email,
-        phone,
-        status,
-        approved_at,
-        admin_notes,
-        logo,
-        menu_url,
-        business_images,
-        offer_name,
-        offer_type,
-        additional_notes,
-        updated_at,
-        created_at,
-        website_url,
-        instagram_handle,
-        facebook_url,
-        business_hours,
-        business_hours_structured,
-        business_tagline,
-        business_description,
-        offer_image,
-        offer_start_date,
-        offer_end_date,
-        offer_terms,
-        plan,
-        features
-      `)
+      .select('*')
       .eq('city', city)
       .order('created_at', { ascending: false })
 

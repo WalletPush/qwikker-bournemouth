@@ -230,6 +230,16 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     offers: business.business_offers
   })
 
+  // Helper function to format dates consistently (avoids hydration errors)
+  const formatDateConsistent = (dateString: string) => {
+    if (!dateString) return 'N/A'
+    const date = new Date(dateString)
+    const day = date.getDate().toString().padStart(2, '0')
+    const month = date.toLocaleDateString('en-GB', { month: 'short' })
+    const year = date.getFullYear()
+    return `${day} ${month} ${year}`
+  }
+
   const handleAction = async (action: 'approve' | 'reject' | 'restore') => {
     if (!onApprove) return
     setIsLoading(true)
@@ -478,13 +488,13 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Billing</span>
-              <span className="font-medium text-white text-base leading-tight block">
-                {business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date
-                  ? new Date(business.subscription.free_trial_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ')
-                  : business.subscription?.current_period_end
-                  ? new Date(business.subscription.current_period_end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ')
-                  : 'N/A'}
-              </span>
+                <span className="font-medium text-white text-base leading-tight block">
+                  {business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date
+                    ? formatDateConsistent(business.subscription.free_trial_end_date)
+                    : business.subscription?.current_period_end
+                    ? formatDateConsistent(business.subscription.current_period_end)
+                    : 'N/A'}
+                </span>
             </div>
 
             {/* Status */}
@@ -511,7 +521,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Joined</span>
               <span className="font-medium text-white text-base leading-tight block">
-                {new Date(business.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ')}
+                {formatDateConsistent(business.created_at)}
               </span>
             </div>
           </div>
