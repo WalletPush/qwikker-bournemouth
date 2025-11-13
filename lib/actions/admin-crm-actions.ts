@@ -281,16 +281,26 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         business_postcode: business.business_postcode || '',
         email: business.email || '',
         phone: business.phone || '',
+        logo: business.logo,
+        business_tagline: business.business_tagline || '',
+        business_description: business.business_description || '',
+        business_hours: business.business_hours || '',
+        business_hours_structured: business.business_hours_structured || null,
+        website_url: business.website_url || '',
+        website: business.website_url || '', // CRM card looks for 'website' field
+        instagram_handle: business.instagram_handle || '',
+        facebook_url: business.facebook_url || '',
         status: business.status as 'incomplete' | 'pending_review' | 'approved' | 'rejected',
         approved_at: business.approved_at,
+        created_at: business.created_at,
+        updated_at: business.updated_at,
         admin_notes: business.admin_notes,
         
         // GHL sync tracking (from database, fallback to null if columns don't exist)
         last_ghl_sync: syncData?.last_ghl_sync || syncData?.last_crm_sync || null,
+        last_crm_sync: syncData?.last_crm_sync || null,
+        crm_sync_status: (syncData?.last_ghl_sync || syncData?.last_crm_sync) ? 'synced' : 'pending',
         ghl_contact_id: syncData?.ghl_contact_id || null,
-        
-        // Business assets
-        logo: business.logo,
         
         subscription: subscriptionsByBusiness.get(business.id) || null,
         tier: null,
@@ -300,13 +310,21 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         business_images: business.business_images as string[] | null,
         business_menus: menusByBusiness.get(business.id) || null,
         business_events: eventsByBusiness.get(business.id) || null,
+        business_offers: offersByBusiness.get(business.id) || [],
         offer_name: business.offer_name,
         offer_type: business.offer_type,
+        offer_image: business.offer_image,
+        offer_start_date: business.offer_start_date,
+        offer_end_date: business.offer_end_date,
+        offer_terms: business.offer_terms,
         secret_menu_items: secretMenuItems,
         
         trial_days_remaining,
         trial_status,
         billing_starts_date,
+        
+        plan: business.plan || 'starter',
+        features: business.features || { social_wizard: false, loyalty_cards: false, analytics: false, push_notifications: false },
         
         last_updated: business.updated_at || business.created_at,
         has_pending_changes: pendingChangesCount > 0,
