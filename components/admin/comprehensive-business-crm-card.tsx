@@ -388,16 +388,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           <div className="flex items-start justify-between mb-6">
             {/* Left: Business Info */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-4">
-                  <h3 className="text-2xl font-bold text-white truncate">
-                    {business.business_name}
-                  </h3>
-                  {/* Small Avatar Badge */}
-                  <InitialAvatar 
-                    businessName={business.business_name} 
-                    className="w-10 h-10 rounded-full border-2 border-slate-700/50 text-xs font-bold flex-shrink-0"
-                  />
-                </div>
+                <h3 className="text-2xl font-bold text-white truncate mb-4">
+                  {business.business_name}
+                </h3>
             </div>
 
             {/* Right: Quick Actions */}
@@ -444,7 +437,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           </div>
           
           {/* Tier-colored Full Width Line */}
-          <div className={`h-0.5 w-full bg-gradient-to-r ${getTierAccentGradient()} mb-6`} />
+          <div className={`h-px w-full bg-gradient-to-r ${getTierAccentGradient()} mb-6`} />
 
           {/* Stats Grid - Centered Icons & Text */}
           <div className="grid grid-cols-4 gap-5">
