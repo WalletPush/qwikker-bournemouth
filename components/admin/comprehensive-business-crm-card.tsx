@@ -217,6 +217,19 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     trialDays: business.trial_days_remaining || 0
   }
 
+  // DEBUG: Log business data to console
+  console.log('🔍 CRM Card Business Data:', {
+    id: business.id,
+    name: business.business_name,
+    website: business.website_url,
+    instagram: business.instagram_handle,
+    facebook: business.facebook_url,
+    hours: business.business_hours,
+    hours_structured: business.business_hours_structured,
+    offers_count: business.business_offers?.length || 0,
+    offers: business.business_offers
+  })
+
   const handleAction = async (action: 'approve' | 'reject' | 'restore') => {
     if (!onApprove) return
     setIsLoading(true)
