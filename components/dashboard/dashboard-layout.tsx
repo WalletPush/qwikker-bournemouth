@@ -124,6 +124,23 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
     router.push('/dashboard/settings')
   }
 
+  // Check if a feature is unlocked for this user
+  const isFeatureUnlocked = (featureId: string): boolean => {
+    // Map nav item IDs to feature keys
+    const featureMap: Record<string, string> = {
+      'social-wizard': 'social_wizard',
+      'loyalty': 'loyalty_cards',
+      'analytics': 'analytics',
+      'notifications': 'push_notifications'
+    }
+
+    const featureKey = featureMap[featureId]
+    if (!featureKey) return true // Not a premium feature
+
+    // Check if feature is explicitly enabled or if user is on Spotlight
+    return profile?.features?.[featureKey] === true || profile?.plan === 'spotlight' || profile?.plan === 'pro'
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
         {/* Mobile sidebar overlay */}
@@ -164,9 +181,13 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
           touchAction: 'pan-y',
           overscrollBehavior: 'contain'
         }}>
-          {navItems.map((item) => (
+          {navItems.map((item) => {
+            const isUnlocked = isFeatureUnlocked(item.id)
+            const showLock = item.locked && !isUnlocked
+            
+            return (
             <div key={item.id}>
-              {item.locked ? (
+              {showLock ? (
                 <Link
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
@@ -207,7 +228,8 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
                 </Link>
               )}
             </div>
-          ))}
+          )
+          })}
         </nav>
       </div>
 
