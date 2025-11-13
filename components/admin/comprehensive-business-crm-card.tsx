@@ -388,7 +388,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           <div className="flex items-start justify-between mb-6">
             {/* Left: Business Info */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-3 mb-4">
                   <h3 className="text-2xl font-bold text-white truncate">
                     {business.business_name}
                   </h3>
@@ -398,9 +398,6 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     className="w-10 h-10 rounded-full border-2 border-slate-700/50 text-xs font-bold flex-shrink-0"
                   />
                 </div>
-                
-                {/* Tier-colored Decorative Gradient Line */}
-                <div className={`h-1 w-32 bg-gradient-to-r ${getTierAccentGradient()} rounded-full`} />
             </div>
 
             {/* Right: Quick Actions */}
@@ -445,11 +442,17 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               )}
             </div>
           </div>
+          
+          {/* Tier-colored Full Width Line */}
+          <div className={`h-0.5 w-full bg-gradient-to-r ${getTierAccentGradient()} mb-6`} />
 
           {/* Stats Grid - Centered Icons & Text */}
           <div className="grid grid-cols-4 gap-5">
             {/* Tier */}
             <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-purple-500/20 text-center">
+              <svg className="w-4 h-4 text-purple-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Tier</span>
               <span className={`font-semibold text-xl leading-tight block ${
                 business.subscription?.tier_display_name === 'Spotlight' ? 'text-purple-400' :
@@ -465,6 +468,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
             {/* Billing */}
             <div className="bg-gradient-to-br from-blue-950/40 to-blue-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-blue-500/20 text-center">
+              <svg className="w-4 h-4 text-blue-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Billing</span>
               <span className="font-medium text-white text-base leading-tight block">
                 {business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date
@@ -477,6 +483,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
             {/* Status */}
             <div className="bg-gradient-to-br from-emerald-950/40 to-emerald-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-emerald-500/20 text-center">
+              <svg className="w-4 h-4 text-emerald-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Status</span>
               <span className={`font-semibold text-xl leading-tight block ${
                 business.subscription?.status === 'active' || business.subscription?.is_in_free_trial ? 'text-[#00d083]' :
@@ -491,6 +500,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
             {/* Joined */}
             <div className="bg-gradient-to-br from-amber-950/40 to-amber-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-amber-500/20 text-center">
+              <svg className="w-4 h-4 text-amber-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Joined</span>
               <span className="font-medium text-white text-base leading-tight block">
                 {new Date(business.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ')}
