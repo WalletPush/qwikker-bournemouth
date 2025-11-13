@@ -508,9 +508,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
       {/* CRM Control Panel Modal - STUNNING POPUP! */}
       {isExpanded && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-12 animate-in fade-in duration-200">
-          {/* Backdrop Blur - Dark & Beautiful */}
+          {/* Backdrop Blur - Deep Black */}
           <div 
-            className="absolute inset-0 bg-slate-950/90 backdrop-blur-2xl"
+            className="absolute inset-0 bg-black/95 backdrop-blur-3xl"
             onClick={() => setIsExpanded(false)}
           />
           
