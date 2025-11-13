@@ -343,6 +343,15 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     )
   }
 
+  // Get tier-specific accent gradient for decorative line
+  const getTierAccentGradient = () => {
+    if (business.subscription?.tier_name === 'spotlight') return 'from-transparent via-purple-500/50 to-transparent'
+    if (business.subscription?.tier_name === 'featured') return 'from-transparent via-blue-500/50 to-transparent'
+    if (business.subscription?.tier_name === 'starter') return 'from-transparent via-slate-500/30 to-transparent'
+    if (business.subscription?.is_in_free_trial) return 'from-transparent via-amber-500/50 to-transparent'
+    return 'from-transparent via-slate-500/30 to-transparent'
+  }
+
   const getHeaderColor = () => {
     const colors = {
       'restaurant': 'from-slate-700/90 to-slate-800/90',
@@ -454,7 +463,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Tier</span>
-              <span className={`font-bold text-lg leading-tight block ${
+              <span className={`font-semibold text-base leading-tight block ${
                 business.subscription?.tier_display_name === 'Spotlight' ? 'text-purple-400' :
                 business.subscription?.tier_display_name === 'Featured' ? 'text-blue-400' :
                 business.subscription?.tier_display_name === 'Starter' ? 'text-slate-300' :
@@ -472,7 +481,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Billing</span>
-              <span className="font-bold text-white text-base leading-tight block">
+              <span className="font-medium text-white text-sm leading-tight block">
                 {business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date
                   ? new Date(business.subscription.free_trial_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ')
                   : business.subscription?.current_period_end
@@ -487,7 +496,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Status</span>
-              <span className={`font-bold text-lg leading-tight block ${
+              <span className={`font-semibold text-base leading-tight block ${
                 business.subscription?.status === 'active' || business.subscription?.is_in_free_trial ? 'text-[#00d083]' :
                 business.subscription?.status === 'paused' ? 'text-slate-400' :
                 'text-red-400'
@@ -504,7 +513,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Joined</span>
-              <span className="font-bold text-white text-base leading-tight block">
+              <span className="font-medium text-white text-sm leading-tight block">
                 {new Date(business.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ')}
               </span>
             </div>
