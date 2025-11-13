@@ -1106,15 +1106,20 @@ Qwikker Admin Team`
                   <h2 className="text-4xl font-bold text-white mb-2">
                     Live Listings
                   </h2>
-                  <p className="text-slate-400">
-                    {allLiveBusinesses.length} active {allLiveBusinesses.length === 1 ? 'business' : 'businesses'} currently operating on the platform
+                  <p className="text-slate-400 text-lg">
+                    View and manage your live listings
                   </p>
                 </div>
 
                 {/* Stats Overview Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
                   {/* Total Active */}
-                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 hover:border-[#00d083]/30 transition-all">
+                  <button
+                    onClick={() => setFilterTier('all')}
+                    className={`w-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border rounded-xl p-4 hover:bg-slate-700/50 transition-all cursor-pointer ${
+                      filterTier === 'all' ? 'border-[#00d083] ring-2 ring-[#00d083]/20' : 'border-slate-700/50 hover:border-[#00d083]/30'
+                    }`}
+                  >
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-lg bg-[#00d083]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1126,10 +1131,15 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">{allLiveBusinesses.length}</p>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Free Trial */}
-                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 hover:border-amber-500/30 transition-all">
+                  <button
+                    onClick={() => setFilterTier('trial')}
+                    className={`w-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border rounded-xl p-4 hover:bg-slate-700/50 transition-all cursor-pointer ${
+                      filterTier === 'trial' ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-slate-700/50 hover:border-amber-500/30'
+                    }`}
+                  >
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1146,10 +1156,15 @@ Qwikker Admin Team`
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Starter Tier */}
-                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 hover:border-slate-400/30 transition-all">
+                  <button
+                    onClick={() => setFilterTier('starter')}
+                    className={`w-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border rounded-xl p-4 hover:bg-slate-700/50 transition-all cursor-pointer ${
+                      filterTier === 'starter' ? 'border-slate-400 ring-2 ring-slate-400/20' : 'border-slate-700/50 hover:border-slate-400/30'
+                    }`}
+                  >
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-lg bg-slate-400/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1166,10 +1181,15 @@ Qwikker Admin Team`
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Featured Tier */}
-                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 hover:border-blue-500/30 transition-all">
+                  <button
+                    onClick={() => setFilterTier('featured')}
+                    className={`w-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border rounded-xl p-4 hover:bg-slate-700/50 transition-all cursor-pointer ${
+                      filterTier === 'featured' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-700/50 hover:border-blue-500/30'
+                    }`}
+                  >
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1186,10 +1206,15 @@ Qwikker Admin Team`
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Spotlight Tier */}
-                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 hover:border-purple-500/30 transition-all">
+                  <button
+                    onClick={() => setFilterTier('spotlight')}
+                    className={`w-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border rounded-xl p-4 hover:bg-slate-700/50 transition-all cursor-pointer ${
+                      filterTier === 'spotlight' ? 'border-purple-500 ring-2 ring-purple-500/20' : 'border-slate-700/50 hover:border-purple-500/30'
+                    }`}
+                  >
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1206,10 +1231,15 @@ Qwikker Admin Team`
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Synced to CRM */}
-                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 hover:border-emerald-500/30 transition-all">
+                  <button
+                    onClick={() => setFilterTier('synced')}
+                    className={`w-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border rounded-xl p-4 hover:bg-slate-700/50 transition-all cursor-pointer ${
+                      filterTier === 'synced' ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-slate-700/50 hover:border-emerald-500/30'
+                    }`}
+                  >
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1226,7 +1256,7 @@ Qwikker Admin Team`
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 </div>
 
                 {/* Search & Filter Bar */}
@@ -1234,8 +1264,8 @@ Qwikker Admin Team`
                   <div className="flex flex-wrap items-center gap-3">
                     {/* Search Input */}
                     <div className="flex-1 min-w-[200px]">
-                      <div className="relative">
-                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="relative group">
+                        <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none z-10 group-hover:text-[#00d083] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <input
@@ -1243,7 +1273,7 @@ Qwikker Admin Team`
                           placeholder="Search by name, owner, or category..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full pl-11 pr-4 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-[#00d083]/50 focus:ring-2 focus:ring-[#00d083]/20 transition-all"
+                          className="w-full pl-12 pr-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-2xl text-white placeholder-slate-500 hover:bg-slate-700/50 focus:outline-none focus:border-[#00d083]/50 focus:ring-2 focus:ring-[#00d083]/20 focus:bg-slate-700/50 transition-all"
                         />
                       </div>
                     </div>
@@ -1252,7 +1282,7 @@ Qwikker Admin Team`
                     <select
                       value={filterCategory}
                       onChange={(e) => setFilterCategory(e.target.value)}
-                      className="px-4 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:border-[#00d083]/50 focus:ring-2 focus:ring-[#00d083]/20 transition-all cursor-pointer"
+                      className="px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-2xl text-white hover:bg-slate-700/50 focus:outline-none focus:border-[#00d083]/50 focus:ring-2 focus:ring-[#00d083]/20 focus:bg-slate-700/50 transition-all cursor-pointer"
                     >
                       <option value="all">All Types</option>
                       <option value="bar">Bar</option>
