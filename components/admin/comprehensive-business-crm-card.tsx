@@ -327,9 +327,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     const config = statusConfig[business.status] || statusConfig['incomplete']
     
     return (
-      <div className={`flex-1 min-w-0 h-10 px-4 text-xs font-semibold rounded-lg border-2 ${config.bg} ${config.text} ${config.border} flex items-center justify-center backdrop-blur-sm shadow-sm`}>
-        <span className="truncate">{config.label}</span>
-      </div>
+      <span className={`px-3 py-1.5 text-xs font-semibold rounded-lg border ${config.bg} ${config.text} ${config.border} inline-flex items-center justify-center`}>
+        {config.label}
+      </span>
     )
   }
 
@@ -709,7 +709,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                   className={`text-xs flex items-center gap-2 rounded-xl transition-all ${
                     activeTab === tab.id 
                       ? 'bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-white shadow-lg shadow-purple-500/20 border-2 border-purple-500/40' 
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/30 hover:border-purple-500/10 border-2 border-transparent'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40 border-2 border-transparent'
                   }`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
