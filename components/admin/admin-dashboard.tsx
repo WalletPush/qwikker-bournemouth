@@ -1096,21 +1096,19 @@ Qwikker Admin Team`
             {/* Header - Enhanced for Live Listings */}
             {activeTab === 'live' ? (
               <div className="mb-8">
-                {/* Title Section */}
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
-                      <span className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#00d083] to-emerald-600 flex items-center justify-center shadow-lg shadow-[#00d083]/20">
-                        <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </span>
-                      Live Listings
-                    </h2>
-                    <p className="text-slate-400 ml-1">
-                      {allLiveBusinesses.length} active {allLiveBusinesses.length === 1 ? 'business' : 'businesses'} currently operating on the platform
-                    </p>
-                  </div>
+                {/* Title Section - Centered */}
+                <div className="flex flex-col items-center justify-center mb-6 text-center">
+                  <span className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#00d083] to-emerald-600 flex items-center justify-center shadow-lg shadow-[#00d083]/20 mb-4">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </span>
+                  <h2 className="text-4xl font-bold text-white mb-2">
+                    Live Listings
+                  </h2>
+                  <p className="text-slate-400">
+                    {allLiveBusinesses.length} active {allLiveBusinesses.length === 1 ? 'business' : 'businesses'} currently operating on the platform
+                  </p>
                 </div>
 
                 {/* Stats Overview Cards */}

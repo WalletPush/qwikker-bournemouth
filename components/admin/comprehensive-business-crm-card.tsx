@@ -436,8 +436,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
           </div>
           
-          {/* Tier-colored Full Width Line */}
-          <div className={`h-px w-full bg-gradient-to-r ${getTierAccentGradient()} mb-6`} />
+          {/* Tier-colored Full Width Line - More Visible */}
+          <div className={`h-1 w-full bg-gradient-to-r ${getTierAccentGradient()} rounded-full mb-6 opacity-80`} />
 
           {/* Stats Grid - Centered Icons & Text */}
           <div className="grid grid-cols-4 gap-5">
