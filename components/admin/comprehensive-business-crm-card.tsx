@@ -360,28 +360,36 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   }
 
   return (
-    <div className={`bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl overflow-hidden hover:border-slate-600 transition-all duration-300 ${className}`}>
-      {/* Header Section */}
-      <div className={`bg-gradient-to-r ${getHeaderColor()} px-4 sm:px-6 py-4`}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="flex-shrink-0">
+    <div className={`bg-gradient-to-br from-slate-800/40 to-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-xl overflow-hidden hover:border-slate-600/70 hover:shadow-xl hover:shadow-slate-900/20 transition-all duration-300 ${className}`}>
+      {/* Header Section - Redesigned with cleaner layout */}
+      <div className="px-5 py-4 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/30 to-slate-900/30">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4 min-w-0 flex-1">
+            {/* Business Avatar */}
+            <div className="flex-shrink-0 mt-1">
               <InitialAvatar 
                 businessName={business.business_name} 
-                className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg border-2 border-white/20 text-base sm:text-lg font-bold"
+                className="w-14 h-14 rounded-xl border-2 border-slate-600/50 shadow-lg text-lg font-bold"
               />
             </div>
             
+            {/* Business Info */}
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg sm:text-xl font-bold text-white mb-1 truncate">
-                {business.business_name}
-              </h3>
-              {(business.first_name || business.last_name) && (
-                <p className="text-blue-100 text-sm font-medium mb-1">
-                  {business.first_name} {business.last_name}
-                </p>
-              )}
-              <div className="flex items-center gap-2 flex-wrap relative overflow-visible">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-bold text-white mb-0.5 truncate">
+                    {business.business_name}
+                  </h3>
+                  {(business.first_name || business.last_name) && (
+                    <p className="text-slate-300 text-sm font-medium mb-2">
+                      {business.first_name} {business.last_name}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Status Badges Row */}
+              <div className="flex items-center gap-2 flex-wrap mb-3">
                 {getStatusBadge()}
                 {getTrialBadge()}
                 
@@ -398,32 +406,93 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 />
                 
                 {business.has_pending_changes && (
-                  <span className="px-2 py-1 text-xs font-medium text-orange-800 bg-orange-200 rounded-full">
+                  <span className="px-2.5 py-1 text-xs font-semibold text-orange-900 bg-orange-400/90 rounded-lg shadow-sm">
                     {business.pending_changes_count} pending
                   </span>
                 )}
               </div>
+
+              {/* Quick Stats Grid - Inline with header */}
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 text-xs">
+                <div className="bg-slate-700/30 px-3 py-2 rounded-lg">
+                  <span className="text-slate-400 block mb-0.5">Tier</span>
+                  <span className={`font-bold ${
+                    business.subscription?.tier_display_name === 'Spotlight' ? 'text-purple-400' :
+                    business.subscription?.tier_display_name === 'Featured' ? 'text-blue-400' :
+                    business.subscription?.tier_display_name === 'Starter' ? 'text-slate-300' :
+                    business.subscription?.is_in_free_trial ? 'text-amber-400' : 'text-slate-300'
+                  }`}>
+                    {business.subscription?.tier_display_name || 
+                     (business.subscription?.is_in_free_trial ? 'Free Trial' : 
+                     business.plan ? business.plan.charAt(0).toUpperCase() + business.plan.slice(1) : 'Unknown')}
+                  </span>
+                </div>
+
+                <div className="bg-slate-700/30 px-3 py-2 rounded-lg">
+                  <span className="text-slate-400 block mb-0.5">Billing</span>
+                  <span className="font-bold text-white">
+                    {business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date
+                      ? formatDate(business.subscription.free_trial_end_date).split(',')[0]
+                      : business.subscription?.current_period_end
+                      ? formatDate(business.subscription.current_period_end).split(',')[0]
+                      : '—'}
+                  </span>
+                </div>
+
+                <div className="bg-slate-700/30 px-3 py-2 rounded-lg">
+                  <span className="text-slate-400 block mb-0.5">Joined</span>
+                  <span className="font-bold text-white">{formatJoinedDate(business.created_at)}</span>
+                </div>
+
+                <div className="bg-slate-700/30 px-3 py-2 rounded-lg">
+                  <span className="text-slate-400 block mb-0.5">Status</span>
+                  <span className={`font-bold ${
+                    business.subscription?.status === 'active' ? 'text-[#00d083]' :
+                    business.subscription?.status === 'trialing' ? 'text-amber-400' :
+                    business.subscription?.status === 'paused' ? 'text-slate-400' :
+                    'text-red-400'
+                  }`}>
+                    {business.subscription?.status === 'active' ? 'Live' : 
+                     business.subscription?.status === 'trialing' ? 'Trial' :
+                     business.subscription?.status || '—'}
+                  </span>
+                </div>
+
+                <div className="bg-slate-700/30 px-3 py-2 rounded-lg">
+                  <span className="text-slate-400 block mb-0.5">Files</span>
+                  <span className="font-bold text-white">
+                    {(business.business_menus?.length || 0) + (business.business_images?.length || 0)} uploaded
+                  </span>
+                </div>
+
+                <div className="bg-slate-700/30 px-3 py-2 rounded-lg">
+                  <span className="text-slate-400 block mb-0.5">Sync</span>
+                  <span className={`font-bold ${business.last_ghl_sync ? 'text-[#00d083]' : 'text-slate-400'}`}>
+                    {business.last_ghl_sync ? 'Synced' : 'Pending'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
           
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="hidden sm:flex gap-1">
+          {/* Action Buttons - Redesigned */}
+          <div className="flex flex-col gap-2 flex-shrink-0">
+            <div className="flex gap-2">
               <button
                 onClick={() => window.open(`mailto:${business.email}`)}
-                className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2.5 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/50 rounded-lg transition-all hover:scale-105"
                 title="Send Email"
               >
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </button>
               <button
                 onClick={() => window.open(`tel:${business.phone}`)}
-                className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2.5 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/50 rounded-lg transition-all hover:scale-105"
                 title="Call Phone"
               >
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
               </button>
@@ -433,9 +502,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               variant="outline"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-white border-white/30 hover:bg-white/10 hover:border-white/50"
+              className="bg-slate-700/50 text-slate-200 border-slate-600/50 hover:bg-slate-600/50 hover:border-slate-500/50 font-semibold"
             >
-              {isExpanded ? 'Less' : 'CRM'}
+              {isExpanded ? 'Close CRM' : 'Open CRM'}
             </Button>
             
             {business.status === 'pending_review' && onInspect && (
@@ -443,7 +512,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 variant="outline"
                 size="sm"
                 onClick={() => onInspect(business)}
-                className="text-white border-white/30 hover:bg-white/10 hover:border-white/50"
+                className="bg-[#00d083]/10 text-[#00d083] border-[#00d083]/30 hover:bg-[#00d083]/20 hover:border-[#00d083]/50 font-semibold"
               >
                 Inspect
               </Button>
@@ -452,8 +521,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
         </div>
       </div>
 
-          {/* Quick Info Bar */}
-          <div className="bg-slate-700/30 px-6 py-3 border-b border-slate-600">
+          {/* Remove old Quick Info Bar - now integrated into header */}
+          <div className="hidden">
             <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
               <div>
                 <span className="text-slate-400 font-medium">Tier:</span>

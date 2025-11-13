@@ -1093,37 +1093,252 @@ Qwikker Admin Team`
         <main className="p-4 sm:p-6">
           <div className="max-w-6xl mx-auto">
             {/* Page Header */}
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">
-                {activeTab === 'overview' && 'Dashboard Overview'}
-                {activeTab === 'pending' && 'Pending Reviews'}
-                {activeTab === 'updates' && 'Pending Updates'}
-                {activeTab === 'live' && 'Live Listings'}
-                {activeTab === 'incomplete' && 'Incomplete Listings'}
-                {activeTab === 'rejected' && 'Rejected Applications'}
-                {activeTab === 'knowledge' && 'Knowledge Base'}
-                {activeTab === 'analytics' && 'City Analytics'}
-                {activeTab === 'pricing' && 'Pricing & Billing'}
-                {activeTab === 'setup' && 'Franchise Setup'}
-                {activeTab === 'contacts' && 'Business Contacts'}
-                {activeTab === 'qr-management' && 'QR Code Management'}
-                {activeTab === 'ai-test' && 'AI Chat Testing'}
-              </h2>
-              <p className="text-slate-400">
-                {activeTab === 'overview' && `Quick overview of ${cityDisplayName} admin activities and priority actions`}
-                {activeTab === 'pending' && 'Businesses awaiting your review and approval'}
-                {activeTab === 'updates' && 'Changes from approved businesses awaiting your review'}
-                {activeTab === 'live' && 'Currently active businesses on the platform'}
-                {activeTab === 'incomplete' && 'Businesses that need to complete their profiles'}
-                {activeTab === 'rejected' && 'Previously rejected business applications'}
-                {activeTab === 'knowledge' && 'AI knowledge base management for businesses and city information'}
-                {activeTab === 'analytics' && `Performance metrics and user analytics for ${cityDisplayName}`}
-                {activeTab === 'pricing' && `Customize pricing cards, currency, and billing settings for ${cityDisplayName}`}
-                {activeTab === 'contacts' && `CRM contact management with GHL sync for ${cityDisplayName}`}
-                {activeTab === 'qr-management' && 'Generate and manage QR codes for businesses, offers, and secret menus'}
-                {activeTab === 'ai-test' && 'Test AI chat responses and knowledge base accuracy'}
-              </p>
-            </div>
+            {/* Header - Enhanced for Live Listings */}
+            {activeTab === 'live' ? (
+              <div className="mb-8">
+                {/* Title Section */}
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
+                      <span className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#00d083] to-emerald-600 flex items-center justify-center shadow-lg shadow-[#00d083]/20">
+                        <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </span>
+                      Live Listings
+                    </h2>
+                    <p className="text-slate-400 ml-1">
+                      {allLiveBusinesses.length} active {allLiveBusinesses.length === 1 ? 'business' : 'businesses'} currently operating on the platform
+                    </p>
+                  </div>
+                </div>
+
+                {/* Stats Overview Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+                  {/* Total Active */}
+                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 hover:border-[#00d083]/30 transition-all">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-lg bg-[#00d083]/10 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-xs font-medium">Total Active</p>
+                        <p className="text-2xl font-bold text-white">{allLiveBusinesses.length}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Free Trial */}
+                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 hover:border-amber-500/30 transition-all">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-xs font-medium">Free Trial</p>
+                        <p className="text-2xl font-bold text-white">
+                          {allLiveBusinesses.filter(b => {
+                            const crm = crmData.find(c => c.id === b.id)
+                            return crm?.subscription?.is_in_free_trial
+                          }).length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Starter Tier */}
+                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 hover:border-slate-400/30 transition-all">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-lg bg-slate-400/10 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-xs font-medium">Starter</p>
+                        <p className="text-2xl font-bold text-white">
+                          {allLiveBusinesses.filter(b => {
+                            const crm = crmData.find(c => c.id === b.id)
+                            return crm?.subscription?.tier_name === 'starter'
+                          }).length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Featured Tier */}
+                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 hover:border-blue-500/30 transition-all">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-xs font-medium">Featured</p>
+                        <p className="text-2xl font-bold text-white">
+                          {allLiveBusinesses.filter(b => {
+                            const crm = crmData.find(c => c.id === b.id)
+                            return crm?.subscription?.tier_name === 'featured'
+                          }).length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Spotlight Tier */}
+                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 hover:border-purple-500/30 transition-all">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-xs font-medium">Spotlight</p>
+                        <p className="text-2xl font-bold text-white">
+                          {allLiveBusinesses.filter(b => {
+                            const crm = crmData.find(c => c.id === b.id)
+                            return crm?.subscription?.tier_name === 'spotlight'
+                          }).length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Synced to CRM */}
+                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 hover:border-emerald-500/30 transition-all">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-xs font-medium">Synced</p>
+                        <p className="text-2xl font-bold text-white">
+                          {allLiveBusinesses.filter(b => {
+                            const crm = crmData.find(c => c.id === b.id)
+                            return crm?.last_ghl_sync
+                          }).length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Search & Filter Bar */}
+                <div className="bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 mb-6">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Search Input */}
+                    <div className="flex-1 min-w-[200px]">
+                      <div className="relative">
+                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input
+                          type="text"
+                          placeholder="Search by name, owner, or category..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full pl-11 pr-4 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-[#00d083]/50 focus:ring-2 focus:ring-[#00d083]/20 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Type Filter */}
+                    <select
+                      value={filterCategory}
+                      onChange={(e) => setFilterCategory(e.target.value)}
+                      className="px-4 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:border-[#00d083]/50 focus:ring-2 focus:ring-[#00d083]/20 transition-all cursor-pointer"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="bar">Bar</option>
+                      <option value="cafe">Café</option>
+                      <option value="restaurant">Restaurant</option>
+                      <option value="salon">Salon</option>
+                      <option value="spa">Spa</option>
+                      <option value="gym">Gym</option>
+                      <option value="retail_shop">Retail Shop</option>
+                      <option value="hotel">Hotel</option>
+                      <option value="service_business">Service Business</option>
+                      <option value="other">Other</option>
+                    </select>
+
+                    {/* Tier Filter */}
+                    <select
+                      value={filterTier}
+                      onChange={(e) => setFilterTier(e.target.value)}
+                      className="px-4 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:border-[#00d083]/50 focus:ring-2 focus:ring-[#00d083]/20 transition-all cursor-pointer"
+                    >
+                      <option value="all">All Tiers</option>
+                      <option value="free_trial">Trial</option>
+                      <option value="starter">Starter</option>
+                      <option value="featured">Featured</option>
+                      <option value="spotlight">Spotlight</option>
+                    </select>
+
+                    {/* Clear Filters */}
+                    {(searchTerm || filterCategory !== 'all' || filterTier !== 'all') && (
+                      <button
+                        onClick={() => {
+                          setSearchTerm('')
+                          setFilterCategory('all')
+                          setFilterTier('all')
+                        }}
+                        className="px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-lg text-slate-300 hover:text-white transition-all flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Clear
+                      </button>
+                    )}
+
+                    {/* Results Count */}
+                    {(searchTerm || filterCategory !== 'all' || filterTier !== 'all') && (
+                      <div className="ml-auto text-sm text-slate-400 whitespace-nowrap">
+                        Showing <span className="text-white font-semibold">{liveBusinesses.length}</span> of {allLiveBusinesses.length}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-8">
+                <h2 className="text-3xl font-bold text-white mb-2">
+                  {activeTab === 'overview' && 'Dashboard Overview'}
+                  {activeTab === 'pending' && 'Pending Reviews'}
+                  {activeTab === 'updates' && 'Pending Updates'}
+                  {activeTab === 'incomplete' && 'Incomplete Listings'}
+                  {activeTab === 'rejected' && 'Rejected Applications'}
+                  {activeTab === 'knowledge' && 'Knowledge Base'}
+                  {activeTab === 'analytics' && 'City Analytics'}
+                  {activeTab === 'pricing' && 'Pricing & Billing'}
+                  {activeTab === 'setup' && 'Franchise Setup'}
+                  {activeTab === 'contacts' && 'Business Contacts'}
+                  {activeTab === 'qr-management' && 'QR Code Management'}
+                  {activeTab === 'ai-test' && 'AI Chat Testing'}
+                </h2>
+                <p className="text-slate-400">
+                  {activeTab === 'overview' && `Quick overview of ${cityDisplayName} admin activities and priority actions`}
+                  {activeTab === 'pending' && 'Businesses awaiting your review and approval'}
+                  {activeTab === 'updates' && 'Changes from approved businesses awaiting your review'}
+                  {activeTab === 'incomplete' && 'Businesses that need to complete their profiles'}
+                  {activeTab === 'rejected' && 'Previously rejected business applications'}
+                  {activeTab === 'knowledge' && 'AI knowledge base management for businesses and city information'}
+                  {activeTab === 'analytics' && `Performance metrics and user analytics for ${cityDisplayName}`}
+                  {activeTab === 'pricing' && `Customize pricing cards, currency, and billing settings for ${cityDisplayName}`}
+                  {activeTab === 'contacts' && `CRM contact management with GHL sync for ${cityDisplayName}`}
+                  {activeTab === 'qr-management' && 'Generate and manage QR codes for businesses, offers, and secret menus'}
+                  {activeTab === 'ai-test' && 'Test AI chat responses and knowledge base accuracy'}
+                </p>
+              </div>
+            )}
 
             {/* Sync Health Overview - Only show on contacts tab */}
             {activeTab === 'contacts' && (
@@ -1132,8 +1347,8 @@ Qwikker Admin Team`
               </div>
             )}
 
-            {/* 🔍 MINIMAL SEARCH */}
-            {activeTab !== 'knowledge' && activeTab !== 'analytics' && activeTab !== 'contacts' && activeTab !== 'pricing' && activeTab !== 'setup' && (
+            {/* 🔍 MINIMAL SEARCH - Only for non-live tabs (live tab has enhanced search in header) */}
+            {activeTab !== 'knowledge' && activeTab !== 'analytics' && activeTab !== 'contacts' && activeTab !== 'pricing' && activeTab !== 'setup' && activeTab !== 'live' && (
               <div className="mb-3 flex items-center gap-2">
                 <input
                   type="text"
