@@ -531,9 +531,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
       {/* CRM Control Panel Modal - STUNNING POPUP! */}
       {isExpanded && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-12 animate-in fade-in duration-200">
-          {/* Backdrop Blur - Deep Black */}
+          {/* Backdrop Blur - More Transparent */}
           <div 
-            className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+            className="absolute inset-0 bg-black/70 backdrop-blur-xl"
             onClick={() => setIsExpanded(false)}
             style={{ backdropFilter: 'blur(20px)' }}
           />
@@ -581,7 +581,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Modal Body - Scrollable - Really Dark Theme */}
-            <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-b from-slate-950/60 to-black/40">
+            <div className="modal-scrollable-content flex-1 overflow-y-auto p-8 bg-gradient-to-b from-slate-950/60 to-black/40">
 
 
       {/* CRM Content Moved Into Modal */}
@@ -1709,20 +1709,41 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     </div>
 
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-blue-500 text-blue-400 hover:bg-blue-500/20"
-                      >
-                        Extend Trial
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-green-500 text-green-400 hover:bg-green-500/20"
-                      >
-                        Upgrade to Paid
-                      </Button>
+                      {/* Only show trial actions for businesses actually on trial */}
+                      {business.subscription?.is_in_free_trial && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-blue-500 text-blue-400 hover:bg-blue-500/20"
+                            onClick={() => {
+                              setActiveTab('controls')
+                              // Scroll to top of modal content after tab switches
+                              setTimeout(() => {
+                                const modalBody = document.querySelector('.modal-scrollable-content')
+                                modalBody?.scrollTo({ top: 0, behavior: 'smooth' })
+                              }, 100)
+                            }}
+                          >
+                            Extend Trial
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-green-500 text-green-400 hover:bg-green-500/20"
+                            onClick={() => {
+                              setActiveTab('controls')
+                              // Scroll to top of modal content after tab switches
+                              setTimeout(() => {
+                                const modalBody = document.querySelector('.modal-scrollable-content')
+                                modalBody?.scrollTo({ top: 0, behavior: 'smooth' })
+                              }, 100)
+                            }}
+                          >
+                            Upgrade to Paid
+                          </Button>
+                        </>
+                      )}
                       {trialInfo.trial_status === 'expired' && (
                         <Button
                           size="sm"
