@@ -239,8 +239,17 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
       console.log('✅ Profile updated successfully:', profileData)
 
       // Step 3: Update or create business_subscriptions
-      const subscriptionUpdate: any = {
+      // CRITICAL: Use user_id (which matches profiles.id), NOT business.id!
+      const businessIdForSubscription = business.user_id || business.id
+      
+      console.log('🔑 Subscription IDs:', {
         business_id: business.id,
+        user_id: business.user_id,
+        using: businessIdForSubscription
+      })
+
+      const subscriptionUpdate: any = {
+        business_id: businessIdForSubscription, // Use user_id for profiles FK
         tier_id: tierData.id,
         status: selectedTier === 'trial' ? 'trial' : 'active',
         updated_at: new Date().toISOString()
@@ -264,7 +273,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
       const { data: existingSub, error: checkError } = await supabase
         .from('business_subscriptions')
         .select('id')
-        .eq('business_id', business.id)
+        .eq('business_id', businessIdForSubscription)
         .single()
 
       let subscriptionError

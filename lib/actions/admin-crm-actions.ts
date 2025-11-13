@@ -45,6 +45,9 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
 
     // Get business IDs for fetching related data
     const businessIds = businesses.map(b => b.id)
+    
+    // Get user IDs for subscription lookups (business_subscriptions uses user_id, not business.id)
+    const userIds = businesses.map(b => b.user_id).filter(Boolean)
 
     // Fetch menus separately - now working correctly
     let menusByBusiness = new Map()
@@ -132,7 +135,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
           free_trial_end_date,
           current_period_end
         `)
-        .in('business_id', businessIds)
+        .in('business_id', userIds) // Use user_ids, not business_ids!
 
       if (subError) {
         console.log('⚠️ Error fetching subscriptions:', subError)
@@ -148,10 +151,12 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
 
         const tierMap = new Map(tiers?.map(t => [t.id, t]) || [])
 
+        // Map subscriptions by user_id, then we'll match to business.user_id
+        const subscriptionsByUserId = new Map()
         subscriptions.forEach(sub => {
           const tier = tierMap.get(sub.tier_id)
           if (tier) {
-            subscriptionsByBusiness.set(sub.business_id, {
+            subscriptionsByUserId.set(sub.business_id, { // sub.business_id is actually user_id
               tier_id: sub.tier_id,
               tier_name: tier.tier_name,
               tier_display_name: tier.tier_display_name,
@@ -161,7 +166,14 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
               free_trial_end_date: sub.free_trial_end_date,
               current_period_end: sub.current_period_end
             })
-            console.log('✅ Loaded subscription for business:', sub.business_id, tier.tier_display_name)
+            console.log('✅ Loaded subscription for user_id:', sub.business_id, tier.tier_display_name)
+          }
+        })
+        
+        // Now map to business IDs using user_id
+        businesses.forEach(business => {
+          if (business.user_id && subscriptionsByUserId.has(business.user_id)) {
+            subscriptionsByBusiness.set(business.id, subscriptionsByUserId.get(business.user_id))
           }
         })
       }
