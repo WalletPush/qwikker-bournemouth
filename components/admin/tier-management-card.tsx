@@ -21,7 +21,16 @@ interface FeatureAccess {
 }
 
 export function TierManagementCard({ business, onUpdate }: TierManagementCardProps) {
-  const [selectedTier, setSelectedTier] = useState<PlanTier>(business?.plan || 'starter')
+  // Get current tier from subscription or fallback to business profile
+  const getCurrentTier = (): PlanTier => {
+    if (business?.subscription?.tier_name) {
+      if (business.subscription.tier_name === 'free') return 'trial'
+      return business.subscription.tier_name as PlanTier
+    }
+    return (business?.plan || 'starter') as PlanTier
+  }
+
+  const [selectedTier, setSelectedTier] = useState<PlanTier>(getCurrentTier())
   const [isSaving, setIsSaving] = useState(false)
   
   // Feature access state
@@ -32,13 +41,23 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     push_notifications: business?.features?.push_notifications ?? false
   })
 
-  // Free trial state
-  const [freeTrialEnabled, setFreeTrialEnabled] = useState(business?.free_trial_enabled ?? false)
+  // Free trial state - use subscription data if available
+  const [freeTrialEnabled, setFreeTrialEnabled] = useState(
+    business?.subscription?.is_in_free_trial ?? business?.free_trial_enabled ?? false
+  )
   const [trialStartDate, setTrialStartDate] = useState(
-    business?.trial_start_date ? new Date(business.trial_start_date).toISOString().split('T')[0] : ''
+    business?.subscription?.free_trial_start_date 
+      ? new Date(business.subscription.free_trial_start_date).toISOString().split('T')[0]
+      : business?.trial_start_date 
+        ? new Date(business.trial_start_date).toISOString().split('T')[0] 
+        : ''
   )
   const [trialEndDate, setTrialEndDate] = useState(
-    business?.trial_end_date ? new Date(business.trial_end_date).toISOString().split('T')[0] : ''
+    business?.subscription?.free_trial_end_date 
+      ? new Date(business.subscription.free_trial_end_date).toISOString().split('T')[0]
+      : business?.trial_end_date 
+        ? new Date(business.trial_end_date).toISOString().split('T')[0] 
+        : ''
   )
 
   // Calculate trial days remaining
@@ -163,40 +182,78 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     const supabase = createClient()
 
     try {
-      const updateData: any = {
+      console.log('🔄 Starting tier update...', { businessId: business.id, selectedTier, features })
+
+      // Step 1: Get tier ID from subscription_tiers
+      const tierName = selectedTier === 'trial' ? 'free' : selectedTier
+      const { data: tierData, error: tierError } = await supabase
+        .from('subscription_tiers')
+        .select('id')
+        .eq('tier_name', tierName)
+        .single()
+
+      if (tierError) {
+        console.error('❌ Error fetching tier:', tierError)
+        throw new Error(`Could not find tier: ${tierName}`)
+      }
+
+      console.log('✅ Found tier:', { tierName, tierId: tierData.id })
+
+      // Step 2: Update business_profiles with plan and features
+      const profileUpdate: any = {
         plan: selectedTier,
         features: features,
         updated_at: new Date().toISOString()
       }
 
-      // Add trial dates if trial tier is selected
-      if (selectedTier === 'trial') {
-        updateData.trial_start_date = trialStartDate || new Date().toISOString()
-        updateData.trial_end_date = trialEndDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
-        updateData.free_trial_enabled = true
-      } else {
-        // Clear trial dates if not on trial
-        updateData.free_trial_enabled = false
-      }
-
-      console.log('🔄 Updating business with data:', updateData)
-      
-      const { error } = await supabase
+      const { error: profileError } = await supabase
         .from('business_profiles')
-        .update(updateData)
+        .update(profileUpdate)
         .eq('id', business.id)
 
-      if (error) {
-        console.error('❌ Supabase error:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        })
-        throw error
+      if (profileError) {
+        console.error('❌ Profile update error:', profileError)
+        throw profileError
       }
 
-      console.log('✅ Tier updated:', { tier: selectedTier, features, trialDates: selectedTier === 'trial' ? { start: trialStartDate, end: trialEndDate } : null })
+      console.log('✅ Profile updated')
+
+      // Step 3: Update or create business_subscriptions
+      const subscriptionUpdate: any = {
+        business_id: business.id,
+        tier_id: tierData.id,
+        status: selectedTier === 'trial' ? 'trial' : 'active',
+        updated_at: new Date().toISOString()
+      }
+
+      // Handle trial-specific fields
+      if (selectedTier === 'trial') {
+        const startDate = trialStartDate || new Date().toISOString()
+        const endDate = trialEndDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+        
+        subscriptionUpdate.is_in_free_trial = true
+        subscriptionUpdate.free_trial_start_date = startDate
+        subscriptionUpdate.free_trial_end_date = endDate
+      } else {
+        subscriptionUpdate.is_in_free_trial = false
+        subscriptionUpdate.free_trial_start_date = null
+        subscriptionUpdate.free_trial_end_date = null
+      }
+
+      // Upsert subscription
+      const { error: subscriptionError } = await supabase
+        .from('business_subscriptions')
+        .upsert(subscriptionUpdate, {
+          onConflict: 'business_id'
+        })
+
+      if (subscriptionError) {
+        console.error('❌ Subscription update error:', subscriptionError)
+        throw subscriptionError
+      }
+
+      console.log('✅ Subscription updated')
+      console.log('🎉 Tier updated successfully:', { tier: selectedTier, features })
       alert('✅ Tier and features updated successfully!')
       onUpdate()
     } catch (error: any) {
@@ -229,6 +286,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
             {(['trial', 'starter', 'featured', 'spotlight'] as PlanTier[]).map((tier) => {
               const details = tierDetails[tier]
               const isSelected = selectedTier === tier
+              const isCurrent = getCurrentTier() === tier
               
               return (
                 <button
@@ -249,11 +307,14 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
                     {tier === 'featured' && 'Priority placement'}
                     {tier === 'spotlight' && 'All premium features'}
                   </div>
-                  {isSelected && (
-                    <div className="mt-2">
+                  <div className="mt-2 flex items-center gap-2">
+                    {isCurrent && (
+                      <span className="text-xs font-medium text-blue-400">Current</span>
+                    )}
+                    {isSelected && (
                       <span className="text-xs font-medium text-[#00d083]">✓ Selected</span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </button>
               )
             })}
