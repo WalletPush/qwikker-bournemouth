@@ -708,7 +708,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                   size="sm"
                   className={`text-xs flex items-center gap-2 rounded-xl transition-all ${
                     activeTab === tab.id 
-                      ? 'bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-white shadow-lg shadow-purple-500/20 border-2 border-purple-500/40' 
+                      ? 'bg-gradient-to-r from-purple-600/20 to-blue-600/20 text-white shadow-md shadow-purple-500/10 border-2 border-purple-500/30' 
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40 border-2 border-transparent'
                   }`}
                 >
