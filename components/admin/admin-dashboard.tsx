@@ -1233,10 +1233,21 @@ Qwikker Admin Team`
                     </div>
                   ) : (
                     liveBusinesses.map((business) => {
-                      // Get menus from CRM data but keep original business data
-                      const crmMenus = crmData.find(crm => crm.id === business.id)?.business_menus || null
+                      // Use CRM data which already has correct subscription + trial info
+                      const crmRecord = crmData.find(crm => crm.id === business.id)
                       
-                      // Convert business data to CRM format (original working version)
+                      // If we have CRM data, use it directly (it has correct subscription data from admin-crm-actions)
+                      if (crmRecord) {
+                        return (
+                          <ComprehensiveBusinessCRMCard
+                            key={business.id}
+                            business={crmRecord}
+                            onUpdate={onUpdate}
+                          />
+                        )
+                      }
+                      
+                      // Fallback: Convert business data to CRM format (shouldn't happen for live businesses)
                       const crmBusiness = {
                         id: business.id,
                         business_name: business.business_name || 'Unnamed Business',
@@ -1255,23 +1266,23 @@ Qwikker Admin Team`
                         business_hours: business.business_hours || '',
                         business_hours_structured: business.business_hours_structured || null,
                         website_url: business.website_url || '',
-                        website: business.website_url || '', // CRM card looks for 'website' field
+                        website: business.website_url || '',
                         instagram_handle: business.instagram_handle || '',
                         facebook_url: business.facebook_url || '',
                         status: business.status as 'incomplete' | 'pending_review' | 'approved' | 'rejected',
                         approved_at: business.approved_at,
                         created_at: business.created_at,
                         updated_at: business.updated_at,
-                        last_ghl_sync: null, // Will be fixed later
-                        last_crm_sync: null, // Will be fixed later
-                        crm_sync_status: 'pending', // Will be fixed later
+                        last_ghl_sync: null,
+                        last_crm_sync: null,
+                        crm_sync_status: 'pending',
                         admin_notes: business.admin_notes,
                         subscription: null,
                         tier: null,
                         recent_payments: [],
                         menu_url: business.menu_url,
                         business_images: business.business_images as string[] | null,
-                        business_menus: crmMenus,
+                        business_menus: null,
                         offer_name: business.offer_name,
                         offer_type: business.offer_type,
                         offer_image: business.offer_image,
@@ -1279,53 +1290,15 @@ Qwikker Admin Team`
                         offer_end_date: business.offer_end_date,
                         offer_terms: business.offer_terms,
                         business_offers: business.business_offers || [],
-                        secret_menu_items: business.additional_notes ? 
-                          (() => {
-                            try {
-                              const parsed = JSON.parse(business.additional_notes)
-                              return parsed.secret_menu_items || []
-                            } catch {
-                              return []
-                            }
-                          })() : [],
-                        // Calculate trial info from subscription or fallback to approved_at
-                        trial_days_remaining: (() => {
-                          if (business.subscription?.is_in_free_trial && business.subscription.free_trial_end_date) {
-                            const trialEndDate = new Date(business.subscription.free_trial_end_date)
-                            const now = new Date()
-                            const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-                            return daysRemaining > 0 ? daysRemaining : 0
-                          } else if (business.approved_at) {
-                            const approvalDate = new Date(business.approved_at)
-                            const trialEndDate = new Date(approvalDate.getTime() + (90 * 24 * 60 * 60 * 1000)) // 90 days
-                            const now = new Date()
-                            const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-                            return daysRemaining > 0 ? daysRemaining : 0
-                          }
-                          return null
-                        })(),
-                        trial_status: (() => {
-                          if (business.subscription?.status === 'active' && !business.subscription.is_in_free_trial) {
-                            return 'upgraded' as const
-                          }
-                          if (business.subscription?.is_in_free_trial && business.subscription.free_trial_end_date) {
-                            const trialEndDate = new Date(business.subscription.free_trial_end_date)
-                            const now = new Date()
-                            return now < trialEndDate ? 'active' as const : 'expired' as const
-                          }
-                          if (business.approved_at) {
-                            const approvalDate = new Date(business.approved_at)
-                            const trialEndDate = new Date(approvalDate.getTime() + (90 * 24 * 60 * 60 * 1000))
-                            const now = new Date()
-                            return now < trialEndDate ? 'active' as const : 'expired' as const
-                          }
-                          return 'not_applicable' as const
-                        })(),
-                        billing_starts_date: business.subscription?.free_trial_end_date || 
-                          (business.approved_at ? new Date(new Date(business.approved_at).getTime() + (90 * 24 * 60 * 60 * 1000)).toISOString() : null),
+                        secret_menu_items: [],
+                        trial_days_remaining: null,
+                        trial_status: 'not_applicable' as const,
+                        billing_starts_date: null,
                         last_updated: business.updated_at || business.created_at,
                         has_pending_changes: false,
-                        pending_changes_count: 0
+                        pending_changes_count: 0,
+                        plan: business.plan || 'starter',
+                        features: business.features || { social_wizard: false, loyalty_cards: false, analytics: false, push_notifications: false }
                       }
                       
                       return (
