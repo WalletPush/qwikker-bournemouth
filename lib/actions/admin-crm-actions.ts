@@ -36,7 +36,20 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         offer_type,
         additional_notes,
         updated_at,
-        created_at
+        created_at,
+        website_url,
+        instagram_handle,
+        facebook_url,
+        business_hours,
+        business_hours_structured,
+        business_tagline,
+        business_description,
+        offer_image,
+        offer_start_date,
+        offer_end_date,
+        offer_terms,
+        plan,
+        features
       `)
       .eq('city', city)
       .order('created_at', { ascending: false })
