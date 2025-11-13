@@ -413,11 +413,11 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
           <Label className="text-slate-300 mb-3 block">Individual Feature Access</Label>
           <div className="space-y-2">
             {[
-              { key: 'social_wizard' as const, label: 'Social Wizard', icon: '✨' },
-              { key: 'loyalty_cards' as const, label: 'Loyalty Cards', icon: '💳' },
-              { key: 'analytics' as const, label: 'Analytics', icon: '📊' },
-              { key: 'push_notifications' as const, label: 'Push Notifications', icon: '🔔' }
-            ].map(({ key, label, icon }) => {
+              { key: 'social_wizard' as const, label: 'Social Wizard' },
+              { key: 'loyalty_cards' as const, label: 'Loyalty Cards' },
+              { key: 'analytics' as const, label: 'Analytics' },
+              { key: 'push_notifications' as const, label: 'Push Notifications' }
+            ].map(({ key, label }) => {
               const isEnabled = features[key]
               
               return (
@@ -431,7 +431,6 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-xl">{icon}</span>
                     <span className={`font-medium ${isEnabled ? 'text-white' : 'text-slate-400'}`}>
                       {label}
                     </span>
