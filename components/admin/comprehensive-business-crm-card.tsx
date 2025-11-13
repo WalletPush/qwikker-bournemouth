@@ -359,13 +359,22 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     return colors[business.business_type as keyof typeof colors] || colors['other']
   }
 
-  // Get tier-specific border color
+  // Get tier-specific border color (subtle hint)
   const getTierBorderColor = () => {
-    if (business.subscription?.tier_name === 'spotlight') return 'border-purple-500 hover:border-purple-400'
-    if (business.subscription?.tier_name === 'featured') return 'border-blue-500 hover:border-blue-400'
-    if (business.subscription?.tier_name === 'starter') return 'border-slate-600 hover:border-slate-500'
-    if (business.subscription?.is_in_free_trial) return 'border-amber-500 hover:border-amber-400'
-    return 'border-slate-700 hover:border-slate-600'
+    if (business.subscription?.tier_name === 'spotlight') return 'border-purple-500/30 hover:border-purple-500/50'
+    if (business.subscription?.tier_name === 'featured') return 'border-blue-500/30 hover:border-blue-500/50'
+    if (business.subscription?.tier_name === 'starter') return 'border-slate-600/30 hover:border-slate-600/50'
+    if (business.subscription?.is_in_free_trial) return 'border-amber-500/30 hover:border-amber-500/50'
+    return 'border-slate-700/30 hover:border-slate-600/50'
+  }
+
+  // Get tier-specific accent color for decorative line
+  const getTierAccentGradient = () => {
+    if (business.subscription?.tier_name === 'spotlight') return 'from-purple-500/50 via-purple-500/20 to-transparent'
+    if (business.subscription?.tier_name === 'featured') return 'from-blue-500/50 via-blue-500/20 to-transparent'
+    if (business.subscription?.tier_name === 'starter') return 'from-slate-500/50 via-slate-500/20 to-transparent'
+    if (business.subscription?.is_in_free_trial) return 'from-amber-500/50 via-amber-500/20 to-transparent'
+    return 'from-slate-500/50 via-slate-500/20 to-transparent'
   }
 
   return (
@@ -378,20 +387,20 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           {/* Header Row */}
           <div className="flex items-start justify-between mb-6">
             {/* Left: Business Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-3">
-                <h3 className="text-2xl font-bold text-white truncate">
-                  {business.business_name}
-                </h3>
-                {/* Small Avatar Badge */}
-                <InitialAvatar 
-                  businessName={business.business_name} 
-                  className="w-10 h-10 rounded-full border-2 border-slate-700/50 text-xs font-bold flex-shrink-0"
-                />
-              </div>
-              
-              {/* Separator Line */}
-              <div className="w-full h-px bg-slate-700/30 my-4" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-3">
+                  <h3 className="text-2xl font-bold text-white truncate">
+                    {business.business_name}
+                  </h3>
+                  {/* Small Avatar Badge */}
+                  <InitialAvatar 
+                    businessName={business.business_name} 
+                    className="w-10 h-10 rounded-full border-2 border-slate-700/50 text-xs font-bold flex-shrink-0"
+                  />
+                </div>
+                
+                {/* Tier-colored Decorative Gradient Line */}
+                <div className={`h-1 w-32 bg-gradient-to-r ${getTierAccentGradient()} rounded-full`} />
             </div>
 
             {/* Right: Quick Actions */}
@@ -479,13 +488,12 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Status</span>
               <span className={`font-bold text-lg leading-tight block ${
-                business.subscription?.status === 'active' ? 'text-[#00d083]' :
-                business.subscription?.status === 'trialing' ? 'text-amber-400' :
+                business.subscription?.status === 'active' || business.subscription?.is_in_free_trial ? 'text-[#00d083]' :
                 business.subscription?.status === 'paused' ? 'text-slate-400' :
                 'text-red-400'
               }`}>
-                {business.subscription?.status === 'active' ? 'Live' : 
-                 business.subscription?.status === 'trialing' ? 'Trial' :
+                {business.subscription?.status === 'active' || business.subscription?.is_in_free_trial ? 'Live' : 
+                 business.subscription?.status === 'paused' ? 'Paused' :
                  business.subscription?.status || 'Inactive'}
               </span>
             </div>
