@@ -1853,6 +1853,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </div>
             </div>
           )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -1863,10 +1865,6 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
         offer={deletionModal.offer}
         onDelete={handleDeleteOffer}
       />
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }
