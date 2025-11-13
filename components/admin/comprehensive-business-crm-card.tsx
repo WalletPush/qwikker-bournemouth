@@ -370,8 +370,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
   return (
     <>
-      {/* Main Card - Darker with Better Glassmorphism */}
-      <div className={`bg-slate-900/80 backdrop-blur-xl border-2 ${getTierBorderColor()} rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-black/40 transition-all duration-300 ${className}`}>
+      {/* Main Card - MUCH DARKER with Better Glassmorphism */}
+      <div className={`bg-slate-950/95 backdrop-blur-xl border-2 ${getTierBorderColor()} rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-black/60 transition-all duration-300 ${className}`}>
         {/* Compact Header */}
         <div className="px-6 py-5">
           <div className="flex items-center justify-between gap-4">
@@ -460,7 +460,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
           {/* Stats Grid - Cleaner Design */}
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mt-5">
-            <div className="bg-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/30">
+            <div className="bg-slate-900/60 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/50">
               <span className="text-slate-500 text-xs block mb-1">Tier</span>
               <span className={`font-bold text-sm ${
                 business.subscription?.tier_display_name === 'Spotlight' ? 'text-purple-400' :
@@ -474,7 +474,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </span>
             </div>
 
-            <div className="bg-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/30">
+            <div className="bg-slate-900/60 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/50">
               <span className="text-slate-500 text-xs block mb-1">Billing</span>
               <span className="font-bold text-white text-sm">
                 {business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date
@@ -485,12 +485,12 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </span>
             </div>
 
-            <div className="bg-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/30">
+            <div className="bg-slate-900/60 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/50">
               <span className="text-slate-500 text-xs block mb-1">Joined</span>
               <span className="font-bold text-white text-sm">{formatJoinedDate(business.created_at)}</span>
             </div>
 
-            <div className="bg-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/30">
+            <div className="bg-slate-900/60 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/50">
               <span className="text-slate-500 text-xs block mb-1">Status</span>
               <span className={`font-bold text-sm ${
                 business.subscription?.status === 'active' ? 'text-[#00d083]' :
@@ -504,14 +504,14 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </span>
             </div>
 
-            <div className="bg-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/30">
+            <div className="bg-slate-900/60 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/50">
               <span className="text-slate-500 text-xs block mb-1">Files</span>
               <span className="font-bold text-white text-sm">
                 {(business.business_menus?.length || 0) + (business.business_images?.length || 0)}
               </span>
             </div>
 
-            <div className="bg-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/30">
+            <div className="bg-slate-900/60 backdrop-blur-sm px-4 py-3 rounded-lg border border-slate-700/50">
               <span className="text-slate-500 text-xs block mb-1">Last Contact</span>
               <span className="font-bold text-white text-sm">
                 {business.updated_at ? new Date(business.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—'}
@@ -531,9 +531,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           />
           
           {/* Modal Content */}
-          <div className="relative w-full max-w-7xl max-h-[90vh] bg-slate-900/95 backdrop-blur-2xl border-2 border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+          <div className="relative w-full max-w-7xl max-h-[90vh] bg-slate-900/95 backdrop-blur-2xl border-2 border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col">
             {/* Modal Header */}
-            <div className="sticky top-0 z-10 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/50 px-8 py-6">
+            <div className="flex-shrink-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/50 px-8 py-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <InitialAvatar 
@@ -571,7 +571,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Modal Body - Scrollable */}
-            <div className="overflow-y-auto max-h-[calc(90vh-120px)] p-8">
+            <div className="flex-1 overflow-y-auto p-8">
 
 
       {/* CRM Content Moved Into Modal */}
