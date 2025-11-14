@@ -171,9 +171,14 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         })
         
         // Now map to business IDs using user_id
+        console.log('🔗 Mapping subscriptions to businesses...')
         businesses.forEach(business => {
           if (business.user_id && subscriptionsByUserId.has(business.user_id)) {
-            subscriptionsByBusiness.set(business.id, subscriptionsByUserId.get(business.user_id))
+            const sub = subscriptionsByUserId.get(business.user_id)
+            subscriptionsByBusiness.set(business.id, sub)
+            console.log(`  ✅ Mapped ${business.business_name}: user_id=${business.user_id} → business_id=${business.id}, tier=${sub.tier_display_name}`)
+          } else {
+            console.log(`  ❌ NO MATCH for ${business.business_name}: user_id=${business.user_id}, has_sub=${subscriptionsByUserId.has(business.user_id)}`)
           }
         })
       }

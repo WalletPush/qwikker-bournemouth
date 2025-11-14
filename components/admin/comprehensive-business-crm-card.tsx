@@ -62,6 +62,16 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const [newTask, setNewTask] = useState('')
   const [isAddingTask, setIsAddingTask] = useState(false)
 
+  // DEBUG: Check subscription data
+  console.log(`🔍 CRM Card for ${business.business_name}:`, {
+    has_subscription: !!business.subscription,
+    subscription_status: business.subscription?.status,
+    tier_name: business.subscription?.tier_name,
+    is_in_free_trial: business.subscription?.is_in_free_trial,
+    user_id: business.user_id,
+    business_id: business.id
+  })
+
   // Handle offer deletion
   const handleDeleteOffer = async (offerId: string, confirmationText: string) => {
     try {
