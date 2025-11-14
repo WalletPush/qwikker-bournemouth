@@ -436,14 +436,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     return colors[business.business_type as keyof typeof colors] || colors['other']
   }
 
-  // Get tier-specific border color (subtle hint)
-  const getTierBorderColor = () => {
-    if (business.subscription?.tier_name === 'spotlight') return 'border-purple-500/30 hover:border-purple-500/50'
-    if (business.subscription?.tier_name === 'featured') return 'border-blue-500/30 hover:border-blue-500/50'
-    if (business.subscription?.tier_name === 'starter') return 'border-slate-600/30 hover:border-slate-600/50'
-    if (business.subscription?.is_in_free_trial) return 'border-amber-500/30 hover:border-amber-500/50'
-    return 'border-slate-700/30 hover:border-slate-600/50'
-  }
+  // NOTE: getTierBorderColor and getTierAccentGradient are defined at the TOP of the file
+  // Do NOT duplicate them here!
 
   return (
     <>
