@@ -51,10 +51,10 @@ const getTierBorderColor = (business: BusinessCRMData) => {
   // Get tier from subscription or fallback to business.plan
   const tierName = business.subscription?.tier_name
   
-  if (isTrial) return 'border-amber-500/50' // Free trial gets amber border
-  if (tierName === 'spotlight') return 'border-purple-500/50'
-  if (tierName === 'featured') return 'border-blue-500/50'
-  return 'border-slate-700/50' // Starter or no tier
+  if (isTrial) return 'border-blue-500/50' // Free trial → Blue
+  if (tierName === 'spotlight') return 'border-amber-500/50' // Spotlight → Gold
+  if (tierName === 'featured') return 'border-purple-500/50' // Featured → Purple
+  return 'border-slate-700/50' // Starter → Grey
 }
 
 // Helper function to get tier-specific accent gradient
@@ -66,10 +66,10 @@ const getTierAccentGradient = (business: BusinessCRMData) => {
   // Get tier from subscription or fallback to business.plan
   const tierName = business.subscription?.tier_name
   
-  if (isTrial) return 'from-amber-500 via-amber-600 to-amber-500' // Free trial gets amber gradient
-  if (tierName === 'spotlight') return 'from-purple-500 via-purple-600 to-purple-500'
-  if (tierName === 'featured') return 'from-blue-500 via-blue-600 to-blue-500'
-  return 'from-slate-500 via-slate-600 to-slate-500' // Starter or no tier
+  if (isTrial) return 'from-blue-500 via-blue-600 to-blue-500' // Free trial → Blue
+  if (tierName === 'spotlight') return 'from-amber-500 via-amber-600 to-amber-500' // Spotlight → Gold
+  if (tierName === 'featured') return 'from-purple-500 via-purple-600 to-purple-500' // Featured → Purple
+  return 'from-slate-500 via-slate-600 to-slate-500' // Starter → Grey
 }
 
 export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, className }: ComprehensiveBusinessCRMCardProps) {
@@ -502,9 +502,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <span className="text-slate-400 text-xs font-medium block mb-2">Tier</span>
               <span className={`font-semibold text-xl leading-tight block ${
                 // Check trial status first (subscription OR legacy)
-                (business.subscription?.is_in_free_trial || (business.trial_days_remaining !== null && business.trial_days_remaining > 0)) ? 'text-amber-400' :
-                business.subscription?.tier_display_name === 'Spotlight' ? 'text-purple-400' :
-                business.subscription?.tier_display_name === 'Featured' ? 'text-blue-400' :
+                (business.subscription?.is_in_free_trial || (business.trial_days_remaining !== null && business.trial_days_remaining > 0)) ? 'text-blue-400' :
+                business.subscription?.tier_display_name === 'Spotlight' ? 'text-amber-400' :
+                business.subscription?.tier_display_name === 'Featured' ? 'text-purple-400' :
                 'text-slate-300'
               }`}>
                 {/* Show tier name, prioritizing trial if active */}
@@ -599,9 +599,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     <h2 className="text-2xl font-bold text-white flex items-center gap-3">
                       {business.business_name}
                       <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${
-                        business.subscription?.tier_name === 'spotlight' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                        business.subscription?.tier_name === 'featured' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                        business.subscription?.is_in_free_trial ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                        business.subscription?.tier_name === 'spotlight' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                        business.subscription?.tier_name === 'featured' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                        business.subscription?.is_in_free_trial ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
                         'bg-slate-700/50 text-slate-400 border border-slate-600/30'
                       }`}>
                         {business.subscription?.tier_display_name || (business.subscription?.is_in_free_trial ? 'Free Trial' : 'Starter')}
