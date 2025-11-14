@@ -1164,7 +1164,9 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
-                            return crm?.subscription?.is_in_free_trial
+                            // Check BOTH subscription AND legacy trial data
+                            return crm?.subscription?.is_in_free_trial || 
+                                   (crm?.trial_days_remaining !== null && crm?.trial_days_remaining > 0)
                           }).length}
                         </p>
                       </div>
@@ -1189,7 +1191,10 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
-                            return crm?.subscription?.tier_name === 'starter'
+                            // Starter tier EXCLUDING trials
+                            const isTrial = crm?.subscription?.is_in_free_trial || 
+                                           (crm?.trial_days_remaining !== null && crm?.trial_days_remaining > 0)
+                            return !isTrial && crm?.subscription?.tier_name === 'starter'
                           }).length}
                         </p>
                       </div>
@@ -1214,7 +1219,10 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
-                            return crm?.subscription?.tier_name === 'featured'
+                            // Featured tier EXCLUDING trials
+                            const isTrial = crm?.subscription?.is_in_free_trial || 
+                                           (crm?.trial_days_remaining !== null && crm?.trial_days_remaining > 0)
+                            return !isTrial && crm?.subscription?.tier_name === 'featured'
                           }).length}
                         </p>
                       </div>
@@ -1239,7 +1247,10 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
-                            return crm?.subscription?.tier_name === 'spotlight'
+                            // Spotlight tier EXCLUDING trials
+                            const isTrial = crm?.subscription?.is_in_free_trial || 
+                                           (crm?.trial_days_remaining !== null && crm?.trial_days_remaining > 0)
+                            return !isTrial && crm?.subscription?.tier_name === 'spotlight'
                           }).length}
                         </p>
                       </div>
