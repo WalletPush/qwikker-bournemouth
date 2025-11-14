@@ -44,24 +44,32 @@ const formatDateConsistent = (dateString: string | null | undefined): string => 
 
 // Helper function to get tier-specific border color
 const getTierBorderColor = (business: BusinessCRMData) => {
-  const tierName = business.subscription?.tier_name
-  const isTrial = business.subscription?.is_in_free_trial
+  // Check if on free trial (from subscription OR legacy calculation)
+  const isTrial = business.subscription?.is_in_free_trial || 
+                  (business.trial_days_remaining !== null && business.trial_days_remaining > 0)
   
+  // Get tier from subscription or fallback to business.plan
+  const tierName = business.subscription?.tier_name
+  
+  if (isTrial) return 'border-amber-500/50' // Free trial gets amber border
   if (tierName === 'spotlight') return 'border-purple-500/50'
   if (tierName === 'featured') return 'border-blue-500/50'
-  if (isTrial) return 'border-amber-500/50'
-  return 'border-slate-700/50'
+  return 'border-slate-700/50' // Starter or no tier
 }
 
 // Helper function to get tier-specific accent gradient
 const getTierAccentGradient = (business: BusinessCRMData) => {
-  const tierName = business.subscription?.tier_name
-  const isTrial = business.subscription?.is_in_free_trial
+  // Check if on free trial (from subscription OR legacy calculation)
+  const isTrial = business.subscription?.is_in_free_trial || 
+                  (business.trial_days_remaining !== null && business.trial_days_remaining > 0)
   
+  // Get tier from subscription or fallback to business.plan
+  const tierName = business.subscription?.tier_name
+  
+  if (isTrial) return 'from-amber-500 via-amber-600 to-amber-500' // Free trial gets amber gradient
   if (tierName === 'spotlight') return 'from-purple-500 via-purple-600 to-purple-500'
   if (tierName === 'featured') return 'from-blue-500 via-blue-600 to-blue-500'
-  if (isTrial) return 'from-amber-500 via-amber-600 to-amber-500'
-  return 'from-slate-500 via-slate-600 to-slate-500'
+  return 'from-slate-500 via-slate-600 to-slate-500' // Starter or no tier
 }
 
 export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, className }: ComprehensiveBusinessCRMCardProps) {
@@ -508,14 +516,16 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Tier</span>
               <span className={`font-semibold text-xl leading-tight block ${
+                // Check trial status first (subscription OR legacy)
+                (business.subscription?.is_in_free_trial || (business.trial_days_remaining !== null && business.trial_days_remaining > 0)) ? 'text-amber-400' :
                 business.subscription?.tier_display_name === 'Spotlight' ? 'text-purple-400' :
                 business.subscription?.tier_display_name === 'Featured' ? 'text-blue-400' :
-                business.subscription?.tier_display_name === 'Starter' ? 'text-slate-300' :
-                business.subscription?.is_in_free_trial ? 'text-amber-400' : 'text-slate-300'
+                'text-slate-300'
               }`}>
-                {business.subscription?.tier_display_name || 
-                 (business.subscription?.is_in_free_trial ? 'Free Trial' : 
-                 business.plan ? business.plan.charAt(0).toUpperCase() + business.plan.slice(1) : 'Starter')}
+                {/* Show tier name, prioritizing trial if active */}
+                {(business.subscription?.is_in_free_trial || (business.trial_days_remaining !== null && business.trial_days_remaining > 0))
+                  ? 'Free Trial'
+                  : business.subscription?.tier_display_name || 'Starter'}
               </span>
             </div>
 
@@ -526,8 +536,11 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Billing</span>
                 <span className="font-medium text-white text-base leading-tight block">
+                  {/* Show trial end date if on trial (subscription OR legacy) */}
                   {business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date
                     ? formatDateConsistent(business.subscription.free_trial_end_date)
+                    : business.billing_starts_date && business.trial_days_remaining !== null && business.trial_days_remaining > 0
+                    ? formatDateConsistent(business.billing_starts_date)
                     : business.subscription?.current_period_end
                     ? formatDateConsistent(business.subscription.current_period_end)
                     : 'N/A'}
@@ -541,13 +554,23 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Status</span>
               <span className={`font-semibold text-xl leading-tight block ${
-                business.subscription?.status === 'active' || business.subscription?.is_in_free_trial ? 'text-[#00d083]' :
+                // Live if: approved business, OR active subscription, OR on trial
+                (business.status === 'approved' || 
+                 business.subscription?.status === 'active' || 
+                 business.subscription?.is_in_free_trial ||
+                 (business.trial_days_remaining !== null && business.trial_days_remaining > 0)) ? 'text-[#00d083]' :
                 business.subscription?.status === 'paused' ? 'text-slate-400' :
                 'text-red-400'
               }`}>
-                {business.subscription?.status === 'active' || business.subscription?.is_in_free_trial ? 'Live' : 
-                 business.subscription?.status === 'paused' ? 'Paused' :
-                 business.subscription?.status || 'Inactive'}
+                {/* Show Live if approved/active/trial */}
+                {(business.status === 'approved' || 
+                  business.subscription?.status === 'active' || 
+                  business.subscription?.is_in_free_trial ||
+                  (business.trial_days_remaining !== null && business.trial_days_remaining > 0)) 
+                  ? 'Live' 
+                  : business.subscription?.status === 'paused' 
+                  ? 'Paused' 
+                  : 'Inactive'}
               </span>
             </div>
 

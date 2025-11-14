@@ -321,17 +321,8 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         crm_sync_status: syncData?.last_ghl_sync ? 'synced' : 'pending',
         ghl_contact_id: syncData?.ghl_contact_id || null,
         
-        // Subscription: Use business_subscriptions if available, otherwise create fallback from legacy data
-        subscription: subscriptionsByBusiness.get(business.id) || {
-          tier_id: null,
-          tier_name: business.plan || 'starter',
-          tier_display_name: business.plan ? business.plan.charAt(0).toUpperCase() + business.plan.slice(1) : 'Starter',
-          status: trial_days_remaining > 0 ? 'trial' : 'active',
-          is_in_free_trial: trial_days_remaining > 0,
-          free_trial_start_date: null,
-          free_trial_end_date: billing_starts_date,
-          current_period_end: null
-        },
+        // Subscription: Use business_subscriptions if available, otherwise null (use legacy trial calculation)
+        subscription: subscriptionsByBusiness.get(business.id) || null,
         tier: null,
         recent_payments: [], // Will be populated when billing system is implemented
         
