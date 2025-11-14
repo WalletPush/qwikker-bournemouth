@@ -26,6 +26,22 @@ interface ComprehensiveBusinessCRMCardProps {
   className?: string
 }
 
+// Helper function for consistent date formatting (prevents hydration errors)
+const formatDateConsistent = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'N/A'
+  try {
+    const date = new Date(dateString)
+    // Use a consistent format that works on both server and client
+    return date.toLocaleDateString('en-GB', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    })
+  } catch {
+    return 'Invalid date'
+  }
+}
+
 // Helper function to get tier-specific border color
 const getTierBorderColor = (business: BusinessCRMData) => {
   const tierName = business.subscription?.tier_name
