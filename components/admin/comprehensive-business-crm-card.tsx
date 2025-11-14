@@ -26,6 +26,28 @@ interface ComprehensiveBusinessCRMCardProps {
   className?: string
 }
 
+// Helper function to get tier-specific border color
+const getTierBorderColor = (business: BusinessCRMData) => {
+  const tierName = business.subscription?.tier_name
+  const isTrial = business.subscription?.is_in_free_trial
+  
+  if (tierName === 'spotlight') return 'border-purple-500/50'
+  if (tierName === 'featured') return 'border-blue-500/50'
+  if (isTrial) return 'border-amber-500/50'
+  return 'border-slate-700/50'
+}
+
+// Helper function to get tier-specific accent gradient
+const getTierAccentGradient = (business: BusinessCRMData) => {
+  const tierName = business.subscription?.tier_name
+  const isTrial = business.subscription?.is_in_free_trial
+  
+  if (tierName === 'spotlight') return 'from-purple-500 via-purple-600 to-purple-500'
+  if (tierName === 'featured') return 'from-blue-500 via-blue-600 to-blue-500'
+  if (isTrial) return 'from-amber-500 via-amber-600 to-amber-500'
+  return 'from-slate-500 via-slate-600 to-slate-500'
+}
+
 export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, className }: ComprehensiveBusinessCRMCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -392,7 +414,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   return (
     <>
       {/* Main Card - COMPLETELY REDESIGNED */}
-      <div className={`relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 backdrop-blur-xl border-2 ${getTierBorderColor()} rounded-2xl overflow-hidden shadow-xl shadow-black/40 hover:shadow-2xl hover:shadow-black/80 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 ${className}`}>
+      <div className={`relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 backdrop-blur-xl border-2 ${getTierBorderColor(business)} rounded-2xl overflow-hidden shadow-xl shadow-black/40 hover:shadow-2xl hover:shadow-black/80 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 ${className}`}>
 
         {/* Main Content */}
         <div className="p-6">
@@ -449,7 +471,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           </div>
           
           {/* Tier-colored Full Width Line - More Visible */}
-          <div className={`h-1 w-full bg-gradient-to-r ${getTierAccentGradient()} rounded-full mb-6 opacity-80`} />
+          <div className={`h-1 w-full bg-gradient-to-r ${getTierAccentGradient(business)} rounded-full mb-6 opacity-80`} />
 
           {/* Stats Grid - Centered Icons & Text */}
           <div className="grid grid-cols-4 gap-5">
