@@ -411,15 +411,6 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     )
   }
 
-  // Get tier-specific accent gradient for decorative line
-  const getTierAccentGradient = () => {
-    if (business.subscription?.tier_name === 'spotlight') return 'from-purple-500/40 via-purple-500 to-purple-500/40'
-    if (business.subscription?.tier_name === 'featured') return 'from-blue-500/40 via-blue-500 to-blue-500/40'
-    if (business.subscription?.tier_name === 'starter') return 'from-slate-500/40 via-slate-500 to-slate-500/40'
-    if (business.subscription?.is_in_free_trial) return 'from-amber-500/40 via-amber-500 to-amber-500/40'
-    return 'from-slate-500/40 via-slate-500 to-slate-500/40'
-  }
-
   const getHeaderColor = () => {
     const colors = {
       'restaurant': 'from-slate-700/90 to-slate-800/90',
