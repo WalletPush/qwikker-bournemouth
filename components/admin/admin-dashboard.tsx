@@ -1399,61 +1399,10 @@ Qwikker Admin Team`
               </div>
             )}
 
-            {/* 🔍 MINIMAL SEARCH - Only for non-live tabs (live tab has enhanced search in header) */}
-            {activeTab !== 'knowledge' && activeTab !== 'analytics' && activeTab !== 'contacts' && activeTab !== 'pricing' && activeTab !== 'setup' && activeTab !== 'live' && (
-              <div className="mb-3 flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="px-2 py-1 w-48 bg-slate-700/30 border border-slate-600/50 rounded text-white text-xs placeholder-slate-500 focus:outline-none focus:border-[#00d083]/50"
-                />
-
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="px-2 py-1 bg-slate-700/30 border border-slate-600/50 rounded text-white text-xs focus:outline-none"
-                >
-                  <option value="all">All Types</option>
-                  <option value="bar">Bar</option>
-                  <option value="cafe">Café</option>
-                  <option value="restaurant">Restaurant</option>
-                  <option value="salon">Salon</option>
-                  <option value="spa">Spa</option>
-                  <option value="gym">Gym</option>
-                  <option value="retail_shop">Retail Shop</option>
-                  <option value="hotel">Hotel</option>
-                  <option value="service_business">Service Business</option>
-                  <option value="other">Other</option>
-                </select>
-
-                <select
-                  value={filterTier}
-                  onChange={(e) => setFilterTier(e.target.value)}
-                  className="px-2 py-1 bg-slate-700/30 border border-slate-600/50 rounded text-white text-xs focus:outline-none"
-                >
-                  <option value="all">All Tiers</option>
-                  <option value="free_trial">Trial</option>
-                  <option value="starter">Starter</option>
-                  <option value="featured">Featured</option>
-                  <option value="spotlight">Spotlight</option>
-                </select>
-
-                {(searchTerm || filterCategory !== 'all' || filterTier !== 'all') && (
-                  <button
-                    onClick={() => {
-                      setSearchTerm('')
-                      setFilterCategory('all')
-                      setFilterTier('all')
-                    }}
-                    className="text-slate-500 hover:text-white text-xs"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            )}
+            {/* 🔍 SEARCH & FILTER - ONLY show on Live Listings tab (has enhanced version in header)
+                REMOVED from: overview, pending, updates, incomplete, expired, rejected
+                (as per user request) */}
+            {activeTab === 'live' && null /* Search already in header above, this section not needed */}
 
             {/* Content */}
             <div className="space-y-6">
