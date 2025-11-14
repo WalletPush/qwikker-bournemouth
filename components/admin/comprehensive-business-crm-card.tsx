@@ -439,11 +439,15 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
         <div className="p-6">
           {/* Header Row */}
           <div className="flex items-start justify-between mb-6">
-            {/* Left: Business Info */}
-              <div className="flex-1 min-w-0">
-                <h3 className="text-2xl font-bold text-white truncate mb-4">
-                  {business.business_name}
-                </h3>
+            {/* Left: Business Info with Avatar */}
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <InitialAvatar 
+                businessName={business.business_name} 
+                className="w-12 h-12 rounded-xl border-2 border-slate-600/50 shadow-lg text-base font-bold flex-shrink-0"
+              />
+              <h3 className="text-2xl font-bold text-white truncate">
+                {business.business_name}
+              </h3>
             </div>
 
             {/* Right: Quick Actions */}
