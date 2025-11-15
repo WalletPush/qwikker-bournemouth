@@ -597,11 +597,19 @@ export async function updateBusinessTier(params: {
       business_id: userId, // CRITICAL: Use user_id (which matches profiles.id)
       tier_id: tierData.id,
       status: selectedTier === 'trial' ? 'trial' : 'active',
-      is_in_free_trial: isTrial,
-      free_trial_start_date: trialStartDate,
-      free_trial_end_date: trialEndDate,
+      is_in_free_trial: isTrial, // FALSE for paid tiers, TRUE for trial
+      // CRITICAL: When upgrading from trial to paid, clear trial dates
+      free_trial_start_date: isTrial ? trialStartDate : null,
+      free_trial_end_date: isTrial ? trialEndDate : null,
       updated_at: now.toISOString()
     }
+    
+    console.log('📝 Subscription data to save:', {
+      tier: selectedTier,
+      isTrial,
+      is_in_free_trial: subscriptionData.is_in_free_trial,
+      free_trial_end_date: subscriptionData.free_trial_end_date
+    })
 
     // Check if subscription exists
     const { data: existingSub, error: checkError } = await supabaseAdmin

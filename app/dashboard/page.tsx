@@ -30,7 +30,7 @@ export default async function DashboardPage() {
     .eq('user_id', data.claims.sub)
     .single()
 
-  // Get subscription data (for accurate tier and trial info)
+  // Get subscription data (for accurate tier and trial info) - GET LATEST ONLY!
   const { data: subscription } = await supabase
     .from('business_subscriptions')
     .select(`
@@ -43,7 +43,9 @@ export default async function DashboardPage() {
       )
     `)
     .eq('business_id', data.claims.sub)
-    .single()
+    .order('updated_at', { ascending: false }) // GET LATEST SUBSCRIPTION
+    .limit(1)
+    .maybeSingle() // Use maybeSingle to handle no subscriptions gracefully
 
   // Get approved menus count for this business
   const { count: approvedMenusCount } = await supabase

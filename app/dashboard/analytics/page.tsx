@@ -20,7 +20,7 @@ export default async function AnalyticsPage() {
     .eq('user_id', data.claims.sub)
     .single()
 
-  // Get subscription data (for tier access control)
+  // Get subscription data (for tier access control) - GET LATEST ONLY!
   const { data: subscription } = await supabase
     .from('business_subscriptions')
     .select(`
@@ -33,7 +33,9 @@ export default async function AnalyticsPage() {
       )
     `)
     .eq('business_id', data.claims.sub)
-    .single()
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   // Add subscription to profile
   const enrichedProfile = {
