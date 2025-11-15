@@ -20,11 +20,32 @@ export default async function AnalyticsPage() {
     .eq('user_id', data.claims.sub)
     .single()
 
-  const actionItemsCount = calculateActionItemsCount(profile)
+  // Get subscription data (for tier access control)
+  const { data: subscription } = await supabase
+    .from('business_subscriptions')
+    .select(`
+      *,
+      subscription_tiers (
+        id,
+        tier_name,
+        tier_display_name,
+        features
+      )
+    `)
+    .eq('business_id', data.claims.sub)
+    .single()
+
+  // Add subscription to profile
+  const enrichedProfile = {
+    ...profile,
+    subscription: subscription || null
+  }
+
+  const actionItemsCount = calculateActionItemsCount(enrichedProfile)
 
   return (
-    <DashboardLayout currentSection="analytics" profile={profile} actionItemsCount={actionItemsCount}>
-      <AnalyticsPageClient profile={profile} />
+    <DashboardLayout currentSection="analytics" profile={enrichedProfile} actionItemsCount={actionItemsCount}>
+      <AnalyticsPageClient profile={enrichedProfile} />
     </DashboardLayout>
   )
 }

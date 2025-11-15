@@ -24,6 +24,21 @@ export default async function SocialWizardRoute() {
     redirect('/onboarding')
   }
 
+  // Get subscription data (for tier access control)
+  const { data: subscription } = await supabase
+    .from('business_subscriptions')
+    .select(`
+      *,
+      subscription_tiers (
+        id,
+        tier_name,
+        tier_display_name,
+        features
+      )
+    `)
+    .eq('business_id', data.claims.sub)
+    .single()
+
   // Get approved menus count for action items
   const { count: approvedMenusCount } = await supabase
     .from('menus')
@@ -33,7 +48,8 @@ export default async function SocialWizardRoute() {
 
   const profile: Profile = {
     ...profileData,
-    approved_menus_count: approvedMenusCount || 0
+    approved_menus_count: approvedMenusCount || 0,
+    subscription: subscription || null
   }
   
   const actionItemsCount = calculateActionItemsCount(profile)
