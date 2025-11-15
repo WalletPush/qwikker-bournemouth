@@ -193,6 +193,9 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     try {
       console.log('🚀 Calling SERVER ACTION: updateBusinessTier')
 
+      // Calculate trial days from trial end date
+      const trialDays = selectedTier === 'trial' ? calculateTrialDays() : undefined
+
       // Call the server action (uses service role, bypasses RLS)
       const result = await updateBusinessTier({
         businessId: business.id,
