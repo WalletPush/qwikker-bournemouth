@@ -92,9 +92,9 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
   const tierDetails = {
     trial: {
       name: 'Free Trial',
-      color: 'border-amber-500',
-      bgColor: 'bg-amber-500/10',
-      textColor: 'text-amber-400',
+      color: 'border-blue-500',
+      bgColor: 'bg-blue-500/10',
+      textColor: 'text-blue-400',
       features: [
         'All Featured features included',
         '90-day free trial period',
@@ -121,9 +121,9 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     },
     featured: {
       name: 'Featured',
-      color: 'border-blue-500',
-      bgColor: 'bg-blue-500/10',
-      textColor: 'text-blue-400',
+      color: 'border-purple-500',
+      bgColor: 'bg-purple-500/10',
+      textColor: 'text-purple-400',
       features: [
         'Everything in Starter, plus:',
         'Priority AI placement',
@@ -135,9 +135,9 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     },
     spotlight: {
       name: 'Spotlight',
-      color: 'border-purple-500',
-      bgColor: 'bg-purple-500/10',
-      textColor: 'text-purple-400',
+      color: 'border-amber-500',
+      bgColor: 'bg-amber-500/10',
+      textColor: 'text-amber-400',
       features: [
         'Everything in Featured, plus:',
         'White-label loyalty system',
