@@ -1036,16 +1036,44 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className={!isPremiumFeatureUnlocked() ? "blur-[8px] select-none pointer-events-none" : ""}>
-            <div className="space-y-3">
-              <div className="bg-slate-700/50 rounded-lg p-3">
-                <p className="font-medium text-white">New Customer Alert</p>
-                <p className="text-sm text-gray-300 mt-1">Sarah just ordered your Daily Special!</p>
+            {isPremiumFeatureUnlocked() ? (
+              // Unlocked: Show action button and recent notifications
+              <div className="space-y-4">
+                <Button asChild className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+                  <Link href="/dashboard/notifications">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Send New Push Notification
+                  </Link>
+                </Button>
+                <div>
+                  <h4 className="text-sm font-medium text-slate-400 mb-2">Recent Notifications</h4>
+                  <div className="space-y-2">
+                    <div className="bg-slate-700/30 rounded-lg p-2 text-xs">
+                      <p className="text-white font-medium">Weekend Special</p>
+                      <p className="text-slate-400">Sent 2 hours ago • 156 delivered</p>
+                    </div>
+                    <div className="bg-slate-700/30 rounded-lg p-2 text-xs">
+                      <p className="text-white font-medium">New Menu Item</p>
+                      <p className="text-slate-400">Sent yesterday • 243 delivered</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="bg-slate-700/50 rounded-lg p-3">
-                <p className="font-medium text-white">Loyalty Milestone</p>
-                <p className="text-sm text-gray-300 mt-1">Mike reached 10 visits!</p>
+            ) : (
+              // Locked: Show placeholder content
+              <div className="space-y-3">
+                <div className="bg-slate-700/50 rounded-lg p-3">
+                  <p className="font-medium text-white">New Customer Alert</p>
+                  <p className="text-sm text-gray-300 mt-1">Sarah just ordered your Daily Special!</p>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-3">
+                  <p className="font-medium text-white">Loyalty Milestone</p>
+                  <p className="text-sm text-gray-300 mt-1">Mike reached 10 visits!</p>
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
           {/* Only show lock overlay if NOT Spotlight */}
           {!isPremiumFeatureUnlocked() && (
