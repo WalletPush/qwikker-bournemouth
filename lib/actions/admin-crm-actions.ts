@@ -121,7 +121,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       console.log('💰 OFFERS ERROR:', error)
     }
 
-    // Fetch subscriptions data
+    // Fetch subscriptions data (GET LATEST ONLY!)
     let subscriptionsByBusiness = new Map()
     try {
       const { data: subscriptions, error: subError } = await supabaseAdmin
@@ -133,9 +133,11 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
           is_in_free_trial,
           free_trial_start_date,
           free_trial_end_date,
-          current_period_end
+          current_period_end,
+          updated_at
         `)
         .in('business_id', userIds) // Use user_ids, not business_ids!
+        .order('updated_at', { ascending: false }) // GET LATEST SUBSCRIPTION FIRST!
 
       if (subError) {
         console.log('⚠️ Error fetching subscriptions:', subError)
@@ -151,22 +153,28 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
 
         const tierMap = new Map(tiers?.map(t => [t.id, t]) || [])
 
-        // Map subscriptions by user_id, then we'll match to business.user_id
+        // Map subscriptions by user_id (ONLY TAKE FIRST/LATEST ONE per user!)
         const subscriptionsByUserId = new Map()
         subscriptions.forEach(sub => {
           const tier = tierMap.get(sub.tier_id)
           if (tier) {
-            subscriptionsByUserId.set(sub.business_id, { // sub.business_id is actually user_id
-              tier_id: sub.tier_id,
-              tier_name: tier.tier_name,
-              tier_display_name: tier.tier_display_name,
-              status: sub.status,
-              is_in_free_trial: sub.is_in_free_trial,
-              free_trial_start_date: sub.free_trial_start_date,
-              free_trial_end_date: sub.free_trial_end_date,
-              current_period_end: sub.current_period_end
-            })
-            console.log('✅ Loaded subscription for user_id:', sub.business_id, tier.tier_display_name)
+            // Only set if not already set (first one is latest due to ORDER BY updated_at DESC)
+            if (!subscriptionsByUserId.has(sub.business_id)) {
+              subscriptionsByUserId.set(sub.business_id, { // sub.business_id is actually user_id
+                tier_id: sub.tier_id,
+                tier_name: tier.tier_name,
+                tier_display_name: tier.tier_display_name,
+                status: sub.status,
+                is_in_free_trial: sub.is_in_free_trial,
+                free_trial_start_date: sub.free_trial_start_date,
+                free_trial_end_date: sub.free_trial_end_date,
+                current_period_end: sub.current_period_end,
+                updated_at: sub.updated_at
+              })
+              console.log('✅ Loaded LATEST subscription for user_id:', sub.business_id, tier.tier_display_name, 'updated:', sub.updated_at)
+            } else {
+              console.log('⏩ Skipping older subscription for user_id:', sub.business_id, 'tier:', tier.tier_display_name, 'updated:', sub.updated_at)
+            }
           }
         })
         
