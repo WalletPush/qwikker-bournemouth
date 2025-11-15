@@ -22,6 +22,18 @@ interface ImprovedDashboardHomeProps {
     business_name?: string
     business_type?: string
     business_town?: string
+    subscription?: {
+      tier_id: string
+      status: string
+      is_in_free_trial: boolean
+      free_trial_start_date: string | null
+      free_trial_end_date: string | null
+      subscription_tiers?: {
+        tier_name: string
+        tier_display_name: string
+        features: any
+      }
+    } | null
     [key: string]: any
   }
 }
@@ -60,14 +72,22 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Calculate trial days
+  // Calculate trial days - USE SUBSCRIPTION DATA FIRST, fallback to legacy
   useEffect(() => {
-    if (profile?.created_at) {
+    if (profile?.subscription?.is_in_free_trial && profile?.subscription?.free_trial_end_date) {
+      // Use accurate subscription trial data
+      const endDate = new Date(profile.subscription.free_trial_end_date)
+      const now = new Date()
+      const diffTime = endDate.getTime() - now.getTime()
+      const daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
+      setTrialDaysLeft(daysLeft)
+    } else if (profile?.created_at) {
+      // Fallback to legacy calculation (90 days from created_at)
       const createdDate = new Date(profile.created_at)
       const now = new Date()
       const diffTime = now.getTime() - createdDate.getTime()
       const daysSinceSignup = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-      const daysLeft = Math.max(0, 120 - daysSinceSignup)
+      const daysLeft = Math.max(0, 90 - daysSinceSignup)
       setTrialDaysLeft(daysLeft)
     }
   }, [profile])
@@ -338,11 +358,25 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   }
 
   const statusDisplay = getStatusDisplay()
-  const plan = profile?.plan || 'starter'
-  const isFreeTrial = plan === 'featured' && trialDaysLeft > 0
-  const planName = isFreeTrial ? 'Featured (Free Trial)' : 
-                  plan === 'starter' ? 'Starter' : 
-                  plan.charAt(0).toUpperCase() + plan.slice(1)
+  
+  // Get plan name from subscription first, fallback to profile
+  const getTierInfo = () => {
+    if (profile?.subscription?.subscription_tiers) {
+      return {
+        name: profile.subscription.subscription_tiers.tier_display_name,
+        isFreeTrial: profile.subscription.is_in_free_trial
+      }
+    }
+    // Fallback to legacy profile.plan
+    const plan = profile?.plan || 'starter'
+    const isFreeTrial = plan === 'featured' && trialDaysLeft > 0
+    const planName = plan === 'starter' ? 'Starter' : 
+                    plan.charAt(0).toUpperCase() + plan.slice(1)
+    return { name: planName, isFreeTrial }
+  }
+  
+  const { name: planName, isFreeTrial } = getTierInfo()
+  const displayPlanName = isFreeTrial ? `${planName} (Free Trial)` : planName
 
   const handleSubmitForReview = async () => {
     console.log('🚀 DASHBOARD: handleSubmitForReview called', { 
@@ -609,7 +643,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             <div className="p-4 bg-slate-700/30 rounded-lg border border-slate-600/50">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-semibold text-[#00d083]">{planName}</p>
+                  <p className="font-semibold text-[#00d083]">{displayPlanName}</p>
                   <p className="text-sm text-slate-400">
                     {isFreeTrial ? `${trialDaysLeft} days remaining` : 'Active subscription'}
                   </p>

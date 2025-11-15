@@ -30,6 +30,21 @@ export default async function DashboardPage() {
     .eq('user_id', data.claims.sub)
     .single()
 
+  // Get subscription data (for accurate tier and trial info)
+  const { data: subscription } = await supabase
+    .from('business_subscriptions')
+    .select(`
+      *,
+      subscription_tiers (
+        id,
+        tier_name,
+        tier_display_name,
+        features
+      )
+    `)
+    .eq('business_id', data.claims.sub)
+    .single()
+
   // Get approved menus count for this business
   const { count: approvedMenusCount } = await supabase
     .from('menus')
@@ -37,10 +52,11 @@ export default async function DashboardPage() {
     .eq('business_id', profile?.id)
     .eq('status', 'approved')
 
-  // Add menus count to profile for action items logic
+  // Add menus count and subscription to profile for action items logic
   const enrichedProfile = {
     ...profile,
-    approved_menus_count: approvedMenusCount || 0
+    approved_menus_count: approvedMenusCount || 0,
+    subscription: subscription || null
   }
 
   // Calculate action items count using shared utility
