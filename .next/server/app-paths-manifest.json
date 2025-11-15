@@ -10,14 +10,18 @@
   "/api/admin/sync/bulk-sync/route": "app/api/admin/sync/bulk-sync/route.js",
   "/api/admin/sync/health/route": "app/api/admin/sync/health/route.js",
   "/api/menus/list/route": "app/api/menus/list/route.js",
+  "/api/user/feature-access/route": "app/api/user/feature-access/route.js",
   "/dashboard/action-items/page": "app/dashboard/action-items/page.js",
+  "/dashboard/analytics/page": "app/dashboard/analytics/page.js",
   "/dashboard/events/page": "app/dashboard/events/page.js",
   "/dashboard/files/page": "app/dashboard/files/page.js",
   "/dashboard/loyalty/page": "app/dashboard/loyalty/page.js",
+  "/dashboard/notifications/page": "app/dashboard/notifications/page.js",
   "/dashboard/offers/page": "app/dashboard/offers/page.js",
   "/dashboard/page": "app/dashboard/page.js",
   "/dashboard/profile/page": "app/dashboard/profile/page.js",
   "/dashboard/secret-menu/page": "app/dashboard/secret-menu/page.js",
+  "/dashboard/settings/page": "app/dashboard/settings/page.js",
   "/dashboard/social-wizard/page": "app/dashboard/social-wizard/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js"
 }

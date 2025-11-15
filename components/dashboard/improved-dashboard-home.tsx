@@ -378,6 +378,16 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   const { name: planName, isFreeTrial } = getTierInfo()
   const displayPlanName = isFreeTrial ? `${planName} (Free Trial)` : planName
 
+  // Check if premium features are unlocked (ONLY Spotlight gets them)
+  const isPremiumFeatureUnlocked = () => {
+    const tierName = profile?.subscription?.subscription_tiers?.tier_name
+    // ONLY Spotlight tier unlocks premium features
+    if (tierName === 'spotlight') return true
+    // Fallback: check legacy plan field
+    if (profile?.plan === 'spotlight' || profile?.plan === 'pro') return true
+    return false
+  }
+
   const handleSubmitForReview = async () => {
     console.log('🚀 DASHBOARD: handleSubmitForReview called', { 
       hasUserId: !!profile?.user_id, 
@@ -997,19 +1007,22 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </div>
             </div>
           </CardContent>
-          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                </svg>
+          {/* Only show lock overlay if NOT Spotlight */}
+          {!isPremiumFeatureUnlocked() && (
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="font-semibold text-white mb-2">Unlock Analytics</p>
+                <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+                  <Link href="/dashboard/settings">Upgrade Plan</Link>
+                </Button>
               </div>
-              <p className="font-semibold text-white mb-2">Unlock Analytics</p>
-              <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
-                <Link href="/dashboard/settings">Upgrade Plan</Link>
-              </Button>
             </div>
-          </div>
+          )}
         </Card>
 
         {/* Push Notifications (Locked) */}
@@ -1034,19 +1047,22 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </div>
             </div>
           </CardContent>
-          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                </svg>
+          {/* Only show lock overlay if NOT Spotlight */}
+          {!isPremiumFeatureUnlocked() && (
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="font-semibold text-white mb-2">Unlock Push Notifications</p>
+                <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+                  <Link href="/dashboard/settings">Upgrade Plan</Link>
+                </Button>
               </div>
-              <p className="font-semibold text-white mb-2">Unlock Push Notifications</p>
-              <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
-                <Link href="/dashboard/settings">Upgrade Plan</Link>
-              </Button>
             </div>
-          </div>
+          )}
         </Card>
 
         {/* Loyalty Cards Preview (Locked) */}
@@ -1077,19 +1093,22 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </div>
             </div>
           </CardContent>
-          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                </svg>
+          {/* Only show lock overlay if NOT Spotlight */}
+          {!isPremiumFeatureUnlocked() && (
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="font-semibold text-white mb-2">Unlock Loyalty Cards</p>
+                <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+                  <Link href="/dashboard/settings">Upgrade Plan</Link>
+                </Button>
               </div>
-              <p className="font-semibold text-white mb-2">Unlock Loyalty Cards</p>
-              <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
-                <Link href="/dashboard/settings">Upgrade Plan</Link>
-              </Button>
             </div>
-          </div>
+          )}
         </Card>
 
         {/* Referral Program Card */}
