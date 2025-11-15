@@ -25,16 +25,28 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
   const getCurrentTier = (): PlanTier => {
     console.log('🔍 Getting current tier:', {
       subscription_tier_name: business?.subscription?.tier_name,
+      is_in_free_trial: business?.subscription?.is_in_free_trial,
+      trial_days_remaining: business?.trial_days_remaining,
       profile_plan: business?.plan
     })
     
+    // Check if on free trial FIRST (subscription OR legacy)
+    if (business?.subscription?.is_in_free_trial || 
+        (business?.trial_days_remaining !== null && business?.trial_days_remaining > 0)) {
+      return 'trial'
+    }
+    
+    // Then check subscription tier
     if (business?.subscription?.tier_name) {
       if (business.subscription.tier_name === 'free') return 'trial'
       return business.subscription.tier_name as PlanTier
     }
+    
+    // Fallback to profile plan
     if (business?.plan) {
       return business.plan as PlanTier
     }
+    
     return 'starter'
   }
 
