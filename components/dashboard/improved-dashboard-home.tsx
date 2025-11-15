@@ -987,7 +987,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               Analytics Overview
             </CardTitle>
           </CardHeader>
-          <CardContent className="blur-[8px] select-none pointer-events-none">
+          <CardContent className={!isPremiumFeatureUnlocked() ? "blur-[8px] select-none pointer-events-none" : ""}>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-[#00d083]">247</p>
@@ -1035,7 +1035,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               Push Notifications
             </CardTitle>
           </CardHeader>
-          <CardContent className="blur-[8px] select-none pointer-events-none">
+          <CardContent className={!isPremiumFeatureUnlocked() ? "blur-[8px] select-none pointer-events-none" : ""}>
             <div className="space-y-3">
               <div className="bg-slate-700/50 rounded-lg p-3">
                 <p className="font-medium text-white">New Customer Alert</p>
@@ -1075,7 +1075,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               Loyalty Card Preview
             </CardTitle>
           </CardHeader>
-          <CardContent className="blur-[8px] select-none pointer-events-none">
+          <CardContent className={!isPremiumFeatureUnlocked() ? "blur-[8px] select-none pointer-events-none" : ""}>
             <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-lg p-4 text-white">
               <h4 className="font-bold">{businessName}</h4>
               <p className="text-sm mt-1">Collect 10 stamps, get a free coffee!</p>
