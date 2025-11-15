@@ -584,8 +584,8 @@ export async function updateBusinessTier(params: {
 
     console.log('✅ Profile updated')
 
-    // 4. Upsert business_subscriptions
-    const subscriptionUpdate: any = {
+    // 4. Update or Insert business_subscriptions (manual check since no unique constraint)
+    const subscriptionData: any = {
       business_id: userId, // CRITICAL: Use user_id (which matches profiles.id)
       tier_id: tierData.id,
       status: selectedTier === 'trial' ? 'trial' : 'active',
@@ -595,18 +595,38 @@ export async function updateBusinessTier(params: {
       updated_at: now.toISOString()
     }
 
-    const { error: subscriptionError } = await supabaseAdmin
+    // Check if subscription exists
+    const { data: existingSub, error: checkError } = await supabaseAdmin
       .from('business_subscriptions')
-      .upsert(subscriptionUpdate, {
-        onConflict: 'business_id'
-      })
+      .select('id')
+      .eq('business_id', userId)
+      .maybeSingle()
+
+    let subscriptionError
+
+    if (existingSub) {
+      // Update existing subscription
+      console.log('✅ Updating existing subscription:', existingSub.id)
+      const { error } = await supabaseAdmin
+        .from('business_subscriptions')
+        .update(subscriptionData)
+        .eq('business_id', userId)
+      subscriptionError = error
+    } else {
+      // Insert new subscription
+      console.log('✅ Creating new subscription')
+      const { error } = await supabaseAdmin
+        .from('business_subscriptions')
+        .insert(subscriptionData)
+      subscriptionError = error
+    }
 
     if (subscriptionError) {
       console.error('❌ Subscription update failed:', subscriptionError)
       return { success: false, error: subscriptionError.message }
     }
 
-    console.log('✅ Subscription updated')
+    console.log('✅ Subscription updated successfully')
 
     return {
       success: true,
