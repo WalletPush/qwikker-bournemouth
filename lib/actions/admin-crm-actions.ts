@@ -524,3 +524,100 @@ export async function recordPayment(
     return { success: false, error: 'Internal server error' }
   }
 }
+
+/**
+ * Update business tier and features (SERVER-SIDE with service role)
+ * Bypasses RLS to avoid infinite recursion on city_admins policy
+ */
+export async function updateBusinessTier(params: {
+  businessId: string
+  userId: string
+  city: string
+  selectedTier: 'trial' | 'starter' | 'featured' | 'spotlight'
+  features: {
+    social_wizard: boolean
+    loyalty_cards: boolean
+    analytics: boolean
+    push_notifications: boolean
+  }
+  trialDays?: number
+}) {
+  const supabaseAdmin = createAdminClient()
+  const { businessId, userId, city, selectedTier, features, trialDays } = params
+
+  try {
+    console.log('🚀 SERVER ACTION: updateBusinessTier', { businessId, userId, city, selectedTier, features, trialDays })
+
+    // 1. Get tier ID
+    const { data: tierData, error: tierError } = await supabaseAdmin
+      .from('subscription_tiers')
+      .select('id')
+      .eq('tier_name', selectedTier === 'trial' ? 'starter' : selectedTier)
+      .single()
+
+    if (tierError || !tierData) {
+      console.error('❌ Tier lookup failed:', tierError)
+      return { success: false, error: `Tier '${selectedTier}' not found` }
+    }
+
+    console.log('✅ Tier ID found:', tierData.id)
+
+    // 2. Calculate trial dates if needed
+    const now = new Date()
+    const isTrial = selectedTier === 'trial'
+    const trialStartDate = isTrial ? now.toISOString() : null
+    const trialEndDate = isTrial ? new Date(now.getTime() + (trialDays || 90) * 24 * 60 * 60 * 1000).toISOString() : null
+
+    // 3. Update business_profiles (plan only, no features column)
+    const { error: profileError } = await supabaseAdmin
+      .from('business_profiles')
+      .update({
+        plan: selectedTier === 'trial' ? 'featured' : selectedTier,
+        updated_at: now.toISOString()
+      })
+      .eq('id', businessId)
+
+    if (profileError) {
+      console.error('❌ Profile update failed:', profileError)
+      return { success: false, error: profileError.message }
+    }
+
+    console.log('✅ Profile updated')
+
+    // 4. Upsert business_subscriptions
+    const subscriptionUpdate: any = {
+      business_id: userId, // CRITICAL: Use user_id (which matches profiles.id)
+      tier_id: tierData.id,
+      status: selectedTier === 'trial' ? 'trial' : 'active',
+      is_in_free_trial: isTrial,
+      free_trial_start_date: trialStartDate,
+      free_trial_end_date: trialEndDate,
+      updated_at: now.toISOString()
+    }
+
+    const { error: subscriptionError } = await supabaseAdmin
+      .from('business_subscriptions')
+      .upsert(subscriptionUpdate, {
+        onConflict: 'business_id'
+      })
+
+    if (subscriptionError) {
+      console.error('❌ Subscription update failed:', subscriptionError)
+      return { success: false, error: subscriptionError.message }
+    }
+
+    console.log('✅ Subscription updated')
+
+    return {
+      success: true,
+      message: `Business tier updated to ${selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)}`
+    }
+
+  } catch (error: any) {
+    console.error('❌ updateBusinessTier error:', error)
+    return {
+      success: false,
+      error: error?.message || 'Unknown error occurred'
+    }
+  }
+}

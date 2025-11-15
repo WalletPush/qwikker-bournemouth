@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { createClient } from '@/lib/supabase/client'
+import { updateBusinessTier } from '@/lib/actions/admin-crm-actions'
 
 interface TierManagementCardProps {
   business: any
@@ -185,144 +185,35 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
   }
 
   const handleSave = async () => {
+    if (!selectedTier) return
+    
     setIsSaving(true)
-    const supabase = createClient()
-
+    setErrorMessage(null)
+    
     try {
-      console.log('🔄 Starting tier update...', { businessId: business.id, selectedTier, features })
+      console.log('🚀 Calling SERVER ACTION: updateBusinessTier')
 
-      // Step 1: Get tier ID from subscription_tiers
-      // For trial, use 'starter' tier but mark as trial in subscription
-      const tierName = selectedTier === 'trial' ? 'starter' : selectedTier
-      const { data: tierData, error: tierError } = await supabase
-        .from('subscription_tiers')
-        .select('id')
-        .eq('tier_name', tierName)
-        .single()
-
-      if (tierError) {
-        console.error('❌ Error fetching tier:', {
-          tierError,
-          tierName,
-          selectedTier,
-          message: `Could not find tier: ${tierName}`
-        })
-        throw new Error(`Could not find tier: ${tierName}. Please ensure the subscription_tiers table has this tier.`)
-      }
-
-      console.log('✅ Found tier:', { tierName, tierId: tierData.id })
-
-      // Step 2: Update business_profiles with plan only (features are managed separately)
-      const profileUpdate: any = {
-        plan: selectedTier,
-        updated_at: new Date().toISOString()
-      }
-
-      const { error: profileError, data: profileData } = await supabase
-        .from('business_profiles')
-        .update(profileUpdate)
-        .eq('id', business.id)
-        .select()
-
-      if (profileError) {
-        console.error('❌ Profile update error:', {
-          error: profileError,
-          message: profileError.message,
-          details: profileError.details,
-          hint: profileError.hint,
-          code: profileError.code,
-          profileUpdate
-        })
-        throw profileError
-      }
-
-      console.log('✅ Profile updated successfully:', profileData)
-
-      // Step 3: Update or create business_subscriptions
-      // CRITICAL: Use user_id (which matches profiles.id), NOT business.id!
-      const businessIdForSubscription = business.user_id || business.id
-      
-      console.log('🔑 Subscription IDs:', {
-        business_id: business.id,
-        user_id: business.user_id,
-        using: businessIdForSubscription
+      // Call the server action (uses service role, bypasses RLS)
+      const result = await updateBusinessTier({
+        businessId: business.id,
+        userId: business.user_id || business.id,
+        city: business.city,
+        selectedTier,
+        features,
+        trialDays
       })
 
-      const subscriptionUpdate: any = {
-        business_id: businessIdForSubscription, // Use user_id for profiles FK
-        tier_id: tierData.id,
-        status: selectedTier === 'trial' ? 'trial' : 'active',
-        updated_at: new Date().toISOString()
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update tier')
       }
 
-      // Handle trial-specific fields
-      if (selectedTier === 'trial') {
-        const startDate = trialStartDate || new Date().toISOString()
-        const endDate = trialEndDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
-        
-        subscriptionUpdate.is_in_free_trial = true
-        subscriptionUpdate.free_trial_start_date = startDate
-        subscriptionUpdate.free_trial_end_date = endDate
-      } else {
-        subscriptionUpdate.is_in_free_trial = false
-        subscriptionUpdate.free_trial_start_date = null
-        subscriptionUpdate.free_trial_end_date = null
-      }
-
-      // Check if subscription exists, then update or insert
-      const { data: existingSub, error: checkError } = await supabase
-        .from('business_subscriptions')
-        .select('id')
-        .eq('business_id', businessIdForSubscription)
-        .single()
-
-      let subscriptionError
-
-      if (existingSub) {
-        // Update existing subscription
-        const { error } = await supabase
-          .from('business_subscriptions')
-          .update(subscriptionUpdate)
-          .eq('business_id', business.id)
-        subscriptionError = error
-      } else {
-        // Insert new subscription
-        const { error } = await supabase
-          .from('business_subscriptions')
-          .insert(subscriptionUpdate)
-        subscriptionError = error
-      }
-
-      if (subscriptionError) {
-        console.error('❌ Subscription update error (full object):', subscriptionError)
-        console.error('❌ Subscription update error (details):', {
-          code: subscriptionError.code,
-          message: subscriptionError.message,
-          details: subscriptionError.details,
-          hint: subscriptionError.hint,
-          fullError: JSON.stringify(subscriptionError, null, 2)
-        })
-        console.error('❌ Subscription data that failed:', subscriptionUpdate)
-        throw subscriptionError
-      }
-
-      console.log('✅ Subscription updated')
-      console.log('🎉 Tier updated successfully:', { tier: selectedTier, features })
+      console.log('✅ SERVER ACTION succeeded:', result)
       setShowSuccessModal(true)
       setTimeout(() => {
         onUpdate()
       }, 1500)
     } catch (error: any) {
-      console.error('❌ Error updating tier (full object):', error)
-      console.error('❌ Error updating tier (details):', {
-        errorType: typeof error,
-        errorConstructor: error?.constructor?.name,
-        message: error?.message,
-        code: error?.code,
-        details: error?.details,
-        hint: error?.hint,
-        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
-      })
+      console.error('❌ Error updating tier:', error)
       setErrorMessage(error?.message || 'Unknown error occurred')
       setShowErrorModal(true)
     } finally {
