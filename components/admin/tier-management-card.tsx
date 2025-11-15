@@ -294,12 +294,15 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
       }
 
       if (subscriptionError) {
-        console.error('❌ Subscription update error:', {
+        console.error('❌ Subscription update error (full object):', subscriptionError)
+        console.error('❌ Subscription update error (details):', {
           code: subscriptionError.code,
           message: subscriptionError.message,
           details: subscriptionError.details,
-          hint: subscriptionError.hint
+          hint: subscriptionError.hint,
+          fullError: JSON.stringify(subscriptionError, null, 2)
         })
+        console.error('❌ Subscription data that failed:', subscriptionUpdate)
         throw subscriptionError
       }
 
@@ -310,12 +313,15 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         onUpdate()
       }, 1500)
     } catch (error: any) {
-      console.error('❌ Error updating tier:', {
-        error,
+      console.error('❌ Error updating tier (full object):', error)
+      console.error('❌ Error updating tier (details):', {
+        errorType: typeof error,
+        errorConstructor: error?.constructor?.name,
         message: error?.message,
         code: error?.code,
         details: error?.details,
-        hint: error?.hint
+        hint: error?.hint,
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
       })
       setErrorMessage(error?.message || 'Unknown error occurred')
       setShowErrorModal(true)
