@@ -137,8 +137,25 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
     const featureKey = featureMap[featureId]
     if (!featureKey) return true // Not a premium feature
 
-    // Check if feature is explicitly enabled or if user is on Spotlight
-    return profile?.features?.[featureKey] === true || profile?.plan === 'spotlight' || profile?.plan === 'pro'
+    // Check subscription tier and trial status
+    const tierName = profile?.subscription?.subscription_tiers?.tier_name
+    const isInTrial = profile?.subscription?.is_in_free_trial
+    
+    // All features unlocked for Spotlight tier
+    if (tierName === 'spotlight') return true
+    
+    // All features unlocked during free trial (which includes Featured features)
+    if (isInTrial) return true
+    
+    // Featured tier gets some features (not all - no social_wizard)
+    if (tierName === 'featured') {
+      return featureKey !== 'social_wizard' // Featured has analytics, loyalty, push_notifications
+    }
+    
+    // Fallback: check legacy plan field
+    if (profile?.plan === 'spotlight' || profile?.plan === 'pro') return true
+    
+    return false
   }
 
   return (
