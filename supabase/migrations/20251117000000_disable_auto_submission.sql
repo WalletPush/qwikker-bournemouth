@@ -1,9 +1,10 @@
 -- CRITICAL FIX: Disable automatic submission to pending_review
 -- Businesses MUST manually click "Submit for Review" button
 
--- Drop existing trigger and function
+-- Drop existing trigger and function (handle both possible trigger names)
 DROP TRIGGER IF EXISTS update_profile_completion ON business_profiles;
-DROP FUNCTION IF EXISTS calculate_profile_completion();
+DROP TRIGGER IF EXISTS trigger_update_completion_percentage ON business_profiles;
+DROP FUNCTION IF EXISTS calculate_profile_completion() CASCADE;
 
 -- Recreate function WITHOUT auto-submission logic
 CREATE OR REPLACE FUNCTION calculate_profile_completion()
@@ -71,8 +72,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Recreate trigger
-CREATE TRIGGER update_profile_completion
+-- Recreate trigger (using the original trigger name from your database)
+CREATE TRIGGER trigger_update_completion_percentage
   BEFORE UPDATE ON business_profiles
   FOR EACH ROW
   EXECUTE FUNCTION calculate_profile_completion();
