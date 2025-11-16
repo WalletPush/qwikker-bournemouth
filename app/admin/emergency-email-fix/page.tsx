@@ -1,17 +1,31 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import Link from 'next/link'
 
 export default function EmergencyEmailFixPage() {
+  const searchParams = useSearchParams()
   const [userId, setUserId] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [oldEmail, setOldEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
+
+  // Pre-fill from URL parameters
+  useEffect(() => {
+    const userIdParam = searchParams.get('userId')
+    const newEmailParam = searchParams.get('newEmail')
+    const oldEmailParam = searchParams.get('oldEmail')
+    
+    if (userIdParam) setUserId(userIdParam)
+    if (newEmailParam) setNewEmail(newEmailParam)
+    if (oldEmailParam) setOldEmail(oldEmailParam)
+  }, [searchParams])
 
   const handleFix = async () => {
     if (!userId || !newEmail) {
@@ -52,11 +66,18 @@ export default function EmergencyEmailFixPage() {
   return (
     <div className="min-h-screen bg-slate-950 p-8">
       <div className="max-w-2xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">🚨 Emergency Email Fix</h1>
-          <p className="text-slate-400">
-            Use this tool to fix a user's login email when they accidentally changed it and can no longer log in.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">🚨 Emergency Email Fix</h1>
+            <p className="text-slate-400">
+              Use this tool to fix a user's login email when they accidentally changed it and can no longer log in.
+            </p>
+          </div>
+          <Link href="/admin/find-user">
+            <Button variant="outline" className="border-blue-500 text-blue-400 hover:bg-blue-500/10">
+              🔍 Find User
+            </Button>
+          </Link>
         </div>
 
         <Card className="bg-slate-900 border-slate-800">
