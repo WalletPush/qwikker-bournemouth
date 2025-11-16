@@ -296,21 +296,16 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   const totalItems = requiredTodos.length + optionalTodos.length + submissionTodos.length
 
   // Show completion modal when all required PROFILE fields are completed and status is still incomplete
+  // Modal shows EVERY time they visit Action Items page until they submit
   useEffect(() => {
     if (profile?.status === 'incomplete' && requiredTodos.length === 0 && !showCompletionModal) {
-      // Check if we've already shown the completion modal for this user
-      const hasShownModal = localStorage.getItem(`completion-modal-shown-${profile.user_id}`)
-      
-      if (!hasShownModal) {
-        // Small delay to let the page render first
-        const timer = setTimeout(() => {
-          setShowCompletionModal(true)
-          localStorage.setItem(`completion-modal-shown-${profile.user_id}`, 'true')
-        }, 1000)
-        return () => clearTimeout(timer)
-      }
+      // Small delay to let the page render first
+      const timer = setTimeout(() => {
+        setShowCompletionModal(true)
+      }, 500)
+      return () => clearTimeout(timer)
     }
-  }, [profile?.status, profile?.user_id, totalRequiredItems, showCompletionModal])
+  }, [profile?.status, profile?.user_id, requiredTodos.length, showCompletionModal])
 
   const handleSubmitListing = async () => {
     if (!profile?.user_id || !isReadyToSubmit || isSubmitting) return
@@ -321,8 +316,6 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     try {
       const result = await submitBusinessForReview(profile.user_id)
       if (result.success) {
-        // Clear the completion modal flag since they've successfully submitted
-        localStorage.removeItem(`completion-modal-shown-${profile.user_id}`)
         setShowSuccessModal(true) // Show success modal
         // Refresh after a short delay to let user see the success message
         setTimeout(() => {
