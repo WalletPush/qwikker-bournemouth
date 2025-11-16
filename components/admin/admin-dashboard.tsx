@@ -1184,9 +1184,8 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
-                            // Check BOTH subscription AND legacy trial data
-                            return crm?.subscription?.is_in_free_trial || 
-                                   (crm?.trial_days_remaining !== null && crm?.trial_days_remaining > 0)
+                            // ONLY check subscription data, ignore legacy trial_days_remaining
+                            return crm?.subscription?.is_in_free_trial
                           }).length}
                         </p>
                       </div>
