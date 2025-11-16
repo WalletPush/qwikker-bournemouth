@@ -298,11 +298,20 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   // Show completion modal when all required PROFILE fields are completed and status is still incomplete
   // Modal shows once per session (until browser close/refresh)
   useEffect(() => {
+    console.log('🔍 MODAL CHECK:', {
+      status: profile?.status,
+      requiredTodosLength: requiredTodos.length,
+      showCompletionModal,
+      sessionKey: `completion-modal-shown-${profile?.user_id}`,
+      hasShownThisSession: sessionStorage.getItem(`completion-modal-shown-${profile?.user_id}`)
+    })
+    
     if (profile?.status === 'incomplete' && requiredTodos.length === 0 && !showCompletionModal) {
       // Check if we've already shown the modal in this session
       const hasShownThisSession = sessionStorage.getItem(`completion-modal-shown-${profile.user_id}`)
       
       if (!hasShownThisSession) {
+        console.log('✅ SHOWING MODAL - All conditions met!')
         // Small delay to let the page render first
         const timer = setTimeout(() => {
           setShowCompletionModal(true)
@@ -310,7 +319,11 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
           sessionStorage.setItem(`completion-modal-shown-${profile.user_id}`, 'true')
         }, 500)
         return () => clearTimeout(timer)
+      } else {
+        console.log('⏭️ MODAL SKIPPED - Already shown this session')
       }
+    } else {
+      console.log('❌ MODAL CONDITIONS NOT MET')
     }
   }, [profile?.status, profile?.user_id, requiredTodos.length, showCompletionModal])
 
@@ -715,33 +728,47 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
               </div>
             </div>
             
-            {/* Submit Button */}
-            <Button 
-              onClick={() => {
-                if (isReadyToSubmit) {
-                  setShowCompletionModal(true)
-                }
-              }}
-              disabled={!isReadyToSubmit || isSubmitting}
-              size="lg"
-              className={`${
-                isReadyToSubmit 
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] border-2 border-green-400/30' 
-                  : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-              }`}
-            >
-              {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Submitting...
-                </span>
-              ) : (
-                'Submit for Review'
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              {isReadyToSubmit && (
+                <Link href="/dashboard/profile/preview">
+                  <Button 
+                    variant="outline"
+                    size="lg"
+                    className="border-2 border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-all"
+                  >
+                    Preview Listing
+                  </Button>
+                </Link>
               )}
-            </Button>
+              
+              <Button 
+                onClick={() => {
+                  if (isReadyToSubmit) {
+                    setShowCompletionModal(true)
+                  }
+                }}
+                disabled={!isReadyToSubmit || isSubmitting}
+                size="lg"
+                className={`${
+                  isReadyToSubmit 
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] border-2 border-green-400/30' 
+                    : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Submitting...
+                  </span>
+                ) : (
+                  'Submit for Review'
+                )}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
