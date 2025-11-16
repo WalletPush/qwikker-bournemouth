@@ -276,6 +276,13 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       if (business.subscription) {
         const subscription = business.subscription
         
+        console.log(`🔍 Trial calculation for ${business.business_name}:`, {
+          is_in_free_trial: subscription.is_in_free_trial,
+          status: subscription.status,
+          free_trial_end_date: subscription.free_trial_end_date,
+          tier_name: subscription.tier_name
+        })
+        
         // Check if on active trial
         if (subscription.is_in_free_trial && subscription.free_trial_end_date) {
           const trialEndDate = new Date(subscription.free_trial_end_date)
@@ -293,6 +300,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
           }
         } else if (subscription.status === 'active' || subscription.status === 'trial') {
           // Paid subscription - not on trial (or trial tier without free trial flag)
+          console.log(`✅ ${business.business_name}: Setting trial_days_remaining=null (status=${subscription.status})`)
           trial_status = 'upgraded'
           trial_days_remaining = null // CRITICAL: Set to null to prevent "Free Trial" display
           billing_starts_date = subscription.current_period_end || null
