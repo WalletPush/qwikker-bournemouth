@@ -1690,12 +1690,13 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <TierManagementCard 
                   business={business} 
                   onUpdate={() => {
-                    // Close modal immediately to show the updated card
+                    // Close modal and force full page reload to get fresh data
                     setIsExpanded(false)
-                    // Then refresh the data
+                    // Use window.location.reload() instead of router.refresh() for now
+                    // router.refresh() doesn't always invalidate server component cache
                     setTimeout(() => {
-                      router.refresh()
-                    }, 300)
+                      window.location.reload()
+                    }, 500)
                   }} 
                 />
                 
