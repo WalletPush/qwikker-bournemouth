@@ -522,7 +522,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Tier</span>
-              <span className={`font-semibold text-xl leading-tight block ${
+              <span className={`font-bold text-lg leading-tight block ${
                 // ONLY check subscription data, ignore legacy trial_days_remaining
                 business.subscription?.is_in_free_trial ? 'text-blue-400' :
                 business.subscription?.tier_display_name === 'Spotlight' ? 'text-amber-400' :
