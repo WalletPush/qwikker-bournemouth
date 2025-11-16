@@ -150,6 +150,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
   }
 
   const handleTierChange = (tier: PlanTier) => {
+    console.log('🎯 TIER CHANGED TO:', tier)
     setSelectedTier(tier)
     
     // Auto-enable features based on tier
@@ -210,9 +211,17 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         name: business.business_name,
         will_use_userId: business.user_id || business.id
       })
+      console.log('📊 SELECTED TIER BEFORE SAVE:', selectedTier)
 
       // Calculate trial days from trial end date
       const trialDays = selectedTier === 'trial' ? calculateTrialDays() : undefined
+
+      console.log('💾 CALLING updateBusinessTier WITH:', {
+        businessId: business.id,
+        selectedTier,
+        features,
+        trialDays
+      })
 
       // Call the server action (uses service role, bypasses RLS)
       const result = await updateBusinessTier({
