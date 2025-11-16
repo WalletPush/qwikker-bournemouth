@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { AdminLogoutButton } from './admin-logout-button'
+import { AdminLogoutButton } from '@/components/admin-logout-button'
 
 interface AdminToolsLayoutProps {
   children: React.ReactNode
