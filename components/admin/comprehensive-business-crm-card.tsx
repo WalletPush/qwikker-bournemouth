@@ -1528,7 +1528,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 text-sm">Menu:</span>
                         <div className="flex items-center gap-1">
-                          {business.menu_url ? (
+                          {(business.business_menus && business.business_menus.length > 0) || business.menu_url ? (
                             <>
                               <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
