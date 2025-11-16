@@ -703,53 +703,174 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
       </Card>
 
       {/* Completion Modal - Shows when all required fields are complete */}
-      <ElegantModal
-        isOpen={showCompletionModal}
-        onClose={() => setShowCompletionModal(false)}
-        title="🎉 Profile Complete!"
-        description="Congratulations! You've completed all required fields for your business profile."
-        type="success"
-        size="lg"
-        actions={[
-          {
-            label: 'Review Later',
-            onClick: () => setShowCompletionModal(false),
-            variant: 'outline'
-          },
-          {
-            label: 'Submit for Review',
-            onClick: handleSubmitListing,
-            variant: 'default',
-            className: 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white'
-          }
-        ]}
-      >
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-            <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <h4 className="font-medium text-green-400">Ready to Go Live!</h4>
-              <p className="text-sm text-green-300">Your business profile is now complete and ready for admin review.</p>
-            </div>
-          </div>
+      {showCompletionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-12 animate-in fade-in duration-200">
+          {/* Backdrop Blur */}
+          <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-xl"
+            onClick={() => setShowCompletionModal(false)}
+            style={{ backdropFilter: 'blur(20px)' }}
+          />
           
-          <div className="space-y-2 text-sm">
-            <p className="text-slate-300">
-              <strong>What happens next?</strong>
-            </p>
-            <ul className="space-y-1 text-slate-400 ml-4">
-              <li>• Our team will review your profile (usually within 24 hours)</li>
-              <li>• You'll receive an email notification when approved</li>
-              <li>• Your business will go live on the Qwikker platform</li>
-              <li>• Customers can start discovering and engaging with your business</li>
-            </ul>
+          {/* Modal Content - Large Centered Popup with Green Accent */}
+          <div className="relative w-full max-w-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 backdrop-blur-xl border-2 border-green-500/30 rounded-3xl shadow-[0_0_80px_rgba(34,197,94,0.4)] overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Top colored line accent */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 via-emerald-500 to-green-500" />
+            
+            {/* Modal Header */}
+            <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 backdrop-blur-sm border-b-2 border-green-500/20 px-8 py-6 relative">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center border-2 border-green-500/30 shadow-lg">
+                    <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">
+                      🎉 Required To-Dos Complete!
+                    </h2>
+                    <p className="text-slate-400 text-sm mt-1">
+                      You're ready to submit your listing for review
+                    </p>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => setShowCompletionModal(false)}
+                  className="p-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/50 rounded-xl transition-all hover:scale-105 group shadow-lg"
+                  title="Close"
+                >
+                  <svg className="w-6 h-6 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-8 space-y-6">
+              {/* Success Message */}
+              <div className="flex items-center gap-3 p-5 bg-gradient-to-br from-green-950/60 to-emerald-950/40 border-2 border-green-500/30 rounded-2xl shadow-lg">
+                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-green-400 text-lg">All Required Fields Complete!</h4>
+                  <p className="text-sm text-green-300/80 mt-1">Your business profile is ready for admin review and approval.</p>
+                </div>
+              </div>
+
+              {/* What's Next Section */}
+              <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+                <h3 className="text-white font-semibold text-lg flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  What Happens Next?
+                </h3>
+                <ul className="space-y-3 text-slate-300">
+                  <li className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Our team will review your profile (usually within 24 hours)</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>You'll receive an email notification when approved</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Your business will go live on the Qwikker platform</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Customers can start discovering and engaging with your business</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Optional To-Dos Reminder */}
+              {optionalTodos.length > 0 && (
+                <div className="bg-blue-950/30 border border-blue-500/30 rounded-2xl p-6">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-6 h-6 text-blue-400 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <div>
+                      <h4 className="text-blue-400 font-semibold mb-2">Boost Your Profile Before Submitting!</h4>
+                      <p className="text-blue-300/80 text-sm mb-3">
+                        You have {optionalTodos.length} recommended item{optionalTodos.length > 1 ? 's' : ''} that can help your business stand out even more.
+                      </p>
+                      <Link 
+                        href="/dashboard/action-items"
+                        onClick={() => setShowCompletionModal(false)}
+                        className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        <span>View recommended to-dos</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4">
+                <Button
+                  onClick={() => setShowCompletionModal(false)}
+                  variant="outline"
+                  className="flex-1 border-2 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white transition-all h-12 text-base font-semibold"
+                >
+                  Review Later
+                </Button>
+                
+                <Link 
+                  href="/dashboard/profile"
+                  onClick={() => setShowCompletionModal(false)}
+                  className="flex-1"
+                >
+                  <Button
+                    variant="outline"
+                    className="w-full border-2 border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 transition-all h-12 text-base font-semibold"
+                  >
+                    Preview Listing
+                  </Button>
+                </Link>
+                
+                <Button
+                  onClick={handleSubmitListing}
+                  disabled={isSubmitting}
+                  className="flex-1 bg-gradient-to-r from-green-500 via-emerald-500 to-green-500 hover:from-green-600 hover:via-emerald-600 hover:to-green-600 text-white transition-all h-12 text-base font-bold shadow-[0_0_30px_rgba(34,197,94,0.3)] hover:shadow-[0_0_40px_rgba(34,197,94,0.5)] border-2 border-green-400/30"
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Submitting...
+                    </span>
+                  ) : (
+                    'Submit for Review'
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
-      </ElegantModal>
+      )}
 
       {/* Success Modal - Shows after successful submission */}
       <ElegantModal
