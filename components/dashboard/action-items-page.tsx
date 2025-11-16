@@ -296,14 +296,21 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   const totalItems = requiredTodos.length + optionalTodos.length + submissionTodos.length
 
   // Show completion modal when all required PROFILE fields are completed and status is still incomplete
-  // Modal shows EVERY time they visit Action Items page until they submit
+  // Modal shows once per session (until browser close/refresh)
   useEffect(() => {
     if (profile?.status === 'incomplete' && requiredTodos.length === 0 && !showCompletionModal) {
-      // Small delay to let the page render first
-      const timer = setTimeout(() => {
-        setShowCompletionModal(true)
-      }, 500)
-      return () => clearTimeout(timer)
+      // Check if we've already shown the modal in this session
+      const hasShownThisSession = sessionStorage.getItem(`completion-modal-shown-${profile.user_id}`)
+      
+      if (!hasShownThisSession) {
+        // Small delay to let the page render first
+        const timer = setTimeout(() => {
+          setShowCompletionModal(true)
+          // Mark as shown for this session only (clears when browser closes)
+          sessionStorage.setItem(`completion-modal-shown-${profile.user_id}`, 'true')
+        }, 500)
+        return () => clearTimeout(timer)
+      }
     }
   }, [profile?.status, profile?.user_id, requiredTodos.length, showCompletionModal])
 
