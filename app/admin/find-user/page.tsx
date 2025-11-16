@@ -212,7 +212,8 @@ export default async function FindUserPage() {
             </Link>
           </div>
         </div>
-      </div>
+        </div>
+      </AdminToolsLayout>
     )
   } catch (error) {
     return (
