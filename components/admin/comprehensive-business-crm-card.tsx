@@ -78,6 +78,15 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const router = useRouter()
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  
+  // DEBUG: Log subscription data to see what we're getting
+  console.log(`🔍 CRM Card for ${business.business_name}:`, {
+    tier_display_name: business.subscription?.tier_display_name,
+    tier_name: business.subscription?.tier_name,
+    is_in_free_trial: business.subscription?.is_in_free_trial,
+    profile_plan: business.plan,
+    subscription_updated_at: business.subscription?.updated_at
+  })
   const [adminNotes, setAdminNotes] = useState(business.admin_notes || '')
   const [deletionModal, setDeletionModal] = useState<{ isOpen: boolean; offer: any | null }>({
     isOpen: false,
