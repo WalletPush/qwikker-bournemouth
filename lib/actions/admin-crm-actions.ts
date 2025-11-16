@@ -46,8 +46,15 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
     // Get business IDs for fetching related data
     const businessIds = businesses.map(b => b.id)
     
-    // Get user IDs for subscription lookups (business_subscriptions uses user_id, not business.id)
-    const userIds = businesses.map(b => b.user_id).filter(Boolean)
+    // CRITICAL: business_subscriptions.business_id actually stores the auth user_id (profiles.id)
+    // So we need to search by business.user_id if it exists, otherwise fall back to business.id
+    const userIds = businesses.map(b => b.user_id || b.id).filter(Boolean)
+    
+    console.log('🔍 Building userIds for subscription lookup:', {
+      sample_business_id: businesses[0]?.id,
+      sample_user_id: businesses[0]?.user_id,
+      using: 'user_id || id'
+    })
 
     // Fetch menus separately - now working correctly
     let menusByBusiness = new Map()
