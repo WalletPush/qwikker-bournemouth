@@ -204,6 +204,12 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     
     try {
       console.log('🚀 Calling SERVER ACTION: updateBusinessTier')
+      console.log('🔍 Business object:', {
+        id: business.id,
+        user_id: business.user_id,
+        name: business.business_name,
+        will_use_userId: business.user_id || business.id
+      })
 
       // Calculate trial days from trial end date
       const trialDays = selectedTier === 'trial' ? calculateTrialDays() : undefined
