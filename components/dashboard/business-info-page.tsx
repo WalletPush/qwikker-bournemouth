@@ -115,19 +115,7 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
           type: 'success',
           text: 'Business information saved successfully!'
         })
-        
-        // ✅ Check if profile JUST reached 100% completion (first time only)
-        const wasIncomplete = profile.profile_completion_percentage < 100
-        const nowComplete = result.data?.profile_completion_percentage === 100
-        
-        if (wasIncomplete && nowComplete && result.data?.status === 'incomplete') {
-          // First time reaching 100% - redirect to action items page where modal will show
-          setTimeout(() => {
-            router.push('/dashboard/action-items')
-          }, 500)
-        } else {
-          router.refresh()
-        }
+        router.refresh()
       } else {
         throw new Error(result.error || 'Failed to save business information')
       }

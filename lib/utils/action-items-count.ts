@@ -1,6 +1,7 @@
 /**
  * Calculate the number of required action items based on profile completeness
  * This matches the logic in the ActionItemsPage component for REQUIRED fields
+ * INCLUDES the "Submit for Review" action when profile is complete but not submitted
  */
 export function calculateActionItemsCount(profile: any): number {
   if (!profile) return 0
@@ -17,6 +18,14 @@ export function calculateActionItemsCount(profile: any): number {
   if (!profile.logo) count++
   if (!profile.business_images || (Array.isArray(profile.business_images) && profile.business_images.length === 0)) count++
   // Note: menu_url and menu_preview are now OPTIONAL for universal business types
+
+  // 🚀 SPECIAL: If all required fields are complete but not yet submitted, count the submission action
+  const isProfileComplete = count === 0
+  const isReadyToSubmit = isProfileComplete && profile.status === 'incomplete'
+  
+  if (isReadyToSubmit) {
+    count = 1 // Show (1) for the "Submit for Review" action
+  }
 
   return count
 }
