@@ -143,6 +143,9 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         console.log('⚠️ Error fetching subscriptions:', subError)
       }
 
+      console.log(`📦 Fetched ${subscriptions?.length || 0} subscription records from business_subscriptions table`)
+      console.log(`🔑 Looking for user_ids:`, userIds)
+
       if (subscriptions && subscriptions.length > 0) {
         // Fetch tier names separately
         const tierIds = subscriptions.map(s => s.tier_id)
