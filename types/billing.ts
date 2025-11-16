@@ -104,6 +104,7 @@ export interface ProfileWithBilling {
 export interface BusinessCRMData {
   // Basic business info
   id: string
+  user_id: string | null // Auth user ID (needed for subscription updates)
   business_name: string
   first_name: string | null
   last_name: string | null

@@ -308,6 +308,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       
       return {
         id: business.id,
+        user_id: business.user_id, // CRITICAL: Need this for subscription updates!
         business_name: business.business_name || 'Unnamed Business',
         first_name: business.first_name,
         last_name: business.last_name,
