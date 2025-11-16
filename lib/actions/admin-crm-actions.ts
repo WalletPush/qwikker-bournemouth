@@ -131,6 +131,10 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
     // Fetch subscriptions data (GET LATEST ONLY!)
     let subscriptionsByBusiness = new Map()
     try {
+      // CRITICAL: Fetch subscriptions by BOTH user_id AND profile.id
+      // Some old subscriptions use profile.id, newer ones use user_id (correct)
+      const allPossibleIds = [...new Set([...userIds, ...businessIds])]
+      
       const { data: subscriptions, error: subError } = await supabaseAdmin
         .from('business_subscriptions')
         .select(`
@@ -143,7 +147,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
           current_period_end,
           updated_at
         `)
-        .in('business_id', userIds) // Use user_ids, not business_ids!
+        .in('business_id', allPossibleIds) // Search by both user_id AND profile.id!
         .order('updated_at', { ascending: false }) // GET LATEST SUBSCRIPTION FIRST!
 
       if (subError) {
@@ -188,15 +192,23 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
           }
         })
         
-        // Now map to business IDs using user_id
+        // Now map to business IDs using BOTH user_id (correct) and profile.id (legacy fallback)
         console.log('🔗 Mapping subscriptions to businesses...')
         businesses.forEach(business => {
+          // Try user_id first (correct architecture)
           if (business.user_id && subscriptionsByUserId.has(business.user_id)) {
             const sub = subscriptionsByUserId.get(business.user_id)
             subscriptionsByBusiness.set(business.id, sub)
             console.log(`  ✅ Mapped ${business.business_name}: user_id=${business.user_id} → business_id=${business.id}, tier=${sub.tier_display_name}`)
-          } else {
-            console.log(`  ❌ NO MATCH for ${business.business_name}: user_id=${business.user_id}, has_sub=${subscriptionsByUserId.has(business.user_id)}`)
+          }
+          // Fall back to profile.id (for legacy subscriptions)
+          else if (subscriptionsByUserId.has(business.id)) {
+            const sub = subscriptionsByUserId.get(business.id)
+            subscriptionsByBusiness.set(business.id, sub)
+            console.log(`  ⚠️ Mapped ${business.business_name} via LEGACY profile.id=${business.id}, tier=${sub.tier_display_name} (subscription needs migration!)`)
+          }
+          else {
+            console.log(`  ❌ NO MATCH for ${business.business_name}: user_id=${business.user_id}, profile_id=${business.id}`)
           }
         })
       }
