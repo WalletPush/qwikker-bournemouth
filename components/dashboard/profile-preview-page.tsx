@@ -174,7 +174,6 @@ export function ProfilePreviewPage({ profile }: ProfilePreviewPageProps) {
           </div>
         </div>
       )}
-    </div>
     </>
   )
 }
