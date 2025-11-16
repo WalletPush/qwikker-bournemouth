@@ -1491,6 +1491,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 
 
 
+// Validate ../../app/admin/emergency-email-fix/layout.tsx
+{
+  type __IsExpected<Specific extends LayoutConfig<"/admin/emergency-email-fix">> = Specific
+  const handler = {} as typeof import("../../app/admin/emergency-email-fix/layout.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/layout.tsx
 {
   type __IsExpected<Specific extends LayoutConfig<"/">> = Specific

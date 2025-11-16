@@ -64,21 +64,8 @@ export default function EmergencyEmailFixPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-8">
+    <div className="p-8">
       <div className="max-w-2xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">🚨 Emergency Email Fix</h1>
-            <p className="text-slate-400">
-              Use this tool to fix a user's login email when they accidentally changed it and can no longer log in.
-            </p>
-          </div>
-          <Link href="/admin/find-user">
-            <Button variant="outline" className="border-blue-500 text-blue-400 hover:bg-blue-500/10">
-              🔍 Find User
-            </Button>
-          </Link>
-        </div>
 
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader>
@@ -172,4 +159,5 @@ export default function EmergencyEmailFixPage() {
     </div>
   )
 }
+
 

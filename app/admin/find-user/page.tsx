@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
+import { AdminToolsLayout } from '@/components/admin/admin-tools-layout'
 
 export default async function FindUserPage() {
   const supabaseAdmin = createAdminClient()
@@ -37,14 +38,9 @@ export default async function FindUserPage() {
     const normalUsers = usersWithProfiles.filter(u => !u.emailMismatch && u.profile)
 
     return (
-      <div className="min-h-screen bg-slate-950 p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">🔍 Find User & Email Mismatch</h1>
-            <p className="text-slate-400">
-              This tool shows all users and highlights any email mismatches between auth and profile.
-            </p>
-          </div>
+      <AdminToolsLayout>
+        <div className="p-8">
+          <div className="max-w-7xl mx-auto space-y-6">
 
           {/* Email Mismatches - PRIORITY */}
           {mismatchedUsers.length > 0 && (
@@ -220,16 +216,18 @@ export default async function FindUserPage() {
     )
   } catch (error) {
     return (
-      <div className="min-h-screen bg-slate-950 p-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-red-950/50 border-2 border-red-500 rounded-2xl p-6">
-            <h1 className="text-2xl font-bold text-red-400 mb-2">Error</h1>
-            <p className="text-red-300">
-              {error instanceof Error ? error.message : 'Unknown error occurred'}
-            </p>
+      <AdminToolsLayout>
+        <div className="p-8">
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-red-950/50 border-2 border-red-500 rounded-2xl p-6">
+              <h1 className="text-2xl font-bold text-red-400 mb-2">Error</h1>
+              <p className="text-red-300">
+                {error instanceof Error ? error.message : 'Unknown error occurred'}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </AdminToolsLayout>
     )
   }
 }
