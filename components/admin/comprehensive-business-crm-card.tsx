@@ -1102,12 +1102,19 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       <div>
                         <div className="font-medium text-white">Menu Files</div>
                         <div className="text-sm text-slate-400">
-                          {business.business_menus && business.business_menus.length > 0 
-                            ? `${business.business_menus.length} menu${business.business_menus.length > 1 ? 's' : ''} uploaded`
-                            : business.menu_url 
-                              ? '1 legacy menu uploaded'
-                              : 'No menus uploaded'
-                          }
+                          {(() => {
+                            console.log(`🍽️ Menu data for ${business.business_name}:`, {
+                              business_menus: business.business_menus,
+                              business_menus_length: business.business_menus?.length,
+                              menu_url: business.menu_url
+                            })
+                            
+                            return business.business_menus && business.business_menus.length > 0 
+                              ? `${business.business_menus.length} menu${business.business_menus.length > 1 ? 's' : ''} uploaded`
+                              : business.menu_url 
+                                ? '1 legacy menu uploaded'
+                                : 'No menus uploaded'
+                          })()}
                         </div>
                       </div>
                     </div>
