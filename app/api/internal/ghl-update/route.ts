@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceRoleClient()
     const { data: config, error } = await supabase
       .from('franchise_crm_configs')
-      .select('ghl_webhook_url, ghl_update_webhook_url, franchise_owner, timezone, display_name')
+      .select('ghl_webhook_url, ghl_update_webhook_url, owner_name, timezone, display_name')
       .eq('city', targetCity)
       .single()
     
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       updateType: formData.updateType || 'contact_update',
       skipSignupNotification: true,
       franchise_city: targetCity,
-      franchise_owner: config.franchise_owner,
+      franchise_owner: config.owner_name,
       timezone: config.timezone,
     }
     

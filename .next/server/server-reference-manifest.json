@@ -15,6 +15,21 @@
       "filename": "lib/actions/admin-crm-actions.ts",
       "exportedName": "getBusinessCRMData"
     },
+    "4028c6bf88830bcbcedf7b87363779bd53dcc84fa0": {
+      "workers": {
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "updateBusinessTier",
+          "filename": "lib/actions/admin-crm-actions.ts"
+        }
+      },
+      "layer": {
+        "app/admin/page": "action-browser"
+      },
+      "filename": "lib/actions/admin-crm-actions.ts",
+      "exportedName": "updateBusinessTier"
+    },
     "70d74cacdfada778a89a84e4b0655998f23b59517f": {
       "workers": {
         "app/admin/page": {
@@ -127,17 +142,10 @@
           "async": false,
           "exportedName": "getBusinessEvents",
           "filename": "lib/actions/event-actions.ts"
-        },
-        "app/dashboard/events/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/events/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getBusinessEvents",
-          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/admin/page": "action-browser",
-        "app/dashboard/events/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
       "filename": "lib/actions/event-actions.ts",
       "exportedName": "getBusinessEvents"
@@ -164,17 +172,10 @@
           "async": false,
           "exportedName": "createEvent",
           "filename": "lib/actions/event-actions.ts"
-        },
-        "app/dashboard/events/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/events/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "createEvent",
-          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/admin/page": "action-browser",
-        "app/dashboard/events/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
       "filename": "lib/actions/event-actions.ts",
       "exportedName": "createEvent"
@@ -186,17 +187,10 @@
           "async": false,
           "exportedName": "updateEvent",
           "filename": "lib/actions/event-actions.ts"
-        },
-        "app/dashboard/events/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/events/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "updateEvent",
-          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/admin/page": "action-browser",
-        "app/dashboard/events/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
       "filename": "lib/actions/event-actions.ts",
       "exportedName": "updateEvent"
@@ -208,17 +202,10 @@
           "async": false,
           "exportedName": "deleteEvent",
           "filename": "lib/actions/event-actions.ts"
-        },
-        "app/dashboard/events/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/events/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "deleteEvent",
-          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/admin/page": "action-browser",
-        "app/dashboard/events/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
       "filename": "lib/actions/event-actions.ts",
       "exportedName": "deleteEvent"
@@ -230,17 +217,10 @@
           "async": false,
           "exportedName": "cancelEvent",
           "filename": "lib/actions/event-actions.ts"
-        },
-        "app/dashboard/events/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/events/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "cancelEvent",
-          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/admin/page": "action-browser",
-        "app/dashboard/events/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
       "filename": "lib/actions/event-actions.ts",
       "exportedName": "cancelEvent"
@@ -379,6 +359,21 @@
       "filename": "lib/actions/pending-changes.ts",
       "exportedName": "getApprovedChangesCount"
     },
+    "7804c3eaf082adf0a9c47823569209f80286d01855": {
+      "workers": {
+        "app/onboarding/page": {
+          "moduleId": "[project]/.next-internal/server/app/onboarding/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/signup-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "createUserAndProfile",
+          "filename": "lib/actions/signup-actions.ts"
+        }
+      },
+      "layer": {
+        "app/onboarding/page": "action-browser"
+      },
+      "filename": "lib/actions/signup-actions.ts",
+      "exportedName": "createUserAndProfile"
+    },
     "602ef984705623698c8b4878f5895f1ed6f9c42a41": {
       "workers": {
         "app/dashboard/profile/page": {
@@ -396,12 +391,6 @@
     },
     "7036662a2d3404b75503dccd5291fe76a13c1f1641": {
       "workers": {
-        "app/dashboard/files/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "updateProfileFile",
-          "filename": "lib/actions/file-actions.ts"
-        },
         "app/dashboard/profile/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/profile/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
@@ -410,131 +399,10 @@
         }
       },
       "layer": {
-        "app/dashboard/files/page": "action-browser",
         "app/dashboard/profile/page": "action-browser"
       },
       "filename": "lib/actions/file-actions.ts",
       "exportedName": "updateProfileFile"
-    },
-    "60dadeac1623cc67cd4e7ea8b4384c7ce1b26d997b": {
-      "workers": {
-        "app/dashboard/offers/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/offers/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "createOffer",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "createOffer"
-    },
-    "6048647d8a58d4fd1b06d9cf33ee94d03f347dbd70": {
-      "workers": {
-        "app/dashboard/offers/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/offers/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "deleteBusinessOffer",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "deleteBusinessOffer"
-    },
-    "40718594acc800d00208434e91e2509adc40b2e6e2": {
-      "workers": {
-        "app/dashboard/offers/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/offers/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "deleteLegacyOffer",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "deleteLegacyOffer"
-    },
-    "70d118430c9c7e94e35e0e543e56b667de5ee5e26d": {
-      "workers": {
-        "app/dashboard/files/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "deleteBusinessImage",
-          "filename": "lib/actions/file-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/files/page": "action-browser"
-      },
-      "filename": "lib/actions/file-actions.ts",
-      "exportedName": "deleteBusinessImage"
-    },
-    "7035ec47fcc8d15b156e66df40f6a3cfc1c9e8bcd7": {
-      "workers": {
-        "app/dashboard/files/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "reorderBusinessImages",
-          "filename": "lib/actions/file-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/files/page": "action-browser"
-      },
-      "filename": "lib/actions/file-actions.ts",
-      "exportedName": "reorderBusinessImages"
-    },
-    "605fe83a7d616efdf1dc94e196d710ed53d84fbb06": {
-      "workers": {
-        "app/dashboard/files/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/files/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/file-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "uploadMultipleBusinessImages",
-          "filename": "lib/actions/file-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/files/page": "action-browser"
-      },
-      "filename": "lib/actions/file-actions.ts",
-      "exportedName": "uploadMultipleBusinessImages"
-    },
-    "600cea68aa577e510d2c0718c91c09102123464cdc": {
-      "workers": {
-        "app/dashboard/secret-menu/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/secret-menu/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "addSecretMenuItem",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/secret-menu/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "addSecretMenuItem"
-    },
-    "60e4b6ecc38c21b6e05d60eb7098e4aa51ecf1fef4": {
-      "workers": {
-        "app/dashboard/secret-menu/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/secret-menu/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "deleteSecretMenuItem",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/secret-menu/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "deleteSecretMenuItem"
     }
   },
   "edge": {},

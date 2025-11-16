@@ -382,7 +382,7 @@ export async function generateAIResponse(
     ?.slice(-1) // Only the LAST AI message for precision
     ?.map(msg => msg.content)
     ?.join(' ') || ''
-  
+
   console.log(`🤖 MOST RECENT AI MESSAGE: "${recentAIMessages}"`)
   
   // Extract businesses from ONLY the most recent AI response (what AI was just talking about)
@@ -540,7 +540,7 @@ export async function generateAIResponse(
   )
   console.log(`🎯 Specific business query: ${isSpecificBusinessQuery}, anywhere else: ${isAnywhereElseQuery}, mentioned: ${mentionedBusinesses?.join(', ') || 'none'}`)
 
-  // 🎯 Build contextual guidance for AI
+    // 🎯 Build contextual guidance for AI
     let contextualGuidance = ''
 
   if (lastAssistantOpening) {
@@ -765,7 +765,7 @@ export async function generateAIResponse(
     const sources = buildKnowledgeSources(businessResults, cityResults)
     const autoRecommendationActive = shouldAutoRecommend && uniqueBusinessResults.length > 0
 
- 
+
     // 2. Build context from search results (clean format)
     const businessContext = businessResults.success && businessResults.results.length > 0
       ? businessResults.results.map(result => 
@@ -1414,7 +1414,7 @@ export async function generateQuickReplies(
 
   if (hasBusinessResults && businessResults.length > 0) {
     const businessNames = businessResults.map(b => b.business_name || '').filter(Boolean)
-
+    
     if (businessNames.length === 1) {
       const businessName = businessNames[0]
       const suggestions = [

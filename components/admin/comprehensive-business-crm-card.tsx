@@ -27,15 +27,16 @@ interface ComprehensiveBusinessCRMCardProps {
 }
 
 // Helper function for consistent date formatting (prevents hydration errors)
+// Uses UTC to ensure 100% consistency between server and client rendering
 const formatDateConsistent = (dateString: string | null | undefined): string => {
   if (!dateString) return 'N/A'
   try {
     const date = new Date(dateString)
-    // Manual formatting to ensure 100% consistency between server and client
-    const day = date.getDate().toString().padStart(2, '0')
+    // Use UTC methods to avoid timezone differences between server and client
+    const day = date.getUTCDate().toString().padStart(2, '0')
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    const month = months[date.getMonth()]
-    const year = date.getFullYear()
+    const month = months[date.getUTCMonth()]
+    const year = date.getUTCFullYear()
     return `${day} ${month} ${year}`
   } catch {
     return 'Invalid date'
