@@ -291,10 +291,10 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
             trial_status = 'expired'
             billing_starts_date = trialEndDate.toISOString()
           }
-        } else if (subscription.status === 'active') {
-          // Paid subscription - not on trial
+        } else if (subscription.status === 'active' || subscription.status === 'trial') {
+          // Paid subscription - not on trial (or trial tier without free trial flag)
           trial_status = 'upgraded'
-          trial_days_remaining = null
+          trial_days_remaining = null // CRITICAL: Set to null to prevent "Free Trial" display
           billing_starts_date = subscription.current_period_end || null
         }
       } else if (business.approved_at) {
