@@ -46,12 +46,12 @@ BEGIN
     provided_count := provided_count + 1;
   END IF;
   
-  IF NEW.business_images IS NOT NULL AND 
-     (
-       (jsonb_typeof(NEW.business_images) = 'array' AND jsonb_array_length(NEW.business_images) > 0) OR
-       (jsonb_typeof(NEW.business_images) = 'string' AND NEW.business_images::TEXT != '""' AND NEW.business_images::TEXT != '')
-     ) THEN
-    provided_count := provided_count + 1;
+  -- Business images - handle both text[] array and jsonb types
+  IF NEW.business_images IS NOT NULL THEN
+    -- Check if it's a text array with elements
+    IF array_length(NEW.business_images, 1) > 0 THEN
+      provided_count := provided_count + 1;
+    END IF;
   END IF;
 
   -- Calculate percentage
