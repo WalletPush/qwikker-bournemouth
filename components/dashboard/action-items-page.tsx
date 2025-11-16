@@ -752,7 +752,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                   Submitting...
                 </span>
               ) : isReadyToSubmit ? (
-                '🚀 Submit for Review'
+                'Submit for Review'
               ) : (
                 'Complete Required Fields'
               )}
@@ -838,7 +838,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold text-white">
-                      🎉 Required To-Dos Complete!
+                      Required To-Dos Complete!
                     </h2>
                     <p className="text-slate-400 text-sm mt-1">
                       You're ready to submit your listing for review
