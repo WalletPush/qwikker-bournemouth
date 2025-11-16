@@ -44,66 +44,44 @@ export function ProfilePreviewPage({ profile }: ProfilePreviewPageProps) {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 -m-6 p-6">
-        <div className="max-w-4xl mx-auto space-y-8">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="text-center">
-          <h1 className="text-4xl font-black text-white mb-3 bg-gradient-to-r from-[#00d083] to-emerald-400 bg-clip-text text-transparent">
-            Preview Your Listing
-          </h1>
-          <p className="text-slate-300 text-lg max-w-2xl mx-auto">
-            This is exactly how your business will appear to customers. Click the card to see the full hero view.
-          </p>
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Preview Your Listing</h1>
+            <p className="text-slate-400 mt-2">
+              This is how your business will appear to customers. Click the card to see the full hero view.
+            </p>
+          </div>
         </div>
 
-        {/* Preview Card - Centered with spotlight */}
-        <div className="max-w-md mx-auto relative">
-          {/* Spotlight effect behind card */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#00d083]/20 via-purple-500/20 to-[#00d083]/20 blur-3xl -z-10 animate-pulse"></div>
-          
+        {/* Preview Card - Centered */}
+        <div className="max-w-md mx-auto">
           <BusinessCard 
             business={businessData}
             onClick={() => setShowHero(true)}
             showDistance={false}
           />
-          
-          {/* Click to view hint */}
-          <div className="text-center mt-4">
-            <p className="text-slate-400 text-sm flex items-center justify-center gap-2">
-              <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-              </svg>
-              Click the card to see full details
-            </p>
-          </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="max-w-2xl mx-auto">
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
-            <Button
-              onClick={() => router.push('/dashboard/profile')}
-              variant="outline"
-              size="lg"
-              className="flex-1 border-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white hover:border-slate-500 transition-all duration-300 text-base py-6"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              I Want to Change Something
-            </Button>
-            
-            <Button
-              onClick={() => router.push('/dashboard/action-items')}
-              size="lg"
-              className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] hover:scale-105 border-2 border-green-400/30 transition-all duration-300 text-base py-6"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              I'm Happy - Submit!
-            </Button>
-          </div>
+        <div className="max-w-md mx-auto flex gap-4 pt-4">
+          <Button
+            onClick={() => router.push('/dashboard/profile')}
+            variant="outline"
+            size="lg"
+            className="flex-1 border-2 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white transition-all"
+          >
+            I Want to Change Something
+          </Button>
+          
+          <Button
+            onClick={() => router.push('/dashboard/action-items')}
+            size="lg"
+            className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] border-2 border-green-400/30"
+          >
+            I'm Happy - Submit!
+          </Button>
         </div>
       </div>
       
