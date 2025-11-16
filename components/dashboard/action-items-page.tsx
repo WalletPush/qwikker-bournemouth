@@ -266,18 +266,38 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     })
   }
 
+  // 🚀 SPECIAL ACTION ITEM: If profile is complete but not yet submitted, add submission as an action item
+  const submissionTodos = []
+  const isReadyToSubmit = requiredTodos.length === 0
+  
+  if (isReadyToSubmit && profile?.status === 'incomplete') {
+    submissionTodos.push({
+      title: 'Submit Your Listing for Review',
+      href: '#submit-listing',
+      priority: 'ACTION REQUIRED',
+      description: 'Your profile is complete! Submit it to our team for review and go live.',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        </svg>
+      ),
+      isSubmission: true // Special flag to handle differently
+    })
+  }
+
   const allTodos = [
+    { priority: 'ACTION REQUIRED', items: submissionTodos },
     { priority: 'REQUIRED', items: requiredTodos },
     { priority: 'RECOMMENDED', items: optionalTodos }
   ]
 
+  // totalRequiredItems is ONLY the profile fields, NOT including the submission action
   const totalRequiredItems = requiredTodos.length
-  const totalItems = requiredTodos.length + optionalTodos.length
-  const isReadyToSubmit = totalRequiredItems === 0
+  const totalItems = requiredTodos.length + optionalTodos.length + submissionTodos.length
 
-  // Show completion modal when all required fields are completed and status is still incomplete
+  // Show completion modal when all required PROFILE fields are completed and status is still incomplete
   useEffect(() => {
-    if (profile?.status === 'incomplete' && totalRequiredItems === 0 && !showCompletionModal) {
+    if (profile?.status === 'incomplete' && requiredTodos.length === 0 && !showCompletionModal) {
       // Check if we've already shown the completion modal for this user
       const hasShownModal = localStorage.getItem(`completion-modal-shown-${profile.user_id}`)
       
@@ -597,9 +617,11 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                 <CardHeader>
                   <CardTitle className="text-white flex items-center gap-3">
                     <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                      priority === 'REQUIRED' 
+                      priority === 'ACTION REQUIRED' 
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/30 animate-pulse' 
+                        : priority === 'REQUIRED' 
                         ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                        : 'bg-green-500/20 text-green-400 border border-green-500/30'
+                        : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                     }`}>
                       {priority}
                     </span>
@@ -609,24 +631,50 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                 <CardContent>
                   <div className="space-y-4">
                     {items.map((item, index) => (
-                      <div key={index} className="flex items-start gap-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600/50 min-w-0">
+                      <div key={index} className={`flex items-start gap-4 p-4 rounded-lg border min-w-0 ${
+                        item.isSubmission 
+                          ? 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20 transition-all cursor-pointer' 
+                          : 'bg-slate-700/30 border-slate-600/50'
+                      }`}
+                      onClick={() => {
+                        if (item.isSubmission) {
+                          document.getElementById('submit-listing')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                        }
+                      }}
+                      >
                         <div className="flex-shrink-0">
                           <span className={`inline-flex items-center text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wide ${
-                            priority === 'REQUIRED' 
+                            item.isSubmission 
+                              ? 'bg-green-500 text-white' 
+                              : priority === 'REQUIRED' 
                               ? 'bg-red-500 text-white' 
-                              : 'bg-green-500 text-white'
+                              : 'bg-blue-500 text-white'
                           }`}>
-                            {priority === 'REQUIRED' ? 'REQ' : 'REC'}
+                            {item.isSubmission ? 'ACT' : priority === 'REQUIRED' ? 'REQ' : 'REC'}
                           </span>
                         </div>
-                        <div className="text-[#00d083] mt-1 flex-shrink-0">{item.icon}</div>
+                        <div className={`mt-1 flex-shrink-0 ${item.isSubmission ? 'text-green-400' : 'text-[#00d083]'}`}>
+                          {item.icon}
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-white mb-1">{item.title}</h4>
+                          <h4 className={`font-medium mb-1 ${item.isSubmission ? 'text-green-300' : 'text-white'}`}>
+                            {item.title}
+                          </h4>
                           <p className="text-sm text-gray-400 mb-3">{item.description}</p>
                         </div>
-                        <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white flex-shrink-0">
-                          <Link href={item.href}>Complete</Link>
-                        </Button>
+                        {!item.isSubmission && (
+                          <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white flex-shrink-0">
+                            <Link href={item.href}>Complete</Link>
+                          </Button>
+                        )}
+                        {item.isSubmission && (
+                          <div className="flex items-center gap-2 text-green-400 flex-shrink-0">
+                            <span className="text-sm font-semibold">Click to submit</span>
+                            <svg className="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                            </svg>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -638,7 +686,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
       )}
 
       {/* Submit Listing Button - PROMINENT CALL TO ACTION */}
-      <Card className={`${
+      <Card id="submit-listing" className={`scroll-mt-20 ${
         isReadyToSubmit 
           ? 'bg-gradient-to-br from-green-950/60 to-emerald-950/40 border-2 border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.2)]' 
           : 'bg-slate-800/50 border-slate-700'
