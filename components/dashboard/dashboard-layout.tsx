@@ -147,17 +147,25 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
         tierName,
         isInTrial,
         legacyPlan: profile?.plan,
-        subscriptionData: profile?.subscription
+        individualFeatures: profile?.features,
+        featureKey,
+        individualFeatureValue: profile?.features?.[featureKey]
       })
     }
     
-    // ONLY SPOTLIGHT gets premium features (Social Wizard, Loyalty Cards, Analytics, Push Notifications)
+    // FIRST: Check individual feature override (allows granular control)
+    if (profile?.features && typeof profile.features[featureKey] === 'boolean') {
+      return profile.features[featureKey]
+    }
+    
+    // SECOND: Check tier-based access
+    // ONLY SPOTLIGHT gets premium features by default
     if (tierName === 'spotlight') return true
     
     // Fallback: check legacy plan field for spotlight
     if (profile?.plan === 'spotlight' || profile?.plan === 'pro') return true
     
-    // ALL OTHER TIERS (Free Trial, Featured, Starter) = LOCKED
+    // ALL OTHER TIERS (Free Trial, Featured, Starter) = LOCKED by default
     return false
   }
 

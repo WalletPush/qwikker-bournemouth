@@ -613,11 +613,12 @@ export async function updateBusinessTier(params: {
     const trialStartDate = isTrial ? now.toISOString() : null
     const trialEndDate = isTrial ? new Date(now.getTime() + (trialDays || 90) * 24 * 60 * 60 * 1000).toISOString() : null
 
-    // 3. Update business_profiles (plan only, no features column)
+    // 3. Update business_profiles (plan AND features)
     const { error: profileError } = await supabaseAdmin
       .from('business_profiles')
       .update({
         plan: selectedTier === 'trial' ? 'featured' : selectedTier,
+        features: features, // Save individual feature toggles
         updated_at: now.toISOString()
       })
       .eq('id', businessId)
@@ -627,7 +628,7 @@ export async function updateBusinessTier(params: {
       return { success: false, error: profileError.message }
     }
 
-    console.log('✅ Profile updated')
+    console.log('✅ Profile updated with features:', features)
 
     // 4. Update or Insert business_subscriptions (manual check since no unique constraint)
     const subscriptionData: any = {
