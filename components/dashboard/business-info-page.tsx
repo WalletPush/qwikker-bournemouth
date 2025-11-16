@@ -116,9 +116,12 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
           text: 'Business information saved successfully!'
         })
         
-        // ✅ Check if profile just reached 100% completion
-        if (result.data?.profile_completion_percentage === 100 && result.data?.status === 'incomplete') {
-          // Redirect to action items page where modal will show
+        // ✅ Check if profile JUST reached 100% completion (first time only)
+        const wasIncomplete = profile.profile_completion_percentage < 100
+        const nowComplete = result.data?.profile_completion_percentage === 100
+        
+        if (wasIncomplete && nowComplete && result.data?.status === 'incomplete') {
+          // First time reaching 100% - redirect to action items page where modal will show
           setTimeout(() => {
             router.push('/dashboard/action-items')
           }, 500)
