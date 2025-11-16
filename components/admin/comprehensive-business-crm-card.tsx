@@ -371,6 +371,21 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
 
   const getStatusBadge = () => {
+    // 🎯 SPECIAL STATE: Profile complete but awaiting manual submission
+    const isReadyToSubmit = business.status === 'incomplete' && 
+                           business.profile_completion_percentage === 100
+    
+    if (isReadyToSubmit) {
+      return (
+        <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border bg-cyan-500/20 text-cyan-300 border-cyan-500/30 inline-flex items-center gap-1.5 animate-pulse">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+          READY TO SUBMIT
+        </span>
+      )
+    }
+    
     const statusConfig = {
       'incomplete': { bg: 'bg-orange-500/20', text: 'text-orange-300', border: 'border-orange-500/30', label: 'INCOMPLETE' },
       'pending_review': { bg: 'bg-yellow-500/20', text: 'text-yellow-300', border: 'border-yellow-500/30', label: 'PENDING REVIEW' },
