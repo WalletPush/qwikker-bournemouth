@@ -7,6 +7,7 @@
   "/api/admin/fix-user-email/route": "app/api/admin/fix-user-email/route.js",
   "/api/admin/login/route": "app/api/admin/login/route.js",
   "/api/admin/logout/route": "app/api/admin/logout/route.js",
+  "/api/ai/chat/route": "app/api/ai/chat/route.js",
   "/api/dashboard/ai-support/route": "app/api/dashboard/ai-support/route.js",
   "/api/internal/ghl-send/route": "app/api/internal/ghl-send/route.js",
   "/api/menus/list/route": "app/api/menus/list/route.js",
@@ -20,11 +21,15 @@
   "/dashboard/offers/page": "app/dashboard/offers/page.js",
   "/dashboard/page": "app/dashboard/page.js",
   "/dashboard/profile/page": "app/dashboard/profile/page.js",
+  "/dashboard/profile/preview/page": "app/dashboard/profile/preview/page.js",
   "/dashboard/secret-menu/page": "app/dashboard/secret-menu/page.js",
   "/dashboard/support/page": "app/dashboard/support/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/onboarding/page": "app/onboarding/page.js",
   "/page": "app/page.js",
   "/protected/page": "app/protected/page.js",
-  "/user/business/[slug]/page": "app/user/business/[slug]/page.js"
+  "/user/business/[slug]/page": "app/user/business/[slug]/page.js",
+  "/user/chat/page": "app/user/chat/page.js",
+  "/user/dashboard/page": "app/user/dashboard/page.js",
+  "/user/page": "app/user/page.js"
 }
