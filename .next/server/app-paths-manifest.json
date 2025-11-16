@@ -24,6 +24,7 @@
   "/dashboard/profile/page": "app/dashboard/profile/page.js",
   "/dashboard/profile/preview/page": "app/dashboard/profile/preview/page.js",
   "/dashboard/secret-menu/page": "app/dashboard/secret-menu/page.js",
+  "/dashboard/social-wizard/page": "app/dashboard/social-wizard/page.js",
   "/dashboard/support/page": "app/dashboard/support/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/onboarding/page": "app/onboarding/page.js",

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -74,6 +75,7 @@ const getTierAccentGradient = (business: BusinessCRMData) => {
 }
 
 export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, className }: ComprehensiveBusinessCRMCardProps) {
+  const router = useRouter()
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [adminNotes, setAdminNotes] = useState(business.admin_notes || '')
@@ -1679,8 +1681,12 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <TierManagementCard 
                   business={business} 
                   onUpdate={() => {
-                    // Refresh the page to show updated data
-                    window.location.reload()
+                    // Use Next.js router.refresh() to reload server components with fresh data
+                    router.refresh()
+                    // Close the modal after a short delay to show success
+                    setTimeout(() => {
+                      setIsExpanded(false)
+                    }, 2000)
                   }} 
                 />
                 
