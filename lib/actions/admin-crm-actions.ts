@@ -304,6 +304,12 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
           trial_status = 'upgraded'
           trial_days_remaining = null // CRITICAL: Set to null to prevent "Free Trial" display
           billing_starts_date = subscription.current_period_end || null
+        } else {
+          console.log(`⚠️ ${business.business_name}: UNHANDLED subscription state!`, {
+            status: subscription.status,
+            is_in_free_trial: subscription.is_in_free_trial,
+            free_trial_end_date: subscription.free_trial_end_date
+          })
         }
       } else if (business.approved_at) {
         // Fallback to old calculation if no subscription exists (legacy businesses)
