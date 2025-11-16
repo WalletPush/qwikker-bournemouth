@@ -448,30 +448,13 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   // NOTE: getTierBorderColor and getTierAccentGradient are defined at the TOP of the file
   // Do NOT duplicate them here!
 
-  // Get first business image for background
-  const backgroundImage = business.business_images && business.business_images.length > 0 
-    ? business.business_images[0] 
-    : null
-
   return (
     <>
       {/* Main Card - COMPLETELY REDESIGNED */}
       <div className={`relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 backdrop-blur-xl border-2 ${getTierBorderColor(business)} rounded-2xl overflow-hidden shadow-xl shadow-black/40 hover:shadow-2xl hover:shadow-black/80 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 ${className}`}>
-        
-        {/* Background Image with Dark Blur Overlay */}
-        {backgroundImage && (
-          <>
-            <div 
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${backgroundImage})` }}
-            />
-            {/* Dark blur overlay */}
-            <div className="absolute inset-0 backdrop-blur-2xl bg-slate-950/85" />
-          </>
-        )}
 
         {/* Main Content */}
-        <div className="relative p-6">
+        <div className="p-6">
           {/* Header Row */}
           <div className="flex items-start justify-between mb-6">
             {/* Left: Business Info with Avatar */}
