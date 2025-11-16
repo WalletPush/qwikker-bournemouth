@@ -84,8 +84,11 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     tier_display_name: business.subscription?.tier_display_name,
     tier_name: business.subscription?.tier_name,
     is_in_free_trial: business.subscription?.is_in_free_trial,
+    trial_days_remaining: business.trial_days_remaining,
+    trial_status: business.trial_status,
     profile_plan: business.plan,
-    subscription_updated_at: business.subscription?.updated_at
+    subscription_updated_at: business.subscription?.updated_at,
+    CHECK: `Will show Free Trial? ${(business.subscription?.is_in_free_trial || (business.trial_days_remaining !== null && business.trial_days_remaining > 0)) ? 'YES' : 'NO'}`
   })
   const [adminNotes, setAdminNotes] = useState(business.admin_notes || '')
   const [deletionModal, setDeletionModal] = useState<{ isOpen: boolean; offer: any | null }>({
