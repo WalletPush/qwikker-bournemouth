@@ -64,11 +64,14 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         .select('*')
 
       if (allMenus && allMenus.length > 0) {
+        console.log(`📄 Fetched ${allMenus.length} total menus from database`)
+        
         // Match menus to businesses by business_id (proper foreign key relationship)
         businesses.forEach(business => {
           const matchingMenus = allMenus.filter(menu => menu.business_id === business.id)
           
           if (matchingMenus.length > 0) {
+            console.log(`📄 Found ${matchingMenus.length} menu(s) for ${business.business_name} (ID: ${business.id})`)
             menusByBusiness.set(business.id, matchingMenus.map(menu => ({
               id: menu.id,
               menu_name: menu.menu_name,
@@ -80,6 +83,10 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
             })))
           }
         })
+        
+        console.log(`📄 Total businesses with menus: ${menusByBusiness.size}`)
+      } else {
+        console.log('📄 No menus found in database')
       }
 
     } catch (error) {
