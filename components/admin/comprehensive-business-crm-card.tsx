@@ -517,12 +517,12 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           {/* Stats Grid - Centered Icons & Text */}
           <div className="grid grid-cols-4 gap-5">
             {/* Tier */}
-            <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-purple-500/20 text-center">
-              <svg className="w-4 h-4 text-purple-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-purple-500/20 flex flex-col items-center justify-center text-center">
+              <svg className="w-4 h-4 text-purple-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
-              <span className="text-slate-400 text-xs font-medium block mb-2">Tier</span>
-              <span className={`font-bold text-lg leading-tight block ${
+              <span className="text-slate-400 text-xs font-medium mb-2">Tier</span>
+              <span className={`font-bold text-lg leading-none ${
                 // ONLY check subscription data, ignore legacy trial_days_remaining
                 business.subscription?.is_in_free_trial ? 'text-blue-400' :
                 business.subscription?.tier_display_name === 'Spotlight' ? 'text-amber-400' :
