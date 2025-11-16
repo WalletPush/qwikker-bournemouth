@@ -65,6 +65,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/admin/emergency-email-fix/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/admin/emergency-email-fix">> = Specific
+  const handler = {} as typeof import("../../app/admin/emergency-email-fix/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/admin/franchise-setup/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/admin/franchise-setup">> = Specific
@@ -843,6 +852,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/admin/extend-offer">> = Specific
   const handler = {} as typeof import("../../app/api/admin/extend-offer/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/admin/fix-user-email/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/admin/fix-user-email">> = Specific
+  const handler = {} as typeof import("../../app/api/admin/fix-user-email/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

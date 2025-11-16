@@ -257,6 +257,7 @@ export async function updateOffer(userId: string, offerId: string, offerData: {
 
 /**
  * Update business information with automatic GHL sync and notifications
+ * IMPORTANT: If email is being changed, also updates auth.users email
  */
 export async function updateBusinessInfo(userId: string, updates: any) {
   const supabaseAdmin = createAdminClient()
@@ -264,6 +265,30 @@ export async function updateBusinessInfo(userId: string, updates: any) {
   // Filter out routine contact updates that don't need Slack notifications
   const routineFields = ['phone', 'email', 'first_name', 'last_name']
   const importantUpdates = Object.keys(updates).filter(key => !routineFields.includes(key))
+
+  // 🔥 CRITICAL: If email is being changed, update auth.users table too!
+  if (updates.email) {
+    console.log('🔐 Email change detected - updating auth.users table...')
+    
+    // Update the auth email using admin API
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+      userId,
+      { 
+        email: updates.email,
+        email_confirm: true // Skip email verification for business users
+      }
+    )
+    
+    if (authError) {
+      console.error('❌ Failed to update auth email:', authError)
+      return { 
+        success: false, 
+        error: `Failed to update login email: ${authError.message}. Your profile email was NOT changed.` 
+      }
+    }
+    
+    console.log('✅ Auth email updated successfully - user can now log in with:', updates.email)
+  }
 
   // Update the profile with timestamp (skip GHL sync fields if they don't exist)
   const updateData = {
