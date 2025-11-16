@@ -105,9 +105,10 @@ export function ProfilePreviewPage({ profile }: ProfilePreviewPageProps) {
             </Button>
           </div>
         </div>
+      </div>
       
-        {/* Hero Modal - Full Screen */}
-        {showHero && (
+      {/* Hero Modal - Full Screen */}
+      {showHero && (
           <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4" onClick={() => setShowHero(false)}>
           <div className="max-w-4xl w-full bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {/* Hero Image */}
@@ -194,8 +195,8 @@ export function ProfilePreviewPage({ profile }: ProfilePreviewPageProps) {
             </div>
           </div>
         </div>
-        )}
-      </div>
+      )}
+    </div>
     </>
   )
 }
