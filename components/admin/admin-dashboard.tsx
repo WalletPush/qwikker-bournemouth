@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 import { AdminLogoutButton } from '@/components/admin-logout-button'
 import AdminInspectionModal from './admin-inspection-modal'
 import { BusinessCRMCard } from './business-crm-card'
