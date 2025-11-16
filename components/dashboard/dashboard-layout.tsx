@@ -141,6 +141,16 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
     const tierName = profile?.subscription?.subscription_tiers?.tier_name
     const isInTrial = profile?.subscription?.is_in_free_trial
     
+    // 🔍 DEBUG LOGGING
+    if (featureKey && typeof window !== 'undefined') {
+      console.log(`🔐 Feature unlock check for ${featureId}:`, {
+        tierName,
+        isInTrial,
+        legacyPlan: profile?.plan,
+        subscriptionData: profile?.subscription
+      })
+    }
+    
     // ONLY SPOTLIGHT gets premium features (Social Wizard, Loyalty Cards, Analytics, Push Notifications)
     if (tierName === 'spotlight') return true
     

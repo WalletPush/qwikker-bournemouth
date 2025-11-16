@@ -1,4 +1,13 @@
 {
   "/admin/page": "app/admin/page.js",
-  "/page": "app/page.js"
+  "/api/admin/contacts/route": "app/api/admin/contacts/route.js",
+  "/api/admin/contacts/simple-update/route": "app/api/admin/contacts/simple-update/route.js",
+  "/api/admin/contacts/update/route": "app/api/admin/contacts/update/route.js",
+  "/api/admin/sync/bulk-sync/route": "app/api/admin/sync/bulk-sync/route.js",
+  "/api/admin/sync/health/route": "app/api/admin/sync/health/route.js",
+  "/api/test-contact-update/route": "app/api/test-contact-update/route.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/page": "app/page.js",
+  "/protected/page": "app/protected/page.js"
 }
