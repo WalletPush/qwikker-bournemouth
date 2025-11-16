@@ -525,14 +525,14 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Tier</span>
               <span className={`font-semibold text-xl leading-tight block ${
-                // Check trial status first (subscription OR legacy)
-                (business.subscription?.is_in_free_trial || (business.trial_days_remaining !== null && business.trial_days_remaining > 0)) ? 'text-blue-400' :
+                // ONLY check subscription data, ignore legacy trial_days_remaining
+                business.subscription?.is_in_free_trial ? 'text-blue-400' :
                 business.subscription?.tier_display_name === 'Spotlight' ? 'text-amber-400' :
                 business.subscription?.tier_display_name === 'Featured' ? 'text-purple-400' :
                 'text-slate-300'
               }`}>
-                {/* Show tier name, prioritizing trial if active */}
-                {(business.subscription?.is_in_free_trial || (business.trial_days_remaining !== null && business.trial_days_remaining > 0))
+                {/* Show tier name based on subscription data only */}
+                {business.subscription?.is_in_free_trial
                   ? 'Free Trial'
                   : business.subscription?.tier_display_name || 'Starter'}
               </span>
