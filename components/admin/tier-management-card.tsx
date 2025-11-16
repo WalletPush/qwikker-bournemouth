@@ -225,8 +225,9 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
       console.log('✅ SERVER ACTION succeeded:', result)
       setShowSuccessModal(true)
       setTimeout(() => {
+        setShowSuccessModal(false)
         onUpdate()
-      }, 1500)
+      }, 800)
     } catch (error: any) {
       console.error('❌ Error updating tier:', error)
       setErrorMessage(error?.message || 'Unknown error occurred')

@@ -1681,12 +1681,12 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <TierManagementCard 
                   business={business} 
                   onUpdate={() => {
-                    // Use Next.js router.refresh() to reload server components with fresh data
-                    router.refresh()
-                    // Close the modal after a short delay to show success
+                    // Close modal immediately to show the updated card
+                    setIsExpanded(false)
+                    // Then refresh the data
                     setTimeout(() => {
-                      setIsExpanded(false)
-                    }, 2000)
+                      router.refresh()
+                    }, 300)
                   }} 
                 />
                 
