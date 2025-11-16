@@ -653,9 +653,9 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-green-400 text-lg">🎉 Profile Complete & Ready!</h3>
-                  <p className="text-green-300 text-sm mt-1">
-                    All required fields are complete. You can now submit your listing for admin review.
+                  <h3 className="font-bold text-green-400 text-xl">✅ PROFILE COMPLETE - READY TO SUBMIT</h3>
+                  <p className="text-green-300 text-sm mt-1 font-semibold">
+                    All required fields are complete. Click "Submit for Review" below to send your listing to our team.
                   </p>
                 </div>
               </div>

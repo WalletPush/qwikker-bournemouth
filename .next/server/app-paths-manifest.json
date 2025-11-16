@@ -12,6 +12,7 @@
   "/auth/login/page": "app/auth/login/page.js",
   "/dashboard/action-items/page": "app/dashboard/action-items/page.js",
   "/dashboard/analytics/page": "app/dashboard/analytics/page.js",
+  "/dashboard/events/page": "app/dashboard/events/page.js",
   "/dashboard/notifications/page": "app/dashboard/notifications/page.js",
   "/dashboard/page": "app/dashboard/page.js",
   "/dashboard/profile/page": "app/dashboard/profile/page.js",
@@ -19,5 +20,6 @@
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/onboarding/page": "app/onboarding/page.js",
   "/page": "app/page.js",
-  "/protected/page": "app/protected/page.js"
+  "/protected/page": "app/protected/page.js",
+  "/user/business/[slug]/page": "app/user/business/[slug]/page.js"
 }
