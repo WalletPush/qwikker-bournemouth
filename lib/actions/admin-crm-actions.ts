@@ -617,7 +617,7 @@ export async function updateBusinessTier(params: {
 
     // 4. Update or Insert business_subscriptions (manual check since no unique constraint)
     const subscriptionData: any = {
-      business_id: userId, // CRITICAL: Use user_id (which matches profiles.id)
+      business_id: businessId, // Use businessId (profile.id) to match foreign key constraint
       tier_id: tierData.id,
       status: selectedTier === 'trial' ? 'trial' : 'active',
       is_in_free_trial: isTrial, // FALSE for paid tiers, TRUE for trial
@@ -634,11 +634,11 @@ export async function updateBusinessTier(params: {
       free_trial_end_date: subscriptionData.free_trial_end_date
     })
 
-    // Check if subscription exists
+    // Check if subscription exists (search by businessId/profile.id)
     const { data: existingSub, error: checkError } = await supabaseAdmin
       .from('business_subscriptions')
       .select('id')
-      .eq('business_id', userId)
+      .eq('business_id', businessId)
       .maybeSingle()
 
     let subscriptionError
@@ -649,7 +649,7 @@ export async function updateBusinessTier(params: {
       const { error } = await supabaseAdmin
         .from('business_subscriptions')
         .update(subscriptionData)
-        .eq('business_id', userId)
+        .eq('business_id', businessId)
       subscriptionError = error
     } else {
       // Insert new subscription
