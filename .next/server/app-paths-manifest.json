@@ -4,6 +4,7 @@
   "/admin/find-user/page": "app/admin/find-user/page.js",
   "/admin/login/page": "app/admin/login/page.js",
   "/admin/page": "app/admin/page.js",
+  "/api/admin/approve/route": "app/api/admin/approve/route.js",
   "/api/admin/fix-user-email/route": "app/api/admin/fix-user-email/route.js",
   "/api/admin/login/route": "app/api/admin/login/route.js",
   "/api/admin/logout/route": "app/api/admin/logout/route.js",

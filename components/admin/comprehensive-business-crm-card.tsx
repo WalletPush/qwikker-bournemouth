@@ -276,16 +276,6 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
   // Data is loading correctly - debug log removed to reduce console noise
 
-  // Helper function to format dates consistently (avoids hydration errors)
-  const formatDateConsistent = (dateString: string) => {
-    if (!dateString) return 'N/A'
-    const date = new Date(dateString)
-    const day = date.getDate().toString().padStart(2, '0')
-    const month = date.toLocaleDateString('en-GB', { month: 'short' })
-    const year = date.getFullYear()
-    return `${day} ${month} ${year}`
-  }
-
   const handleAction = async (action: 'approve' | 'reject' | 'restore') => {
     if (!onApprove) return
     setIsLoading(true)
