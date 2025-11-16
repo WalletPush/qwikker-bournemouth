@@ -637,23 +637,47 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
         </div>
       )}
 
-      {/* Submit Listing Button */}
-      <Card className="bg-slate-800/50 border-slate-700">
+      {/* Submit Listing Button - PROMINENT CALL TO ACTION */}
+      <Card className={`${
+        isReadyToSubmit 
+          ? 'bg-gradient-to-br from-green-950/60 to-emerald-950/40 border-2 border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.2)]' 
+          : 'bg-slate-800/50 border-slate-700'
+      }`}>
         <CardContent className="p-6">
+          {isReadyToSubmit && (
+            <div className="mb-4 p-4 bg-green-500/10 border-2 border-green-500/30 rounded-xl">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center animate-pulse">
+                  <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-green-400 text-lg">🎉 Profile Complete & Ready!</h3>
+                  <p className="text-green-300 text-sm mt-1">
+                    All required fields are complete. You can now submit your listing for admin review.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#00d083]/10 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              isReadyToSubmit ? 'bg-green-500/20' : 'bg-[#00d083]/10'
+            }`}>
+              <svg className={`w-6 h-6 ${isReadyToSubmit ? 'text-green-400' : 'text-[#00d083]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-white mb-1">
-                {isReadyToSubmit ? 'Ready to Submit!' : 'Submit Your Listing'}
+              <h3 className={`font-semibold mb-1 ${isReadyToSubmit ? 'text-green-400 text-lg' : 'text-white'}`}>
+                {isReadyToSubmit ? '✅ Ready to Submit for Review' : 'Submit Your Listing'}
               </h3>
-              <p className="text-sm text-gray-400">
+              <p className={`text-sm ${isReadyToSubmit ? 'text-green-300' : 'text-gray-400'}`}>
                 {isReadyToSubmit 
-                  ? 'All required fields complete. Submit your listing for admin review to go live on Qwikker.'
-                  : `Complete ${totalRequiredItems} more required field${totalRequiredItems !== 1 ? 's' : ''} before you can submit your listing.`
+                  ? 'Click the button below to submit your listing. Our team will review it within 24 hours.'
+                  : `Complete ${totalRequiredItems} more required field${totalRequiredItems !== 1 ? 's' : ''} before you can submit.`
                 }
               </p>
             </div>
@@ -664,20 +688,58 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                 }
               }}
               disabled={!isReadyToSubmit || isSubmitting}
+              size="lg"
               className={`${
                 isReadyToSubmit 
-                  ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white' 
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] border-2 border-green-400/30 animate-pulse' 
                   : 'bg-gray-600 text-gray-300 cursor-not-allowed'
               }`}
             >
-              {isSubmitting ? 'Submitting...' : isReadyToSubmit ? 'Ready to Submit!' : 'Submit Listing'}
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Submitting...
+                </span>
+              ) : isReadyToSubmit ? (
+                '🚀 Submit for Review'
+              ) : (
+                'Complete Required Fields'
+              )}
             </Button>
           </div>
+          
           {!isReadyToSubmit && (
-            <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-              <p className="text-xs text-yellow-400">
-                💡 Your listing will be reviewed by our team before going live to ensure the best experience for customers.
-              </p>
+            <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm text-yellow-300 font-semibold mb-1">Admin Review Required</p>
+                  <p className="text-xs text-yellow-400">
+                    Your listing will be reviewed by our team before going live to ensure quality and accuracy for customers.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {isReadyToSubmit && (
+            <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm text-blue-300 font-semibold mb-1">⚠️ Important: Submission is Manual</p>
+                  <p className="text-xs text-blue-400">
+                    Your listing will NOT be submitted automatically. You must click "Submit for Review" to send it to our admin team.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
