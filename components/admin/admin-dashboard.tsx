@@ -1212,8 +1212,7 @@ Qwikker Admin Team`
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
                             // Starter tier EXCLUDING trials
-                            const isTrial = crm?.subscription?.is_in_free_trial || 
-                                           (crm?.trial_days_remaining !== null && crm?.trial_days_remaining > 0)
+                            const isTrial = crm?.subscription?.is_in_free_trial
                             return !isTrial && crm?.subscription?.tier_name === 'starter'
                           }).length}
                         </p>
@@ -1240,8 +1239,7 @@ Qwikker Admin Team`
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
                             // Featured tier EXCLUDING trials
-                            const isTrial = crm?.subscription?.is_in_free_trial || 
-                                           (crm?.trial_days_remaining !== null && crm?.trial_days_remaining > 0)
+                            const isTrial = crm?.subscription?.is_in_free_trial
                             return !isTrial && crm?.subscription?.tier_name === 'featured'
                           }).length}
                         </p>
@@ -1268,8 +1266,7 @@ Qwikker Admin Team`
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
                             // Spotlight tier EXCLUDING trials
-                            const isTrial = crm?.subscription?.is_in_free_trial || 
-                                           (crm?.trial_days_remaining !== null && crm?.trial_days_remaining > 0)
+                            const isTrial = crm?.subscription?.is_in_free_trial
                             return !isTrial && crm?.subscription?.tier_name === 'spotlight'
                           }).length}
                         </p>

@@ -46,9 +46,8 @@ const formatDateConsistent = (dateString: string | null | undefined): string => 
 
 // Helper function to get tier-specific border color
 const getTierBorderColor = (business: BusinessCRMData) => {
-  // Check if on free trial (from subscription OR legacy calculation)
-  const isTrial = business.subscription?.is_in_free_trial || 
-                  (business.trial_days_remaining !== null && business.trial_days_remaining > 0)
+  // ONLY check subscription data, ignore legacy trial_days_remaining
+  const isTrial = business.subscription?.is_in_free_trial
   
   // Get tier from subscription or fallback to business.plan
   const tierName = business.subscription?.tier_name
@@ -61,9 +60,8 @@ const getTierBorderColor = (business: BusinessCRMData) => {
 
 // Helper function to get tier-specific accent gradient
 const getTierAccentGradient = (business: BusinessCRMData) => {
-  // Check if on free trial (from subscription OR legacy calculation)
-  const isTrial = business.subscription?.is_in_free_trial || 
-                  (business.trial_days_remaining !== null && business.trial_days_remaining > 0)
+  // ONLY check subscription data, ignore legacy trial_days_remaining
+  const isTrial = business.subscription?.is_in_free_trial
   
   // Get tier from subscription or fallback to business.plan
   const tierName = business.subscription?.tier_name
