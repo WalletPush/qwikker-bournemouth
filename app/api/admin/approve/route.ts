@@ -261,6 +261,12 @@ export async function POST(request: NextRequest) {
       await sendContactUpdateToGoHighLevel(ghlData, data.city)
       console.log(`📞 Business ${action} synced to ${data.city} GHL: ${data.business_name}`)
       
+      // ✅ UPDATE last_ghl_sync timestamp
+      await supabaseAdmin
+        .from('business_profiles')
+        .update({ last_ghl_sync: new Date().toISOString() })
+        .eq('id', businessId)
+      
     } catch (ghlError) {
       console.error(`⚠️ GHL sync failed after business ${action} (non-critical):`, ghlError)
       // Don't fail the approval if GHL sync fails

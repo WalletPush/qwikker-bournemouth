@@ -356,6 +356,12 @@ export async function POST(request: NextRequest) {
             
             await sendContactUpdateToGoHighLevel(ghlData, updatedBusiness.city)
             console.log(`📞 Approved ${change.change_type} synced to ${updatedBusiness.city} GHL: ${updatedBusiness.business_name}`)
+            
+            // ✅ UPDATE last_ghl_sync timestamp
+            await supabaseAdmin
+              .from('business_profiles')
+              .update({ last_ghl_sync: new Date().toISOString() })
+              .eq('id', change.business_id)
           }
           
         } catch (ghlError) {
