@@ -685,50 +685,37 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
         </div>
       )}
 
-      {/* Submit Listing Button - PROMINENT CALL TO ACTION */}
+      {/* Submit Listing Button - CLEAN & SIMPLE */}
       <Card id="submit-listing" className={`scroll-mt-20 ${
         isReadyToSubmit 
           ? 'bg-gradient-to-br from-green-950/60 to-emerald-950/40 border-2 border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.2)]' 
           : 'bg-slate-800/50 border-slate-700'
       }`}>
         <CardContent className="p-6">
-          {isReadyToSubmit && (
-            <div className="mb-4 p-4 bg-green-500/10 border-2 border-green-500/30 rounded-xl">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center animate-pulse">
-                  <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-green-400 text-xl">✅ PROFILE COMPLETE - READY TO SUBMIT</h3>
-                  <p className="text-green-300 text-sm mt-1 font-semibold">
-                    All required fields are complete. Click "Submit for Review" below to send your listing to our team.
-                  </p>
-                </div>
+          <div className="flex items-center justify-between gap-6">
+            {/* Icon + Text */}
+            <div className="flex items-center gap-4 flex-1">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                isReadyToSubmit ? 'bg-green-500/20' : 'bg-slate-700'
+              }`}>
+                <svg className={`w-6 h-6 ${isReadyToSubmit ? 'text-green-400' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className={`font-bold text-lg mb-1 ${isReadyToSubmit ? 'text-green-400' : 'text-white'}`}>
+                  {isReadyToSubmit ? 'Ready to Submit for Review' : 'Submit Your Listing'}
+                </h3>
+                <p className={`text-sm ${isReadyToSubmit ? 'text-green-300' : 'text-slate-400'}`}>
+                  {isReadyToSubmit 
+                    ? 'All required fields complete. Click button to submit.'
+                    : `Complete ${totalRequiredItems} more field${totalRequiredItems !== 1 ? 's' : ''} to submit.`
+                  }
+                </p>
               </div>
             </div>
-          )}
-          
-          <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              isReadyToSubmit ? 'bg-green-500/20' : 'bg-[#00d083]/10'
-            }`}>
-              <svg className={`w-6 h-6 ${isReadyToSubmit ? 'text-green-400' : 'text-[#00d083]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h3 className={`font-semibold mb-1 ${isReadyToSubmit ? 'text-green-400 text-lg' : 'text-white'}`}>
-                {isReadyToSubmit ? '✅ Ready to Submit for Review' : 'Submit Your Listing'}
-              </h3>
-              <p className={`text-sm ${isReadyToSubmit ? 'text-green-300' : 'text-gray-400'}`}>
-                {isReadyToSubmit 
-                  ? 'Click the button below to submit your listing. Our team will review it within 24 hours.'
-                  : `Complete ${totalRequiredItems} more required field${totalRequiredItems !== 1 ? 's' : ''} before you can submit.`
-                }
-              </p>
-            </div>
+            
+            {/* Submit Button */}
             <Button 
               onClick={() => {
                 if (isReadyToSubmit) {
@@ -739,8 +726,8 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
               size="lg"
               className={`${
                 isReadyToSubmit 
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] border-2 border-green-400/30 animate-pulse' 
-                  : 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] border-2 border-green-400/30' 
+                  : 'bg-slate-700 text-slate-400 cursor-not-allowed'
               }`}
             >
               {isSubmitting ? (
@@ -751,45 +738,11 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                   </svg>
                   Submitting...
                 </span>
-              ) : isReadyToSubmit ? (
-                'Submit for Review'
               ) : (
-                'Complete Required Fields'
+                'Submit for Review'
               )}
             </Button>
           </div>
-          
-          {!isReadyToSubmit && (
-            <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-              <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <p className="text-sm text-yellow-300 font-semibold mb-1">Admin Review Required</p>
-                  <p className="text-xs text-yellow-400">
-                    Your listing will be reviewed by our team before going live to ensure quality and accuracy for customers.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {isReadyToSubmit && (
-            <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-              <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <p className="text-sm text-blue-300 font-semibold mb-1">⚠️ Important: Submission is Manual</p>
-                  <p className="text-xs text-blue-400">
-                    Your listing will NOT be submitted automatically. You must click "Submit for Review" to send it to our admin team.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -947,7 +900,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                 </Button>
                 
                 <Link 
-                  href="/dashboard/profile"
+                  href="/dashboard/profile/preview"
                   onClick={() => setShowCompletionModal(false)}
                   className="flex-1"
                 >
