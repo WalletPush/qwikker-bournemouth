@@ -227,11 +227,11 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
   }
 
   const steps = [
-    { id: 1, name: 'Admin Account', icon: '👤', color: 'from-blue-500 to-blue-600' },
-    { id: 2, name: 'Franchise Details', icon: '🏢', color: 'from-purple-500 to-purple-600' },
-    { id: 3, name: 'Your API Services', icon: '🔑', color: 'from-orange-500 to-orange-600' },
-    { id: 4, name: 'Integrations', icon: '🔗', color: 'from-green-500 to-green-600' },
-    { id: 5, name: 'Save & Launch', icon: '🚀', color: 'from-[#00d083] to-[#00b86f]' },
+    { id: 1, name: 'Admin Account', icon: '1', color: 'from-blue-500 to-blue-600' },
+    { id: 2, name: 'Franchise Details', icon: '2', color: 'from-purple-500 to-purple-600' },
+    { id: 3, name: 'Your API Services', icon: '3', color: 'from-orange-500 to-orange-600' },
+    { id: 4, name: 'Integrations', icon: '4', color: 'from-green-500 to-green-600' },
+    { id: 5, name: 'Save & Launch', icon: '5', color: 'from-[#00d083] to-[#00b86f]' },
   ]
 
   if (isLoading || !config) {
@@ -296,7 +296,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 </div>
               )}
               <div className="text-center">
-                <div className={`text-3xl mb-2 ${isActive ? 'animate-bounce' : ''}`}>{step.icon}</div>
+                <div className={`text-2xl font-bold mb-2 ${isActive ? 'text-[#00d083]' : isComplete ? 'text-green-400' : 'text-slate-400'}`}>{step.icon}</div>
                 <div className={`font-bold text-xs ${isActive ? 'text-[#00d083]' : isComplete ? 'text-green-400' : 'text-slate-400'}`}>
                   Step {step.id}
                 </div>
@@ -327,8 +327,10 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
           <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-blue-500/50 shadow-2xl backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-blue-500/30">
-                  👤
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
                 </div>
                 <div>
                   <CardTitle className="text-white text-2xl">Your Admin Account</CardTitle>
@@ -343,7 +345,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div>
-                    <p className="text-blue-300 text-sm font-semibold mb-1">🔐 Security First</p>
+                    <p className="text-blue-300 text-sm font-semibold mb-1">Security First</p>
                     <p className="text-blue-200 text-sm">
                       This is YOUR admin account for managing your franchise. Use a strong, unique password and keep your email secure for important system notifications.
                     </p>
@@ -423,10 +425,10 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  {passwordStatus === 'saving' && '⏳ Changing...'}
-                  {passwordStatus === 'saved' && '✅ Changed!'}
-                  {passwordStatus === 'error' && '❌ Error'}
-                  {passwordStatus === 'idle' && '🔐 Change Password'}
+                  {passwordStatus === 'saving' && 'Changing...'}
+                  {passwordStatus === 'saved' && 'Changed!'}
+                  {passwordStatus === 'error' && 'Error'}
+                  {passwordStatus === 'idle' && 'Change Password'}
                 </Button>
               </div>
 
@@ -447,8 +449,10 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
           <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-purple-500/50 shadow-2xl backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-purple-500/30">
-                  🏢
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
                 </div>
                 <div>
                   <CardTitle className="text-white text-2xl">Franchise Details</CardTitle>
@@ -462,7 +466,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div>
-                    <p className="text-purple-300 text-sm font-semibold mb-1">📍 Why This Matters</p>
+                    <p className="text-purple-300 text-sm font-semibold mb-1">Why This Matters</p>
                     <p className="text-purple-200 text-sm">
                       This information appears on your franchise website, in customer communications, and helps businesses find you. Make it accurate and professional!
                     </p>
@@ -508,14 +512,14 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     value={config.timezone}
                     onChange={(e) => setConfig({...config, timezone: e.target.value})}
                   >
-                    <option value="Europe/London">🇬🇧 Europe/London (GMT/BST)</option>
-                    <option value="America/Toronto">🇨🇦 America/Toronto (EST/EDT)</option>
-                    <option value="America/Vancouver">🇨🇦 America/Vancouver (PST/PDT)</option>
-                    <option value="America/New_York">🇺🇸 America/New_York (EST/EDT)</option>
-                    <option value="America/Los_Angeles">🇺🇸 America/Los_Angeles (PST/PDT)</option>
-                    <option value="Australia/Sydney">🇦🇺 Australia/Sydney (AEST/AEDT)</option>
-                    <option value="Europe/Paris">🇫🇷 Europe/Paris (CET/CEST)</option>
-                    <option value="Asia/Tokyo">🇯🇵 Asia/Tokyo (JST)</option>
+                    <option value="Europe/London">Europe/London (GMT/BST)</option>
+                    <option value="America/Toronto">America/Toronto (EST/EDT)</option>
+                    <option value="America/Vancouver">America/Vancouver (PST/PDT)</option>
+                    <option value="America/New_York">America/New_York (EST/EDT)</option>
+                    <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+                    <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
+                    <option value="Europe/Paris">Europe/Paris (CET/CEST)</option>
+                    <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
                   </select>
                 </div>
               </div>
@@ -554,28 +558,30 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
           <div className="space-y-6">
             <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-orange-500/50 shadow-2xl backdrop-blur-sm">
               <CardHeader>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-orange-500/30">
-                    🔑
-                  </div>
-                  <div>
-                    <CardTitle className="text-white text-2xl">Your API Services</CardTitle>
-                    <p className="text-slate-400 text-sm mt-1">Configure the services YOU manage and pay for</p>
-                  </div>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
                 </div>
+                <div>
+                  <CardTitle className="text-white text-2xl">Your API Services</CardTitle>
+                  <p className="text-slate-400 text-sm mt-1">Configure the services YOU manage and pay for</p>
+                </div>
+              </div>
                 
                 <div className="bg-orange-900/30 border-2 border-orange-500/30 rounded-xl p-4 mt-4">
                   <div className="flex items-start gap-3">
                     <svg className="w-6 h-6 text-orange-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <div>
-                      <p className="text-orange-300 text-sm font-semibold mb-1">💰 Franchise Owner Responsibility</p>
-                      <p className="text-orange-200 text-sm">
-                        These services are <span className="font-bold">paid for and managed by YOU</span>, the franchise owner. Qwikker HQ only covers hosting and the database. 
-                        This keeps your operating costs transparent and gives you full control!
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-orange-300 text-sm font-semibold mb-1">Franchise Owner Responsibility</p>
+                    <p className="text-orange-200 text-sm">
+                      These services are <span className="font-bold">paid for and managed by YOU</span>, the franchise owner. Qwikker HQ only covers hosting and the database. 
+                      This keeps your operating costs transparent and gives you full control!
+                    </p>
+                  </div>
                   </div>
                 </div>
               </CardHeader>
@@ -584,8 +590,8 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 {/* Resend (Email) */}
                 <div className="border-2 border-slate-700/50 rounded-xl p-6 hover:border-slate-600 transition-colors bg-slate-800/30">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                      📧
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                      RS
                     </div>
                     <div className="flex-1">
                       <h3 className="text-white font-bold text-lg">Resend (Email Service)</h3>
@@ -639,15 +645,15 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                         />
                       </div>
                     </div>
-                    <p className="text-xs text-slate-400">⚠️ You'll need to verify this domain in Resend</p>
+                    <p className="text-xs text-slate-400">Note: You'll need to verify this domain in Resend</p>
                   </div>
                 </div>
 
                 {/* OpenAI */}
                 <div className="border-2 border-slate-700/50 rounded-xl p-6 hover:border-slate-600 transition-colors bg-slate-800/30">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                      🤖
+                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                      AI
                     </div>
                     <div className="flex-1">
                       <h3 className="text-white font-bold text-lg">OpenAI (AI Features)</h3>
@@ -685,8 +691,8 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 {/* Anthropic (Claude) */}
                 <div className="border-2 border-slate-700/50 rounded-xl p-6 hover:border-slate-600 transition-colors bg-slate-800/30">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                      🧠
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                      CL
                     </div>
                     <div className="flex-1">
                       <h3 className="text-white font-bold text-lg">Anthropic Claude (Advanced AI)</h3>
@@ -747,27 +753,29 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
           <div className="space-y-6">
             <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-green-500/50 shadow-2xl backdrop-blur-sm">
               <CardHeader>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-green-500/30">
-                    🔗
-                  </div>
-                  <div>
-                    <CardTitle className="text-white text-2xl">Platform Integrations</CardTitle>
-                    <p className="text-slate-400 text-sm mt-1">Connect CRM, payments, notifications & more</p>
-                  </div>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/30">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
                 </div>
+                <div>
+                  <CardTitle className="text-white text-2xl">Platform Integrations</CardTitle>
+                  <p className="text-slate-400 text-sm mt-1">Connect CRM, payments, notifications & more</p>
+                </div>
+              </div>
                 
                 <div className="bg-green-900/30 border-2 border-green-500/30 rounded-xl p-4 mt-4">
                   <div className="flex items-start gap-3">
                     <svg className="w-6 h-6 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    <div>
-                      <p className="text-green-300 text-sm font-semibold mb-1">⚡ Automate Everything</p>
-                      <p className="text-green-200 text-sm">
-                        These integrations power your franchise operations. Connect your tools once and let Qwikker handle the rest automatically!
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-green-300 text-sm font-semibold mb-1">Automate Everything</p>
+                    <p className="text-green-200 text-sm">
+                      These integrations power your franchise operations. Connect your tools once and let Qwikker handle the rest automatically!
+                    </p>
+                  </div>
                   </div>
                 </div>
               </CardHeader>
@@ -1007,8 +1015,10 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
         {activeStep === 5 && (
           <Card className="bg-gradient-to-br from-[#00d083]/10 to-[#00b86f]/10 border-2 border-[#00d083]/50 shadow-2xl backdrop-blur-sm">
             <CardHeader className="text-center pb-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-3xl flex items-center justify-center text-5xl mx-auto mb-6 shadow-2xl shadow-[#00d083]/30 animate-bounce">
-                🚀
+              <div className="w-20 h-20 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-[#00d083]/30 animate-bounce">
+                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
               </div>
               <CardTitle className="text-white text-4xl mb-3">Ready to Save!</CardTitle>
               <p className="text-slate-300 text-lg max-w-2xl mx-auto">
@@ -1017,7 +1027,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="bg-[#00d083]/10 border-2 border-[#00d083]/30 rounded-xl p-8">
-                <h3 className="text-white font-bold text-xl mb-4 text-center">✨ What gets saved?</h3>
+                <h3 className="text-white font-bold text-xl mb-4 text-center">What gets saved?</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-300 text-sm">
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-[#00d083] rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">1</div>
@@ -1071,9 +1081,9 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       Saving Configuration...
                     </>
                   )}
-                  {saveStatus === 'saved' && '🎉 Configuration Saved!'}
-                  {saveStatus === 'error' && '❌ Try Again'}
-                  {saveStatus === 'idle' && '💾 Save Configuration'}
+                  {saveStatus === 'saved' && 'Configuration Saved!'}
+                  {saveStatus === 'error' && 'Try Again'}
+                  {saveStatus === 'idle' && 'Save Configuration'}
                 </Button>
                 
                 <Button
