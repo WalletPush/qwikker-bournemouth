@@ -165,6 +165,29 @@ export async function POST(request: NextRequest) {
     // Log the creation for audit trail
     console.log(`🏢 Admin ${adminUserId} created business "${businessName}" for ${contactEmail} in ${city}`)
 
+    // 📢 SEND SLACK NOTIFICATION: Admin created business
+    try {
+      const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
+      
+      await sendCitySlackNotification({
+        city,
+        type: 'business_registered',
+        title: '🏢 Business Created by Admin',
+        message: `Admin has manually created a new business: **${businessName}**`,
+        details: [
+          `📧 Email: ${contactEmail}`,
+          `📍 Location: ${city}`,
+          `💼 Type: ${businessType}`,
+          `🔑 Temp Password: ${tempPassword}`,
+          `👤 Created by Admin ID: ${adminUserId}`
+        ]
+      })
+      
+      console.log(`📢 Slack notification sent for admin-created business: ${businessName}`)
+    } catch (error) {
+      console.error('⚠️ Slack notification error (non-critical):', error)
+    }
+
     return NextResponse.json({
       success: true,
       message: `Business "${businessName}" created successfully`,
