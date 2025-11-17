@@ -29,6 +29,7 @@ interface FranchiseConfig {
   // CRM Integration (GHL)
   ghl_webhook_url: string
   ghl_update_webhook_url: string
+  ghl_api_key: string
   
   // Mobile Wallet (WalletPush)
   walletpush_api_key: string
@@ -118,6 +119,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
             // CRM
             ghl_webhook_url: `https://services.leadconnectorhq.com/hooks/${city.toLowerCase()}/qwikker`,
             ghl_update_webhook_url: `https://services.leadconnectorhq.com/hooks/${city.toLowerCase()}/qwikker-updates`,
+            ghl_api_key: '',
             
             // Wallet
             walletpush_api_key: '',
@@ -819,6 +821,17 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                         placeholder="https://services.leadconnectorhq.com/hooks/..."
                       />
                       <p className="text-xs text-slate-400 mt-1">Used for business profile updates (optional)</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-300 text-sm mb-2 block">GHL API Key</Label>
+                      <Input
+                        value={config.ghl_api_key}
+                        onChange={(e) => setConfig({...config, ghl_api_key: e.target.value})}
+                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        type="password"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">For advanced CRM authentication and two-way sync</p>
                     </div>
                   </div>
                 </div>
