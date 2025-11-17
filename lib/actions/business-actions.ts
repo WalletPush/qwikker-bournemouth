@@ -768,18 +768,25 @@ export async function submitBusinessForReview(userId: string) {
       return { success: false, error: 'Profile not found' }
     }
 
-    // Send notification to admin (you can implement this later)
+    // 📢 SEND SLACK NOTIFICATION: Business submitted for review
     try {
-      await sendBusinessUpdateNotification({
-        businessName: profile.business_name || 'New Business',
-        businessType: profile.business_type || 'Business',
-        action: 'SUBMITTED_FOR_REVIEW',
-        userId: userId,
-        email: profile.email || 'No email',
-        town: profile.business_town || 'Unknown location'
+      const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
+      
+      await sendCitySlackNotification({
+        title: `🎉 New Business Submitted: ${profile.business_name}`,
+        message: `${profile.business_name} has completed onboarding and submitted their listing for review!\n\n**Business Details:**\n• Owner: ${profile.first_name} ${profile.last_name}\n• Type: ${profile.business_type}\n• Location: ${profile.business_town}, ${profile.business_postcode}\n• Email: ${profile.email}\n• Phone: ${profile.phone}`,
+        city: profile.city || 'bournemouth',
+        type: 'business_signup',
+        data: { 
+          businessName: profile.business_name,
+          ownerName: `${profile.first_name} ${profile.last_name}`,
+          email: profile.email
+        }
       })
+      
+      console.log(`📢 Slack notification sent for business submission: ${profile.business_name}`)
     } catch (notificationError) {
-      console.error('Notification failed:', notificationError)
+      console.error('⚠️ Slack notification error (non-critical):', notificationError)
       // Don't fail the whole operation if notification fails
     }
 

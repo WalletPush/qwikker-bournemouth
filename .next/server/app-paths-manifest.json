@@ -11,6 +11,7 @@
   "/api/admin/setup/route": "app/api/admin/setup/route.js",
   "/api/admin/sync/bulk-sync/route": "app/api/admin/sync/bulk-sync/route.js",
   "/api/admin/sync/health/route": "app/api/admin/sync/health/route.js",
+  "/api/ai/chat/route": "app/api/ai/chat/route.js",
   "/api/menus/list/route": "app/api/menus/list/route.js",
   "/api/test-contact-update/route": "app/api/test-contact-update/route.js",
   "/auth/login/page": "app/auth/login/page.js",
