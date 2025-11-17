@@ -482,21 +482,21 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   <Label className="text-slate-300 font-semibold mb-2 block">Display Name *</Label>
                   <Input
                     value={config.display_name}
-                    onChange={(e) => setConfig({...config, display_name: e.target.value})}
-                    className="bg-slate-700/80 border-slate-600 text-white h-12 rounded-xl"
+                    disabled
+                    className="bg-slate-700/50 border-slate-600/50 text-slate-400 h-12 rounded-xl cursor-not-allowed"
                     placeholder="Bournemouth Qwikker"
                   />
-                  <p className="text-xs text-slate-400 mt-1">This appears on your website header</p>
+                  <p className="text-xs text-slate-500 mt-1">🔒 Set during franchise creation (cannot be changed)</p>
                 </div>
                 <div>
                   <Label className="text-slate-300 font-semibold mb-2 block">Subdomain *</Label>
                   <Input
                     value={config.subdomain}
-                    onChange={(e) => setConfig({...config, subdomain: e.target.value})}
-                    className="bg-slate-700/80 border-slate-600 text-white h-12 rounded-xl"
+                    disabled
+                    className="bg-slate-700/50 border-slate-600/50 text-slate-400 h-12 rounded-xl cursor-not-allowed"
                     placeholder="bournemouth"
                   />
-                  <p className="text-xs text-slate-400 mt-1">Your URL: <span className="text-[#00d083]">{config.subdomain}.qwikker.com</span></p>
+                  <p className="text-xs text-slate-500 mt-1">🔒 Your URL: <span className="text-slate-400">{config.subdomain}.qwikker.com</span></p>
                 </div>
                 <div>
                   <Label className="text-slate-300 font-semibold mb-2 block">Owner Phone</Label>

@@ -13,6 +13,8 @@
   "/api/admin/sync/health/route": "app/api/admin/sync/health/route.js",
   "/api/ai/chat/route": "app/api/ai/chat/route.js",
   "/api/menus/list/route": "app/api/menus/list/route.js",
+  "/api/social-wizard/analyze-image/route": "app/api/social-wizard/analyze-image/route.js",
+  "/api/social-wizard/generate/route": "app/api/social-wizard/generate/route.js",
   "/api/test-contact-update/route": "app/api/test-contact-update/route.js",
   "/auth/login/page": "app/auth/login/page.js",
   "/dashboard/files/page": "app/dashboard/files/page.js",
