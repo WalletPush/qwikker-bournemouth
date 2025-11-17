@@ -70,6 +70,17 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
     confirmPassword: ''
   })
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  
+  // State for showing/hiding API keys
+  const [showKeys, setShowKeys] = useState({
+    resend: false,
+    openai: false,
+    anthropic: false,
+    ghl: false,
+    walletpush: false,
+    stripe_publishable: false,
+    stripe_secret: false
+  })
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -612,13 +623,31 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   <div className="space-y-4">
                     <div>
                       <Label className="text-slate-300 text-sm mb-2 block">Resend API Key *</Label>
-                      <Input
-                        type="password"
-                        value={config.resend_api_key || ''}
-                        onChange={(e) => setConfig({...config, resend_api_key: e.target.value})}
-                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
-                        placeholder="re_..."
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showKeys.resend ? "text" : "password"}
+                          value={config.resend_api_key || ''}
+                          onChange={(e) => setConfig({...config, resend_api_key: e.target.value})}
+                          className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
+                          placeholder="re_..."
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowKeys({...showKeys, resend: !showKeys.resend})}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                        >
+                          {showKeys.resend ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -667,13 +696,31 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
 
                   <div>
                     <Label className="text-slate-300 text-sm mb-2 block">OpenAI API Key *</Label>
-                    <Input
-                      type="password"
-                      value={config.openai_api_key || ''}
-                      onChange={(e) => setConfig({...config, openai_api_key: e.target.value})}
-                      className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
-                      placeholder="sk-proj-..."
-                    />
+                    <div className="relative">
+                      <Input
+                        type={showKeys.openai ? "text" : "password"}
+                        value={config.openai_api_key || ''}
+                        onChange={(e) => setConfig({...config, openai_api_key: e.target.value})}
+                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
+                        placeholder="sk-proj-..."
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowKeys({...showKeys, openai: !showKeys.openai})}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                      >
+                        {showKeys.openai ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
                     <p className="text-xs text-slate-400 mt-1">Used for: AI Support Chat, Social Wizard, Knowledge Base</p>
                   </div>
                 </div>
@@ -700,13 +747,31 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
 
                   <div>
                     <Label className="text-slate-300 text-sm mb-2 block">Anthropic API Key (Optional)</Label>
-                    <Input
-                      type="password"
-                      value={config.anthropic_api_key || ''}
-                      onChange={(e) => setConfig({...config, anthropic_api_key: e.target.value})}
-                      className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
-                      placeholder="sk-ant-..."
-                    />
+                    <div className="relative">
+                      <Input
+                        type={showKeys.anthropic ? "text" : "password"}
+                        value={config.anthropic_api_key || ''}
+                        onChange={(e) => setConfig({...config, anthropic_api_key: e.target.value})}
+                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
+                        placeholder="sk-ant-..."
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowKeys({...showKeys, anthropic: !showKeys.anthropic})}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                      >
+                        {showKeys.anthropic ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
                     <p className="text-xs text-slate-400 mt-1">Used for: Hybrid AI Mode (falls back to OpenAI if not set)</p>
                   </div>
                 </div>
@@ -806,13 +871,31 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     </div>
                     <div>
                       <Label className="text-slate-300 text-sm mb-2 block">GHL API Key</Label>
-                      <Input
-                        value={config.ghl_api_key}
-                        onChange={(e) => setConfig({...config, ghl_api_key: e.target.value})}
-                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
-                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                        type="password"
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showKeys.ghl ? "text" : "password"}
+                          value={config.ghl_api_key}
+                          onChange={(e) => setConfig({...config, ghl_api_key: e.target.value})}
+                          className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
+                          placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowKeys({...showKeys, ghl: !showKeys.ghl})}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                        >
+                          {showKeys.ghl ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                       <p className="text-xs text-slate-400 mt-1">For advanced CRM authentication and two-way sync</p>
                     </div>
                   </div>
@@ -844,13 +927,31 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label className="text-slate-300 text-sm mb-2 block">WalletPush API Key</Label>
-                        <Input
-                          type="password"
-                          value={config.walletpush_api_key}
-                          onChange={(e) => setConfig({...config, walletpush_api_key: e.target.value})}
-                          className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
-                          placeholder="wp_live_..."
-                        />
+                        <div className="relative">
+                          <Input
+                            type={showKeys.walletpush ? "text" : "password"}
+                            value={config.walletpush_api_key}
+                            onChange={(e) => setConfig({...config, walletpush_api_key: e.target.value})}
+                            className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
+                            placeholder="wp_live_..."
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowKeys({...showKeys, walletpush: !showKeys.walletpush})}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                          >
+                            {showKeys.walletpush ? (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
                       </div>
                       <div>
                         <Label className="text-slate-300 text-sm mb-2 block">Template ID</Label>
@@ -954,23 +1055,60 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       </div>
                       <div>
                         <Label className="text-slate-300 text-sm mb-2 block">Publishable Key</Label>
-                        <Input
-                          value={config.stripe_publishable_key}
-                          onChange={(e) => setConfig({...config, stripe_publishable_key: e.target.value})}
-                          className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
-                          placeholder="pk_live_..."
-                        />
+                        <div className="relative">
+                          <Input
+                            type={showKeys.stripe_publishable ? "text" : "password"}
+                            value={config.stripe_publishable_key}
+                            onChange={(e) => setConfig({...config, stripe_publishable_key: e.target.value})}
+                            className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
+                            placeholder="pk_live_..."
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowKeys({...showKeys, stripe_publishable: !showKeys.stripe_publishable})}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                          >
+                            {showKeys.stripe_publishable ? (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                     <div>
                       <Label className="text-slate-300 text-sm mb-2 block">Webhook Secret</Label>
-                      <Input
-                        type="password"
-                        value={config.stripe_webhook_secret}
-                        onChange={(e) => setConfig({...config, stripe_webhook_secret: e.target.value})}
-                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
-                        placeholder="whsec_..."
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showKeys.stripe_secret ? "text" : "password"}
+                          value={config.stripe_webhook_secret}
+                          onChange={(e) => setConfig({...config, stripe_webhook_secret: e.target.value})}
+                          className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
+                          placeholder="whsec_..."
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowKeys({...showKeys, stripe_secret: !showKeys.stripe_secret})}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                        >
+                          {showKeys.stripe_secret ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     </div>
                     <div className="flex items-center space-x-3 pt-2">
                       <input
