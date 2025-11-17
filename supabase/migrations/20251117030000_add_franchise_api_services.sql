@@ -17,6 +17,42 @@ COMMENT ON COLUMN franchise_crm_configs.resend_from_name IS 'Display name for se
 COMMENT ON COLUMN franchise_crm_configs.openai_api_key IS 'OpenAI API key for AI features (paid by franchise owner)';
 COMMENT ON COLUMN franchise_crm_configs.anthropic_api_key IS 'Anthropic Claude API key for advanced AI features (optional, paid by franchise owner)';
 
+-- Pre-populate Bournemouth row with placeholder values
+-- NOTE: Admin should fill these in via the Setup page UI
+INSERT INTO franchise_crm_configs (
+  city,
+  display_name,
+  subdomain,
+  owner_name,
+  owner_email,
+  resend_api_key,
+  resend_from_email,
+  resend_from_name,
+  openai_api_key,
+  anthropic_api_key,
+  status,
+  created_at,
+  updated_at
+)
+VALUES (
+  'bournemouth',
+  'Bournemouth Qwikker',
+  'bournemouth',
+  'Qwikker Admin',
+  'admin@bournemouth.qwikker.com',
+  '', -- Will be filled via UI
+  'hello@bournemouth.qwikker.com',
+  'Bournemouth Qwikker',
+  '', -- Will be filled via UI
+  '', -- Will be filled via UI
+  'active',
+  NOW(),
+  NOW()
+)
+ON CONFLICT (city) DO UPDATE SET
+  resend_from_email = EXCLUDED.resend_from_email,
+  resend_from_name = EXCLUDED.resend_from_name,
+  updated_at = NOW();
+
 -- Update RLS policies if needed (these fields should be secure)
 -- Note: Existing RLS policies should already restrict access to franchise admins only
-
