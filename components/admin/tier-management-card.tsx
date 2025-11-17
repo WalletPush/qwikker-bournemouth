@@ -26,13 +26,11 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     console.log('🔍 Getting current tier:', {
       subscription_tier_name: business?.subscription?.tier_name,
       is_in_free_trial: business?.subscription?.is_in_free_trial,
-      trial_days_remaining: business?.trial_days_remaining,
       profile_plan: business?.plan
     })
     
-    // Check if on free trial FIRST (subscription OR legacy)
-    if (business?.subscription?.is_in_free_trial || 
-        (business?.trial_days_remaining !== null && business?.trial_days_remaining > 0)) {
+    // ONLY check subscription data (ignore legacy trial_days_remaining)
+    if (business?.subscription?.is_in_free_trial) {
       return 'trial'
     }
     
