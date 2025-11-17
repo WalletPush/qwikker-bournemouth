@@ -614,13 +614,37 @@ export async function updateBusinessTier(params: {
 
     console.log('✅ Tier ID found:', tierData.id)
 
-    // 2. Calculate trial dates if needed
+    // 2. Get existing subscription to check for original trial dates
+    const { data: existingSubscription } = await supabaseAdmin
+      .from('business_subscriptions')
+      .select('free_trial_start_date, free_trial_end_date')
+      .eq('business_id', businessId)
+      .maybeSingle()
+
+    // 3. Calculate trial dates
     const now = new Date()
     const isTrial = selectedTier === 'trial'
-    const trialStartDate = isTrial ? now.toISOString() : null
-    const trialEndDate = isTrial ? new Date(now.getTime() + (trialDays || 90) * 24 * 60 * 60 * 1000).toISOString() : null
+    
+    // If downgrading to trial AND original trial dates exist, preserve them
+    // Otherwise, create new trial with custom days or default 90
+    let trialStartDate = null
+    let trialEndDate = null
+    
+    if (isTrial) {
+      if (existingSubscription?.free_trial_start_date && existingSubscription?.free_trial_end_date) {
+        // Preserve original trial dates
+        trialStartDate = existingSubscription.free_trial_start_date
+        trialEndDate = existingSubscription.free_trial_end_date
+        console.log('✅ Preserving original trial dates')
+      } else {
+        // Create new trial (for new businesses or manual trial extension)
+        trialStartDate = now.toISOString()
+        trialEndDate = new Date(now.getTime() + (trialDays || 90) * 24 * 60 * 60 * 1000).toISOString()
+        console.log(`✅ Creating new ${trialDays || 90}-day trial`)
+      }
+    }
 
-    // 3. Update business_profiles (plan AND features)
+    // 4. Update business_profiles (plan AND features)
     const { error: profileError } = await supabaseAdmin
       .from('business_profiles')
       .update({
@@ -637,7 +661,7 @@ export async function updateBusinessTier(params: {
 
     console.log('✅ Profile updated with features:', features)
 
-    // 4. Update or Insert business_subscriptions (manual check since no unique constraint)
+    // 5. Update or Insert business_subscriptions (manual check since no unique constraint)
     const subscriptionData: any = {
       business_id: businessId, // Use businessId (profile.id) to match foreign key constraint
       tier_id: tierData.id,
