@@ -608,12 +608,6 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       Sign Up →
                     </a>
                   </div>
-                  
-                  <div className="bg-blue-900/20 border border-blue-500/20 rounded-lg p-3 mb-4">
-                    <p className="text-blue-200 text-xs">
-                      <span className="font-semibold">Estimated Cost:</span> Free up to 100 emails/day, then $20/mo for 50,000 emails/mo
-                    </p>
-                  </div>
 
                   <div className="space-y-4">
                     <div>
@@ -670,12 +664,6 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       Sign Up →
                     </a>
                   </div>
-                  
-                  <div className="bg-green-900/20 border border-green-500/20 rounded-lg p-3 mb-4">
-                    <p className="text-green-200 text-xs">
-                      <span className="font-semibold">Estimated Cost:</span> Pay-as-you-go, typically $10-50/mo for small franchises
-                    </p>
-                  </div>
 
                   <div>
                     <Label className="text-slate-300 text-sm mb-2 block">OpenAI API Key *</Label>
@@ -708,12 +696,6 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     >
                       Sign Up →
                     </a>
-                  </div>
-                  
-                  <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-3 mb-4">
-                    <p className="text-purple-200 text-xs">
-                      <span className="font-semibold">Estimated Cost:</span> Pay-as-you-go, typically $20-80/mo for advanced features
-                    </p>
                   </div>
 
                   <div>
