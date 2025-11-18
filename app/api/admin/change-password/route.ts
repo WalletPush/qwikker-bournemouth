@@ -24,9 +24,10 @@ export async function POST(request: NextRequest) {
 
     // Get current admin password hash
     const { data: adminData, error: fetchError } = await supabase
-      .from('franchise_admins')
-      .select('password_hash')
+      .from('city_admins')
+      .select('password_hash, username')
       .eq('city', city)
+      .eq('is_active', true)
       .single()
 
     if (fetchError) {
@@ -53,12 +54,13 @@ export async function POST(request: NextRequest) {
 
     // Update password in database
     const { error: updateError } = await supabase
-      .from('franchise_admins')
+      .from('city_admins')
       .update({
         password_hash: newPasswordHash,
         updated_at: new Date().toISOString()
       })
       .eq('city', city)
+      .eq('is_active', true)
 
     if (updateError) {
       console.error('❌ Error updating password:', updateError)

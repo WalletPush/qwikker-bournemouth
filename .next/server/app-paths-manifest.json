@@ -16,11 +16,22 @@
   "/api/social-wizard/analyze-image/route": "app/api/social-wizard/analyze-image/route.js",
   "/api/social-wizard/generate/route": "app/api/social-wizard/generate/route.js",
   "/api/test-contact-update/route": "app/api/test-contact-update/route.js",
+  "/api/user/feature-access/route": "app/api/user/feature-access/route.js",
   "/auth/login/page": "app/auth/login/page.js",
+  "/dashboard/action-items/page": "app/dashboard/action-items/page.js",
+  "/dashboard/analytics/page": "app/dashboard/analytics/page.js",
+  "/dashboard/events/page": "app/dashboard/events/page.js",
   "/dashboard/files/page": "app/dashboard/files/page.js",
   "/dashboard/loyalty/page": "app/dashboard/loyalty/page.js",
+  "/dashboard/notifications/page": "app/dashboard/notifications/page.js",
+  "/dashboard/offers/page": "app/dashboard/offers/page.js",
   "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/profile/page": "app/dashboard/profile/page.js",
+  "/dashboard/referrals/page": "app/dashboard/referrals/page.js",
+  "/dashboard/settings/page": "app/dashboard/settings/page.js",
   "/dashboard/social-wizard/page": "app/dashboard/social-wizard/page.js",
   "/page": "app/page.js",
-  "/protected/page": "app/protected/page.js"
+  "/privacy-policy/page": "app/privacy-policy/page.js",
+  "/protected/page": "app/protected/page.js",
+  "/terms-of-service/page": "app/terms-of-service/page.js"
 }
