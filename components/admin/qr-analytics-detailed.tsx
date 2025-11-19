@@ -3,14 +3,12 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { BarChart, TrendingUp, Smartphone, Clock, MapPin } from 'lucide-react'
+import { BarChart, TrendingUp, Smartphone, Clock } from 'lucide-react'
 
 interface QRAnalytics {
   qr_code: string
   qr_name: string
   total_scans: number
-  scans_7d: number
-  scans_30d: number
   mobile_scans: number
   desktop_scans: number
   tablet_scans: number
@@ -41,8 +39,11 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
     setLoading(true)
     try {
       const supabase = createClientComponentClient()
+      const daysAgo = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 60
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - daysAgo)
 
-      // 1. Get QR codes with their total scans
+      // 1. Get QR codes with their total scans (FAST - no loop)
       const { data: qrCodes, error: qrError } = await supabase
         .from('qr_codes')
         .select('id, qr_code, name, total_scans, last_scanned_at')
@@ -50,53 +51,61 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
         .eq('status', 'active')
         .order('total_scans', { ascending: false })
 
-      if (qrError) throw qrError
-
-      // 2. Get scan details for each QR
-      const daysAgo = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 60
-      const startDate = new Date()
-      startDate.setDate(startDate.getDate() - daysAgo)
-
-      const analyticsData: QRAnalytics[] = []
-      let totalCount = 0
-
-      for (const qr of qrCodes || []) {
-        const { data: scans } = await supabase
-          .from('qr_code_scans')
-          .select('device_type, scanned_at')
-          .eq('qr_code_id', qr.id)
-          .gte('scanned_at', startDate.toISOString())
-
-        const mobileScans = scans?.filter(s => s.device_type === 'mobile').length || 0
-        const desktopScans = scans?.filter(s => s.device_type === 'desktop').length || 0
-        const tabletScans = scans?.filter(s => s.device_type === 'tablet').length || 0
-        const recentScans = scans?.length || 0
-
-        analyticsData.push({
-          qr_code: qr.qr_code,
-          qr_name: qr.name,
-          total_scans: qr.total_scans || 0,
-          scans_7d: timeRange === '7d' ? recentScans : 0,
-          scans_30d: timeRange === '30d' ? recentScans : 0,
-          mobile_scans: mobileScans,
-          desktop_scans: desktopScans,
-          tablet_scans: tabletScans,
-          last_scanned: qr.last_scanned_at
-        })
-
-        totalCount += qr.total_scans || 0
+      if (qrError) {
+        console.error('QR codes fetch error:', qrError)
+        throw qrError
       }
 
-      setAnalytics(analyticsData)
-      setTotalScans(totalCount)
+      console.log(`✅ Fetched ${qrCodes?.length || 0} QR codes for ${city}`)
 
-      // 3. Get daily scans for chart
+      // 2. Get ALL scans in one query (MUCH FASTER than loop)
+      const qrIds = qrCodes?.map(qr => qr.id) || []
+      
+      let deviceCounts: Record<string, { mobile: number, desktop: number, tablet: number }> = {}
+      
+      if (qrIds.length > 0) {
+        const { data: allScans } = await supabase
+          .from('qr_code_scans')
+          .select('qr_code_id, device_type')
+          .in('qr_code_id', qrIds)
+          .gte('scanned_at', startDate.toISOString())
+
+        // Aggregate in memory (fast)
+        allScans?.forEach(scan => {
+          if (!deviceCounts[scan.qr_code_id]) {
+            deviceCounts[scan.qr_code_id] = { mobile: 0, desktop: 0, tablet: 0 }
+          }
+          if (scan.device_type === 'mobile') deviceCounts[scan.qr_code_id].mobile++
+          else if (scan.device_type === 'desktop') deviceCounts[scan.qr_code_id].desktop++
+          else if (scan.device_type === 'tablet') deviceCounts[scan.qr_code_id].tablet++
+        })
+
+        console.log(`✅ Fetched ${allScans?.length || 0} scans across all QRs`)
+      }
+
+      // 3. Map analytics data
+      const analyticsData: QRAnalytics[] = qrCodes?.map(qr => ({
+        qr_code: qr.qr_code,
+        qr_name: qr.name,
+        total_scans: qr.total_scans || 0,
+        mobile_scans: deviceCounts[qr.id]?.mobile || 0,
+        desktop_scans: deviceCounts[qr.id]?.desktop || 0,
+        tablet_scans: deviceCounts[qr.id]?.tablet || 0,
+        last_scanned: qr.last_scanned_at
+      })) || []
+
+      setAnalytics(analyticsData)
+      setTotalScans(analyticsData.reduce((sum, qr) => sum + qr.total_scans, 0))
+
+      // 4. Get daily scans for chart
       const { data: dailyData } = await supabase
         .from('qr_code_analytics')
         .select('date, total_scans')
         .eq('city', city)
         .gte('date', startDate.toISOString().split('T')[0])
         .order('date', { ascending: true })
+
+      console.log(`✅ Fetched ${dailyData?.length || 0} daily data points`)
 
       // Aggregate by date
       const scansByDate = new Map<string, number>()
@@ -113,7 +122,7 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
       setDailyScans(dailyArray)
 
     } catch (error) {
-      console.error('Error fetching QR analytics:', error)
+      console.error('❌ Error fetching QR analytics:', error)
     } finally {
       setLoading(false)
     }
@@ -131,7 +140,8 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-[#00d083] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-white text-lg">Loading analytics...</div>
+          <div className="text-white text-lg">Loading QR analytics...</div>
+          <div className="text-slate-400 text-sm">Fetching scan data from database</div>
         </div>
       </div>
     )
@@ -143,7 +153,7 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">QR Code Analytics</h2>
-          <p className="text-slate-400">Track performance and engagement</p>
+          <p className="text-slate-400">Track performance and engagement across all QR codes</p>
         </div>
         
         {/* Time Range Selector */}
@@ -230,7 +240,7 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-[#00d083]" />
-            Scan Trend ({timeRange === '7d' ? '7 Days' : timeRange === '30d' ? '30 Days' : '60 Days'})
+            Scan Trend ({timeRange === '7d' ? 'Last 7 Days' : timeRange === '30d' ? 'Last 30 Days' : 'Last 60 Days'})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -244,9 +254,9 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
                   <div className="flex-1 bg-slate-700 rounded-full h-8 overflow-hidden relative">
                     <div 
                       className="bg-gradient-to-r from-[#00d083] to-[#00b570] h-full transition-all duration-500 flex items-center justify-end pr-3"
-                      style={{ width: `${(day.scans / maxScans) * 100}%` }}
+                      style={{ width: `${maxScans > 0 ? (day.scans / maxScans) * 100 : 0}%`, minWidth: day.scans > 0 ? '40px' : '0' }}
                     >
-                      <span className="text-white text-xs font-semibold">{day.scans}</span>
+                      {day.scans > 0 && <span className="text-white text-xs font-semibold">{day.scans}</span>}
                     </div>
                   </div>
                 </div>
@@ -310,26 +320,32 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {analytics.slice(0, 10).map((qr, idx) => (
-              <div key={idx} className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors">
-                <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-[#00d083] to-[#00b570] rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                  #{idx + 1}
+          {analytics.length > 0 ? (
+            <div className="space-y-3">
+              {analytics.slice(0, 10).map((qr, idx) => (
+                <div key={idx} className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors">
+                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-[#00d083] to-[#00b570] rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                    #{idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-white font-semibold truncate">{qr.qr_name}</h4>
+                    <p className="text-slate-400 text-xs truncate">{qr.qr_code}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-white">{qr.total_scans}</p>
+                    <p className="text-xs text-slate-400">total scans</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-white font-semibold truncate">{qr.qr_name}</h4>
-                  <p className="text-slate-400 text-xs truncate">{qr.qr_code}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-white">{qr.total_scans}</p>
-                  <p className="text-xs text-slate-400">total scans</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-slate-400">
+              <p className="text-lg mb-2">No QR codes found</p>
+              <p className="text-sm">Generate your first QR code in the QR Management tab</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   )
 }
-
