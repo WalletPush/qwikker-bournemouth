@@ -311,32 +311,95 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
         </CardContent>
       </Card>
 
-      {/* Best Performing QR Codes */}
+      {/* Individual QR Code Breakdown */}
       <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <BarChart className="w-5 h-5 text-purple-400" />
-            Best Performing QR Codes
+            Individual QR Code Performance
           </CardTitle>
+          <p className="text-slate-400 text-sm mt-1">Detailed breakdown for each QR code</p>
         </CardHeader>
         <CardContent>
           {analytics.length > 0 ? (
-            <div className="space-y-3">
-              {analytics.slice(0, 10).map((qr, idx) => (
-                <div key={idx} className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors">
-                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-[#00d083] to-[#00b570] rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                    #{idx + 1}
+            <div className="space-y-4">
+              {analytics.map((qr, idx) => {
+                const qrDeviceTotal = qr.mobile_scans + qr.desktop_scans + qr.tablet_scans
+                const qrMobilePercent = qrDeviceTotal > 0 ? Math.round((qr.mobile_scans / qrDeviceTotal) * 100) : 0
+                const qrDesktopPercent = qrDeviceTotal > 0 ? Math.round((qr.desktop_scans / qrDeviceTotal) * 100) : 0
+                const qrTabletPercent = qrDeviceTotal > 0 ? Math.round((qr.tablet_scans / qrDeviceTotal) * 100) : 0
+
+                return (
+                  <div key={idx} className="bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden">
+                    {/* Header */}
+                    <div className="p-4 flex items-center gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-[#00d083] to-[#00b570] rounded-lg flex items-center justify-center text-white font-bold">
+                        #{idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-white font-semibold text-lg truncate">{qr.qr_name}</h4>
+                        <p className="text-slate-400 text-sm truncate font-mono">{qr.qr_code}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-3xl font-bold text-white">{qr.total_scans.toLocaleString()}</p>
+                        <p className="text-xs text-slate-400">total scans</p>
+                      </div>
+                    </div>
+
+                    {/* Device Breakdown */}
+                    <div className="px-4 pb-4 border-t border-slate-700 pt-4">
+                      <p className="text-slate-300 font-semibold mb-3 text-sm">Device Breakdown</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                          <div className="flex items-center justify-center gap-2 mb-1">
+                            <Smartphone className="w-4 h-4 text-blue-400" />
+                            <span className="text-slate-300 text-sm font-medium">Mobile</span>
+                          </div>
+                          <div className="text-2xl font-bold text-white">{qr.mobile_scans}</div>
+                          <div className="text-xs text-slate-400">{qrMobilePercent}%</div>
+                        </div>
+                        <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                          <div className="flex items-center justify-center gap-2 mb-1">
+                            <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" strokeWidth="2"/>
+                              <line x1="8" y1="21" x2="16" y2="21" strokeWidth="2"/>
+                              <line x1="12" y1="17" x2="12" y2="21" strokeWidth="2"/>
+                            </svg>
+                            <span className="text-slate-300 text-sm font-medium">Desktop</span>
+                          </div>
+                          <div className="text-2xl font-bold text-white">{qr.desktop_scans}</div>
+                          <div className="text-xs text-slate-400">{qrDesktopPercent}%</div>
+                        </div>
+                        <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                          <div className="flex items-center justify-center gap-2 mb-1">
+                            <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" strokeWidth="2"/>
+                            </svg>
+                            <span className="text-slate-300 text-sm font-medium">Tablet</span>
+                          </div>
+                          <div className="text-2xl font-bold text-white">{qr.tablet_scans}</div>
+                          <div className="text-xs text-slate-400">{qrTabletPercent}%</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Last Scanned */}
+                    {qr.last_scanned && (
+                      <div className="px-4 pb-4">
+                        <p className="text-slate-400 text-xs">
+                          Last scanned: {new Date(qr.last_scanned).toLocaleString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-white font-semibold truncate">{qr.qr_name}</h4>
-                    <p className="text-slate-400 text-xs truncate">{qr.qr_code}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-white">{qr.total_scans}</p>
-                    <p className="text-xs text-slate-400">total scans</p>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="text-center py-12 text-slate-400">
