@@ -931,30 +931,48 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
 
               {/* Logo Options */}
               <div className="space-y-3">
-                <Label className="text-slate-300">QR Code Logo (Optional)</Label>
-                <div className="flex gap-2">
-                  <Button
+                <Label className="text-slate-300 font-semibold">QR Code Logo</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
                     type="button"
-                    onClick={() => setLogoUrl('/qwikker-logo.png')}
-                    variant="outline"
-                    className={`flex-1 ${logoUrl === '/qwikker-logo.png' ? 'bg-[#00d083] border-[#00d083] text-white' : 'text-slate-300 border-slate-600'}`}
+                    onClick={() => setLogoUrl('/qwikker-icon.svg')}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      logoUrl === '/qwikker-icon.svg'
+                        ? 'border-[#00d083] bg-[#00d083]/10'
+                        : 'border-slate-700 hover:border-slate-600'
+                    }`}
                   >
-                    Use Qwikker Logo
-                  </Button>
-                  <Button
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 bg-white rounded-lg p-2 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-[#00d083]">Q</span>
+                      </div>
+                      <span className="text-white text-sm font-medium">Qwikker Logo</span>
+                      {logoUrl === '/qwikker-icon.svg' && (
+                        <span className="text-[#00d083] text-xs">✓ Selected</span>
+                      )}
+                    </div>
+                  </button>
+                  
+                  <button
                     type="button"
                     onClick={() => setLogoUrl('')}
-                    variant="outline"
-                    className={`flex-1 ${!logoUrl ? 'bg-slate-700 border-slate-600 text-white' : 'text-slate-400 border-slate-700'}`}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      !logoUrl
+                        ? 'border-slate-600 bg-slate-700/50'
+                        : 'border-slate-700 hover:border-slate-600'
+                    }`}
                   >
-                    No Logo
-                  </Button>
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center">
+                        <span className="text-slate-600 text-2xl">∅</span>
+                      </div>
+                      <span className="text-white text-sm font-medium">No Logo</span>
+                      {!logoUrl && (
+                        <span className="text-slate-400 text-xs">✓ Selected</span>
+                      )}
+                    </div>
+                  </button>
                 </div>
-                {logoUrl && logoUrl !== '/qwikker-logo.png' && (
-                  <div className="text-xs text-slate-400 bg-slate-800 p-2 rounded border border-slate-700">
-                    Custom logo: {logoUrl}
-                  </div>
-                )}
               </div>
 
               {/* Generate Button */}
@@ -971,9 +989,22 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
             <div className="space-y-4">
               {generatedQrData ? (
                 <div className="text-center p-6 bg-slate-800 border border-slate-700 rounded-lg">
-                  <h4 className="text-white text-lg font-semibold mb-4">QR Code Generated!</h4>
-                  <div className="bg-white p-4 inline-block rounded-lg mb-4">
-                    <QRCode value={generatedQrData} size={200} level="H" includeMargin={true} />
+                  <h4 className="text-white text-lg font-semibold mb-4">
+                    QR Code Generated! {logoUrl && <span className="text-[#00d083] text-sm">✓ With Logo</span>}
+                  </h4>
+                  <div className="bg-white p-4 inline-block rounded-lg mb-4 relative">
+                    <QRCode 
+                      value={generatedQrData} 
+                      size={200} 
+                      level="H" 
+                      includeMargin={true}
+                      imageSettings={logoUrl ? {
+                        src: logoUrl,
+                        excavate: true,
+                        width: 40,
+                        height: 40
+                      } : undefined}
+                    />
                   </div>
                   <p className="text-slate-400 text-sm break-all mb-4">{generatedQrData}</p>
                   
