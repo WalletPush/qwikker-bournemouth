@@ -337,7 +337,17 @@ export function ComprehensiveAdminAnalytics({ city }: { city: string }) {
                     </div>
                     <div className="flex-1">
                       <div className="text-white font-medium text-sm">{activity.message}</div>
-                      <div className="text-slate-400 text-xs mt-1">{activity.timestamp}</div>
+                      <div className="text-slate-400 text-xs mt-1">
+                        {activity.timestamp instanceof Date 
+                          ? activity.timestamp.toLocaleString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              hour: 'numeric', 
+                              minute: '2-digit' 
+                            })
+                          : activity.time || 'Just now'
+                        }
+                      </div>
                       {activity.details && (
                         <div className="text-slate-300 text-xs mt-1 bg-slate-700/50 rounded px-2 py-1">
                           {activity.details}
