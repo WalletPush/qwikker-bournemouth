@@ -11,8 +11,7 @@ import { getApprovedBusinessesForQR, QRBusiness } from '@/lib/actions/qr-managem
 import { debugBusinessData } from '@/lib/actions/debug-businesses'
 import { QRCodeCanvas as QRCode } from 'qrcode.react'
 import { useElegantModal } from '@/components/ui/elegant-modal'
-import { Download, Search, Filter, Eye, BarChart2 } from 'lucide-react'
-import { QRAnalyticsDetailed } from './qr-analytics-detailed'
+import { Download, Search, Filter, Eye } from 'lucide-react'
 
 interface Business {
   id: string
@@ -44,7 +43,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [generatedCodes, setGeneratedCodes] = useState<GeneratedQR[]>([])
   const [loading, setLoading] = useState(false)
-  const [activeSection, setActiveSection] = useState<'qwikker-marketing' | 'static-business' | 'intent-routing' | 'analytics'>('qwikker-marketing')
+  const [activeSection, setActiveSection] = useState<'qwikker-marketing' | 'static-business' | 'intent-routing'>('qwikker-marketing')
   
   // Generator State
   const [selectedBusiness, setSelectedBusiness] = useState('')
@@ -660,26 +659,10 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         >
           Intent Routing
         </button>
-        <button
-          onClick={() => setActiveSection('analytics')}
-          className={`px-4 py-2 rounded-t-lg font-semibold transition-colors flex items-center gap-2 ${
-            activeSection === 'analytics'
-              ? 'bg-purple-500 text-white'
-              : 'bg-slate-800 text-slate-400 hover:text-white'
-          }`}
-        >
-          <BarChart2 size={16} />
-          Analytics
-        </button>
       </div>
 
-      {/* Analytics View */}
-      {activeSection === 'analytics' ? (
-        <QRAnalyticsDetailed city={city} />
-      ) : (
-        <>
-          {/* Section Analytics */}
-          <Card className="bg-slate-900 border-slate-800">
+      {/* Section Analytics */}
+      <Card className="bg-slate-900 border-slate-800">
         <CardHeader>
           <CardTitle className={
             activeSection === 'qwikker-marketing' ? 'text-green-400' :
@@ -935,19 +918,19 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setLogoUrl('/qwikker-icon.svg')}
+                    onClick={() => setLogoUrl('/icon-192x192.png')}
                     className={`p-4 rounded-lg border-2 transition-all ${
-                      logoUrl === '/qwikker-icon.svg'
+                      logoUrl === '/icon-192x192.png'
                         ? 'border-[#00d083] bg-[#00d083]/10'
                         : 'border-slate-700 hover:border-slate-600'
                     }`}
                   >
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 bg-white rounded-lg p-2 flex items-center justify-center">
-                        <span className="text-2xl font-bold text-[#00d083]">Q</span>
+                        <img src="/icon-192x192.png" alt="Qwikker" className="w-full h-full object-contain" />
                       </div>
                       <span className="text-white text-sm font-medium">Qwikker Logo</span>
-                      {logoUrl === '/qwikker-icon.svg' && (
+                      {logoUrl === '/icon-192x192.png' && (
                         <span className="text-[#00d083] text-xs">✓ Selected</span>
                       )}
                     </div>
@@ -1164,8 +1147,6 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
           )}
         </CardContent>
       </Card>
-        </>
-      )}
 
       {/* Edit URL Modal */}
       {editingCode && (

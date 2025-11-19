@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AdminAnalytics, getAdminAnalytics } from '@/lib/actions/admin-analytics-actions'
 import { getAdminActivity, AdminActivity } from '@/lib/actions/admin-activity-actions'
 import { getRealQRAnalytics } from '@/lib/actions/real-qr-actions'
+import { QRAnalyticsDetailed } from './qr-analytics-detailed'
 
 interface OfferClaimTrend {
   date: string
@@ -465,8 +466,13 @@ export function ComprehensiveAdminAnalytics({ city }: { city: string }) {
         </div>
       )}
 
-      {/* QR Performance Tab */}
+      {/* QR Performance Tab - NEW DETAILED ANALYTICS */}
       {activeTab === 'qr' && (
+        <QRAnalyticsDetailed city={city} />
+      )}
+
+      {/* OLD QR TAB (HIDDEN - keeping for reference)
+      {false && activeTab === 'qr' && (
         <div className="space-y-6">
           <div className="space-y-3">
             <h3 className="text-white text-lg font-semibold">QR Code Performance</h3>
@@ -684,7 +690,7 @@ export function ComprehensiveAdminAnalytics({ city }: { city: string }) {
             </Card>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   )
 }
