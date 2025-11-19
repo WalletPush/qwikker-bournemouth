@@ -1289,6 +1289,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/qr/scan/[code]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/qr/scan/[code]">> = Specific
+  const handler = {} as typeof import("../../app/api/qr/scan/[code]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/qr/track/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/qr/track">> = Specific
