@@ -216,8 +216,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
     }
   }
 
-  // Download QR code as high-resolution image
-  const downloadQRCode = (url: string, filename: string, size: number = 2000) => {
+  // Download QR code as high-resolution image with optional logo
+  const downloadQRCode = (url: string, filename: string, size: number = 2000, logo?: string) => {
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
     
@@ -237,27 +237,58 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
           dark: '#000000',
           light: '#FFFFFF'
         },
-        errorCorrectionLevel: 'H'
+        errorCorrectionLevel: 'H' // High error correction for logo overlay
       }, (error) => {
         if (error) {
           showError('Failed to generate high-resolution QR code.')
           return
         }
 
-        canvas.toBlob((blob) => {
-          if (!blob) return
-          
-          const downloadUrl = URL.createObjectURL(blob)
-          const link = document.createElement('a')
-          link.href = downloadUrl
-          link.download = `${filename}.png`
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          URL.revokeObjectURL(downloadUrl)
-          
-          showSuccess(`High-resolution QR code saved as ${filename}.png`)
-        }, 'image/png')
+        // Add logo if provided
+        if (logo) {
+          const logoImg = new Image()
+          logoImg.crossOrigin = 'anonymous'
+          logoImg.onload = () => {
+            const logoSize = size * 0.2 // Logo is 20% of QR size
+            const logoX = (size - logoSize) / 2
+            const logoY = (size - logoSize) / 2
+            
+            // Draw white circle background for logo
+            ctx.fillStyle = '#FFFFFF'
+            ctx.beginPath()
+            ctx.arc(size / 2, size / 2, logoSize / 2 + 10, 0, 2 * Math.PI)
+            ctx.fill()
+            
+            // Draw logo
+            ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize)
+            
+            saveCanvas()
+          }
+          logoImg.onerror = () => {
+            console.warn('Failed to load logo, saving QR without logo')
+            saveCanvas()
+          }
+          logoImg.src = logo
+        } else {
+          saveCanvas()
+        }
+
+        function saveCanvas() {
+          canvas.toBlob((blob) => {
+            if (!blob) return
+            
+            const downloadUrl = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = downloadUrl
+            link.download = `${filename}.png`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(downloadUrl)
+            
+            showSuccess(`High-resolution QR code saved as ${filename}.png`)
+          }, 'image/png')
+        }
       })
     }).catch(() => {
       showError('QR code library not available. Please try again.')
@@ -847,16 +878,32 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                 </div>
               )}
 
-              {/* Logo URL (Optional) */}
-              <div className="space-y-2">
-                <Label className="text-slate-300">Business Logo URL (Optional)</Label>
-                <Input
-                  type="url"
-                  placeholder="https://example.com/logo.png"
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  className="bg-slate-800 border-slate-700 text-white"
-                />
+              {/* Logo Options */}
+              <div className="space-y-3">
+                <Label className="text-slate-300">QR Code Logo (Optional)</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => setLogoUrl('/qwikker-logo.png')}
+                    variant="outline"
+                    className={`flex-1 ${logoUrl === '/qwikker-logo.png' ? 'bg-[#00d083] border-[#00d083] text-white' : 'text-slate-300 border-slate-600'}`}
+                  >
+                    Use Qwikker Logo
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setLogoUrl('')}
+                    variant="outline"
+                    className={`flex-1 ${!logoUrl ? 'bg-slate-700 border-slate-600 text-white' : 'text-slate-400 border-slate-700'}`}
+                  >
+                    No Logo
+                  </Button>
+                </div>
+                {logoUrl && logoUrl !== '/qwikker-logo.png' && (
+                  <div className="text-xs text-slate-400 bg-slate-800 p-2 rounded border border-slate-700">
+                    Custom logo: {logoUrl}
+                  </div>
+                )}
               </div>
 
               {/* Generate Button */}
@@ -902,12 +949,12 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                         const filename = selectedBusinessData
                           ? `qr-${selectedBusinessData.business_name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${qrType}-print-ready`
                           : `qr-${activeSection}-${qrSubtype}-print-ready`
-                        downloadQRCode(generatedQrData, filename, 2000)
+                        downloadQRCode(generatedQrData, filename, 2000, logoUrl || undefined)
                       }}
                       className="bg-[#00d083] hover:bg-[#00b570] text-white px-4 py-2 flex items-center justify-center gap-2"
                     >
                       <Download size={16} />
-                      Download Print-Ready
+                      Download Print-Ready {logoUrl ? '(with logo)' : ''}
                     </Button>
                   </div>
                   
@@ -999,6 +1046,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                             const filename = code.business_name
                               ? `qr-${code.business_name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${code.qr_type}-print-ready`
                               : `qr-${code.code_name}-print-ready`
+                            // TODO: Store logo URL in database for re-download with logo
                             downloadQRCode(code.generated_url, filename, 2000)
                           }}
                           className="text-[#00d083] border-[#00d083] hover:bg-[#00d083] hover:text-white"
