@@ -6,7 +6,6 @@ export interface QRBusiness {
   id: string
   business_name: string
   business_tier: string
-  slug: string
   business_town: string
   status: string
 }
@@ -44,7 +43,7 @@ export async function getApprovedBusinessesForQR(franchiseCity: string): Promise
 
     const { data, error } = await supabase
       .from('business_profiles')
-      .select('id, business_name, business_tier, slug, business_town, status')
+      .select('id, business_name, business_tier, business_town, status')
       .eq('status', 'approved')
       .in('business_town', coveredCities)
       .order('business_name')
