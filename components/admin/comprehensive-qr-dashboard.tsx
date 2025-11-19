@@ -168,24 +168,51 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
 
     setGeneratedCodes(mockCodes)
 
-    // Try to fetch from database in background, but don't fail if it doesn't work
+    // Fetch from database using CORRECT table name (qr_codes)
     try {
       const supabase = createClientComponentClient()
       
-      // Try a simple query first to see if table exists
       const { data, error } = await supabase
-        .from('qr_code_templates')
-        .select('id, code_name, qr_type, city, created_at')
+        .from('qr_codes')
+        .select(`
+          id,
+          qr_code,
+          name,
+          qr_type,
+          category,
+          current_target_url,
+          business_id,
+          city,
+          total_scans,
+          created_at
+        `)
         .eq('city', city)
-        .limit(5)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
       
       if (data && data.length > 0) {
-        console.log('✅ Database connection successful, found QR codes:', data.length)
-        // If we get real data, we could process it here
-        // For now, just log success and keep using mock data
+        console.log('✅ Found QR codes in database:', data.length)
+        
+        // Transform database data to UI format
+        const transformedCodes: GeneratedQR[] = data.map(qr => ({
+          id: qr.id,
+          code_name: qr.qr_code,
+          qr_type: qr.qr_type === 'marketing' ? 'other' : qr.qr_type as any,
+          qr_category: qr.qr_type === 'marketing' ? 'qwikker-marketing' : 'static-business',
+          qr_subtype: qr.category,
+          business_id: qr.business_id || undefined,
+          generated_url: qr.current_target_url,
+          created_at: new Date(qr.created_at).toLocaleDateString(),
+          scans_7d: qr.total_scans || 0,
+          scans_30d: qr.total_scans || 0,
+          scans_60d: qr.total_scans || 0
+        }))
+        
+        setGeneratedCodes(transformedCodes)
+        return
       }
     } catch (error) {
-      console.log('ℹ️ Database not ready yet, using mock data:', error)
+      console.error('❌ Error fetching QR codes:', error)
     }
   }
 
@@ -306,45 +333,47 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         scans_60d: 0
       }
 
-      // Try to insert into database, but don't fail if it doesn't work
+      // Save to database using CORRECT table (qr_codes)
       try {
         const supabase = createClientComponentClient()
         
-        // Use the correct schema from qr_code_templates table
-        const insertData: any = {
-          code_name: codeName,
-          qr_type: qrSubtype === 'secret-menu' ? 'secret_menu' : qrSubtype, // Fix naming
-          qr_category: activeSection,
-          qr_subtype: qrSubtype,
+        // Determine QR type based on activeSection
+        let qrType: 'marketing' | 'business_static' | 'business_dynamic' = 'marketing'
+        if (activeSection === 'static-business') qrType = 'business_static'
+        if (activeSection === 'intent-routing') qrType = 'business_dynamic'
+        
+        const insertData = {
+          qr_code: codeName,
+          qr_type: qrType,
+          name: codeName.replace(/-/g, ' ').toUpperCase(),
+          description: `${qrSubtype} QR code`,
+          category: qrSubtype,
+          current_target_url: generatedUrl,
+          default_target_url: generatedUrl,
+          business_id: selectedBusiness || null,
           city: city,
-          base_url: generatedUrl, // This is the QR redirect URL
-          target_url: activeSection === 'intent-routing' ? targetUrl : targetUrl, // This is the actual target
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-
-        if (activeSection === 'intent-routing' && selectedBusiness) {
-          insertData.business_id = selectedBusiness
-          insertData.business_name = businessName
-        }
-
-        if (logoUrl) {
-          insertData.logo_url = logoUrl
+          status: 'active'
         }
 
         const { data, error } = await supabase
-          .from('qr_code_templates')
+          .from('qr_codes')
           .insert(insertData)
           .select()
           .single()
 
+        if (error) {
+          console.error('❌ Database error:', error)
+          throw error
+        }
+
         if (data) {
           newQRCode.id = data.id
-          console.log('✅ QR Code saved to database:', data.code_name)
+          console.log('✅ QR Code saved to database:', data.qr_code)
+          showSuccess('QR Code saved to database!')
         }
       } catch (dbError) {
-        console.log('ℹ️ Database insert not available yet, using local storage')
+        console.error('❌ Failed to save QR to database:', dbError)
+        showError('QR generated but not saved to database. It will work locally only.')
       }
 
       // Add to local state
@@ -369,37 +398,35 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
   }
 
   const updateQRCode = async (qrCode: GeneratedQR, newUrl: string) => {
-    // Always update local state first so UI works immediately
-    const updatedCodes = generatedCodes.map(code => 
-      code.id === qrCode.id ? { ...code, generated_url: newUrl } : code
-    )
-    setGeneratedCodes(updatedCodes)
-    setEditingCode(null)
-    setEditUrl('')
-    showSuccess('QR Code URL updated successfully!')
-
-    // Try to update database in background, but don't fail if it doesn't work
     try {
       const supabase = createClientComponentClient()
       
-      // Use the correct column name from the actual schema
-      const updateData = {
-        base_url: newUrl, // This is the correct column from qr_code_templates
-        updated_at: new Date().toISOString()
-      }
-      
+      // Update in database first using CORRECT table and column names
       const { error } = await supabase
-        .from('qr_code_templates')
-        .update(updateData)
+        .from('qr_codes')
+        .update({
+          current_target_url: newUrl, // CORRECT column name
+          updated_at: new Date().toISOString()
+        })
         .eq('id', qrCode.id)
 
       if (error) {
-        console.log('ℹ️ Database update not available yet, using local storage')
-      } else {
-        console.log('✅ Database updated successfully')
+        console.error('❌ Database update error:', error)
+        throw error
       }
+
+      // Update local state after successful database update
+      const updatedCodes = generatedCodes.map(code => 
+        code.id === qrCode.id ? { ...code, generated_url: newUrl } : code
+      )
+      setGeneratedCodes(updatedCodes)
+      setEditingCode(null)
+      setEditUrl('')
+      showSuccess('QR Code URL updated successfully!')
+      
     } catch (error) {
-      console.log('ℹ️ Database not ready for updates, using local storage')
+      console.error('❌ Failed to update QR code:', error)
+      showError('Failed to update QR code URL')
     }
   }
 
