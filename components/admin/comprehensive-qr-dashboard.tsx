@@ -11,7 +11,8 @@ import { getApprovedBusinessesForQR, QRBusiness } from '@/lib/actions/qr-managem
 import { debugBusinessData } from '@/lib/actions/debug-businesses'
 import { QRCodeCanvas as QRCode } from 'qrcode.react'
 import { useElegantModal } from '@/components/ui/elegant-modal'
-import { Download, Search, Filter, Eye } from 'lucide-react'
+import { Download, Search, Filter, Eye, BarChart2 } from 'lucide-react'
+import { QRAnalyticsDetailed } from './qr-analytics-detailed'
 
 interface Business {
   id: string
@@ -43,7 +44,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [generatedCodes, setGeneratedCodes] = useState<GeneratedQR[]>([])
   const [loading, setLoading] = useState(false)
-  const [activeSection, setActiveSection] = useState<'qwikker-marketing' | 'static-business' | 'intent-routing'>('qwikker-marketing')
+  const [activeSection, setActiveSection] = useState<'qwikker-marketing' | 'static-business' | 'intent-routing' | 'analytics'>('qwikker-marketing')
   
   // Generator State
   const [selectedBusiness, setSelectedBusiness] = useState('')
@@ -627,8 +628,58 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         </CardContent>
       </Card>
 
-      {/* Section Analytics */}
-      <Card className="bg-slate-900 border-slate-800">
+      {/* Tab Navigation */}
+      <div className="flex gap-2 border-b border-slate-700 pb-2">
+        <button
+          onClick={() => setActiveSection('qwikker-marketing')}
+          className={`px-4 py-2 rounded-t-lg font-semibold transition-colors ${
+            activeSection === 'qwikker-marketing'
+              ? 'bg-green-500 text-white'
+              : 'bg-slate-800 text-slate-400 hover:text-white'
+          }`}
+        >
+          Qwikker Marketing
+        </button>
+        <button
+          onClick={() => setActiveSection('static-business')}
+          className={`px-4 py-2 rounded-t-lg font-semibold transition-colors ${
+            activeSection === 'static-business'
+              ? 'bg-orange-500 text-white'
+              : 'bg-slate-800 text-slate-400 hover:text-white'
+          }`}
+        >
+          Static Business
+        </button>
+        <button
+          onClick={() => setActiveSection('intent-routing')}
+          className={`px-4 py-2 rounded-t-lg font-semibold transition-colors ${
+            activeSection === 'intent-routing'
+              ? 'bg-blue-500 text-white'
+              : 'bg-slate-800 text-slate-400 hover:text-white'
+          }`}
+        >
+          Intent Routing
+        </button>
+        <button
+          onClick={() => setActiveSection('analytics')}
+          className={`px-4 py-2 rounded-t-lg font-semibold transition-colors flex items-center gap-2 ${
+            activeSection === 'analytics'
+              ? 'bg-purple-500 text-white'
+              : 'bg-slate-800 text-slate-400 hover:text-white'
+          }`}
+        >
+          <BarChart2 size={16} />
+          Analytics
+        </button>
+      </div>
+
+      {/* Analytics View */}
+      {activeSection === 'analytics' ? (
+        <QRAnalyticsDetailed city={city} />
+      ) : (
+        <>
+          {/* Section Analytics */}
+          <Card className="bg-slate-900 border-slate-800">
         <CardHeader>
           <CardTitle className={
             activeSection === 'qwikker-marketing' ? 'text-green-400' :
@@ -1082,6 +1133,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
           )}
         </CardContent>
       </Card>
+        </>
+      )}
 
       {/* Edit URL Modal */}
       {editingCode && (
