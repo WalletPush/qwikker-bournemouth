@@ -288,33 +288,33 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
       let generatedUrl = ''
       let businessName = ''
       
+      // ALWAYS use redirect endpoint for editability!
+      codeName = `QWK-${city.substring(0, 3).toUpperCase()}-${qrSubtype.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-6)}`
+      
+      // QR always points to our redirect (EDITABLE!)
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://bournemouth.qwikker.com'
+      generatedUrl = `${baseUrl}/api/qr/scan/${codeName}`
+      
+      // Determine target URL
+      let finalTargetUrl = targetUrl
       if (activeSection === 'intent-routing' && selectedBusiness) {
         const selectedBusinessData = businesses.find(b => b.id === selectedBusiness)
         businessName = selectedBusinessData?.business_name || 'Unknown Business'
         const businessSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-')
-        codeName = `${businessSlug}-${qrSubtype}-${Date.now()}`
         
-        // Generate deep-link URL (this will be the target URL, but QR will point to redirect)
-        let targetUrl = ''
         switch (qrSubtype) {
           case 'discover':
-            targetUrl = `https://${city}.qwikker.com/user/dashboard?highlight=${businessSlug}`
+            finalTargetUrl = `https://${city}.qwikker.com/user/dashboard?highlight=${businessSlug}`
             break
           case 'offers':
-            targetUrl = `https://${city}.qwikker.com/user/offers?highlight=${businessSlug}`
+            finalTargetUrl = `https://${city}.qwikker.com/user/offers?highlight=${businessSlug}`
             break
           case 'secret-menu':
-            targetUrl = `https://${city}.qwikker.com/user/secret-menu?highlight=${businessSlug}`
+            finalTargetUrl = `https://${city}.qwikker.com/user/secret-menu?highlight=${businessSlug}`
             break
           default:
-            targetUrl = `https://${city}.qwikker.com/user/dashboard?highlight=${businessSlug}`
+            finalTargetUrl = `https://${city}.qwikker.com/user/dashboard?highlight=${businessSlug}`
         }
-        
-        // QR code points to our redirect system (EDITABLE after printing!)
-        generatedUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://qwikkerdashboard-theta.vercel.app'}/qr/${codeName}`
-      } else {
-        codeName = `${activeSection}-${qrSubtype}-${Date.now()}`
-        generatedUrl = targetUrl
       }
 
       // Create new QR code object for local state
@@ -348,8 +348,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
           name: codeName.replace(/-/g, ' ').toUpperCase(),
           description: `${qrSubtype} QR code`,
           category: qrSubtype,
-          current_target_url: generatedUrl,
-          default_target_url: generatedUrl,
+          current_target_url: finalTargetUrl, // ACTUAL target (editable)
+          default_target_url: finalTargetUrl, // Fallback
           business_id: selectedBusiness || null,
           city: city,
           status: 'active'
@@ -427,6 +427,34 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
     } catch (error) {
       console.error('❌ Failed to update QR code:', error)
       showError('Failed to update QR code URL')
+    }
+  }
+
+  const deleteQRCode = async (qrCode: GeneratedQR) => {
+    if (!confirm(`Delete QR code "${qrCode.code_name}"?\n\nThis cannot be undone. Any printed QR codes will stop working!`)) {
+      return
+    }
+
+    try {
+      const supabase = createClientComponentClient()
+      
+      const { error } = await supabase
+        .from('qr_codes')
+        .delete()
+        .eq('id', qrCode.id)
+
+      if (error) {
+        console.error('❌ Database delete error:', error)
+        throw error
+      }
+
+      // Remove from local state
+      setGeneratedCodes(generatedCodes.filter(code => code.id !== qrCode.id))
+      showSuccess('QR Code deleted successfully!')
+      
+    } catch (error) {
+      console.error('❌ Failed to delete QR code:', error)
+      showError('Failed to delete QR code')
     }
   }
 
@@ -988,6 +1016,14 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                           className="text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black"
                         >
                           Edit URL
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => deleteQRCode(code)}
+                          className="text-red-400 border-red-400 hover:bg-red-400 hover:text-white"
+                        >
+                          Delete
                         </Button>
                       </div>
                     </div>
