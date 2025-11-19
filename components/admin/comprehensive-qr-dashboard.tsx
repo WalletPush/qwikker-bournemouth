@@ -124,8 +124,51 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
   }
 
   const fetchGeneratedCodes = async () => {
-    // Always start with mock data for now since database structure is inconsistent
-    const mockCodes: GeneratedQR[] = [
+    try {
+      const supabase = createClientComponentClient()
+      
+      // Fetch REAL QR codes from database
+      const { data, error } = await supabase
+        .from('qr_codes')
+        .select('*')
+        .eq('city', city)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+      
+      if (error) {
+        console.error('❌ Error fetching QR codes:', error)
+        setGeneratedCodes([])
+        return
+      }
+      
+      console.log(`✅ Fetched ${data?.length || 0} real QR codes from database`)
+      
+      // Map database data to GeneratedQR interface
+      const mappedCodes: GeneratedQR[] = (data || []).map(qr => ({
+        id: qr.id,
+        code_name: qr.name,
+        qr_type: qr.qr_type,
+        qr_category: qr.category as 'qwikker-marketing' | 'static-business' | 'intent-routing',
+        qr_subtype: qr.description || '',
+        business_name: qr.business_id ? 'Business QR' : undefined,
+        business_id: qr.business_id || undefined,
+        generated_url: qr.current_target_url,
+        created_at: new Date(qr.created_at).toLocaleDateString(),
+        scans_7d: 0, // Will calculate from qr_code_scans
+        scans_30d: 0, // Will calculate from qr_code_scans  
+        scans_60d: 0, // Will calculate from qr_code_scans
+        total_scans: qr.total_scans || 0
+      }))
+      
+      setGeneratedCodes(mappedCodes)
+      
+    } catch (error) {
+      console.error('❌ Failed to fetch QR codes:', error)
+      setGeneratedCodes([])
+    }
+    
+    // OLD MOCK DATA - REMOVED
+    /* const mockCodes: GeneratedQR[] = [
       {
         id: '1',
         code_name: 'qwikker-marketing-flyers-001',
@@ -164,11 +207,9 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         scans_30d: 67,
         scans_60d: 134
       }
-    ]
-
-    setGeneratedCodes(mockCodes)
-
-    // Fetch from database using CORRECT table name (qr_codes)
+    ] */
+    // Mock data removed - now using real database data above
+    // Fetch from database using CORRECT table name (qr_codes) - MOVED ABOVE
     try {
       const supabase = createClientComponentClient()
       
@@ -918,7 +959,10 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setLogoUrl('/icon-192x192.png')}
+                    onClick={() => {
+                      setLogoUrl('/icon-192x192.png')
+                      console.log('✅ Logo selected: /icon-192x192.png')
+                    }}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       logoUrl === '/icon-192x192.png'
                         ? 'border-[#00d083] bg-[#00d083]/10'
@@ -927,11 +971,17 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                   >
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 bg-white rounded-lg p-2 flex items-center justify-center">
-                        <img src="/icon-192x192.png" alt="Qwikker" className="w-full h-full object-contain" />
+                        <img 
+                          src="/icon-192x192.png" 
+                          alt="Qwikker" 
+                          className="w-full h-full object-contain"
+                          onError={(e) => console.error('Logo failed to load:', e)}
+                          onLoad={() => console.log('Logo loaded successfully')}
+                        />
                       </div>
                       <span className="text-white text-sm font-medium">Qwikker Logo</span>
                       {logoUrl === '/icon-192x192.png' && (
-                        <span className="text-[#00d083] text-xs">✓ Selected</span>
+                        <span className="text-[#00d083] text-xs font-semibold">✓ Selected</span>
                       )}
                     </div>
                   </button>
