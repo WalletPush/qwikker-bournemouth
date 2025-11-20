@@ -960,27 +960,21 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                   <button
                     type="button"
                     onClick={() => {
-                      setLogoUrl('/icon-192x192.png')
-                      console.log('✅ Logo selected: /icon-192x192.png')
+                      setLogoUrl('https://api.dicebear.com/7.x/initials/png?seed=Q&backgroundColor=00d083&fontSize=60')
+                      console.log('✅ Logo selected: Qwikker icon')
                     }}
                     className={`p-4 rounded-lg border-2 transition-all ${
-                      logoUrl === '/icon-192x192.png'
+                      logoUrl
                         ? 'border-[#00d083] bg-[#00d083]/10'
                         : 'border-slate-700 hover:border-slate-600'
                     }`}
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 bg-white rounded-lg p-2 flex items-center justify-center">
-                        <img 
-                          src="/icon-192x192.png" 
-                          alt="Qwikker" 
-                          className="w-full h-full object-contain"
-                          onError={(e) => console.error('Logo failed to load:', e)}
-                          onLoad={() => console.log('Logo loaded successfully')}
-                        />
+                      <div className="w-12 h-12 bg-[#00d083] rounded-lg p-2 flex items-center justify-center">
+                        <span className="text-white text-2xl font-bold">Q</span>
                       </div>
                       <span className="text-white text-sm font-medium">Qwikker Logo</span>
-                      {logoUrl === '/icon-192x192.png' && (
+                      {logoUrl && (
                         <span className="text-[#00d083] text-xs font-semibold">✓ Selected</span>
                       )}
                     </div>
