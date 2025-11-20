@@ -286,23 +286,63 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         }
 
         // Add logo if provided
-        if (logo) {
+        if (logo && logo.includes('.svg')) {
+          // Handle SVG logo by fetching and converting
+          fetch(logo)
+            .then(response => response.text())
+            .then(svgText => {
+              const blob = new Blob([svgText], { type: 'image/svg+xml' })
+              const url = URL.createObjectURL(blob)
+              const logoImg = new Image()
+              
+              logoImg.onload = () => {
+                const logoSize = size * 0.15 // Logo is 15% of QR size
+                const logoX = (size - logoSize) / 2
+                const logoY = (size - logoSize) / 2
+                
+                // Draw white rounded rectangle background for logo
+                const padding = size * 0.02
+                const bgSize = logoSize + (padding * 2)
+                const bgX = (size - bgSize) / 2
+                const bgY = (size - bgSize) / 2
+                const radius = size * 0.02
+                
+                ctx.fillStyle = '#FFFFFF'
+                ctx.beginPath()
+                ctx.roundRect(bgX, bgY, bgSize, bgSize, radius)
+                ctx.fill()
+                
+                // Draw logo
+                ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize)
+                
+                URL.revokeObjectURL(url)
+                saveCanvas()
+              }
+              logoImg.onerror = () => {
+                console.warn('Failed to load SVG logo, saving QR without logo')
+                saveCanvas()
+              }
+              logoImg.src = url
+            })
+            .catch(() => {
+              console.warn('Failed to fetch SVG, saving QR without logo')
+              saveCanvas()
+            })
+        } else if (logo) {
+          // Handle PNG/JPG logo
           const logoImg = new Image()
           logoImg.crossOrigin = 'anonymous'
           logoImg.onload = () => {
-            const logoSize = size * 0.2 // Logo is 20% of QR size
+            const logoSize = size * 0.2
             const logoX = (size - logoSize) / 2
             const logoY = (size - logoSize) / 2
             
-            // Draw white circle background for logo
             ctx.fillStyle = '#FFFFFF'
             ctx.beginPath()
             ctx.arc(size / 2, size / 2, logoSize / 2 + 10, 0, 2 * Math.PI)
             ctx.fill()
             
-            // Draw logo
             ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize)
-            
             saveCanvas()
           }
           logoImg.onerror = () => {
@@ -962,8 +1002,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                   <button
                     type="button"
                     onClick={() => {
-                      setLogoUrl('https://api.dicebear.com/7.x/initials/png?seed=Q&backgroundColor=00d083&fontSize=60')
-                      console.log('✅ Logo selected: Qwikker icon')
+                      setLogoUrl('/Qwikker Logo web.svg')
+                      console.log('✅ Qwikker logo selected for download overlay')
                     }}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       logoUrl
@@ -972,8 +1012,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                     }`}
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 bg-[#00d083] rounded-lg p-2 flex items-center justify-center">
-                        <span className="text-white text-2xl font-bold">Q</span>
+                      <div className="w-12 h-12 bg-white rounded-lg p-2 flex items-center justify-center">
+                        <img src="/Qwikker Logo web.svg" alt="Qwikker" className="w-full h-full object-contain" />
                       </div>
                       <span className="text-white text-sm font-medium">Qwikker Logo</span>
                       {logoUrl && (
@@ -1019,7 +1059,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
               {generatedQrData ? (
                 <div className="text-center p-6 bg-slate-800 border border-slate-700 rounded-lg">
                   <h4 className="text-white text-lg font-semibold mb-4">
-                    QR Code Generated! {logoUrl && <span className="text-[#00d083] text-sm">✓ With Logo</span>}
+                    QR Code Generated! {logoUrl && <span className="text-[#00d083] text-sm">✓ Logo will be added on download</span>}
                   </h4>
                   <div className="bg-white p-4 inline-block rounded-lg mb-4 relative">
                     <QRCode 
@@ -1027,13 +1067,12 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                       size={200} 
                       level="H" 
                       includeMargin={true}
-                      imageSettings={logoUrl ? {
-                        src: logoUrl,
-                        excavate: true,
-                        width: 40,
-                        height: 40
-                      } : undefined}
                     />
+                    {logoUrl && (
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-lg">
+                        <img src="/Qwikker Logo web.svg" alt="Qwikker" className="w-10 h-10 object-contain" />
+                      </div>
+                    )}
                   </div>
                   <p className="text-slate-400 text-sm break-all mb-4">{generatedQrData}</p>
                   
