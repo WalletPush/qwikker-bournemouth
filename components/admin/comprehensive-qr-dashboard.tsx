@@ -364,7 +364,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
       codeName = `QWK-${city.substring(0, 3).toUpperCase()}-${qrSubtype.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-6)}`
       
       // QR always points to our redirect (EDITABLE!)
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://bournemouth.qwikker.com'
+      // Use production URL, not localhost
+      const baseUrl = `https://${city}.qwikker.com`
       generatedUrl = `${baseUrl}/api/qr/scan/${codeName}`
       
       // Determine target URL
@@ -451,6 +452,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
       // Add to local state
       setGeneratedCodes(prev => [newQRCode, ...prev])
       setGeneratedQrData(generatedUrl)
+      console.log('🎨 QR Generated with logo:', { url: generatedUrl, logoUrl, hasLogo: !!logoUrl })
       showSuccess('QR Code generated successfully!')
       
       // Reset form
