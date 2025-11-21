@@ -550,6 +550,66 @@
       },
       "filename": "lib/actions/business-actions.ts",
       "exportedName": "updateBusinessInfo"
+    },
+    "4061430a5e2a76dba6c2a3851d032498e0d989b3a0": {
+      "workers": {
+        "app/user/dashboard/page": {
+          "moduleId": "[project]/.next-internal/server/app/user/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/utils/wallet-pass-security.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/user-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/recent-activity-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getValidatedUser",
+          "filename": "lib/utils/wallet-pass-security.ts"
+        }
+      },
+      "layer": {
+        "app/user/dashboard/page": "rsc"
+      },
+      "filename": "lib/utils/wallet-pass-security.ts",
+      "exportedName": "getValidatedUser"
+    },
+    "40fd438d62165d5d3f0923ad6f543946292da0313b": {
+      "workers": {
+        "app/user/dashboard/page": {
+          "moduleId": "[project]/.next-internal/server/app/user/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/utils/wallet-pass-security.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/user-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/recent-activity-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "validateWalletPassId",
+          "filename": "lib/utils/wallet-pass-security.ts"
+        }
+      },
+      "layer": {
+        "app/user/dashboard/page": "rsc"
+      },
+      "filename": "lib/utils/wallet-pass-security.ts",
+      "exportedName": "validateWalletPassId"
+    },
+    "600602e79a367dc9ca91cb6bce319bffae8da309ce": {
+      "workers": {
+        "app/user/dashboard/page": {
+          "moduleId": "[project]/.next-internal/server/app/user/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/utils/wallet-pass-security.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/user-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/recent-activity-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getUserActivity",
+          "filename": "lib/actions/user-activity-actions.ts"
+        }
+      },
+      "layer": {
+        "app/user/dashboard/page": "action-browser"
+      },
+      "filename": "lib/actions/user-activity-actions.ts",
+      "exportedName": "getUserActivity"
+    },
+    "40e44c3c8cff508add786700a961c7dd48be22fb35": {
+      "workers": {
+        "app/user/dashboard/page": {
+          "moduleId": "[project]/.next-internal/server/app/user/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/utils/wallet-pass-security.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/user-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/recent-activity-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getRecentBusinessActivity",
+          "filename": "lib/actions/recent-activity-actions.ts"
+        }
+      },
+      "layer": {
+        "app/user/dashboard/page": "action-browser"
+      },
+      "filename": "lib/actions/recent-activity-actions.ts",
+      "exportedName": "getRecentBusinessActivity"
     }
   },
   "edge": {},
