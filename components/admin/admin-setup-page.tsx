@@ -512,7 +512,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 <div>
                   <Label className="text-slate-300 font-semibold mb-2 block">Owner Phone</Label>
                   <Input
-                    value={config.owner_phone}
+                    value={config.owner_phone || ''}
                     onChange={(e) => setConfig({...config, owner_phone: e.target.value})}
                     className="bg-slate-700/80 border-slate-600 text-white h-12 rounded-xl"
                     placeholder="+44 1234 567890"
