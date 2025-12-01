@@ -175,7 +175,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             realActivity.push({
               id: `recent_visits_${profile.id}`,
               type: 'business_visit',
-              message: `${businessAnalytics.recentVisits} customer visit${businessAnalytics.recentVisits > 1 ? 's' : ''} this week`,
+              message: `${businessAnalytics.recentVisits} page visit${businessAnalytics.recentVisits > 1 ? 's' : ''} this week`,
               timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12 hours ago for sorting
               icon: (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
