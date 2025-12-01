@@ -152,6 +152,9 @@ export class SimpleBadgeTracker {
 
   // Track specific actions
   trackAction(action: string, _data?: unknown) {
+    // Auto-check for time-based badges on any action
+    this.checkTimeBadges()
+    
     switch (action) {
       case 'offer_claimed':
         this.awardBadge('first_offer')
@@ -180,20 +183,21 @@ export class SimpleBadgeTracker {
       case 'share_completed':
         this.updateProgress('social_sharer')
         break
-        
-      case 'early_morning_use':
-        const hour = new Date().getHours()
-        if (hour < 6) {
-          this.updateProgress('early_bird')
-        }
-        break
-        
-      case 'late_night_use':
-        const lateHour = new Date().getHours()
-        if (lateHour >= 0 && lateHour < 6) {
-          this.awardBadge('night_owl')
-        }
-        break
+    }
+  }
+  
+  // Auto-check time-based badges
+  private checkTimeBadges() {
+    const hour = new Date().getHours()
+    
+    // Early Bird (before 6am)
+    if (hour < 6) {
+      this.updateProgress('early_bird')
+    }
+    
+    // Night Owl (midnight to 6am)
+    if (hour >= 0 && hour < 6) {
+      this.awardBadge('night_owl')
     }
   }
 }

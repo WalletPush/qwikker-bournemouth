@@ -160,6 +160,13 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
   const handleSendMessage = async (message: string) => {
     if (!message.trim() || isTyping) return
 
+    // Track chat usage for badge
+    if (typeof window !== 'undefined') {
+      const { getBadgeTracker } = require('@/lib/utils/simple-badge-tracker')
+      const badgeTracker = getBadgeTracker(currentUser?.wallet_pass_id)
+      badgeTracker.trackAction('ai_chat_used')
+    }
+
     // Add user message immediately
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
