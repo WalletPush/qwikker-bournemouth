@@ -122,6 +122,9 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
   
   // Transform real approved businesses to match the expected format
   const realBusinesses = (approvedBusinesses || []).map(business => {
+    // Debug phone number
+    console.log('🔍 Business:', business.business_name, 'Phone from DB:', business.phone)
+    
     // Check if business has secret menu items
     let hasSecretMenu = false
     if (business.additional_notes) {
