@@ -42,6 +42,58 @@ export interface BusinessAnalytics {
   }>
 }
 
+// Lightweight analytics for dashboard home (just recent activity)
+export async function getBusinessActivityData(businessId: string): Promise<{
+  recentVisits: number
+  recentClaims: number
+  recentQRScans: number
+}> {
+  try {
+    const supabase = createServiceRoleClient()
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    
+    // Get recent visits (last 7 days)
+    const { data: visits } = await supabase
+      .from('user_business_visits')
+      .select('id')
+      .eq('business_id', businessId)
+      .gte('visit_date', sevenDaysAgo.toISOString())
+    
+    // Get recent claims (last 7 days)
+    const { data: claims } = await supabase
+      .from('user_offer_claims')
+      .select(`
+        id,
+        business_offers!inner(business_id)
+      `)
+      .eq('business_offers.business_id', businessId)
+      .gte('claimed_at', sevenDaysAgo.toISOString())
+    
+    // Get recent QR scans (last 7 days)
+    const { data: qrScans } = await supabase
+      .from('qr_code_scans')
+      .select(`
+        id,
+        qr_codes!inner(business_id)
+      `)
+      .eq('qr_codes.business_id', businessId)
+      .gte('scanned_at', sevenDaysAgo.toISOString())
+    
+    return {
+      recentVisits: visits?.length || 0,
+      recentClaims: claims?.length || 0,
+      recentQRScans: qrScans?.length || 0
+    }
+  } catch (error) {
+    console.error('❌ Error fetching business activity:', error)
+    return {
+      recentVisits: 0,
+      recentClaims: 0,
+      recentQRScans: 0
+    }
+  }
+}
+
 export async function getBusinessAnalytics(businessId: string): Promise<BusinessAnalytics> {
   try {
     const supabase = createServiceRoleClient()

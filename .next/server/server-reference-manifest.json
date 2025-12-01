@@ -371,6 +371,28 @@
       "filename": "lib/actions/business-analytics-actions.ts",
       "exportedName": "getBusinessActivityData"
     },
+    "40fb3f82aa98cbc4e547486c84bddbb06ed37b9a8d": {
+      "workers": {
+        "app/dashboard/analytics/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/analytics/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-analytics-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getBusinessAnalytics",
+          "filename": "lib/actions/business-analytics-actions.ts"
+        },
+        "app/dashboard/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/pending-changes.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/business-visit-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/business-analytics-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getBusinessAnalytics",
+          "filename": "lib/actions/business-analytics-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/analytics/page": "rsc",
+        "app/dashboard/page": "action-browser"
+      },
+      "filename": "lib/actions/business-analytics-actions.ts",
+      "exportedName": "getBusinessAnalytics"
+    },
     "406addebe977bf25f178601ba2fa2b7a1c7550a4d7": {
       "workers": {
         "app/dashboard/page": {
@@ -512,21 +534,6 @@
       },
       "filename": "lib/actions/business-actions.ts",
       "exportedName": "deleteLegacyOffer"
-    },
-    "40fb3f82aa98cbc4e547486c84bddbb06ed37b9a8d": {
-      "workers": {
-        "app/dashboard/analytics/page": {
-          "moduleId": "[project]/.next-internal/server/app/dashboard/analytics/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-analytics-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "getBusinessAnalytics",
-          "filename": "lib/actions/business-analytics-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/analytics/page": "rsc"
-      },
-      "filename": "lib/actions/business-analytics-actions.ts",
-      "exportedName": "getBusinessAnalytics"
     },
     "40f2273c34506fca7eff4fbd7797d0616e099deb24": {
       "workers": {
