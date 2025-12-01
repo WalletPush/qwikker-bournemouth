@@ -129,7 +129,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   // Use consistent city detection like other pages
   console.log(`📊 Dashboard: Filtering businesses for franchise city: ${currentCity}`)
   
-  // Fetch approved businesses from database (franchise-filtered)
+  // Fetch approved businesses from database (franchise-filtered) with tier info
   const { data: approvedBusinesses, error } = await supabase
     .from('business_profiles')
     .select(`
@@ -139,6 +139,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
       offer_type,
       offer_value,
       menu_preview,
+      plan,
       status,
       additional_notes,
       business_offers!left(

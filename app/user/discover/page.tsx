@@ -75,7 +75,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
     }
   }
   
-  // Fetch approved businesses only
+  // Fetch approved businesses only with subscription data for tier badges
   const { data: approvedBusinesses, error } = await supabase
     .from('business_profiles')
     .select(`
@@ -100,6 +100,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       review_count,
       additional_notes,
       created_at,
+      plan,
       business_offers!left(
         id,
         offer_name,
