@@ -253,24 +253,40 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
           <p className="text-lg text-slate-300">Four simple steps to unlock {franchiseCity ? franchiseCity.charAt(0).toUpperCase() + franchiseCity.slice(1) + "'s" : 'your city\'s'} culinary secrets</p>
         </div>
 
-        {/* Interactive Steps */}
+        {/* Interactive Steps - Now Clickable */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {steps.map((step, index) => (
-            <Card 
-              key={index}
-              className={`relative overflow-hidden transition-all duration-700 cursor-pointer ${
-                visibleStep === index 
-                  ? `bg-gradient-to-br ${step.bgColor} border ${step.borderColor}` 
-                  : 'bg-slate-800/50 border-slate-600/50 hover:border-slate-500/50'
-              }`}
-              style={{ 
-                height: '380px',
-                boxShadow: visibleStep === index 
-                  ? '0 25px 50px -12px rgba(0, 208, 131, 0.15)' 
-                  : '0 10px 25px -3px rgba(0, 0, 0, 0.3)'
-              }}
-              onClick={() => setVisibleStep(index)}
-            >
+          {steps.map((step, index) => {
+            // Determine which page each step links to
+            const stepLinks = [
+              getNavUrl("/user/discover"), // Step 1: Discover
+              getNavUrl("/user/chat"),     // Step 2: AI Chat
+              getNavUrl("/user/offers"),   // Step 3: Offers
+              getNavUrl("/user/secret-menu") // Step 4: Secret Menu
+            ]
+            
+            return (
+              <Link href={stepLinks[index]} key={index}>
+                <Card 
+                  className={`relative overflow-hidden transition-all duration-700 cursor-pointer ${
+                    visibleStep === index 
+                      ? `bg-gradient-to-br ${step.bgColor} border ${step.borderColor}` 
+                      : 'bg-slate-800/50 border-slate-600/50 hover:border-slate-500/50'
+                  }`}
+                  style={{ 
+                    height: '380px',
+                    boxShadow: visibleStep === index 
+                      ? '0 25px 50px -12px rgba(0, 208, 131, 0.15)' 
+                      : '0 10px 25px -3px rgba(0, 0, 0, 0.3)'
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setVisibleStep(index)
+                    // Delay navigation to show the animation
+                    setTimeout(() => {
+                      window.location.href = stepLinks[index]
+                    }, 300)
+                  }}
+                >
               <div className={`absolute inset-0 bg-gradient-to-r ${step.color} transition-opacity duration-700 ${
                 visibleStep === index ? 'opacity-10' : 'opacity-0'
               }`}></div>
@@ -313,7 +329,9 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
                 </div>
               </CardContent>
             </Card>
-          ))}
+              </Link>
+            )
+          })}
         </div>
       </div>
 
@@ -394,7 +412,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
       </Card>
 
       {/* Navigation Cards - Bigger */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Discover Places */}
         <Link href={getNavUrl("/user/discover")} className="group">
           <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/40 transition-colors duration-200 cursor-pointer">
