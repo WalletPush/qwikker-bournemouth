@@ -28,8 +28,8 @@ export async function trackBusinessVisit({ businessId, visitorName, visitorWalle
     }
     
     // Check if this is a first visit (check by user_id OR wallet_pass_id)
-    // For anonymous visitors, always treat as new visit (we don't track session)
-    let isFirstVisit = true
+    // For anonymous visitors, we can't reliably track first visit, so default to false
+    let isFirstVisit = false
     if (visitorUserId || visitorWalletPassId) {
       const { data: existingVisit } = await supabase
         .from('user_business_visits')

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { mockBusinesses, mockOffers, mockSecretMenus, mockClaimedOffers } from '@/lib/mock-data/user-mock-data'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
@@ -31,10 +31,12 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
   }
   const [activeTab, setActiveTab] = useState<'overview' | 'menu' | 'offers' | 'reviews'>('overview')
   const [claimedOffers, setClaimedOffers] = useState<Set<string>>(new Set())
+  const hasTrackedVisit = useRef(false)
   
-  // Track business visit after component mounts
+  // Track business visit after component mounts (only once!)
   useEffect(() => {
-    if (trackingData) {
+    if (trackingData && !hasTrackedVisit.current) {
+      hasTrackedVisit.current = true
       const trackVisit = async () => {
         try {
           const { trackBusinessVisit } = await import('@/lib/actions/business-visit-actions')
