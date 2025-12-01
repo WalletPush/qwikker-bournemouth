@@ -289,17 +289,18 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     // 🎯 STEP 8: Fetch event cards if user is asking about events OR conversation contains events
     let eventCards: ChatResponse['eventCards'] = []
     
-    // Check current message
-    const currentMessageMentionsEvents = /\b(event|show|concert|gig|happening|what'?s on|things to do|this weekend|tonight|tasting)\b/i.test(userMessage)
+    // Check current message - but EXCLUDE food/menu context
+    const isFoodContext = /\b(menu|mains|food|lunch|dinner|breakfast|dish|meal|eat)\b/i.test(userMessage)
+    const currentMessageMentionsEvents = !isFoodContext && /\b(event|show|concert|gig|happening|what'?s on|things to do|this weekend|tonight|tasting experience|jazz night)\b/i.test(userMessage)
     
-    // Check if events were discussed in recent conversation
+    // Check if events were discussed in recent conversation (more specific patterns)
     const recentConversation = conversationHistory.slice(-4).map(m => m.content).join(' ')
-    const conversationMentionsEvents = /\b(event|show|concert|gig|happening|tasting experience)\b/i.test(recentConversation)
+    const conversationMentionsEvents = /\b(event|show|concert|gig|happening|tasting experience|jazz night|live music)\b/i.test(recentConversation)
     
     // Check if user is showing interest (yes, yeah, sure, etc) after events were mentioned
     const showingInterest = /\b(yes|yeah|yep|sure|sounds good|go on|interested|tell me more|show me|pull up)\b/i.test(userMessage)
     
-    const shouldFetchEvents = currentMessageMentionsEvents || (conversationMentionsEvents && showingInterest)
+    const shouldFetchEvents = currentMessageMentionsEvents || (conversationMentionsEvents && showingInterest && !isFoodContext)
     
     console.log(`🎉 EVENT QUERY CHECK:`, {
       userMessage,
