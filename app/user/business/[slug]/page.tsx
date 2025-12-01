@@ -83,6 +83,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       business_hours_structured,
       business_images,
       logo,
+      phone,
       offer_name,
       offer_type,
       offer_value,
@@ -135,6 +136,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       town: business.business_town, // Use actual business town for display
       tagline: business.business_tagline || '',
       description: business.business_description || '',
+      phone: business.phone || '',
       hours: formatBusinessHours(business.business_hours, business.business_hours_structured), // For cards
       fullSchedule: formatBusinessHours(business.business_hours, business.business_hours_structured, true), // For hero view
       images: business.business_images || ['/placeholder-business.jpg'],
