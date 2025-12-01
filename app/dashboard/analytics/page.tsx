@@ -4,6 +4,7 @@ import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { calculateActionItemsCount } from '@/lib/utils/action-items-count'
 import { AnalyticsPageClient } from '@/components/dashboard/analytics-page-client'
+import { getBusinessAnalytics } from '@/lib/actions/business-analytics-actions'
 
 export default async function AnalyticsPage() {
   const supabase = await createClient()
@@ -45,9 +46,12 @@ export default async function AnalyticsPage() {
 
   const actionItemsCount = calculateActionItemsCount(enrichedProfile)
 
+  // Fetch REAL analytics data for this business
+  const analytics = await getBusinessAnalytics(profile?.id || '')
+
   return (
     <DashboardLayout currentSection="analytics" profile={enrichedProfile} actionItemsCount={actionItemsCount}>
-      <AnalyticsPageClient profile={enrichedProfile} />
+      <AnalyticsPageClient profile={enrichedProfile} analytics={analytics} />
     </DashboardLayout>
   )
 }

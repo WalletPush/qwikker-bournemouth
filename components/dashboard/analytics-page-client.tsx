@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ElegantModal } from '@/components/ui/elegant-modal'
+import type { BusinessAnalytics } from '@/lib/actions/business-analytics-actions'
 
 interface AnalyticsPageClientProps {
   profile: any
+  analytics: BusinessAnalytics
 }
 
-export function AnalyticsPageClient({ profile }: AnalyticsPageClientProps) {
+export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientProps) {
   const [showModal, setShowModal] = useState(true)
   const [hasAnalyticsAccess, setHasAnalyticsAccess] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -109,19 +111,22 @@ export function AnalyticsPageClient({ profile }: AnalyticsPageClientProps) {
           <p className="text-gray-400">Track your business performance and customer engagement</p>
         </div>
 
-      {/* Key Metrics */}
+      {/* Key Metrics - REAL DATA */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-400">Total Impressions</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-400">Total Visits</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">12,547</div>
-            <p className="text-xs text-[#00d083] flex items-center gap-1">
+            <div className="text-2xl font-bold text-white">{analytics.totalVisits.toLocaleString()}</div>
+            <p className={`text-xs flex items-center gap-1 ${analytics.visitTrend >= 0 ? 'text-[#00d083]' : 'text-red-400'}`}>
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l9.2-9.2M17 17V7H7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={analytics.visitTrend >= 0 ? "M7 17l9.2-9.2M17 17V7H7" : "M17 7l-9.2 9.2M7 7v10h10"} />
               </svg>
-              +23.4% from last month
+              {analytics.visitTrend >= 0 ? '+' : ''}{analytics.visitTrend.toFixed(1)}% from last month
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              {analytics.uniqueVisitors} unique • {analytics.registeredVisitors} registered
             </p>
           </CardContent>
         </Card>
@@ -131,12 +136,15 @@ export function AnalyticsPageClient({ profile }: AnalyticsPageClientProps) {
             <CardTitle className="text-sm font-medium text-gray-400">Offer Claims</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">387</div>
-            <p className="text-xs text-[#00d083] flex items-center gap-1">
+            <div className="text-2xl font-bold text-white">{analytics.totalOfferClaims.toLocaleString()}</div>
+            <p className={`text-xs flex items-center gap-1 ${analytics.claimTrend >= 0 ? 'text-[#00d083]' : 'text-red-400'}`}>
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l9.2-9.2M17 17V7H7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={analytics.claimTrend >= 0 ? "M7 17l9.2-9.2M17 17V7H7" : "M17 7l-9.2 9.2M7 7v10h10"} />
               </svg>
-              +18.2% from last month
+              {analytics.claimTrend >= 0 ? '+' : ''}{analytics.claimTrend.toFixed(1)}% from last month
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              {analytics.activeOffers} active offers
             </p>
           </CardContent>
         </Card>
@@ -146,27 +154,30 @@ export function AnalyticsPageClient({ profile }: AnalyticsPageClientProps) {
             <CardTitle className="text-sm font-medium text-gray-400">Conversion Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">3.08%</div>
-            <p className="text-xs text-[#00d083] flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l9.2-9.2M17 17V7H7" />
-              </svg>
-              +0.4% from last month
+            <div className="text-2xl font-bold text-white">{analytics.conversionRate.toFixed(2)}%</div>
+            <p className="text-xs text-slate-400">
+              Visits to offer claims
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              {analytics.avgVisitsPerUser.toFixed(1)} avg visits/user
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-400">Revenue Impact</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-400">QR Code Scans</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">£2,847</div>
-            <p className="text-xs text-[#00d083] flex items-center gap-1">
+            <div className="text-2xl font-bold text-white">{analytics.totalQRScans.toLocaleString()}</div>
+            <p className={`text-xs flex items-center gap-1 ${analytics.qrScanTrend >= 0 ? 'text-[#00d083]' : 'text-red-400'}`}>
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l9.2-9.2M17 17V7H7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={analytics.qrScanTrend >= 0 ? "M7 17l9.2-9.2M17 17V7H7" : "M17 7l-9.2 9.2M7 7v10h10"} />
               </svg>
-              +31.7% from last month
+              {analytics.qrScanTrend >= 0 ? '+' : ''}{analytics.qrScanTrend.toFixed(1)}% from last month
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              Last 30 days
             </p>
           </CardContent>
         </Card>
@@ -191,44 +202,47 @@ export function AnalyticsPageClient({ profile }: AnalyticsPageClientProps) {
           </CardContent>
         </Card>
 
-        {/* Top Offers */}
+        {/* Top Offers - REAL DATA */}
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white">Top Performing Offers</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-                <div>
-                  <h4 className="font-medium text-white">Free Coffee with Pastry</h4>
-                  <p className="text-sm text-gray-400">127 claims this month</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[#00d083] font-semibold">4.2%</p>
-                  <p className="text-xs text-gray-400">conversion</p>
-                </div>
+            {analytics.topOffers.length > 0 ? (
+              <div className="space-y-4">
+                {analytics.topOffers.map((offer, index) => {
+                  const conversionRate = analytics.totalVisits > 0 
+                    ? (offer.claims / analytics.totalVisits) * 100 
+                    : 0
+                  
+                  return (
+                    <div key={offer.id} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-8 h-8 bg-[#00d083]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <span className="text-[#00d083] font-bold">#{index + 1}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-medium text-white truncate">{offer.offerName}</h4>
+                          <p className="text-sm text-gray-400">{offer.claims} claims this month</p>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-4">
+                        <p className="text-[#00d083] font-semibold">{conversionRate.toFixed(2)}%</p>
+                        <p className="text-xs text-gray-400">conversion</p>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-              <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-                <div>
-                  <h4 className="font-medium text-white">20% Off Lunch Menu</h4>
-                  <p className="text-sm text-gray-400">98 claims this month</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[#00d083] font-semibold">3.8%</p>
-                  <p className="text-xs text-gray-400">conversion</p>
-                </div>
+            ) : (
+              <div className="text-center py-8">
+                <svg className="w-12 h-12 text-gray-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <p className="text-gray-400 text-sm">No offer claims yet</p>
+                <p className="text-gray-500 text-xs mt-1">Create offers to start tracking claims</p>
               </div>
-              <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-                <div>
-                  <h4 className="font-medium text-white">Happy Hour Special</h4>
-                  <p className="text-sm text-gray-400">76 claims this month</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[#00d083] font-semibold">2.9%</p>
-                  <p className="text-xs text-gray-400">conversion</p>
-                </div>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

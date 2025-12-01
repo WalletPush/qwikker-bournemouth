@@ -513,6 +513,21 @@
       "filename": "lib/actions/business-actions.ts",
       "exportedName": "deleteLegacyOffer"
     },
+    "40fb3f82aa98cbc4e547486c84bddbb06ed37b9a8d": {
+      "workers": {
+        "app/dashboard/analytics/page": {
+          "moduleId": "[project]/.next-internal/server/app/dashboard/analytics/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/business-analytics-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getBusinessAnalytics",
+          "filename": "lib/actions/business-analytics-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/analytics/page": "rsc"
+      },
+      "filename": "lib/actions/business-analytics-actions.ts",
+      "exportedName": "getBusinessAnalytics"
+    },
     "40f2273c34506fca7eff4fbd7797d0616e099deb24": {
       "workers": {
         "app/dashboard/referrals/page": {
