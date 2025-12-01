@@ -647,10 +647,17 @@
           "async": false,
           "exportedName": "getUserSavedItems",
           "filename": "lib/actions/user-saved-actions.ts"
+        },
+        "app/user/saved/page": {
+          "moduleId": "[project]/.next-internal/server/app/user/saved/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-saved-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getUserSavedItems",
+          "filename": "lib/actions/user-saved-actions.ts"
         }
       },
       "layer": {
-        "app/user/dashboard/page": "action-browser"
+        "app/user/dashboard/page": "action-browser",
+        "app/user/saved/page": "rsc"
       },
       "filename": "lib/actions/user-saved-actions.ts",
       "exportedName": "getUserSavedItems"
@@ -662,10 +669,17 @@
           "async": false,
           "exportedName": "saveItem",
           "filename": "lib/actions/user-saved-actions.ts"
+        },
+        "app/user/saved/page": {
+          "moduleId": "[project]/.next-internal/server/app/user/saved/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-saved-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "saveItem",
+          "filename": "lib/actions/user-saved-actions.ts"
         }
       },
       "layer": {
-        "app/user/dashboard/page": "action-browser"
+        "app/user/dashboard/page": "action-browser",
+        "app/user/saved/page": "rsc"
       },
       "filename": "lib/actions/user-saved-actions.ts",
       "exportedName": "saveItem"
@@ -677,10 +691,17 @@
           "async": false,
           "exportedName": "unsaveItem",
           "filename": "lib/actions/user-saved-actions.ts"
+        },
+        "app/user/saved/page": {
+          "moduleId": "[project]/.next-internal/server/app/user/saved/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-saved-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "unsaveItem",
+          "filename": "lib/actions/user-saved-actions.ts"
         }
       },
       "layer": {
-        "app/user/dashboard/page": "action-browser"
+        "app/user/dashboard/page": "action-browser",
+        "app/user/saved/page": "action-browser"
       },
       "filename": "lib/actions/user-saved-actions.ts",
       "exportedName": "unsaveItem"
@@ -692,10 +713,17 @@
           "async": false,
           "exportedName": "isItemSaved",
           "filename": "lib/actions/user-saved-actions.ts"
+        },
+        "app/user/saved/page": {
+          "moduleId": "[project]/.next-internal/server/app/user/saved/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-saved-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "isItemSaved",
+          "filename": "lib/actions/user-saved-actions.ts"
         }
       },
       "layer": {
-        "app/user/dashboard/page": "action-browser"
+        "app/user/dashboard/page": "action-browser",
+        "app/user/saved/page": "rsc"
       },
       "filename": "lib/actions/user-saved-actions.ts",
       "exportedName": "isItemSaved"
@@ -707,10 +735,17 @@
           "async": false,
           "exportedName": "getSavedItemsCountByType",
           "filename": "lib/actions/user-saved-actions.ts"
+        },
+        "app/user/saved/page": {
+          "moduleId": "[project]/.next-internal/server/app/user/saved/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/user-saved-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "getSavedItemsCountByType",
+          "filename": "lib/actions/user-saved-actions.ts"
         }
       },
       "layer": {
-        "app/user/dashboard/page": "action-browser"
+        "app/user/dashboard/page": "action-browser",
+        "app/user/saved/page": "rsc"
       },
       "filename": "lib/actions/user-saved-actions.ts",
       "exportedName": "getSavedItemsCountByType"

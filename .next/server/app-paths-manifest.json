@@ -48,5 +48,6 @@
   "/user/how-it-works/page": "app/user/how-it-works/page.js",
   "/user/offers/page": "app/user/offers/page.js",
   "/user/page": "app/user/page.js",
+  "/user/saved/page": "app/user/saved/page.js",
   "/user/secret-menu/page": "app/user/secret-menu/page.js"
 }
