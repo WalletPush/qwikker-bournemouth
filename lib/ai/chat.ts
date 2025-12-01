@@ -1403,14 +1403,15 @@ export async function generateQuickReplies(
     ])
   }
 
-  console.log('🔍 Analyzing AI response for quick replies:', aiResponse?.substring(0, 100) + '...')
-  const extractedOptions = extractOptionsFromAIResponse(aiResponse || '')
-  console.log('🎯 Extracted options from AI response:', extractedOptions)
-  if (extractedOptions.length > 0) {
-    console.log('✅ Using extracted options as quick replies:', extractedOptions)
-    return tidy(extractedOptions)
-  }
-  console.log('⚠️ No options extracted, falling back to contextual replies')
+  // Disable broken extraction logic - it pulls random words from descriptions
+  // console.log('🔍 Analyzing AI response for quick replies:', aiResponse?.substring(0, 100) + '...')
+  // const extractedOptions = extractOptionsFromAIResponse(aiResponse || '')
+  // console.log('🎯 Extracted options from AI response:', extractedOptions)
+  // if (extractedOptions.length > 0) {
+  //   console.log('✅ Using extracted options as quick replies:', extractedOptions)
+  //   return tidy(extractedOptions)
+  // }
+  // console.log('⚠️ No options extracted, falling back to contextual replies')
 
   if (hasBusinessResults && businessResults.length > 0) {
     const businessNames = businessResults.map(b => b.business_name || '').filter(Boolean)
