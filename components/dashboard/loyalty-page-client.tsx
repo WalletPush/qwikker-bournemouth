@@ -146,33 +146,23 @@ export function LoyaltyPageClient({ profile }: LoyaltyPageClientProps) {
       {/* Header Section */}
       <div className={!hasAccess && showModal ? "blur-[8px] select-none pointer-events-none" : ""}>
         <div className="text-center mb-12">
-          <div className="inline-block mb-4">
-            <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-full px-6 py-2">
-              <p className="text-purple-300 text-sm font-semibold">Qwikker Loyalty Portal</p>
-            </div>
-          </div>
-          <h1 className="text-5xl font-bold mb-4">
-            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-              Build Lasting Customer Loyalty
-            </span>
-          </h1>
-          <p className="text-xl text-slate-300 max-w-3xl mx-auto mb-8">
-            Create stunning digital loyalty programs with our powerful all-in-one platform. 
-            No external software needed - everything you need in one place.
+          <h1 className="text-3xl font-bold text-white mb-2">Loyalty Portal</h1>
+          <p className="text-slate-400 mb-8">
+            Access the Qwikker Loyalty System to create custom loyalty programs, design branded cards, and manage rewards with our built-in POS.
           </p>
           
           {/* Launch Button */}
           <Button
             onClick={handleLaunchPortal}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-lg shadow-purple-500/50 hover:shadow-purple-500/70 transition-all duration-300 hover:scale-105"
+            className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-8 py-4 text-base font-semibold rounded-xl transition-all duration-300"
           >
-            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
             Launch Loyalty Portal
           </Button>
-          <p className="text-sm text-slate-400 mt-3">
-            Opens in new tab • Seamlessly integrated with your Qwikker account
+          <p className="text-sm text-slate-500 mt-3">
+            Opens in new tab
           </p>
         </div>
 
@@ -184,51 +174,24 @@ export function LoyaltyPageClient({ profile }: LoyaltyPageClientProps) {
               className="bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all duration-300 hover:scale-105 cursor-pointer group"
               onClick={() => setSelectedFeature(feature.id)}
             >
-              <CardHeader>
-                <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.color} p-4 mb-4 group-hover:scale-110 transition-transform duration-300`}>
+              <CardHeader className="flex flex-col items-center text-center">
+                <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.color} p-4 mb-4 group-hover:scale-110 transition-transform duration-300 flex items-center justify-center`}>
                   <div className="text-white">
                     {feature.icon}
                   </div>
                 </div>
                 <CardTitle className="text-white text-xl">{feature.title}</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="text-center">
                 <p className="text-slate-400 leading-relaxed">{feature.description}</p>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Info Banner */}
-        <Card className="bg-gradient-to-r from-purple-900/20 to-pink-900/20 border-purple-500/30">
-          <CardContent className="p-8">
-            <div className="flex items-center justify-between flex-wrap gap-6">
-              <div className="flex-1 min-w-[300px]">
-                <h3 className="text-2xl font-bold text-white mb-2">
-                  Ready to boost customer retention?
-                </h3>
-                <p className="text-slate-300">
-                  The Qwikker Loyalty Portal gives you enterprise-grade tools with zero complexity. 
-                  Launch your program in minutes, not months.
-                </p>
-              </div>
-              <Button
-                onClick={handleLaunchPortal}
-                size="lg"
-                className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold px-8"
-              >
-                Get Started Now
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Use Cases */}
-        <div className="mt-12">
-          <h2 className="text-3xl font-bold text-center text-white mb-8">Perfect For Any Occasion</h2>
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-white mb-6">Perfect For Any Occasion</h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {[
               'Loyalty Programs',
@@ -239,13 +202,35 @@ export function LoyaltyPageClient({ profile }: LoyaltyPageClientProps) {
             ].map((label, index) => (
               <div 
                 key={index}
-                className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center hover:border-purple-500/50 transition-all duration-300 hover:scale-105"
+                className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center hover:border-slate-600 transition-all duration-300"
               >
                 <p className="text-slate-300 font-medium">{label}</p>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Info Banner */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  External Portal Access
+                </h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  The Qwikker Loyalty System is a separate web application that gives you enterprise-grade tools with zero complexity. 
+                  Click the button above to access your loyalty portal and start building custom programs in minutes.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
