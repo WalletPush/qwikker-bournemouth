@@ -145,24 +145,25 @@ export function LoyaltyPageClient({ profile }: LoyaltyPageClientProps) {
 
       {/* Header Section */}
       <div className={!hasAccess && showModal ? "blur-[8px] select-none pointer-events-none" : ""}>
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-white mb-2">Loyalty Portal</h1>
-          <p className="text-slate-400 mb-8">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold mb-4">
+            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+              Loyalty Portal
+            </span>
+          </h1>
+          <p className="text-xl text-slate-300 max-w-3xl mx-auto mb-10">
             Access the Qwikker Loyalty System to create custom loyalty programs, design branded cards, and manage rewards with our built-in POS.
           </p>
           
           {/* Launch Button */}
           <Button
             onClick={handleLaunchPortal}
-            className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-8 py-4 text-base font-semibold rounded-xl transition-all duration-300"
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-12 py-6 text-lg font-semibold rounded-xl shadow-lg shadow-purple-500/50 hover:shadow-purple-500/70 transition-all duration-300 hover:scale-105"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
             Launch Loyalty Portal
           </Button>
-          <p className="text-sm text-slate-500 mt-3">
-            Opens in new tab
+          <p className="text-sm text-slate-400 mt-4">
+            Opens in new tab • Seamlessly integrated with your Qwikker account
           </p>
         </div>
 
