@@ -28,7 +28,8 @@ export async function trackBusinessVisit({ businessId, visitorName, visitorWalle
     }
     
     // Check if this is a first visit (check by user_id OR wallet_pass_id)
-    let isFirstVisit = false
+    // For anonymous visitors, always treat as new visit (we don't track session)
+    let isFirstVisit = true
     if (visitorUserId || visitorWalletPassId) {
       const { data: existingVisit } = await supabase
         .from('user_business_visits')
@@ -40,30 +41,27 @@ export async function trackBusinessVisit({ businessId, visitorName, visitorWalle
       isFirstVisit = !existingVisit
     }
     
-    // Record the visit for both registered AND anonymous users
-    if (visitorUserId || visitorWalletPassId) {
-      const { error: visitError } = await supabase
-        .from('user_business_visits')
-        .insert({
-          user_id: visitorUserId, // Can be null for anonymous users
-          wallet_pass_id: visitorWalletPassId, // Track anonymous users by wallet pass
-          business_id: businessId,
-          visit_date: new Date().toISOString(),
-          is_first_visit: isFirstVisit,
-          points_earned: isFirstVisit ? 25 : 5 // More points for first visit
-        })
-      
-      if (visitError) {
-        console.error('Error tracking business visit:', visitError)
-        return { success: false, error: visitError.message }
-      }
-      
-      console.log(`✅ Business visit tracked: ${visitorName || 'Anonymous'} visited business ${businessId} (first visit: ${isFirstVisit})`)
-    } else {
-      console.log(`⚠️ No tracking data provided for business visit to ${businessId}`)
+    // ALWAYS record the visit for analytics (even anonymous visitors!)
+    const { error: visitError } = await supabase
+      .from('user_business_visits')
+      .insert({
+        user_id: visitorUserId, // Can be null for anonymous users
+        wallet_pass_id: visitorWalletPassId, // Can be null for anonymous users
+        business_id: businessId,
+        visit_date: new Date().toISOString(),
+        is_first_visit: isFirstVisit,
+        points_earned: (visitorUserId || visitorWalletPassId) ? (isFirstVisit ? 25 : 5) : 0 // No points for anonymous
+      })
+    
+    if (visitError) {
+      console.error('❌ Error tracking business visit:', visitError)
+      return { success: false, error: visitError.message }
     }
     
-    // Award points if user is registered
+    console.log(`✅ Business visit tracked: ${visitorName || 'Anonymous'} visited business ${businessId} (first visit: ${isFirstVisit}, registered: ${!!(visitorUserId || visitorWalletPassId)})`)
+    
+    // Award points if user is registered (not anonymous)
+    let pointsAwarded = 0
     if (visitorUserId && isFirstVisit) {
       // Award points for first visit
       const { error: pointsError } = await supabase.rpc('award_points', {
@@ -76,17 +74,19 @@ export async function trackBusinessVisit({ businessId, visitorName, visitorWalle
       })
       
       if (pointsError) {
-        console.error('Error awarding points:', pointsError)
+        console.error('❌ Error awarding points:', pointsError)
+      } else {
+        pointsAwarded = 25
+        console.log(`🎉 Awarded ${pointsAwarded} points to ${visitorName}`)
       }
     }
-    
-    console.log(`✅ Business visit tracked: ${visitorName || 'Anonymous'} visited business ${businessId}`)
     
     return { 
       success: true, 
       isFirstVisit,
       visitorName: visitorName || 'Anonymous user',
-      pointsEarned: isFirstVisit ? 25 : 5
+      pointsEarned: pointsAwarded,
+      isAnonymous: !visitorUserId && !visitorWalletPassId
     }
     
   } catch (error) {

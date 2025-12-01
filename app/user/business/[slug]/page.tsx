@@ -177,8 +177,9 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
   const viewedBusiness = allBusinesses.find(business => business.slug === slug)
   
   // Get visitor info and business ID for client-side tracking
+  // IMPORTANT: Track ALL visits, not just users with wallet passes!
   let trackingData = null
-  if (viewedBusiness && walletPassId) {
+  if (viewedBusiness) {
     // Try to find real business first, then fall back to mock business
     const realBusiness = realBusinesses.find(rb => rb.slug === slug)
     const businessId = realBusiness ? realBusiness.id : viewedBusiness.id
@@ -186,7 +187,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
     trackingData = {
       businessId: businessId,
       visitorName: currentUser?.name || 'Anonymous User',
-      visitorWalletPassId: walletPassId
+      visitorWalletPassId: walletPassId || null // Can be null for anonymous visitors
     }
     
     console.log('🔍 Business visit tracking data:', trackingData)
