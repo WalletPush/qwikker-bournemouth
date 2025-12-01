@@ -176,7 +176,7 @@ export function UserDashboardLayoutMobile({ children, currentSection, currentUse
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-slate-100 truncate">{currentUser?.name || 'Qwikker User'}</p>
               <p className="text-sm text-slate-400 truncate">
-                {currentUser?.tier ? `${currentUser.tier.charAt(0).toUpperCase() + currentUser.tier.slice(1)} • Level ${currentUser.level}` : 'Explorer • Level 1'}
+                {currentUser?.tier ? `${currentUser.tier.charAt(0).toUpperCase() + currentUser.tier.slice(1)} • Level ${currentUser.level || 1}` : 'Explorer • Level 1'}
               </p>
             </div>
           </div>

@@ -175,7 +175,7 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
             <div className="flex-1">
               <p className="font-semibold text-slate-100">{currentUser?.name || 'Qwikker User'}</p>
               <p className="text-sm text-slate-400">
-                {currentUser?.tier ? `${currentUser.tier.charAt(0).toUpperCase() + currentUser.tier.slice(1)} • Level ${currentUser.level}` : 'Bournemouth Explorer'}
+                {currentUser?.tier ? `${currentUser.tier.charAt(0).toUpperCase() + currentUser.tier.slice(1)} • Level ${currentUser.level || 1}` : 'Explorer • Level 1'}
               </p>
             </div>
           </div>
