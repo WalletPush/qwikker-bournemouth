@@ -394,7 +394,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
       </Card>
 
       {/* Navigation Cards - Bigger */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {/* Discover Places */}
         <Link href={getNavUrl("/user/discover")} className="group">
           <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/40 transition-colors duration-200 cursor-pointer">
@@ -441,6 +441,22 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
               <p className="text-sm text-slate-400">hidden</p>
           </CardContent>
         </Card>
+        </Link>
+
+        {/* Events */}
+        <Link href={getNavUrl("/user/events")} className="group">
+          <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 hover:border-blue-500/40 transition-colors duration-200 cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-slate-100 text-base mb-2">Events</h3>
+              <p className="text-blue-400 font-bold text-2xl">0</p>
+              <p className="text-sm text-slate-400">upcoming</p>
+            </CardContent>
+          </Card>
         </Link>
 
         {/* Achievements */}
