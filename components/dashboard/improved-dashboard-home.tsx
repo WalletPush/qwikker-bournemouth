@@ -553,7 +553,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             <Button
               onClick={handleSubmitForReview}
               disabled={isSubmitting}
-              className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold"
+              className="bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold"
             >
               {isSubmitting ? 'Submitting…' : 'Submit for review'}
             </Button>
@@ -586,8 +586,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
 
       {/* Quick Actions Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-[#00d083] to-[#00b86f] rounded-xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
+        <div>
           <Link href="/dashboard/offers">
             <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer transition-colors duration-200">
               <CardContent className="p-4 text-center">
@@ -604,8 +603,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           </Link>
         </div>
 
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
+        <div>
           <Link href="/dashboard/secret-menu">
             <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer transition-colors duration-200">
               <CardContent className="p-4 text-center">
@@ -622,8 +620,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           </Link>
         </div>
 
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
+        <div>
           <Link href="/dashboard/profile#featured-items">
             <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer transition-colors duration-200">
               <CardContent className="p-4 text-center">
@@ -640,8 +637,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           </Link>
         </div>
 
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
+        <div>
           <Link href="/dashboard/profile#business-info">
             <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer transition-colors duration-200">
               <CardContent className="p-4 text-center">
@@ -775,7 +771,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   <Button 
                     onClick={() => setShowAnalyticsModal(true)}
                     size="sm" 
-                    className="w-full bg-gradient-to-r from-[#00d083]/20 to-[#00b86f]/20 hover:from-[#00d083]/30 hover:to-[#00b86f]/30 text-[#00d083] border border-[#00d083]/30 hover:border-[#00d083]/50 transition-all duration-200"
+                    className="w-full bg-[#00d083]/20 hover:bg-[#00d083]/30 text-[#00d083] border border-[#00d083]/30 hover:border-[#00d083]/50"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -799,7 +795,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   <Button 
                     onClick={() => setShowAnalyticsModal(true)}
                     size="sm" 
-                    className="bg-gradient-to-r from-[#00d083]/20 to-[#00b86f]/20 hover:from-[#00d083]/30 hover:to-[#00b86f]/30 text-[#00d083] border border-[#00d083]/30 hover:border-[#00d083]/50 transition-all duration-200"
+                    className="bg-[#00d083]/20 hover:bg-[#00d083]/30 text-[#00d083] border border-[#00d083]/30 hover:border-[#00d083]/50"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -1080,7 +1076,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             {isPremiumFeatureUnlocked() ? (
               // Unlocked: Show action button and recent notifications
               <div className="space-y-4">
-                <Button asChild className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+                <Button asChild className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white">
                   <Link href="/dashboard/notifications">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1194,7 +1190,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             {isFeatureUnlocked('social_wizard') ? (
               // Unlocked: Show action button
               <div className="space-y-4">
-                <Button asChild className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+                <Button asChild className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white">
                   <Link href="/dashboard/social-wizard">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1265,7 +1261,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                 </div>
               </div>
               
-              <Button asChild className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+              <Button asChild className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white">
                 <Link href="/dashboard/referrals">Refer a Business</Link>
               </Button>
             </div>
@@ -1296,7 +1292,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                 </div>
               </div>
               
-              <Button asChild className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+              <Button asChild className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white">
                 <Link href="/dashboard/support">Open Chat</Link>
               </Button>
             </div>
@@ -1337,7 +1333,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               window.location.href = '/dashboard/settings'
             },
             variant: 'default',
-            className: 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold'
+            className: 'bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold'
           }
         ]}
       >
