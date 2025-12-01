@@ -145,26 +145,21 @@ export function LoyaltyPageClient({ profile }: LoyaltyPageClientProps) {
 
       {/* Header Section */}
       <div className={!hasAccess && showModal ? "blur-[8px] select-none pointer-events-none" : ""}>
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold mb-4">
-            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-              Loyalty Portal
-            </span>
-          </h1>
-          <p className="text-xl text-slate-300 max-w-3xl mx-auto mb-10">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2 text-center">Loyalty Portal</h1>
+          <p className="text-slate-400 text-center mb-6 max-w-2xl mx-auto">
             Access the Qwikker Loyalty System to create custom loyalty programs, design branded cards, and manage rewards with our built-in POS.
           </p>
           
           {/* Launch Button */}
-          <Button
-            onClick={handleLaunchPortal}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-12 py-6 text-lg font-semibold rounded-xl shadow-lg shadow-purple-500/50 hover:shadow-purple-500/70 transition-all duration-300 hover:scale-105"
-          >
-            Launch Loyalty Portal
-          </Button>
-          <p className="text-sm text-slate-400 mt-4">
-            Opens in new tab • Seamlessly integrated with your Qwikker account
-          </p>
+          <div className="text-center">
+            <Button
+              onClick={handleLaunchPortal}
+              className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-8 py-3 text-base font-semibold rounded-lg transition-all duration-300"
+            >
+              Launch Loyalty Portal
+            </Button>
+          </div>
         </div>
 
         {/* Features Grid */}
