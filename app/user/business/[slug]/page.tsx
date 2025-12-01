@@ -189,8 +189,6 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       visitorName: currentUser?.name || 'Anonymous User',
       visitorWalletPassId: walletPassId || null // Can be null for anonymous visitors
     }
-    
-    console.log('🔍 Business visit tracking data:', trackingData)
   }
   
   return (

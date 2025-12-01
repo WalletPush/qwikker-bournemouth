@@ -35,19 +35,15 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
   // Track business visit after component mounts
   useEffect(() => {
     if (trackingData) {
-      console.log('🔍 Tracking business visit with data:', trackingData)
       const trackVisit = async () => {
         try {
           const { trackBusinessVisit } = await import('@/lib/actions/business-visit-actions')
-          const result = await trackBusinessVisit(trackingData)
-          console.log('✅ Business visit tracked:', result)
+          await trackBusinessVisit(trackingData)
         } catch (error) {
           console.error('❌ Failed to track business visit:', error)
         }
       }
       trackVisit()
-    } else {
-      console.log('⚠️ No tracking data provided for business visit')
     }
   }, [trackingData])
 
@@ -67,9 +63,6 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
   
   // Find business by slug in the combined businesses list
   const business = businesses.find(b => b.slug === slug)
-  
-  // Debug: Log business phone
-  console.log('🔍 Business Detail - Phone:', business?.phone, 'Business:', business?.name)
   
   // Handle case where business is not found
   if (!business) {
@@ -306,13 +299,9 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
           variant="outline" 
           className="border-slate-600 text-slate-300 hover:bg-slate-700"
           onClick={() => {
-            console.log('📞 Call Now clicked! Phone:', business.phone)
             if (business.phone) {
-              const telLink = `tel:${business.phone}`
-              console.log('📞 Attempting to call:', telLink)
-              window.location.href = telLink
+              window.location.href = `tel:${business.phone}`
             } else {
-              console.warn('❌ No phone number available for:', business.name)
               alert('Phone number not available for this business')
             }
           }}
