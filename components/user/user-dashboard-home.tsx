@@ -150,14 +150,159 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
     loadActivity()
   }, [walletPassId])
   
+  // How It Works steps
+  const [visibleStep, setVisibleStep] = useState(0)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setVisibleStep(prev => (prev + 1) % 4)
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const steps = [
+    {
+      number: "01",
+      title: "Discover Amazing Places",
+      description: "Explore Bournemouth's best restaurants, cafes, bars, and hidden gems — all carefully curated by locals",
+      icon: (
+        <svg className="w-16 h-16 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      ),
+      color: "from-emerald-500 to-teal-500",
+      bgColor: "from-emerald-500/20 to-teal-500/20",
+      borderColor: "border-emerald-500/30"
+    },
+    {
+      number: "02", 
+      title: "Chat with Your AI Guide",
+      description: "Ask our intelligent AI anything about menus, deals, secret items, or get personalized recommendations",
+      icon: (
+        <svg className="w-16 h-16 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      ),
+      color: "from-blue-500 to-cyan-500",
+      bgColor: "from-blue-500/20 to-cyan-500/20",
+      borderColor: "border-blue-500/30"
+    },
+    {
+      number: "03",
+      title: "Grab Exclusive Deals",
+      description: "Access special offers and add them to your mobile wallet — deals you won't find anywhere else",
+      icon: (
+        <svg className="w-16 h-16 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+      ),
+      color: "from-orange-500 to-red-500",
+      bgColor: "from-orange-500/20 to-red-500/20",
+      borderColor: "border-orange-500/30"
+    },
+    {
+      number: "04",
+      title: "Unlock Secret Menus",
+      description: "Discover hidden menu items and off-menu specialties that only insiders know about",
+      icon: (
+        <svg className="w-16 h-16 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      ),
+      color: "from-purple-500 to-pink-500",
+      bgColor: "from-purple-500/20 to-pink-500/20",
+      borderColor: "border-purple-500/30"
+    }
+  ]
+  
   return (
-    <div className="space-y-6">
-      {/* Simple Header */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-slate-100 mb-2">
-          Hello, <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] bg-clip-text text-transparent">{userName}</span>
-        </h1>
-        <p className="text-slate-400">Your AI companion is ready to help you discover {franchiseCity ? franchiseCity.charAt(0).toUpperCase() + franchiseCity.slice(1) : 'your city'}</p>
+    <div className="space-y-12">
+      {/* Welcome Header */}
+      <div className="text-center space-y-6">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-blue-500/5 to-purple-500/10 rounded-3xl blur-3xl"></div>
+          <div className="relative bg-gradient-to-br from-slate-900/80 to-slate-800/60 rounded-3xl border border-slate-700/50 p-12">
+            <h1 className="text-5xl font-bold text-slate-100 mb-4">
+              Welcome to <span className="bg-gradient-to-r from-emerald-400 to-purple-400 bg-clip-text text-transparent">Qwikker</span>, {userName}
+            </h1>
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
+              Your intelligent companion for discovering {franchiseCity ? franchiseCity.charAt(0).toUpperCase() + franchiseCity.slice(1) + "'s" : 'your city\'s'} best dining experiences. 
+              We connect you with amazing local businesses through AI-powered recommendations, 
+              exclusive deals, and insider knowledge.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* How It Works Section */}
+      <div className="space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-slate-100 mb-4">How Qwikker Works</h2>
+          <p className="text-lg text-slate-300">Four simple steps to unlock {franchiseCity ? franchiseCity.charAt(0).toUpperCase() + franchiseCity.slice(1) + "'s" : 'your city\'s'} culinary secrets</p>
+        </div>
+
+        {/* Interactive Steps */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {steps.map((step, index) => (
+            <Card 
+              key={index}
+              className={`relative overflow-hidden transition-all duration-700 cursor-pointer ${
+                visibleStep === index 
+                  ? `bg-gradient-to-br ${step.bgColor} border ${step.borderColor}` 
+                  : 'bg-slate-800/50 border-slate-600/50 hover:border-slate-500/50'
+              }`}
+              style={{ 
+                height: '380px',
+                boxShadow: visibleStep === index 
+                  ? '0 25px 50px -12px rgba(0, 208, 131, 0.15)' 
+                  : '0 10px 25px -3px rgba(0, 0, 0, 0.3)'
+              }}
+              onClick={() => setVisibleStep(index)}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-r ${step.color} transition-opacity duration-700 ${
+                visibleStep === index ? 'opacity-10' : 'opacity-0'
+              }`}></div>
+              
+              <CardContent className="relative p-6 text-center h-full">
+                {/* Step Number */}
+                <div className="absolute top-6 left-1/2 transform -translate-x-1/2">
+                  <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full font-bold text-lg ${
+                    visibleStep === index 
+                      ? `bg-gradient-to-r ${step.color} text-black` 
+                      : 'bg-slate-700 text-slate-400'
+                  }`}>
+                    {step.number}
+                  </div>
+                </div>
+
+                {/* Icon */}
+                <div className="absolute top-24 left-1/2 transform -translate-x-1/2">
+                  <div className={`${visibleStep === index ? 'opacity-100' : 'opacity-60'}`}>
+                    {step.icon}
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div className="absolute top-44 left-6 right-6">
+                  <h3 className={`text-lg font-bold ${
+                    visibleStep === index ? 'text-slate-100' : 'text-slate-300'
+                  }`}>
+                    {step.title}
+                  </h3>
+                </div>
+
+                {/* Description */}
+                <div className="absolute top-56 left-6 right-6 bottom-6">
+                  <p className={`text-sm leading-relaxed ${
+                    visibleStep === index ? 'text-slate-200' : 'text-slate-400'
+                  }`}>
+                    {step.description}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
 
       {/* AI Companion - Beautiful & Engaging */}
