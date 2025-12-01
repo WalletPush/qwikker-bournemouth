@@ -11,11 +11,87 @@ interface LoyaltyPageClientProps {
 
 export function LoyaltyPageClient({ profile }: LoyaltyPageClientProps) {
   const [showModal, setShowModal] = useState(true)
+  const [selectedFeature, setSelectedFeature] = useState<string | null>(null)
   
   // Check if feature is enabled (either through tier or manual override)
   const hasAccess = profile?.features?.loyalty_cards === true || profile?.plan === 'spotlight' || profile?.plan === 'pro'
+
+  const features = [
+    {
+      id: 'custom-cards',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+        </svg>
+      ),
+      title: 'Custom Loyalty Cards',
+      description: 'Design stunning digital loyalty cards that match your brand perfectly',
+      color: 'from-purple-500 to-pink-500'
+    },
+    {
+      id: 'landing-pages',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+      title: 'AI Landing Page Builder',
+      description: 'Create beautiful landing pages with AI assistance in minutes',
+      color: 'from-blue-500 to-cyan-500'
+    },
+    {
+      id: 'built-in-pos',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      title: 'Built-in POS System',
+      description: 'Manage loyalty programs without external software - everything in one place',
+      color: 'from-green-500 to-emerald-500'
+    },
+    {
+      id: 'fully-customizable',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+        </svg>
+      ),
+      title: '100% Customizable',
+      description: 'Colors, fonts, layouts - make it yours with complete design freedom',
+      color: 'from-orange-500 to-red-500'
+    },
+    {
+      id: 'multi-use',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+        </svg>
+      ),
+      title: 'Multi-Purpose',
+      description: 'Perfect for loyalty programs, events, birthday clubs, VIP memberships & more',
+      color: 'from-yellow-500 to-amber-500'
+    },
+    {
+      id: 'qr-integration',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+        </svg>
+      ),
+      title: 'Integrated QR Codes',
+      description: 'Seamlessly works with your existing QR code system for easy redemption',
+      color: 'from-indigo-500 to-purple-500'
+    }
+  ]
+
+  const handleLaunchPortal = () => {
+    // TODO: Replace with actual loyalty portal URL
+    window.open('https://loyalty.qwikker.com', '_blank')
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Show upgrade modal for users without access */}
       {!hasAccess && (
         <ElegantModal
@@ -44,199 +120,133 @@ export function LoyaltyPageClient({ profile }: LoyaltyPageClientProps) {
               <div className="space-y-2 text-sm text-slate-300">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>Stamp cards, points, tiers, or perks system</span>
+                  <span>Custom loyalty cards & landing pages</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>Auto-unlock rewards & birthday treats</span>
+                  <span>Built-in POS system - no external software needed</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>Push notifications to members only</span>
+                  <span>AI-assisted design tools</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>Branded cards & QR codes</span>
+                  <span>100% customizable for your brand</span>
                 </div>
               </div>
             </div>
             <p className="text-xs text-slate-400 text-center">
-              Available on Spotlight • Fully branded to your business
+              Available on Spotlight • Perfect for events, loyalty, birthdays & more
             </p>
           </div>
         </ElegantModal>
       )}
 
-      {/* Content - blurred for users without access */}
+      {/* Header Section */}
       <div className={!hasAccess && showModal ? "blur-[8px] select-none pointer-events-none" : ""}>
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Loyalty Program</h1>
-          <p className="text-gray-400">Build customer loyalty with digital rewards</p>
-        </div>
-
-      {/* Program Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-400">Active Members</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">1,247</div>
-            <p className="text-xs text-[#00d083] flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l9.2-9.2M17 17V7H7" />
-              </svg>
-              +15.3% this month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-400">Rewards Claimed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">487</div>
-            <p className="text-xs text-[#00d083] flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l9.2-9.2M17 17V7H7" />
-              </svg>
-              +28.7% this month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-400">Member Revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">£8,347</div>
-            <p className="text-xs text-[#00d083] flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l9.2-9.2M17 17V7H7" />
-              </svg>
-              +42.1% this month
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Loyalty Card Preview */}
-      <Card className="bg-slate-800/50 border-slate-700 mb-8">
-        <CardHeader>
-          <CardTitle className="text-white">Your Loyalty Card</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Card Design */}
-            <div className="space-y-4">
-              <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-xl p-6 text-white">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold">Your Business Name</h3>
-                    <p className="text-sm opacity-90">Loyalty Program</p>
-                  </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm">Collect 10 stamps, get a free coffee!</p>
-                  <div className="flex gap-1">
-                    {[...Array(10)].map((_, i) => (
-                      <div key={i} className={`w-6 h-6 rounded-full border-2 border-white ${i < 7 ? 'bg-white' : 'bg-transparent'}`}></div>
-                    ))}
-                  </div>
-                  <p className="text-xs opacity-75">7 of 10 stamps collected</p>
-                </div>
-              </div>
-              <Button className="w-full bg-slate-700 hover:bg-slate-600 text-white">
-                Customize Card Design
-              </Button>
-            </div>
-
-            {/* Program Settings */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-white">Program Settings</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-                  <span className="text-gray-300">Program Type</span>
-                  <span className="text-white">Stamp Card</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-                  <span className="text-gray-300">Stamps Required</span>
-                  <span className="text-white">10</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-                  <span className="text-gray-300">Reward</span>
-                  <span className="text-white">Free Coffee</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-                  <span className="text-gray-300">Birthday Reward</span>
-                  <span className="text-white">Free Pastry</span>
-                </div>
-              </div>
-              <Button className="w-full bg-slate-700 hover:bg-slate-600 text-white">
-                Edit Program
-              </Button>
+        <div className="text-center mb-12">
+          <div className="inline-block mb-4">
+            <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-full px-6 py-2">
+              <p className="text-purple-300 text-sm font-semibold">Qwikker Loyalty Portal</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <h1 className="text-5xl font-bold mb-4">
+            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+              Build Lasting Customer Loyalty
+            </span>
+          </h1>
+          <p className="text-xl text-slate-300 max-w-3xl mx-auto mb-8">
+            Create stunning digital loyalty programs with our powerful all-in-one platform. 
+            No external software needed - everything you need in one place.
+          </p>
+          
+          {/* Launch Button */}
+          <Button
+            onClick={handleLaunchPortal}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-lg shadow-purple-500/50 hover:shadow-purple-500/70 transition-all duration-300 hover:scale-105"
+          >
+            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Launch Loyalty Portal
+          </Button>
+          <p className="text-sm text-slate-400 mt-3">
+            Opens in new tab • Seamlessly integrated with your Qwikker account
+          </p>
+        </div>
 
-      {/* Program Types */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-              </svg>
-              Stamp Cards
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-400 text-sm">
-              Classic punch card system. Customers collect stamps with each purchase and earn rewards.
-            </p>
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          {features.map((feature) => (
+            <Card 
+              key={feature.id}
+              className="bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all duration-300 hover:scale-105 cursor-pointer group"
+              onClick={() => setSelectedFeature(feature.id)}
+            >
+              <CardHeader>
+                <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.color} p-4 mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                  <div className="text-white">
+                    {feature.icon}
+                  </div>
+                </div>
+                <CardTitle className="text-white text-xl">{feature.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-400 leading-relaxed">{feature.description}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Info Banner */}
+        <Card className="bg-gradient-to-r from-purple-900/20 to-pink-900/20 border-purple-500/30">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between flex-wrap gap-6">
+              <div className="flex-1 min-w-[300px]">
+                <h3 className="text-2xl font-bold text-white mb-2">
+                  Ready to boost customer retention?
+                </h3>
+                <p className="text-slate-300">
+                  The Qwikker Loyalty Portal gives you enterprise-grade tools with zero complexity. 
+                  Launch your program in minutes, not months.
+                </p>
+              </div>
+              <Button
+                onClick={handleLaunchPortal}
+                size="lg"
+                className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold px-8"
+              >
+                Get Started Now
+                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-              </svg>
-              Points System
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-400 text-sm">
-              Earn points based on spend amount. Flexible redemption options for different reward levels.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-              Tier System
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-400 text-sm">
-              Bronze, Silver, Gold tiers with increasing benefits. Encourage higher spending and loyalty.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Use Cases */}
+        <div className="mt-12">
+          <h2 className="text-3xl font-bold text-center text-white mb-8">Perfect For Any Occasion</h2>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {[
+              { icon: '🎯', label: 'Loyalty Programs' },
+              { icon: '🎉', label: 'Special Events' },
+              { icon: '🎂', label: 'Birthday Clubs' },
+              { icon: '⭐', label: 'VIP Memberships' },
+              { icon: '🎁', label: 'Reward Systems' }
+            ].map((useCase, index) => (
+              <div 
+                key={index}
+                className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center hover:border-purple-500/50 transition-all duration-300 hover:scale-105"
+              >
+                <div className="text-4xl mb-3">{useCase.icon}</div>
+                <p className="text-slate-300 font-medium">{useCase.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
