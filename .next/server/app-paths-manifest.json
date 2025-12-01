@@ -39,7 +39,14 @@
   "/privacy-policy/page": "app/privacy-policy/page.js",
   "/protected/page": "app/protected/page.js",
   "/terms-of-service/page": "app/terms-of-service/page.js",
+  "/user/badges/page": "app/user/badges/page.js",
+  "/user/business/[slug]/page": "app/user/business/[slug]/page.js",
   "/user/chat/page": "app/user/chat/page.js",
   "/user/dashboard/page": "app/user/dashboard/page.js",
-  "/user/page": "app/user/page.js"
+  "/user/discover/page": "app/user/discover/page.js",
+  "/user/events/page": "app/user/events/page.js",
+  "/user/how-it-works/page": "app/user/how-it-works/page.js",
+  "/user/offers/page": "app/user/offers/page.js",
+  "/user/page": "app/user/page.js",
+  "/user/secret-menu/page": "app/user/secret-menu/page.js"
 }

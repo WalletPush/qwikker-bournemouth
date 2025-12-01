@@ -96,7 +96,6 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       offer_value,
       offer_image,
       menu_preview,
-      plan,
       rating,
       review_count,
       additional_notes,
@@ -116,7 +115,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
     .order('created_at', { ascending: false })
   
   if (error) {
-    console.error('Error fetching businesses:', error)
+    console.error('❌ Error fetching businesses for discover page:', error, JSON.stringify(error))
   }
   
   // Transform real approved businesses to match the expected format

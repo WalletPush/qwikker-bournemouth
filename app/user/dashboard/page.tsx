@@ -139,7 +139,6 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
       offer_type,
       offer_value,
       menu_preview,
-      plan,
       status,
       additional_notes,
       business_offers!left(
@@ -156,7 +155,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
     .not('business_name', 'is', null)
   
   if (error) {
-    console.error('Error fetching businesses:', error)
+    console.error('❌ Error fetching businesses:', error, JSON.stringify(error))
   }
   
   // Calculate real stats
