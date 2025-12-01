@@ -1170,6 +1170,68 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           )}
         </Card>
 
+        {/* Social Wizard (Locked) */}
+        <Card className="bg-slate-800/50 border-slate-700 relative overflow-hidden">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+              Social Wizard
+            </CardTitle>
+          </CardHeader>
+          <CardContent className={!isPremiumFeatureUnlocked() ? "blur-[8px] select-none pointer-events-none" : ""}>
+            {isPremiumFeatureUnlocked() ? (
+              // Unlocked: Show action button
+              <div className="space-y-4">
+                <Button asChild className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+                  <Link href="/dashboard/social-wizard">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create New Post
+                  </Link>
+                </Button>
+                <div>
+                  <h4 className="text-sm font-medium text-slate-400 mb-2">AI-Powered Content</h4>
+                  <div className="bg-slate-700/30 rounded-lg p-3">
+                    <p className="text-white text-sm font-medium mb-1">Generate engaging social posts</p>
+                    <p className="text-slate-400 text-xs">Let AI create compelling content for Instagram, Facebook, and Twitter in seconds</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Locked: Show placeholder content
+              <div className="space-y-3">
+                <div className="bg-slate-700/50 rounded-lg p-3">
+                  <p className="font-medium text-white">AI Post Generator</p>
+                  <p className="text-sm text-gray-300 mt-1">Create engaging social content in seconds</p>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-3">
+                  <p className="font-medium text-white">Multi-Platform</p>
+                  <p className="text-sm text-gray-300 mt-1">Optimize for Instagram, Facebook, Twitter</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+          {/* Only show lock overlay if NOT Spotlight */}
+          {!isPremiumFeatureUnlocked() && (
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="font-semibold text-white mb-2">Unlock Social Wizard</p>
+                <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+                  <Link href="/dashboard/settings">Upgrade Plan</Link>
+                </Button>
+              </div>
+            </div>
+          )}
+        </Card>
+
         {/* Referral Program Card */}
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
