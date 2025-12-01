@@ -67,14 +67,26 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
     const previousTotalVisits = previousVisits?.length || 0
     const visitTrend = previousTotalVisits > 0 
       ? ((totalVisits - previousTotalVisits) / previousTotalVisits) * 100 
-      : 0
+      : totalVisits > 0 ? 100 : 0 // If we have visits but no previous visits, show 100% growth
     
+    // Count unique visitors (only those with user_id or wallet_pass_id)
     const uniqueVisitors = new Set(
       visits?.map(v => v.user_id || v.wallet_pass_id).filter(Boolean)
     ).size
     
+    // Count registered visitors (those with user_id or wallet_pass_id)
     const registeredVisitors = visits?.filter(v => v.user_id || v.wallet_pass_id).length || 0
-    const anonymousVisitors = totalVisits - registeredVisitors
+    
+    // Anonymous visitors are those WITHOUT user_id or wallet_pass_id
+    const anonymousVisitors = visits?.filter(v => !v.user_id && !v.wallet_pass_id).length || 0
+    
+    console.log('📊 Analytics Debug:', {
+      totalVisits,
+      uniqueVisitors,
+      registeredVisitors,
+      anonymousVisitors,
+      sampleVisit: visits?.[0]
+    })
     
     // 2. OFFER ANALYTICS
     const { data: claims } = await supabase
