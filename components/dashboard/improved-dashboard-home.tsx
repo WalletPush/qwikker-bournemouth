@@ -45,6 +45,11 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   const [activityFeed, setActivityFeed] = useState<any[]>([])
   const [businessVisits, setBusinessVisits] = useState<any[]>([])
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false)
+  const [analyticsData, setAnalyticsData] = useState<{
+    totalVisits: number
+    totalClaims: number
+    totalQRScans: number
+  }>({ totalVisits: 0, totalClaims: 0, totalQRScans: 0 })
   const supabase = createClientComponentClient()
   
   // Modal states
@@ -71,6 +76,28 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Fetch real analytics data
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      if (!profile?.id) return
+      
+      try {
+        const { getBusinessAnalytics } = await import('@/lib/actions/business-analytics-actions')
+        const data = await getBusinessAnalytics(profile.id)
+        
+        setAnalyticsData({
+          totalVisits: data.totalVisits,
+          totalClaims: data.totalOfferClaims,
+          totalQRScans: data.totalQRScans
+        })
+      } catch (error) {
+        console.error('Error fetching analytics:', error)
+      }
+    }
+    
+    fetchAnalytics()
+  }, [profile?.id])
 
   // Calculate trial days - USE SUBSCRIPTION DATA FIRST, fallback to legacy
   useEffect(() => {
@@ -990,20 +1017,24 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           <CardContent className={!isPremiumFeatureUnlocked() ? "blur-[8px] select-none pointer-events-none" : ""}>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-[#00d083]">247</p>
+                <p className="text-2xl font-bold text-[#00d083]">{analyticsData.totalVisits}</p>
                 <p className="text-xs text-gray-400">Views This Month</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-[#00d083]">12</p>
+                <p className="text-2xl font-bold text-[#00d083]">{analyticsData.totalClaims}</p>
                 <p className="text-xs text-gray-400">Offers Claimed</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-[#00d083]">89%</p>
-                <p className="text-xs text-gray-400">Positive Reviews</p>
+                <p className="text-2xl font-bold text-[#00d083]">{analyticsData.totalQRScans}</p>
+                <p className="text-xs text-gray-400">QR Code Scans</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-[#00d083]">34</p>
-                <p className="text-xs text-gray-400">New Followers</p>
+                <p className="text-2xl font-bold text-[#00d083]">
+                  {analyticsData.totalVisits > 0 
+                    ? ((analyticsData.totalClaims / analyticsData.totalVisits) * 100).toFixed(1) 
+                    : '0'}%
+                </p>
+                <p className="text-xs text-gray-400">Conversion Rate</p>
               </div>
             </div>
           </CardContent>
