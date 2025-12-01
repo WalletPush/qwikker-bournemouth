@@ -599,8 +599,8 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
                   return null
                 })()}
                 
-                {/* DEBUG: Show if eventCards exist but aren't rendering */}
-                {message.eventCards && message.eventCards.length > 0 ? (
+                {/* Event Cards */}
+                {message.eventCards && message.eventCards.length > 0 && (
                   <div className="mt-3 -mx-2 sm:mx-0">
                     <EventCarousel 
                       events={message.eventCards}
@@ -608,15 +608,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
                       className="w-full"
                     />
                   </div>
-                ) : message.eventCards && message.eventCards.length === 0 ? (
-                  <div className="mt-3 p-3 bg-yellow-500/20 border border-yellow-500 rounded-lg text-yellow-300 text-xs">
-                    ⚠️ DEBUG: eventCards array exists but is empty (length: 0)
-                  </div>
-                ) : message.type === 'ai' && message.content.toLowerCase().includes('here you go') ? (
-                  <div className="mt-3 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-300 text-xs">
-                    ❌ DEBUG: AI said "here you go" but no eventCards in message object!
-                  </div>
-                ) : null}
+                )}
 
                 {/* Simplified Quick Replies - Only show for AI messages and limit to 3 */}
                 {message.type === 'ai' && message.quickReplies && message.quickReplies.length > 0 && (
