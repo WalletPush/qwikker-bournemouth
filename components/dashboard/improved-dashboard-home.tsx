@@ -415,6 +415,16 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
     return false
   }
 
+  // Check if a specific feature is unlocked (for individual feature cards)
+  const isFeatureUnlocked = (featureKey: string) => {
+    // FIRST: Check individual feature override
+    if (profile?.features && typeof profile.features[featureKey] === 'boolean') {
+      return profile.features[featureKey]
+    }
+    // SECOND: Check tier-based access
+    return isPremiumFeatureUnlocked()
+  }
+
   const handleSubmitForReview = async () => {
     console.log('🚀 DASHBOARD: handleSubmitForReview called', { 
       hasUserId: !!profile?.user_id, 
@@ -1048,8 +1058,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   </svg>
                 </div>
                 <p className="font-semibold text-white mb-2">Unlock Analytics</p>
-                <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
-                  <Link href="/dashboard/settings">Upgrade Plan</Link>
+                <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-white">
+                  <Link href="/dashboard/analytics">Upgrade Plan</Link>
                 </Button>
               </div>
             </div>
@@ -1116,8 +1126,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   </svg>
                 </div>
                 <p className="font-semibold text-white mb-2">Unlock Push Notifications</p>
-                <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
-                  <Link href="/dashboard/settings">Upgrade Plan</Link>
+                <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-white">
+                  <Link href="/dashboard/notifications">Upgrade Plan</Link>
                 </Button>
               </div>
             </div>
@@ -1162,8 +1172,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   </svg>
                 </div>
                 <p className="font-semibold text-white mb-2">Unlock Loyalty Cards</p>
-                <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
-                  <Link href="/dashboard/settings">Upgrade Plan</Link>
+                <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-white">
+                  <Link href="/dashboard/loyalty">Upgrade Plan</Link>
                 </Button>
               </div>
             </div>
@@ -1180,8 +1190,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               Social Wizard
             </CardTitle>
           </CardHeader>
-          <CardContent className={!isPremiumFeatureUnlocked() ? "blur-[8px] select-none pointer-events-none" : ""}>
-            {isPremiumFeatureUnlocked() ? (
+          <CardContent className={!isFeatureUnlocked('social_wizard') ? "blur-[8px] select-none pointer-events-none" : ""}>
+            {isFeatureUnlocked('social_wizard') ? (
               // Unlocked: Show action button
               <div className="space-y-4">
                 <Button asChild className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
@@ -1214,8 +1224,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </div>
             )}
           </CardContent>
-          {/* Only show lock overlay if NOT Spotlight */}
-          {!isPremiumFeatureUnlocked() && (
+          {/* Only show lock overlay if NOT unlocked */}
+          {!isFeatureUnlocked('social_wizard') && (
             <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
               <div className="text-center">
                 <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
@@ -1224,8 +1234,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   </svg>
                 </div>
                 <p className="font-semibold text-white mb-2">Unlock Social Wizard</p>
-                <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
-                  <Link href="/dashboard/settings">Upgrade Plan</Link>
+                <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-white">
+                  <Link href="/dashboard/social-wizard">Upgrade Plan</Link>
                 </Button>
               </div>
             </div>
