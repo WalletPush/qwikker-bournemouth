@@ -48,6 +48,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
   const [badgeCount, setBadgeCount] = useState(0)
   const [claimedOffersCount, setClaimedOffersCount] = useState(0)
   const [recentActivity, setRecentActivity] = useState<any[]>([])
+  const [savedItemsCount, setSavedItemsCount] = useState(0)
   
   useEffect(() => {
     const loadActivity = async () => {
@@ -58,6 +59,13 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
       // Get real business activity from database
       const { getRecentBusinessActivity } = await import('@/lib/actions/recent-activity-actions')
       const businessActivity = await getRecentBusinessActivity(franchiseCity)
+      
+      // Get saved items count
+      const { getUserSavedItems } = await import('@/lib/actions/user-saved-actions')
+      const savedResult = await getUserSavedItems(walletPassId)
+      if (savedResult.success) {
+        setSavedItemsCount(savedResult.count || 0)
+      }
       
       if (typeof window !== 'undefined') {
         // Get actual badge count from badge tracker
@@ -412,7 +420,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
       </Card>
 
       {/* Navigation Cards - Bigger */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* Discover Places */}
         <Link href={getNavUrl("/user/discover")} className="group">
           <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/40 transition-colors duration-200 cursor-pointer">
@@ -473,6 +481,22 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
               <h3 className="font-semibold text-slate-100 text-base mb-2">Events</h3>
               <p className="text-blue-400 font-bold text-2xl">0</p>
               <p className="text-sm text-slate-400">upcoming</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* Saved */}
+        <Link href={getNavUrl("/user/saved")} className="group">
+          <Card className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 border border-pink-500/20 hover:border-pink-500/40 transition-colors duration-200 cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-slate-100 text-base mb-2">Saved</h3>
+              <p className="text-pink-400 font-bold text-2xl">{savedItemsCount}</p>
+              <p className="text-sm text-slate-400">places</p>
             </CardContent>
           </Card>
         </Link>
