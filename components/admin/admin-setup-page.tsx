@@ -883,7 +883,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     <div>
                       <Label className="text-slate-300 text-sm mb-2 block">Update Webhook URL</Label>
                       <Input
-                        value={config.ghl_update_webhook_url}
+                        value={config.ghl_update_webhook_url || ''}
                         onChange={(e) => setConfig({...config, ghl_update_webhook_url: e.target.value})}
                         className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
                         placeholder="https://services.leadconnectorhq.com/hooks/..."

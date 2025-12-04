@@ -803,15 +803,6 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
-// Validate ../../app/api/admin/billing/stripe-status/route.ts
-{
-  type __IsExpected<Specific extends RouteHandlerConfig<"/api/admin/billing/stripe-status">> = Specific
-  const handler = {} as typeof import("../../app/api/admin/billing/stripe-status/route.js")
-  type __Check = __IsExpected<typeof handler>
-  // @ts-ignore
-  type __Unused = __Check
-}
-
 // Validate ../../app/api/admin/businesses/create/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/admin/businesses/create">> = Specific
