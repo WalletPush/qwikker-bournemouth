@@ -81,6 +81,27 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
     stripe_publishable: false,
     stripe_secret: false
   })
+  
+  // Stripe Connect state
+  const [stripeConnecting, setStripeConnecting] = useState(false)
+  const [stripeMessage, setStripeMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
+  
+  // Check URL params for Stripe callback results
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const stripeSuccess = params.get('stripe_success')
+    const stripeError = params.get('stripe_error')
+    
+    if (stripeSuccess) {
+      setStripeMessage({ type: 'success', text: 'Stripe account connected successfully!' })
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (stripeError) {
+      setStripeMessage({ type: 'error', text: decodeURIComponent(stripeError) })
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -1020,107 +1041,233 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   </div>
                 </div>
 
-                {/* Stripe (Payments) */}
+                {/* Stripe (Payments) - Connect Integration */}
                 <div className="border-2 border-slate-700/50 rounded-xl p-6 hover:border-slate-600 transition-colors bg-slate-800/30">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#635BFF] to-[#8B5CF6] rounded-xl flex items-center justify-center shadow-lg">
+                      {/* Stripe "S" Icon */}
+                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-white" fill="currentColor">
+                        <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-white font-bold text-lg">Stripe (Payment Processing)</h3>
-                      <p className="text-slate-400 text-sm">Handle subscription payments for your franchise</p>
+                      <h3 className="text-white font-bold text-lg">Payment Processing</h3>
+                      <p className="text-slate-400 text-sm">Connect your Stripe account to accept payments from businesses</p>
                     </div>
-                    <a 
-                      href="https://dashboard.stripe.com/register" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
-                    >
-                      Sign Up →
-                    </a>
+                    {/* Stripe Wordmark */}
+                    <img src="/stripe-logo.svg" alt="Stripe" className="h-8 opacity-60" />
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-slate-300 text-sm mb-2 block">Stripe Account ID</Label>
-                        <Input
-                          value={config.stripe_account_id}
-                          onChange={(e) => setConfig({...config, stripe_account_id: e.target.value})}
-                          className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
-                          placeholder="acct_..."
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-slate-300 text-sm mb-2 block">Publishable Key</Label>
-                        <div className="relative">
-                          <Input
-                            type={showKeys.stripe_publishable ? "text" : "password"}
-                            value={config.stripe_publishable_key}
-                            onChange={(e) => setConfig({...config, stripe_publishable_key: e.target.value})}
-                            className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
-                            placeholder="pk_live_..."
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowKeys({...showKeys, stripe_publishable: !showKeys.stripe_publishable})}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
-                          >
-                            {showKeys.stripe_publishable ? (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                              </svg>
-                            ) : (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                            )}
-                          </button>
+                  {/* Stripe Message */}
+                  {stripeMessage && (
+                    <div className={`mb-4 p-3 rounded-lg ${
+                      stripeMessage.type === 'success' 
+                        ? 'bg-green-500/20 border border-green-500/30 text-green-400' 
+                        : 'bg-red-500/20 border border-red-500/30 text-red-400'
+                    }`}>
+                      <p className="text-sm flex items-center gap-2">
+                        {stripeMessage.type === 'success' ? (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        )}
+                        {stripeMessage.text}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Connected State */}
+                  {config.stripe_account_id && config.stripe_onboarding_completed ? (
+                    <div className="space-y-4">
+                      <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                            <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-green-400 font-semibold text-lg">Stripe Connected</p>
+                            <p className="text-slate-400 text-sm">Your account is ready to accept payments</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-slate-500 text-xs uppercase tracking-wide">Account ID</p>
+                            <p className="text-slate-300 font-mono text-sm">{config.stripe_account_id}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-sm mb-2 block">Webhook Secret</Label>
-                      <div className="relative">
-                        <Input
-                          type={showKeys.stripe_secret ? "text" : "password"}
-                          value={config.stripe_webhook_secret}
-                          onChange={(e) => setConfig({...config, stripe_webhook_secret: e.target.value})}
-                          className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
-                          placeholder="whsec_..."
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowKeys({...showKeys, stripe_secret: !showKeys.stripe_secret})}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                      
+                      <div className="flex gap-3">
+                        <a
+                          href={`https://dashboard.stripe.com/${config.stripe_account_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-700/50 hover:bg-slate-700 text-white rounded-xl font-medium transition-colors"
                         >
-                          {showKeys.stripe_secret ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          )}
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          View Dashboard
+                        </a>
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to disconnect your Stripe account?')) {
+                              setConfig({...config, stripe_account_id: '', stripe_onboarding_completed: false})
+                              setStripeMessage({ type: 'success', text: 'Stripe account disconnected. Remember to save your changes.' })
+                            }
+                          }}
+                          className="px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl font-medium transition-colors border border-red-500/20"
+                        >
+                          Disconnect
                         </button>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3 pt-2">
-                      <input
-                        type="checkbox"
-                        checked={config.stripe_onboarding_completed}
-                        onChange={(e) => setConfig({...config, stripe_onboarding_completed: e.target.checked})}
-                        className="w-5 h-5 rounded border-slate-600 bg-slate-700 text-[#00d083] focus:ring-[#00d083]"
-                        id="stripe-complete"
-                      />
-                      <label htmlFor="stripe-complete" className="text-slate-300 text-sm">Stripe onboarding completed</label>
+                  ) : config.stripe_account_id && !config.stripe_onboarding_completed ? (
+                    /* Partially Connected - Needs More Setup */
+                    <div className="space-y-4">
+                      <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-xl p-5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center">
+                            <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-amber-400 font-semibold text-lg">Setup Incomplete</p>
+                            <p className="text-slate-400 text-sm">Your Stripe account needs additional verification</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={async () => {
+                          setStripeConnecting(true)
+                          try {
+                            const response = await fetch('/api/admin/billing/stripe-connect', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ city })
+                            })
+                            const data = await response.json()
+                            if (data.url) {
+                              window.location.href = data.url
+                            } else {
+                              setStripeMessage({ type: 'error', text: data.error || 'Failed to connect Stripe' })
+                            }
+                          } catch (err) {
+                            setStripeMessage({ type: 'error', text: 'Failed to initiate Stripe connection' })
+                          }
+                          setStripeConnecting(false)
+                        }}
+                        disabled={stripeConnecting}
+                        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-[#635BFF] to-[#8B5CF6] hover:from-[#5851DB] hover:to-[#7C3AED] text-white rounded-xl font-semibold text-lg transition-all shadow-lg shadow-purple-500/25 disabled:opacity-50"
+                      >
+                        {stripeConnecting ? (
+                          <>
+                            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Connecting...
+                          </>
+                        ) : (
+                          <>
+                            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
+                              <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
+                            </svg>
+                            Complete Stripe Setup
+                          </>
+                        )}
+                      </button>
                     </div>
-                  </div>
+                  ) : (
+                    /* Not Connected */
+                    <div className="space-y-5">
+                      <div className="bg-slate-700/30 rounded-xl p-5">
+                        <p className="text-slate-300 text-sm leading-relaxed">
+                          Connect your Stripe account to accept subscription payments from businesses in your franchise. 
+                          Payments will go directly to your account with no platform fees.
+                        </p>
+                        <div className="mt-4 flex flex-wrap gap-3">
+                          <div className="flex items-center gap-2 text-slate-400 text-sm">
+                            <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Secure payments
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-400 text-sm">
+                            <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Automatic invoicing
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-400 text-sm">
+                            <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Full dashboard access
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-400 text-sm">
+                            <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            No platform fees
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={async () => {
+                          setStripeConnecting(true)
+                          setStripeMessage(null)
+                          try {
+                            const response = await fetch('/api/admin/billing/stripe-connect', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ city })
+                            })
+                            const data = await response.json()
+                            if (data.url) {
+                              window.location.href = data.url
+                            } else {
+                              setStripeMessage({ type: 'error', text: data.error || 'Failed to connect Stripe' })
+                              setStripeConnecting(false)
+                            }
+                          } catch (err) {
+                            setStripeMessage({ type: 'error', text: 'Failed to initiate Stripe connection' })
+                            setStripeConnecting(false)
+                          }
+                        }}
+                        disabled={stripeConnecting}
+                        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-[#635BFF] to-[#8B5CF6] hover:from-[#5851DB] hover:to-[#7C3AED] text-white rounded-xl font-semibold text-lg transition-all shadow-lg shadow-purple-500/25 disabled:opacity-50"
+                      >
+                        {stripeConnecting ? (
+                          <>
+                            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Connecting...
+                          </>
+                        ) : (
+                          <>
+                            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
+                              <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
+                            </svg>
+                            Connect with Stripe
+                          </>
+                        )}
+                      </button>
+                      
+                      <p className="text-center text-slate-500 text-xs">
+                        Don&apos;t have a Stripe account? You&apos;ll create one during the connection process.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
               </CardContent>
