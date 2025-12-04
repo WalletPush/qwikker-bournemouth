@@ -392,7 +392,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 <div>
                   <Label className="text-slate-300 font-semibold mb-2 block">Owner Name *</Label>
                   <Input
-                    value={config.owner_name}
+                    value={config.owner_name || ''}
                     onChange={(e) => setConfig({...config, owner_name: e.target.value})}
                     className="bg-slate-700/80 border-slate-600 text-white h-12 rounded-xl"
                     placeholder="John Smith"
@@ -402,7 +402,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   <Label className="text-slate-300 font-semibold mb-2 block">Owner Email *</Label>
                   <Input
                     type="email"
-                    value={config.owner_email}
+                    value={config.owner_email || ''}
                     onChange={(e) => setConfig({...config, owner_email: e.target.value})}
                     className="bg-slate-700/80 border-slate-600 text-white h-12 rounded-xl"
                     placeholder="john@bournemouth.qwikker.com"
@@ -513,7 +513,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 <div>
                   <Label className="text-slate-300 font-semibold mb-2 block">Display Name *</Label>
                   <Input
-                    value={config.display_name}
+                    value={config.display_name || ''}
                     disabled
                     className="bg-slate-700/50 border-slate-600/50 text-slate-400 h-12 rounded-xl cursor-not-allowed"
                     placeholder="Bournemouth Qwikker"
@@ -523,7 +523,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 <div>
                   <Label className="text-slate-300 font-semibold mb-2 block">Subdomain *</Label>
                   <Input
-                    value={config.subdomain}
+                    value={config.subdomain || ''}
                     disabled
                     className="bg-slate-700/50 border-slate-600/50 text-slate-400 h-12 rounded-xl cursor-not-allowed"
                     placeholder="bournemouth"
@@ -543,7 +543,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   <Label className="text-slate-300 font-semibold mb-2 block">Timezone *</Label>
                   <select 
                     className="w-full h-12 px-4 bg-slate-700/80 border border-slate-600 rounded-xl text-white"
-                    value={config.timezone}
+                    value={config.timezone || ''}
                     onChange={(e) => setConfig({...config, timezone: e.target.value})}
                   >
                     <option value="Europe/London">Europe/London (GMT/BST)</option>
@@ -560,7 +560,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
               <div>
                 <Label className="text-slate-300 font-semibold mb-2 block">Contact Address</Label>
                 <Textarea
-                  value={config.contact_address}
+                  value={config.contact_address || ''}
                   onChange={(e) => setConfig({...config, contact_address: e.target.value})}
                   className="bg-slate-700/80 border-slate-600 text-white rounded-xl"
                   placeholder="123 High Street, Bournemouth, BH1 2AB"
@@ -873,7 +873,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     <div>
                       <Label className="text-slate-300 text-sm mb-2 block">Main Webhook URL *</Label>
                       <Input
-                        value={config.ghl_webhook_url}
+                        value={config.ghl_webhook_url || ''}
                         onChange={(e) => setConfig({...config, ghl_webhook_url: e.target.value})}
                         className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
                         placeholder="https://services.leadconnectorhq.com/hooks/..."
@@ -895,7 +895,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       <div className="relative">
                         <Input
                           type={showKeys.ghl ? "text" : "password"}
-                          value={config.ghl_api_key}
+                          value={config.ghl_api_key || ''}
                           onChange={(e) => setConfig({...config, ghl_api_key: e.target.value})}
                           className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
                           placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -951,7 +951,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                         <div className="relative">
                           <Input
                             type={showKeys.walletpush ? "text" : "password"}
-                            value={config.walletpush_api_key}
+                            value={config.walletpush_api_key || ''}
                             onChange={(e) => setConfig({...config, walletpush_api_key: e.target.value})}
                             className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
                             placeholder="wp_live_..."
@@ -977,7 +977,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       <div>
                         <Label className="text-slate-300 text-sm mb-2 block">Template ID</Label>
                         <Input
-                          value={config.walletpush_template_id}
+                          value={config.walletpush_template_id || ''}
                           onChange={(e) => setConfig({...config, walletpush_template_id: e.target.value})}
                           className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg"
                           placeholder="template_12345"
@@ -987,7 +987,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     <div>
                       <Label className="text-slate-300 text-sm mb-2 block">Endpoint URL</Label>
                       <Input
-                        value={config.walletpush_endpoint_url}
+                        value={config.walletpush_endpoint_url || ''}
                         onChange={(e) => setConfig({...config, walletpush_endpoint_url: e.target.value})}
                         className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg"
                         placeholder="https://app.walletpush.io/api/hl-yourfranchise"
@@ -1023,7 +1023,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       <Label className="text-slate-300 text-sm mb-2 block">Slack Webhook URL</Label>
                       <Input
                         type="password"
-                        value={config.slack_webhook_url}
+                        value={config.slack_webhook_url || ''}
                         onChange={(e) => setConfig({...config, slack_webhook_url: e.target.value})}
                         className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
                         placeholder="https://hooks.slack.com/services/..."
@@ -1032,7 +1032,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     <div>
                       <Label className="text-slate-300 text-sm mb-2 block">Default Channel</Label>
                       <Input
-                        value={config.slack_channel}
+                        value={config.slack_channel || ''}
                         onChange={(e) => setConfig({...config, slack_channel: e.target.value})}
                         className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg"
                         placeholder="#qwikker-alerts"

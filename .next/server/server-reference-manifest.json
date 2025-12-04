@@ -3,252 +3,22 @@
     "407f353144d33c3258f08975b8062c60cd32f63793": {
       "workers": {
         "app/admin/page": {
-          "moduleId": "6591",
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
           "exportedName": "updateBusinessTier",
           "filename": "lib/actions/admin-crm-actions.ts"
         }
       },
       "layer": {
-        "app/admin/page": "rsc"
+        "app/admin/page": "action-browser"
       },
       "filename": "lib/actions/admin-crm-actions.ts",
       "exportedName": "updateBusinessTier"
     },
-    "40f78773ffe7d63e5a1224fbfa76d108c7dbe5781f": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "getBusinessEvents",
-          "filename": "lib/actions/event-actions.ts"
-        },
-        "app/dashboard/events/page": {
-          "moduleId": "3267",
-          "async": false,
-          "exportedName": "getBusinessEvents",
-          "filename": "lib/actions/event-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser",
-        "app/dashboard/events/page": "action-browser"
-      },
-      "filename": "lib/actions/event-actions.ts",
-      "exportedName": "getBusinessEvents"
-    },
-    "60edd59d74a6ed4fb0a588222a1ce3b39bcd868662": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "getUpcomingEvents",
-          "filename": "lib/actions/event-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser"
-      },
-      "filename": "lib/actions/event-actions.ts",
-      "exportedName": "getUpcomingEvents"
-    },
-    "4048e288399f04a05de1de74491c385db0b1c6a530": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "createEvent",
-          "filename": "lib/actions/event-actions.ts"
-        },
-        "app/dashboard/events/page": {
-          "moduleId": "3267",
-          "async": false,
-          "exportedName": "createEvent",
-          "filename": "lib/actions/event-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser",
-        "app/dashboard/events/page": "action-browser"
-      },
-      "filename": "lib/actions/event-actions.ts",
-      "exportedName": "createEvent"
-    },
-    "60ba67006b47125313c5bd91519e23d93f22355527": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "updateEvent",
-          "filename": "lib/actions/event-actions.ts"
-        },
-        "app/dashboard/events/page": {
-          "moduleId": "3267",
-          "async": false,
-          "exportedName": "updateEvent",
-          "filename": "lib/actions/event-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser",
-        "app/dashboard/events/page": "action-browser"
-      },
-      "filename": "lib/actions/event-actions.ts",
-      "exportedName": "updateEvent"
-    },
-    "40962c97ca931bccad7bb441395b5bd4b142324be0": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "deleteEvent",
-          "filename": "lib/actions/event-actions.ts"
-        },
-        "app/dashboard/events/page": {
-          "moduleId": "3267",
-          "async": false,
-          "exportedName": "deleteEvent",
-          "filename": "lib/actions/event-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser",
-        "app/dashboard/events/page": "action-browser"
-      },
-      "filename": "lib/actions/event-actions.ts",
-      "exportedName": "deleteEvent"
-    },
-    "606742f33965888b57d7f73da9c0ce3680a6acc6c1": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "cancelEvent",
-          "filename": "lib/actions/event-actions.ts"
-        },
-        "app/dashboard/events/page": {
-          "moduleId": "3267",
-          "async": false,
-          "exportedName": "cancelEvent",
-          "filename": "lib/actions/event-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser",
-        "app/dashboard/events/page": "action-browser"
-      },
-      "filename": "lib/actions/event-actions.ts",
-      "exportedName": "cancelEvent"
-    },
-    "409d4e898f5463e22eccc04460d1d6e74f1e930ed7": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "approveEvent",
-          "filename": "lib/actions/event-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser"
-      },
-      "filename": "lib/actions/event-actions.ts",
-      "exportedName": "approveEvent"
-    },
-    "608853fe36b9f5f240d7adb1a3712d6cd7d65ae773": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "rejectEvent",
-          "filename": "lib/actions/event-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser"
-      },
-      "filename": "lib/actions/event-actions.ts",
-      "exportedName": "rejectEvent"
-    },
-    "40bfff7e43e297b5a514114dd45f346cfd6a491338": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "getAdminAnalytics",
-          "filename": "lib/actions/admin-analytics-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser"
-      },
-      "filename": "lib/actions/admin-analytics-actions.ts",
-      "exportedName": "getAdminAnalytics"
-    },
-    "60f29901526ab04eee25aa4685685671e11fcd820f": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "getAdminActivity",
-          "filename": "lib/actions/admin-activity-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser"
-      },
-      "filename": "lib/actions/admin-activity-actions.ts",
-      "exportedName": "getAdminActivity"
-    },
-    "608a1b2cc3ba782653ea894c6c7fec4e148d0e80c4": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "getRealQRAnalytics",
-          "filename": "lib/actions/real-qr-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser"
-      },
-      "filename": "lib/actions/real-qr-actions.ts",
-      "exportedName": "getRealQRAnalytics"
-    },
-    "409301a7e55f3e7c936714f9ea0e7932c649fd79ee": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "getApprovedBusinessesForQR",
-          "filename": "lib/actions/qr-management-actions.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser"
-      },
-      "filename": "lib/actions/qr-management-actions.ts",
-      "exportedName": "getApprovedBusinessesForQR"
-    },
-    "001a9b1f0fe8a3d8a126556e1aa636b0bd957340f1": {
-      "workers": {
-        "app/admin/page": {
-          "moduleId": "6591",
-          "async": false,
-          "exportedName": "debugBusinessData",
-          "filename": "lib/actions/debug-businesses.ts"
-        }
-      },
-      "layer": {
-        "app/admin/page": "action-browser"
-      },
-      "filename": "lib/actions/debug-businesses.ts",
-      "exportedName": "debugBusinessData"
-    },
     "408dd953eba1d8820dff3c578da6a727efb125eb61": {
       "workers": {
         "app/admin/page": {
-          "moduleId": "6591",
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
           "exportedName": "getBusinessCRMData",
           "filename": "lib/actions/admin-crm-actions.ts"
@@ -263,7 +33,7 @@
     "705eb6970700316c20856155e85cb02d601718c804": {
       "workers": {
         "app/admin/page": {
-          "moduleId": "6591",
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
           "exportedName": "updateBusinessSubscription",
           "filename": "lib/actions/admin-crm-actions.ts"
@@ -278,7 +48,7 @@
     "785c9ff9cc2ff06da3a6df3c08efe855474faf877d": {
       "workers": {
         "app/admin/page": {
-          "moduleId": "6591",
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
           "exportedName": "recordPayment",
           "filename": "lib/actions/admin-crm-actions.ts"
@@ -290,767 +60,200 @@
       "filename": "lib/actions/admin-crm-actions.ts",
       "exportedName": "recordPayment"
     },
-    "0002387b6d3102b841bf5fa93de45832dfcae103c9": {
+    "40bfff7e43e297b5a514114dd45f346cfd6a491338": {
       "workers": {
-        "app/admin/utils/init-mock-user/page": {
-          "moduleId": "66641",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "createMockUserMember",
-          "filename": "lib/actions/create-mock-user.ts"
-        },
-        "app/admin/utils/reset-david/page": {
-          "moduleId": "46347",
-          "async": false,
-          "exportedName": "createMockUserMember",
-          "filename": "lib/actions/create-mock-user.ts"
-        },
-        "app/wallet-pass/[id]/page": {
-          "moduleId": "20532",
-          "async": false,
-          "exportedName": "createMockUserMember",
-          "filename": "lib/actions/create-mock-user.ts"
+          "exportedName": "getAdminAnalytics",
+          "filename": "lib/actions/admin-analytics-actions.ts"
         }
       },
       "layer": {
-        "app/admin/utils/init-mock-user/page": "rsc",
-        "app/admin/utils/reset-david/page": "rsc",
-        "app/wallet-pass/[id]/page": "rsc"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/create-mock-user.ts",
-      "exportedName": "createMockUserMember"
+      "filename": "lib/actions/admin-analytics-actions.ts",
+      "exportedName": "getAdminAnalytics"
     },
-    "4038bb77943c12293fc7b4f1bd6d51ac849398b690": {
+    "60f29901526ab04eee25aa4685685671e11fcd820f": {
       "workers": {
-        "app/dashboard/action-items/page": {
-          "moduleId": "59433",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "submitBusinessForReview",
-          "filename": "lib/actions/business-actions.ts"
-        },
-        "app/dashboard/page": {
-          "moduleId": "17116",
-          "async": false,
-          "exportedName": "submitBusinessForReview",
-          "filename": "lib/actions/business-actions.ts"
+          "exportedName": "getAdminActivity",
+          "filename": "lib/actions/admin-activity-actions.ts"
         }
       },
       "layer": {
-        "app/dashboard/action-items/page": "action-browser",
-        "app/dashboard/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "submitBusinessForReview"
+      "filename": "lib/actions/admin-activity-actions.ts",
+      "exportedName": "getAdminActivity"
     },
-    "4063448c117774cb38e47d5b9c12142b588bb873c2": {
+    "608a1b2cc3ba782653ea894c6c7fec4e148d0e80c4": {
       "workers": {
-        "app/dashboard/action-items/page": {
-          "moduleId": "59433",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "getPendingChanges",
-          "filename": "lib/actions/pending-changes.ts"
-        },
-        "app/dashboard/page": {
-          "moduleId": "17116",
-          "async": false,
-          "exportedName": "getPendingChanges",
-          "filename": "lib/actions/pending-changes.ts"
+          "exportedName": "getRealQRAnalytics",
+          "filename": "lib/actions/real-qr-actions.ts"
         }
       },
       "layer": {
-        "app/dashboard/action-items/page": "action-browser",
-        "app/dashboard/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/pending-changes.ts",
-      "exportedName": "getPendingChanges"
+      "filename": "lib/actions/real-qr-actions.ts",
+      "exportedName": "getRealQRAnalytics"
     },
-    "606ca7831179d68f886a98b85e2c144d2296791c97": {
+    "409301a7e55f3e7c936714f9ea0e7932c649fd79ee": {
       "workers": {
-        "app/dashboard/page": {
-          "moduleId": "17116",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "getBusinessVisits",
-          "filename": "lib/actions/business-visit-actions.ts"
-        },
-        "app/user/business/[slug]/page": {
-          "moduleId": "60012",
-          "async": false,
-          "exportedName": "getBusinessVisits",
-          "filename": "lib/actions/business-visit-actions.ts"
+          "exportedName": "getApprovedBusinessesForQR",
+          "filename": "lib/actions/qr-management-actions.ts"
         }
       },
       "layer": {
-        "app/dashboard/page": "action-browser",
-        "app/user/business/[slug]/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/business-visit-actions.ts",
-      "exportedName": "getBusinessVisits"
+      "filename": "lib/actions/qr-management-actions.ts",
+      "exportedName": "getApprovedBusinessesForQR"
     },
-    "40cb947b216456145d122d33dd6f14ec4357889aac": {
+    "001a9b1f0fe8a3d8a126556e1aa636b0bd957340f1": {
       "workers": {
-        "app/dashboard/analytics/page": {
-          "moduleId": "53097",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "getBusinessActivityData",
-          "filename": "lib/actions/business-analytics-actions.ts"
-        },
-        "app/dashboard/page": {
-          "moduleId": "17116",
-          "async": false,
-          "exportedName": "getBusinessActivityData",
-          "filename": "lib/actions/business-analytics-actions.ts"
+          "exportedName": "debugBusinessData",
+          "filename": "lib/actions/debug-businesses.ts"
         }
       },
       "layer": {
-        "app/dashboard/analytics/page": "rsc",
-        "app/dashboard/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/business-analytics-actions.ts",
-      "exportedName": "getBusinessActivityData"
+      "filename": "lib/actions/debug-businesses.ts",
+      "exportedName": "debugBusinessData"
     },
-    "40ed9e64a034c0dce31cee3177faeb8e4823e3c7a4": {
+    "40f78773ffe7d63e5a1224fbfa76d108c7dbe5781f": {
       "workers": {
-        "app/dashboard/analytics/page": {
-          "moduleId": "53097",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "getBusinessAnalytics",
-          "filename": "lib/actions/business-analytics-actions.ts"
-        },
-        "app/dashboard/page": {
-          "moduleId": "17116",
-          "async": false,
-          "exportedName": "getBusinessAnalytics",
-          "filename": "lib/actions/business-analytics-actions.ts"
+          "exportedName": "getBusinessEvents",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/dashboard/analytics/page": "rsc",
-        "app/dashboard/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/business-analytics-actions.ts",
-      "exportedName": "getBusinessAnalytics"
+      "filename": "lib/actions/event-actions.ts",
+      "exportedName": "getBusinessEvents"
     },
-    "409be8f154e5752b79eaea7ce3b78c2e5cbb586c81": {
+    "60edd59d74a6ed4fb0a588222a1ce3b39bcd868662": {
       "workers": {
-        "app/dashboard/page": {
-          "moduleId": "17116",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "getApprovedChanges",
-          "filename": "lib/actions/pending-changes.ts"
+          "exportedName": "getUpcomingEvents",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/dashboard/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/pending-changes.ts",
-      "exportedName": "getApprovedChanges"
+      "filename": "lib/actions/event-actions.ts",
+      "exportedName": "getUpcomingEvents"
     },
-    "40aa221ba5985a1b1d826c7420f8463269ff465a20": {
+    "4048e288399f04a05de1de74491c385db0b1c6a530": {
       "workers": {
-        "app/dashboard/page": {
-          "moduleId": "17116",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "getApprovedChangesCount",
-          "filename": "lib/actions/pending-changes.ts"
+          "exportedName": "createEvent",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/dashboard/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/pending-changes.ts",
-      "exportedName": "getApprovedChangesCount"
+      "filename": "lib/actions/event-actions.ts",
+      "exportedName": "createEvent"
     },
-    "000542a8d0ea41e8a206b43a251cb76bda1a459505": {
+    "60ba67006b47125313c5bd91519e23d93f22355527": {
       "workers": {
-        "app/admin/utils/debug-users/page": {
-          "moduleId": "86396",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "getAppUsers",
-          "filename": "lib/actions/user-member-actions.ts"
+          "exportedName": "updateEvent",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/admin/utils/debug-users/page": "rsc"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/user-member-actions.ts",
-      "exportedName": "getAppUsers"
+      "filename": "lib/actions/event-actions.ts",
+      "exportedName": "updateEvent"
     },
-    "000b2e213667d6263b2f3e6c6431780a68ec90ef3e": {
+    "40962c97ca931bccad7bb441395b5bd4b142324be0": {
       "workers": {
-        "app/admin/utils/debug-users/page": {
-          "moduleId": "86396",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "getCurrentAppUser",
-          "filename": "lib/actions/user-member-actions.ts"
+          "exportedName": "deleteEvent",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/admin/utils/debug-users/page": "rsc"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/user-member-actions.ts",
-      "exportedName": "getCurrentAppUser"
+      "filename": "lib/actions/event-actions.ts",
+      "exportedName": "deleteEvent"
     },
-    "7053445fb298ae8ef87b2e6e03f7618535a544ba56": {
+    "606742f33965888b57d7f73da9c0ce3680a6acc6c1": {
       "workers": {
-        "app/dashboard/files/page": {
-          "moduleId": "50176",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "updateProfileFile",
-          "filename": "lib/actions/file-actions.ts"
-        },
-        "app/dashboard/profile/page": {
-          "moduleId": "52366",
-          "async": false,
-          "exportedName": "updateProfileFile",
-          "filename": "lib/actions/file-actions.ts"
+          "exportedName": "cancelEvent",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/dashboard/files/page": "action-browser",
-        "app/dashboard/profile/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/file-actions.ts",
-      "exportedName": "updateProfileFile"
+      "filename": "lib/actions/event-actions.ts",
+      "exportedName": "cancelEvent"
     },
-    "70001b3d4b82449051564cfc9a21d6c9d639a0cb28": {
+    "409d4e898f5463e22eccc04460d1d6e74f1e930ed7": {
       "workers": {
-        "app/dashboard/files/page": {
-          "moduleId": "50176",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "deleteBusinessImage",
-          "filename": "lib/actions/file-actions.ts"
+          "exportedName": "approveEvent",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/dashboard/files/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/file-actions.ts",
-      "exportedName": "deleteBusinessImage"
+      "filename": "lib/actions/event-actions.ts",
+      "exportedName": "approveEvent"
     },
-    "704981a720387a384bedf79bfa788c4061e8c14db3": {
+    "608853fe36b9f5f240d7adb1a3712d6cd7d65ae773": {
       "workers": {
-        "app/dashboard/files/page": {
-          "moduleId": "50176",
+        "app/admin/page": {
+          "moduleId": "[project]/.next-internal/server/app/admin/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/admin-crm-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/lib/actions/admin-analytics-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE2 => \"[project]/lib/actions/admin-activity-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE3 => \"[project]/lib/actions/real-qr-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE4 => \"[project]/lib/actions/qr-management-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE5 => \"[project]/lib/actions/debug-businesses.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE6 => \"[project]/lib/actions/event-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": false,
-          "exportedName": "reorderBusinessImages",
-          "filename": "lib/actions/file-actions.ts"
+          "exportedName": "rejectEvent",
+          "filename": "lib/actions/event-actions.ts"
         }
       },
       "layer": {
-        "app/dashboard/files/page": "action-browser"
+        "app/admin/page": "action-browser"
       },
-      "filename": "lib/actions/file-actions.ts",
-      "exportedName": "reorderBusinessImages"
-    },
-    "60d582162082e7e0ff9b0ec0db48bbaa019bd58511": {
-      "workers": {
-        "app/dashboard/files/page": {
-          "moduleId": "50176",
-          "async": false,
-          "exportedName": "uploadMultipleBusinessImages",
-          "filename": "lib/actions/file-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/files/page": "action-browser"
-      },
-      "filename": "lib/actions/file-actions.ts",
-      "exportedName": "uploadMultipleBusinessImages"
-    },
-    "60e9e29f95e65ca6ba63c2e989a57c564c0361d7ee": {
-      "workers": {
-        "app/dashboard/business/page": {
-          "moduleId": "26542",
-          "async": false,
-          "exportedName": "updateBusinessInfo",
-          "filename": "lib/actions/business-actions.ts"
-        },
-        "app/dashboard/personal/page": {
-          "moduleId": "20704",
-          "async": false,
-          "exportedName": "updateBusinessInfo",
-          "filename": "lib/actions/business-actions.ts"
-        },
-        "app/dashboard/profile/page": {
-          "moduleId": "52366",
-          "async": false,
-          "exportedName": "updateBusinessInfo",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/business/page": "action-browser",
-        "app/dashboard/personal/page": "action-browser",
-        "app/dashboard/profile/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "updateBusinessInfo"
-    },
-    "40b552c9a22b33c3c463dc744ccf2d15c5e9b34346": {
-      "workers": {
-        "app/dashboard/referrals/page": {
-          "moduleId": "39199",
-          "async": false,
-          "exportedName": "generateReferralCodeForUser",
-          "filename": "lib/actions/generate-referral-code.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/referrals/page": "action-browser"
-      },
-      "filename": "lib/actions/generate-referral-code.ts",
-      "exportedName": "generateReferralCodeForUser"
-    },
-    "40b9103b2defb2279ddd0b6ad1eb8e55ce04e2e8fc": {
-      "workers": {
-        "app/dashboard/referrals/page": {
-          "moduleId": "39199",
-          "async": false,
-          "exportedName": "getUserReferrals",
-          "filename": "lib/actions/referral-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/referrals/page": "action-browser"
-      },
-      "filename": "lib/actions/referral-actions.ts",
-      "exportedName": "getUserReferrals"
-    },
-    "601918372b155d5bd86fae9e23ea68acb335c24a66": {
-      "workers": {
-        "app/dashboard/secret-menu/page": {
-          "moduleId": "93873",
-          "async": false,
-          "exportedName": "addSecretMenuItem",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/secret-menu/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "addSecretMenuItem"
-    },
-    "606521efd7b9e5ccabe87d4eafb858e0927079266b": {
-      "workers": {
-        "app/dashboard/secret-menu/page": {
-          "moduleId": "93873",
-          "async": false,
-          "exportedName": "deleteSecretMenuItem",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/secret-menu/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "deleteSecretMenuItem"
-    },
-    "608b6bfc3f3093dc5ce39c9a9dd6a67b5eaa87fbcc": {
-      "workers": {
-        "app/dashboard/offers/page": {
-          "moduleId": "45196",
-          "async": false,
-          "exportedName": "createOffer",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "createOffer"
-    },
-    "60bdfb28a578c457c8144c641a2b5705fc9b807acb": {
-      "workers": {
-        "app/dashboard/offers/page": {
-          "moduleId": "45196",
-          "async": false,
-          "exportedName": "deleteBusinessOffer",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "deleteBusinessOffer"
-    },
-    "4046d5f476f38c33c8b4cbfab3f388f7cbaf34a407": {
-      "workers": {
-        "app/dashboard/offers/page": {
-          "moduleId": "45196",
-          "async": false,
-          "exportedName": "deleteLegacyOffer",
-          "filename": "lib/actions/business-actions.ts"
-        }
-      },
-      "layer": {
-        "app/dashboard/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/business-actions.ts",
-      "exportedName": "deleteLegacyOffer"
-    },
-    "607ed1f7b00808c805d600f2ca555d1e802c138ac8": {
-      "workers": {
-        "app/user/dashboard/page": {
-          "moduleId": "46943",
-          "async": false,
-          "exportedName": "getUserActivity",
-          "filename": "lib/actions/user-activity-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/dashboard/page": "action-browser"
-      },
-      "filename": "lib/actions/user-activity-actions.ts",
-      "exportedName": "getUserActivity"
-    },
-    "40d237f79cc94d100e5ecb4632c1b13ade6b9a9129": {
-      "workers": {
-        "app/user/dashboard/page": {
-          "moduleId": "46943",
-          "async": false,
-          "exportedName": "getRecentBusinessActivity",
-          "filename": "lib/actions/recent-activity-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/dashboard/page": "action-browser"
-      },
-      "filename": "lib/actions/recent-activity-actions.ts",
-      "exportedName": "getRecentBusinessActivity"
-    },
-    "40a308d5087bd3c7d8e7882ce10ad5d1568afb1b68": {
-      "workers": {
-        "app/user/dashboard/page": {
-          "moduleId": "46943",
-          "async": false,
-          "exportedName": "getUserSavedItems",
-          "filename": "lib/actions/user-saved-actions.ts"
-        },
-        "app/user/saved/page": {
-          "moduleId": "77993",
-          "async": false,
-          "exportedName": "getUserSavedItems",
-          "filename": "lib/actions/user-saved-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/dashboard/page": "action-browser",
-        "app/user/saved/page": "rsc"
-      },
-      "filename": "lib/actions/user-saved-actions.ts",
-      "exportedName": "getUserSavedItems"
-    },
-    "78a844c8c35734b5553e02dc484f503d74d0d2831a": {
-      "workers": {
-        "app/user/dashboard/page": {
-          "moduleId": "46943",
-          "async": false,
-          "exportedName": "saveItem",
-          "filename": "lib/actions/user-saved-actions.ts"
-        },
-        "app/user/saved/page": {
-          "moduleId": "77993",
-          "async": false,
-          "exportedName": "saveItem",
-          "filename": "lib/actions/user-saved-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/dashboard/page": "action-browser",
-        "app/user/saved/page": "rsc"
-      },
-      "filename": "lib/actions/user-saved-actions.ts",
-      "exportedName": "saveItem"
-    },
-    "70e019318c6e8e2f38f8b0a5619701909f49c5e0b0": {
-      "workers": {
-        "app/user/dashboard/page": {
-          "moduleId": "46943",
-          "async": false,
-          "exportedName": "unsaveItem",
-          "filename": "lib/actions/user-saved-actions.ts"
-        },
-        "app/user/saved/page": {
-          "moduleId": "77993",
-          "async": false,
-          "exportedName": "unsaveItem",
-          "filename": "lib/actions/user-saved-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/dashboard/page": "action-browser",
-        "app/user/saved/page": "action-browser"
-      },
-      "filename": "lib/actions/user-saved-actions.ts",
-      "exportedName": "unsaveItem"
-    },
-    "7047d5fe0e0c5867d33a2f2c07d2532e1c6da8557c": {
-      "workers": {
-        "app/user/dashboard/page": {
-          "moduleId": "46943",
-          "async": false,
-          "exportedName": "isItemSaved",
-          "filename": "lib/actions/user-saved-actions.ts"
-        },
-        "app/user/saved/page": {
-          "moduleId": "77993",
-          "async": false,
-          "exportedName": "isItemSaved",
-          "filename": "lib/actions/user-saved-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/dashboard/page": "action-browser",
-        "app/user/saved/page": "rsc"
-      },
-      "filename": "lib/actions/user-saved-actions.ts",
-      "exportedName": "isItemSaved"
-    },
-    "408fe60da506614edf26935469c4bdba2129ee33ca": {
-      "workers": {
-        "app/user/dashboard/page": {
-          "moduleId": "46943",
-          "async": false,
-          "exportedName": "getSavedItemsCountByType",
-          "filename": "lib/actions/user-saved-actions.ts"
-        },
-        "app/user/saved/page": {
-          "moduleId": "77993",
-          "async": false,
-          "exportedName": "getSavedItemsCountByType",
-          "filename": "lib/actions/user-saved-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/dashboard/page": "action-browser",
-        "app/user/saved/page": "rsc"
-      },
-      "filename": "lib/actions/user-saved-actions.ts",
-      "exportedName": "getSavedItemsCountByType"
-    },
-    "402c7f17da8d2b19da7f681caa6791a55d4944bf5c": {
-      "workers": {
-        "app/user/dashboard/page": {
-          "moduleId": "46943",
-          "async": false,
-          "exportedName": "validateWalletPassId",
-          "filename": "lib/utils/wallet-pass-security.ts"
-        },
-        "app/user/saved/page": {
-          "moduleId": "77993",
-          "async": false,
-          "exportedName": "validateWalletPassId",
-          "filename": "lib/utils/wallet-pass-security.ts"
-        }
-      },
-      "layer": {
-        "app/user/dashboard/page": "rsc",
-        "app/user/saved/page": "rsc"
-      },
-      "filename": "lib/utils/wallet-pass-security.ts",
-      "exportedName": "validateWalletPassId"
-    },
-    "40fcdeb3b9a2138cdb7af92d48e04ce0434f34eb9c": {
-      "workers": {
-        "app/user/dashboard/page": {
-          "moduleId": "46943",
-          "async": false,
-          "exportedName": "getValidatedUser",
-          "filename": "lib/utils/wallet-pass-security.ts"
-        },
-        "app/user/saved/page": {
-          "moduleId": "77993",
-          "async": false,
-          "exportedName": "getValidatedUser",
-          "filename": "lib/utils/wallet-pass-security.ts"
-        }
-      },
-      "layer": {
-        "app/user/dashboard/page": "rsc",
-        "app/user/saved/page": "rsc"
-      },
-      "filename": "lib/utils/wallet-pass-security.ts",
-      "exportedName": "getValidatedUser"
-    },
-    "405e1acaeff8f7aa83845ac6cd15e3c49caabacdc7": {
-      "workers": {
-        "app/user/business/[slug]/page": {
-          "moduleId": "60012",
-          "async": false,
-          "exportedName": "claimOffer",
-          "filename": "lib/actions/offer-claim-actions.ts"
-        },
-        "app/user/offers/page": {
-          "moduleId": "48105",
-          "async": false,
-          "exportedName": "claimOffer",
-          "filename": "lib/actions/offer-claim-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/business/[slug]/page": "action-browser",
-        "app/user/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/offer-claim-actions.ts",
-      "exportedName": "claimOffer"
-    },
-    "4075594dfa742e62fc205103b487724c7a79feec88": {
-      "workers": {
-        "app/user/business/[slug]/page": {
-          "moduleId": "60012",
-          "async": false,
-          "exportedName": "getClaimedOffers",
-          "filename": "lib/actions/offer-claim-actions.ts"
-        },
-        "app/user/offers/page": {
-          "moduleId": "48105",
-          "async": false,
-          "exportedName": "getClaimedOffers",
-          "filename": "lib/actions/offer-claim-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/business/[slug]/page": "action-browser",
-        "app/user/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/offer-claim-actions.ts",
-      "exportedName": "getClaimedOffers"
-    },
-    "600b5e36a9e464e73db485d2ce649b9b6f54049dd0": {
-      "workers": {
-        "app/user/business/[slug]/page": {
-          "moduleId": "60012",
-          "async": false,
-          "exportedName": "isOfferClaimed",
-          "filename": "lib/actions/offer-claim-actions.ts"
-        },
-        "app/user/offers/page": {
-          "moduleId": "48105",
-          "async": false,
-          "exportedName": "isOfferClaimed",
-          "filename": "lib/actions/offer-claim-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/business/[slug]/page": "action-browser",
-        "app/user/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/offer-claim-actions.ts",
-      "exportedName": "isOfferClaimed"
-    },
-    "70c0d6c97e4c14e30140d74fb9cd3ada2c87696a28": {
-      "workers": {
-        "app/user/business/[slug]/page": {
-          "moduleId": "60012",
-          "async": false,
-          "exportedName": "updateOfferClaimStatus",
-          "filename": "lib/actions/offer-claim-actions.ts"
-        },
-        "app/user/offers/page": {
-          "moduleId": "48105",
-          "async": false,
-          "exportedName": "updateOfferClaimStatus",
-          "filename": "lib/actions/offer-claim-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/business/[slug]/page": "action-browser",
-        "app/user/offers/page": "action-browser"
-      },
-      "filename": "lib/actions/offer-claim-actions.ts",
-      "exportedName": "updateOfferClaimStatus"
-    },
-    "4076d7dfabb1ed84018bbc37c7c7cec9b988bc17dc": {
-      "workers": {
-        "app/user/offers/page": {
-          "moduleId": "48105",
-          "async": false,
-          "exportedName": "updatePassActivity",
-          "filename": "lib/utils/pass-status-tracker.ts"
-        }
-      },
-      "layer": {
-        "app/user/offers/page": "rsc"
-      },
-      "filename": "lib/utils/pass-status-tracker.ts",
-      "exportedName": "updatePassActivity"
-    },
-    "407d45c7df6f7aa686ea64fb94ac8704440ae4388f": {
-      "workers": {
-        "app/user/offers/page": {
-          "moduleId": "48105",
-          "async": false,
-          "exportedName": "estimatePassDeletions",
-          "filename": "lib/utils/pass-status-tracker.ts"
-        }
-      },
-      "layer": {
-        "app/user/offers/page": "rsc"
-      },
-      "filename": "lib/utils/pass-status-tracker.ts",
-      "exportedName": "estimatePassDeletions"
-    },
-    "40aaa45005f5944ffe7be2a72c5fb8999aa6abbead": {
-      "workers": {
-        "app/user/offers/page": {
-          "moduleId": "48105",
-          "async": false,
-          "exportedName": "getCityPassStatus",
-          "filename": "lib/utils/pass-status-tracker.ts"
-        }
-      },
-      "layer": {
-        "app/user/offers/page": "rsc"
-      },
-      "filename": "lib/utils/pass-status-tracker.ts",
-      "exportedName": "getCityPassStatus"
-    },
-    "40b3243eff188a0add9756aa638c41ec7390d8b185": {
-      "workers": {
-        "app/user/business/[slug]/page": {
-          "moduleId": "60012",
-          "async": false,
-          "exportedName": "trackBusinessVisit",
-          "filename": "lib/actions/business-visit-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/business/[slug]/page": "action-browser"
-      },
-      "filename": "lib/actions/business-visit-actions.ts",
-      "exportedName": "trackBusinessVisit"
-    },
-    "4052b61c1157f0329063626622419a45e3c1a61248": {
-      "workers": {
-        "app/user/secret-menu/page": {
-          "moduleId": "45602",
-          "async": false,
-          "exportedName": "trackSecretUnlock",
-          "filename": "lib/actions/secret-unlock-actions.ts"
-        }
-      },
-      "layer": {
-        "app/user/secret-menu/page": "action-browser"
-      },
-      "filename": "lib/actions/secret-unlock-actions.ts",
-      "exportedName": "trackSecretUnlock"
-    },
-    "78d8a2294fd1e7e6de064bd536f267ed2021f536d0": {
-      "workers": {
-        "app/onboarding/page": {
-          "moduleId": "55608",
-          "async": false,
-          "exportedName": "createUserAndProfile",
-          "filename": "lib/actions/signup-actions.ts"
-        }
-      },
-      "layer": {
-        "app/onboarding/page": "action-browser"
-      },
-      "filename": "lib/actions/signup-actions.ts",
-      "exportedName": "createUserAndProfile"
+      "filename": "lib/actions/event-actions.ts",
+      "exportedName": "rejectEvent"
     }
   },
   "edge": {},
