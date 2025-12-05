@@ -94,11 +94,9 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
     
     if (stripeSuccess) {
       setStripeMessage({ type: 'success', text: 'Stripe account connected successfully!' })
-      // Clean URL
       window.history.replaceState({}, '', window.location.pathname)
     } else if (stripeError) {
       setStripeMessage({ type: 'error', text: decodeURIComponent(stripeError) })
-      // Clean URL
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [])
@@ -1045,16 +1043,14 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 <div className="border-2 border-slate-700/50 rounded-xl p-6 hover:border-slate-600 transition-colors bg-slate-800/30">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-12 h-12 bg-gradient-to-br from-[#635BFF] to-[#8B5CF6] rounded-xl flex items-center justify-center shadow-lg">
-                      {/* Stripe "S" Icon */}
                       <svg viewBox="0 0 24 24" className="w-6 h-6 text-white" fill="currentColor">
                         <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
                       </svg>
                     </div>
                     <div className="flex-1">
                       <h3 className="text-white font-bold text-lg">Payment Processing</h3>
-                      <p className="text-slate-400 text-sm">Connect your Stripe account to accept payments from businesses</p>
+                      <p className="text-slate-400 text-sm">Connect your Stripe account to receive subscription payments</p>
                     </div>
-                    {/* Stripe Wordmark */}
                     <img src="/stripe-logo.svg" alt="Stripe" className="h-8 opacity-60" />
                   </div>
 
@@ -1103,7 +1099,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       
                       <div className="flex gap-3">
                         <a
-                          href={`https://dashboard.stripe.com/${config.stripe_account_id}`}
+                          href="https://dashboard.stripe.com"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-700/50 hover:bg-slate-700 text-white rounded-xl font-medium transition-colors"
@@ -1126,71 +1122,13 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                         </button>
                       </div>
                     </div>
-                  ) : config.stripe_account_id && !config.stripe_onboarding_completed ? (
-                    /* Partially Connected - Needs More Setup */
-                    <div className="space-y-4">
-                      <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-xl p-5">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center">
-                            <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-amber-400 font-semibold text-lg">Setup Incomplete</p>
-                            <p className="text-slate-400 text-sm">Your Stripe account needs additional verification</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <button
-                        onClick={async () => {
-                          setStripeConnecting(true)
-                          try {
-                            const response = await fetch('/api/admin/billing/stripe-connect', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ city })
-                            })
-                            const data = await response.json()
-                            if (data.url) {
-                              window.location.href = data.url
-                            } else {
-                              setStripeMessage({ type: 'error', text: data.error || 'Failed to connect Stripe' })
-                            }
-                          } catch (err) {
-                            setStripeMessage({ type: 'error', text: 'Failed to initiate Stripe connection' })
-                          }
-                          setStripeConnecting(false)
-                        }}
-                        disabled={stripeConnecting}
-                        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-[#635BFF] to-[#8B5CF6] hover:from-[#5851DB] hover:to-[#7C3AED] text-white rounded-xl font-semibold text-lg transition-all shadow-lg shadow-purple-500/25 disabled:opacity-50"
-                      >
-                        {stripeConnecting ? (
-                          <>
-                            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Connecting...
-                          </>
-                        ) : (
-                          <>
-                            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
-                              <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
-                            </svg>
-                            Complete Stripe Setup
-                          </>
-                        )}
-                      </button>
-                    </div>
                   ) : (
                     /* Not Connected */
                     <div className="space-y-5">
                       <div className="bg-slate-700/30 rounded-xl p-5">
                         <p className="text-slate-300 text-sm leading-relaxed">
                           Connect your Stripe account to accept subscription payments from businesses in your franchise. 
-                          Payments will go directly to your account with no platform fees.
+                          Payments go directly to your account with no platform fees.
                         </p>
                         <div className="mt-4 flex flex-wrap gap-3">
                           <div className="flex items-center gap-2 text-slate-400 text-sm">

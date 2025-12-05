@@ -254,6 +254,21 @@
       },
       "filename": "lib/actions/event-actions.ts",
       "exportedName": "rejectEvent"
+    },
+    "78d8a2294fd1e7e6de064bd536f267ed2021f536d0": {
+      "workers": {
+        "app/onboarding/page": {
+          "moduleId": "[project]/.next-internal/server/app/onboarding/page/actions.js { ACTIONS_MODULE0 => \"[project]/lib/actions/signup-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "createUserAndProfile",
+          "filename": "lib/actions/signup-actions.ts"
+        }
+      },
+      "layer": {
+        "app/onboarding/page": "action-browser"
+      },
+      "filename": "lib/actions/signup-actions.ts",
+      "exportedName": "createUserAndProfile"
     }
   },
   "edge": {},

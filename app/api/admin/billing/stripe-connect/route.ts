@@ -8,6 +8,23 @@ import { createAdminClient } from '@/lib/supabase/admin'
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check for required environment variables first
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('STRIPE_SECRET_KEY is not configured')
+      return NextResponse.json(
+        { success: false, error: 'Stripe is not configured. Add STRIPE_SECRET_KEY to environment variables.' },
+        { status: 500 }
+      )
+    }
+    
+    if (!process.env.STRIPE_CONNECT_CLIENT_ID) {
+      console.error('STRIPE_CONNECT_CLIENT_ID is not configured')
+      return NextResponse.json(
+        { success: false, error: 'Stripe Connect is not configured. Add STRIPE_CONNECT_CLIENT_ID to environment variables.' },
+        { status: 500 }
+      )
+    }
+    
     const { city } = await request.json()
     
     if (!city) {
@@ -49,8 +66,9 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('Stripe Connect error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to initiate Stripe Connect'
     return NextResponse.json(
-      { success: false, error: 'Failed to initiate Stripe Connect' },
+      { success: false, error: errorMessage },
       { status: 500 }
     )
   }
