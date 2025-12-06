@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 // This webhook receives data from your EXISTING GHL workflow
 // Add this as a webhook action AFTER wallet pass creation in GHL
@@ -110,7 +109,8 @@ export async function POST(request: NextRequest) {
       })
     }
     
-    const supabase = createRouteHandlerClient({ cookies })
+    // 🔧 FIX: Use service role client to bypass RLS for webhook
+    const supabase = createServiceRoleClient()
     
     // 🔄 IMPROVED: Check by email first to handle deleted passes
     const { data: existingUserByEmail } = await supabase
