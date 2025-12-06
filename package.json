@@ -28,7 +28,7 @@
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.544.0",
     "multer": "^2.0.2",
-    "next": "15.5.3",
+    "next": "16.0.7",
     "openai": "^5.23.0",
     "pdf-parse": "^2.2.2",
     "pdf2pic": "^3.2.0",
