@@ -28,6 +28,8 @@ export async function GET() {
 }
 
 // POST /api/admin/franchise - Add new franchise
+// NOTE: API keys (Google Places, Resend) should ideally be encrypted using Supabase Vault
+// For MVP, they are stored as plain text with RLS protection
 export async function POST(request: Request) {
   try {
     const data = await request.json()
@@ -43,7 +45,13 @@ export async function POST(request: Request) {
       owner_name,
       owner_email,
       owner_phone,
-      timezone
+      timezone,
+      google_places_api_key,
+      resend_api_key,
+      founding_member_enabled,
+      founding_member_total_spots,
+      founding_member_trial_days,
+      founding_member_discount_percent
     } = data
     
     // Validate required fields
@@ -69,6 +77,12 @@ export async function POST(request: Request) {
         owner_email,
         owner_phone,
         timezone: timezone || 'UTC',
+        google_places_api_key,
+        resend_api_key,
+        founding_member_enabled: founding_member_enabled !== undefined ? founding_member_enabled : true,
+        founding_member_total_spots: founding_member_total_spots || 150,
+        founding_member_trial_days: founding_member_trial_days || 90,
+        founding_member_discount_percent: founding_member_discount_percent || 20,
         status: 'active'
       })
       .select()

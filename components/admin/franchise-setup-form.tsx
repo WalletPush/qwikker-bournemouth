@@ -17,6 +17,12 @@ interface FranchiseFormData {
   owner_email: string
   owner_phone: string
   timezone: string
+  google_places_api_key: string
+  resend_api_key: string
+  founding_member_enabled: boolean
+  founding_member_total_spots: number
+  founding_member_trial_days: number
+  founding_member_discount_percent: number
 }
 
 export function FranchiseSetupForm() {
@@ -31,20 +37,26 @@ export function FranchiseSetupForm() {
     owner_name: '',
     owner_email: '',
     owner_phone: '',
-    timezone: 'UTC'
+    timezone: 'UTC',
+    google_places_api_key: '',
+    resend_api_key: '',
+    founding_member_enabled: true,
+    founding_member_total_spots: 150,
+    founding_member_trial_days: 90,
+    founding_member_discount_percent: 20
   })
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { showSuccess, showError, ModalComponent } = useElegantModal()
 
-  const handleInputChange = (field: keyof FranchiseFormData, value: string) => {
+  const handleInputChange = (field: keyof FranchiseFormData, value: string | number | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
     
     // Auto-generate subdomain from city
-    if (field === 'city') {
+    if (field === 'city' && typeof value === 'string') {
       const subdomain = value.toLowerCase().replace(/[^a-z0-9]/g, '-')
       setFormData(prev => ({
         ...prev,
@@ -53,7 +65,7 @@ export function FranchiseSetupForm() {
     }
     
     // Auto-generate display name from city
-    if (field === 'city') {
+    if (field === 'city' && typeof value === 'string') {
       const displayName = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
       setFormData(prev => ({
         ...prev,
@@ -134,7 +146,13 @@ export function FranchiseSetupForm() {
           owner_name: '',
           owner_email: '',
           owner_phone: '',
-          timezone: 'UTC'
+          timezone: 'UTC',
+          google_places_api_key: '',
+          resend_api_key: '',
+          founding_member_enabled: true,
+          founding_member_total_spots: 150,
+          founding_member_trial_days: 90,
+          founding_member_discount_percent: 20
         })
       } else {
         showError('Creation Failed', result.error || 'Failed to create franchise')
@@ -354,6 +372,141 @@ export function FranchiseSetupForm() {
                   placeholder="+1 403 123 4567"
                 />
               </div>
+            </div>
+
+            {/* API Keys & Services */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white">API Keys & Services</h3>
+              <p className="text-sm text-slate-400">Configure third-party services for this franchise location. Keys are encrypted and stored securely.</p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Google Places API Key
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.google_places_api_key}
+                    onChange={(e) => handleInputChange('google_places_api_key', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-[#00d083] font-mono text-sm"
+                    placeholder="AIzaSy..."
+                  />
+                  <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                    <p className="text-xs text-blue-300">
+                      <strong>💡 Why needed:</strong> For auto-importing local businesses (Nearby Search + Place Details + Photos API)
+                    </p>
+                    <p className="text-xs text-blue-300 mt-1">
+                      <strong>💰 Estimated cost:</strong> ~£0.075 per business imported (£15 for 200 businesses)
+                    </p>
+                    <p className="text-xs text-blue-300 mt-1">
+                      <strong>🔗 Get your key:</strong> <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline">Google Cloud Console</a>
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Resend API Key
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.resend_api_key}
+                    onChange={(e) => handleInputChange('resend_api_key', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-[#00d083] font-mono text-sm"
+                    placeholder="re_..."
+                  />
+                  <div className="mt-2 p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                    <p className="text-xs text-purple-300">
+                      <strong>📧 Why needed:</strong> For sending claim verification emails and business notifications
+                    </p>
+                    <p className="text-xs text-purple-300 mt-1">
+                      <strong>🔗 Get your key:</strong> <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">Resend Dashboard</a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Founding Member Program */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white">Founding Member Program</h3>
+              <p className="text-sm text-slate-400">Configure the founding member benefits for businesses that claim their listings early.</p>
+              
+              <div className="flex items-center gap-3 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="founding_member_enabled"
+                  checked={formData.founding_member_enabled}
+                  onChange={(e) => setFormData(prev => ({ ...prev, founding_member_enabled: e.target.checked }))}
+                  className="w-5 h-5 rounded border-yellow-500/50 bg-slate-700 checked:bg-yellow-500"
+                />
+                <label htmlFor="founding_member_enabled" className="text-sm font-medium text-yellow-300 cursor-pointer">
+                  🏅 Enable Founding Member Program
+                </label>
+              </div>
+
+              {formData.founding_member_enabled && (
+                <div className="space-y-4 pl-4 border-l-2 border-yellow-500/30">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Total Spots Available
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.founding_member_total_spots}
+                        onChange={(e) => setFormData(prev => ({ ...prev, founding_member_total_spots: parseInt(e.target.value) || 0 }))}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-[#00d083]"
+                        placeholder="150"
+                        min="1"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">First X claims get benefits</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Free Trial (Days)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.founding_member_trial_days}
+                        onChange={(e) => setFormData(prev => ({ ...prev, founding_member_trial_days: parseInt(e.target.value) || 0 }))}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-[#00d083]"
+                        placeholder="90"
+                        min="1"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">Featured tier trial length</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Lifetime Discount (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.founding_member_discount_percent}
+                        onChange={(e) => setFormData(prev => ({ ...prev, founding_member_discount_percent: parseInt(e.target.value) || 0 }))}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-[#00d083]"
+                        placeholder="20"
+                        min="0"
+                        max="100"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">Off annual plans forever</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-slate-700/50 rounded-lg">
+                    <h4 className="text-sm font-semibold text-white mb-2">🎁 Founding Member Benefits Preview:</h4>
+                    <ul className="text-sm text-slate-300 space-y-1">
+                      <li>✅ <strong>{formData.founding_member_trial_days}-day FREE trial</strong> of Featured tier (£{(formData.founding_member_trial_days / 30 * 75).toFixed(0)} value)</li>
+                      <li>✅ <strong>{formData.founding_member_discount_percent}% OFF FOR LIFE</strong> on annual plans if upgraded within trial</li>
+                      <li>✅ Exclusive founding member badge & marketing assets</li>
+                      <li>✅ Priority support from {formData.city || 'your'} team</li>
+                      <li>⏰ Limited to first <strong>{formData.founding_member_total_spots} claims only</strong></li>
+                    </ul>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Submit */}

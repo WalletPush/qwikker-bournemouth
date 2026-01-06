@@ -69,11 +69,172 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const searchParams = useSearchParams()
   
   // Get initial tab from URL or default to 'pending'
-  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'qr-management' | 'ai-test' | 'pricing' | 'setup'>(() => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'import' | 'claims' | 'qr-management' | 'ai-test' | 'pricing' | 'setup'>(() => {
     const urlTab = searchParams.get('tab')
-    const validTabs = ['overview', 'pending', 'updates', 'live', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'qr-management', 'ai-test', 'pricing', 'setup']
+    const validTabs = ['overview', 'pending', 'updates', 'live', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'import', 'claims', 'qr-management', 'ai-test', 'pricing', 'setup']
     return validTabs.includes(urlTab || '') ? (urlTab as any) : 'overview'
   })
+
+  // No redirects - all tabs stay in dashboard
+
+  // Mock claims data (same as /admin/claims)
+  const [mockClaims, setMockClaims] = useState([
+    {
+      id: '1',
+      status: 'pending',
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      user: {
+        name: 'Sarah Williams',
+        email: 'thelarderhouse@gmail.com',
+        accountCreated: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+      },
+      business: {
+        id: 'larder-house',
+        name: 'The Larder House',
+        address: '123 Old Christchurch Rd, Bournemouth',
+        category: 'Restaurant',
+        rating: 4.6,
+        reviewCount: 847,
+        googleYears: 5,
+        image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400'
+      },
+      website: 'https://thelarderhouse.com',
+      verification: {
+        emailDomainMatch: false,
+        phoneVerified: false,
+        duplicateClaims: 0,
+        deniedClaims: 0,
+        riskScore: 15,
+        riskLevel: 'safe' as const,
+        confidenceBadge: '✅ Email matches business name'
+      },
+      foundingMemberEligible: true,
+      foundingMemberCount: 27
+    },
+    {
+      id: '2',
+      status: 'pending',
+      createdAt: new Date(Date.now() - 30 * 60 * 1000),
+      user: {
+        name: 'John Smith',
+        email: 'john.smith12345@gmail.com',
+        accountCreated: new Date(Date.now() - 20 * 60 * 1000)
+      },
+      business: {
+        id: 'larder-house-2',
+        name: 'The Larder House',
+        address: '123 Old Christchurch Rd, Bournemouth',
+        category: 'Restaurant',
+        rating: 4.6,
+        reviewCount: 847,
+        googleYears: 5,
+        image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400'
+      },
+      website: '',
+      verification: {
+        emailDomainMatch: false,
+        phoneVerified: false,
+        duplicateClaims: 2,
+        deniedClaims: 1,
+        riskScore: 85,
+        riskLevel: 'critical' as const,
+        confidenceBadge: '🚨 Generic email, multiple claims'
+      },
+      foundingMemberEligible: true,
+      foundingMemberCount: 27
+    },
+    {
+      id: '3',
+      status: 'pending',
+      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
+      user: {
+        name: 'Mike Johnson',
+        email: 'mike@joesbarbershop.co.uk',
+        accountCreated: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      },
+      business: {
+        id: 'joes-barber',
+        name: "Joe's Barber Shop",
+        address: '456 High Street, Bournemouth',
+        category: 'Barber',
+        rating: 4.8,
+        reviewCount: 203,
+        googleYears: 3,
+        image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400'
+      },
+      website: 'https://joesbarbershop.co.uk',
+      verification: {
+        emailDomainMatch: true,
+        phoneVerified: false,
+        duplicateClaims: 0,
+        deniedClaims: 0,
+        riskScore: 5,
+        riskLevel: 'safe' as const,
+        confidenceBadge: '✅ VERY HIGH - Email domain matches website'
+      },
+      foundingMemberEligible: true,
+      foundingMemberCount: 27
+    }
+  ])
+
+  const [processingClaim, setProcessingClaim] = useState<string | null>(null)
+
+  const handleApproveClaim = async (claimId: string) => {
+    setProcessingClaim(claimId)
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    setMockClaims(mockClaims.map(c => 
+      c.id === claimId ? { ...c, status: 'approved' as const } : c
+    ))
+    setProcessingClaim(null)
+    showSuccess('Claim Approved!', 'Business owner will receive dashboard access')
+    // Auto-switch to approved view
+    setTimeout(() => setClaimsView('approved'), 500)
+  }
+
+  const handleDenyClaim = async (claimId: string) => {
+    setProcessingClaim(claimId)
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    setMockClaims(mockClaims.map(c => 
+      c.id === claimId ? { ...c, status: 'denied' as const } : c
+    ))
+    setProcessingClaim(null)
+    showError('Claim Denied', 'Business owner will be notified')
+    // Auto-switch to denied view
+    setTimeout(() => setClaimsView('denied'), 500)
+  }
+
+  const formatTimeAgo = (date: Date) => {
+    const minutes = Math.floor((Date.now() - date.getTime()) / (1000 * 60))
+    if (minutes < 60) return `${minutes} min${minutes !== 1 ? 's' : ''} ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+    const days = Math.floor(hours / 24)
+    return `${days} day${days !== 1 ? 's' : ''} ago`
+  }
+
+  const getRiskColor = (level: string) => {
+    switch (level) {
+      case 'safe': return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950'
+      case 'medium': return 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950'
+      case 'high': return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950'
+      case 'critical': return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950'
+      default: return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-950'
+    }
+  }
+
+  const getRiskIcon = (level: string) => {
+    switch (level) {
+      case 'safe': return '🛡️'
+      case 'medium': case 'high': case 'critical': return '⚠️'
+      default: return null
+    }
+  }
+
+  const pendingClaims = mockClaims.filter(c => c.status === 'pending')
+  const approvedClaims = mockClaims.filter(c => c.status === 'approved')
+  const deniedClaims = mockClaims.filter(c => c.status === 'denied')
+  
+  const [claimsView, setClaimsView] = useState<'pending' | 'approved' | 'denied'>('pending')
   const [businessList, setBusinessList] = useState<Business[]>(businesses)
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const [inspectionModal, setInspectionModal] = useState<{ open: boolean; business: Business | null }>({ open: false, business: null })
@@ -167,7 +328,7 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
   }
   
   // Function to update tab and URL
-  const updateActiveTab = (newTab: 'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'qr-management' | 'ai-test') => {
+  const updateActiveTab = (newTab: 'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'import' | 'claims' | 'qr-management' | 'ai-test' | 'pricing' | 'setup') => {
     setActiveTab(newTab)
     setIsMobileMenuOpen(false) // Close mobile menu when tab is selected
     // Update URL without page refresh
@@ -400,7 +561,6 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
       id: 'overview', 
       label: 'Dashboard Overview', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v0z" /></svg>, 
-      count: 0 
     },
     { 
       id: 'pending', 
@@ -413,6 +573,12 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
       label: 'Pending Updates', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>, 
       count: pendingChangesCount + pendingMenus.length + pendingEvents.length 
+    },
+    { 
+      id: 'claims', 
+      label: 'Claim Requests', 
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+      count: pendingClaims.length
     },
     { 
       id: 'live', 
@@ -1009,6 +1175,20 @@ Qwikker Admin Team`
 
               {/* Control Center Items */}
               <button
+                onClick={() => setActiveTab('import')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  activeTab === 'import' 
+                    ? 'bg-[#00d083] text-black' 
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                </svg>
+                <span>Import Businesses</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('knowledge')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                   activeTab === 'knowledge' 
@@ -1153,6 +1333,8 @@ Qwikker Admin Team`
                 {activeTab === 'pricing' && 'Pricing & Billing'}
                 {activeTab === 'setup' && 'Franchise Setup'}
                 {activeTab === 'contacts' && 'Business Contacts'}
+                {activeTab === 'import' && 'Import Businesses'}
+                {activeTab === 'claims' && 'Claim Requests'}
                 {activeTab === 'qr-management' && 'QR Code Management'}
                 {activeTab === 'ai-test' && 'AI Chat Testing'}
                 </h1>
@@ -1454,6 +1636,8 @@ Qwikker Admin Team`
                   {activeTab === 'analytics' && `Performance metrics and user analytics for ${cityDisplayName}`}
                   {activeTab === 'pricing' && `Customize pricing cards, currency, and billing settings for ${cityDisplayName}`}
                   {activeTab === 'contacts' && `CRM contact management with GHL sync for ${cityDisplayName}`}
+                  {activeTab === 'import' && 'Auto-populate your city with businesses from Google Places API'}
+                  {activeTab === 'claims' && 'Review and approve business owners claiming their listings'}
                   {activeTab === 'qr-management' && 'Generate and manage QR codes for businesses, offers, and secret menus'}
                   {activeTab === 'ai-test' && 'Test AI chat responses and knowledge base accuracy'}
                 </p>
@@ -2781,6 +2965,280 @@ Qwikker Admin Team`
               {/* Contacts Tab */}
               {activeTab === 'contacts' && (
                 <ContactsTab city={city} cityDisplayName={cityDisplayName} />
+              )}
+
+              {/* Import Businesses Tab */}
+              {activeTab === 'import' && (
+                <div className="h-full">
+                  <iframe 
+                    src="/admin/import" 
+                    className="w-full border-0 rounded-2xl bg-slate-800/50"
+                    style={{ height: 'calc(100vh - 200px)' }}
+                    title="Import Businesses"
+                  />
+                </div>
+              )}
+
+              {/* Claim Requests Tab */}
+              {activeTab === 'claims' && (
+                <div className="space-y-6">
+                  {/* Tabs / Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button
+                      onClick={() => setClaimsView('pending')}
+                      className={`bg-slate-800/50 backdrop-blur border rounded-xl p-6 transition-all text-left cursor-pointer hover:scale-105 ${
+                        claimsView === 'pending' 
+                          ? 'border-yellow-500 ring-2 ring-yellow-500/20' 
+                          : 'border-slate-700 hover:border-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-slate-400">Pending Review</p>
+                          <p className="text-3xl font-bold text-white">{pendingClaims.length}</p>
+                        </div>
+                        <div className="w-12 h-12 bg-yellow-600/20 rounded-full flex items-center justify-center">
+                          <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setClaimsView('approved')}
+                      className={`bg-slate-800/50 backdrop-blur border rounded-xl p-6 transition-all text-left cursor-pointer hover:scale-105 ${
+                        claimsView === 'approved' 
+                          ? 'border-green-500 ring-2 ring-green-500/20' 
+                          : 'border-slate-700 hover:border-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-slate-400">Approved</p>
+                          <p className="text-3xl font-bold text-green-400">{approvedClaims.length}</p>
+                        </div>
+                        <div className="w-12 h-12 bg-green-600/20 rounded-full flex items-center justify-center">
+                          <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setClaimsView('denied')}
+                      className={`bg-slate-800/50 backdrop-blur border rounded-xl p-6 transition-all text-left cursor-pointer hover:scale-105 ${
+                        claimsView === 'denied' 
+                          ? 'border-red-500 ring-2 ring-red-500/20' 
+                          : 'border-slate-700 hover:border-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-slate-400">Denied</p>
+                          <p className="text-3xl font-bold text-red-400">{deniedClaims.length}</p>
+                        </div>
+                        <div className="w-12 h-12 bg-red-600/20 rounded-full flex items-center justify-center">
+                          <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Claims List */}
+                  {claimsView === 'pending' && pendingClaims.length === 0 && (
+                    <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-12 text-center">
+                      <svg className="w-12 h-12 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-slate-400">No pending claims</p>
+                    </div>
+                  )}
+                  
+                  {claimsView === 'approved' && approvedClaims.length === 0 && (
+                    <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-12 text-center">
+                      <svg className="w-12 h-12 mx-auto mb-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-slate-400">No approved claims yet</p>
+                    </div>
+                  )}
+                  
+                  {claimsView === 'denied' && deniedClaims.length === 0 && (
+                    <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-12 text-center">
+                      <svg className="w-12 h-12 mx-auto mb-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <p className="text-slate-400">No denied claims</p>
+                    </div>
+                  )}
+
+                  {(claimsView === 'pending' ? pendingClaims : claimsView === 'approved' ? approvedClaims : deniedClaims).map(claim => (
+                      <div key={claim.id} className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl overflow-hidden">
+                        <div className="p-6">
+                          <div className="grid md:grid-cols-[1fr,auto] gap-6">
+                            {/* Main Content */}
+                            <div className="space-y-4">
+                              {/* Header */}
+                              <div className="flex gap-4">
+                                <img 
+                                  src={claim.business.image} 
+                                  alt={claim.business.name}
+                                  className="w-20 h-20 rounded-xl object-cover"
+                                />
+                                <div className="flex-1">
+                                  <h3 className="font-bold text-xl text-white mb-1">
+                                    {claim.user.name} → {claim.business.name}
+                                  </h3>
+                                  <p className="text-sm text-slate-400 mb-2">
+                                    Claimed {formatTimeAgo(claim.createdAt)}
+                                  </p>
+                                  
+                                  <div className="flex flex-wrap gap-3 text-sm text-slate-400">
+                                    <div className="flex items-center gap-1">
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                      </svg>
+                                      {claim.user.email}
+                                    </div>
+                                    {claim.website && (
+                                      <div className="flex items-center gap-1">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                                        </svg>
+                                        {claim.website.replace('https://', '')}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Business Info */}
+                              <div className="flex flex-wrap gap-3 text-sm text-slate-400 pl-24">
+                                <div className="flex items-center gap-1">
+                                  <svg className="w-4 h-4 fill-yellow-400 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                  </svg>
+                                  {claim.business.rating} ({claim.business.reviewCount} reviews)
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
+                                  {claim.business.address}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  {claim.business.googleYears} years on Google
+                                </div>
+                              </div>
+
+                              {/* Risk Analysis */}
+                              <div className={`rounded-xl p-4 ${getRiskColor(claim.verification.riskLevel)}`}>
+                                <div className="flex items-start gap-3">
+                                  <span className="text-2xl">{getRiskIcon(claim.verification.riskLevel)}</span>
+                                  <div className="flex-1">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h4 className="font-semibold uppercase text-sm">
+                                        {claim.verification.riskLevel === 'safe' && '✅ SAFE'}
+                                        {claim.verification.riskLevel === 'medium' && '⚠️ MEDIUM RISK'}
+                                        {claim.verification.riskLevel === 'high' && '🚨 HIGH RISK'}
+                                        {claim.verification.riskLevel === 'critical' && '🔴 CRITICAL RISK'}
+                                      </h4>
+                                      <span className="text-sm font-mono">
+                                        Risk: {claim.verification.riskScore}/100
+                                      </span>
+                                    </div>
+
+                                    <p className="text-sm mb-3">
+                                      {claim.verification.confidenceBadge}
+                                    </p>
+
+                                    <div className="grid sm:grid-cols-2 gap-2 text-sm">
+                                      <div>
+                                        <strong>Email Domain:</strong>{' '}
+                                        {claim.verification.emailDomainMatch ? '✅ Matches' : '❌ No match'}
+                                      </div>
+                                      <div>
+                                        <strong>Previous Claims:</strong>{' '}
+                                        {claim.verification.duplicateClaims === 0 ? '✅ First claim' : `⚠️ ${claim.verification.duplicateClaims} other claims`}
+                                      </div>
+                                      <div>
+                                        <strong>Account Age:</strong>{' '}
+                                        {formatTimeAgo(claim.user.accountCreated)}
+                                      </div>
+                                      <div>
+                                        <strong>Denied Before:</strong>{' '}
+                                        {claim.verification.deniedClaims === 0 ? '✅ No' : `🚨 ${claim.verification.deniedClaims} times`}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Founding Member */}
+                              {claim.foundingMemberEligible && (
+                                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3">
+                                  <p className="text-sm text-yellow-300">
+                                    🏅 <strong>Founding Member Eligible</strong> (Spot #{claim.foundingMemberCount}/150)
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Actions - Only show for pending claims */}
+                            {claim.status === 'pending' && (
+                              <div className="flex md:flex-col gap-2 md:w-32">
+                                <button
+                                  onClick={() => handleApproveClaim(claim.id)}
+                                  disabled={processingClaim === claim.id}
+                                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleDenyClaim(claim.id)}
+                                  disabled={processingClaim === claim.id}
+                                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                  Deny
+                                </button>
+                              </div>
+                            )}
+                            
+                            {/* Status badge for approved/denied */}
+                            {claim.status === 'approved' && (
+                              <div className="md:w-32 flex items-center justify-center">
+                                <div className="bg-green-600/20 border border-green-600 text-green-400 font-semibold py-2 px-4 rounded-xl">
+                                  ✅ Approved
+                                </div>
+                              </div>
+                            )}
+                            
+                            {claim.status === 'denied' && (
+                              <div className="md:w-32 flex items-center justify-center">
+                                <div className="bg-red-600/20 border border-red-600 text-red-400 font-semibold py-2 px-4 rounded-xl">
+                                  ❌ Denied
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
               )}
 
               {/* QR Management Tab */}

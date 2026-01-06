@@ -76,6 +76,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
     resend: false,
     openai: false,
     anthropic: false,
+    googlePlaces: false,
     ghl: false,
     walletpush: false,
     stripe_publishable: false,
@@ -792,6 +793,67 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       </button>
                     </div>
                     <p className="text-xs text-slate-400 mt-1">Used for: Hybrid AI Mode (falls back to OpenAI if not set)</p>
+                  </div>
+                </div>
+
+                {/* Google Places API */}
+                <div className="border-2 border-slate-700/50 rounded-xl p-6 hover:border-slate-600 transition-colors bg-slate-800/30">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-yellow-500 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                      GP
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-white font-bold text-lg">Google Places API (Business Import)</h3>
+                      <p className="text-slate-400 text-sm">Auto-import local businesses to populate your city</p>
+                    </div>
+                    <a 
+                      href="https://console.cloud.google.com/apis/credentials" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-gradient-to-r from-red-600 to-yellow-600 hover:from-red-700 hover:to-yellow-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Get API Key →
+                    </a>
+                  </div>
+
+                  <div>
+                    <Label className="text-slate-300 text-sm mb-2 block">Google Places API Key</Label>
+                    <div className="relative">
+                      <Input
+                        type={showKeys.googlePlaces ? "text" : "password"}
+                        value={config.google_places_api_key || ''}
+                        onChange={(e) => setConfig({...config, google_places_api_key: e.target.value})}
+                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
+                        placeholder="AIzaSy..."
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowKeys({...showKeys, googlePlaces: !showKeys.googlePlaces})}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                      >
+                        {showKeys.googlePlaces ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    <div className="mt-3 p-4 bg-gradient-to-br from-blue-500/10 to-yellow-500/10 border border-blue-500/30 rounded-lg space-y-2">
+                      <p className="text-xs text-blue-300">
+                        <strong>💡 Why needed:</strong> For auto-importing businesses from Google (Nearby Search + Place Details + Photos)
+                      </p>
+                      <p className="text-xs text-yellow-300">
+                        <strong>💰 Cost:</strong> ~£0.075 per business • £15 for 200 businesses • £37.50 for 500 businesses
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        <strong>📝 Setup:</strong> Enable Places API (new) in Google Cloud Console → Create API Key → Restrict to Places API only
+                      </p>
+                    </div>
                   </div>
                 </div>
 
