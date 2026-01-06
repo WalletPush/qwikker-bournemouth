@@ -131,6 +131,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       offer_name,
       offer_type,
       offer_value,
+      offer_description,
       offer_terms,
       offer_start_date,
       offer_end_date,
@@ -194,7 +195,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     businessLogo: offer.business_profiles?.logo,
     businessRating: offer.business_profiles?.rating || 4.5,
     title: offer.offer_name,
-    description: offer.offer_terms || `${offer.offer_type} offer from ${offer.business_profiles?.business_name}`,
+    description: offer.offer_description || offer.offer_terms || `${offer.offer_type} offer from ${offer.business_profiles?.business_name}`,
     type: offer.offer_type?.toLowerCase().replace(' ', '_') || 'discount',
     value: offer.offer_value,
     originalPrice: null, // Real offers don't have original price tracking yet
@@ -206,7 +207,12 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     termsAndConditions: offer.offer_terms || 'Standard terms and conditions apply.',
     businessAddress: offer.business_profiles?.business_address,
     businessTown: offer.business_profiles?.business_town,
-    businessHours: offer.business_profiles?.business_hours
+    businessHours: offer.business_profiles?.business_hours,
+    // Pass through raw fields for new modal component
+    offer_description: offer.offer_description,
+    offer_terms: offer.offer_terms,
+    offer_start_date: offer.offer_start_date,
+    offer_end_date: offer.offer_end_date
   }))
   
   

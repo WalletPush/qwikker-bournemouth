@@ -176,7 +176,8 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
   const savePricingCards = async () => {
     setSaveStatus('saving')
     try {
-      const response = await fetch('/api/admin/pricing-cards', {
+      // Use the unified pricing API that updates BOTH display cards AND database tiers
+      const response = await fetch('/api/admin/billing/pricing-tiers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ city, config })
@@ -184,15 +185,16 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
       
       if (response.ok) {
         setSaveStatus('saved')
-        setMessage('✅ Pricing cards saved! Changes are now live on business dashboard.')
+        setMessage('✅ Pricing saved! Updated both display cards and subscription tiers in database.')
         
         // Reset to idle after 2 seconds
         setTimeout(() => {
           setSaveStatus('idle')
         }, 2000)
       } else {
+        const errorData = await response.json()
         setSaveStatus('error')
-        setMessage('❌ Failed to save pricing cards')
+        setMessage(`❌ Failed to save pricing: ${errorData.error || 'Unknown error'}`)
       }
     } catch (error) {
       setSaveStatus('error')

@@ -129,11 +129,38 @@ export async function generateHybridAIResponse(
     const businessResults = await searchBusinessKnowledge(enhancedQuery, city, { matchCount: searchLimit })
     const cityResults = await searchCityKnowledge(userMessage, city, { matchCount: 6 })
     
-    // Build knowledge context
+    // 🎯 Fetch offer counts for businesses to enrich context
+    const supabase = createServiceRoleClient()
+    const businessOfferCounts: Record<string, number> = {}
+    
+    if (businessResults.success && businessResults.results.length > 0) {
+      const businessIds = businessResults.results
+        .map(r => r.business_id)
+        .filter(Boolean)
+        .slice(0, 5) // Check top 5 businesses only
+      
+      if (businessIds.length > 0) {
+        const { data: offerCounts } = await supabase
+          .from('business_offers')
+          .select('business_id')
+          .in('business_id', businessIds)
+          .eq('status', 'approved')
+        
+        if (offerCounts) {
+          offerCounts.forEach(offer => {
+            businessOfferCounts[offer.business_id] = (businessOfferCounts[offer.business_id] || 0) + 1
+          })
+        }
+      }
+    }
+    
+    // Build knowledge context with offer availability
     const businessContext = businessResults.success && businessResults.results.length > 0
-      ? businessResults.results.map(result => 
-          `**${result.business_name}**: ${result.content}`
-        ).join('\n\n')
+      ? businessResults.results.map(result => {
+          const offerCount = result.business_id ? businessOfferCounts[result.business_id] || 0 : 0
+          const offerText = offerCount > 0 ? ` [Has ${offerCount} ${offerCount === 1 ? 'offer' : 'offers'} available]` : ''
+          return `**${result.business_name}**: ${result.content}${offerText}`
+        }).join('\n\n')
       : ''
 
     const cityContext = cityResults.success && cityResults.results.length > 0
@@ -168,6 +195,20 @@ KNOWLEDGE RULES:
 - Only say "I don't have that info" if you've genuinely checked the business entry and it's missing
 - Never make up amenities, addresses, or hours
 - Always bold business names like **David's Grill Shack**
+
+🔒 STRICT NO-HALLUCINATION RULES (CRITICAL):
+- ONLY mention menu items, specials, or dishes if they EXPLICITLY appear in the AVAILABLE BUSINESSES or CITY INFO sections
+- If asked about a specific item/special that's NOT in the data, say "I don't have info about that specific item"
+- NEVER make up menu items, chef's specials, or secret dishes based on general restaurant knowledge
+- NEVER suggest items with phrases like "might have", "often have", "probably offers", or "could try"
+- Secret menu items are exclusive content - they MUST be in the knowledge base to mention them
+- If you don't see it in the provided data, it doesn't exist in your knowledge!
+
+💳 OFFER HANDLING:
+- If a business entry shows "[Has X offers available]", mention this naturally when relevant
+- Example: "I don't have info on that specific special, but they do have 3 current offers I can show you!"
+- When mentioning offers, use friendly phrasing like "Want to see their current offers?" or "I can show you what deals they have!"
+- The offer cards will appear automatically after your message
 
 🎯 CRITICAL: TIER-BASED PRESENTATION (PAID VISIBILITY!)
 - Businesses are sorted by TIER (Spotlight → Featured → Starter)
@@ -242,15 +283,33 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       try {
         const supabase = createServiceRoleClient()
         
-        // Get business IDs from search results
-        const businessIds = businessResults.results
-          .slice(0, 10) // Check up to 10 businesses
-          .map(result => result.business_id)
-          .filter(Boolean)
+        // 🎯 SMART FILTERING: Only fetch offers for the business being discussed
+        let targetBusinessIds: string[] = []
         
-        console.log(`🎫 Fetching offers for ${businessIds.length} businesses`)
+        // Check recent conversation for business mentions
+        const recentContext = conversationHistory.slice(-2).map(m => m.content).join(' ')
+        const mentionedBusinesses = businessResults.results.filter(result => 
+          recentContext.includes(result.business_name)
+        )
         
-        if (businessIds.length > 0) {
+        if (state.currentBusiness?.id) {
+          // User is discussing a specific business - only show their offers
+          targetBusinessIds = [state.currentBusiness.id]
+          console.log(`🎫 Fetching offers for current business: ${state.currentBusiness.name}`)
+        } else if (mentionedBusinesses.length > 0) {
+          // Use business mentioned in recent conversation (last 2 messages)
+          targetBusinessIds = [mentionedBusinesses[0].business_id]
+          console.log(`🎫 Fetching offers for recently mentioned business: ${mentionedBusinesses[0].business_name}`)
+        } else {
+          // General offer query - use TOP search result
+          const topResult = businessResults.results[0]
+          if (topResult?.business_id) {
+            targetBusinessIds = [topResult.business_id]
+            console.log(`🎫 Fetching offers for top result: ${topResult.title}`)
+          }
+        }
+        
+        if (targetBusinessIds.length > 0) {
           const { data: offers, error } = await supabase
             .from('business_offers')
             .select(`
@@ -260,10 +319,10 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
               business_id,
               business_profiles!inner(business_name, city)
             `)
-            .in('business_id', businessIds)
+            .in('business_id', targetBusinessIds)
             .eq('status', 'approved')
             .eq('business_profiles.city', city)
-            .limit(20) // Get more offers
+            .limit(10)
           
           if (!error && offers && offers.length > 0) {
             walletActions = offers.map(offer => ({
@@ -290,17 +349,19 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     let eventCards: ChatResponse['eventCards'] = []
     
     // Check current message - but EXCLUDE food/menu context
-    const isFoodContext = /\b(menu|mains|food|lunch|dinner|breakfast|dish|meal|eat)\b/i.test(userMessage)
-    const currentMessageMentionsEvents = !isFoodContext && /\b(event|show|concert|gig|happening|what'?s on|things to do|this weekend|tonight|tasting experience|jazz night)\b/i.test(userMessage)
+    const isFoodContext = /\b(menu|mains|food|lunch|dinner|breakfast|dish|meal|eat|burger|fries|steak|ribeye|sauce|toppings|patty|cheese)\b/i.test(userMessage)
+    const currentMessageMentionsEvents = !isFoodContext && /\b(event|show|concert|gig|happening|what'?s on|things to do|this weekend|tonight)\b/i.test(userMessage)
     
     // Check if events were discussed in recent conversation (more specific patterns)
     const recentConversation = conversationHistory.slice(-4).map(m => m.content).join(' ')
-    const conversationMentionsEvents = /\b(event|show|concert|gig|happening|tasting experience|jazz night|live music)\b/i.test(recentConversation)
+    const conversationMentionsEvents = /\b(event card|show me the event|concert|gig|happening tonight|what's on tonight|tasting experience|tasting event|jazz night|live music)\b/i.test(recentConversation)
     
     // Check if user is showing interest (yes, yeah, sure, etc) after events were mentioned
-    const showingInterest = /\b(yes|yeah|yep|sure|sounds good|go on|interested|tell me more|show me|pull up)\b/i.test(userMessage)
+    // BUT exclude if they're asking about offers/deals
+    const isAskingAboutOffer = /\b(offer|deal|discount|promo)\b/i.test(userMessage)
+    const showingInterest = !isAskingAboutOffer && /\b(yes|yeah|yep|sure|sounds good|go on|interested|tell me more|show me the event|pull up)\b/i.test(userMessage)
     
-    const shouldFetchEvents = currentMessageMentionsEvents || (conversationMentionsEvents && showingInterest && !isFoodContext)
+    const shouldFetchEvents = currentMessageMentionsEvents || (conversationMentionsEvents && showingInterest && !isFoodContext && !isAskingAboutOffer)
     
     console.log(`🎉 EVENT QUERY CHECK:`, {
       userMessage,
@@ -318,8 +379,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         // Check LAST 4 messages for specific event name (more context)
         const recentMessages = conversationHistory.slice(-4).map(m => m.content).join(' ')
-        const tastingMentioned = /tasting experience|tasting night|cocktail tasting/i.test(recentMessages)
-        const jazzMentioned = /jazz night|live jazz/i.test(recentMessages)
+        const tastingMentioned = /tasting experience|tasting event|tasting night|cocktail tasting/i.test(recentMessages)
+        const jazzMentioned = /jazz night|live jazz|jazz event/i.test(recentMessages)
         
         // 🆕 Check for date mentions in the CURRENT user message and AI response
         const allRelevantText = `${userMessage} ${aiResponse} ${recentMessages}`

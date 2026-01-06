@@ -660,6 +660,317 @@ Status: Approved and happening soon in ${business.city}`
 }
 
 /**
+ * Sync approved offer to knowledge base with embeddings
+ */
+export async function syncOfferToKnowledgeBase(offerId: string): Promise<{
+  success: boolean
+  message: string
+  error?: string
+}> {
+  try {
+    const supabase = createServiceRoleClient()
+
+    // Fetch the offer with business details
+    const { data: offer, error: offerError } = await supabase
+      .from('business_offers')
+      .select(`
+        *,
+        business:business_profiles(business_name, city)
+      `)
+      .eq('id', offerId)
+      .single()
+
+    if (offerError || !offer) {
+      return {
+        success: false,
+        message: 'Offer not found',
+        error: offerError?.message
+      }
+    }
+
+    // Only sync approved offers
+    if (offer.status !== 'approved') {
+      return {
+        success: false,
+        message: `Offer must be approved to sync to knowledge base (current status: ${offer.status})`
+      }
+    }
+
+    const business = offer.business
+
+    // Build content for AI
+    const content = `OFFER: ${offer.offer_name} - ${offer.offer_value}${
+      offer.offer_description ? `\n\n${offer.offer_description}` : ''
+    }${
+      offer.offer_terms ? `\n\nTerms: ${offer.offer_terms}` : ''
+    }${
+      offer.offer_start_date && offer.offer_end_date
+        ? `\n\nValid: ${new Date(offer.offer_start_date).toLocaleDateString()} to ${new Date(offer.offer_end_date).toLocaleDateString()}`
+        : offer.offer_end_date
+        ? `\n\nValid until: ${new Date(offer.offer_end_date).toLocaleDateString()}`
+        : ''
+    }`
+
+    const title = `${business.business_name} - ${offer.offer_name}`
+
+    // Generate embedding
+    const fullText = `${title}\n\n${content}`
+    const embedding = await generateEmbedding(fullText)
+
+    if (!embedding) {
+      return {
+        success: false,
+        message: 'Failed to generate embedding for offer',
+        error: 'Embedding generation returned null'
+      }
+    }
+
+    // Check if knowledge base entry already exists for this offer
+    const { data: existing } = await supabase
+      .from('knowledge_base')
+      .select('id')
+      .eq('business_id', offer.business_id)
+      .eq('knowledge_type', 'custom_knowledge')
+      .eq('metadata->>offer_id', offerId)
+      .single()
+
+    if (existing) {
+      // Update existing entry
+      const { error: updateError } = await supabase
+        .from('knowledge_base')
+        .update({
+          title,
+          content,
+          embedding,
+          metadata: {
+            type: 'offer',
+            offer_id: offerId,
+            offer_name: offer.offer_name,
+            offer_value: offer.offer_value,
+            offer_start_date: offer.offer_start_date,
+            offer_end_date: offer.offer_end_date,
+          },
+          tags: ['offers', 'deals', 'discounts', business.city],
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+
+      if (updateError) {
+        return {
+          success: false,
+          message: 'Failed to update offer in knowledge base',
+          error: updateError.message
+        }
+      }
+
+      console.log(`✅ Updated offer "${offer.offer_name}" in knowledge base`)
+      return {
+        success: true,
+        message: 'Offer updated in knowledge base successfully'
+      }
+    } else {
+      // Create new entry
+      const { error: insertError } = await supabase
+        .from('knowledge_base')
+        .insert({
+          city: business.city,
+          business_id: offer.business_id,
+          knowledge_type: 'custom_knowledge',
+          title,
+          content,
+          embedding,
+          metadata: {
+            type: 'offer',
+            offer_id: offerId,
+            offer_name: offer.offer_name,
+            offer_value: offer.offer_value,
+            offer_start_date: offer.offer_start_date,
+            offer_end_date: offer.offer_end_date,
+          },
+          tags: ['offers', 'deals', 'discounts', business.city],
+          status: 'active'
+        })
+
+      if (insertError) {
+        return {
+          success: false,
+          message: 'Failed to add offer to knowledge base',
+          error: insertError.message
+        }
+      }
+
+      console.log(`✅ Added offer "${offer.offer_name}" to knowledge base`)
+      return {
+        success: true,
+        message: 'Offer added to knowledge base successfully'
+      }
+    }
+
+  } catch (error: any) {
+    console.error('❌ Error in syncOfferToKnowledgeBase:', error)
+    return {
+      success: false,
+      message: 'Failed to sync offer to knowledge base',
+      error: error.message
+    }
+  }
+}
+
+/**
+ * Sync approved secret menu item to knowledge base with embeddings
+ */
+export async function syncSecretMenuItemToKnowledgeBase(menuItemId: string): Promise<{
+  success: boolean
+  message: string
+  error?: string
+}> {
+  try {
+    const supabase = createServiceRoleClient()
+
+    // Fetch the secret menu item with business details
+    const { data: menuItem, error: menuError } = await supabase
+      .from('business_changes')
+      .select(`
+        *,
+        business:business_profiles(business_name, city)
+      `)
+      .eq('id', menuItemId)
+      .eq('change_type', 'secret_menu_item')
+      .single()
+
+    if (menuError || !menuItem) {
+      return {
+        success: false,
+        message: 'Secret menu item not found',
+        error: menuError?.message
+      }
+    }
+
+    // Only sync approved items
+    if (menuItem.status !== 'approved') {
+      return {
+        success: false,
+        message: `Secret menu item must be approved to sync to knowledge base (current status: ${menuItem.status})`
+      }
+    }
+
+    const business = menuItem.business
+    const data = menuItem.change_data
+
+    // Build content for AI
+    const content = `SECRET MENU ITEM: ${data.itemName}
+Price: ${data.itemPrice}
+Description: ${data.itemDescription || 'A special off-menu item'}
+${data.itemCategory ? `Category: ${data.itemCategory}` : ''}
+
+This is an exclusive item not shown on the regular menu. Ask staff about it!`
+
+    const title = `${business.business_name} - Secret Menu: ${data.itemName}`
+
+    // Generate embedding
+    const fullText = `${title}\n\n${content}`
+    const embedding = await generateEmbedding(fullText)
+
+    if (!embedding) {
+      return {
+        success: false,
+        message: 'Failed to generate embedding for secret menu item',
+        error: 'Embedding generation returned null'
+      }
+    }
+
+    // Check if knowledge base entry already exists for this item
+    const { data: existing } = await supabase
+      .from('knowledge_base')
+      .select('id')
+      .eq('business_id', menuItem.business_id)
+      .eq('knowledge_type', 'custom_knowledge')
+      .eq('metadata->>secret_menu_id', menuItemId)
+      .single()
+
+    if (existing) {
+      // Update existing entry
+      const { error: updateError } = await supabase
+        .from('knowledge_base')
+        .update({
+          title,
+          content,
+          embedding,
+          metadata: {
+            type: 'secret_menu',
+            secret_menu_id: menuItemId,
+            item_name: data.itemName,
+            item_price: data.itemPrice,
+            item_category: data.itemCategory,
+          },
+          tags: ['secret_menu', 'exclusive', 'hidden', business.city],
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+
+      if (updateError) {
+        return {
+          success: false,
+          message: 'Failed to update secret menu item in knowledge base',
+          error: updateError.message
+        }
+      }
+
+      console.log(`✅ Updated secret menu item "${data.itemName}" in knowledge base`)
+      return {
+        success: true,
+        message: 'Secret menu item updated in knowledge base successfully'
+      }
+    } else {
+      // Create new entry
+      const { error: insertError } = await supabase
+        .from('knowledge_base')
+        .insert({
+          city: business.city,
+          business_id: menuItem.business_id,
+          knowledge_type: 'custom_knowledge',
+          title,
+          content,
+          embedding,
+          metadata: {
+            type: 'secret_menu',
+            secret_menu_id: menuItemId,
+            item_name: data.itemName,
+            item_price: data.itemPrice,
+            item_category: data.itemCategory,
+          },
+          tags: ['secret_menu', 'exclusive', 'hidden', business.city],
+          status: 'active'
+        })
+
+      if (insertError) {
+        return {
+          success: false,
+          message: 'Failed to add secret menu item to knowledge base',
+          error: insertError.message
+        }
+      }
+
+      console.log(`✅ Added secret menu item "${data.itemName}" to knowledge base`)
+      return {
+        success: true,
+        message: 'Secret menu item added to knowledge base successfully'
+      }
+    }
+
+  } catch (error: any) {
+    console.error('❌ Error in syncSecretMenuItemToKnowledgeBase:', error)
+    return {
+      success: false,
+      message: 'Failed to sync secret menu item to knowledge base',
+      error: error.message
+    }
+  }
+}
+
+/**
  * Remove event from knowledge base (when rejected, cancelled, or completed)
  */
 export async function removeEventFromKnowledgeBase(eventId: string): Promise<{

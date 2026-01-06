@@ -10,15 +10,22 @@ export function InitialAvatar({ businessName, className = "" }: InitialAvatarPro
   const getInitials = (name: string): string => {
     if (!name || name.trim() === '') return '??'
     
-    const words = name.trim().split(/\s+/)
+    // Filter out words that are only special characters (like &, +, -, etc.)
+    // Only keep words that contain at least one letter
+    const words = name.trim().split(/\s+/).filter(word => /[a-zA-Z]/.test(word))
+    
+    if (words.length === 0) {
+      // No letter-containing words found, use first character of original name
+      return name.charAt(0).toUpperCase()
+    }
     
     if (words.length === 1) {
-      // Single word - take first 2 characters
+      // Single word - take first 2 letters
       return words[0].substring(0, 2).toUpperCase()
-    } else {
-      // Multiple words - take first letter of first 2 words
-      return words.slice(0, 2).map(word => word.charAt(0)).join('').toUpperCase()
     }
+    
+    // Multiple words - take first letter of first 2 words that contain letters
+    return words.slice(0, 2).map(word => word.charAt(0)).join('').toUpperCase()
   }
 
   // Generate consistent color based on business name

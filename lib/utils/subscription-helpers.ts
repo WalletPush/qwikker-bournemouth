@@ -24,7 +24,16 @@ export async function getBusinessTierInfo(businessId: string): Promise<BusinessT
   const supabase = createServiceRoleClient()
   
   try {
-    // First check the new subscription system
+    // FIRST: Get business profile for individual feature overrides
+    const { data: profile } = await supabase
+      .from('business_profiles')
+      .select('plan, trial_expiry, features')
+      .eq('id', businessId)
+      .single()
+    
+    const profileFeatures = (profile?.features as any) || {}
+    
+    // SECOND: Check the new subscription system
     const { data: subscription } = await supabase
       .from('business_subscriptions')
       .select(`
@@ -41,36 +50,53 @@ export async function getBusinessTierInfo(businessId: string): Promise<BusinessT
 
     if (subscription?.subscription_tiers) {
       const tier = subscription.subscription_tiers
-      const features = tier.features as any || {}
+      const tierFeatures = tier.features as any || {}
+      
+      // 🎯 PRIORITY ORDER:
+      // 1. Individual feature override from business_profiles.features
+      // 2. Tier-based access (spotlight gets all features)
+      // 3. Specific tier features from subscription_tiers.features
+      
+      const hasAnalytics = profileFeatures.analytics === true || 
+                          tier.tier_name === 'spotlight' || 
+                          tierFeatures.analytics === true || 
+                          tierFeatures.analytics_qr_stands === true
+      
+      const hasPushNotifs = profileFeatures.push_notifications === true || 
+                           tier.tier_name === 'spotlight' || 
+                           tierFeatures.push_notifications === true
       
       return {
         tier: tier.tier_name as any,
         displayName: tier.tier_display_name,
-        hasAnalyticsAccess: tier.tier_name === 'spotlight' || features.analytics_qr_stands === true,
-        hasAdvancedQR: tier.tier_name === 'spotlight' || features.analytics_qr_stands === true,
-        hasPushNotifications: tier.tier_name === 'spotlight' || features.push_notifications === true,
-        maxOffers: features.max_offers || 1,
+        hasAnalyticsAccess: hasAnalytics,
+        hasAdvancedQR: hasAnalytics, // Same as analytics
+        hasPushNotifications: hasPushNotifs,
+        maxOffers: tierFeatures.max_offers || 1,
         isInTrial: subscription.is_in_free_trial || false,
         trialEndsAt: subscription.free_trial_end_date
       }
     }
 
-    // Fallback to old system (profiles.plan)
-    const { data: profile } = await supabase
-      .from('business_profiles')
-      .select('plan, trial_expiry')
-      .eq('id', businessId)
-      .single()
-
+    // Fallback to old system (profiles.plan) - profile is already fetched above
     if (profile) {
       const isInTrial = profile.trial_expiry ? new Date(profile.trial_expiry) > new Date() : false
+      
+      // Check individual feature overrides FIRST, then tier defaults
+      const hasAnalytics = profileFeatures.analytics === true || 
+                          profile.plan === 'spotlight' || 
+                          profile.plan === 'pro'
+      
+      const hasPushNotifs = profileFeatures.push_notifications === true || 
+                           profile.plan === 'spotlight' || 
+                           profile.plan === 'pro'
       
       return {
         tier: profile.plan || 'starter',
         displayName: getTierDisplayName(profile.plan || 'starter'),
-        hasAnalyticsAccess: profile.plan === 'spotlight' || profile.plan === 'pro',
-        hasAdvancedQR: profile.plan === 'spotlight' || profile.plan === 'pro',
-        hasPushNotifications: profile.plan === 'spotlight' || profile.plan === 'pro',
+        hasAnalyticsAccess: hasAnalytics,
+        hasAdvancedQR: hasAnalytics,
+        hasPushNotifications: hasPushNotifs,
         maxOffers: getMaxOffers(profile.plan || 'starter'),
         isInTrial,
         trialEndsAt: profile.trial_expiry

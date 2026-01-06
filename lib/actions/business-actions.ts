@@ -47,14 +47,21 @@ export async function addSecretMenuItem(userId: string, itemData: {
     return { success: false, error: 'Failed to submit secret menu item for review' }
   }
 
-  // Send Slack notification for ADMIN APPROVAL
+  // 📢 SEND SLACK NOTIFICATION: Secret menu item submitted
   try {
-    await sendBusinessUpdateNotification(profile, 'secret_menu_pending_approval', {
-      ...itemData,
-      changeId: changeRecord.id
+    const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
+    
+    await sendCitySlackNotification({
+      title: `🤫 New Secret Menu Item: ${itemData.itemName}`,
+      message: `${profile.business_name} has submitted a new secret menu item for admin approval.\n\n**Item Details:**\n• Name: ${itemData.itemName}\n• Description: ${itemData.description || 'Not provided'}\n• Price: ${itemData.price || 'Not provided'}`,
+      city: profile.city || 'bournemouth',
+      type: 'offer_created', // Reusing this type
+      data: { businessName: profile.business_name, itemName: itemData.itemName }
     })
+    
+    console.log(`📢 Slack notification sent for secret menu submission: ${itemData.itemName}`)
   } catch (error) {
-    console.error('Slack notification failed (non-critical):', error)
+    console.error('⚠️ Slack notification error (non-critical):', error)
   }
 
   revalidatePath('/dashboard')
@@ -73,6 +80,7 @@ export async function createOffer(userId: string, offerData: {
   offerType: string
   offerValue: string
   offerClaimAmount?: string
+  offerDescription?: string
   offerTerms?: string
   startDate?: string
   endDate?: string
@@ -107,6 +115,7 @@ export async function createOffer(userId: string, offerData: {
           offer_type: offerData.offerType,
           offer_value: offerData.offerValue,
           offer_claim_amount: offerData.offerClaimAmount,
+          offer_description: offerData.offerDescription,
           offer_terms: offerData.offerTerms,
           offer_start_date: offerData.startDate && offerData.startDate.trim() !== '' ? offerData.startDate : null,
           offer_end_date: offerData.endDate && offerData.endDate.trim() !== '' ? offerData.endDate : null,
@@ -208,6 +217,7 @@ export async function updateOffer(userId: string, offerId: string, offerData: {
           offer_type: offerData.offerType || existingOffer.offer_type,
           offer_value: offerData.offerValue || existingOffer.offer_value,
           offer_claim_amount: offerData.offerClaimAmount || existingOffer.offer_claim_amount,
+          offer_description: offerData.offerDescription || existingOffer.offer_description,
           offer_terms: offerData.offerTerms || existingOffer.offer_terms,
           offer_start_date: offerData.startDate && offerData.startDate.trim() !== '' ? offerData.startDate : existingOffer.offer_start_date,
           offer_end_date: offerData.endDate && offerData.endDate.trim() !== '' ? offerData.endDate : existingOffer.offer_end_date,

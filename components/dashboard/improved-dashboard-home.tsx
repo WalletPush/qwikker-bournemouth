@@ -1020,7 +1020,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               Analytics Overview
             </CardTitle>
           </CardHeader>
-          <CardContent className={!isPremiumFeatureUnlocked() ? "blur-[8px] select-none pointer-events-none" : ""}>
+          <CardContent className={!isFeatureUnlocked('analytics') ? "blur-[8px] select-none pointer-events-none" : ""}>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-[#00d083]">{analyticsData.totalVisits}</p>
@@ -1044,8 +1044,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </div>
             </div>
           </CardContent>
-          {/* Only show lock overlay if NOT Spotlight */}
-          {!isPremiumFeatureUnlocked() && (
+          {/* Only show lock overlay if analytics is not unlocked */}
+          {!isFeatureUnlocked('analytics') && (
             <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
               <div className="text-center">
                 <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
@@ -1055,7 +1055,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                 </div>
                 <p className="font-semibold text-white mb-2">Unlock Analytics</p>
                 <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-white">
-                  <Link href="/dashboard/analytics">Upgrade Plan</Link>
+                  <Link href="/dashboard/settings">Upgrade Plan</Link>
                 </Button>
               </div>
             </div>
@@ -1072,8 +1072,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               Push Notifications
             </CardTitle>
           </CardHeader>
-          <CardContent className={!isPremiumFeatureUnlocked() ? "blur-[8px] select-none pointer-events-none" : ""}>
-            {isPremiumFeatureUnlocked() ? (
+          <CardContent className={!isFeatureUnlocked('push_notifications') ? "blur-[8px] select-none pointer-events-none" : ""}>
+            {isFeatureUnlocked('push_notifications') ? (
               // Unlocked: Show action button and recent notifications
               <div className="space-y-4">
                 <Button asChild className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white">
@@ -1112,8 +1112,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </div>
             )}
           </CardContent>
-          {/* Only show lock overlay if NOT Spotlight */}
-          {!isPremiumFeatureUnlocked() && (
+          {/* Only show lock overlay if push_notifications is not unlocked */}
+          {!isFeatureUnlocked('push_notifications') && (
             <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
               <div className="text-center">
                 <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
@@ -1123,7 +1123,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                 </div>
                 <p className="font-semibold text-white mb-2">Unlock Push Notifications</p>
                 <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-white">
-                  <Link href="/dashboard/notifications">Upgrade Plan</Link>
+                  <Link href="/dashboard/settings">Upgrade Plan</Link>
                 </Button>
               </div>
             </div>
@@ -1140,7 +1140,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               Loyalty Card Preview
             </CardTitle>
           </CardHeader>
-          <CardContent className={!isPremiumFeatureUnlocked() ? "blur-[8px] select-none pointer-events-none" : ""}>
+          <CardContent className={!isFeatureUnlocked('loyalty_cards') ? "blur-[8px] select-none pointer-events-none" : ""}>
             <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-lg p-4 text-white">
               <h4 className="font-bold">{businessName}</h4>
               <p className="text-sm mt-1">Collect 10 stamps, get a free coffee!</p>
@@ -1158,8 +1158,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </div>
             </div>
           </CardContent>
-          {/* Only show lock overlay if NOT Spotlight */}
-          {!isPremiumFeatureUnlocked() && (
+          {/* Only show lock overlay if loyalty_cards is not unlocked */}
+          {!isFeatureUnlocked('loyalty_cards') && (
             <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
               <div className="text-center">
                 <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
@@ -1169,7 +1169,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                 </div>
                 <p className="font-semibold text-white mb-2">Unlock Loyalty Cards</p>
                 <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-white">
-                  <Link href="/dashboard/loyalty">Upgrade Plan</Link>
+                  <Link href="/dashboard/settings">Upgrade Plan</Link>
                 </Button>
               </div>
             </div>
@@ -1231,7 +1231,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                 </div>
                 <p className="font-semibold text-white mb-2">Unlock Social Wizard</p>
                 <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-white">
-                  <Link href="/dashboard/social-wizard">Upgrade Plan</Link>
+                  <Link href="/dashboard/settings">Upgrade Plan</Link>
                 </Button>
               </div>
             </div>

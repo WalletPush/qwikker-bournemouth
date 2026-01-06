@@ -117,7 +117,24 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
   const router = useRouter()
 
   const businessName = profile?.business_name || 'Your Business'
-  const businessInitials = businessName.split(' ').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)
+  
+  // Generate initials - filter out special characters and use first two words
+  const getBusinessInitials = (name: string): string => {
+    // Filter out words that are only special characters (like &, +, -, etc.)
+    const words = name.split(/\s+/).filter(word => /[a-zA-Z]/.test(word))
+    
+    if (words.length === 0) {
+      return name.charAt(0).toUpperCase()
+    }
+    
+    if (words.length === 1) {
+      return words[0].substring(0, 2).toUpperCase()
+    }
+    
+    return words.slice(0, 2).map((word: string) => word[0]).join('').toUpperCase()
+  }
+  
+  const businessInitials = getBusinessInitials(businessName)
 
   const handleLockedFeature = () => {
     // Show upgrade modal or redirect to settings
@@ -140,18 +157,6 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
     // Check subscription tier and trial status
     const tierName = profile?.subscription?.subscription_tiers?.tier_name
     const isInTrial = profile?.subscription?.is_in_free_trial
-    
-    // 🔍 DEBUG LOGGING
-    if (featureKey && typeof window !== 'undefined') {
-      console.log(`🔐 Feature unlock check for ${featureId}:`, {
-        tierName,
-        isInTrial,
-        legacyPlan: profile?.plan,
-        individualFeatures: profile?.features,
-        featureKey,
-        individualFeatureValue: profile?.features?.[featureKey]
-      })
-    }
     
     // FIRST: Check individual feature override (allows granular control)
     if (profile?.features && typeof profile.features[featureKey] === 'boolean') {

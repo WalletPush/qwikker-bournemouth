@@ -617,18 +617,18 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
                 {formData.requires_booking && (
                   <div className="pl-6 border-l-2 border-[#00d083]">
                     <Label htmlFor="booking_url" className="text-slate-300">
-                      Booking/Ticket URL <span className="text-slate-500">(e.g., Ticketmaster, Eventbrite)</span>
+                      Booking/Ticket URL <span className="text-slate-500">(optional)</span>
                     </Label>
                     <Input
                       id="booking_url"
                       type="url"
-                      value={formData.booking_url}
+                      value={formData.booking_url || ''}
                       onChange={(e) => handleInputChange('booking_url', e.target.value)}
                       placeholder="https://www.ticketmaster.co.uk/..."
                       className="bg-slate-700/50 border-slate-600 text-white"
                     />
-                    <p className="text-xs text-slate-500 mt-1">
-                      Link to external ticket provider or booking page
+                    <p className="text-xs text-amber-400 mt-1">
+                      ⚠️ Must start with https:// (e.g., https://www.eventbrite.com/...)
                     </p>
                   </div>
                 )}
@@ -658,7 +658,7 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
                     <Label htmlFor="custom_location_name" className="text-slate-300">Location Name</Label>
                     <Input
                       id="custom_location_name"
-                      value={formData.custom_location_name}
+                      value={formData.custom_location_name || ''}
                       onChange={(e) => handleInputChange('custom_location_name', e.target.value)}
                       placeholder="e.g., Bournemouth Pavilion"
                       className="bg-slate-700/50 border-slate-600 text-white"

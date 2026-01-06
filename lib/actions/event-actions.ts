@@ -161,6 +161,36 @@ export async function createEvent(input: CreateEventInput): Promise<{
       return { success: false, error: error.message }
     }
 
+    // 📢 SEND SLACK NOTIFICATION: Event created
+    try {
+      const { data: businessProfile } = await supabase
+        .from('business_profiles')
+        .select('business_name, city')
+        .eq('id', input.business_id)
+        .single()
+
+      if (businessProfile) {
+        const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
+        
+        await sendCitySlackNotification({
+          title: `📅 New Event Created: ${input.event_name}`,
+          message: `${businessProfile.business_name} has created a new event!\n\n**Event Details:**\n• Type: ${input.event_type}\n• Date: ${input.event_date}\n• Time: ${input.event_start_time || 'Not specified'}\n• Description: ${input.event_description}`,
+          city: businessProfile.city || 'bournemouth',
+          type: 'offer_created', // Reusing this type since there's no event-specific type
+          data: { 
+            businessName: businessProfile.business_name, 
+            eventName: input.event_name,
+            eventType: input.event_type,
+            eventDate: input.event_date
+          }
+        })
+        
+        console.log(`📢 Slack notification sent for event creation: ${input.event_name}`)
+      }
+    } catch (error) {
+      console.error('⚠️ Slack notification error (non-critical):', error)
+    }
+
     revalidatePath('/dashboard/events')
     revalidatePath('/admin')
 

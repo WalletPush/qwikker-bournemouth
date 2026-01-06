@@ -28,6 +28,7 @@ export function OffersPage({ profile }: OffersPageProps) {
     offerType: '',
     offerValue: '',
     offerClaimAmount: '',
+    offerDescription: '',
     offerTerms: '',
     startDate: '',
     endDate: '',
@@ -55,6 +56,7 @@ export function OffersPage({ profile }: OffersPageProps) {
       offerType: profile.offer_type || '',
       offerValue: profile.offer_value || '',
       offerClaimAmount: profile.offer_claim_amount || '',
+      offerDescription: profile.offer_description || '',
       offerTerms: profile.offer_terms || '',
       startDate: profile.offer_start_date || '',
       endDate: profile.offer_end_date || '',
@@ -70,6 +72,7 @@ export function OffersPage({ profile }: OffersPageProps) {
       offerType: '',
       offerValue: '',
       offerClaimAmount: '',
+      offerDescription: '',
       offerTerms: '',
       startDate: '',
       endDate: '',
@@ -948,6 +951,36 @@ export function OffersPage({ profile }: OffersPageProps) {
                   </div>
               </div>
 
+              {/* Offer Description Section */}
+              <div className="bg-slate-900/30 border border-slate-700 rounded-xl p-6 space-y-6">
+                <div className="border-b border-slate-600 pb-4">
+                  <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                    </svg>
+                    Offer Description
+                  </h3>
+                  <p className="text-slate-400 text-sm">Short description shown on the offer card (2-3 lines max)</p>
+                </div>
+
+                <div>
+                  <Label htmlFor="offerDescription" className="text-white font-medium mb-2 block">
+                    Description <span className="text-red-400">*</span>
+                  </Label>
+                  <textarea
+                    id="offerDescription"
+                    value={formData.offerDescription}
+                    onChange={(e) => handleInputChange('offerDescription', e.target.value)}
+                    className="w-full bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 rounded-lg p-4 min-h-[100px] resize-vertical transition-all duration-200 placeholder:text-slate-500 shadow-sm"
+                    required
+                    placeholder="e.g., A midweek fire-led dining experience at Ember & Oak, featuring a curated sharing menu cooked over open flames."
+                  />
+                  <p className="text-slate-400 text-xs mt-2">
+                    Full description - will be truncated to 2 lines on the card
+                  </p>
+                </div>
+              </div>
+
               {/* Terms & Conditions Section */}
               <div className="bg-slate-900/30 border border-slate-700 rounded-xl p-6 space-y-6">
                 <div className="border-b border-slate-600 pb-4">
@@ -957,7 +990,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                     </svg>
                     Terms & Conditions
                   </h3>
-                  <p className="text-slate-400 text-sm">Add any restrictions or limitations for your offer</p>
+                  <p className="text-slate-400 text-sm">Full terms shown in the offer details modal</p>
                 </div>
 
                 <div>

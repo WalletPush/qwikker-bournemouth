@@ -4,6 +4,10 @@ import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { ImprovedDashboardHome } from '@/components/dashboard/improved-dashboard-home'
 import { calculateActionItemsCount } from '@/lib/utils/action-items-count'
 
+// Force dynamic rendering (no caching)
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function DashboardPage() {
   const supabase = await createClient()
 

@@ -18,7 +18,7 @@ export async function sendCitySlackNotification(notification: NotificationData) 
   try {
     // Try CRM config first (supports environment variables)
     const { getFranchiseCRMConfigWithEnvOverrides } = await import('./franchise-crm-config')
-    const crmConfig = getFranchiseCRMConfigWithEnvOverrides(notification.city)
+    const crmConfig = await getFranchiseCRMConfigWithEnvOverrides(notification.city)
     
     let config = null
     let webhookUrl = crmConfig?.slack_webhook_url
@@ -35,7 +35,7 @@ export async function sendCitySlackNotification(notification: NotificationData) 
     }
 
     const slackMessage = {
-      text: `🎯 ${notification.city.toUpperCase()} - ${notification.title}`,
+      text: `<!channel> 🎯 ${notification.city.toUpperCase()} - ${notification.title}`,
       blocks: [
         {
           type: 'header',
@@ -48,7 +48,7 @@ export async function sendCitySlackNotification(notification: NotificationData) 
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*${notification.title}*\n${notification.message}`
+            text: `<!channel>\n*${notification.title}*\n${notification.message}`
           }
         },
         {

@@ -40,6 +40,9 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     }, 100)
   }
   
+  // Combine real offers with mock offers
+  const allOffers = [...realOffers, ...mockOffers]
+
   // Load from localStorage after component mounts
   useEffect(() => {
     const userId = walletPassId || 'anonymous-user'
@@ -59,8 +62,34 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     }
   }, [walletPassId])
 
-  // Combine real offers with mock offers
-  const allOffers = [...realOffers, ...mockOffers]
+  // Clean up expired offer IDs from localStorage
+  useEffect(() => {
+    if (allOffers.length === 0) return
+    
+    const userId = walletPassId || 'anonymous-user'
+    const activeOfferIds = new Set(allOffers.map(o => o.id))
+    
+    // Clean up favorites
+    const updatedFavorites = Array.from(favoriteOffers).filter(id => activeOfferIds.has(id))
+    if (updatedFavorites.length !== favoriteOffers.size) {
+      setFavoriteOffers(new Set(updatedFavorites))
+      localStorage.setItem(`qwikker-favorites-${userId}`, JSON.stringify(updatedFavorites))
+    }
+    
+    // Clean up claimed
+    const updatedClaimed = Array.from(claimedOffers).filter(id => activeOfferIds.has(id))
+    if (updatedClaimed.length !== claimedOffers.size) {
+      setClaimedOffers(new Set(updatedClaimed))
+      localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify(updatedClaimed))
+    }
+    
+    // Clean up wallet
+    const updatedWallet = Array.from(walletOffers).filter(id => activeOfferIds.has(id))
+    if (updatedWallet.length !== walletOffers.size) {
+      setWalletOffers(new Set(updatedWallet))
+      localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify(updatedWallet))
+    }
+  }, [allOffers, favoriteOffers, claimedOffers, walletOffers, walletPassId])
 
   // Handle auto-scroll to specific highlighted business
   useEffect(() => {
@@ -106,15 +135,18 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     { id: 'all', label: 'All Offers', count: allOffers.length },
     { id: 'claimed', label: 'My Claimed', count: Array.from(claimedOffers).filter(id => {
       const offer = allOffers.find(o => o.id === id)
-      // Show in claimed if: not in wallet OR is multiple-use
-      return !walletOffers.has(id) || offer?.claimType !== 'single'
+      // Only count if offer exists (not expired) AND (not in wallet OR is multiple-use)
+      return offer && (!walletOffers.has(id) || offer?.claimType !== 'single')
     }).length },
     { id: 'redeemed', label: 'My Redeemed', count: Array.from(walletOffers).filter(id => {
       const offer = allOffers.find(o => o.id === id)
-      // Show in redeemed if: in wallet AND is single-use
-      return offer?.claimType === 'single'
+      // Only count if offer exists (not expired) AND is single-use
+      return offer && offer?.claimType === 'single'
     }).length },
-    { id: 'favorites', label: 'My Favorites', count: favoriteOffers.size },
+    { id: 'favorites', label: 'My Favorites', count: Array.from(favoriteOffers).filter(id => {
+      // Only count favorites that are still active (not expired)
+      return allOffers.find(o => o.id === id) !== undefined
+    }).length },
     { id: 'popular', label: 'Popular', count: allOffers.filter(o => o.isPopular).length },
     { id: 'ending_soon', label: 'Ending Soon', count: allOffers.filter(o => o.isEndingSoon).length },
     { id: 'two_for_one', label: '2-for-1', count: allOffers.filter(o => o.type === 'two_for_one').length },
@@ -509,6 +541,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   }
 
   const OfferCard = ({ offer }: { offer: any }) => {
+    const [showModal, setShowModal] = useState(false)
+    
     // Distinguish real vs mock offers: real offers have 'image' property from transformation, mock offers don't
     const isRealOffer = !!offer.image
     const business = isRealOffer ? null : mockBusinesses.find(b => b.id === offer.businessId)
@@ -556,6 +590,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     const claimedOfferData = mockClaimedOffers.find(co => co.offerId === offer.id)
     
     return (
+      <>
       <Card 
         ref={(el) => { cardRefs.current[businessSlug] = el }}
         data-offer-card
@@ -641,7 +676,16 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           {/* Title and description - flexible content */}
           <div className="flex-grow">
             <h3 className="text-slate-100 font-bold text-lg mb-2">{offer.title}</h3>
-            <p className="text-slate-300 text-sm leading-relaxed mb-3">{offer.description}</p>
+            <p className="text-slate-300 text-sm leading-relaxed mb-3 line-clamp-2">{offer.description}</p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowModal(true)
+              }}
+              className="text-[#00d083] text-xs font-medium hover:text-[#00b86f] transition-colors mb-3"
+            >
+              ...more
+            </button>
             
             {/* Value highlight */}
             <div className="bg-gradient-to-r from-green-500/15 to-emerald-500/15 border border-green-500/25 rounded-lg p-3 mb-3">
@@ -703,6 +747,121 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           </div>
         </CardContent>
       </Card>
+
+      {/* OFFER DETAILS MODAL */}
+      {showModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowModal(false)}
+        >
+          <div 
+            className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-br from-slate-800 to-slate-900 border-b border-slate-700 p-6 flex items-start justify-between z-10">
+              <div className="flex-1 pr-4">
+                <div className={`inline-block ${getBadgeColor(offer.type)} text-white text-xs px-3 py-1 rounded-full font-bold mb-3`}>
+                  {(() => {
+                    if (!isRealOffer && offer.badge) return offer.badge
+                    switch (offer.type) {
+                      case 'two_for_one': return '2-FOR-1'
+                      case 'percentage_off': return `${offer.value}`
+                      case 'freebie': return 'FREE ITEM'
+                      case 'discount': return 'DISCOUNT'
+                      default: return 'OFFER'
+                    }
+                  })()}
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">{offer.title}</h2>
+                <p className="text-slate-400">at <span className="text-slate-300 font-medium">{businessName}</span></p>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-slate-700 hover:bg-slate-600 text-slate-400 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Image */}
+            {businessImage && (
+              <div className="relative h-64 bg-slate-900/50">
+                <img
+                  src={businessImage}
+                  alt={offer.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Offer Value */}
+              <div className="bg-gradient-to-r from-green-500/15 to-emerald-500/15 border border-green-500/25 rounded-xl p-6 text-center">
+                <div className="text-sm text-green-300 font-semibold mb-2">You Save:</div>
+                <div className="text-4xl font-bold text-green-400">{offer.value}</div>
+              </div>
+
+              {/* Full Description */}
+              {offer.description && (
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">About This Offer</h3>
+                  <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{offer.description}</p>
+                </div>
+              )}
+
+              {/* Validity Period */}
+              {offer.validUntil && (
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Valid Until</h3>
+                  <p className="text-slate-300">{offer.validUntil}</p>
+                </div>
+              )}
+
+              {/* Terms & Conditions */}
+              {(offer.termsAndConditions || offer.terms) && (
+                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+                  <h3 className="text-lg font-semibold text-white mb-3">Terms & Conditions</h3>
+                  <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap">
+                    {isRealOffer ? offer.termsAndConditions : offer.terms}
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="space-y-3 pt-4">
+                {!isClaimed ? (
+                  <Button 
+                    onClick={() => {
+                      claimOffer(offer.id, offer.title, businessName)
+                      setShowModal(false)
+                    }}
+                    className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold text-lg rounded-xl"
+                  >
+                    Claim Offer
+                  </Button>
+                ) : (
+                  !isInWallet && (
+                    <Button
+                      onClick={() => {
+                        handleAddToWallet(offer.id, offer.title, businessName)
+                        setShowModal(false)
+                      }}
+                      className="w-full h-12 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-lg rounded-xl"
+                    >
+                      Add to Wallet
+                    </Button>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
     )
   }
 
@@ -817,7 +976,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           }}
         >
           <p className="text-base sm:text-lg font-semibold text-pink-300 mb-1">Favourites</p>
-          <p className="text-lg font-bold text-pink-400">{favoriteOffers.size}</p>
+          <p className="text-lg font-bold text-pink-400">{Array.from(favoriteOffers).filter(id => allOffers.find(o => o.id === id)).length}</p>
         </Card>
       </div>
 

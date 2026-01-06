@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
         }
         
         // Create NEW offer in business_offers table
-        const { error: offerError } = await supabaseAdmin
+        const { data: newOffer, error: offerError } = await supabaseAdmin
           .from('business_offers')
           .insert({
             business_id: change.business_id,
@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
             offer_type: change.change_data.offer_type || 'other',
             offer_value: change.change_data.offer_value,
             offer_claim_amount: change.change_data.offer_claim_amount || 'multiple',
+            offer_description: change.change_data.offer_description,
             offer_terms: change.change_data.offer_terms,
             offer_start_date: change.change_data.offer_start_date && change.change_data.offer_start_date.trim() !== '' ? change.change_data.offer_start_date : null,
             offer_end_date: change.change_data.offer_end_date && change.change_data.offer_end_date.trim() !== '' ? change.change_data.offer_end_date : null,
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
           .select()
           .single()
         
-        if (offerError) {
+        if (offerError || !newOffer) {
           console.error('Error creating new offer:', offerError)
           return NextResponse.json(
             { error: 'Failed to create new offer' },
@@ -163,6 +164,20 @@ export async function POST(request: NextRequest) {
         }
         
         console.log(`✅ NEW OFFER CREATED: ${change.change_data.offer_name} for ${change.business?.business_name} (${currentOfferCount + 1}/${maxOffers})`)
+        
+        // 📚 ADD OFFER TO KNOWLEDGE BASE with embeddings (so AI chat can see it!)
+        try {
+          const { syncOfferToKnowledgeBase } = await import('@/lib/ai/embeddings')
+          const syncResult = await syncOfferToKnowledgeBase(newOffer.id)
+          
+          if (syncResult.success) {
+            console.log(`📚 ${syncResult.message}`)
+          } else {
+            console.error(`⚠️ KB sync warning: ${syncResult.message}`)
+          }
+        } catch (kbError) {
+          console.error('⚠️ Knowledge base sync error (non-critical):', kbError)
+        }
         
         // 📧 SEND EMAIL NOTIFICATION: Offer approved
         try {
@@ -229,6 +244,20 @@ export async function POST(request: NextRequest) {
             ...existingNotes,
             secret_menu_items: secretMenuItems
           })
+        }
+
+        // 📚 ADD SECRET MENU TO KNOWLEDGE BASE with embeddings (so AI chat can see it!)
+        try {
+          const { syncSecretMenuItemToKnowledgeBase } = await import('@/lib/ai/embeddings')
+          const syncResult = await syncSecretMenuItemToKnowledgeBase(changeId)
+          
+          if (syncResult.success) {
+            console.log(`📚 ${syncResult.message}`)
+          } else {
+            console.error(`⚠️ KB sync warning: ${syncResult.message}`)
+          }
+        } catch (kbError) {
+          console.error('⚠️ Knowledge base sync error (non-critical):', kbError)
         }
       } else if (change.change_type === 'logo') {
         // Approve logo upload

@@ -218,8 +218,8 @@ export function validateCRMConfig(city: FranchiseCity): {
  * Environment variable override system
  * Allows franchise owners to set their webhooks via environment variables
  */
-export function getFranchiseCRMConfigWithEnvOverrides(city: FranchiseCity): FranchiseCRMConfig {
-  const baseConfig = getFranchiseCRMConfig(city)
+export async function getFranchiseCRMConfigWithEnvOverrides(city: FranchiseCity): Promise<FranchiseCRMConfig> {
+  const baseConfig = await getFranchiseCRMConfig(city)
   
   // Check for environment variable overrides
   const cityUpper = city.toUpperCase()

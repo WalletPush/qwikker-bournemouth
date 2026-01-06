@@ -70,17 +70,19 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
   const upcomingEvents = events.filter(e => new Date(e.event_date) >= today)
   const thisWeekEvents = upcomingEvents.filter(e => new Date(e.event_date) <= nextWeek)
   const todayEvents = upcomingEvents.filter(e => new Date(e.event_date).toDateString() === today.toDateString())
-  const savedEventsList = events.filter(e => savedEvents.has(e.id))
-  const interestedEventsList = events.filter(e => interestedEvents.has(e.id))
+  
+  // Filter saved/interested to only show upcoming events (exclude expired)
+  const savedEventsList = upcomingEvents.filter(e => savedEvents.has(e.id))
+  const interestedEventsList = upcomingEvents.filter(e => interestedEvents.has(e.id))
   
   // Filter counts
   const getFilters = () => [
     { id: 'upcoming', label: 'All Events', count: upcomingEvents.length },
     { id: 'today', label: 'Today', count: todayEvents.length },
     { id: 'this_week', label: 'This Week', count: thisWeekEvents.length },
-    { id: 'saved', label: 'My Saved', count: savedEvents.size },
-    { id: 'interested', label: "I'm Interested", count: interestedEvents.size },
-    { id: 'free', label: 'Free Events', count: events.filter(e => e.price_info?.toLowerCase().includes('free')).length },
+    { id: 'saved', label: 'My Saved', count: savedEventsList.length },
+    { id: 'interested', label: "I'm Interested", count: interestedEventsList.length },
+    { id: 'free', label: 'Free Events', count: upcomingEvents.filter(e => e.price_info?.toLowerCase().includes('free')).length },
   ]
 
   const toggleSaved = (eventId: string) => {
@@ -517,7 +519,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
             }}
           >
             <p className="text-base sm:text-lg font-semibold text-amber-300 mb-1">My Saved</p>
-            <p className="text-lg font-bold text-amber-400">{savedEvents.size}</p>
+            <p className="text-lg font-bold text-amber-400">{savedEventsList.length}</p>
           </Card>
           
           <Card 
@@ -532,7 +534,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
             }}
           >
             <p className="text-base sm:text-lg font-semibold text-pink-300 mb-1">Interested</p>
-            <p className="text-lg font-bold text-pink-400">{interestedEvents.size}</p>
+            <p className="text-lg font-bold text-pink-400">{interestedEventsList.length}</p>
           </Card>
         </div>
 
