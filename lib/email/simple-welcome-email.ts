@@ -6,10 +6,12 @@ interface WelcomeEmailData {
   email: string;
   businessName: string;
   profile: Profile;
+  trialDays?: number; // Franchise-specific trial length (default: 90)
 }
 
 export function generateSimpleWelcomeEmailHTML(data: WelcomeEmailData): string {
   const { firstName, businessName, profile } = data;
+  const trialDays = data.trialDays || 90; // Default to 90 days if not provided
   
   // Calculate missing items for action list
   const missingItems = [];
@@ -56,7 +58,7 @@ export function generateSimpleWelcomeEmailHTML(data: WelcomeEmailData): string {
                         <td style="padding: 40px 30px;">
                             <h2 style="color: #1a1a1a; font-size: 28px; margin: 0 0 20px 0;">Welcome to QWIKKER, ${firstName}!</h2>
                             <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
-                                Great news! Your <strong>${businessName}</strong> dashboard is now ready and your <strong>120-day free trial</strong> has begun.
+                                Great news! Your <strong>${businessName}</strong> dashboard is now ready and your <strong>${trialDays}-day free trial</strong> has begun.
                             </p>
                         </td>
                     </tr>
@@ -67,7 +69,7 @@ export function generateSimpleWelcomeEmailHTML(data: WelcomeEmailData): string {
                             <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 8px; padding: 25px; text-align: center;">
                                 <h3 style="color: #ffffff; font-size: 20px; margin: 0 0 10px 0;">🎉 FREE TRIAL ACTIVE</h3>
                                 <p style="color: #ffffff; font-size: 16px; margin: 0; opacity: 0.9;">
-                                    You have <strong>120 days</strong> to explore Featured plan benefits including up to 3 offers, secret menu items, file uploads, and dashboard access. Premium features like Analytics, Loyalty Cards, and Push Notifications require an upgrade.
+                                    You have <strong>${trialDays} days</strong> to explore Featured plan benefits including up to 3 offers, secret menu items, file uploads, and dashboard access. Premium features like Analytics, Loyalty Cards, and Push Notifications require an upgrade.
                                 </p>
                             </div>
                         </td>
@@ -128,6 +130,7 @@ export function generateSimpleWelcomeEmailHTML(data: WelcomeEmailData): string {
 
 export function generateSimpleWelcomeEmailText(data: WelcomeEmailData): string {
   const { firstName, businessName, profile } = data;
+  const trialDays = data.trialDays || 90; // Default to 90 days if not provided
   
   // Calculate missing items for action list
   const missingItems = [];
@@ -141,10 +144,10 @@ export function generateSimpleWelcomeEmailText(data: WelcomeEmailData): string {
   return `
 WELCOME TO QWIKKER, ${firstName.toUpperCase()}!
 
-Great news! Your ${businessName} dashboard is now ready and your 120-day free trial has begun.
+Great news! Your ${businessName} dashboard is now ready and your ${trialDays}-day free trial has begun.
 
 FREE TRIAL ACTIVE
-You have 120 days to explore Featured plan benefits including up to 3 offers, secret menu items, file uploads, and dashboard access. Premium features like Analytics, Loyalty Cards, and Push Notifications require an upgrade.
+You have ${trialDays} days to explore Featured plan benefits including up to 3 offers, secret menu items, file uploads, and dashboard access. Premium features like Analytics, Loyalty Cards, and Push Notifications require an upgrade.
 
 COMPLETE YOUR SETUP
 ${hasAllItems 

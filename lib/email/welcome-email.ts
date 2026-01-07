@@ -6,10 +6,12 @@ interface WelcomeEmailData {
   email: string
   businessName: string
   profile: Profile
+  trialDays?: number // Franchise-specific trial length (default: 90)
 }
 
 // Email template for welcome email
 export function generateWelcomeEmailHTML(data: WelcomeEmailData): string {
+  const trialDays = data.trialDays || 90 // Default to 90 days if not provided
   const { firstName, businessName, profile } = data
   
   // Check what's missing from onboarding
@@ -247,7 +249,7 @@ export function generateWelcomeEmailHTML(data: WelcomeEmailData): string {
             <h1 class="welcome-message">Welcome to QWIKKER, ${firstName}!</h1>
             
             <p class="message">
-                Congratulations on joining QWIKKER! Your <strong>${businessName}</strong> is now part of our platform, and your <strong>120-day free trial</strong> has officially started.
+                Congratulations on joining QWIKKER! Your <strong>${businessName}</strong> is now part of our platform, and your <strong>${trialDays}-day free trial</strong> has officially started.
             </p>
             
             <div class="message" style="display: flex; align-items: flex-start; gap: 12px; background: rgba(0, 208, 131, 0.1); border-left: 3px solid #00d083; padding: 16px; border-radius: 8px; margin-bottom: 30px;">
@@ -269,7 +271,7 @@ export function generateWelcomeEmailHTML(data: WelcomeEmailData): string {
                     Your Free Trial is Active
                 </div>
                 <p class="trial-description">
-                    You have <strong>120 days</strong> to explore Featured plan benefits including up to 3 offers, secret menu items, file uploads, and dashboard access. Premium features like Analytics, Loyalty Cards, and Push Notifications require an upgrade.
+                    You have <strong>${trialDays} days</strong> to explore Featured plan benefits including up to 3 offers, secret menu items, file uploads, and dashboard access. Premium features like Analytics, Loyalty Cards, and Push Notifications require an upgrade.
                 </p>
             </div>
             
@@ -351,6 +353,7 @@ export function generateWelcomeEmailHTML(data: WelcomeEmailData): string {
 // Plain text version for email clients that don't support HTML
 export function generateWelcomeEmailText(data: WelcomeEmailData): string {
   const { firstName, businessName, profile } = data
+  const trialDays = data.trialDays || 90 // Default to 90 days if not provided
   
   // Check what's missing from onboarding
   const missingItems = []
@@ -384,10 +387,10 @@ export function generateWelcomeEmailText(data: WelcomeEmailData): string {
   return `
 Welcome to QWIKKER, ${firstName}!
 
-Congratulations on joining QWIKKER! Your ${businessName} is now part of our platform, and your 120-day free trial has officially started.
+Congratulations on joining QWIKKER! Your ${businessName} is now part of our platform, and your ${trialDays}-day free trial has officially started.
 
 YOUR FREE TRIAL IS ACTIVE
-You have 120 days to explore Featured plan benefits including up to 3 offers, secret menu items, file uploads, and dashboard access. Premium features like Analytics, Loyalty Cards, and Push Notifications require an upgrade.
+You have ${trialDays} days to explore Featured plan benefits including up to 3 offers, secret menu items, file uploads, and dashboard access. Premium features like Analytics, Loyalty Cards, and Push Notifications require an upgrade.
 
 COMPLETE YOUR SETUP (${completedCount} of ${checklistItems.length} completed)
 ${checklistItems.map(item => `${item.done ? '✓' : '○'} ${item.item}`).join('\n')}

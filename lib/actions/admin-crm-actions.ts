@@ -280,8 +280,10 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       let billing_starts_date: string | null = null
 
       // Calculate trial status from business_subscriptions table (proper source of truth)
-      if (business.subscription) {
-        const subscription = business.subscription
+      // 🔥 FIX: Get subscription from the Map BEFORE trying to use it!
+      const subscription = subscriptionsByBusiness.get(business.id)
+      
+      if (subscription) {
         
         console.log(`🔍 Trial calculation for ${business.business_name}:`, {
           is_in_free_trial: subscription.is_in_free_trial,
@@ -374,7 +376,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         ghl_contact_id: syncData?.ghl_contact_id || null,
         
         // Subscription: Use business_subscriptions if available, otherwise null (use legacy trial calculation)
-        subscription: subscriptionsByBusiness.get(business.id) || null,
+        subscription: subscription || null,
         tier: null,
         recent_payments: [], // Will be populated when billing system is implemented
         

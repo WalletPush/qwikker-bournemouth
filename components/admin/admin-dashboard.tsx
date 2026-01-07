@@ -216,10 +216,43 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
 
   // ORIGINAL counts for sidebar (NEVER filtered)
   const allPendingBusinesses = businessList.filter(b => b.status === 'pending_review')
-  const allLiveBusinesses = businessList.filter(b => b.status === 'approved')
+  
+  // ✅ FIXED: Exclude expired trials from Live Listings
+  const allLiveBusinesses = businessList.filter(b => {
+    if (b.status !== 'approved') return false
+    
+    // Check if trial is expired
+    if (b.subscription && Array.isArray(b.subscription) && b.subscription.length > 0) {
+      const sub = b.subscription[0]
+      if (sub.is_in_free_trial && sub.free_trial_end_date) {
+        const endDate = new Date(sub.free_trial_end_date)
+        const now = new Date()
+        if (endDate < now) {
+          return false // ❌ Exclude expired trials from Live
+        }
+      }
+    }
+    
+    return true // ✅ Include in Live
+  })
+  
   const allIncompleteBusinesses = businessList.filter(b => b.status === 'incomplete')
   const allRejectedBusinesses = businessList.filter(b => b.status === 'rejected')
-  const allExpiredTrialBusinesses = businessList.filter(b => b.status === 'trial_expired' || b.status === 'inactive')
+  
+  // ✅ FIXED: Check subscription end date, not status
+  const allExpiredTrialBusinesses = businessList.filter(b => {
+    // Check if business has subscription data
+    if (!b.subscription || !Array.isArray(b.subscription) || b.subscription.length === 0) return false
+    
+    const sub = b.subscription[0] // Get first subscription
+    if (!sub.free_trial_end_date || !sub.is_in_free_trial) return false
+    
+    // Check if trial is expired
+    const endDate = new Date(sub.free_trial_end_date)
+    const now = new Date()
+    
+    return endDate < now
+  })
 
   // FILTERED businesses for display content only
   const pendingBusinesses = filterBusinesses(allPendingBusinesses)
@@ -2395,10 +2428,56 @@ Qwikker Admin Team`
                     </div>
                   ) : (
                     expiredTrialBusinesses.map((business) => {
-                      // Get menus from CRM data but keep original business data
-                      const crmMenus = crmData.find(crm => crm.id === business.id)?.business_menus || null
+                      // 🔥 FIX: Use CRM data which has correct subscription + trial info (same as Live Businesses)
+                      const crmRecord = crmData.find(crm => crm.id === business.id)
                       
-                      // Convert business data to CRM format (same as live businesses)
+                      // If we have CRM data, use it directly (it has correct subscription data from admin-crm-actions)
+                      if (crmRecord) {
+                        return (
+                          <ComprehensiveBusinessCRMCard
+                            key={business.id}
+                            business={crmRecord}
+                            onApprove={handleApproval}
+                            onInspect={(business) => {
+                              // Find the original business data from allBusinesses to get complete info
+                              const originalBusiness = allBusinesses.find(b => b.id === business.id)
+                              const legacyBusiness = {
+                                id: business.id,
+                                user_id: originalBusiness?.user_id || '',
+                                business_name: business.business_name,
+                                email: business.email,
+                                first_name: originalBusiness?.first_name || '',
+                                last_name: originalBusiness?.last_name || '',
+                                business_type: originalBusiness?.business_type || '',
+                                business_category: business.business_category,
+                                business_town: business.business_town,
+                                business_address: business.business_address,
+                                business_postcode: business.business_postcode,
+                                phone: business.phone,
+                                logo: originalBusiness?.logo || '',
+                                business_tagline: originalBusiness?.business_tagline || '',
+                                business_description: originalBusiness?.business_description || '',
+                                business_hours: originalBusiness?.business_hours || '',
+                                business_hours_structured: originalBusiness?.business_hours_structured || null,
+                                offer_name: business.offer_name || '',
+                                offer_type: business.offer_type || '',
+                                offer_value: originalBusiness?.offer_value || '',
+                                offer_terms: originalBusiness?.offer_terms || '',
+                                menu_url: business.menu_url || '',
+                                business_images: business.business_images || [],
+                                menu_preview: originalBusiness?.menu_preview || '',
+                                additional_notes: business.secret_menu_items ? JSON.stringify({ secret_menu_items: business.secret_menu_items }) : '',
+                                status: business.status,
+                                created_at: originalBusiness?.created_at || '',
+                                updated_at: business.last_updated
+                              }
+                              setInspectionModal({ open: true, business: legacyBusiness })
+                            }}
+                          />
+                        )
+                      }
+                      
+                      // Fallback: Convert business data to CRM format (shouldn't happen for expired businesses)
                       const crmBusiness = {
                         id: business.id,
                         business_name: business.business_name || 'Unnamed Business',
@@ -2436,17 +2515,15 @@ Qwikker Admin Team`
                               return []
                             }
                           })() : [],
-                        // Calculate trial info for expired businesses
-                        trial_days_remaining: business.approved_at ? 
+                        // Calculate trial info for expired businesses (✅ FIXED: Use subscription data, not hardcoded 120 days)
+                        trial_days_remaining: business.subscription?.[0]?.free_trial_end_date ? 
                           (() => {
-                            const approvalDate = new Date(business.approved_at)
-                            const trialEndDate = new Date(approvalDate.getTime() + (120 * 24 * 60 * 60 * 1000))
+                            const endDate = new Date(business.subscription[0].free_trial_end_date)
                             const now = new Date()
-                            return Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                            return Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
                           })() : null,
                         trial_status: 'expired' as const,
-                        billing_starts_date: business.approved_at ? 
-                          new Date(new Date(business.approved_at).getTime() + (120 * 24 * 60 * 60 * 1000)).toISOString() : null,
+                        billing_starts_date: business.subscription?.[0]?.free_trial_end_date || null,
                         last_updated: business.updated_at || business.created_at,
                         has_pending_changes: false,
                         pending_changes_count: 0

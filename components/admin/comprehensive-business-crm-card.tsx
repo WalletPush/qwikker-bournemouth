@@ -19,6 +19,7 @@ import { formatDate, formatLastSync, formatJoinedDate } from '@/lib/utils/date-f
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { OfferDeletionModal } from '@/components/admin/offer-deletion-modal'
 import { TierManagementCard } from './tier-management-card'
+import { ExtendTrialButton } from './extend-trial-button'
 
 interface ComprehensiveBusinessCRMCardProps {
   business: BusinessCRMData
@@ -555,29 +556,49 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Status */}
-            <div className="bg-gradient-to-br from-emerald-950/40 to-emerald-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-emerald-500/20 text-center">
-              <svg className="w-4 h-4 text-emerald-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className={`backdrop-blur-sm px-5 py-5 rounded-xl border text-center ${
+              // Check for expired trial FIRST
+              (business.trial_days_remaining !== null && business.trial_days_remaining < 0) ||
+              (business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date && new Date(business.subscription.free_trial_end_date) < new Date())
+                ? 'bg-gradient-to-br from-red-950/40 to-red-900/20 border-red-500/20'
+                : 'bg-gradient-to-br from-emerald-950/40 to-emerald-900/20 border-emerald-500/20'
+            }`}>
+              <svg className={`w-4 h-4 mx-auto mb-2 ${
+                (business.trial_days_remaining !== null && business.trial_days_remaining < 0) ||
+                (business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date && new Date(business.subscription.free_trial_end_date) < new Date())
+                  ? 'text-red-400'
+                  : 'text-emerald-400'
+              }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Status</span>
               <span className={`font-semibold text-xl leading-tight block ${
-                // Live if: approved business, OR active subscription, OR on trial
-                (business.status === 'approved' || 
-                 business.subscription?.status === 'active' || 
-                 business.subscription?.is_in_free_trial ||
-                 (business.trial_days_remaining !== null && business.trial_days_remaining > 0)) ? 'text-[#00d083]' :
-                business.subscription?.status === 'paused' ? 'text-slate-400' :
-                'text-red-400'
+                // PRIORITY 1: Check for expired trial
+                ((business.trial_days_remaining !== null && business.trial_days_remaining < 0) ||
+                 (business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date && new Date(business.subscription.free_trial_end_date) < new Date()))
+                  ? 'text-red-400'
+                // PRIORITY 2: Live if active/trial
+                : (business.status === 'approved' || 
+                   business.subscription?.status === 'active' || 
+                   (business.subscription?.is_in_free_trial && business.trial_days_remaining !== null && business.trial_days_remaining > 0))
+                  ? 'text-[#00d083]'
+                // PRIORITY 3: Paused
+                : business.subscription?.status === 'paused'
+                  ? 'text-slate-400'
+                // DEFAULT: Inactive
+                : 'text-red-400'
               }`}>
-                {/* Show Live if approved/active/trial */}
-                {(business.status === 'approved' || 
-                  business.subscription?.status === 'active' || 
-                  business.subscription?.is_in_free_trial ||
-                  (business.trial_days_remaining !== null && business.trial_days_remaining > 0)) 
-                  ? 'Live' 
-                  : business.subscription?.status === 'paused' 
-                  ? 'Paused' 
-                  : 'Inactive'}
+                {/* Show status based on priority */}
+                {((business.trial_days_remaining !== null && business.trial_days_remaining < 0) ||
+                  (business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date && new Date(business.subscription.free_trial_end_date) < new Date()))
+                  ? 'Trial Expired' 
+                  : (business.status === 'approved' || 
+                     business.subscription?.status === 'active' || 
+                     (business.subscription?.is_in_free_trial && business.trial_days_remaining !== null && business.trial_days_remaining > 0))
+                    ? 'Live' 
+                    : business.subscription?.status === 'paused' 
+                      ? 'Paused' 
+                      : 'Inactive'}
               </span>
             </div>
 
@@ -1707,6 +1728,36 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     }, 500)
                   }} 
                 />
+                
+                {/* Trial Extension - Show if trial is active or expired */}
+                {business.subscription?.is_in_free_trial && (
+                  <Card className="bg-slate-800/30 border-slate-700 border-yellow-500/20">
+                    <CardHeader>
+                      <CardTitle className="text-white text-sm flex items-center gap-2">
+                        <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Trial Management
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="text-sm text-slate-400">
+                        {business.subscription?.free_trial_end_date && new Date(business.subscription.free_trial_end_date) < new Date() ? (
+                          <>Trial expired on {new Date(business.subscription.free_trial_end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+                        ) : business.subscription?.free_trial_end_date ? (
+                          <>Trial ends on {new Date(business.subscription.free_trial_end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+                        ) : (
+                          <>Trial end date not set</>
+                        )}
+                      </div>
+                      <ExtendTrialButton 
+                        businessId={business.id} 
+                        businessName={business.business_name}
+                        currentEndDate={business.subscription?.free_trial_end_date}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
                 
                 {/* Listing Controls */}
                 <Card className="bg-slate-800/30 border-slate-700">
