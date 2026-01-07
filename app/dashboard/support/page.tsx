@@ -109,7 +109,7 @@ export default async function SupportPage() {
             <div className="border-l-2 border-[#00d083] pl-4">
               <h4 className="font-semibold text-white mb-2">What happens when my free trial ends?</h4>
               <p className="text-gray-300 text-sm mb-2">
-                Your 120-day free trial includes all Featured plan benefits. Before it ends, you can upgrade to continue accessing premium features.
+                Your free trial includes all Featured plan benefits. Before it ends, you can upgrade to continue accessing premium features. Check your dashboard to see how many days remain.
               </p>
               <Button asChild variant="link" className="text-[#00d083] p-0 h-auto">
                 <Link href="/dashboard/settings">View Plans →</Link>

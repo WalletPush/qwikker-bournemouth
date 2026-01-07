@@ -36,7 +36,7 @@ export default async function SocialWizardRoute() {
         features
       )
     `)
-    .eq('business_id', data.claims.sub)
+    .eq('business_id', profileData?.id) // ✅ FIX: Use business profile ID, not user ID
     .single()
 
   // Get approved menus count for action items

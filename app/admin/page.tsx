@@ -94,6 +94,13 @@ export default async function AdminPage() {
         status,
         created_at,
         approved_at
+      ),
+      subscription:business_subscriptions!business_id(
+        id,
+        free_trial_start_date,
+        free_trial_end_date,
+        is_in_free_trial,
+        status
       )
     `)
     .in('city', coveredCities) // 🎯 FRANCHISE FILTERING: Use covered cities for franchise

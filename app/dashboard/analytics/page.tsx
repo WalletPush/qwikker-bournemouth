@@ -33,7 +33,7 @@ export default async function AnalyticsPage() {
         features
       )
     `)
-    .eq('business_id', data.claims.sub)
+    .eq('business_id', profile?.id) // ✅ FIX: Use business profile ID, not user ID
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle()

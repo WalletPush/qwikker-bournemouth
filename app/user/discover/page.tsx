@@ -109,6 +109,10 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
         offer_value,
         offer_image,
         status
+      ),
+      subscription:business_subscriptions!business_id(
+        free_trial_end_date,
+        is_in_free_trial
       )
     `)
     .eq('status', 'approved')
@@ -120,8 +124,48 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
     console.error('❌ Error fetching businesses for discover page:', error, JSON.stringify(error))
   }
   
+  console.log('🔍 DISCOVER DEBUG: Total businesses fetched:', approvedBusinesses?.length)
+  approvedBusinesses?.forEach(b => {
+    console.log(`🔍 ${b.business_name}:`, {
+      hasSubscription: !!b.subscription,
+      subscriptionData: b.subscription,
+      isArray: Array.isArray(b.subscription)
+    })
+  })
+  
+  // ✅ CRITICAL: Filter out expired trials
+  const activeBusinesses = (approvedBusinesses || []).filter(business => {
+    // If no subscription data, assume active (legacy businesses)
+    if (!business.subscription || !Array.isArray(business.subscription) || business.subscription.length === 0) {
+      console.log(`✅ ${business.business_name}: No subscription data, showing (legacy)`)
+      return true
+    }
+    
+    const sub = business.subscription[0]
+    
+    // If not in trial, they're active (paid customers)
+    if (!sub.is_in_free_trial) {
+      console.log(`✅ ${business.business_name}: Not in trial, showing (paid)`)
+      return true
+    }
+    
+    // If in trial, check if expired
+    if (sub.free_trial_end_date) {
+      const endDate = new Date(sub.free_trial_end_date)
+      const now = new Date()
+      const isExpired = endDate < now
+      console.log(`${isExpired ? '❌' : '✅'} ${business.business_name}: Trial ${isExpired ? 'EXPIRED' : 'active'} (ends: ${sub.free_trial_end_date})`)
+      return endDate >= now // Only show if trial NOT expired
+    }
+    
+    console.log(`✅ ${business.business_name}: No end date, showing by default`)
+    return true // Default to showing if we can't determine
+  })
+  
+  console.log(`🔍 DISCOVER RESULT: Showing ${activeBusinesses.length} of ${approvedBusinesses?.length} businesses`)
+  
   // Transform real approved businesses to match the expected format
-  const realBusinesses = (approvedBusinesses || []).map(business => {
+  const realBusinesses = activeBusinesses.map(business => {
     // Check if business has secret menu items
     let hasSecretMenu = false
     if (business.additional_notes) {

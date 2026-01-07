@@ -66,7 +66,7 @@ export function FoundingMemberBanner({ profile, trialDaysLeft }: FoundingMemberB
         {config.founding_member_description.replace(/\d+%/, `${config.founding_member_discount}%`)}
       </p>
       <p className="text-yellow-300 text-xs mt-2 font-medium">
-        Trial ends: {new Date(new Date(profile.created_at).getTime() + (120 * 24 * 60 * 60 * 1000)).toLocaleDateString('en-GB', { 
+        Trial ends: {new Date(new Date().getTime() + (trialDaysLeft * 24 * 60 * 60 * 1000)).toLocaleDateString('en-GB', { 
           day: 'numeric',
           month: 'long',
           year: 'numeric'

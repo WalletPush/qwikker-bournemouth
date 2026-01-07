@@ -31,7 +31,7 @@ export default async function LoyaltyPage() {
         features
       )
     `)
-    .eq('business_id', data.claims.sub)
+    .eq('business_id', profile?.id) // ✅ FIX: Use business profile ID, not user ID
     .single()
 
   // Add subscription to profile

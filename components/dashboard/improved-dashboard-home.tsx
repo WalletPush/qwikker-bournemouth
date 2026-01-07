@@ -101,12 +101,17 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
 
   // Calculate trial days - USE SUBSCRIPTION DATA FIRST, fallback to legacy
   useEffect(() => {
+    console.log('🔍 COMPONENT DEBUG: Profile has subscription?', !!profile?.subscription)
+    console.log('🔍 COMPONENT DEBUG: is_in_free_trial?', profile?.subscription?.is_in_free_trial)
+    console.log('🔍 COMPONENT DEBUG: free_trial_end_date?', profile?.subscription?.free_trial_end_date)
+    
     if (profile?.subscription?.is_in_free_trial && profile?.subscription?.free_trial_end_date) {
       // Use accurate subscription trial data
       const endDate = new Date(profile.subscription.free_trial_end_date)
       const now = new Date()
       const diffTime = endDate.getTime() - now.getTime()
       const daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
+      console.log('✅ USING SUBSCRIPTION DATA: Days left =', daysLeft)
       setTrialDaysLeft(daysLeft)
     } else if (profile?.created_at) {
       // Fallback to legacy calculation (90 days from created_at)
@@ -115,6 +120,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
       const diffTime = now.getTime() - createdDate.getTime()
       const daysSinceSignup = Math.floor(diffTime / (1000 * 60 * 60 * 24))
       const daysLeft = Math.max(0, 90 - daysSinceSignup)
+      console.log('❌ USING FALLBACK: Days left =', daysLeft, '(90 - ' + daysSinceSignup + ' days since signup)')
       setTrialDaysLeft(daysLeft)
     }
   }, [profile])
@@ -317,6 +323,32 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
 
   // Status display logic - FIXED LOGIC
   const getStatusDisplay = () => {
+    // ✅ CRITICAL: Check for expired trial FIRST (overrides all other statuses)
+    // Handle both array format (from admin) and object format (from dashboard)
+    const subscription = Array.isArray(profile?.subscription) 
+      ? profile.subscription[0] 
+      : profile?.subscription
+      
+    if (subscription?.is_in_free_trial && subscription?.free_trial_end_date) {
+      const endDate = new Date(subscription.free_trial_end_date)
+      const now = new Date()
+      
+      if (endDate < now) {
+        const daysExpired = Math.ceil((now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
+        return {
+          text: '🔴 Trial Expired',
+          subtext: `Trial ended ${daysExpired} day${daysExpired !== 1 ? 's' : ''} ago - Please upgrade to continue`,
+          color: 'text-red-400',
+          bgColor: 'bg-red-500/10 border-red-500/20',
+          icon: (
+            <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )
+        }
+      }
+    }
+    
     // If profile is complete but status is still incomplete, show "Ready to Submit"
     if (currentStatus === 'incomplete' && isReadyForReview) {
         return {

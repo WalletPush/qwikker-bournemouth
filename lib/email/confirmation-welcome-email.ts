@@ -7,11 +7,13 @@ interface ConfirmationWelcomeEmailData {
   businessName: string
   profile: Profile
   confirmationUrl: string
+  trialDays?: number // Franchise-specific trial length (default: 90)
 }
 
 // Combined confirmation + welcome email template
 export function generateConfirmationWelcomeEmailHTML(data: ConfirmationWelcomeEmailData): string {
   const { firstName, businessName, profile, confirmationUrl } = data
+  const trialDays = data.trialDays || 90 // Default to 90 days if not provided
   
   // Check what's missing from onboarding
   const hasSecretMenuItems = profile.additional_notes ? 
@@ -263,7 +265,7 @@ export function generateConfirmationWelcomeEmailHTML(data: ConfirmationWelcomeEm
             <div class="confirmation-section">
                 <div class="confirmation-title">📧 Please Confirm Your Email Address</div>
                 <p class="confirmation-text">
-                    To complete your signup and start your <strong>120-day free trial</strong>, please confirm your email address by clicking the button below:
+                    To complete your signup and start your <strong>${trialDays}-day free trial</strong>, please confirm your email address by clicking the button below:
                 </p>
                 <a href="${confirmationUrl}" class="confirm-button">
                     Confirm Email & Start Trial →
@@ -283,7 +285,7 @@ export function generateConfirmationWelcomeEmailHTML(data: ConfirmationWelcomeEm
             <div class="trial-info">
                 <div class="trial-title">🚀 What's Included in Your Free Trial</div>
                 <p class="trial-description">
-                    You'll have <strong>120 days</strong> to explore all Featured plan benefits including unlimited offers, secret menu items, and full dashboard access.
+                    You'll have <strong>${trialDays} days</strong> to explore all Featured plan benefits including unlimited offers, secret menu items, and full dashboard access.
                 </p>
             </div>
             
@@ -334,19 +336,20 @@ export function generateConfirmationWelcomeEmailHTML(data: ConfirmationWelcomeEm
 // Plain text version
 export function generateConfirmationWelcomeEmailText(data: ConfirmationWelcomeEmailData): string {
   const { firstName, businessName, confirmationUrl } = data
+  const trialDays = data.trialDays || 90 // Default to 90 days if not provided
   
   return `
 Welcome to QWIKKER, ${firstName}!
 
 PLEASE CONFIRM YOUR EMAIL ADDRESS
-To complete your signup and start your 120-day free trial, please confirm your email address by visiting this link:
+To complete your signup and start your ${trialDays}-day free trial, please confirm your email address by visiting this link:
 ${confirmationUrl}
 
 CONGRATULATIONS!
 Your ${businessName} is now part of the QWIKKER platform. Once you confirm your email, you'll have full access to your dashboard and all Featured plan benefits.
 
 WHAT'S INCLUDED IN YOUR FREE TRIAL
-You'll have 120 days to explore all Featured plan benefits including unlimited offers, secret menu items, and full dashboard access.
+You'll have ${trialDays} days to explore all Featured plan benefits including unlimited offers, secret menu items, and full dashboard access.
 
 AFTER CONFIRMING YOUR EMAIL:
 • Complete your setup: ${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/dashboard
