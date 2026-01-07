@@ -42,7 +42,7 @@ INSERT INTO franchise_crm_configs (
   'Bournemouth',
   'bournemouth',
   'https://services.leadconnectorhq.com/hooks/IkBldqzvQG4XkoSxkCq8/webhook-trigger/582275ed-27fe-4374-808b-9f8403f820e3',
-  'https://hooks.slack.com/services/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',
+  'https://hooks.slack.com/services/YOUR_WORKSPACE_ID/YOUR_CHANNEL_ID/YOUR_SECRET',
   'Qwikker Bournemouth',
   'bournemouth@qwikker.com',
   'Europe/London',

@@ -53,7 +53,7 @@ SLACK_BUSINESS_WEBHOOK=https://hooks.slack.com/services/YOUR_BUSINESS_WEBHOOK_HE
 SLACK_REPORTS_WEBHOOK=https://hooks.slack.com/services/YOUR_REPORTS_WEBHOOK_HERE
 
 # Legacy webhook (can be removed once new ones are set up)
-NEXT_PUBLIC_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/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
+NEXT_PUBLIC_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR_WORKSPACE_ID/YOUR_CHANNEL_ID/YOUR_SECRET
 ```
 
 ---
