@@ -365,16 +365,8 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
       <ModalComponent />
 
       {/* Events Promotion Banner */}
-      <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl p-6 mb-6">
+      <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-6">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-3">
-            <Calendar className="w-8 h-8 text-white" />
-          </div>
-          <div className="flex justify-center mb-3">
-            <span className="bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-              COMMUNITY EVENTS
-            </span>
-          </div>
           <h3 className="text-xl font-semibold text-white mb-2">
             Promote Your Events to Local Customers
           </h3>

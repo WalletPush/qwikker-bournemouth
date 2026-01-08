@@ -355,7 +355,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           text: 'Ready to Submit',
           subtext: 'All requirements complete - ready for review',
           color: 'text-green-400',
-          bgColor: 'bg-green-500/10 border-green-500/20',
+          bgColor: 'bg-slate-700/30 border-slate-600/50',
           icon: (
             <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -394,7 +394,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           text: 'Live on Qwikker!',
           subtext: 'Your business is discoverable by customers',
           color: 'text-green-400',
-          bgColor: 'bg-green-500/10 border-green-500/20',
+          bgColor: 'bg-slate-700/30 border-slate-600/50',
           icon: (
             <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -406,7 +406,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           text: 'Ready to Submit',
           subtext: 'All requirements complete',
           color: 'text-green-400',
-          bgColor: 'bg-green-500/10 border-green-500/20',
+          bgColor: 'bg-slate-700/30 border-slate-600/50',
           icon: (
             <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -548,17 +548,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
     <div className="space-y-8">
       {/* Page Header */}
       <div className="text-center mb-8">
-        <div className="flex flex-col items-center gap-6 mb-6">
-          <div className="p-4 bg-[#00d083]/10 rounded-full border border-[#00d083]/30">
-            <svg className="w-10 h-10 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-5xl font-bold text-[#00d083] mb-2">Dashboard</h1>
-            <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-[#00d083] to-transparent rounded-full" />
-          </div>
-        </div>
+        <h1 className="text-4xl font-semibold tracking-tight text-white mb-2">Dashboard</h1>
         <p className="text-slate-400 text-lg max-w-2xl mx-auto">
           Welcome back! Here's your business overview.
         </p>
@@ -620,14 +610,14 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div>
           <Link href="/dashboard/offers">
-            <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer transition-colors duration-200">
+            <Card className="relative bg-slate-800/50 border-slate-700 rounded-xl cursor-pointer transition-colors duration-200 hover:border-[#00d083]/50">
               <CardContent className="p-4 text-center">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 bg-slate-700/50 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                 </div>
-                <span className="text-sm font-semibold text-white group-hover:text-[#00d083]">
+                <span className="text-sm font-semibold text-white">
                   Create Offer
                 </span>
               </CardContent>
@@ -637,14 +627,14 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
 
         <div>
           <Link href="/dashboard/secret-menu">
-            <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer transition-colors duration-200">
+            <Card className="relative bg-slate-800/50 border-slate-700 rounded-xl cursor-pointer transition-colors duration-200 hover:border-purple-500/50">
               <CardContent className="p-4 text-center">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 bg-slate-700/50 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
-                <span className="text-sm font-semibold text-white group-hover:text-purple-400">
+                <span className="text-sm font-semibold text-white">
                   Add Secret Menu
                 </span>
               </CardContent>
@@ -654,14 +644,14 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
 
         <div>
           <Link href="/dashboard/profile#featured-items">
-            <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer transition-colors duration-200">
+            <Card className="relative bg-slate-800/50 border-slate-700 rounded-xl cursor-pointer transition-colors duration-200 hover:border-blue-500/50">
               <CardContent className="p-4 text-center">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 bg-slate-700/50 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <span className="text-sm font-semibold text-white group-hover:text-blue-400">
+                <span className="text-sm font-semibold text-white">
                   Update Menu
                 </span>
               </CardContent>
@@ -671,14 +661,14 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
 
         <div>
           <Link href="/dashboard/profile#business-info">
-            <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-xl shadow-lg cursor-pointer transition-colors duration-200">
+            <Card className="relative bg-slate-800/50 border-slate-700 rounded-xl cursor-pointer transition-colors duration-200 hover:border-orange-500/50">
               <CardContent className="p-4 text-center">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 bg-slate-700/50 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>
-                <span className="text-sm font-semibold text-white group-hover:text-orange-400">
+                <span className="text-sm font-semibold text-white">
                   Edit Profile
                 </span>
               </CardContent>
@@ -1018,9 +1008,9 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               } else {
                 return (
                   <div className="space-y-4">
-                    <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                      <p className="text-sm text-green-300 mb-2">🎉 All Items Complete!</p>
-                      <p className="text-xs text-green-400">Your listing is fully optimized for maximum visibility</p>
+                    <div className="p-4 bg-slate-700/30 border border-slate-600/50 rounded-lg">
+                      <p className="text-sm text-green-400 mb-2">All Items Complete</p>
+                      <p className="text-xs text-slate-400">Your listing is fully optimized for maximum visibility</p>
                     </div>
                     <div className="space-y-2">
                       <p className="text-sm font-medium text-white">Keep customers engaged:</p>

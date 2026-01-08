@@ -430,26 +430,16 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
 
       {/* Page Header - Clean and Aligned */}
       <div className="text-center relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 rounded-3xl blur-3xl"></div>
-        <div className="relative">
-          <div className="flex flex-col items-center gap-6 mb-6">
-            <div className="p-4 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full border border-purple-500/30 animate-pulse">
-              <svg className="w-12 h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-              Secret Menu Club
-            </h1>
-          </div>
-          <p className="text-xl text-slate-300 mb-2">
-            Unlock Bournemouth's most guarded culinary secrets
-          </p>
-          <p className="text-slate-400 max-w-2xl mx-auto">
-            These exclusive off-menu items are known only to insiders. Each secret tells a story, 
-            each dish holds mystery. Start your culinary adventure!
-          </p>
-        </div>
+        <h1 className="text-4xl font-semibold tracking-tight text-white mb-2">
+          Secret Menu Club
+        </h1>
+        <p className="text-xl text-slate-300 mb-2">
+          Unlock Bournemouth's most guarded culinary secrets
+        </p>
+        <p className="text-slate-400 max-w-2xl mx-auto">
+          These exclusive off-menu items are known only to insiders. Each secret tells a story, 
+          each dish holds mystery. Start your culinary adventure!
+        </p>
       </div>
 
       {/* Stats Dashboard - Dark & Mysterious */}

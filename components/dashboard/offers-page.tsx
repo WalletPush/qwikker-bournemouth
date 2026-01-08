@@ -299,20 +299,10 @@ export function OffersPage({ profile }: OffersPageProps) {
   return (
     <div className="space-y-6">
       {/* Qwikker Exclusive Offer Promotion Banner */}
-      <div className="bg-gradient-to-r from-[#00d083]/10 to-[#00b86f]/10 border border-[#00d083]/30 rounded-xl p-6 mb-6">
+      <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-6">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-xl flex items-center justify-center mx-auto mb-3">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-            </svg>
-          </div>
-          <div className="flex justify-center mb-3">
-            <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-xs font-bold px-3 py-1 rounded-full">
-              EXCLUSIVE
-            </span>
-          </div>
           <h3 className="text-xl font-semibold text-white mb-2">
-            Create Qwikker-Exclusive Offers
+            Create Exclusive Offers
           </h3>
           <p className="text-slate-300 mb-4 leading-relaxed max-w-3xl mx-auto">
             Stand out from competitors by creating special offers exclusively for Qwikker users. 

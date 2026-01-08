@@ -189,6 +189,19 @@ export default async function AdminPage() {
 
   console.log(`🗓️ Found ${pendingEvents?.length || 0} pending events for ${currentCity}`)
   
+  // Fetch wallet passes installed count for this franchise
+  const { count: walletPassesCount, error: passesError } = await supabase
+    .from('app_users')
+    .select('*', { count: 'exact', head: true })
+    .not('wallet_pass_id', 'is', null)
+    .in('city', coveredCities)
+
+  if (passesError) {
+    console.error('Error fetching wallet passes count:', passesError)
+  }
+
+  console.log(`📱 Found ${walletPassesCount || 0} wallet passes installed for ${currentCity} franchise`)
+  
   // Fetch comprehensive CRM data
   const crmData = await getBusinessCRMData(currentCity)
   
@@ -203,6 +216,7 @@ export default async function AdminPage() {
       pendingChanges={pendingChanges || []}
       pendingMenus={pendingMenus || []}
       pendingEvents={pendingEvents || []}
+      walletPassesCount={walletPassesCount || 0}
     />
   )
 }

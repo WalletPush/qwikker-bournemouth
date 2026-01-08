@@ -62,9 +62,10 @@ interface AdminDashboardProps {
   pendingChanges: any[]
   pendingMenus: any[]
   pendingEvents: any[]
+  walletPassesCount: number
 }
 
-export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisplayName, pendingChangesCount, pendingChanges, pendingMenus, pendingEvents }: AdminDashboardProps) {
+export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisplayName, pendingChangesCount, pendingChanges, pendingMenus, pendingEvents, walletPassesCount }: AdminDashboardProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -1128,7 +1129,7 @@ Qwikker Admin Team`
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950/40 to-slate-950">
+    <div className="min-h-screen bg-slate-950">
       {/* Mobile sidebar overlay */}
       {isMobileMenuOpen && (
         <div 
@@ -1138,7 +1139,7 @@ Qwikker Admin Team`
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-slate-900/95 backdrop-blur-xl border-r border-indigo-500/30 transform transition-transform duration-300 z-50 flex flex-col ${
+      <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 lg:max-w-none`}>
         
@@ -1154,13 +1155,8 @@ Qwikker Admin Team`
               />
               {/* Admin Dashboard Text */}
               <div>
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <p className="text-lg font-bold text-white">Admin Dashboard</p>
-                  <div className="px-2 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-bold rounded-full border border-indigo-400/50">
-                    ADMIN
-                  </div>
-                </div>
-                <p className="text-sm text-indigo-300">{cityDisplayName}</p>
+                <p className="text-lg font-bold text-white mb-1">Admin Dashboard</p>
+                <p className="text-sm text-slate-400">{cityDisplayName}</p>
               </div>
           </div>
         </div>
@@ -1189,7 +1185,7 @@ Qwikker Admin Team`
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                       activeTab === item.id
                         ? 'bg-[#00d083]/20 text-[#00d083]'
-                        : item.count > 0 && (item.id === 'incomplete' || item.id === 'pending' || item.id === 'updates')
+                        : item.count > 0 && (item.id === 'incomplete' || item.id === 'pending' || item.id === 'updates' || item.id === 'claims')
                           ? 'bg-red-500/20 text-red-400 border border-red-500/30' // Red ONLY when count > 0 AND needs attention
                           : item.count > 0 && item.id === 'live'
                           ? 'bg-green-500/20 text-green-400 border border-green-500/30' // Green ONLY when count > 0 AND live
@@ -1339,7 +1335,7 @@ Qwikker Admin Team`
       {/* Main content */}
       <div className="lg:ml-80">
         {/* Top header */}
-        <header className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700 px-4 sm:px-6 py-4">
+        <header className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Left side - Mobile menu button */}
             <div className="flex items-center">
@@ -1355,7 +1351,6 @@ Qwikker Admin Team`
               {/* Page title */}
               <div className="hidden lg:block ml-4">
                 <h1 className="text-lg font-semibold text-slate-100">
-                {activeTab === 'overview' && 'Dashboard Overview'}
                 {activeTab === 'pending' && 'Pending Reviews'}
                 {activeTab === 'updates' && 'Pending Updates'}
                 {activeTab === 'live' && 'Live Listings'}
@@ -1382,7 +1377,7 @@ Qwikker Admin Team`
               </div>
               
               {/* City indicator */}
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center font-semibold text-slate-100">
+              <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center font-bold text-slate-200 border border-slate-600">
                 {cityDisplayName.charAt(0).toUpperCase()}
               </div>
             </div>
@@ -1398,11 +1393,6 @@ Qwikker Admin Team`
               <div className="mb-8">
                 {/* Title Section - Centered */}
                 <div className="flex flex-col items-center justify-center mb-6 text-center">
-                  <span className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#00d083] to-emerald-600 flex items-center justify-center shadow-lg shadow-[#00d083]/20 mb-4">
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </span>
                   <h2 className="text-4xl font-bold text-white mb-2">
                     Live Listings
                   </h2>
@@ -1644,7 +1634,7 @@ Qwikker Admin Team`
                 </div>
               </div>
             ) : (
-              <div className="mb-8">
+              <div className="mb-8 text-center">
                 <h2 className="text-3xl font-bold text-white mb-2">
                   {activeTab === 'overview' && 'Dashboard Overview'}
                   {activeTab === 'pending' && 'Pending Reviews'}
@@ -1698,6 +1688,8 @@ Qwikker Admin Team`
                   updatesCount={pendingChangesCount}
                   liveCount={liveBusinesses.length}
                   incompleteCount={incompleteBusinesses.length}
+                  claimsCount={pendingClaims.length}
+                  walletPassesCount={walletPassesCount}
                   onNavigateToTab={setActiveTab}
                 />
               )}

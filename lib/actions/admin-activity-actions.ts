@@ -5,7 +5,7 @@ import { getFranchiseCity } from '@/lib/utils/franchise-areas'
 
 export interface AdminActivity {
   id: string
-  type: 'application' | 'update' | 'approval' | 'rejection' | 'signup' | 'trial_expiry' | 'pass_install' | 'offer_claim' | 'business_visit'
+  type: 'application' | 'update' | 'approval' | 'rejection' | 'signup' | 'trial_expiry' | 'pass_install' | 'offer_claim' | 'business_visit' | 'claim_request'
   message: string
   time: string
   timestamp: Date // Add actual timestamp for accurate sorting
@@ -22,7 +22,6 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
     
     // 🎯 SIMPLIFIED FRANCHISE SYSTEM: Get franchise city
     const franchiseCity = await getFranchiseCity(city)
-    console.log(`📊 Admin Activity for ${city} franchise city: ${franchiseCity}`)
 
     // Get recent wallet pass installations (user signups) - CITY FILTERED
     const { data: newPassInstalls } = await supabase
@@ -72,22 +71,40 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
       .order('claimed_at', { ascending: false })
       .limit(20)
 
+    // 🚫 DISABLED: Business visits clutter the admin feed (will flood with real user activity)
     // Get recent business visits - FRANCHISE FILTERED
-    const { data: businessVisits } = await supabase
-      .from('user_business_visits')
+    // const { data: businessVisits } = await supabase
+    //   .from('user_business_visits')
+    //   .select(`
+    //     id,
+    //     visit_date,
+    //     business_id,
+    //     user_id,
+    //     app_users!inner(city)
+    //   `)
+    //   .eq('app_users.city', franchiseCity) // 🔒 SECURITY: Filter by franchise
+    //   .order('visit_date', { ascending: false })
+    //   .limit(8)
+    const businessVisits = null // Disabled to keep feed focused on admin actions
+
+    // Get recent claim requests - CITY FILTERED
+    const { data: claimRequests } = await supabase
+      .from('claim_requests')
       .select(`
         id,
-        visit_date,
+        created_at,
+        status,
+        business_email,
+        business_website,
         business_id,
-        user_id,
-        app_users!inner(city)
+        user_id
       `)
-      .eq('app_users.city', franchiseCity) // 🔒 SECURITY: Filter by franchise
-      .order('visit_date', { ascending: false })
-      .limit(8)
+      .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING
+      .order('created_at', { ascending: false })
+      .limit(10)
 
-    // Get recent status changes
-    const { data: statusChanges } = await supabase
+    // Get recent status changes - CITY FILTERED
+    const { data: statusChanges, error: statusError } = await supabase
       .from('business_profiles')
       .select(`
         id,
@@ -97,7 +114,8 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
         created_at,
         business_town
       `)
-      .neq('updated_at', null)
+      .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Only show this city's businesses
+      .not('updated_at', 'is', null) // 🔧 FIX: Use proper null check syntax
       .order('updated_at', { ascending: false })
       .limit(20)
 
@@ -142,18 +160,8 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
     // Process status changes (approvals, updates, etc.)
     if (statusChanges) {
       for (const change of statusChanges) {
-        
         const updatedAt = new Date(change.updated_at)
         const createdAt = new Date(change.created_at)
-        
-        // For pending_review, we want to show the initial submission
-        // For approved/rejected, we want to show the status change (skip if no real update)
-        const isInitialCreation = Math.abs(updatedAt.getTime() - createdAt.getTime()) < 60000
-        
-        // Skip initial creation for approved/rejected (we only want to show the status change)
-        if (isInitialCreation && change.status !== 'pending_review') {
-          continue
-        }
 
         let message = ''
         let type: AdminActivity['type'] = 'update'
@@ -164,7 +172,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
 
         switch (change.status) {
           case 'approved':
-            message = `Approved: ${change.business_name || 'Business'} in ${change.business_town || 'Unknown City'}`
+            message = `Admin approved: ${change.business_name || 'Business'} in ${change.business_town || 'Unknown City'}`
             type = 'approval'
             color = 'bg-green-500'
             iconType = 'check'
@@ -172,7 +180,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
             activityDate = updatedAt
             break
           case 'rejected':
-            message = `Rejected: ${change.business_name || 'Business'} application`
+            message = `Admin rejected: ${change.business_name || 'Business'} application`
             type = 'rejection'
             color = 'bg-red-500'
             iconType = 'x'
@@ -180,21 +188,14 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
             activityDate = updatedAt
             break
           case 'pending_review':
-            message = `${change.business_name || 'Business'} submitted for review`
-            type = 'update'
-            color = 'bg-yellow-500'
-            iconType = 'clock'
-            // Use created_at for submissions (when business first submitted)
-            activityDate = createdAt
-            activityId = `status-${change.id}-${change.created_at}`
-            break
+            // Skip pending_review from status changes (we show these from new applications instead)
+            continue
+          case 'incomplete':
+            // Skip incomplete status (not interesting for activity feed)
+            continue
           default:
-            message = `${change.business_name || 'Business'} updated profile`
-            type = 'update'
-            iconType = 'edit'
-            // Use updated_at for general updates
-            activityDate = updatedAt
-            break
+            // Skip other status updates (only show approvals/rejections)
+            continue
         }
 
         const timeAgo = getTimeAgo(activityDate)
@@ -263,44 +264,105 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
       }
     }
 
+    // 🚫 DISABLED: Business visits processing (keeping feed focused on admin actions)
     // Process business visits
-    if (businessVisits) {
-      for (const visit of businessVisits) {
-        const visitDate = new Date(visit.visit_date)
-        const timeAgo = getTimeAgo(visitDate)
+    // if (businessVisits) {
+    //   for (const visit of businessVisits) {
+    //     const visitDate = new Date(visit.visit_date)
+    //     const timeAgo = getTimeAgo(visitDate)
 
-        // Get user and business names
-        const { data: user } = await supabase
-          .from('app_users')
-          .select('name')
-          .eq('user_id', visit.user_id)
-          .single()
+    //     // Get user and business names
+    //     const { data: user } = await supabase
+    //       .from('app_users')
+    //       .select('name')
+    //       .eq('user_id', visit.user_id)
+    //       .single()
 
+    //     const { data: business } = await supabase
+    //       .from('business_profiles')
+    //       .select('business_name, business_town')
+    //       .eq('id', visit.business_id)
+    //       .single()
+
+    //     const userName = user?.name || 'Unknown User'
+    //     const businessName = business?.business_name || 'Unknown Business'
+    //     const businessTown = business?.business_town || 'Unknown City'
+
+    //     activities.push({
+    //       id: `visit-${visit.id}`,
+    //       type: 'business_visit',
+    //       message: `${userName} visited ${businessName} in ${businessTown}`,
+    //       time: timeAgo,
+    //       timestamp: visitDate,
+    //       user_name: userName,
+    //       business_name: businessName,
+    //       iconType: 'mapPin',
+    //       color: 'bg-indigo-500'
+    //     })
+    //   }
+    // }
+
+    // Process claim requests
+    if (claimRequests) {
+      for (const claim of claimRequests) {
+        const claimDate = new Date(claim.created_at)
+        const timeAgo = getTimeAgo(claimDate)
+
+        // Get business and user details
         const { data: business } = await supabase
           .from('business_profiles')
-          .select('business_name, business_town')
-          .eq('id', visit.business_id)
+          .select('business_name')
+          .eq('id', claim.business_id)
           .single()
 
-        const userName = user?.name || 'Unknown User'
+        const { data: user } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('user_id', claim.user_id)
+          .single()
+
         const businessName = business?.business_name || 'Unknown Business'
-        const businessTown = business?.business_town || 'Unknown City'
+        const userEmail = user?.email || claim.business_email || 'Unknown User'
+
+        // Set icon and color based on status
+        let iconType = 'document'
+        let color = 'bg-amber-500'
+        let statusText = 'claimed'
+        
+        switch (claim.status) {
+          case 'approved':
+            iconType = 'check'
+            color = 'bg-green-500'
+            statusText = 'claim approved'
+            break
+          case 'denied':
+            iconType = 'x'
+            color = 'bg-red-500'
+            statusText = 'claim denied'
+            break
+          case 'pending':
+          default:
+            iconType = 'document'
+            color = 'bg-amber-500'
+            statusText = 'claimed'
+            break
+        }
 
         activities.push({
-          id: `visit-${visit.id}`,
-          type: 'business_visit',
-          message: `${userName} visited ${businessName} in ${businessTown}`,
+          id: `claim-req-${claim.id}`,
+          type: 'claim_request',
+          message: `${userEmail} ${statusText} listing for ${businessName}`,
           time: timeAgo,
-          timestamp: visitDate,
-          user_name: userName,
+          timestamp: claimDate,
+          user_name: userEmail,
           business_name: businessName,
-          iconType: 'mapPin',
-          color: 'bg-indigo-500'
+          iconType,
+          color
         })
       }
     }
 
-    // Get trial expiries (businesses with featured plan that are about to expire)
+    // Get trial expiries (businesses with featured plan that are about to expire) - CITY FILTERED
     const { data: trials } = await supabase
       .from('business_profiles')
       .select(`
@@ -310,6 +372,7 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
         plan,
         business_town
       `)
+      .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Only this city's trials
       .eq('plan', 'featured')
       .not('business_name', 'is', null)
 

@@ -300,7 +300,7 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
               </div>
               
               {/* Avatar - Perfect circle */}
-              <div className="w-10 h-10 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-full flex items-center justify-center font-semibold text-black">
+              <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center font-semibold text-white">
                 {businessInitials}
               </div>
               

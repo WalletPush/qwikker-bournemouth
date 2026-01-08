@@ -30,17 +30,7 @@ export function SocialWizardPage({ profile }: SocialWizardPageProps) {
     <div className="space-y-6">
       {/* Page Header */}
       <div className="text-center mb-8">
-        <div className="flex flex-col items-center gap-6 mb-6">
-          <div className="p-4 bg-[#00d083]/10 rounded-full border border-[#00d083]/30">
-            <svg className="w-10 h-10 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-5xl font-bold text-[#00d083] mb-2">Social Wizard</h1>
-            <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-[#00d083] to-transparent rounded-full" />
-          </div>
-        </div>
+        <h1 className="text-4xl font-semibold tracking-tight text-white mb-2">Social Wizard</h1>
         <p className="text-slate-400 text-lg max-w-2xl mx-auto">
           Create stunning, on-brand social media posts for Instagram and Facebook
         </p>

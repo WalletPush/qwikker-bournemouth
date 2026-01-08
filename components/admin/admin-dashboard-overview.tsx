@@ -10,6 +10,8 @@ interface DashboardOverviewProps {
   updatesCount: number
   liveCount: number
   incompleteCount: number
+  claimsCount: number
+  walletPassesCount: number
   onNavigateToTab: (tab: string) => void
 }
 
@@ -19,6 +21,8 @@ export function AdminDashboardOverview({
   updatesCount, 
   liveCount, 
   incompleteCount,
+  claimsCount,
+  walletPassesCount,
   onNavigateToTab 
 }: DashboardOverviewProps) {
   const [currentTime, setCurrentTime] = useState<string>('')
@@ -71,6 +75,18 @@ export function AdminDashboardOverview({
       )
     },
     {
+      title: 'Claim Requests',
+      count: claimsCount,
+      description: 'Businesses claiming their listings',
+      action: () => onNavigateToTab('claims'),
+      priority: 'high',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      )
+    },
+    {
       title: 'Incomplete Profiles',
       count: incompleteCount,
       description: 'Businesses need to complete setup',
@@ -94,7 +110,7 @@ export function AdminDashboardOverview({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
         </svg>
       ),
-      color: 'from-purple-500 to-pink-500'
+      iconColor: 'text-purple-400'
     },
     {
       title: 'City Analytics',
@@ -105,7 +121,7 @@ export function AdminDashboardOverview({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       ),
-      color: 'from-blue-500 to-cyan-500'
+      iconColor: 'text-blue-400'
     },
     {
       title: 'CRM Contacts',
@@ -116,7 +132,7 @@ export function AdminDashboardOverview({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       ),
-      color: 'from-green-500 to-emerald-500'
+      iconColor: 'text-green-400'
     },
     {
       title: 'AI Testing',
@@ -127,7 +143,7 @@ export function AdminDashboardOverview({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
         </svg>
       ),
-      color: 'from-orange-500 to-red-500'
+      iconColor: 'text-orange-400'
     }
   ]
 
@@ -136,7 +152,7 @@ export function AdminDashboardOverview({
     async function loadActivity() {
       setIsLoadingActivity(true)
       try {
-        const activities = await getAdminActivity(city, 5) // 🎯 Pass city parameter
+        const activities = await getAdminActivity(city, 10) // 🎯 Pass city parameter (increased to 10 for better visibility)
         setRecentActivity(activities)
       } catch (error) {
         console.error('Error loading admin activity:', error)
@@ -175,30 +191,43 @@ export function AdminDashboardOverview({
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-indigo-500/10 to-purple-600/10 border border-indigo-500/20 rounded-2xl p-6 sm:p-8">
+      <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 sm:p-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
               Welcome back, Admin
             </h1>
-            <p className="text-lg text-indigo-300">
-              {city} Admin Dashboard
-            </p>
             {currentTime && (
               <p className="text-sm text-slate-400 mt-1">
                 {currentTime}
               </p>
             )}
           </div>
-          <div className="flex items-center gap-6">
-            <div className="text-right">
-              <p className="text-sm text-slate-400">Live Businesses</p>
-              <p className="text-2xl font-bold text-white">{liveCount}</p>
+          <div className="flex items-center gap-4">
+            {/* Live Businesses Counter */}
+            <div className="flex items-center gap-3 bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3">
+              <div className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Live Businesses</p>
+                <p className="text-2xl font-bold text-white">{liveCount}</p>
+              </div>
             </div>
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
+
+            {/* Wallet Passes Counter */}
+            <div className="flex items-center gap-3 bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3">
+              <div className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Wallet Passes</p>
+                <p className="text-2xl font-bold text-white">{walletPassesCount}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -213,7 +242,7 @@ export function AdminDashboardOverview({
           </svg>
           Priority Actions
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {priorityActions.map((action, index) => (
             <Card 
               key={index}
@@ -252,8 +281,8 @@ export function AdminDashboardOverview({
               className="p-4 sm:p-6 bg-slate-800/50 border border-slate-700/50 cursor-pointer hover:bg-slate-700/50 transition-all duration-200 group"
               onClick={action.action}
             >
-              <div className={`w-12 h-12 bg-gradient-to-r ${action.color} rounded-xl flex items-center justify-center mb-4 transition-colors duration-200`}>
-                <div className="text-white">
+              <div className="w-12 h-12 bg-slate-700/50 rounded-xl flex items-center justify-center mb-4 transition-colors duration-200">
+                <div className={action.iconColor}>
                   {action.icon}
                 </div>
               </div>
@@ -335,6 +364,12 @@ export function AdminDashboardOverview({
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      )
+                    case 'document':
+                      return (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       )
                     default:
