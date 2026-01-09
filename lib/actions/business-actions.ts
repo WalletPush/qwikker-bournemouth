@@ -413,15 +413,22 @@ export async function updateBusinessInfo(userId: string, updates: any) {
     // Don't fail the request, but log the error
   }
 
-  // Only send Slack notification if important fields were updated (not routine contact changes)
-  if (importantUpdates.length > 0) {
+  // Only send Slack notification if:
+  // 1. Important fields were updated (not routine contact changes)
+  // 2. Business is already approved (not during initial setup/onboarding)
+  const isApproved = profile.status === 'approved' || profile.status === 'live'
+  
+  if (importantUpdates.length > 0 && isApproved) {
     try {
       await sendBusinessUpdateNotification(profile, 'business_info', { 
         updatedFields: importantUpdates 
       })
+      console.log(`📢 Slack notification sent for approved business update: ${profile.business_name}`)
     } catch (error) {
       console.error('Slack notification failed (non-critical):', error)
     }
+  } else if (importantUpdates.length > 0 && !isApproved) {
+    console.log(`🔕 Skipping Slack notification (business not approved yet): ${profile.business_name}`)
   }
 
   // 🔥 SYNC TO KNOWLEDGE BASE if description/details changed
