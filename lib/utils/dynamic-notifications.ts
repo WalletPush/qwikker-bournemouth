@@ -16,39 +16,49 @@ export interface NotificationData {
  */
 export async function sendCitySlackNotification(notification: NotificationData) {
   try {
+    console.log(`🔍 [SLACK] Looking up webhook for city: ${notification.city}`)
+    
     // Try CRM config first (supports environment variables)
     const { getFranchiseCRMConfigWithEnvOverrides } = await import('./franchise-crm-config')
     const crmConfig = await getFranchiseCRMConfigWithEnvOverrides(notification.city)
     
     let config = null
     let webhookUrl = crmConfig?.slack_webhook_url
+    console.log(`🔍 [SLACK] CRM config webhook: ${webhookUrl ? '✅ Found' : '❌ Not found'}`)
     
     // Fallback to franchise config if no CRM config
     if (!webhookUrl) {
       config = await getFranchiseConfig(notification.city)
       webhookUrl = config?.slack_webhook_url
+      console.log(`🔍 [SLACK] Franchise config webhook: ${webhookUrl ? '✅ Found' : '❌ Not found'}`)
     }
     
     if (!webhookUrl) {
-      console.warn(`No Slack webhook configured for ${notification.city}`)
+      console.error(`❌ [SLACK] No webhook configured for ${notification.city}`)
+      console.error(`❌ [SLACK] Please set ${notification.city.toUpperCase()}_SLACK_WEBHOOK_URL in your environment`)
       return { success: false, error: 'No Slack webhook configured' }
     }
+    
+    console.log(`✅ [SLACK] Using webhook URL: ${webhookUrl.substring(0, 40)}...`)
 
+    // Use <!here> for mobile push notifications (notifies active users + mobile)
+    // This ensures you get lock screen notifications on your phone!
     const slackMessage = {
-      text: `<!channel> 🎯 ${notification.city.toUpperCase()} - ${notification.title}`,
+      text: `<!here> 🚨 ${notification.city.toUpperCase()} - ${notification.title}`,
       blocks: [
         {
           type: 'header',
           text: {
             type: 'plain_text',
-            text: `🏙️ ${crmConfig?.displayName || config?.display_name || notification.city.charAt(0).toUpperCase() + notification.city.slice(1)} Alert`
+            text: `🏙️ ${crmConfig?.displayName || config?.display_name || notification.city.charAt(0).toUpperCase() + notification.city.slice(1)} Alert`,
+            emoji: true
           }
         },
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `<!channel>\n*${notification.title}*\n${notification.message}`
+            text: `<!here> *${notification.title}*\n${notification.message}`
           }
         },
         {
@@ -63,6 +73,7 @@ export async function sendCitySlackNotification(notification: NotificationData) 
       ]
     }
 
+    console.log(`📤 [SLACK] Sending notification to ${notification.city}...`)
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
@@ -72,14 +83,16 @@ export async function sendCitySlackNotification(notification: NotificationData) 
     })
 
     if (!response.ok) {
-      throw new Error(`Slack API error: ${response.status}`)
+      const errorText = await response.text()
+      console.error(`❌ [SLACK] API error: ${response.status} - ${errorText}`)
+      throw new Error(`Slack API error: ${response.status} - ${errorText}`)
     }
 
-    console.log(`✅ Slack notification sent to ${notification.city}`)
+    console.log(`✅ [SLACK] Notification sent successfully to ${notification.city}`)
     return { success: true }
 
   } catch (error) {
-    console.error(`❌ Error sending Slack notification to ${notification.city}:`, error)
+    console.error(`❌ [SLACK] Error sending notification to ${notification.city}:`, error)
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 }

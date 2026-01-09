@@ -836,7 +836,7 @@ export async function syncSecretMenuItemToKnowledgeBase(menuItemId: string): Pro
         business:business_profiles(business_name, city)
       `)
       .eq('id', menuItemId)
-      .eq('change_type', 'secret_menu_item')
+      .eq('change_type', 'secret_menu')
       .single()
 
     if (menuError || !menuItem) {

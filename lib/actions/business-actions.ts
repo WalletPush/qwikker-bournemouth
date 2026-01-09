@@ -49,19 +49,26 @@ export async function addSecretMenuItem(userId: string, itemData: {
 
   // 📢 SEND SLACK NOTIFICATION: Secret menu item submitted
   try {
+    console.log(`📢 [SECRET MENU] Attempting to send Slack notification for: ${itemData.itemName}`)
+    console.log(`📢 [SECRET MENU] Business: ${profile.business_name}, City: ${profile.city || 'bournemouth'}`)
+    
     const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
     
-    await sendCitySlackNotification({
+    const notificationResult = await sendCitySlackNotification({
       title: `🤫 New Secret Menu Item: ${itemData.itemName}`,
-      message: `${profile.business_name} has submitted a new secret menu item for admin approval.\n\n**Item Details:**\n• Name: ${itemData.itemName}\n• Description: ${itemData.description || 'Not provided'}\n• Price: ${itemData.price || 'Not provided'}`,
+      message: `${profile.business_name} has submitted a new secret menu item for admin approval.\n\n**Item Details:**\n• Name: ${itemData.itemName}\n• Description: ${itemData.description || 'Not provided'}\n• Price: ${itemData.price || 'Not provided'}\n\n🔗 View in admin: ${process.env.NEXT_PUBLIC_BASE_URL || 'https://app.qwikker.com'}/admin?tab=applications`,
       city: profile.city || 'bournemouth',
-      type: 'offer_created', // Reusing this type
-      data: { businessName: profile.business_name, itemName: itemData.itemName }
+      type: 'offer_created',
+      data: { businessName: profile.business_name, itemName: itemData.itemName, changeId: changeRecord.id }
     })
     
-    console.log(`📢 Slack notification sent for secret menu submission: ${itemData.itemName}`)
+    if (notificationResult.success) {
+      console.log(`✅ [SECRET MENU] Slack notification sent successfully for: ${itemData.itemName}`)
+    } else {
+      console.error(`❌ [SECRET MENU] Slack notification failed:`, notificationResult.error)
+    }
   } catch (error) {
-    console.error('⚠️ Slack notification error (non-critical):', error)
+    console.error('❌ [SECRET MENU] Slack notification exception:', error)
   }
 
   revalidatePath('/dashboard')
@@ -134,17 +141,25 @@ export async function createOffer(userId: string, offerData: {
 
   // 📢 SEND SLACK NOTIFICATION: Offer submitted for approval
   try {
+    console.log(`📢 [OFFER] Attempting to send Slack notification for: ${offerData.offerName}`)
+    console.log(`📢 [OFFER] Business: ${profile.business_name}, City: ${profile.city || 'bournemouth'}`)
+    
     const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
     
-    await sendCitySlackNotification({
-      title: `New Offer Submitted: ${offerData.offerName}`,
-      message: `${profile.business_name} has submitted a new offer for admin approval.\n\n**Offer Details:**\n• Value: ${offerData.offerValue}\n• Type: ${offerData.offerType}\n• Claims: ${offerData.offerClaimAmount}`,
+    const notificationResult = await sendCitySlackNotification({
+      title: `💰 New Offer Submitted: ${offerData.offerName}`,
+      message: `${profile.business_name} has submitted a new offer for admin approval.\n\n**Offer Details:**\n• Value: ${offerData.offerValue}\n• Type: ${offerData.offerType}\n• Claims: ${offerData.offerClaimAmount}\n\n🔗 View in admin: ${process.env.NEXT_PUBLIC_BASE_URL || 'https://app.qwikker.com'}/admin?tab=applications`,
       city: profile.city || 'bournemouth',
       type: 'offer_created',
-      data: { businessName: profile.business_name, offerName: offerData.offerName }
+      data: { businessName: profile.business_name, offerName: offerData.offerName, changeId: changeRecord.id }
     })
     
-    console.log(`📢 Slack notification sent for offer submission: ${offerData.offerName}`)
+    if (notificationResult.success) {
+      console.log(`✅ [OFFER] Slack notification sent successfully for: ${offerData.offerName}`)
+    } else {
+      console.error(`❌ [OFFER] Slack notification failed:`, notificationResult.error)
+    }
+
   } catch (error) {
     console.error('⚠️ Slack notification error (non-critical):', error)
   }

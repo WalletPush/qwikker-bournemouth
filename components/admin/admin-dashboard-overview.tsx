@@ -51,7 +51,7 @@ export function AdminDashboardOverview({
 
   const priorityActions = [
     {
-      title: 'Pending Reviews',
+      title: 'Pending Applications',
       count: pendingCount,
       description: 'New business applications awaiting approval',
       action: () => onNavigateToTab('pending'),

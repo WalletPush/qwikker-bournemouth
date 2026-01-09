@@ -245,20 +245,6 @@ export async function POST(request: NextRequest) {
             secret_menu_items: secretMenuItems
           })
         }
-
-        // 📚 ADD SECRET MENU TO KNOWLEDGE BASE with embeddings (so AI chat can see it!)
-        try {
-          const { syncSecretMenuItemToKnowledgeBase } = await import('@/lib/ai/embeddings')
-          const syncResult = await syncSecretMenuItemToKnowledgeBase(changeId)
-          
-          if (syncResult.success) {
-            console.log(`📚 ${syncResult.message}`)
-          } else {
-            console.error(`⚠️ KB sync warning: ${syncResult.message}`)
-          }
-        } catch (kbError) {
-          console.error('⚠️ Knowledge base sync error (non-critical):', kbError)
-        }
       } else if (change.change_type === 'logo') {
         // Approve logo upload
         updateData = {
@@ -324,6 +310,25 @@ export async function POST(request: NextRequest) {
       }
       
       console.log(`✅ Change ${changeId} approved by ${admin.username} - ${change.change_type} for ${change.business?.business_name}`)
+      
+      // 📚 ADD SECRET MENU TO KNOWLEDGE BASE (after status is approved!)
+      if (change.change_type === 'secret_menu') {
+        try {
+          console.log(`🔍 Syncing approved secret menu item to knowledge base (changeId: ${changeId})`)
+          const { syncSecretMenuItemToKnowledgeBase } = await import('@/lib/ai/embeddings')
+          const syncResult = await syncSecretMenuItemToKnowledgeBase(changeId)
+          
+          if (syncResult.success) {
+            console.log(`📚 ✅ ${syncResult.message}`)
+          } else {
+            console.error(`⚠️ KB sync FAILED: ${syncResult.message}`)
+            console.error(`⚠️ Error details:`, syncResult.error)
+          }
+        } catch (kbError) {
+          console.error('⚠️ Knowledge base sync error (non-critical):', kbError)
+          console.error('⚠️ Stack trace:', (kbError as Error).stack)
+        }
+      }
       
       // 📞 SYNC APPROVALS TO GHL (offers and files, skip secret menu items)
       if (change.change_type === 'offer' || change.change_type === 'logo' || change.change_type === 'menu_url' || change.change_type === 'business_images') {

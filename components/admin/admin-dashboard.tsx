@@ -107,7 +107,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
         deniedClaims: 0,
         riskScore: 15,
         riskLevel: 'safe' as const,
-        confidenceBadge: '✅ Email matches business name'
+        confidenceBadge: 'Email matches business name'
       },
       foundingMemberEligible: true,
       foundingMemberCount: 27
@@ -171,7 +171,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
         deniedClaims: 0,
         riskScore: 5,
         riskLevel: 'safe' as const,
-        confidenceBadge: '✅ VERY HIGH - Email domain matches website'
+        confidenceBadge: 'VERY HIGH - Email domain matches website'
       },
       foundingMemberEligible: true,
       foundingMemberCount: 27
@@ -224,11 +224,8 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   }
 
   const getRiskIcon = (level: string) => {
-    switch (level) {
-      case 'safe': return '🛡️'
-      case 'medium': case 'high': case 'critical': return '⚠️'
-      default: return null
-    }
+    // Icons removed for cleaner UI
+    return null
   }
 
   const pendingClaims = mockClaims.filter(c => c.status === 'pending')
@@ -598,7 +595,7 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
     },
     { 
       id: 'pending', 
-      label: 'Pending Reviews', 
+      label: 'Pending Applications', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, 
       count: allPendingBusinesses.length 
     },
@@ -1351,7 +1348,7 @@ Qwikker Admin Team`
               {/* Page title */}
               <div className="hidden lg:block ml-4">
                 <h1 className="text-lg font-semibold text-slate-100">
-                {activeTab === 'pending' && 'Pending Reviews'}
+                {activeTab === 'pending' && 'Pending Applications'}
                 {activeTab === 'updates' && 'Pending Updates'}
                 {activeTab === 'live' && 'Live Listings'}
                 {activeTab === 'incomplete' && 'Incomplete Listings'}
@@ -1637,7 +1634,7 @@ Qwikker Admin Team`
               <div className="mb-8 text-center">
                 <h2 className="text-3xl font-bold text-white mb-2">
                   {activeTab === 'overview' && 'Dashboard Overview'}
-                  {activeTab === 'pending' && 'Pending Reviews'}
+                  {activeTab === 'pending' && 'Pending Applications'}
                   {activeTab === 'updates' && 'Pending Updates'}
                   {activeTab === 'incomplete' && 'Incomplete Listings'}
                   {activeTab === 'rejected' && 'Rejected Applications'}
@@ -1703,8 +1700,8 @@ Qwikker Admin Team`
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
-                      <h3 className="text-xl font-semibold text-white mb-2">No pending reviews</h3>
-                      <p className="text-slate-400">All businesses have been reviewed.</p>
+                      <h3 className="text-xl font-semibold text-white mb-2">No pending applications</h3>
+                      <p className="text-slate-400">All business applications have been reviewed.</p>
                     </div>
                   ) : (
                     pendingBusinesses.map((business) => renderBusinessCard(business, true))
@@ -3055,98 +3052,62 @@ Qwikker Admin Team`
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <button
                       onClick={() => setClaimsView('pending')}
-                      className={`bg-slate-800/50 backdrop-blur border rounded-xl p-6 transition-all text-left cursor-pointer hover:scale-105 ${
+                      className={`bg-slate-800/50 border rounded-xl p-6 transition-colors text-left cursor-pointer ${
                         claimsView === 'pending' 
-                          ? 'border-yellow-500 ring-2 ring-yellow-500/20' 
+                          ? 'border-yellow-500/50' 
                           : 'border-slate-700 hover:border-slate-600'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-slate-400">Pending Review</p>
-                          <p className="text-3xl font-bold text-white">{pendingClaims.length}</p>
-                        </div>
-                        <div className="w-12 h-12 bg-yellow-600/20 rounded-full flex items-center justify-center">
-                          <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                      </div>
+                      <p className="text-sm text-slate-400 mb-1">Pending Review</p>
+                      <p className="text-3xl font-semibold text-white">{pendingClaims.length}</p>
                     </button>
 
                     <button
                       onClick={() => setClaimsView('approved')}
-                      className={`bg-slate-800/50 backdrop-blur border rounded-xl p-6 transition-all text-left cursor-pointer hover:scale-105 ${
+                      className={`bg-slate-800/50 border rounded-xl p-6 transition-colors text-left cursor-pointer ${
                         claimsView === 'approved' 
-                          ? 'border-green-500 ring-2 ring-green-500/20' 
+                          ? 'border-green-500/50' 
                           : 'border-slate-700 hover:border-slate-600'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-slate-400">Approved</p>
-                          <p className="text-3xl font-bold text-green-400">{approvedClaims.length}</p>
-                        </div>
-                        <div className="w-12 h-12 bg-green-600/20 rounded-full flex items-center justify-center">
-                          <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                      </div>
+                      <p className="text-sm text-slate-400 mb-1">Approved</p>
+                      <p className="text-3xl font-semibold text-white">{approvedClaims.length}</p>
                     </button>
 
                     <button
                       onClick={() => setClaimsView('denied')}
-                      className={`bg-slate-800/50 backdrop-blur border rounded-xl p-6 transition-all text-left cursor-pointer hover:scale-105 ${
+                      className={`bg-slate-800/50 border rounded-xl p-6 transition-colors text-left cursor-pointer ${
                         claimsView === 'denied' 
-                          ? 'border-red-500 ring-2 ring-red-500/20' 
+                          ? 'border-red-500/50' 
                           : 'border-slate-700 hover:border-slate-600'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-slate-400">Denied</p>
-                          <p className="text-3xl font-bold text-red-400">{deniedClaims.length}</p>
-                        </div>
-                        <div className="w-12 h-12 bg-red-600/20 rounded-full flex items-center justify-center">
-                          <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </div>
-                      </div>
+                      <p className="text-sm text-slate-400 mb-1">Denied</p>
+                      <p className="text-3xl font-semibold text-white">{deniedClaims.length}</p>
                     </button>
                   </div>
 
                   {/* Claims List */}
                   {claimsView === 'pending' && pendingClaims.length === 0 && (
-                    <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-12 text-center">
-                      <svg className="w-12 h-12 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                    <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-12 text-center">
                       <p className="text-slate-400">No pending claims</p>
                     </div>
                   )}
                   
                   {claimsView === 'approved' && approvedClaims.length === 0 && (
-                    <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-12 text-center">
-                      <svg className="w-12 h-12 mx-auto mb-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                    <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-12 text-center">
                       <p className="text-slate-400">No approved claims yet</p>
                     </div>
                   )}
                   
                   {claimsView === 'denied' && deniedClaims.length === 0 && (
-                    <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-12 text-center">
-                      <svg className="w-12 h-12 mx-auto mb-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                    <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-12 text-center">
                       <p className="text-slate-400">No denied claims</p>
                     </div>
                   )}
 
                   {(claimsView === 'pending' ? pendingClaims : claimsView === 'approved' ? approvedClaims : deniedClaims).map(claim => (
-                      <div key={claim.id} className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl overflow-hidden">
+                      <div key={claim.id} className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden">
                         <div className="p-6">
                           <div className="grid md:grid-cols-[1fr,auto] gap-6">
                             {/* Main Content */}
@@ -3215,10 +3176,10 @@ Qwikker Admin Team`
                                   <div className="flex-1">
                                     <div className="flex items-center justify-between mb-2">
                                       <h4 className="font-semibold uppercase text-sm">
-                                        {claim.verification.riskLevel === 'safe' && '✅ SAFE'}
-                                        {claim.verification.riskLevel === 'medium' && '⚠️ MEDIUM RISK'}
-                                        {claim.verification.riskLevel === 'high' && '🚨 HIGH RISK'}
-                                        {claim.verification.riskLevel === 'critical' && '🔴 CRITICAL RISK'}
+                                        {claim.verification.riskLevel === 'safe' && 'SAFE'}
+                                        {claim.verification.riskLevel === 'medium' && 'MEDIUM RISK'}
+                                        {claim.verification.riskLevel === 'high' && 'HIGH RISK'}
+                                        {claim.verification.riskLevel === 'critical' && 'CRITICAL RISK'}
                                       </h4>
                                       <span className="text-sm font-mono">
                                         Risk: {claim.verification.riskScore}/100
@@ -3232,11 +3193,11 @@ Qwikker Admin Team`
                                     <div className="grid sm:grid-cols-2 gap-2 text-sm">
                                       <div>
                                         <strong>Email Domain:</strong>{' '}
-                                        {claim.verification.emailDomainMatch ? '✅ Matches' : '❌ No match'}
+                                        {claim.verification.emailDomainMatch ? 'Matches' : 'No match'}
                                       </div>
                                       <div>
                                         <strong>Previous Claims:</strong>{' '}
-                                        {claim.verification.duplicateClaims === 0 ? '✅ First claim' : `⚠️ ${claim.verification.duplicateClaims} other claims`}
+                                        {claim.verification.duplicateClaims === 0 ? 'First claim' : `${claim.verification.duplicateClaims} other claims`}
                                       </div>
                                       <div>
                                         <strong>Account Age:</strong>{' '}
@@ -3244,7 +3205,7 @@ Qwikker Admin Team`
                                       </div>
                                       <div>
                                         <strong>Denied Before:</strong>{' '}
-                                        {claim.verification.deniedClaims === 0 ? '✅ No' : `🚨 ${claim.verification.deniedClaims} times`}
+                                        {claim.verification.deniedClaims === 0 ? 'No' : `${claim.verification.deniedClaims} times`}
                                       </div>
                                     </div>
                                   </div>
@@ -3255,7 +3216,7 @@ Qwikker Admin Team`
                               {claim.foundingMemberEligible && (
                                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3">
                                   <p className="text-sm text-yellow-300">
-                                    🏅 <strong>Founding Member Eligible</strong> (Spot #{claim.foundingMemberCount}/150)
+                                    <strong>Founding Member Eligible</strong> (Spot #{claim.foundingMemberCount}/150)
                                   </p>
                                 </div>
                               )}
@@ -3267,21 +3228,15 @@ Qwikker Admin Team`
                                 <button
                                   onClick={() => handleApproveClaim(claim.id)}
                                   disabled={processingClaim === claim.id}
-                                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50"
                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
                                   Approve
                                 </button>
                                 <button
                                   onClick={() => handleDenyClaim(claim.id)}
                                   disabled={processingClaim === claim.id}
-                                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50"
                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
                                   Deny
                                 </button>
                               </div>
@@ -3291,7 +3246,7 @@ Qwikker Admin Team`
                             {claim.status === 'approved' && (
                               <div className="md:w-32 flex items-center justify-center">
                                 <div className="bg-green-600/20 border border-green-600 text-green-400 font-semibold py-2 px-4 rounded-xl">
-                                  ✅ Approved
+                                  Approved
                                 </div>
                               </div>
                             )}
@@ -3299,7 +3254,7 @@ Qwikker Admin Team`
                             {claim.status === 'denied' && (
                               <div className="md:w-32 flex items-center justify-center">
                                 <div className="bg-red-600/20 border border-red-600 text-red-400 font-semibold py-2 px-4 rounded-xl">
-                                  ❌ Denied
+                                  Denied
                                 </div>
                               </div>
                             )}
