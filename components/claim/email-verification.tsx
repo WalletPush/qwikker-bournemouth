@@ -77,14 +77,28 @@ export function EmailVerification({ email, onVerified, onResend, onBack }: Email
     setIsVerifying(true)
     setError('')
 
-    // Mock verification (replace with real API call)
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch('/api/claim/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: email.toLowerCase(), 
+          code: verificationCode 
+        })
+      })
 
-    // Mock: accept code "123456"
-    if (verificationCode === '123456') {
-      onVerified(verificationCode)
-    } else {
-      setError('Invalid verification code. Please try again.')
+      const data = await response.json()
+
+      if (data.success) {
+        onVerified(verificationCode)
+      } else {
+        setError(data.error || 'Invalid verification code. Please try again.')
+        setCode(['', '', '', '', '', ''])
+        inputRefs.current[0]?.focus()
+      }
+    } catch (error) {
+      console.error('Verification error:', error)
+      setError('Failed to verify code. Please try again.')
       setCode(['', '', '', '', '', ''])
       inputRefs.current[0]?.focus()
     }

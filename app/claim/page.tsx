@@ -54,18 +54,32 @@ export default function ClaimPage() {
   const [website, setWebsite] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
 
-  const handleSearch = (query: string = searchQuery) => {
-    // Mock search - filter businesses (only show results if there's a query)
+  const handleSearch = async (query: string = searchQuery) => {
+    // Real search - call API
     if (!query.trim()) {
       setSearchResults([])
       return
     }
     
-    const results = MOCK_BUSINESSES.filter(b => 
-      b.name.toLowerCase().includes(query.toLowerCase()) ||
-      b.category.toLowerCase().includes(query.toLowerCase())
-    )
-    setSearchResults(results)
+    try {
+      const response = await fetch('/api/claim/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, city: 'bournemouth' })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setSearchResults(data.results || [])
+      } else {
+        console.error('Search failed:', data.error)
+        setSearchResults([])
+      }
+    } catch (error) {
+      console.error('Search error:', error)
+      setSearchResults([])
+    }
   }
 
   const handleSelectBusiness = (business: typeof MOCK_BUSINESSES[0]) => {
@@ -91,10 +105,28 @@ export default function ClaimPage() {
   }
 
   const handleSendVerification = async () => {
-    // Mock: Send verification email
-    console.log('Sending verification to:', email)
-    // In production: await fetch('/api/claim/send-verification', { method: 'POST', body: JSON.stringify({ email }) })
-    setStep('verify')
+    // Real: Send verification email
+    try {
+      const response = await fetch('/api/claim/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: email.toLowerCase(), 
+          businessId: selectedBusiness?.id 
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setStep('verify')
+      } else {
+        alert(data.error || 'Failed to send verification code')
+      }
+    } catch (error) {
+      console.error('Send verification error:', error)
+      alert('Failed to send verification code. Please try again.')
+    }
   }
 
   const handleVerified = (code: string) => {
@@ -103,15 +135,36 @@ export default function ClaimPage() {
   }
 
   const handleResendCode = async () => {
-    // Mock: Resend verification email
-    console.log('Resending verification to:', email)
+    // Real: Resend verification email
+    await handleSendVerification()
   }
 
   const handleCreateAccount = async (data: { firstName: string; lastName: string; password: string }) => {
-    // Mock: Create account and submit claim
-    console.log('Creating account and submitting claim:', { ...data, email, businessId: selectedBusiness?.id })
-    // In production: await fetch('/api/claim/submit', { method: 'POST', body: JSON.stringify({ ...data, email, website, businessId: selectedBusiness?.id }) })
-    setStep('submitted')
+    // Real: Create account and submit claim
+    try {
+      const response = await fetch('/api/claim/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          ...data, 
+          email: email.toLowerCase(), 
+          website, 
+          businessId: selectedBusiness?.id,
+          verificationCode
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setStep('submitted')
+      } else {
+        alert(result.error || 'Failed to submit claim. Please try again.')
+      }
+    } catch (error) {
+      console.error('Submit claim error:', error)
+      alert('Failed to submit claim. Please try again.')
+    }
   }
 
   return (
