@@ -48,3 +48,23 @@ export function categorySystemEnum(business: any): SystemCategory {
   return categoryForAI(business).system;
 }
 
+/**
+ * Get category label for display (user-facing pages)
+ * Consistent fallback chain across all pages
+ */
+export function categoryLabel(business: any): string {
+  return business?.display_category ?? 
+         business?.business_category ?? 
+         business?.category ?? 
+         business?.business_type ?? 
+         'Other';
+}
+
+/**
+ * Get system category key (for filtering logic)
+ * Strict - returns empty string if not valid
+ */
+export function categoryKey(business: any): string {
+  return (business?.system_category ?? '').toString();
+}
+

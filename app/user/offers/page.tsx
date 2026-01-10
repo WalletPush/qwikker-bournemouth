@@ -191,7 +191,10 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     id: offer.id,
     businessId: offer.business_profiles?.id,
     businessName: offer.business_profiles?.business_name,
-    businessCategory: offer.business_profiles?.business_category,
+    businessCategory: offer.business_profiles?.display_category || 
+                      offer.business_profiles?.business_category || 
+                      offer.business_profiles?.business_type || 
+                      'Other',
     businessLogo: offer.business_profiles?.logo,
     businessRating: offer.business_profiles?.rating || 4.5,
     title: offer.offer_name,

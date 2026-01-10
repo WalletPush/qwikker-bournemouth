@@ -1,6 +1,7 @@
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { UserDiscoverPage } from '@/components/user/user-discover-page'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
+import { categoryLabel } from '@/lib/utils/category-helpers'
 
 export const dynamic = 'force-dynamic'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
@@ -83,6 +84,8 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       id,
       business_name,
       business_type,
+      system_category,
+      display_category,
       business_category,
       business_town,
       business_address,
@@ -179,7 +182,9 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
     return {
       id: business.id,
       name: business.business_name,
-      category: business.business_category || business.business_type,
+      category: categoryLabel(business), // Consistent fallback: display_category → business_category → business_type → 'Other'
+      systemCategory: business.system_category, // For filtering logic
+      displayCategory: business.display_category, // For display
       location: business.business_town, // Keep for display
       address: business.business_address,
       town: business.business_town, // Use actual business town for display
@@ -207,7 +212,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       rating: business.rating || 4.5,
       reviewCount: business.review_count || Math.floor(Math.random() * 50) + 10,
       tags: [
-        business.business_category,
+        business.display_category || business.business_category, // Use new field with fallback
         business.business_type,
         business.business_town
       ].filter(Boolean),
