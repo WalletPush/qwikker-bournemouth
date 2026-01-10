@@ -19,6 +19,7 @@ interface UserOffersPageProps {
 export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId }: UserOffersPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [showAllCategories, setShowAllCategories] = useState(false) // NEW: Show More toggle
   const searchParams = useSearchParams()
   const urlWalletPassId = searchParams.get('wallet_pass_id')
   // Use prop first, then URL, then null - this ensures consistency with server-side logic
@@ -667,7 +668,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           {/* Business name in bottom corner */}
           <div className="absolute bottom-2 left-3 right-12">
             <p className="text-white font-semibold text-sm drop-shadow-lg truncate">{businessName}</p>
-            <p className="text-white/80 text-xs drop-shadow-md truncate">{isRealOffer ? offer.businessCategory : business?.category}</p>
+            <p className="text-white/90 text-xs drop-shadow-md truncate">{isRealOffer ? offer.businessCategory : business?.category}</p>
           </div>
 
           {/* In Wallet Badge */}
@@ -997,9 +998,9 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
               }`}
             >
-              All Categories ({allOffers.filter(o => !claimedOffers.has(o.id)).length})
+              All <span className="hidden sm:inline">({allOffers.filter(o => !claimedOffers.has(o.id)).length})</span>
             </button>
-            {uniqueCategories.map(cat => (
+            {(showAllCategories ? uniqueCategories : uniqueCategories.slice(0, 5)).map(cat => (
               <button
                 key={cat}
                 onClick={() => {
@@ -1012,9 +1013,17 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
                 }`}
               >
-                {cat} ({getCategoryCount(cat)})
+                {cat} <span className="hidden sm:inline">({getCategoryCount(cat)})</span>
               </button>
             ))}
+            {uniqueCategories.length > 5 && (
+              <button
+                onClick={() => setShowAllCategories(!showAllCategories)}
+                className="px-4 py-2 rounded-full text-sm font-medium transition-colors bg-slate-800/50 text-slate-400 hover:bg-slate-700 border border-slate-700/50 hover:border-slate-600"
+              >
+                {showAllCategories ? '← Show Less' : `More (${uniqueCategories.length - 5}) →`}
+              </button>
+            )}
           </div>
         </div>
       )}

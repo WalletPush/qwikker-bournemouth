@@ -41,6 +41,7 @@ interface UserDiscoverPageProps {
 export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: UserDiscoverPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all') // NEW: Category filter
+  const [showAllCategories, setShowAllCategories] = useState(false) // NEW: Show More toggle
   
   // Helper function to scroll to results after filter change
   const scrollToResults = () => {
@@ -226,9 +227,9 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
               }`}
             >
-              All Categories ({businesses.length})
+              All <span className="hidden sm:inline">({businesses.length})</span>
             </button>
-            {availableCategories.map(cat => (
+            {(showAllCategories ? availableCategories : availableCategories.slice(0, 5)).map(cat => (
               <button
                 key={cat}
                 onClick={() => {
@@ -241,9 +242,17 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
                 }`}
               >
-                {SYSTEM_CATEGORY_LABEL[cat as SystemCategory] || cat} ({getCategoryCount(cat)})
+                {SYSTEM_CATEGORY_LABEL[cat as SystemCategory] || cat} <span className="hidden sm:inline">({getCategoryCount(cat)})</span>
               </button>
             ))}
+            {availableCategories.length > 5 && (
+              <button
+                onClick={() => setShowAllCategories(!showAllCategories)}
+                className="px-4 py-2 rounded-full text-sm font-medium transition-colors bg-slate-800/50 text-slate-400 hover:bg-slate-700 border border-slate-700/50 hover:border-slate-600"
+              >
+                {showAllCategories ? '← Show Less' : `More (${availableCategories.length - 5}) →`}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -252,7 +261,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
       <div className="mb-4">
         <AiCompanionCard 
           title="Discover Your Next Favorite Spot"
-          description="Skip the scrolling! Ask our AI in plain English and get instant recommendations."
+          description="Skip the scrolling. Tell our AI what you're in the mood for and get instant recommendations."
           prompts={[
             "Best bars with live music tonight",
             "Find romantic restaurant for anniversary", 

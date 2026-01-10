@@ -26,13 +26,13 @@ export function AiCompanionCard({
   }
 
   return (
-    <Card className={`bg-gradient-to-r from-[#00d083]/10 to-emerald-500/5 border-[#00d083]/30 hover:border-[#00d083]/50 transition-all duration-200 ${className}`}>
+    <Card className={`bg-gradient-to-r from-[#00d083]/8 to-emerald-500/3 border-[#00d083]/30 hover:border-[#00d083]/50 transition-all duration-200 ${className}`}>
       <CardContent className="p-4">
         <div className="text-center">
-          {/* AI Avatar - Centered with subtle AI badge */}
+          {/* AI Avatar - Centered with subtle mint green */}
           <div className="flex justify-center mb-3">
             <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#00d083] to-emerald-400 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#00d083]/80 to-emerald-400/70 rounded-full flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.847a4.5 4.5 0 003.09 3.09L15.75 12l-2.847.813a4.5 4.5 0 00-3.09 3.091z" />
                 </svg>
@@ -53,11 +53,12 @@ export function AiCompanionCard({
             Try: "{prompts[0]}"
           </p>
           
-          {/* Clean Centered Button */}
+          {/* Outlined Button - Doesn't compete with primary CTAs */}
           <Button 
             asChild
             size="sm"
-            className="bg-[#00d083] hover:bg-[#00b86f] active:bg-[#00a05c] text-black font-semibold text-xs px-6 py-2 h-8 transition-colors duration-150 shadow-sm border border-[#00d083]/20"
+            variant="outline"
+            className="border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10 hover:text-[#00d083] font-semibold text-xs px-6 py-2 h-8 transition-colors duration-150"
           >
             <Link href={getNavUrl('/user/chat')}>
               Ask AI
