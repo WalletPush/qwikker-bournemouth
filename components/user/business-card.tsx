@@ -66,7 +66,11 @@ export function BusinessCard({
               {business.name}
             </CardTitle>
             <p className="text-slate-400 text-sm">
-              {business.display_category ?? business.business_category ?? business.category ?? 'Other'}
+              {(() => {
+                const category = business.display_category ?? business.business_category ?? business.category ?? 'Other'
+                // Hide "Other" label - show nothing instead (display_category is more descriptive)
+                return category === 'Other' ? '' : category
+              })()}
             </p>
             <p className="text-[#00d083] text-sm font-medium mt-1">{business.tagline}</p>
           </div>

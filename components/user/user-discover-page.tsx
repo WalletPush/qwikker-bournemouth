@@ -252,10 +252,10 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
       <div className="mb-4">
         <AiCompanionCard 
           title="Discover Your Next Favorite Spot"
-          description="Tell our AI exactly what you're in the mood for! Whether it's 'cozy coffee shop with WiFi' or 'best sushi near the beach' - we'll find your perfect match."
+          description="Skip the scrolling! Ask our AI in plain English and get instant recommendations."
           prompts={[
-            "Find me a romantic restaurant for tonight",
-            "Where can I get the best fish and chips?", 
+            "Best bars with live music tonight",
+            "Find romantic restaurant for anniversary", 
             "Show me cafes with outdoor seating"
           ]}
           walletPassId={walletPassId}
