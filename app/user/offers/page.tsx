@@ -143,8 +143,17 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       business_profiles (
         id,
         business_name,
+        system_category,
+        display_category,
+        business_category,
+        business_type,
         business_images,
-        business_tier
+        business_tier,
+        logo,
+        rating,
+        business_address,
+        business_town,
+        business_hours
       )
     `)
     .eq('status', 'approved')

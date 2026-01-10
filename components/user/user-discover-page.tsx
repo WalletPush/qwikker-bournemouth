@@ -6,11 +6,14 @@ import { Button } from '@/components/ui/button'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { AiCompanionCard } from '@/components/ui/ai-companion-card'
 import { BusinessCard } from '@/components/user/business-card'
+import { SYSTEM_CATEGORY_LABEL, SystemCategory, SYSTEM_CATEGORIES } from '@/lib/constants/system-categories'
 
 interface Business {
   id: string
   name: string
   category: string
+  systemCategory?: string
+  displayCategory?: string
   location: string
   address: string
   tagline: string
@@ -37,6 +40,7 @@ interface UserDiscoverPageProps {
 
 export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: UserDiscoverPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
+  const [selectedCategory, setSelectedCategory] = useState<string>('all') // NEW: Category filter
   
   // Helper function to scroll to results after filter change
   const scrollToResults = () => {
@@ -71,8 +75,22 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
     { id: 'recommended', label: 'Recommended', count: recommended.length },
   ]
 
+  // NEW: Get unique categories from businesses (for filter pills)
+  const availableCategories = Array.from(
+    new Set(
+      businesses
+        .map(b => b.systemCategory)
+        .filter(Boolean)
+    )
+  ).sort()
+
+  // NEW: Count businesses per category
+  const getCategoryCount = (cat: string) => {
+    return businesses.filter(b => b.systemCategory === cat).length
+  }
+
   const getFilteredBusinesses = () => {
-    // First filter by selected category
+    // First filter by selected tier (All/Qwikker Picks/Featured/Recommended)
     let filtered = businesses
     switch (selectedFilter) {
       case 'qwikker_picks': 
@@ -86,6 +104,11 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
         break
       default: 
         filtered = businesses
+    }
+
+    // NEW: Then filter by category if selected
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(b => b.systemCategory === selectedCategory)
     }
 
     // Then filter by search query if present
@@ -186,6 +209,44 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
           <p className="text-sm text-slate-400">All Places</p>
         </Card>
       </div>
+
+      {/* NEW: Category Filter Pills */}
+      {availableCategories.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-slate-400 mb-3">Filter by Category</h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => {
+                setSelectedCategory('all')
+                scrollToResults()
+              }}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                selectedCategory === 'all'
+                  ? 'bg-[#00d083] text-white'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+              }`}
+            >
+              All Categories ({businesses.length})
+            </button>
+            {availableCategories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => {
+                  setSelectedCategory(cat)
+                  scrollToResults()
+                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedCategory === cat
+                    ? 'bg-[#00d083] text-white'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                }`}
+              >
+                {SYSTEM_CATEGORY_LABEL[cat as SystemCategory] || cat} ({getCategoryCount(cat)})
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* AI Companion Card - After Filter Cards */}
       <div className="mb-4">
