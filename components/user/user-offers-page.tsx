@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { useSearchParams } from 'next/navigation'
+import { SYSTEM_CATEGORY_LABEL } from '@/lib/constants/system-categories'
 
 interface UserOffersPageProps {
   realOffers?: any[]
@@ -125,10 +126,20 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     }
   }, [highlightBusiness, allOffers]) // Include allOffers to re-run when offers load
   
-  // Get unique categories from all businesses
-  const realCategories = realOffers.map(o => o.businessCategory).filter(Boolean)
-  const mockCategories = mockBusinesses.map(b => b.category)
-  const categories = ['all', ...Array.from(new Set([...realCategories, ...mockCategories]))]
+  // Get unique categories from all offers (use businessCategory which has the fallback chain)
+  const uniqueCategories = Array.from(
+    new Set(
+      allOffers
+        .map(o => o.businessCategory)
+        .filter(Boolean)
+        .filter(c => c !== 'Other') // Exclude generic "Other"
+    )
+  ).sort()
+  
+  // Count offers per category
+  const getCategoryCount = (category: string) => {
+    return allOffers.filter(o => o.businessCategory === category && !claimedOffers.has(o.id)).length
+  }
   
   // Dynamic filter counts that update with state changes
   const getFilters = () => [
@@ -969,6 +980,44 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           <p className="text-lg font-bold text-pink-400">{Array.from(favoriteOffers).filter(id => allOffers.find(o => o.id === id)).length}</p>
         </Card>
       </div>
+
+      {/* Category Filter Pills */}
+      {uniqueCategories.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-slate-400 mb-3">Filter by Category</h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => {
+                setSelectedCategory('all')
+                scrollToResults()
+              }}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                selectedCategory === 'all'
+                  ? 'bg-[#00d083] text-white'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+              }`}
+            >
+              All Categories ({allOffers.filter(o => !claimedOffers.has(o.id)).length})
+            </button>
+            {uniqueCategories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => {
+                  setSelectedCategory(cat)
+                  scrollToResults()
+                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedCategory === cat
+                    ? 'bg-[#00d083] text-white'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                }`}
+              >
+                {cat} ({getCategoryCount(cat)})
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
 
       {/* AI Companion Card - Replace Search & Filters */}
