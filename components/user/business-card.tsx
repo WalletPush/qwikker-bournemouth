@@ -1,11 +1,11 @@
-'use client'
-
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
+import { BusinessCardImage } from '@/components/ui/business-card-image'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 import { formatPrice } from '@/lib/utils/price-formatter'
+import type { SystemCategory } from '@/lib/constants/system-categories'
 
 interface BusinessCardProps {
   business: any
@@ -24,34 +24,78 @@ export function BusinessCard({
 }: BusinessCardProps) {
   const cardContent = (
     <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden ${className}`}>
-      {/* Business Image Carousel */}
+      {/* Business Image - Conditional logic based on status + images */}
       <div className="relative h-48 overflow-hidden">
-        <ImageCarousel
-          images={business.images || []}
-          alt={business.name}
-          className="w-full h-full"
-          showArrows={true}
-          showDots={false}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+        {business.status === 'unclaimed' ? (
+          // Case 1: Unclaimed → Placeholder WITH "UNCLAIMED" badge
+          <BusinessCardImage
+            businessName={business.name}
+            businessId={business.id}
+            googlePlaceId={business.google_place_id ?? business.id}
+            imageSource="placeholder"
+            systemCategory={(business.system_category ?? 'other') as SystemCategory}
+            placeholderVariant={business.placeholder_variant ?? null}
+            showUnclaimedBadge={true}
+            businessStatus={business.status}
+            className="h-full w-full"
+          />
+        ) : business.images && business.images.length > 0 ? (
+          // Case 2: Claimed + has images → ImageCarousel
+          <>
+            <ImageCarousel
+              images={business.images}
+              alt={business.name}
+              className="w-full h-full"
+              showArrows={true}
+              showDots={false}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+          </>
+        ) : (
+          // Case 3: Claimed + NO images → Placeholder WITHOUT "UNCLAIMED" badge (shows "No Photos Yet")
+          <BusinessCardImage
+            businessName={business.name}
+            businessId={business.id}
+            googlePlaceId={business.google_place_id ?? business.id ?? business.slug ?? business.name}
+            imageSource="placeholder"
+            systemCategory={(business.system_category ?? 'other') as SystemCategory}
+            placeholderVariant={business.placeholder_variant ?? null}
+            showUnclaimedBadge={false}
+            businessStatus={business.status}
+            className="h-full w-full"
+          />
+        )}
         
-        {/* Hero Badge - Based on Subscription Plan */}
-        <div className="absolute top-3 right-3">
-          {business.plan === 'spotlight' && (
-            <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg animate-pulse">
-              ⭐ QWIKKER PICK
-            </span>
-          )}
-          {business.plan === 'featured' && (
-            <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg">
-              FEATURED
-            </span>
-          )}
-        </div>
+        {/* Hero Badge - Show for ALL claimed businesses (regardless of images) */}
+        {business.status !== 'unclaimed' && (
+          <div className="absolute top-3 right-3 z-20">
+            {business.plan === 'spotlight' && (
+              <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg animate-pulse">
+                ⭐ QWIKKER PICK
+              </span>
+            )}
+            {business.plan === 'featured' && (
+              <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg">
+                FEATURED
+              </span>
+            )}
+          </div>
+        )}
 
-        {/* Distance Badge */}
+        {/* Case 3 Override: Add "No Photos Yet" badge for claimed businesses without images */}
+        {business.status !== 'unclaimed' && (!business.images || business.images.length === 0) && (
+          <div className="absolute top-3 right-3 z-20">
+            <div className="px-2.5 py-1 rounded-md bg-slate-700/90 backdrop-blur-sm border border-slate-600/30">
+              <span className="text-xs font-semibold text-white uppercase tracking-wide">
+                No Photos Yet
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Distance Badge - Show for ALL businesses */}
         {showDistance && business.distance && (
-          <div className="absolute bottom-3 left-3">
+          <div className="absolute bottom-3 left-3 z-20">
             <span className="bg-black/70 text-slate-100 text-xs px-3 py-2 rounded-full backdrop-blur-sm flex items-center gap-1">
               🚶 {Math.round(parseFloat(business.distance) * 20)} min walk • {business.distance} miles
             </span>

@@ -196,6 +196,7 @@ export async function POST(request: NextRequest) {
                 opening_hours: openingHours,
                 google_place_id: placeId,
                 google_photo_name: place.photos?.[0]?.name || null,
+                placeholder_variant: 0, // 🔒 CRITICAL: Always use neutral default (variant 0) on import
                 status: 'unclaimed',
                 visibility: 'discover_only',
                 auto_imported: true,

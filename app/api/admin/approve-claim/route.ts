@@ -81,6 +81,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'approve') {
+      // 🔒 CRITICAL GUARDRAIL: Cannot approve claim without at least 1 uploaded image
+      if (!claim.logo_upload_url && !claim.hero_image_upload_url) {
+        return NextResponse.json(
+          { 
+            error: 'Cannot approve claim: Business must upload at least one photo (logo or hero image) before approval.' 
+          },
+          { status: 400 }
+        )
+      }
+
       // 1. Update claim_requests status to 'approved'
       const { error: updateClaimError } = await supabaseAdmin
         .from('claim_requests')
