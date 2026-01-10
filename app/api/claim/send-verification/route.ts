@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     // Verify business exists and is unclaimed
     const { data: business, error: businessError } = await supabase
       .from('business_profiles')
-      .select('id, business_name, status')
+      .select('id, business_name, status, city')
       .eq('id', businessId)
       .single()
 
@@ -47,6 +47,30 @@ export async function POST(request: NextRequest) {
         success: false, 
         error: 'This business has already been claimed or is not available for claiming' 
       }, { status: 400 })
+    }
+
+    // Get franchise config for this city (multi-tenant email support)
+    const { data: franchiseConfig, error: configError } = await supabase
+      .from('franchise_crm_configs')
+      .select('resend_api_key, resend_from_email, resend_from_name, display_name')
+      .eq('city', business.city)
+      .single()
+
+    if (configError || !franchiseConfig) {
+      console.error('Franchise config not found for city:', business.city)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Email service not configured for this location. Please contact support.' 
+      }, { status: 500 })
+    }
+
+    // Check if Resend is configured for this franchise
+    if (!franchiseConfig.resend_api_key || !franchiseConfig.resend_from_email) {
+      console.error('Resend not configured for city:', business.city)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Email service not set up for this location. Please contact your franchise admin.' 
+      }, { status: 500 })
     }
 
     // Generate 6-digit verification code
@@ -73,15 +97,18 @@ export async function POST(request: NextRequest) {
       // Continue anyway - we'll log but not fail
     }
 
-    // Send verification email using Resend
+    // Send verification email using franchise's Resend API key (multi-tenant)
     try {
       const { Resend } = await import('resend')
-      const resend = new Resend(process.env.RESEND_API_KEY)
+      const resend = new Resend(franchiseConfig.resend_api_key)
+
+      const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
+      const cityDisplayName = franchiseConfig.display_name || business.city
 
       await resend.emails.send({
-        from: 'QWIKKER <noreply@qwikker.com>',
+        from: `${fromName} <${franchiseConfig.resend_from_email}>`,
         to: email,
-        subject: `Your QWIKKER Verification Code: ${verificationCode}`,
+        subject: `Your ${cityDisplayName} Verification Code: ${verificationCode}`,
         html: `
           <!DOCTYPE html>
           <html>

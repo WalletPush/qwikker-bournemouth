@@ -45,6 +45,12 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   const [activityFeed, setActivityFeed] = useState<any[]>([])
   const [businessVisits, setBusinessVisits] = useState<any[]>([])
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false)
+  const [franchiseConfig, setFranchiseConfig] = useState<{
+    founding_member_enabled: boolean
+    founding_member_discount: number
+    founding_member_title: string
+    founding_member_description: string
+  } | null>(null)
   const [analyticsData, setAnalyticsData] = useState<{
     totalVisits: number
     totalClaims: number
@@ -148,6 +154,33 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
       })
     }
   }, [profile])
+
+  // Fetch franchise config for founding member discount
+  useEffect(() => {
+    const fetchFranchiseConfig = async () => {
+      try {
+        const { getCityFromHostnameClient } = await import('@/lib/utils/client-city-detection')
+        const city = getCityFromHostnameClient(window.location.hostname)
+        const response = await fetch(`/api/admin/pricing-cards?city=${city}`)
+        const data = await response.json()
+        
+        if (data.success) {
+          setFranchiseConfig({
+            founding_member_enabled: data.config.founding_member_enabled ?? true,
+            founding_member_discount: data.config.founding_member_discount || 20,
+            founding_member_title: data.config.founding_member_title || 'Founding Member Benefit',
+            founding_member_description: data.config.founding_member_description || ''
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching franchise config:', error)
+      }
+    }
+    
+    if (profile?.status === 'claimed_free') {
+      fetchFranchiseConfig()
+    }
+  }, [profile?.status])
 
   // Generate REAL activity feed based on profile data AND business changes
   useEffect(() => {
@@ -350,7 +383,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
     }
     
     // If profile is complete but status is still incomplete, show "Ready to Submit"
-    if (currentStatus === 'incomplete' && isReadyForReview) {
+    // 🔒 HIDE for claimed_free businesses
+    if (currentStatus === 'incomplete' && isReadyForReview && profile?.status !== 'claimed_free') {
         return {
           text: 'Ready to Submit',
           subtext: 'All requirements complete - ready for review',
@@ -362,6 +396,21 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             </svg>
           )
         }
+    }
+    
+    // 🔒 For claimed_free, show special status
+    if (profile?.status === 'claimed_free') {
+      return {
+        text: 'Free Listing',
+        subtext: 'Your listing is live - upgrade to unlock premium features',
+        color: 'text-emerald-400',
+        bgColor: 'bg-slate-700/30 border-slate-600/50',
+        icon: (
+          <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        )
+      }
     }
     
     switch (currentStatus) {
@@ -420,6 +469,14 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   
   // Get plan name from subscription first, fallback to profile
   const getTierInfo = () => {
+    // 🔒 CRITICAL: Check if claimed_free status
+    if (profile?.status === 'claimed_free') {
+      return {
+        name: 'Free Listing',
+        isFreeTrial: false
+      }
+    }
+    
     if (profile?.subscription?.subscription_tiers) {
       return {
         name: profile.subscription.subscription_tiers.tier_display_name,
@@ -554,7 +611,90 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         </p>
       </div>
 
-      {currentStatus === 'incomplete' && isReadyForReview && (
+      {/* 🔒 FREE LISTING UPGRADE BANNER */}
+      {profile?.status === 'claimed_free' && (
+        <div className="rounded-2xl border border-slate-600 bg-slate-800/50 p-6 sm:p-8">
+          <div className="space-y-6">
+            <div className="space-y-3 text-center">
+              <h3 className="text-2xl font-semibold text-white">Unlock Premium Features</h3>
+              <p className="text-slate-300 text-base leading-relaxed max-w-4xl mx-auto">
+                <span className="text-emerald-400 font-medium">Let customers find you based on what they're craving.</span> Upload your full menu and our AI will recommend your specific dishes and items based on exactly what customers are looking for.
+              </p>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 max-w-3xl mx-auto">
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">AI Chat Visibility</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">Full Menu Indexing</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">Exclusive Offers</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">Secret Menu Club</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">Events & Analytics</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">Social Wizard</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">Loyalty Portal</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">Push Notifications</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">Full POS System</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex flex-col items-center gap-2 pt-4">
+              <Button
+                asChild
+                size="lg"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-12"
+              >
+                <Link href="/dashboard/settings#pricing">
+                  View Plans
+                </Link>
+              </Button>
+              <p className="text-xs text-slate-400">90-day free trial available</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {currentStatus === 'incomplete' && isReadyForReview && profile?.status !== 'claimed_free' && (
         <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-5 sm:p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <p className="text-emerald-300 font-semibold text-lg">Your listing is ready for review</p>
@@ -608,7 +748,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
 
       {/* Quick Actions Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
+        <div className="relative">
           <Link href="/dashboard/offers">
             <Card className="relative bg-slate-800/50 border-slate-700 rounded-xl cursor-pointer transition-colors duration-200 hover:border-[#00d083]/50">
               <CardContent className="p-4 text-center">
@@ -623,9 +763,20 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </CardContent>
             </Card>
           </Link>
+          {profile?.status === 'claimed_free' && (
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-2 px-4">
+              <svg className="w-8 h-8 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              <span className="text-xs text-slate-300 text-center font-medium leading-tight">
+                Offers Locked<br/>
+                <span className="text-[10px] text-slate-400">Upgrade to create deals</span>
+              </span>
+            </div>
+          )}
         </div>
 
-        <div>
+        <div className="relative">
           <Link href="/dashboard/secret-menu">
             <Card className="relative bg-slate-800/50 border-slate-700 rounded-xl cursor-pointer transition-colors duration-200 hover:border-purple-500/50">
               <CardContent className="p-4 text-center">
@@ -640,9 +791,20 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </CardContent>
             </Card>
           </Link>
+          {profile?.status === 'claimed_free' && (
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-2 px-4">
+              <svg className="w-8 h-8 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              <span className="text-xs text-slate-300 text-center font-medium leading-tight">
+                Secret Menu Locked<br/>
+                <span className="text-[10px] text-slate-400">Upgrade for hidden specials</span>
+              </span>
+            </div>
+          )}
         </div>
 
-        <div>
+        <div className="relative">
           <Link href="/dashboard/profile#featured-items">
             <Card className="relative bg-slate-800/50 border-slate-700 rounded-xl cursor-pointer transition-colors duration-200 hover:border-blue-500/50">
               <CardContent className="p-4 text-center">
@@ -657,6 +819,17 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </CardContent>
             </Card>
           </Link>
+          {profile?.status === 'claimed_free' && (
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-2 px-4">
+              <svg className="w-8 h-8 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              <span className="text-xs text-slate-300 text-center font-medium leading-tight">
+                Menu Upload Locked<br/>
+                <span className="text-[10px] text-slate-400">Upgrade to upload menus</span>
+              </span>
+            </div>
+          )}
         </div>
 
         <div>
@@ -761,7 +934,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         </Card>
 
         {/* Activity Feed Card */}
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className={`bg-slate-800/50 border-slate-700 ${profile?.status === 'claimed_free' ? 'md:col-span-2 lg:col-span-2' : ''}`}>
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -831,6 +1004,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         </Card>
 
         {/* Action Items / Optimize Listing Card */}
+        {/* 🔒 HIDE for claimed_free businesses - they don't need to complete action items */}
+        {profile?.status !== 'claimed_free' && (
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
@@ -1027,6 +1202,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             })()}
           </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Additional Dashboard Cards - ALL THE MISSING ONES */}

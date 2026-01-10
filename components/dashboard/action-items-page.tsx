@@ -699,6 +699,8 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
       )}
 
       {/* Submit Listing Button - CLEAN & SIMPLE */}
+      {/* 🔒 HIDE for claimed_free businesses */}
+      {profile?.status !== 'claimed_free' && (
       <Card id="submit-listing" className={`scroll-mt-20 ${
         isReadyToSubmit 
           ? 'bg-gradient-to-br from-green-950/60 to-emerald-950/40 border-2 border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.2)]' 
@@ -772,6 +774,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
           </div>
         </CardContent>
       </Card>
+      )}
 
       <Card className="bg-slate-800/50 border-slate-700">
         <CardContent className="p-6">

@@ -59,6 +59,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
   }, [])
   
   // Group businesses by subscription plan (determines badges)
+  // 🎯 Free listings (plan = null) are included in "All Places" but not in specific tiers
   const qwikkerPicks = businesses.filter(b => b.plan === 'spotlight')
   const featured = businesses.filter(b => b.plan === 'featured')
   const recommended = businesses.filter(b => b.plan === 'starter')

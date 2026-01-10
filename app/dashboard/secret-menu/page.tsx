@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { SecretMenuPage } from '@/components/dashboard/secret-menu-page'
+import { LockedFeaturePage } from '@/components/dashboard/locked-feature-page'
 import { Profile } from '@/types/profiles'
 import { calculateActionItemsCount } from '@/lib/utils/action-items-count'
 
@@ -26,6 +27,24 @@ export default async function DashboardSecretMenuPage() {
 
   const profile: Profile = profileData
   const actionItemsCount = calculateActionItemsCount(profile)
+
+  // 🔒 CRITICAL: Check if claimed_free status - show locked page
+  if (profileData.status === 'claimed_free') {
+    return (
+      <DashboardLayout currentSection="secret-menu" profile={profile} actionItemsCount={actionItemsCount}>
+        <LockedFeaturePage 
+          featureName="Secret Menu" 
+          description="Create exclusive off-menu items that reward loyal customers. Build intrigue and word-of-mouth with hidden specials only discoverable through AI chat."
+          benefits={[
+            'Add unlimited secret menu items',
+            'Create exclusivity and customer loyalty',
+            'Increase AI chat engagement',
+            'Track secret menu popularity and views'
+          ]}
+        />
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout currentSection="secret-menu" profile={profile} actionItemsCount={actionItemsCount}>

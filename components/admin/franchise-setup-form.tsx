@@ -19,6 +19,8 @@ interface FranchiseFormData {
   timezone: string
   google_places_api_key: string
   resend_api_key: string
+  resend_from_email: string
+  resend_from_name: string
   founding_member_enabled: boolean
   founding_member_total_spots: number
   founding_member_trial_days: number
@@ -40,6 +42,8 @@ export function FranchiseSetupForm() {
     timezone: 'UTC',
     google_places_api_key: '',
     resend_api_key: '',
+    resend_from_email: '',
+    resend_from_name: 'QWIKKER',
     founding_member_enabled: true,
     founding_member_total_spots: 150,
     founding_member_trial_days: 90,
@@ -149,6 +153,8 @@ export function FranchiseSetupForm() {
           timezone: 'UTC',
           google_places_api_key: '',
           resend_api_key: '',
+          resend_from_email: '',
+          resend_from_name: 'QWIKKER',
           founding_member_enabled: true,
           founding_member_total_spots: 150,
           founding_member_trial_days: 90,
@@ -423,6 +429,39 @@ export function FranchiseSetupForm() {
                       <strong>🔗 Get your key:</strong> <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">Resend Dashboard</a>
                     </p>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    From Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.resend_from_email}
+                    onChange={(e) => handleInputChange('resend_from_email', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-[#00d083]"
+                    placeholder="hello@yourdomain.com"
+                    required
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    Must be verified in Resend. See setup guide below.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    From Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.resend_from_name}
+                    onChange={(e) => handleInputChange('resend_from_name', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-[#00d083]"
+                    placeholder="QWIKKER Bournemouth"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    Display name shown in emails (e.g., "QWIKKER Bournemouth")
+                  </p>
                 </div>
               </div>
             </div>

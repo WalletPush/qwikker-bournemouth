@@ -102,7 +102,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
         business.business_town?.toLowerCase().includes(searchTerm.toLowerCase())
       
       // Filter by business_type ONLY (clean standardized values)
-      const matchesCategory = filterCategory === 'all' || business.business_type === filterCategory
+      const matchesCategory = filterCategory === 'all' || business.business_type?.toLowerCase() === filterCategory.toLowerCase()
       
       const matchesTier = filterTier === 'all' || business.business_tier === filterTier
 

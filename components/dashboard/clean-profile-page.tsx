@@ -572,6 +572,8 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
       </div>
 
         {/* Featured Items Section */}
+        {/* 🔒 HIDE for claimed_free businesses - premium feature only */}
+        {profile?.status !== 'claimed_free' && (
         <div id="featured-items" className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-500"></div>
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
@@ -645,6 +647,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
           </CardContent>
         </Card>
       </div>
+        )}
 
         {/* Business Logo Section */}
         <div id="business-logo" className="group relative">

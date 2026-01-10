@@ -48,7 +48,8 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
         created_at,
         status,
         user_id,
-        business_town
+        business_town,
+        auto_imported
       `)
       .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Use city field for franchise
       .order('created_at', { ascending: false })
@@ -139,29 +140,84 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
     }
 
     // Process new business applications
+    // 🚫 EXCLUDE auto-imported/unclaimed businesses (they weren't "applied" for)
+    // 🚫 ONLY show applications from last 7 days
     if (newApplications) {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      
       for (const app of newApplications) {
         const createdAt = new Date(app.created_at)
+        
+        // 🚫 CRITICAL: Skip unclaimed businesses (auto-imported via Google Places)
+        if (app.status === 'unclaimed' || app.auto_imported === true) {
+          console.log(`[Activity] Skipping unclaimed business: ${app.business_name} (status=${app.status}, auto_imported=${app.auto_imported})`)
+          continue
+        }
+        
+        // 🚫 CRITICAL: Only show applications from last 7 days
+        if (createdAt < sevenDaysAgo) {
+          console.log(`[Activity] Skipping old application: ${app.business_name} (created ${getTimeAgo(createdAt)})`)
+          continue
+        }
+
         const timeAgo = getTimeAgo(createdAt)
+
+        // Show as "application" for pending_review/incomplete
+        // Show as "claim submission" for pending_claim
+        let message = ''
+        let iconType = 'plus'
+        let color = 'bg-green-500'
+
+        if (app.status === 'pending_claim') {
+          message = `Claim submitted: ${app.business_name || 'Unnamed Business'} in ${app.business_town || 'Unknown City'}`
+          iconType = 'document'
+          color = 'bg-amber-500'
+        } else {
+          message = `New business application: ${app.business_name || 'Unnamed Business'} in ${app.business_town || 'Unknown City'}`
+        }
 
         activities.push({
           id: `app-${app.id}`,
           type: 'application',
-          message: `New business application: ${app.business_name || 'Unnamed Business'} in ${app.business_town || 'Unknown City'}`,
+          message,
           time: timeAgo,
           timestamp: createdAt,
           business_name: app.business_name,
-          iconType: 'plus',
-          color: 'bg-green-500'
+          iconType,
+          color
         })
       }
     }
 
     // Process status changes (approvals, updates, etc.)
+    // 🚫 CRITICAL: Only show approvals for NEWLY CREATED businesses (created in last 7 days)
+    // This prevents old businesses from appearing when their profile gets updated for other reasons
     if (statusChanges) {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+
       for (const change of statusChanges) {
         const updatedAt = new Date(change.updated_at)
         const createdAt = new Date(change.created_at)
+
+        // 🚫 CRITICAL FIX #1: Only show approvals for NEW businesses (created in last 7 days)
+        // This prevents old businesses from showing when they get profile updates (secret menus, offers, etc.)
+        if (createdAt < sevenDaysAgo) {
+          // This is an OLD business - skip even if updated recently
+          continue
+        }
+
+        // 🚫 CRITICAL FIX #2: Only show approvals/rejections if updated_at is SIGNIFICANTLY DIFFERENT from created_at
+        // This filters out businesses that were approved long ago (their updated_at = created_at or very close)
+        const timeDiffMinutes = Math.abs(updatedAt.getTime() - createdAt.getTime()) / (1000 * 60)
+        const isRecentStatusChange = timeDiffMinutes > 5 // At least 5 minutes between creation and update
+
+        // 🚫 CRITICAL FIX #3: Only show if updated in last 24 HOURS
+        // This prevents old approvals from showing up if their updated_at was touched for any reason
+        if (updatedAt < twentyFourHoursAgo) {
+          console.log(`[Activity] Skipping old status change for: ${change.business_name} (updated ${getTimeAgo(updatedAt)})`)
+          continue
+        }
 
         let message = ''
         let type: AdminActivity['type'] = 'update'
@@ -172,6 +228,12 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
 
         switch (change.status) {
           case 'approved':
+            // Only show if this was a real status change (not just initial creation)
+            if (!isRecentStatusChange) {
+              console.log(`[Activity] Skipping approval for ${change.business_name}: not a recent status change (${timeDiffMinutes.toFixed(1)} minutes between create/update)`)
+              continue
+            }
+
             message = `Admin approved: ${change.business_name || 'Business'} in ${change.business_town || 'Unknown City'}`
             type = 'approval'
             color = 'bg-green-500'
@@ -180,6 +242,12 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
             activityDate = updatedAt
             break
           case 'rejected':
+            // Only show if this was a real status change (not just initial creation)
+            if (!isRecentStatusChange) {
+              console.log(`[Activity] Skipping rejection for ${change.business_name}: not a recent status change`)
+              continue
+            }
+
             message = `Admin rejected: ${change.business_name || 'Business'} application`
             type = 'rejection'
             color = 'bg-red-500'
@@ -187,11 +255,30 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
             // Use updated_at for rejections (when admin rejected it)
             activityDate = updatedAt
             break
+          case 'claimed_free':
+            // Show when a business gets their claim approved
+            if (!isRecentStatusChange) {
+              console.log(`[Activity] Skipping claimed_free for ${change.business_name}: not a recent status change`)
+              continue
+            }
+
+            message = `Claim approved: ${change.business_name || 'Business'} is now a Free Listing`
+            type = 'approval'
+            color = 'bg-emerald-500'
+            iconType = 'check'
+            activityDate = updatedAt
+            break
           case 'pending_review':
             // Skip pending_review from status changes (we show these from new applications instead)
             continue
           case 'incomplete':
             // Skip incomplete status (not interesting for activity feed)
+            continue
+          case 'unclaimed':
+            // Skip unclaimed businesses (auto-imported, not user activity)
+            continue
+          case 'pending_claim':
+            // Skip pending_claim (we show these from new applications instead)
             continue
           default:
             // Skip other status updates (only show approvals/rejections)

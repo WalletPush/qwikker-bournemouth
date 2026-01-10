@@ -38,25 +38,29 @@ const navItems: NavItem[] = [
     id: 'offers', 
     title: 'Offers', 
     icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>, 
-    href: '/dashboard/offers' 
+    href: '/dashboard/offers',
+    locked: true 
   },
   { 
     id: 'events', 
     title: 'Events', 
     icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>, 
-    href: '/dashboard/events' 
+    href: '/dashboard/events',
+    locked: true 
   },
   { 
     id: 'files', 
     title: 'Files & Menus', 
     icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>, 
-    href: '/dashboard/files' 
+    href: '/dashboard/files',
+    locked: true 
   },
   { 
     id: 'secret-menu', 
     title: 'Secret Menu', 
     icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>, 
-    href: '/dashboard/secret-menu' 
+    href: '/dashboard/secret-menu',
+    locked: true 
   },
   { 
     id: 'action-items', 
@@ -143,6 +147,11 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
 
   // Check if a feature is unlocked for this user
   const isFeatureUnlocked = (featureId: string): boolean => {
+    // 🔒 CRITICAL: claimed_free status = ALL features locked except profile editing
+    if (profile?.status === 'claimed_free') {
+      return false // Everything locked for free claimed listings
+    }
+
     // Map nav item IDs to feature keys
     const featureMap: Record<string, string> = {
       'social-wizard': 'social_wizard',
@@ -214,7 +223,15 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
           touchAction: 'pan-y',
           overscrollBehavior: 'contain'
         }}>
-          {navItems.map((item) => {
+          {navItems
+            .filter(item => {
+              // Hide action-items for claimed_free businesses
+              if (item.id === 'action-items' && profile?.status === 'claimed_free') {
+                return false
+              }
+              return true
+            })
+            .map((item) => {
             const isUnlocked = isFeatureUnlocked(item.id)
             const showLock = item.locked && !isUnlocked
             

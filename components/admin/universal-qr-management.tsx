@@ -61,7 +61,7 @@ export function UniversalQRManagement({ city, cityDisplayName }: UniversalQRMana
         .eq('city', city)
 
       if (filterCategory !== 'all') {
-        query = query.eq('business_category', filterCategory)
+        query = query.ilike('business_category', filterCategory)
       }
 
       if (searchQuery.trim()) {

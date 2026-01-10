@@ -70,142 +70,188 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const searchParams = useSearchParams()
   
   // Get initial tab from URL or default to 'pending'
-  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'import' | 'claims' | 'qr-management' | 'ai-test' | 'pricing' | 'setup'>(() => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'unclaimed' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'import' | 'claims' | 'qr-management' | 'ai-test' | 'pricing' | 'setup'>(() => {
     const urlTab = searchParams.get('tab')
-    const validTabs = ['overview', 'pending', 'updates', 'live', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'import', 'claims', 'qr-management', 'ai-test', 'pricing', 'setup']
+    const validTabs = ['overview', 'pending', 'updates', 'live', 'unclaimed', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'import', 'claims', 'qr-management', 'ai-test', 'pricing', 'setup']
     return validTabs.includes(urlTab || '') ? (urlTab as any) : 'overview'
   })
 
   // No redirects - all tabs stay in dashboard
 
-  // Mock claims data (same as /admin/claims)
-  const [mockClaims, setMockClaims] = useState([
-    {
-      id: '1',
-      status: 'pending',
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      user: {
-        name: 'Sarah Williams',
-        email: 'thelarderhouse@gmail.com',
-        accountCreated: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-      },
-      business: {
-        id: 'larder-house',
-        name: 'The Larder House',
-        address: '123 Old Christchurch Rd, Bournemouth',
-        category: 'Restaurant',
-        rating: 4.6,
-        reviewCount: 847,
-        googleYears: 5,
-        image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400'
-      },
-      website: 'https://thelarderhouse.com',
-      verification: {
-        emailDomainMatch: false,
-        phoneVerified: false,
-        duplicateClaims: 0,
-        deniedClaims: 0,
-        riskScore: 15,
-        riskLevel: 'safe' as const,
-        confidenceBadge: 'Email matches business name'
-      },
-      foundingMemberEligible: true,
-      foundingMemberCount: 27
-    },
-    {
-      id: '2',
-      status: 'pending',
-      createdAt: new Date(Date.now() - 30 * 60 * 1000),
-      user: {
-        name: 'John Smith',
-        email: 'john.smith12345@gmail.com',
-        accountCreated: new Date(Date.now() - 20 * 60 * 1000)
-      },
-      business: {
-        id: 'larder-house-2',
-        name: 'The Larder House',
-        address: '123 Old Christchurch Rd, Bournemouth',
-        category: 'Restaurant',
-        rating: 4.6,
-        reviewCount: 847,
-        googleYears: 5,
-        image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400'
-      },
-      website: '',
-      verification: {
-        emailDomainMatch: false,
-        phoneVerified: false,
-        duplicateClaims: 2,
-        deniedClaims: 1,
-        riskScore: 85,
-        riskLevel: 'critical' as const,
-        confidenceBadge: '🚨 Generic email, multiple claims'
-      },
-      foundingMemberEligible: true,
-      foundingMemberCount: 27
-    },
-    {
-      id: '3',
-      status: 'pending',
-      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
-      user: {
-        name: 'Mike Johnson',
-        email: 'mike@joesbarbershop.co.uk',
-        accountCreated: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      },
-      business: {
-        id: 'joes-barber',
-        name: "Joe's Barber Shop",
-        address: '456 High Street, Bournemouth',
-        category: 'Barber',
-        rating: 4.8,
-        reviewCount: 203,
-        googleYears: 3,
-        image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400'
-      },
-      website: 'https://joesbarbershop.co.uk',
-      verification: {
-        emailDomainMatch: true,
-        phoneVerified: false,
-        duplicateClaims: 0,
-        deniedClaims: 0,
-        riskScore: 5,
-        riskLevel: 'safe' as const,
-        confidenceBadge: 'VERY HIGH - Email domain matches website'
-      },
-      foundingMemberEligible: true,
-      foundingMemberCount: 27
+  // Real claims data from database (will be loaded via API)
+  const [mockClaims, setMockClaims] = useState([])
+  const [loadingClaims, setLoadingClaims] = useState(true)
+  const [expandedClaims, setExpandedClaims] = useState<Set<string>>(new Set())
+
+  // Load real claims from database
+  useEffect(() => {
+    const loadClaims = async () => {
+      try {
+        const response = await fetch(`/api/admin/claims?city=${city}`)
+        const data = await response.json()
+        
+        if (data.success && data.claims) {
+          setMockClaims(data.claims)
+        }
+      } catch (error) {
+        console.error('Failed to load claims:', error)
+      } finally {
+        setLoadingClaims(false)
+      }
     }
-  ])
+    
+    loadClaims()
+  }, [city])
 
   const [processingClaim, setProcessingClaim] = useState<string | null>(null)
 
+  const toggleExpandClaim = (claimId: string) => {
+    const newExpanded = new Set(expandedClaims)
+    if (newExpanded.has(claimId)) {
+      newExpanded.delete(claimId)
+    } else {
+      newExpanded.add(claimId)
+    }
+    setExpandedClaims(newExpanded)
+  }
+
   const handleApproveClaim = async (claimId: string) => {
     setProcessingClaim(claimId)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setMockClaims(mockClaims.map(c => 
-      c.id === claimId ? { ...c, status: 'approved' as const } : c
-    ))
-    setProcessingClaim(null)
-    showSuccess('Claim Approved!', 'Business owner will receive dashboard access')
-    // Auto-switch to approved view
-    setTimeout(() => setClaimsView('approved'), 500)
+    
+    try {
+      const response = await fetch('/api/admin/approve-claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claimId, action: 'approve' }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        // Update local state
+        setMockClaims(mockClaims.map(c => 
+          c.id === claimId ? { ...c, status: 'approved' as const } : c
+        ))
+        showSuccess('Claim Approved!', 'Business now has free tier access and is visible in Discover')
+        // Auto-switch to approved view
+        setTimeout(() => {
+          setClaimsView('approved')
+          window.location.reload() // Refresh to show updated business in Live Listings
+        }, 1500)
+      } else {
+        showError('Approval Failed', result.error || 'Failed to approve claim. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error approving claim:', error)
+      showError('Unexpected Error', 'An unexpected error occurred. Please try again.')
+    } finally {
+      setProcessingClaim(null)
+    }
+  }
+
+  const handleRequestProof = async (claim: any) => {
+    setProcessingClaim(claim.id)
+    
+    try {
+      const response = await fetch('/api/admin/request-proof', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          claimId: claim.id,
+          businessName: claim.business.name,
+          email: claim.user.email,
+          riskFactors: {
+            emailDomainMatch: claim.verification.emailDomainMatch,
+            genericEmail: claim.user.email.split('@')[1]?.match(/(gmail|yahoo|hotmail|outlook)\.com/),
+            accountAge: claim.user.accountCreated
+          }
+        }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        showSuccess('Proof Requested', `Email sent to ${claim.user.email}`)
+      } else {
+        showError('Request Failed', result.error || 'Failed to send proof request')
+      }
+    } catch (error) {
+      console.error('Error requesting proof:', error)
+      showError('Request Failed', 'An unexpected error occurred')
+    } finally {
+      setProcessingClaim(null)
+    }
+  }
+
+  const handleContactBusiness = async (claim: any) => {
+    // Get custom message from admin
+    const customMessage = prompt(
+      `Contact ${claim.business.name}\n\nEnter your message to ${claim.user.name}:`,
+      ''
+    )
+    
+    if (customMessage && customMessage.trim()) {
+      try {
+        const response = await fetch('/api/admin/contact-business', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            claimId: claim.id,
+            email: claim.user.email,
+            businessName: claim.business.name,
+            userName: claim.user.name,
+            customMessage: customMessage.trim(),
+            city: city
+          }),
+        })
+
+        const result = await response.json()
+        if (response.ok && result.success) {
+          showSuccess('Email Sent', `Message sent to ${claim.user.email}`)
+        } else {
+          showError('Send Failed', result.error || 'Failed to send email')
+        }
+      } catch (error) {
+        console.error('Error sending email:', error)
+        showError('Send Failed', 'An unexpected error occurred')
+      }
+    }
   }
 
   const handleDenyClaim = async (claimId: string) => {
     setProcessingClaim(claimId)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setMockClaims(mockClaims.map(c => 
-      c.id === claimId ? { ...c, status: 'denied' as const } : c
-    ))
-    setProcessingClaim(null)
-    showError('Claim Denied', 'Business owner will be notified')
-    // Auto-switch to denied view
-    setTimeout(() => setClaimsView('denied'), 500)
+    
+    try {
+      const response = await fetch('/api/admin/approve-claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claimId, action: 'deny' }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        // Update local state
+        setMockClaims(mockClaims.map(c => 
+          c.id === claimId ? { ...c, status: 'denied' as const } : c
+        ))
+        showSuccess('Claim Denied', 'Business listing remains unclaimed')
+        // Auto-switch to denied view
+        setTimeout(() => setClaimsView('denied'), 500)
+      } else {
+        showError('Denial Failed', result.error || 'Failed to deny claim. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error denying claim:', error)
+      showError('Unexpected Error', 'An unexpected error occurred. Please try again.')
+    } finally {
+      setProcessingClaim(null)
+    }
   }
 
-  const formatTimeAgo = (date: Date) => {
-    const minutes = Math.floor((Date.now() - date.getTime()) / (1000 * 60))
+  const formatTimeAgo = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date
+    const minutes = Math.floor((Date.now() - dateObj.getTime()) / (1000 * 60))
     if (minutes < 60) return `${minutes} min${minutes !== 1 ? 's' : ''} ago`
     const hours = Math.floor(minutes / 60)
     if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
@@ -350,8 +396,8 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
         business.business_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         business.business_town?.toLowerCase().includes(searchTerm.toLowerCase())
       
-      // Filter by business_type ONLY (clean standardized values)
-      const matchesCategory = filterCategory === 'all' || business.business_type === filterCategory
+      // Filter by business_type ONLY (case-insensitive to handle both lowercase and Google Places proper case)
+      const matchesCategory = filterCategory === 'all' || business.business_type?.toLowerCase() === filterCategory.toLowerCase()
       
       // Filter by tier - Check CRM subscription data
       let matchesTier = false
@@ -361,6 +407,9 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
         const crm = crmData.find(c => c.id === business.id)
         if (filterTier === 'trial') {
           matchesTier = crm?.subscription?.is_in_free_trial === true
+        } else if (filterTier === 'free') {
+          // Free tier: claimed_free status OR subscription tier = 'free'
+          matchesTier = business.status === 'claimed_free' || crm?.subscription?.tier_name === 'free'
         } else if (filterTier === 'synced') {
           matchesTier = !!crm?.last_ghl_sync
         } else {
@@ -377,11 +426,13 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
   const allPendingBusinesses = businessList.filter(b => b.status === 'pending_review')
   
   // ✅ FIXED: Exclude expired trials from Live Listings
+  // ✅ INCLUDE claimed_free businesses (they're live with free tier)
+  // ✅ EXCLUDE unclaimed businesses (they have their own tab)
   const allLiveBusinesses = businessList.filter(b => {
-    if (b.status !== 'approved') return false
+    if (b.status !== 'approved' && b.status !== 'claimed_free') return false
     
-    // Check if trial is expired
-    if (b.subscription && Array.isArray(b.subscription) && b.subscription.length > 0) {
+    // Check if trial is expired (only for approved businesses with trials)
+    if (b.status === 'approved' && b.subscription && Array.isArray(b.subscription) && b.subscription.length > 0) {
       const sub = b.subscription[0]
       if (sub.is_in_free_trial && sub.free_trial_end_date) {
         const endDate = new Date(sub.free_trial_end_date)
@@ -392,8 +443,11 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
       }
     }
     
-    return true // ✅ Include in Live
+    return true // ✅ Include approved AND claimed_free
   })
+  
+  // ✅ NEW: Unclaimed businesses (separate tab)
+  const allUnclaimedBusinesses = businessList.filter(b => b.status === 'unclaimed')
   
   const allIncompleteBusinesses = businessList.filter(b => b.status === 'incomplete')
   const allRejectedBusinesses = businessList.filter(b => b.status === 'rejected')
@@ -416,6 +470,7 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
   // FILTERED businesses for display content only
   const pendingBusinesses = filterBusinesses(allPendingBusinesses)
   const liveBusinesses = filterBusinesses(allLiveBusinesses)
+  const unclaimedBusinesses = filterBusinesses(allUnclaimedBusinesses)
   const incompleteBusinesses = filterBusinesses(allIncompleteBusinesses)
   const rejectedBusinesses = filterBusinesses(allRejectedBusinesses)
   const expiredTrialBusinesses = filterBusinesses(allExpiredTrialBusinesses)
@@ -616,6 +671,12 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
       label: 'Live Listings', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, 
       count: allLiveBusinesses.length 
+    },
+    { 
+      id: 'unclaimed', 
+      label: 'Unclaimed Listings', 
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>, 
+      count: allUnclaimedBusinesses.length 
     },
     { 
       id: 'incomplete', 
@@ -1351,6 +1412,7 @@ Qwikker Admin Team`
                 {activeTab === 'pending' && 'Pending Applications'}
                 {activeTab === 'updates' && 'Pending Updates'}
                 {activeTab === 'live' && 'Live Listings'}
+                {activeTab === 'unclaimed' && 'Unclaimed Listings'}
                 {activeTab === 'incomplete' && 'Incomplete Listings'}
                 {activeTab === 'rejected' && 'Rejected Applications'}
                 {activeTab === 'knowledge' && 'Knowledge Base'}
@@ -1440,6 +1502,32 @@ Qwikker Admin Team`
                             const crm = crmData.find(c => c.id === b.id)
                             // ONLY check subscription data, ignore legacy trial_days_remaining
                             return crm?.subscription?.is_in_free_trial
+                          }).length}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Free Tier */}
+                  <button
+                    onClick={() => setFilterTier('free')}
+                    className={`w-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border rounded-xl p-4 hover:bg-slate-700/50 transition-all cursor-pointer ${
+                      filterTier === 'free' ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-slate-700/50 hover:border-emerald-500/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-xs font-medium">Free</p>
+                        <p className="text-2xl font-bold text-white">
+                          {allLiveBusinesses.filter(b => {
+                            const crm = crmData.find(c => c.id === b.id)
+                            // Free tier (claimed_free status OR subscription tier = 'free')
+                            return b.status === 'claimed_free' || crm?.subscription?.tier_name === 'free'
                           }).length}
                         </p>
                       </div>
@@ -1598,7 +1686,8 @@ Qwikker Admin Team`
                       className="px-4 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:border-[#00d083]/50 focus:ring-2 focus:ring-[#00d083]/20 transition-all cursor-pointer"
                     >
                       <option value="all">All Tiers</option>
-                      <option value="free_trial">Trial</option>
+                      <option value="trial">Trial</option>
+                      <option value="free">Free</option>
                       <option value="starter">Starter</option>
                       <option value="featured">Featured</option>
                       <option value="spotlight">Spotlight</option>
@@ -1838,6 +1927,83 @@ Qwikker Admin Team`
                               updated_at: business.last_updated
                             }
                             setInspectionModal({ open: true, business: legacyBusiness })
+                          }}
+                        />
+                      )
+                    })
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'unclaimed' && (
+                <div className="grid lg:grid-cols-2 gap-6">
+                  {allUnclaimedBusinesses.length === 0 ? (
+                    <div className="text-center py-12 col-span-full">
+                      <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-semibold text-white mb-2">No unclaimed listings</h3>
+                      <p className="text-slate-400">There are no unclaimed business listings at the moment.</p>
+                    </div>
+                  ) : (
+                    unclaimedBusinesses.map((business) => {
+                      // Build CRM-compatible business object for unclaimed listings
+                      const crmBusiness = {
+                        id: business.id,
+                        business_name: business.business_name || 'Unnamed Business',
+                        first_name: '',
+                        last_name: '',
+                        business_category: business.business_category || 'Uncategorized',
+                        business_type: business.business_type,
+                        business_address: business.business_address || '',
+                        business_town: business.business_town || '',
+                        business_postcode: business.business_postcode || '',
+                        email: business.email || '',
+                        phone: business.phone || '',
+                        logo: business.logo || '',
+                        business_tagline: business.business_tagline || '',
+                        business_description: business.business_description || '',
+                        business_hours: business.business_hours || '',
+                        business_hours_structured: business.business_hours_structured || null,
+                        website_url: business.website_url || '',
+                        website: business.website_url || '',
+                        instagram_handle: business.instagram_handle || '',
+                        facebook_page: business.facebook_page || '',
+                        status: 'unclaimed',
+                        subscription: null, // No subscription for unclaimed
+                        business_tier: null,
+                        offer_name: '',
+                        offer_type: '',
+                        offer_value: '',
+                        offer_claim_amount: 0,
+                        offer_start_date: null,
+                        offer_end_date: null,
+                        offer_terms: '',
+                        business_offers: [],
+                        secret_menu_items: [],
+                        trial_days_remaining: null,
+                        trial_status: 'not_applicable' as const,
+                        billing_starts_date: null,
+                        last_updated: business.updated_at || business.created_at,
+                        has_pending_changes: false,
+                        pending_changes_count: 0,
+                        plan: null,
+                        features: { social_wizard: false, loyalty_cards: false, analytics: false, push_notifications: false }
+                      }
+                      
+                      return (
+                        <ComprehensiveBusinessCRMCard
+                          key={business.id}
+                          business={crmBusiness}
+                          onApprove={handleApproval}
+                          onInspect={(business) => {
+                            const fullBusinessData = allBusinesses.find(b => b.id === business.id)
+                            if (fullBusinessData) {
+                              setSelectedBusiness(fullBusinessData)
+                              setInspectionModalOpen(true)
+                            }
                           }}
                         />
                       )
@@ -3212,6 +3378,119 @@ Qwikker Admin Team`
                                 </div>
                               </div>
 
+                              {/* Edited Business Details */}
+                              {claim.dataEdited && claim.editedData && (
+                                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl overflow-hidden">
+                                  <button
+                                    onClick={() => toggleExpandClaim(claim.id)}
+                                    className="w-full flex items-center justify-between p-3 hover:bg-slate-700/50 transition-colors"
+                                  >
+                                    <h4 className="text-sm font-medium text-slate-300">
+                                      {expandedClaims.has(claim.id) ? 'Updated Business Information' : 'Review Business Info'}
+                                    </h4>
+                                    <svg 
+                                      className={`w-4 h-4 text-slate-400 transition-transform ${expandedClaims.has(claim.id) ? 'rotate-180' : ''}`}
+                                      fill="none" 
+                                      stroke="currentColor" 
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                  </button>
+                                  
+                                  {expandedClaims.has(claim.id) && (
+                                    <div className="px-4 pb-4 space-y-3">
+                                  
+                                  <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                                    {claim.editedData.businessName && (
+                                      <div>
+                                        <strong className="text-slate-400">Business Name:</strong>
+                                        <p className="text-white">{claim.editedData.businessName}</p>
+                                      </div>
+                                    )}
+                                    {claim.editedData.address && (
+                                      <div>
+                                        <strong className="text-slate-400">Address:</strong>
+                                        <p className="text-white">{claim.editedData.address}</p>
+                                      </div>
+                                    )}
+                                    {claim.editedData.phone && (
+                                      <div>
+                                        <strong className="text-slate-400">Phone:</strong>
+                                        <p className="text-white">{claim.editedData.phone}</p>
+                                      </div>
+                                    )}
+                                    {claim.editedData.website && (
+                                      <div>
+                                        <strong className="text-slate-400">Website:</strong>
+                                        <p className="text-white truncate">
+                                          <a href={claim.editedData.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                                            {claim.editedData.website}
+                                          </a>
+                                        </p>
+                                      </div>
+                                    )}
+                                    {claim.editedData.category && (
+                                      <div>
+                                        <strong className="text-slate-400">Category:</strong>
+                                        <p className="text-white">{claim.editedData.category}</p>
+                                      </div>
+                                    )}
+                                    {claim.editedData.type && (
+                                      <div>
+                                        <strong className="text-slate-400">Type:</strong>
+                                        <p className="text-white">{claim.editedData.type}</p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {claim.editedData.hours && (
+                                    <div>
+                                      <strong className="text-slate-400 text-sm">Opening Hours:</strong>
+                                      <p className="text-white text-sm whitespace-pre-line mt-1">{claim.editedData.hours}</p>
+                                    </div>
+                                  )}
+
+                                  {claim.editedData.description && (
+                                    <div>
+                                      <strong className="text-slate-400 text-sm">Description:</strong>
+                                      <p className="text-white text-sm mt-1">{claim.editedData.description}</p>
+                                    </div>
+                                  )}
+
+                                  {/* Logo and Hero Images */}
+                                  {(claim.editedData.logoUrl || claim.editedData.heroImageUrl) && (
+                                    <div>
+                                      <strong className="text-slate-400 text-sm block mb-2">Uploaded Images:</strong>
+                                      <div className="flex gap-3">
+                                        {claim.editedData.logoUrl && (
+                                          <div>
+                                            <p className="text-xs text-slate-400 mb-1">Logo</p>
+                                            <img 
+                                              src={claim.editedData.logoUrl} 
+                                              alt="Business Logo" 
+                                              className="w-20 h-20 object-cover rounded-lg border border-slate-600"
+                                            />
+                                          </div>
+                                        )}
+                                        {claim.editedData.heroImageUrl && (
+                                          <div>
+                                            <p className="text-xs text-slate-400 mb-1">Hero Image</p>
+                                            <img 
+                                              src={claim.editedData.heroImageUrl} 
+                                              alt="Hero Image" 
+                                              className="w-32 h-20 object-cover rounded-lg border border-slate-600"
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
                               {/* Founding Member */}
                               {claim.foundingMemberEligible && (
                                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3">
@@ -3224,20 +3503,34 @@ Qwikker Admin Team`
 
                             {/* Actions - Only show for pending claims */}
                             {claim.status === 'pending' && (
-                              <div className="flex md:flex-col gap-2 md:w-32">
+                              <div className="grid grid-cols-4 gap-2 mt-4">
                                 <button
                                   onClick={() => handleApproveClaim(claim.id)}
                                   disabled={processingClaim === claim.id}
-                                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50"
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-3 rounded transition-colors disabled:opacity-50 text-sm"
                                 >
                                   Approve
                                 </button>
                                 <button
                                   onClick={() => handleDenyClaim(claim.id)}
                                   disabled={processingClaim === claim.id}
-                                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50"
+                                  className="bg-red-600 hover:bg-red-500 text-white font-medium py-2 px-3 rounded transition-colors disabled:opacity-50 text-sm"
                                 >
                                   Deny
+                                </button>
+                                <button
+                                  onClick={() => handleRequestProof(claim)}
+                                  disabled={processingClaim === claim.id}
+                                  className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-3 rounded transition-colors disabled:opacity-50 text-sm"
+                                >
+                                  Request Proof
+                                </button>
+                                <button
+                                  onClick={() => handleContactBusiness(claim)}
+                                  disabled={processingClaim === claim.id}
+                                  className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-3 rounded transition-colors disabled:opacity-50 text-sm"
+                                >
+                                  Contact
                                 </button>
                               </div>
                             )}

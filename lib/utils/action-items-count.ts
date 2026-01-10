@@ -6,6 +6,9 @@
 export function calculateActionItemsCount(profile: any): number {
   if (!profile) return 0
 
+  // 🔒 CRITICAL: claimed_free businesses have NO action items (profile already approved)
+  if (profile.status === 'claimed_free') return 0
+
   let count = 0
 
   // REQUIRED fields for user dashboard listing

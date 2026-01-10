@@ -19,37 +19,56 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceRoleClient()
 
+    console.log(`🔍 [CLAIM SEARCH] Query: "${query}", City: ${city}`)
+
     // Search for unclaimed businesses matching the query
     const { data: businesses, error } = await supabase
       .from('business_profiles')
-      .select('id, business_name, business_address, business_town, business_postcode, business_type, business_category, business_tagline, logo_url, hero_image_url, google_place_id, status')
+      .select('id, business_name, business_address, business_town, business_postcode, business_type, business_category, business_tagline, email, phone, website, business_images, rating, review_count, years_on_google, google_place_id, status')
       .eq('city', city)
       .eq('status', 'unclaimed')
       .or(`business_name.ilike.%${query}%,business_category.ilike.%${query}%,business_type.ilike.%${query}%`)
       .order('business_name')
       .limit(10)
 
+    console.log(`🔍 [CLAIM SEARCH] Found ${businesses?.length || 0} results`)
+    if (businesses && businesses.length > 0) {
+      console.log(`🔍 [CLAIM SEARCH] Results:`, businesses.map(b => b.business_name).join(', '))
+    }
+
     if (error) {
-      console.error('Error searching businesses:', error)
+      console.error('❌ [CLAIM SEARCH] Database error:', error)
       return NextResponse.json({ 
         success: false, 
         error: 'Failed to search businesses' 
       }, { status: 500 })
     }
 
+    if (!businesses || businesses.length === 0) {
+      console.log(`⚠️ [CLAIM SEARCH] No unclaimed businesses found for query: "${query}"`)
+    }
+
     // Format results for the UI
-    const results = (businesses || []).map(business => ({
-      id: business.id,
-      name: business.business_name,
-      address: `${business.business_address}, ${business.business_town}${business.business_postcode ? ', ' + business.business_postcode : ''}`,
-      category: business.business_category || business.business_type,
-      tagline: business.business_tagline,
-      image: business.hero_image_url || business.logo_url || '/placeholder-business.jpg',
-      status: business.status,
-      // Note: Google ratings will be added when we implement Google Places API integration
-      rating: null,
-      reviewCount: null
-    }))
+    const results = (businesses || []).map(business => {
+      // Get first business image from array
+      const firstImage = business.business_images?.[0] || '/placeholder-business.jpg'
+      
+      return {
+        id: business.id,
+        name: business.business_name,
+        address: `${business.business_address}, ${business.business_town}${business.business_postcode ? ', ' + business.business_postcode : ''}`,
+        category: business.business_category || business.business_type,
+        tagline: business.business_tagline,
+        image: firstImage,
+        email: business.email,
+        phone: business.phone,
+        website: business.website,
+        rating: business.rating,
+        reviewCount: business.review_count,
+        yearsOnGoogle: business.years_on_google,
+        status: business.status
+      }
+    })
 
     return NextResponse.json({
       success: true,

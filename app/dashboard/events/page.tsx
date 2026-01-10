@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { EventsPage } from '@/components/dashboard/events-page'
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
+import { LockedFeaturePage } from '@/components/dashboard/locked-feature-page'
 
 export default async function Events() {
   const supabase = await createClient()
@@ -21,6 +22,24 @@ export default async function Events() {
 
   if (error || !profile) {
     redirect('/onboarding')
+  }
+
+  // 🔒 CRITICAL: Check if claimed_free status - show locked page
+  if (profile.status === 'claimed_free') {
+    return (
+      <DashboardLayout currentSection="events" profile={profile}>
+        <LockedFeaturePage 
+          featureName="Events" 
+          description="Promote upcoming events and build community engagement. Share special nights, live music, themed events, and more with your customers."
+          benefits={[
+            'Create and promote unlimited events',
+            'Add event details, dates, and ticketing info',
+            'Increase foot traffic with event visibility',
+            'Engage customers with community experiences'
+          ]}
+        />
+      </DashboardLayout>
+    )
   }
 
   return (

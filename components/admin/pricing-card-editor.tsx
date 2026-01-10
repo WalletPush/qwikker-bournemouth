@@ -19,6 +19,7 @@ interface PricingCard {
 }
 
 interface PricingCards {
+  free: PricingCard
   starter: PricingCard
   featured: PricingCard
   spotlight: PricingCard
@@ -50,7 +51,7 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
 
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [selectedCard, setSelectedCard] = useState<'starter' | 'featured' | 'spotlight'>('starter')
+  const [selectedCard, setSelectedCard] = useState<'free' | 'starter' | 'featured' | 'spotlight'>('free')
 
   // Load real pricing data from database
   useEffect(() => {
@@ -60,7 +61,33 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
         const data = await response.json()
         
         if (data.success && data.config) {
-          setConfig(data.config)
+          // Ensure free card exists in config (for backwards compatibility with old configs)
+          const configWithFree = {
+            ...data.config,
+            pricing_cards: {
+              free: data.config.pricing_cards.free || {
+                title: 'Free Listing',
+                subtitle: 'Basic visibility',
+                price: 0,
+                annual_price: 0,
+                features: [
+                  'Listed in Discover directory',
+                  'Basic business profile',
+                  'Update profile info',
+                  'Limited visibility',
+                  '❌ No AI chat visibility',
+                  '❌ No offers or events',
+                  '❌ No secret menu items',
+                  '❌ No analytics'
+                ],
+                cta_text: 'Free',
+                popular: false,
+                color_scheme: 'slate' as const
+              },
+              ...data.config.pricing_cards
+            }
+          }
+          setConfig(configWithFree)
         } else {
           // Fallback to default if no data found
           setConfig({
@@ -74,6 +101,25 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
             founding_member_title: 'Founding Member Benefit',
             founding_member_description: '20% off for life on 12-month plans if you upgrade to a paid plan before your trial expires. This discount locks in your rate permanently.',
             pricing_cards: {
+              free: {
+                title: 'Free Listing',
+                subtitle: 'Basic visibility',
+                price: 0,
+                annual_price: 0,
+                features: [
+                  'Listed in Discover directory',
+                  'Basic business profile',
+                  'Update profile info',
+                  'Limited visibility',
+                  '❌ No AI chat visibility',
+                  '❌ No offers or events',
+                  '❌ No secret menu items',
+                  '❌ No analytics'
+                ],
+                cta_text: 'Free',
+                popular: false,
+                color_scheme: 'slate'
+              },
               starter: {
                 title: 'Starter',
                 subtitle: 'Perfect for new businesses',
@@ -139,7 +185,7 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
     loadPricingConfig()
   }, [city])
 
-  const updateCard = (tier: 'starter' | 'featured' | 'spotlight', field: string, value: any) => {
+  const updateCard = (tier: 'free' | 'starter' | 'featured' | 'spotlight', field: string, value: any) => {
     if (!config) return
     
     setConfig(prev => prev ? ({
@@ -154,20 +200,20 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
     }) : null)
   }
 
-  const updateFeature = (tier: 'starter' | 'featured' | 'spotlight', index: number, value: string) => {
+  const updateFeature = (tier: 'free' | 'starter' | 'featured' | 'spotlight', index: number, value: string) => {
     if (!config) return
     const updatedFeatures = [...config.pricing_cards[tier].features]
     updatedFeatures[index] = value
     updateCard(tier, 'features', updatedFeatures)
   }
 
-  const addFeature = (tier: 'starter' | 'featured' | 'spotlight') => {
+  const addFeature = (tier: 'free' | 'starter' | 'featured' | 'spotlight') => {
     if (!config) return
     const updatedFeatures = [...config.pricing_cards[tier].features, 'New Feature']
     updateCard(tier, 'features', updatedFeatures)
   }
 
-  const removeFeature = (tier: 'starter' | 'featured' | 'spotlight', index: number) => {
+  const removeFeature = (tier: 'free' | 'starter' | 'featured' | 'spotlight', index: number) => {
     if (!config) return
     const updatedFeatures = config.pricing_cards[tier].features.filter((_, i) => i !== index)
     updateCard(tier, 'features', updatedFeatures)
@@ -215,15 +261,45 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
     }
   }
 
-  const renderPricingCard = (tier: 'starter' | 'featured' | 'spotlight') => {
-    const card = config.pricing_cards[tier]
+  const renderPricingCard = (tier: 'free' | 'starter' | 'featured' | 'spotlight') => {
+    // Provide default for free card if it doesn't exist in database yet
+    const card = config.pricing_cards[tier] || (tier === 'free' ? {
+      title: 'Free Listing',
+      subtitle: 'Basic visibility',
+      price: 0,
+      annual_price: 0,
+      features: [
+        'Listed in Discover directory',
+        'Basic business profile',
+        'Update profile info',
+        'Limited visibility',
+        '❌ No AI chat visibility',
+        '❌ No offers or events',
+        '❌ No secret menu items',
+        '❌ No analytics'
+      ],
+      cta_text: 'Free',
+      popular: false,
+      color_scheme: 'slate' as const
+    } : null)
+    
+    if (!card) return null
+    
     const isSelected = selectedCard === tier
     const showDiscountPricing = config.founding_member_enabled // Show discount if enabled
-    const discountMultiplier = config.founding_member_discount ? (100 - config.founding_member_discount) / 100 : 0.8
+    // IMPORTANT: Check for null/undefined, not falsy (0% is a valid discount!)
+    const discountMultiplier = config.founding_member_discount != null 
+      ? (100 - config.founding_member_discount) / 100 
+      : 0.8
     
     // Use the EXACT same styling as the business dashboard
-    const planNames = { starter: 'Starter', featured: 'Featured', spotlight: 'Spotlight' }
+    const planNames = { free: 'Free Listing', starter: 'Starter', featured: 'Featured', spotlight: 'Spotlight' }
     const planIcons = {
+      free: (
+        <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      ),
       starter: (
         <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -267,29 +343,40 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
             </div>
             <CardTitle className="text-xl font-bold text-white">{planNames[tier]}</CardTitle>
             <div className="mt-4">
-              {/* EXACT pricing display from business dashboard */}
-              <div className="text-3xl font-bold text-white mb-2">
-                {config.currency_symbol}{card.price}
-                <span className="text-lg font-normal text-gray-400">/month</span>
-              </div>
-              
-              {/* Discount Pricing - EXACTLY like business dashboard */}
-              {showDiscountPricing ? (
-                <div className="text-center">
-                  <div className="text-sm text-gray-400 line-through">
-                    {config.currency_symbol}{card.annual_price}/year
-                  </div>
-                  <div className="text-base font-semibold text-green-400">
-                    {config.currency_symbol}{Math.round(card.annual_price * discountMultiplier)}/year
-                  </div>
-                  <div className="text-xs text-green-300">
-                    {config.founding_member_discount}% off 12-month plans
-                  </div>
+              {tier === 'free' ? (
+                // Free card - no pricing, just "Free"
+                <div className="text-3xl font-bold text-slate-400 mb-2">
+                  Free
+                  <span className="text-lg font-normal text-slate-500">/forever</span>
                 </div>
               ) : (
-                <div className="text-sm text-gray-400">
-                  {config.currency_symbol}{card.annual_price}/year
-                </div>
+                <>
+                  {/* Paid tiers - show monthly and annual pricing */}
+                  {/* EXACT pricing display from business dashboard */}
+                  <div className="text-3xl font-bold text-white mb-2">
+                    {config.currency_symbol}{card.price}
+                    <span className="text-lg font-normal text-gray-400">/month</span>
+                  </div>
+                  
+                  {/* Clean Yearly Pricing */}
+                  {showDiscountPricing ? (
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-green-400">
+                        {config.currency_symbol}{Math.round(card.annual_price * discountMultiplier)}/year
+                      </div>
+                      <div className="text-xs text-green-300 mt-1">
+                        2 months free + {config.founding_member_discount}% founding member discount
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <div className="text-sm text-gray-400">
+                        {config.currency_symbol}{card.annual_price}/year
+                      </div>
+                      <div className="text-xs text-blue-400 mt-1">2 months free</div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </CardHeader>
@@ -515,7 +602,8 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
       {/* Live Preview */}
       <div>
         <h2 className="text-xl font-bold text-white mb-4">Live Preview - Click to Edit</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {renderPricingCard('free')}
           {renderPricingCard('starter')}
           {renderPricingCard('featured')}
           {renderPricingCard('spotlight')}
@@ -526,11 +614,13 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader>
           <CardTitle className="text-white">
-            Editing: {config.pricing_cards[selectedCard].title}
+            Editing: {config.pricing_cards[selectedCard]?.title || 'Loading...'}
             <Badge className="ml-2" variant="secondary">{selectedCard}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {config.pricing_cards[selectedCard] && (
+            <>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-slate-300">Plan Name (Fixed)</Label>
@@ -642,6 +732,8 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
               </Button>
             </div>
           </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

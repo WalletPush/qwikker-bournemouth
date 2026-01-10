@@ -152,8 +152,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
     
     loadDynamicPricing()
   }, [])
-  // Check if user is in free trial
+  // Check if user is in free trial OR claimed_free status
   const isInFreeTrial = profile?.plan === 'featured' && profile?.created_at
+  const isClaimedFree = profile?.status === 'claimed_free'
   const trialDaysLeft = isInFreeTrial ? (() => {
     const createdDate = new Date(profile.created_at)
     const now = new Date()
@@ -162,12 +163,45 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
     return Math.max(0, 90 - daysSinceSignup)
   })() : 0
   
-  const showDiscountPricing = isInFreeTrial && trialDaysLeft > 0 && isFoundingMember && dynamicPricing?.founding_member_enabled
+  // Show discount pricing if:
+  // 1. User is in free trial with founding member status, OR
+  // 2. User has claimed_free status (all claimed free get founding member benefit)
+  const showDiscountPricing = (isInFreeTrial && trialDaysLeft > 0 && isFoundingMember && dynamicPricing?.founding_member_enabled) || 
+                               (isClaimedFree && dynamicPricing?.founding_member_enabled)
   
   // Calculate discount multiplier from admin settings
-  const discountMultiplier = dynamicPricing?.founding_member_discount ? (100 - dynamicPricing.founding_member_discount) / 100 : 0.8
+  // IMPORTANT: Check for null/undefined, not falsy (0% is a valid discount!)
+  const discountMultiplier = dynamicPricing?.founding_member_discount != null 
+    ? (100 - dynamicPricing.founding_member_discount) / 100 
+    : 0.8
 
   const plans = [
+    // Free Listing Card (always show for reference)
+    {
+      id: 'free',
+      name: 'Free Listing',
+      subtitle: 'Basic visibility',
+      cta: currentPlan === 'free' ? 'Current Plan' : 'Included',
+      price: 0,
+      yearlyPrice: 0,
+      yearlyDiscount: 0,
+      icon: (
+        <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      ),
+      features: [
+        'Listed in Discover directory',
+        'Basic business profile',
+        'Update profile info',
+        'Limited visibility',
+        '❌ No AI chat visibility',
+        '❌ No offers or events',
+        '❌ No secret menu items',
+        '❌ No analytics'
+      ],
+      isFree: true
+    },
     {
       id: 'starter',
       name: dynamicPricing?.starter_title || 'Starter',
@@ -239,15 +273,17 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
       {plans.map((plan) => {
-        const isCurrentPlan = currentPlan === plan.id
+        const isCurrentPlan = currentPlan === plan.id || (currentPlan === 'free' && profile?.status === 'claimed_free' && plan.id === 'free')
         const isFreeTrialFeatured = isInFreeTrial && plan.id === 'featured'
+        const isFreeListingCard = plan.id === 'free'
         
         return (
           <Card 
             key={plan.id}
             className={`relative bg-slate-800/50 border transition-all duration-300 hover:scale-[1.02] flex flex-col ${
+              isFreeListingCard ? 'border-slate-600 opacity-80' :
               isFreeTrialFeatured ? 'ring-2 ring-[#00d083]/50 border-[#00d083]/50' : 
               plan.popular ? 'border-blue-500/50' : 
               plan.premium ? 'border-yellow-500/50' : 
@@ -259,6 +295,12 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                 <div className="bg-[#00d083] text-black px-4 py-1 rounded-full text-sm font-bold">
                   Current - Free Trial
+                </div>
+              </div>
+            ) : isCurrentPlan && isFreeListingCard ? (
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                <div className="bg-slate-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                  Current Plan
                 </div>
               </div>
             ) : plan.popular ? (
@@ -279,28 +321,37 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
               )}
               <div className="mt-4">
                 {/* Clean Pricing Display */}
-                <div className="text-3xl font-bold text-white mb-2">
-                  {dynamicPricing?.currency_symbol || '£'}{plan.price}
-                  <span className="text-lg font-normal text-gray-400">/month</span>
-                </div>
-                
-                {/* Simplified Yearly Pricing */}
-                {showDiscountPricing ? (
-                  <div className="text-center">
-                    <div className="text-sm text-gray-400 line-through">
-                      {dynamicPricing?.currency_symbol || '£'}{plan.yearlyPrice}/year
-                    </div>
-                    <div className="text-base font-semibold text-green-400">
-                      {dynamicPricing?.currency_symbol || '£'}{plan.yearlyDiscount}/year
-                    </div>
-                    <div className="text-xs text-green-300">
-                      {dynamicPricing?.founding_member_discount || 20}% off 12-month plans
-                    </div>
+                {isFreeListingCard ? (
+                  <div className="text-3xl font-bold text-slate-400 mb-2">
+                    Free
+                    <span className="text-lg font-normal text-slate-500">/forever</span>
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-400">
-                    {dynamicPricing?.currency_symbol || '£'}{plan.yearlyPrice}/year
-                  </div>
+                  <>
+                    <div className="text-3xl font-bold text-white mb-2">
+                      {dynamicPricing?.currency_symbol || '£'}{plan.price}
+                      <span className="text-lg font-normal text-gray-400">/month</span>
+                    </div>
+                    
+                    {/* Clean Yearly Pricing */}
+                    {showDiscountPricing ? (
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-green-400">
+                          {dynamicPricing?.currency_symbol || '£'}{plan.yearlyDiscount}/year
+                        </div>
+                        <div className="text-xs text-green-300 mt-1">
+                          2 months free + {dynamicPricing?.founding_member_discount || 20}% founding member discount
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <div className="text-sm text-gray-400">
+                          {dynamicPricing?.currency_symbol || '£'}{plan.yearlyPrice}/year
+                        </div>
+                        <div className="text-xs text-blue-400 mt-1">2 months free</div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </CardHeader>
@@ -308,19 +359,39 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
             <CardContent className="flex-1 flex flex-col">
               {/* Clean Feature List */}
               <div className="space-y-3 flex-1 mb-6">
-                {plan.features.map((feature, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <svg className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-300 text-sm leading-relaxed">{feature}</span>
-                  </div>
-                ))}
+                {plan.features.map((feature, index) => {
+                  const isNegativeFeature = feature.startsWith('❌')
+                  const cleanFeature = isNegativeFeature ? feature.replace('❌ ', '') : feature
+                  
+                  return (
+                    <div key={index} className="flex items-start gap-3">
+                      {isNegativeFeature ? (
+                        <svg className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      <span className={`text-sm leading-relaxed ${isNegativeFeature ? 'text-slate-400' : 'text-gray-300'}`}>
+                        {cleanFeature}
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
 
               {/* Beautiful Action Button */}
               <div className="mt-auto">
-                {(isCurrentPlan && !isFreeTrialFeatured) ? (
+                {isFreeListingCard ? (
+                  <Button 
+                    className="w-full bg-slate-600 hover:bg-slate-700 text-white cursor-not-allowed h-12 font-semibold rounded-lg"
+                    disabled
+                  >
+                    {isCurrentPlan ? 'Current Plan' : 'Free'}
+                  </Button>
+                ) : (isCurrentPlan && !isFreeTrialFeatured) ? (
                   <Button 
                     className="w-full bg-slate-600 hover:bg-slate-700 text-white cursor-not-allowed h-12 font-semibold rounded-lg"
                     disabled

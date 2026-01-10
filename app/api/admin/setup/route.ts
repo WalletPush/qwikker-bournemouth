@@ -122,6 +122,8 @@ export async function POST(request: NextRequest) {
         openai_api_key: config.openai_api_key,
         anthropic_api_key: config.anthropic_api_key,
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'city' // Tell Supabase to UPDATE if city already exists
       })
 
     if (error) {

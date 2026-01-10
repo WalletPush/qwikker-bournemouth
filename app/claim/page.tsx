@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { EmailVerification } from '@/components/claim/email-verification'
 import { CreateAccount } from '@/components/claim/create-account'
 import { PendingApproval } from '@/components/claim/pending-approval'
+import { ConfirmBusinessDetails } from '@/components/claim/confirm-business-details'
 
 // Mock business data (will be replaced with real API)
 const MOCK_BUSINESSES = [
@@ -53,10 +54,22 @@ export default function ClaimPage() {
   const [email, setEmail] = useState('')
   const [website, setWebsite] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
+  
+  // Edited business data
+  const [editedBusinessData, setEditedBusinessData] = useState<any>(null)
 
   const handleSearch = async (query: string = searchQuery) => {
     // Real search - call API
-    if (!query.trim()) {
+    const trimmedQuery = query.trim()
+    
+    // Clear results if query is empty
+    if (!trimmedQuery) {
+      setSearchResults([])
+      return
+    }
+    
+    // Don't search if less than 2 characters (API will reject it anyway)
+    if (trimmedQuery.length < 2) {
       setSearchResults([])
       return
     }
@@ -65,7 +78,7 @@ export default function ClaimPage() {
       const response = await fetch('/api/claim/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, city: 'bournemouth' })
+        body: JSON.stringify({ query: trimmedQuery, city: 'bournemouth' })
       })
 
       const data = await response.json()
@@ -93,10 +106,10 @@ export default function ClaimPage() {
 
   const handleBack = () => {
     if (step === 'account') {
-      setStep('verify')
-    } else if (step === 'verify') {
       setStep('details')
     } else if (step === 'details') {
+      setStep('verify')
+    } else if (step === 'verify') {
       setStep('confirm')
     } else if (step === 'confirm') {
       setStep('search')
@@ -131,6 +144,11 @@ export default function ClaimPage() {
 
   const handleVerified = (code: string) => {
     setVerificationCode(code)
+    setStep('details')
+  }
+
+  const handleBusinessDetailsConfirmed = (editedData: any) => {
+    setEditedBusinessData(editedData)
     setStep('account')
   }
 
@@ -142,16 +160,38 @@ export default function ClaimPage() {
   const handleCreateAccount = async (data: { firstName: string; lastName: string; password: string }) => {
     // Real: Create account and submit claim
     try {
+      const formData = new FormData()
+      formData.append('firstName', data.firstName)
+      formData.append('lastName', data.lastName)
+      formData.append('password', data.password)
+      formData.append('email', email.toLowerCase())
+      formData.append('website', website)
+      formData.append('businessId', selectedBusiness?.id || '')
+      formData.append('verificationCode', verificationCode)
+      
+      // Add edited business data
+      if (editedBusinessData) {
+        formData.append('editedBusinessName', editedBusinessData.business_name)
+        formData.append('editedAddress', editedBusinessData.address)
+        formData.append('editedPhone', editedBusinessData.phone)
+        formData.append('editedWebsite', editedBusinessData.website)
+        formData.append('editedCategory', editedBusinessData.category)
+        formData.append('editedType', editedBusinessData.type)
+        formData.append('editedDescription', editedBusinessData.description)
+        formData.append('editedHours', editedBusinessData.hours)
+        
+        // Add image files if they exist
+        if (editedBusinessData.logo) {
+          formData.append('logo', editedBusinessData.logo)
+        }
+        if (editedBusinessData.heroImage) {
+          formData.append('heroImage', editedBusinessData.heroImage)
+        }
+      }
+
       const response = await fetch('/api/claim/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          ...data, 
-          email: email.toLowerCase(), 
-          website, 
-          businessId: selectedBusiness?.id,
-          verificationCode
-        })
+        body: formData
       })
 
       const result = await response.json()
@@ -278,6 +318,14 @@ export default function ClaimPage() {
                   <div className="text-center py-8 text-muted-foreground">
                     <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p className="text-sm">Start typing to search for your business</p>
+                    <p className="text-xs mt-2 opacity-75">(minimum 2 characters)</p>
+                  </div>
+                )}
+
+                {searchQuery.length === 1 && searchResults.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">Type at least 2 characters to search</p>
                   </div>
                 )}
               </CardContent>
@@ -467,7 +515,28 @@ export default function ClaimPage() {
           />
         )}
 
-        {/* Step 5: Create Account */}
+        {/* Step 5: Confirm Business Details */}
+        {step === 'details' && selectedBusiness && (
+          <ConfirmBusinessDetails
+            business={{
+              id: selectedBusiness.id,
+              name: selectedBusiness.name || selectedBusiness.business_name,
+              address: selectedBusiness.address || selectedBusiness.business_address,
+              phone: selectedBusiness.phone,
+              website: selectedBusiness.website || website,
+              category: selectedBusiness.category || selectedBusiness.business_category,
+              type: selectedBusiness.type || selectedBusiness.business_type,
+              description: selectedBusiness.description || selectedBusiness.business_description,
+              hours: selectedBusiness.hours,
+              rating: selectedBusiness.rating,
+              reviewCount: selectedBusiness.reviewCount || selectedBusiness.review_count
+            }}
+            onConfirm={handleBusinessDetailsConfirmed}
+            onBack={handleBack}
+          />
+        )}
+
+        {/* Step 6: Create Account */}
         {step === 'account' && selectedBusiness && (
           <CreateAccount
             email={email}

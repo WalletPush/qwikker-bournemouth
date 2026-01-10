@@ -67,7 +67,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
     }
   }
   
-  // Fetch approved businesses from database
+  // Fetch all discoverable businesses (approved, unclaimed, claimed_free)
   const { data: approvedBusinesses, error } = await supabase
     .from('business_profiles')
     .select(`
@@ -97,6 +97,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       review_count,
       additional_notes,
       created_at,
+      status,
       business_offers!left(
         id,
         offer_name,
@@ -109,7 +110,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
         status
       )
     `)
-    .eq('status', 'approved')
+    .in('status', ['approved', 'unclaimed', 'claimed_free']) // Show all discoverable businesses
     .eq('city', currentCity) // SECURITY: Filter by franchise city
     .not('business_name', 'is', null)
   
@@ -154,7 +155,10 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
         badge: offer.offer_value || 'OFFER',
         image: offer.offer_image || business.business_images?.[0]
       })) || [],
-      plan: business.plan || 'starter',
+      // 🎯 Don't set default plan for unclaimed/claimed_free (they should show no badge)
+      plan: (business.status === 'unclaimed' || business.status === 'claimed_free') 
+        ? null // No plan = no badge
+        : (business.plan || 'starter'),
       rating: business.rating || 4.5,
       reviewCount: business.review_count || Math.floor(Math.random() * 50) + 10,
       tags: [
@@ -166,7 +170,15 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       activeOffers: business.business_offers?.filter(offer => offer.status === 'approved')?.length || 0,
       menuPreview: business.menu_preview || [], // Add menu preview for popular items
       hasSecretMenu, // Now properly checks for real secret menu data
-      tier: business.plan === 'spotlight' ? 'qwikker_picks' : business.plan === 'featured' ? 'featured' : 'recommended'
+      // 🎯 TIER LOGIC: Free listings (unclaimed/claimed_free) have NO tier badge
+      tier: (business.status === 'unclaimed' || business.status === 'claimed_free') 
+        ? null // No tier badge for free listings
+        : business.plan === 'spotlight' 
+          ? 'qwikker_picks' 
+          : business.plan === 'featured' 
+            ? 'featured' 
+            : 'recommended',
+      status: business.status // Pass status for debugging/filtering
     }
   })
   

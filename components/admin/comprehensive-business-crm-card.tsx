@@ -47,10 +47,12 @@ const formatDateConsistent = (dateString: string | null | undefined): string => 
 
 // Helper function to get tier-specific border color
 const getTierBorderColor = (business: BusinessCRMData) => {
-  // ONLY check subscription data, ignore legacy trial_days_remaining
-  const isTrial = business.subscription?.is_in_free_trial
+  // Check status for free tier businesses first
+  if (business.status === 'unclaimed') return 'border-slate-600/50' // Unclaimed → Dark grey
+  if (business.status === 'claimed_free') return 'border-emerald-500/50' // Free → Green
   
-  // Get tier from subscription or fallback to business.plan
+  // Then check subscription data
+  const isTrial = business.subscription?.is_in_free_trial
   const tierName = business.subscription?.tier_name
   
   if (isTrial) return 'border-blue-500/50' // Free trial → Blue
@@ -61,10 +63,12 @@ const getTierBorderColor = (business: BusinessCRMData) => {
 
 // Helper function to get tier-specific accent gradient
 const getTierAccentGradient = (business: BusinessCRMData) => {
-  // ONLY check subscription data, ignore legacy trial_days_remaining
-  const isTrial = business.subscription?.is_in_free_trial
+  // Check status for free tier businesses first
+  if (business.status === 'unclaimed') return 'from-slate-500 via-slate-600 to-slate-500' // Unclaimed → Dark grey
+  if (business.status === 'claimed_free') return 'from-emerald-500 via-emerald-600 to-emerald-500' // Free → Green
   
-  // Get tier from subscription or fallback to business.plan
+  // Then check subscription data
+  const isTrial = business.subscription?.is_in_free_trial
   const tierName = business.subscription?.tier_name
   
   if (isTrial) return 'from-blue-500 via-blue-600 to-blue-500' // Free trial → Blue
@@ -524,14 +528,21 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </svg>
               <span className="text-slate-400 text-xs font-medium mb-2">Tier</span>
               <span className={`font-bold text-lg leading-none ${
-                // ONLY check subscription data, ignore legacy trial_days_remaining
+                // Check status for free tier businesses first
+                business.status === 'unclaimed' ? 'text-slate-400' :
+                business.status === 'claimed_free' ? 'text-emerald-400' :
+                // Then check subscription data
                 business.subscription?.is_in_free_trial ? 'text-blue-400' :
                 business.subscription?.tier_display_name === 'Spotlight' ? 'text-amber-400' :
                 business.subscription?.tier_display_name === 'Featured' ? 'text-purple-400' :
                 'text-slate-300'
               }`}>
-                {/* Show tier name based on subscription data only */}
-                {business.subscription?.is_in_free_trial
+                {/* Show tier based on status for free tier, then subscription */}
+                {business.status === 'unclaimed' 
+                  ? 'Unclaimed'
+                  : business.status === 'claimed_free'
+                  ? 'Free'
+                  : business.subscription?.is_in_free_trial
                   ? 'Free Trial'
                   : business.subscription?.tier_display_name || 'Starter'}
               </span>

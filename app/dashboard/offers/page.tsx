@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { OffersPage } from '@/components/dashboard/offers-page'
+import { LockedFeaturePage } from '@/components/dashboard/locked-feature-page'
 import { Profile } from '@/types/profiles'
 import { calculateActionItemsCount } from '@/lib/utils/action-items-count'
 
@@ -53,6 +54,24 @@ export default async function DashboardOffersPage() {
     plan: profilePlan?.plan || 'starter'
   }
   const actionItemsCount = calculateActionItemsCount(profile)
+
+  // 🔒 CRITICAL: Check if claimed_free status - show locked page
+  if (profileData.status === 'claimed_free') {
+    return (
+      <DashboardLayout currentSection="offers" profile={profile} actionItemsCount={actionItemsCount}>
+        <LockedFeaturePage 
+          featureName="Exclusive Offers" 
+          description="Create and manage limited-time offers to attract new customers. Track redemptions, set expiry dates, and boost engagement with exclusive deals."
+          benefits={[
+            'Create unlimited offers with custom expiry dates',
+            'Track redemptions and engagement in real-time',
+            'Appear in AI-powered recommendations',
+            'Boost visibility with exclusive deals'
+          ]}
+        />
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout currentSection="offers" profile={profile} actionItemsCount={actionItemsCount}>

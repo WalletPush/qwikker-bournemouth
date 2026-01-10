@@ -28,9 +28,11 @@ export function SettingsPage({ profile }: SettingsPageProps) {
     }
   }, [profile])
 
-  const plan = profile?.plan || 'starter'
+  // 🔒 CRITICAL: Check if claimed_free status
+  const plan = profile?.status === 'claimed_free' ? 'free' : (profile?.plan || 'starter')
   const isFreeTrial = plan === 'featured' && trialDaysLeft > 0
-  const planName = isFreeTrial ? 'Featured (Free Trial)' : 
+  const planName = profile?.status === 'claimed_free' ? 'Free Listing' :
+                  isFreeTrial ? 'Featured (Free Trial)' : 
                   plan === 'starter' ? 'Starter' : 
                   plan.charAt(0).toUpperCase() + plan.slice(1)
 

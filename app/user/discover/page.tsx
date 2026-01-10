@@ -3,7 +3,6 @@ import { UserDiscoverPage } from '@/components/user/user-discover-page'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 
 export const dynamic = 'force-dynamic'
-import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { filterActiveOffers } from '@/lib/utils/offer-helpers'
@@ -75,7 +74,9 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
     }
   }
   
-  // Fetch approved businesses only with subscription data for tier badges
+  // Fetch all discoverable businesses (approved, unclaimed, claimed_free)
+  // CRITICAL: Free tier businesses (unclaimed/claimed_free) appear in Discover but NOT AI chat
+  // Updated: 2026-01-09 21:12 GMT - FORCE TURBOPACK RECOMPILE NOW
   const { data: approvedBusinesses, error } = await supabase
     .from('business_profiles')
     .select(`
@@ -102,6 +103,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       additional_notes,
       created_at,
       plan,
+      status,
       business_offers!left(
         id,
         offer_name,
@@ -109,13 +111,9 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
         offer_value,
         offer_image,
         status
-      ),
-      subscription:business_subscriptions!business_id(
-        free_trial_end_date,
-        is_in_free_trial
       )
     `)
-    .eq('status', 'approved')
+    .in('status', ['approved', 'unclaimed', 'claimed_free']) // Show all discoverable businesses
     .eq('city', currentCity) // SECURITY: Filter by franchise city
     .not('business_name', 'is', null)
     .order('created_at', { ascending: false })
@@ -202,7 +200,10 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
         value: offer.offer_value,
         image: offer.offer_image
       })) || [],
-      plan: business.plan || 'starter',
+      // 🎯 Don't set default plan for unclaimed/claimed_free (they should show no badge)
+      plan: (business.status === 'unclaimed' || business.status === 'claimed_free') 
+        ? null // No plan = no badge
+        : (business.plan || 'starter'),
       rating: business.rating || 4.5,
       reviewCount: business.review_count || Math.floor(Math.random() * 50) + 10,
       tags: [
@@ -214,12 +215,20 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       activeOffers: business.business_offers?.filter(offer => offer.status === 'approved')?.length || 0,
       menuPreview: business.menu_preview || [], // Add menu preview for popular items
       hasSecretMenu, // Now properly checks for real secret menu data
-      tier: business.plan === 'spotlight' ? 'qwikker_picks' : business.plan === 'featured' ? 'featured' : 'recommended'
+      // 🎯 TIER LOGIC: Free listings (unclaimed/claimed_free) have NO tier badge
+      tier: (business.status === 'unclaimed' || business.status === 'claimed_free') 
+        ? null // No tier badge for free listings
+        : business.plan === 'spotlight' 
+          ? 'qwikker_picks' 
+          : business.plan === 'featured' 
+            ? 'featured' 
+            : 'recommended',
+      status: business.status // Pass status for debugging/filtering
     }
   })
   
-  // Combine real businesses with mock businesses for now
-  const allBusinesses = [...realBusinesses, ...mockBusinesses]
+  // Use only real businesses (no mock data needed anymore)
+  const allBusinesses = realBusinesses
   
   return (
     <UserDashboardLayout 
