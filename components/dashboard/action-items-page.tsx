@@ -108,7 +108,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     })
   }
 
-  if (!profile?.business_category) {
+  if (!profile?.display_category && !profile?.system_category) {
     requiredTodos.push({ 
       title: 'Select your business category', 
       href: '/dashboard/profile#business-info',

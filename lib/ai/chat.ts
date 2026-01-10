@@ -3,6 +3,7 @@
 import OpenAI from 'openai'
 import { searchBusinessKnowledge, searchCityKnowledge } from './embeddings'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
+import { categoryDisplayLabel } from '@/lib/utils/category-helpers'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 // Initialize OpenAI client
@@ -339,7 +340,8 @@ export async function generateAIResponse(
     id: string
     business_name: string
     business_tagline?: string
-    business_category?: string
+    system_category?: string // Stable enum for filtering
+    display_category?: string // User-friendly label
     business_tier: string
     business_address?: string
     business_town?: string
@@ -973,7 +975,8 @@ ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
             .select(`
               id,
               business_name,
-              business_category,
+              system_category,
+              display_category,
               business_tagline,
               business_town,
               business_images,
@@ -1494,7 +1497,7 @@ export async function formatBusinessForAI(business: any): Promise<string> {
     business.business_name,
     business.business_tagline,
     business.business_description,
-    business.business_category ? `Category: ${business.business_category}` : '',
+    business.display_category ? `Category: ${categoryDisplayLabel(business)}` : '',
     business.business_hours ? `Hours: ${business.business_hours}` : '',
     business.business_address ? `Address: ${business.business_address}` : ''
   ].filter(Boolean)

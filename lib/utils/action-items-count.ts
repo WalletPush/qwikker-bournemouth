@@ -17,7 +17,7 @@ export function calculateActionItemsCount(profile: any): number {
   if (!profile.business_description) count++
   if (!profile.business_tagline) count++
   if (!profile.business_address || !profile.business_town) count++
-  if (!profile.business_category) count++
+  if (!profile.display_category && !profile.system_category) count++
   if (!profile.logo) count++
   if (!profile.business_images || (Array.isArray(profile.business_images) && profile.business_images.length === 0)) count++
   // Note: menu_url and menu_preview are now OPTIONAL for universal business types

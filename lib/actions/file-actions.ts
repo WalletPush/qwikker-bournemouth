@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { sendFileUpdateToGoHighLevel, sendBusinessUpdateNotification } from '@/lib/integrations'
+import { categoryDisplayLabel } from '@/lib/utils/category-helpers'
 import { ImageTransform } from '@/types/profiles'
 
 export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu' | 'offer' | 'business_images', fileUrl: string) {
@@ -234,7 +235,7 @@ async function syncFileUpdateWithGHL(profileData: any, fileType: 'logo' | 'menu'
     phone: profileData.phone || '',
     businessName: profileData.business_name || '',
     businessType: profileData.business_type || '',
-    businessCategory: profileData.business_category || '',
+    businessCategory: categoryDisplayLabel(profileData),
     town: profileData.business_town || '',
     postcode: profileData.business_postcode || '',
     

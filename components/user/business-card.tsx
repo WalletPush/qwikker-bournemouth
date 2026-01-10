@@ -65,7 +65,9 @@ export function BusinessCard({
             <CardTitle className="text-slate-100 text-lg mb-1 group-hover:text-[#00d083] transition-colors">
               {business.name}
             </CardTitle>
-            <p className="text-slate-400 text-sm">{business.category}</p>
+            <p className="text-slate-400 text-sm">
+              {business.display_category ?? business.business_category ?? business.category ?? 'Other'}
+            </p>
             <p className="text-[#00d083] text-sm font-medium mt-1">{business.tagline}</p>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import OpenAI from 'openai'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { categoryDisplayLabel, categorySystemEnum } from '@/lib/utils/category-helpers'
 
 // Initialize OpenAI client
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
@@ -77,7 +78,7 @@ export async function syncBusinessProfileToKnowledgeBase(businessId: string): Pr
     const content = `Business Name: ${business.business_name}
 Tagline: ${business.business_tagline || 'N/A'}
 Description: ${business.business_description || 'No description provided'}
-Category: ${business.business_category}
+Category: ${categoryDisplayLabel(business)}
 Type: ${business.business_type}
 City: ${business.city}
 Tier: ${business.business_tier}
@@ -153,7 +154,8 @@ This business is ${business.status} and ${business.status === 'approved' ? 'live
           metadata: {
             auto_generated: true,
             business_type: business.business_type,
-            business_category: business.business_category,
+            system_category: categorySystemEnum(business), // Stable enum for filtering
+            display_category: categoryDisplayLabel(business), // User-friendly label
             tier: business.business_tier,
             address: business.business_address,
             town: business.business_town,
@@ -167,7 +169,7 @@ This business is ${business.status} and ${business.status === 'approved' ? 'live
             rating: business.rating
           },
           tags: [
-            business.business_category?.toLowerCase(),
+            categorySystemEnum(business), // Already lowercase, stable enum
             business.business_type,
             business.city.toLowerCase(),
             'basic_info',

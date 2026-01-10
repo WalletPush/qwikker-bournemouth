@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { uploadToCloudinary } from '@/lib/integrations'
 import { getCurrentLocation, mapTownToCity } from '@/lib/utils/location-detection'
 import { validateBusinessProfile } from '@/lib/utils/business-validation'
+import { getSystemCategoryFromDisplayLabel, SYSTEM_CATEGORIES, isValidSystemCategory } from '@/lib/constants/system-categories'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 // import { sendWelcomeEmail } from '@/lib/email/send-welcome-email' // Disabled until domain verification
@@ -215,7 +216,9 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       phone: normalizePhoneNumber(formData.phone),
       business_name: formData.businessName,
       business_type: mapBusinessType(formData.businessType),
-      business_category: formData.businessCategory,
+      // business_category: formData.businessCategory, // REMOVED: No longer writing to this field (legacy)
+      system_category: getSystemCategoryFromDisplayLabel(formData.businessCategory), // NEW: Stable enum
+      display_category: formData.businessCategory, // NEW: User-facing label
       business_address: formData.businessAddress,
       business_town: mapBusinessTown(formData.town),
       business_postcode: formData.postcode,
@@ -243,6 +246,12 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       business_tier: 'free_trial', // Fix: Add correct business tier for onboarding
       rating: 0, // Fix: Add default rating
       review_count: 0, // Fix: Add default review count
+    }
+
+    // POST-WRITE SANITY CHECK: Ensure system_category is valid
+    if (!isValidSystemCategory(profileData.system_category)) {
+      console.error(`⚠️ Invalid system_category detected in onboarding: "${profileData.system_category}"`)
+      throw new Error(`Invalid category: ${profileData.system_category}. Please contact support.`)
     }
 
     // SECURITY: Validate business profile data server-side

@@ -329,7 +329,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
     profile?.business_tagline && 
     profile?.business_address && 
     profile?.business_town && 
-    profile?.business_category && 
+    profile?.display_category && 
     profile?.logo && 
     profile?.business_images && 
     Array.isArray(profile.business_images) && 
@@ -345,7 +345,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
     if (!profile?.business_description) count++
     if (!profile?.business_tagline) count++
     if (!profile?.business_address || !profile?.business_town) count++
-    if (!profile?.business_category) count++
+    if (!profile?.display_category) count++
     if (!profile?.logo) count++
     if (!profile?.business_images || (Array.isArray(profile?.business_images) && profile.business_images.length === 0)) count++
     return count
@@ -1021,7 +1021,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               if (!profile?.business_description) remainingItems.push({ title: 'Add business description', priority: 'REQUIRED' })
               if (!profile?.business_tagline) remainingItems.push({ title: 'Add business tagline', priority: 'REQUIRED' })
               if (!profile?.business_address || !profile?.business_town) remainingItems.push({ title: 'Complete business address', priority: 'REQUIRED' })
-              if (!profile?.business_category) remainingItems.push({ title: 'Select business category', priority: 'REQUIRED' })
+              if (!profile?.display_category) remainingItems.push({ title: 'Select business category', priority: 'REQUIRED' })
               if (!profile?.logo) remainingItems.push({ title: 'Upload business logo', priority: 'REQUIRED' })
               if (!profile?.business_images || (Array.isArray(profile?.business_images) && profile.business_images.length === 0)) {
                 remainingItems.push({ title: 'Upload business photo', priority: 'REQUIRED' })
@@ -1098,7 +1098,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               if (!profile?.business_description) remainingItems.push({ title: 'Add business description', priority: 'REQUIRED', href: '/dashboard/profile#business-info' })
               if (!profile?.business_tagline) remainingItems.push({ title: 'Add business tagline', priority: 'REQUIRED', href: '/dashboard/profile#business-info' })
               if (!profile?.business_address || !profile?.business_town) remainingItems.push({ title: 'Complete business address', priority: 'REQUIRED', href: '/dashboard/profile#business-info' })
-              if (!profile?.business_category) remainingItems.push({ title: 'Select business category', priority: 'REQUIRED', href: '/dashboard/profile#business-info' })
+              if (!profile?.display_category) remainingItems.push({ title: 'Select business category', priority: 'REQUIRED', href: '/dashboard/profile#business-info' })
               if (!profile?.logo) remainingItems.push({ title: 'Upload business logo', priority: 'REQUIRED', href: '/dashboard/profile#business-logo' })
               if (!profile?.business_images || (Array.isArray(profile?.business_images) && profile.business_images.length === 0)) {
                 remainingItems.push({ title: 'Upload business photo', priority: 'REQUIRED', href: '/dashboard/profile#business-photo' })

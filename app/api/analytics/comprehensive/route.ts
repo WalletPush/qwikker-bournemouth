@@ -209,13 +209,14 @@ async function getUserAnalytics(supabase: any, walletPassId: string) {
     .from('user_business_visits')
     .select(`
       business_id,
-      business_profiles!inner(business_category)
+      business_profiles!inner(system_category, display_category)
     `)
     .or(`user_id.eq.${user.user_id},wallet_pass_id.eq.${walletPassId}`)
 
   const categoryCount: { [key: string]: number } = {}
   categoryVisits?.forEach(visit => {
-    const category = visit.business_profiles?.business_category
+    // Use system_category for stable grouping, display_category for labels
+    const category = visit.business_profiles?.system_category
     if (category) {
       categoryCount[category] = (categoryCount[category] || 0) + 1
     }

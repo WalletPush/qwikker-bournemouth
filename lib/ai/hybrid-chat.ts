@@ -40,7 +40,8 @@ interface ChatResponse {
     id: string
     business_name: string
     business_tagline?: string
-    business_category?: string
+    system_category?: string // Stable enum for filtering
+    display_category?: string // User-friendly label
     business_tier: string
     business_address?: string
     business_town?: string

@@ -238,7 +238,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     })
   }
 
-  if (!profile?.business_category) {
+  if (!profile?.display_category) {
     requiredTodos.push({ 
       title: 'Select your business category', 
       href: '/dashboard/business',

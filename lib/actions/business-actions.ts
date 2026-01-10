@@ -348,7 +348,7 @@ export async function updateBusinessInfo(userId: string, updates: any) {
       // Business info
       businessName: profile.business_name || '',
       businessType: profile.business_type || '',
-      businessCategory: profile.business_category || '',
+      businessCategory: profile.display_category || profile.system_category || '',
       businessAddress: profile.business_address || '',
       town: profile.business_town || '',
       postcode: profile.business_postcode || '',
@@ -434,7 +434,7 @@ export async function updateBusinessInfo(userId: string, updates: any) {
   // 🔥 SYNC TO KNOWLEDGE BASE if description/details changed
   const knowledgeFields = ['business_name', 'business_description', 'business_tagline', 'business_address', 
     'business_town', 'business_postcode', 'phone', 'website_url', 'instagram_handle', 'facebook_url', 
-    'business_hours', 'business_hours_structured', 'business_category', 'business_type']
+    'business_hours', 'business_hours_structured', 'display_category', 'business_type']
   const needsKnowledgeSync = Object.keys(updates).some(key => knowledgeFields.includes(key))
   
   if (needsKnowledgeSync && profile?.id) {
@@ -685,7 +685,7 @@ export async function submitBusinessForReview(userId: string) {
     // First check if the profile exists and what fields it has
     const { data: existingProfile, error: checkError } = await supabaseAdmin
       .from('business_profiles')
-      .select('user_id, status, business_name, business_hours, business_hours_structured, business_description, business_tagline, logo, business_images, business_address, business_town, business_category')
+      .select('user_id, status, business_name, business_hours, business_hours_structured, business_description, business_tagline, logo, business_images, business_address, business_town, display_category, system_category')
       .eq('user_id', userId)
       .single()
     
@@ -708,7 +708,7 @@ export async function submitBusinessForReview(userId: string) {
     if (!existingProfile?.business_description) missingFields.push('business_description') 
     if (!existingProfile?.business_tagline) missingFields.push('business_tagline')
     if (!existingProfile?.business_address || !existingProfile?.business_town) missingFields.push('business_address/town')
-    if (!existingProfile?.business_category) missingFields.push('business_category')
+    if (!existingProfile?.display_category && !existingProfile?.system_category) missingFields.push('category')
     if (!existingProfile?.logo) missingFields.push('logo')
     if (!existingProfile?.business_images || (Array.isArray(existingProfile.business_images) && existingProfile.business_images.length === 0)) missingFields.push('business_images')
     

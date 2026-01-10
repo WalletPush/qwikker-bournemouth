@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { categoryDisplayLabel, categorySystemEnum } from '@/lib/utils/category-helpers'
 
 /**
  * Automatically add basic business information to knowledge base when approved
@@ -58,7 +59,8 @@ export async function addBasicBusinessKnowledge(businessId: string, adminId: str
       content: generateBasicBusinessContent(business),
       metadata: {
         auto_generated: true,
-        business_category: business.business_category,
+        system_category: categorySystemEnum(business), // Stable enum
+        display_category: categoryDisplayLabel(business), // User-friendly label
         business_type: business.business_type,
         address: business.business_address,
         postcode: business.business_postcode,
@@ -73,7 +75,7 @@ export async function addBasicBusinessKnowledge(businessId: string, adminId: str
         tier: business.business_tier
       },
       tags: [
-        business.business_category?.toLowerCase(),
+        categorySystemEnum(business), // Already lowercase, stable enum
         business.business_type?.toLowerCase(),
         business.business_town?.toLowerCase(),
         'basic_info',
@@ -119,7 +121,7 @@ function generateBasicBusinessContent(business: any): string {
   }
 
   // Business Details
-  sections.push(`Category: ${business.business_category}`)
+  sections.push(`Category: ${categoryDisplayLabel(business)}`)
   sections.push(`Type: ${business.business_type}`)
   sections.push(`City: ${business.city}`)
   if (business.business_tier) {
