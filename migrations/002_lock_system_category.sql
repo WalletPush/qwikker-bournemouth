@@ -34,7 +34,7 @@ BEGIN
   SELECT COUNT(*) INTO invalid_count
   FROM business_profiles
   WHERE system_category NOT IN (
-    'restaurant','cafe','bar','dessert','takeaway','salon','barber','tattoo',
+    'restaurant','cafe','bakery','bar','pub','dessert','takeaway','fast_food','salon','barber','tattoo','wellness',
     'retail','fitness','sports','hotel','venue','entertainment','professional','other'
   );
   
@@ -60,12 +60,16 @@ ADD CONSTRAINT business_profiles_system_category_check
 CHECK (system_category IN (
   'restaurant',
   'cafe',
+  'bakery',
   'bar',
+  'pub',
   'dessert',
   'takeaway',
+  'fast_food',
   'salon',
   'barber',
   'tattoo',
+  'wellness',
   'retail',
   'fitness',
   'sports',

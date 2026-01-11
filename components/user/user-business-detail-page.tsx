@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
+import { BusinessCardImage } from '@/components/ui/business-card-image'
+import type { SystemCategory } from '@/lib/constants/system-categories'
 import { mockBusinesses, mockOffers, mockSecretMenus, mockClaimedOffers } from '@/lib/mock-data/user-mock-data'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
@@ -222,15 +224,42 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
         </Button>
       </div>
 
-      {/* Hero Section with Image Carousel */}
+      {/* Hero Section with Image Carousel or Placeholder */}
       <div className="relative h-64 md:h-80 rounded-xl overflow-hidden">
-        <ImageCarousel
-          images={business.images || []}
-          alt={business.name}
-          className="w-full h-full"
-          showArrows={true}
-          showDots={true}
-        />
+        {business.status === 'unclaimed' || (!business.images || business.images.length === 0) ? (
+          // Unclaimed or no images → Show placeholder with subtle info message
+          <>
+            <BusinessCardImage
+              businessName={business.name}
+              businessId={business.id}
+              googlePlaceId={business.google_place_id ?? business.id}
+              imageSource="placeholder"
+              systemCategory={(business.system_category ?? 'other') as SystemCategory}
+              placeholderVariant={business.placeholder_variant ?? null}
+              showUnclaimedBadge={false}
+              businessStatus={business.status}
+              className="h-full w-full"
+            />
+            {business.status === 'unclaimed' && (
+              <div className="absolute top-4 left-4 z-20">
+                <div className="px-3 py-2 rounded-lg bg-slate-800/90 backdrop-blur-md border border-slate-700/50">
+                  <p className="text-sm text-slate-300 font-medium">
+                    ℹ️ Listing not yet claimed by business owner
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          // Has real images → ImageCarousel
+          <ImageCarousel
+            images={business.images || []}
+            alt={business.name}
+            className="w-full h-full"
+            showArrows={true}
+            showDots={true}
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
         
         {/* Badges - Based on Subscription Plan */}

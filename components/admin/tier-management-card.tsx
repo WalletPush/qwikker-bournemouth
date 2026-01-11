@@ -11,7 +11,7 @@ interface TierManagementCardProps {
   onUpdate: () => void
 }
 
-type PlanTier = 'trial' | 'starter' | 'featured' | 'spotlight'
+type PlanTier = 'free' | 'trial' | 'starter' | 'featured' | 'spotlight'
 
 interface FeatureAccess {
   social_wizard: boolean
@@ -24,10 +24,20 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
   // Get current tier from subscription or fallback to business profile
   const getCurrentTier = (): PlanTier => {
     console.log('🔍 Getting current tier:', {
+      business_status: business?.status,
       subscription_tier_name: business?.subscription?.tier_name,
       is_in_free_trial: business?.subscription?.is_in_free_trial,
       profile_plan: business?.plan
     })
+    
+    // Check business status first (free tier)
+    if (business?.status === 'unclaimed') {
+      return 'free' // Unclaimed businesses have no tier yet
+    }
+    
+    if (business?.status === 'claimed_free') {
+      return 'free' // Claimed free listings
+    }
     
     // ONLY check subscription data (ignore legacy trial_days_remaining)
     if (business?.subscription?.is_in_free_trial) {
@@ -36,7 +46,8 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     
     // Then check subscription tier
     if (business?.subscription?.tier_name) {
-      if (business.subscription.tier_name === 'free') return 'trial'
+      if (business.subscription.tier_name === 'free') return 'free'
+      if (business.subscription.tier_name === 'trial') return 'trial'
       return business.subscription.tier_name as PlanTier
     }
     
@@ -88,6 +99,22 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
   }
 
   const tierDetails = {
+    free: {
+      name: 'Free Listing',
+      color: 'border-emerald-500',
+      bgColor: 'bg-emerald-500/10',
+      textColor: 'text-emerald-400',
+      features: [
+        '✅ Listed in Discover directory',
+        '✅ Basic business profile',
+        '✅ Update profile info',
+        '✅ Limited visibility',
+        '❌ No AI chat visibility',
+        '❌ No offers or events',
+        '❌ No secret menu items',
+        '❌ No analytics'
+      ]
+    },
     trial: {
       name: 'Free Trial',
       color: 'border-blue-500',
@@ -262,8 +289,8 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         {/* Tier Selection */}
         <div>
           <Label className="text-slate-300 mb-3 block">Select Subscription Tier</Label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {(['trial', 'starter', 'featured', 'spotlight'] as PlanTier[]).map((tier) => {
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {(['free', 'trial', 'starter', 'featured', 'spotlight'] as PlanTier[]).map((tier) => {
               const details = tierDetails[tier]
               const isSelected = selectedTier === tier
               const isCurrent = getCurrentTier() === tier
@@ -282,6 +309,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
                     {details.name}
                   </div>
                   <div className="text-xs text-slate-500">
+                    {tier === 'free' && 'Discover only'}
                     {tier === 'trial' && '90-day free trial'}
                     {tier === 'starter' && 'Basic features'}
                     {tier === 'featured' && 'Priority placement'}

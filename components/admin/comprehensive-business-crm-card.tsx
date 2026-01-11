@@ -20,6 +20,9 @@ import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { OfferDeletionModal } from '@/components/admin/offer-deletion-modal'
 import { TierManagementCard } from './tier-management-card'
 import { ExtendTrialButton } from './extend-trial-button'
+import { PlaceholderSelector } from './placeholder-selector'
+import { PLACEHOLDER_LIBRARY } from '@/lib/constants/category-placeholders'
+import type { SystemCategory } from '@/lib/constants/system-categories'
 
 interface ComprehensiveBusinessCRMCardProps {
   business: BusinessCRMData
@@ -47,34 +50,38 @@ const formatDateConsistent = (dateString: string | null | undefined): string => 
 
 // Helper function to get tier-specific border color
 const getTierBorderColor = (business: BusinessCRMData) => {
-  // Check status for free tier businesses first
-  if (business.status === 'unclaimed') return 'border-slate-600/50' // Unclaimed → Dark grey
-  if (business.status === 'claimed_free') return 'border-emerald-500/50' // Free → Green
-  
-  // Then check subscription data
+  // PRIORITY 1: Check subscription data FIRST (trial and paid tiers)
   const isTrial = business.subscription?.is_in_free_trial
   const tierName = business.subscription?.tier_name
   
   if (isTrial) return 'border-blue-500/50' // Free trial → Blue
   if (tierName === 'spotlight') return 'border-amber-500/50' // Spotlight → Gold
   if (tierName === 'featured') return 'border-purple-500/50' // Featured → Purple
-  return 'border-slate-700/50' // Starter → Grey
+  if (tierName === 'starter') return 'border-slate-700/50' // Starter → Grey
+  
+  // PRIORITY 2: Then check status for free tier businesses
+  if (business.status === 'unclaimed') return 'border-slate-600/50' // Unclaimed → Dark grey
+  if (business.status === 'claimed_free') return 'border-emerald-500/50' // Free → Green
+  
+  return 'border-slate-700/50' // Default
 }
 
 // Helper function to get tier-specific accent gradient
 const getTierAccentGradient = (business: BusinessCRMData) => {
-  // Check status for free tier businesses first
-  if (business.status === 'unclaimed') return 'from-slate-500 via-slate-600 to-slate-500' // Unclaimed → Dark grey
-  if (business.status === 'claimed_free') return 'from-emerald-500 via-emerald-600 to-emerald-500' // Free → Green
-  
-  // Then check subscription data
+  // PRIORITY 1: Check subscription data FIRST (trial and paid tiers)
   const isTrial = business.subscription?.is_in_free_trial
   const tierName = business.subscription?.tier_name
   
   if (isTrial) return 'from-blue-500 via-blue-600 to-blue-500' // Free trial → Blue
   if (tierName === 'spotlight') return 'from-amber-500 via-amber-600 to-amber-500' // Spotlight → Gold
   if (tierName === 'featured') return 'from-purple-500 via-purple-600 to-purple-500' // Featured → Purple
-  return 'from-slate-500 via-slate-600 to-slate-500' // Starter → Grey
+  if (tierName === 'starter') return 'from-slate-500 via-slate-600 to-slate-500' // Starter → Grey
+  
+  // PRIORITY 2: Then check status for free tier businesses
+  if (business.status === 'unclaimed') return 'from-slate-500 via-slate-600 to-slate-500' // Unclaimed → Dark grey
+  if (business.status === 'claimed_free') return 'from-emerald-500 via-emerald-600 to-emerald-500' // Free → Green
+  
+  return 'from-slate-500 via-slate-600 to-slate-500' // Default
 }
 
 export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, className }: ComprehensiveBusinessCRMCardProps) {
@@ -378,35 +385,59 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
 
   const getStatusBadge = () => {
-    // 🎯 SPECIAL STATE: Profile complete but awaiting manual submission
-    const isReadyToSubmit = business.status === 'incomplete' && 
-                           business.profile_completion_percentage === 100
-    
-    if (isReadyToSubmit) {
+    // PRIORITY 1: Unclaimed businesses
+    if (business.status === 'unclaimed') {
       return (
-        <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border bg-cyan-500/20 text-cyan-300 border-cyan-500/30 inline-flex items-center gap-1.5 animate-pulse">
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-          </svg>
-          READY TO SUBMIT
+        <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border bg-slate-500/20 text-slate-300 border-slate-500/30 inline-flex items-center justify-center">
+          UNCLAIMED
         </span>
       )
     }
     
-    const statusConfig = {
-      'incomplete': { bg: 'bg-orange-500/20', text: 'text-orange-300', border: 'border-orange-500/30', label: 'INCOMPLETE' },
-      'pending_review': { bg: 'bg-yellow-500/20', text: 'text-yellow-300', border: 'border-yellow-500/30', label: 'PENDING REVIEW' },
-      'approved': { bg: 'bg-green-500/20', text: 'text-green-300', border: 'border-green-500/30', label: 'APPROVED' },
-      'rejected': { bg: 'bg-red-500/20', text: 'text-red-300', border: 'border-red-500/30', label: 'REJECTED' },
-      'trial_expired': { bg: 'bg-gray-500/20', text: 'text-gray-300', border: 'border-gray-500/30', label: 'TRIAL EXPIRED' },
-      'inactive': { bg: 'bg-gray-500/20', text: 'text-gray-300', border: 'border-gray-500/30', label: 'INACTIVE' }
+    // PRIORITY 2: Incomplete businesses (haven't completed action items)
+    if (business.status === 'incomplete') {
+      // Special state: Profile complete but awaiting manual submission
+      const isReadyToSubmit = business.profile_completion_percentage === 100
+      
+      if (isReadyToSubmit) {
+        return (
+          <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border bg-cyan-500/20 text-cyan-300 border-cyan-500/30 inline-flex items-center gap-1.5 animate-pulse">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+            READY TO SUBMIT
+          </span>
+        )
+      }
+      
+      return (
+        <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border bg-orange-500/20 text-orange-300 border-orange-500/30 inline-flex items-center justify-center">
+          INCOMPLETE
+        </span>
+      )
     }
     
-    const config = statusConfig[business.status] || statusConfig['incomplete']
+    // PRIORITY 3: Other special statuses
+    if (business.status === 'pending_review' || business.status === 'pending_claim') {
+      return (
+        <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border bg-yellow-500/20 text-yellow-300 border-yellow-500/30 inline-flex items-center justify-center">
+          PENDING REVIEW
+        </span>
+      )
+    }
     
+    if (business.status === 'rejected') {
+      return (
+        <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border bg-red-500/20 text-red-300 border-red-500/30 inline-flex items-center justify-center">
+          REJECTED
+        </span>
+      )
+    }
+    
+    // PRIORITY 4: Default = LIVE (for approved, claimed_free, and everything else active)
     return (
-      <span className={`px-3 py-1.5 text-xs font-semibold rounded-lg border ${config.bg} ${config.text} ${config.border} inline-flex items-center justify-center`}>
-        {config.label}
+      <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border bg-green-500/20 text-green-300 border-green-500/30 inline-flex items-center justify-center">
+        LIVE
       </span>
     )
   }
@@ -528,23 +559,28 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </svg>
               <span className="text-slate-400 text-xs font-medium mb-2">Tier</span>
               <span className={`font-bold text-lg leading-none ${
-                // Check status for free tier businesses first
-                business.status === 'unclaimed' ? 'text-slate-400' :
-                business.status === 'claimed_free' ? 'text-emerald-400' :
-                // Then check subscription data
+                // PRIORITY 1: Check subscription data FIRST (trial and paid tiers)
                 business.subscription?.is_in_free_trial ? 'text-blue-400' :
                 business.subscription?.tier_display_name === 'Spotlight' ? 'text-amber-400' :
                 business.subscription?.tier_display_name === 'Featured' ? 'text-purple-400' :
+                business.subscription?.tier_name === 'starter' ? 'text-slate-300' :
+                // PRIORITY 2: Then check status for free tier businesses
+                business.status === 'unclaimed' ? 'text-slate-400' :
+                business.status === 'claimed_free' ? 'text-emerald-400' :
                 'text-slate-300'
               }`}>
-                {/* Show tier based on status for free tier, then subscription */}
-                {business.status === 'unclaimed' 
+                {/* PRIORITY 1: Show subscription tier first */}
+                {business.subscription?.is_in_free_trial
+                  ? 'Free Trial'
+                  : business.subscription?.tier_display_name
+                  ? business.subscription.tier_display_name
+                  : business.subscription?.tier_name === 'starter'
+                  ? 'Starter'
+                  : business.status === 'unclaimed' 
                   ? 'Unclaimed'
                   : business.status === 'claimed_free'
-                  ? 'Free'
-                  : business.subscription?.is_in_free_trial
-                  ? 'Free Trial'
-                  : business.subscription?.tier_display_name || 'Starter'}
+                  ? 'Free Listing'
+                  : business.plan?.charAt(0).toUpperCase() + business.plan?.slice(1) || 'Starter'}
               </span>
             </div>
 
@@ -653,12 +689,28 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     <h2 className="text-2xl font-bold text-white flex items-center gap-3">
                       {business.business_name}
                       <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${
+                        // PRIORITY 1: Check subscription data FIRST (trial and paid tiers)
+                        business.subscription?.is_in_free_trial ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
                         business.subscription?.tier_name === 'spotlight' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
                         business.subscription?.tier_name === 'featured' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                        business.subscription?.is_in_free_trial ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                        business.subscription?.tier_name === 'starter' ? 'bg-slate-700/50 text-slate-400 border border-slate-600/30' :
+                        // PRIORITY 2: Then check status for free tier businesses
+                        business.status === 'unclaimed' ? 'bg-slate-700/50 text-slate-400 border border-slate-600/30' :
+                        business.status === 'claimed_free' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                         'bg-slate-700/50 text-slate-400 border border-slate-600/30'
                       }`}>
-                        {business.subscription?.tier_display_name || (business.subscription?.is_in_free_trial ? 'Free Trial' : 'Starter')}
+                        {/* PRIORITY 1: Show subscription tier first */}
+                        {business.subscription?.is_in_free_trial
+                          ? 'Free Trial'
+                          : business.subscription?.tier_display_name
+                          ? business.subscription.tier_display_name
+                          : business.subscription?.tier_name === 'starter'
+                          ? 'Starter'
+                          : business.status === 'unclaimed'
+                          ? 'Unclaimed'
+                          : business.status === 'claimed_free'
+                          ? 'Free Listing'
+                          : 'Starter'}
                       </span>
                     </h2>
                     <p className="text-slate-400 text-sm mt-1">
@@ -770,15 +822,17 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <div>
                 <span className="text-slate-400 font-medium">Status:</span>
                 <span className={`ml-2 font-medium ${
-                  business.status === 'approved' ? 'text-green-400' :
-                  business.status === 'pending_review' ? 'text-yellow-400' :
+                  business.status === 'unclaimed' ? 'text-slate-400' :
+                  business.status === 'incomplete' ? 'text-orange-400' :
+                  business.status === 'pending_review' || business.status === 'pending_claim' ? 'text-yellow-400' :
                   business.status === 'rejected' ? 'text-red-400' :
-                  'text-orange-400'
+                  'text-green-400'
                 }`}>
-                  {business.status === 'approved' ? 'Live' :
-                   business.status === 'pending_review' ? 'Pending' :
+                  {business.status === 'unclaimed' ? 'Unclaimed' :
+                   business.status === 'incomplete' ? 'Incomplete' :
+                   business.status === 'pending_review' || business.status === 'pending_claim' ? 'Pending' :
                    business.status === 'rejected' ? 'Rejected' :
-                   business.status === 'trial_expired' ? 'Expired' : 'Incomplete'}
+                   'Live'}
                 </span>
               </div>
               <div>
@@ -1083,6 +1137,42 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     {(business.logo ? 1 : 0) + (business.business_menus?.length || 0) + (business.business_images?.length || 0)} files
                   </div>
                 </div>
+
+                {/* Placeholder Image Selector (Unclaimed Only) */}
+                {business.status === 'unclaimed' && business.system_category && (
+                  <div className="mb-4">
+                    <PlaceholderSelector
+                      businessId={business.id}
+                      businessName={business.business_name}
+                      status={business.status}
+                      systemCategory={business.system_category as SystemCategory}
+                      googlePlaceId={business.google_place_id || business.id}
+                      placeholderVariant={business.placeholder_variant ?? 0}
+                      unclaimedMaxVariantId={PLACEHOLDER_LIBRARY[business.system_category as SystemCategory]?.unclaimedMaxVariantId ?? 10}
+                      onSave={async (variant: number) => {
+                        try {
+                          const response = await fetch('/api/admin/businesses/placeholder-variant', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              businessId: business.id,
+                              placeholderVariant: variant
+                            })
+                          })
+                          if (!response.ok) {
+                            const error = await response.json()
+                            throw new Error(error.error || 'Failed to update placeholder')
+                          }
+                          // Refresh the page to show updated placeholder
+                          window.location.reload()
+                        } catch (error) {
+                          console.error('Failed to update placeholder:', error)
+                          alert(error instanceof Error ? error.message : 'Failed to update placeholder')
+                        }
+                      }}
+                    />
+                  </div>
+                )}
 
                 {/* Logo */}
                 <Card className="bg-slate-800/30 border-slate-700">
@@ -1820,18 +1910,35 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       <div>
                         <div className="text-slate-400 text-sm mb-1">Current Tier</div>
                         <div className={`font-semibold ${
-                          business.subscription?.tier_display_name === 'Spotlight' ? 'text-purple-400' :
-                          business.subscription?.tier_display_name === 'Featured' ? 'text-blue-400' :
+                          // PRIORITY 1: Check subscription data FIRST
+                          business.subscription?.is_in_free_trial ? 'text-blue-400' :
+                          business.subscription?.tier_display_name === 'Spotlight' ? 'text-amber-400' :
+                          business.subscription?.tier_display_name === 'Featured' ? 'text-purple-400' :
                           business.subscription?.tier_display_name === 'Starter' ? 'text-slate-400' :
+                          // PRIORITY 2: Then check status for free tier
+                          business.status === 'unclaimed' ? 'text-slate-500' :
+                          business.status === 'claimed_free' ? 'text-emerald-400' :
+                          // PRIORITY 3: Fallback to trial info
                           trialInfo.trial_status === 'active' ? 'text-amber-400' :
                           trialInfo.trial_status === 'expired' ? 'text-red-400' :
-                          'text-green-400'
+                          'text-slate-400'
                         }`}>
-                          {business.subscription?.tier_display_name || 
-                           (trialInfo.trial_status === 'active' ? 'Free Trial' :
-                            trialInfo.trial_status === 'expired' ? 'Trial Expired' :
-                            trialInfo.trial_status === 'upgraded' ? 'Paid Plan' : 
-                            business.plan?.charAt(0).toUpperCase() + business.plan?.slice(1) || 'Starter')}
+                          {/* PRIORITY 1: Show subscription tier first */}
+                          {business.subscription?.is_in_free_trial
+                            ? 'Free Trial'
+                            : business.subscription?.tier_display_name
+                            ? business.subscription.tier_display_name
+                            : business.status === 'unclaimed'
+                            ? 'Unclaimed'
+                            : business.status === 'claimed_free'
+                            ? 'Free Listing'
+                            : trialInfo.trial_status === 'active'
+                            ? 'Free Trial'
+                            : trialInfo.trial_status === 'expired'
+                            ? 'Trial Expired'
+                            : trialInfo.trial_status === 'upgraded'
+                            ? 'Paid Plan'
+                            : business.plan?.charAt(0).toUpperCase() + business.plan?.slice(1) || 'Starter'}
                         </div>
                       </div>
                       <div>
