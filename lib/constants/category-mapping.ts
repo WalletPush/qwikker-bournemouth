@@ -111,7 +111,9 @@ export const CATEGORY_MAPPING: Record<SystemCategory, CategoryConfig> = {
     displayName: SYSTEM_CATEGORY_LABEL.barber
   },
   tattoo: {
-    googleTypes: ['tattoo_shop', 'tattoo_studio', 'piercing_studio'],
+    // NOTE: Google Places API (New) doesn't support tattoo-specific types
+    // Using beauty_salon as closest match - results will need manual filtering
+    googleTypes: ['beauty_salon'], // Was: tattoo_shop, tattoo_studio, piercing_studio (unsupported)
     displayName: SYSTEM_CATEGORY_LABEL.tattoo
   },
   wellness: {

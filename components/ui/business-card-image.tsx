@@ -71,10 +71,21 @@ export function BusinessCardImage({
               systemCategory === 'pub' ? '#dc2626, #b91c1c' :
               systemCategory === 'dessert' ? '#f43f5e, #e11d48' :
               systemCategory === 'takeaway' ? '#f59e0b, #d97706' :
+              systemCategory === 'fast_food' ? '#f59e0b, #d97706' :
+              systemCategory === 'bakery' ? '#fbbf24, #f59e0b' :
               systemCategory === 'barber' ? '#06b6d4, #0891b2' :
               systemCategory === 'salon' ? '#ec4899, #db2777' :
               systemCategory === 'tattoo' ? '#6366f1, #4f46e5' :
-              '#64748b, #475569'
+              systemCategory === 'fitness' ? '#10b981, #059669' :
+              systemCategory === 'wellness' ? '#8b5cf6, #7c3aed' :
+              systemCategory === 'retail' ? '#f97316, #ea580c' :
+              systemCategory === 'hotel' ? '#3b82f6, #2563eb' :
+              systemCategory === 'venue' ? '#a855f7, #9333ea' :
+              systemCategory === 'entertainment' ? '#ec4899, #db2777' :
+              systemCategory === 'professional' ? '#0ea5e9, #0284c7' :
+              systemCategory === 'sports' ? '#22c55e, #16a34a' :
+              systemCategory === 'other' ? '#64748b, #475569' :
+              '#64748b, #475569' // Default fallback
             })`
           }
         }}
