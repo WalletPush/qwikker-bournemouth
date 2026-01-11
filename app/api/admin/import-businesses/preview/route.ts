@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { CATEGORY_MAPPING } from '@/lib/constants/category-mapping'
+import { type SystemCategory, SYSTEM_CATEGORY_LABEL, isValidSystemCategory } from '@/lib/constants/system-categories'
 
 interface PreviewRequest {
   city: string
   location: string // e.g., "Bournemouth, UK"
-  category: keyof typeof CATEGORY_MAPPING
+  category: SystemCategory // Now uses canonical system_category enum (e.g. 'restaurant', 'cafe')
   minRating: number
   radius: number // in meters (5000 = 5km)
   maxResults: number
+  skipDuplicates?: boolean // Optional: skip already imported businesses
 }
 
 interface PlaceResult {
@@ -35,13 +37,21 @@ interface PlaceResult {
 export async function POST(request: NextRequest) {
   try {
     const body: PreviewRequest = await request.json()
-    const { city, location, category, minRating, radius, maxResults } = body
+    const { city, location, category, minRating, radius, maxResults, skipDuplicates = true } = body
 
     // Validate inputs
     if (!city || !location || !category || minRating < 1 || radius < 100 || maxResults < 1) {
       return NextResponse.json({
         success: false,
         error: 'Invalid search parameters'
+      }, { status: 400 })
+    }
+
+    // Validate system_category
+    if (!isValidSystemCategory(category)) {
+      return NextResponse.json({
+        success: false,
+        error: `Invalid category: ${category}. Must be a valid SystemCategory enum.`
       }, { status: 400 })
     }
 

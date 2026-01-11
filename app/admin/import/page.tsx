@@ -15,7 +15,8 @@ import {
   DollarSign,
   Download,
   Building2,
-  XCircle
+  XCircle,
+  Info
 } from 'lucide-react'
 import {
   Select,
@@ -25,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ImportProgressModal } from '@/components/admin/import-progress-modal'
+import { ONBOARDING_CATEGORY_OPTIONS, type SystemCategory, SYSTEM_CATEGORY_LABEL } from '@/lib/constants/system-categories'
 
 interface BusinessResult {
   placeId: string
@@ -40,30 +42,10 @@ interface BusinessResult {
   photoName: string | null
 }
 
-const CATEGORIES = [
-  'Restaurant',
-  'Cafe/Coffee Shop',
-  'Bar/Pub',
-  'Dessert/Ice Cream',
-  'Takeaway/Street Food',
-  'Salon/Spa',
-  'Hairdresser/Barber',
-  'Tattoo/Piercing',
-  'Clothing/Fashion',
-  'Gift Shop',
-  'Fitness/Gym',
-  'Sports/Outdoors',
-  'Hotel/BnB',
-  'Venue/Event Space',
-  'Entertainment/Attractions',
-  'Professional Services',
-  'Other'
-]
-
 export default function AdminImportPage() {
   const [city, setCity] = useState('bournemouth')
   const [location, setLocation] = useState('Bournemouth, UK')
-  const [category, setCategory] = useState('Restaurant')
+  const [category, setCategory] = useState<SystemCategory>('restaurant')
   const [minRating, setMinRating] = useState([4.4])
   const [maxResults, setMaxResults] = useState([50])
   const [radius, setRadius] = useState([5000]) // meters
@@ -75,6 +57,8 @@ export default function AdminImportPage() {
   const [searchError, setSearchError] = useState('')
   const [searchCost, setSearchCost] = useState('0.00')
   const [estimatedImportCost, setEstimatedImportCost] = useState('0.00')
+  const [skipDuplicates, setSkipDuplicates] = useState(true)
+  const [sortBy, setSortBy] = useState<'rating' | 'distance' | 'reviews'>('rating')
   
   // Progress modal state
   const [showProgressModal, setShowProgressModal] = useState(false)
@@ -105,10 +89,11 @@ export default function AdminImportPage() {
         body: JSON.stringify({
           city,
           location,
-          category,
+          category, // SystemCategory enum value (e.g. 'restaurant', 'cafe')
           minRating: minRating[0],
           radius: radius[0],
-          maxResults: maxResults[0]
+          maxResults: maxResults[0],
+          skipDuplicates
         })
       })
 
@@ -155,18 +140,15 @@ export default function AdminImportPage() {
     })
     
     try {
-      const selectedBusinesses = results.filter(r => selectedResults.includes(r.placeId))
-      const category = selectedBusinesses[0]?.category || 'Other'
-      const businessType = selectedBusinesses[0]?.businessType || 'other'
-
       const response = await fetch('/api/admin/import-businesses/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           city,
           placeIds: selectedResults,
-          category,
-          businessType
+          systemCategory: category, // Use the system category from form (e.g. 'restaurant', 'cafe')
+          displayCategory: SYSTEM_CATEGORY_LABEL[category], // User-facing label (e.g. 'Restaurant', 'Cafe / Coffee Shop')
+          skipDuplicates
         })
       })
 
@@ -350,20 +332,20 @@ export default function AdminImportPage() {
             {/* Category */}
             <div className="space-y-2">
               <Label htmlFor="category">Business Category</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category} onValueChange={(value) => setCategory(value as SystemCategory)}>
                 <SelectTrigger id="category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map(cat => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
+                  {ONBOARDING_CATEGORY_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Type of business to import
+                Type of business to import (uses canonical categories)
               </p>
             </div>
           </div>
@@ -482,6 +464,52 @@ export default function AdminImportPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Sort and Filter Controls */}
+            <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border">
+              <div className="flex items-center gap-2 flex-1">
+                <Label htmlFor="sortBy" className="text-sm whitespace-nowrap">Sort by:</Label>
+                <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                  <SelectTrigger id="sortBy" className="w-[160px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="rating">Highest Rating</SelectItem>
+                    <SelectItem value="reviews">Most Reviews</SelectItem>
+                    <SelectItem value="distance">Nearest First</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input 
+                  type="checkbox" 
+                  id="skipDuplicates"
+                  checked={skipDuplicates}
+                  onChange={(e) => setSkipDuplicates(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <Label htmlFor="skipDuplicates" className="text-sm cursor-pointer">
+                  Skip duplicates
+                </Label>
+              </div>
+            </div>
+
+            {/* What Happens Next */}
+            <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="text-sm space-y-1">
+                <p className="font-semibold text-blue-900 dark:text-blue-100">
+                  What happens after import?
+                </p>
+                <ul className="text-blue-700 dark:text-blue-300 space-y-0.5 list-disc list-inside">
+                  <li>Businesses added as <strong>unclaimed</strong> (visible in Discover only)</li>
+                  <li>NOT visible in AI chat until claimed by owner</li>
+                  <li>Owners can claim & upgrade via QR code or claim page</li>
+                  <li>Placeholder images used until real photos uploaded</li>
+                </ul>
+              </div>
+            </div>
+
             {/* Selection Summary */}
             <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
               <div>
@@ -514,7 +542,15 @@ export default function AdminImportPage() {
 
             {/* Results List */}
             <div className="space-y-3">
-              {results.map(result => (
+              {results
+                .slice() // Create a copy to avoid mutating state
+                .sort((a, b) => {
+                  if (sortBy === 'rating') return b.rating - a.rating
+                  if (sortBy === 'reviews') return b.reviewCount - a.reviewCount
+                  if (sortBy === 'distance') return a.distance - b.distance
+                  return 0
+                })
+                .map(result => (
                 <div
                   key={result.placeId}
                   className={`border rounded-lg p-4 transition-all ${

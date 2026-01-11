@@ -624,8 +624,10 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 ((business.trial_days_remaining !== null && business.trial_days_remaining < 0) ||
                  (business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date && new Date(business.subscription.free_trial_end_date) < new Date()))
                   ? 'text-red-400'
-                // PRIORITY 2: Live if active/trial
+                // PRIORITY 2: Live if approved, unclaimed, claimed_free, active subscription, or on trial
                 : (business.status === 'approved' || 
+                   business.status === 'unclaimed' ||
+                   business.status === 'claimed_free' ||
                    business.subscription?.status === 'active' || 
                    (business.subscription?.is_in_free_trial && business.trial_days_remaining !== null && business.trial_days_remaining > 0))
                   ? 'text-[#00d083]'
@@ -640,6 +642,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                   (business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date && new Date(business.subscription.free_trial_end_date) < new Date()))
                   ? 'Trial Expired' 
                   : (business.status === 'approved' || 
+                     business.status === 'unclaimed' ||
+                     business.status === 'claimed_free' ||
                      business.subscription?.status === 'active' || 
                      (business.subscription?.is_in_free_trial && business.trial_days_remaining !== null && business.trial_days_remaining > 0))
                     ? 'Live' 

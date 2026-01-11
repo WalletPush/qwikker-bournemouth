@@ -408,8 +408,10 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
         if (filterTier === 'trial') {
           matchesTier = crm?.subscription?.is_in_free_trial === true
         } else if (filterTier === 'free') {
-          // Free tier: claimed_free status OR subscription tier = 'free'
-          matchesTier = business.status === 'claimed_free' || crm?.subscription?.tier_name === 'free'
+          // CRITICAL: Only show truly free listings (unclaimed or claimed_free WITHOUT trial)
+          // EXCLUDE businesses on free trial (they show in 'trial' filter)
+          const isOnTrial = crm?.subscription?.is_in_free_trial === true
+          matchesTier = !isOnTrial && (business.status === 'unclaimed' || business.status === 'claimed_free' || crm?.subscription?.tier_name === 'free')
         } else if (filterTier === 'synced') {
           matchesTier = !!crm?.last_ghl_sync
         } else {
@@ -1526,8 +1528,9 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
-                            // Free tier (claimed_free status OR subscription tier = 'free')
-                            return b.status === 'claimed_free' || crm?.subscription?.tier_name === 'free'
+                            // CRITICAL: Only count truly free listings, NOT free trials
+                            const isOnTrial = crm?.subscription?.is_in_free_trial === true
+                            return !isOnTrial && (b.status === 'unclaimed' || b.status === 'claimed_free' || crm?.subscription?.tier_name === 'free')
                           }).length}
                         </p>
                       </div>

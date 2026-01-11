@@ -1,12 +1,13 @@
 import { NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { mapGoogleTypesToSystemCategory, SYSTEM_CATEGORY_LABEL, isValidSystemCategory } from '@/lib/constants/system-categories'
+import { mapGoogleTypesToSystemCategory, SYSTEM_CATEGORY_LABEL, isValidSystemCategory, type SystemCategory } from '@/lib/constants/system-categories'
 
 interface ImportRequest {
   city: string
   placeIds: string[]
-  category: string
-  businessType: string
+  systemCategory: SystemCategory // Stable enum (e.g. 'restaurant', 'cafe')
+  displayCategory: string // User-facing label (e.g. 'Restaurant', 'Cafe / Coffee Shop')
+  skipDuplicates?: boolean // Skip already imported businesses
 }
 
 // Track active imports (in-memory, will reset on server restart)
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       try {
         const body: ImportRequest = await request.json()
-        const { city, placeIds, category, businessType } = body
+        const { city, placeIds, systemCategory, displayCategory, skipDuplicates = true } = body
 
         if (!city || !placeIds || placeIds.length === 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
@@ -31,13 +32,39 @@ export async function POST(request: NextRequest) {
           return
         }
 
+        // Validate systemCategory
+        if (!isValidSystemCategory(systemCategory)) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: 'error',
+            message: `Invalid systemCategory: ${systemCategory}`
+          })}\n\n`))
+          controller.close()
+          return
+        }
+
         const importId = `${city}-${Date.now()}`
         activeImports.set(importId, true)
 
-        console.log(`🚀 Starting import: ${placeIds.length} businesses for ${city}`)
+        console.log(`🚀 Starting import: ${placeIds.length} businesses for ${city} (category: ${systemCategory})`)
 
         // Get Google Places API key
         const supabase = createServiceRoleClient()
+
+        // If skipDuplicates, fetch existing google_place_ids
+        let existingPlaceIds = new Set<string>()
+        if (skipDuplicates) {
+          const { data: existingBusinesses } = await supabase
+            .from('business_profiles')
+            .select('google_place_id')
+            .in('google_place_id', placeIds)
+            .not('google_place_id', 'is', null)
+          
+          if (existingBusinesses) {
+            existingPlaceIds = new Set(existingBusinesses.map(b => b.google_place_id).filter(Boolean))
+            console.log(`📋 Found ${existingPlaceIds.size} duplicates to skip`)
+          }
+        }
+
         const { data: franchiseConfig } = await supabase
           .from('franchise_crm_configs')
           .select('google_places_api_key')
@@ -130,16 +157,9 @@ export async function POST(request: NextRequest) {
               continue
             }
 
-            // Check for duplicates
-            const { data: existing } = await supabase
-              .from('business_profiles')
-              .select('id')
-              .eq('google_place_id', placeId)
-              .eq('city', city.toLowerCase())
-              .single()
-
-            if (existing) {
-              console.log(`⚠️ Skipping ${place.displayName?.text}: Already exists`)
+            // Check for duplicates using pre-fetched set
+            if (skipDuplicates && existingPlaceIds.has(placeId)) {
+              console.log(`⚠️ Skipping ${place.displayName?.text}: Already imported`)
               skipped++
               
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({
@@ -176,16 +196,15 @@ export async function POST(request: NextRequest) {
               continue
             }
 
-            // Create business profile
+            // Create business profile (use systemCategory from admin form)
             const { error: insertError } = await supabase
               .from('business_profiles')
               .insert({
                 business_name: place.displayName?.text || 'Unknown',
-                // business_category: category, // REMOVED: No longer writing to this field (legacy)
-                system_category: system_category, // Stable enum from Google types
-                display_category: display_category, // User-facing label
-                google_types: googleTypes, // Store raw Google types
-                business_type: businessType,
+                system_category: systemCategory, // Use category selected in import form
+                display_category: displayCategory, // Use display label from import form
+                google_types: googleTypes, // Store raw Google types for reference
+                business_type: systemCategory, // Map system_category to business_type (legacy field)
                 business_town: city.charAt(0).toUpperCase() + city.slice(1),
                 city: city.toLowerCase(),
                 address: place.formattedAddress || '',

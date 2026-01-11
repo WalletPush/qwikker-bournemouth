@@ -1,99 +1,102 @@
 // Category Mapping for Google Places Import
-// Maps our user-friendly categories to Google Places API types
+// Maps our canonical system categories to Google Places API types
+// CRITICAL: This must stay in sync with system-categories.ts
 
-export const CATEGORY_MAPPING = {
-  'Restaurant': {
-    googleTypes: ['restaurant', 'meal_takeaway'],
-    displayName: 'Restaurant',
-    businessType: 'restaurant'
+import { type SystemCategory, SYSTEM_CATEGORY_LABEL } from './system-categories'
+
+interface CategoryConfig {
+  googleTypes: string[] // Google Places API type identifiers
+  displayName: string  // User-facing label
+}
+
+// Map system_category enum → Google Places types
+export const CATEGORY_MAPPING: Record<SystemCategory, CategoryConfig> = {
+  restaurant: {
+    googleTypes: ['restaurant', 'pizza_restaurant', 'italian_restaurant', 'chinese_restaurant', 'indian_restaurant', 'mexican_restaurant', 'japanese_restaurant', 'thai_restaurant', 'french_restaurant'],
+    displayName: SYSTEM_CATEGORY_LABEL.restaurant
   },
-  'Cafe/Coffee Shop': {
+  cafe: {
     googleTypes: ['cafe', 'coffee_shop'],
-    displayName: 'Cafe/Coffee Shop',
-    businessType: 'cafe'
+    displayName: SYSTEM_CATEGORY_LABEL.cafe
   },
-  'Bar/Pub': {
-    googleTypes: ['bar', 'night_club'],
-    displayName: 'Bar/Pub',
-    businessType: 'bar'
+  bakery: {
+    googleTypes: ['bakery'],
+    displayName: SYSTEM_CATEGORY_LABEL.bakery
   },
-  'Dessert/Ice Cream': {
-    googleTypes: ['bakery', 'ice_cream_shop'],
-    displayName: 'Dessert/Ice Cream',
-    businessType: 'dessert'
+  bar: {
+    googleTypes: ['bar', 'night_club', 'wine_bar'],
+    displayName: SYSTEM_CATEGORY_LABEL.bar
   },
-  'Takeaway/Street Food': {
-    googleTypes: ['meal_takeaway', 'food_truck'],
-    displayName: 'Takeaway/Street Food',
-    businessType: 'takeaway'
+  pub: {
+    googleTypes: ['pub', 'gastropub'],
+    displayName: SYSTEM_CATEGORY_LABEL.pub
   },
-  'Salon/Spa': {
-    googleTypes: ['beauty_salon', 'spa'],
-    displayName: 'Salon/Spa',
-    businessType: 'salon'
+  dessert: {
+    googleTypes: ['ice_cream_shop', 'dessert_shop'],
+    displayName: SYSTEM_CATEGORY_LABEL.dessert
   },
-  'Hairdresser/Barber': {
-    googleTypes: ['hair_care', 'barber_shop'],
-    displayName: 'Hairdresser/Barber',
-    businessType: 'salon'
+  takeaway: {
+    googleTypes: ['meal_takeaway'],
+    displayName: SYSTEM_CATEGORY_LABEL.takeaway
   },
-  'Tattoo/Piercing': {
-    googleTypes: ['tattoo_studio', 'piercing_studio'],
-    displayName: 'Tattoo/Piercing',
-    businessType: 'salon'
+  fast_food: {
+    googleTypes: ['fast_food_restaurant'],
+    displayName: SYSTEM_CATEGORY_LABEL.fast_food
   },
-  'Clothing/Fashion': {
-    googleTypes: ['clothing_store', 'shoe_store', 'jewelry_store'],
-    displayName: 'Clothing/Fashion',
-    businessType: 'retail'
+  salon: {
+    googleTypes: ['beauty_salon', 'spa', 'nail_salon'],
+    displayName: SYSTEM_CATEGORY_LABEL.salon
   },
-  'Gift Shop': {
-    googleTypes: ['gift_shop', 'souvenir_store'],
-    displayName: 'Gift Shop',
-    businessType: 'retail'
+  barber: {
+    googleTypes: ['hair_care', 'hair_salon', 'barber_shop'],
+    displayName: SYSTEM_CATEGORY_LABEL.barber
   },
-  'Fitness/Gym': {
-    googleTypes: ['gym', 'fitness_center'],
-    displayName: 'Fitness/Gym',
-    businessType: 'fitness'
+  tattoo: {
+    googleTypes: ['tattoo_shop', 'tattoo_studio', 'piercing_studio'],
+    displayName: SYSTEM_CATEGORY_LABEL.tattoo
   },
-  'Sports/Outdoors': {
-    googleTypes: ['sporting_goods_store', 'outdoor_sports'],
-    displayName: 'Sports/Outdoors',
-    businessType: 'retail'
+  wellness: {
+    googleTypes: ['physiotherapist', 'massage_spa', 'wellness_center', 'acupuncture', 'osteopath', 'chiropractor'],
+    displayName: SYSTEM_CATEGORY_LABEL.wellness
   },
-  'Hotel/BnB': {
-    googleTypes: ['lodging', 'hotel', 'bed_and_breakfast'],
-    displayName: 'Hotel/BnB',
-    businessType: 'accommodation'
+  retail: {
+    googleTypes: ['clothing_store', 'shoe_store', 'jewelry_store', 'gift_shop', 'souvenir_store', 'store', 'shopping_mall'],
+    displayName: SYSTEM_CATEGORY_LABEL.retail
   },
-  'Venue/Event Space': {
-    googleTypes: ['event_venue', 'banquet_hall'],
-    displayName: 'Venue/Event Space',
-    businessType: 'venue'
+  fitness: {
+    googleTypes: ['gym', 'fitness_center', 'yoga_studio', 'pilates_studio'],
+    displayName: SYSTEM_CATEGORY_LABEL.fitness
   },
-  'Entertainment/Attractions': {
-    googleTypes: ['tourist_attraction', 'amusement_park', 'movie_theater'],
-    displayName: 'Entertainment/Attractions',
-    businessType: 'entertainment'
+  sports: {
+    googleTypes: ['sporting_goods_store', 'sports_club', 'sports_complex'],
+    displayName: SYSTEM_CATEGORY_LABEL.sports
   },
-  'Professional Services': {
-    googleTypes: ['lawyer', 'accountant', 'real_estate_agency', 'insurance_agency'],
-    displayName: 'Professional Services',
-    businessType: 'service_business'
+  hotel: {
+    googleTypes: ['lodging', 'hotel', 'motel', 'bed_and_breakfast'],
+    displayName: SYSTEM_CATEGORY_LABEL.hotel
   },
-  'Other': {
+  venue: {
+    googleTypes: ['event_venue', 'banquet_hall', 'wedding_venue', 'conference_center'],
+    displayName: SYSTEM_CATEGORY_LABEL.venue
+  },
+  entertainment: {
+    googleTypes: ['tourist_attraction', 'amusement_park', 'museum', 'art_gallery', 'movie_theater', 'bowling_alley', 'amusement_center'],
+    displayName: SYSTEM_CATEGORY_LABEL.entertainment
+  },
+  professional: {
+    googleTypes: ['lawyer', 'accounting', 'accountant', 'real_estate_agency', 'insurance_agency', 'consultant'],
+    displayName: SYSTEM_CATEGORY_LABEL.professional
+  },
+  other: {
     googleTypes: ['establishment', 'point_of_interest'],
-    displayName: 'Other',
-    businessType: 'other'
+    displayName: SYSTEM_CATEGORY_LABEL.other
   }
-} as const;
+} as const
 
-// Reverse mapping: Google type -> Our category
-export const GOOGLE_TYPE_TO_CATEGORY: Record<string, string> = {};
+// Reverse mapping: Google type → system_category (for quick lookups)
+export const GOOGLE_TYPE_TO_SYSTEM_CATEGORY: Record<string, SystemCategory> = {}
 Object.entries(CATEGORY_MAPPING).forEach(([category, config]) => {
   config.googleTypes.forEach(type => {
-    GOOGLE_TYPE_TO_CATEGORY[type] = category;
-  });
-});
-
+    GOOGLE_TYPE_TO_SYSTEM_CATEGORY[type] = category as SystemCategory
+  })
+})
