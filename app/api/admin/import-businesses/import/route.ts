@@ -13,6 +13,125 @@ interface ImportRequest {
 // Track active imports (in-memory, will reset on server restart)
 const activeImports = new Map<string, boolean>()
 
+/**
+ * OPENING HOURS PARSER
+ * 
+ * FIX: business_hours_structured must match DB constraint:
+ *  - NULL OR JSON containing keys monday..sunday
+ *  - Each day: { open: "HH:MM", close: "HH:MM", closed: boolean }
+ *
+ * IMPORTANT:
+ *  - Your table columns are business_hours and business_hours_structured
+ *  - Do NOT insert into opening_hours (unless that column exists)
+ */
+
+type DayKey =
+  | 'monday' | 'tuesday' | 'wednesday' | 'thursday'
+  | 'friday' | 'saturday' | 'sunday'
+
+const DAY_KEYS: DayKey[] = [
+  'monday','tuesday','wednesday','thursday','friday','saturday','sunday'
+]
+
+function parseWeekdayDescriptionsToStructured(
+  weekdayDescriptions: string[] | undefined,
+  timezone: string
+): { structured: any | null; text: string | null } {
+  if (!weekdayDescriptions || weekdayDescriptions.length < 7) {
+    return { structured: null, text: null }
+  }
+
+  // Google commonly returns lines like:
+  // "Monday: 9:00 AM – 6:00 PM" OR "Monday: Closed"
+  // We'll parse conservatively. If anything looks off, we bail to null to satisfy constraint safely.
+  const structured: any = {
+    timezone,
+    last_updated: new Date().toISOString()
+  }
+
+  const text = weekdayDescriptions.join('\n')
+
+  // Map day label -> dayKey
+  const dayMap: Record<string, DayKey> = {
+    monday: 'monday',
+    tuesday: 'tuesday',
+    wednesday: 'wednesday',
+    thursday: 'thursday',
+    friday: 'friday',
+    saturday: 'saturday',
+    sunday: 'sunday'
+  }
+
+  for (const line of weekdayDescriptions) {
+    const parts = line.split(':')
+    if (parts.length < 2) return { structured: null, text } // unknown format
+
+    const dayLabel = parts[0].trim().toLowerCase()
+    const dayKey = dayMap[dayLabel]
+    if (!dayKey) return { structured: null, text }
+
+    const rest = parts.slice(1).join(':').trim()
+
+    // Closed
+    if (/closed/i.test(rest)) {
+      structured[dayKey] = { open: null, close: null, closed: true }
+      continue
+    }
+
+    // Try to parse "9:00 AM – 6:00 PM" (en dash or hyphen)
+    const range = rest.split(/–|-|—/).map(s => s.trim())
+    if (range.length < 2) return { structured: null, text }
+
+    const open = normalizeTo24h(range[0])
+    const close = normalizeTo24h(range[1])
+
+    if (!open || !close) return { structured: null, text }
+
+    structured[dayKey] = { open, close, closed: false }
+  }
+
+  // Ensure all 7 keys exist (DB constraint)
+  for (const k of DAY_KEYS) {
+    if (!structured[k]) return { structured: null, text }
+  }
+
+  return { structured, text }
+}
+
+function normalizeTo24h(input: string): string | null {
+  // Handles:
+  //  - "9:00 AM" / "09:00"
+  //  - "9 AM"
+  // If it looks weird, return null.
+  const s = input.trim()
+
+  // Already 24h?
+  const m24 = s.match(/^([01]?\d|2[0-3]):([0-5]\d)$/)
+  if (m24) {
+    const hh = m24[1].padStart(2,'0')
+    return `${hh}:${m24[2]}`
+  }
+
+  // 12h with AM/PM
+  const m12 = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i)
+  if (!m12) return null
+
+  let h = parseInt(m12[1], 10)
+  const min = (m12[2] ?? '00')
+  const ap = m12[3].toUpperCase()
+
+  if (h < 1 || h > 12) return null
+  if (parseInt(min, 10) < 0 || parseInt(min, 10) > 59) return null
+
+  if (ap === 'AM') {
+    if (h === 12) h = 0
+  } else {
+    if (h !== 12) h += 12
+  }
+
+  return `${String(h).padStart(2,'0')}:${min}`
+}
+
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder()
   
@@ -113,7 +232,8 @@ export async function POST(request: NextRequest) {
               headers: {
                 'Content-Type': 'application/json',
                 'X-Goog-Api-Key': apiKey,
-                'X-Goog-FieldMask': 'id,displayName,formattedAddress,nationalPhoneNumber,websiteUri,rating,userRatingCount,types,location,businessStatus,regularOpeningHours,photos'
+                // IMPORTANT: Include regularOpeningHours.weekdayDescriptions to get hours data
+                'X-Goog-FieldMask': 'id,displayName,formattedAddress,nationalPhoneNumber,websiteUri,rating,userRatingCount,types,location,businessStatus,regularOpeningHours.weekdayDescriptions,photos'
               }
             })
             
@@ -177,12 +297,18 @@ export async function POST(request: NextRequest) {
               continue
             }
 
-            // Parse opening hours from NEW API format
-            const openingHours = place.regularOpeningHours?.weekdayDescriptions?.reduce((acc: any, day: string) => {
-              const [dayName, hours] = day.split(': ')
-              acc[dayName.toLowerCase()] = hours || 'Closed'
-              return acc
-            }, {}) || null
+            // Parse opening hours using safe parser
+            const timezone = 'Europe/London' // Default to UK timezone (could be franchise-specific later)
+            const { structured: businessHoursStructured, text: businessHoursText } = 
+              parseWeekdayDescriptionsToStructured(
+                place.regularOpeningHours?.weekdayDescriptions,
+                timezone
+              )
+
+            // 🐛 DEBUG: Verify hours structure before insert (only in development)
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('hours_structured_keys', businessHoursStructured ? Object.keys(businessHoursStructured) : null)
+            }
 
             // Map Google types to system_category
             const googleTypes = place.types || []
@@ -212,7 +338,10 @@ export async function POST(request: NextRequest) {
                 website: place.websiteUri || null,
                 rating: place.rating || null,
                 review_count: place.userRatingCount || null,
-                opening_hours: openingHours,
+                business_hours: businessHoursText, // Human-readable text
+                business_hours_structured: businessHoursStructured, // Structured JSON (all days or null)
+                latitude: place.location?.latitude || null, // For distance calculations and maps
+                longitude: place.location?.longitude || null,
                 google_place_id: placeId,
                 google_photo_name: place.photos?.[0]?.name || null,
                 placeholder_variant: 0, // 🔒 CRITICAL: Always use neutral default (variant 0) on import

@@ -225,21 +225,45 @@ export const PLACEHOLDER_LIBRARY: Record<SystemCategory, CategoryPlaceholder> = 
   'salon': {
     category: 'salon',
     variants: [
+      // ══════════════════════════════════════════════════════════════════════════
+      // NEUTRAL / DEFAULT (Auto-assigned to unclaimed)
+      // ══════════════════════════════════════════════════════════════════════════
+      // These must be abstract enough to work for ALL salon subtypes:
+      // - Nail salons
+      // - Spas
+      // - Beauty salons
+      // - Waxing clinics
+      // - Aesthetic clinics
+      // 
+      // ⚠️ NOTE: Hair salons map to "barber" category, NOT "salon"
+      // ══════════════════════════════════════════════════════════════════════════
       { id: 0, filename: 'salon-abstract-00.v1.webp', description: '🔒 NEUTRAL: White towels and spa setting (safe for all)' },
-      { id: 1, filename: 'salon-abstract-01.v1.webp', description: 'Nail polish bottle' },
-      { id: 2, filename: 'salon-abstract-02.v1.webp', description: 'Makeup brush bristles' },
-      { id: 3, filename: 'salon-abstract-03.v1.webp', description: 'Essential oil drop' },
-      { id: 4, filename: 'salon-abstract-04.v1.webp', description: 'White towel texture' },
-      { id: 5, filename: 'salon-abstract-05.v1.webp', description: 'Rose gold metal tool' },
-      { id: 6, filename: 'salon-abstract-06.v1.webp', description: 'Cream texture swirl' },
-      { id: 7, filename: 'salon-abstract-07.v1.webp', description: 'Mirror reflection' },
-      { id: 8, filename: 'salon-abstract-08.v1.webp', description: 'Candle flame spa' },
-      { id: 9, filename: 'salon-abstract-09.v1.webp', description: 'Flower petal' },
-      { id: 10, filename: 'salon-abstract-10.v1.webp', description: 'Soft fabric fold' },
+      { id: 1, filename: 'salon-abstract-01.v1.webp', description: '🔒 NEUTRAL: Soft fabric texture (safe for all)' },
+      { id: 2, filename: 'salon-abstract-02.v1.webp', description: '🔒 NEUTRAL: Cream/product texture (safe for all)' },
+      
+      // ══════════════════════════════════════════════════════════════════════════
+      // BEAUTY / AESTHETICS SPECIFIC (Admin-only, manual selection)
+      // ══════════════════════════════════════════════════════════════════════════
+      { id: 3, filename: 'salon-abstract-03.v1.webp', description: '✨ BEAUTY: Makeup brush and palette' },
+      { id: 4, filename: 'salon-abstract-04.v1.webp', description: '✨ BEAUTY: Beauty products on shelf' },
+      { id: 5, filename: 'salon-abstract-05.v1.webp', description: '✨ BEAUTY: Mirror and lighting' },
+      
+      // ══════════════════════════════════════════════════════════════════════════
+      // NAILS SPECIFIC (Admin-only, manual selection)
+      // ══════════════════════════════════════════════════════════════════════════
+      { id: 6, filename: 'salon-abstract-06.v1.webp', description: '💅 NAILS: Nail polish bottles' },
+      { id: 7, filename: 'salon-abstract-07.v1.webp', description: '💅 NAILS: Nail tools and files' },
+      { id: 8, filename: 'salon-abstract-08.v1.webp', description: '💅 NAILS: Manicure station' },
+      
+      // ══════════════════════════════════════════════════════════════════════════
+      // SPA / WELLNESS SPECIFIC (Admin-only, manual selection)
+      // ══════════════════════════════════════════════════════════════════════════
+      { id: 9, filename: 'salon-abstract-09.v1.webp', description: '🧘 SPA: Massage stones and candles' },
+      { id: 10, filename: 'salon-abstract-10.v1.webp', description: '🧘 SPA: Essential oils and diffuser' },
     ],
-    unclaimedMaxVariantId: 10,
+    unclaimedMaxVariantId: 2, // 🔒 CRITICAL: Only variants 0-2 are safe/neutral for unclaimed
     icon: '💅',
-    label: 'Salon',
+    label: 'Salon / Spa',
     accentColor: 'text-rose-400',
     overlayGradient: 'from-black/60 via-black/40 to-transparent'
   },
@@ -267,19 +291,44 @@ export const PLACEHOLDER_LIBRARY: Record<SystemCategory, CategoryPlaceholder> = 
   'wellness': {
     category: 'wellness',
     variants: [
+      // ══════════════════════════════════════════════════════════════════════════
+      // NEUTRAL / DEFAULT (Auto-assigned to unclaimed)
+      // ══════════════════════════════════════════════════════════════════════════
+      // These must be abstract enough to work for ALL wellness subtypes:
+      // - Massage therapy
+      // - Physiotherapy
+      // - Chiropractic
+      // - Acupuncture
+      // - Osteopathy
+      // - Holistic therapy
+      // 
+      // ⚠️ Avoid spa-specific imagery (stones, oils) that misrepresents physio/chiro
+      // ══════════════════════════════════════════════════════════════════════════
       { id: 0, filename: 'wellness-abstract-00.v1.webp', description: '🔒 NEUTRAL: Calm therapy room (safe for all)' },
-      { id: 1, filename: 'wellness-abstract-01.v1.webp', description: 'Massage stones' },
-      { id: 2, filename: 'wellness-abstract-02.v1.webp', description: 'White towel roll' },
-      { id: 3, filename: 'wellness-abstract-03.v1.webp', description: 'Plant leaves natural light' },
-      { id: 4, filename: 'wellness-abstract-04.v1.webp', description: 'Acupuncture needles case' },
-      { id: 5, filename: 'wellness-abstract-05.v1.webp', description: 'Diffuser mist' },
-      { id: 6, filename: 'wellness-abstract-06.v1.webp', description: 'Bamboo mat texture' },
-      { id: 7, filename: 'wellness-abstract-07.v1.webp', description: 'Therapy table corner' },
-      { id: 8, filename: 'wellness-abstract-08.v1.webp', description: 'Calming water feature' },
-      { id: 9, filename: 'wellness-abstract-09.v1.webp', description: 'Herbal compress bundle' },
-      { id: 10, filename: 'wellness-abstract-10.v1.webp', description: 'Soft lighting diffused' },
+      { id: 1, filename: 'wellness-abstract-01.v1.webp', description: '🔒 NEUTRAL: White towel roll (safe for all)' },
+      { id: 2, filename: 'wellness-abstract-02.v1.webp', description: '🔒 NEUTRAL: Plant leaves natural light (safe for all)' },
+      
+      // ══════════════════════════════════════════════════════════════════════════
+      // MASSAGE / SPA SPECIFIC (Admin-only, manual selection)
+      // ══════════════════════════════════════════════════════════════════════════
+      { id: 3, filename: 'wellness-abstract-03.v1.webp', description: '💆 MASSAGE: Hot stones and candles' },
+      { id: 4, filename: 'wellness-abstract-04.v1.webp', description: '💆 MASSAGE: Essential oils and diffuser' },
+      { id: 5, filename: 'wellness-abstract-05.v1.webp', description: '💆 MASSAGE: Massage table with towels' },
+      
+      // ══════════════════════════════════════════════════════════════════════════
+      // PHYSICAL THERAPY SPECIFIC (Admin-only, manual selection)
+      // ══════════════════════════════════════════════════════════════════════════
+      { id: 6, filename: 'wellness-abstract-06.v1.webp', description: '🦴 PHYSIO: Therapy equipment and tools' },
+      { id: 7, filename: 'wellness-abstract-07.v1.webp', description: '🦴 PHYSIO: Treatment table clinical' },
+      { id: 8, filename: 'wellness-abstract-08.v1.webp', description: '🦴 PHYSIO: Exercise bands and weights' },
+      
+      // ══════════════════════════════════════════════════════════════════════════
+      // ALTERNATIVE THERAPY SPECIFIC (Admin-only, manual selection)
+      // ══════════════════════════════════════════════════════════════════════════
+      { id: 9, filename: 'wellness-abstract-09.v1.webp', description: '🌿 ALTERNATIVE: Acupuncture needles case' },
+      { id: 10, filename: 'wellness-abstract-10.v1.webp', description: '🌿 ALTERNATIVE: Herbal medicine and herbs' },
     ],
-    unclaimedMaxVariantId: 10,
+    unclaimedMaxVariantId: 2, // 🔒 CRITICAL: Only variants 0-2 are safe/neutral for unclaimed
     icon: '🧘',
     label: 'Wellness',
     accentColor: 'text-teal-400',

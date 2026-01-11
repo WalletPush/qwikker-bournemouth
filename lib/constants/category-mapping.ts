@@ -12,7 +12,58 @@ interface CategoryConfig {
 // Map system_category enum → Google Places types
 export const CATEGORY_MAPPING: Record<SystemCategory, CategoryConfig> = {
   restaurant: {
-    googleTypes: ['restaurant', 'pizza_restaurant', 'italian_restaurant', 'chinese_restaurant', 'indian_restaurant', 'mexican_restaurant', 'japanese_restaurant', 'thai_restaurant', 'french_restaurant'],
+    googleTypes: [
+      // Generic / Broad
+      'restaurant',
+      
+      // European Cuisines
+      'pizza_restaurant',
+      'italian_restaurant',
+      'french_restaurant',
+      'spanish_restaurant',
+      'greek_restaurant',
+      'turkish_restaurant',
+      // 'portuguese_restaurant', // Not supported by Google Places API
+      
+      // Asian Cuisines
+      'chinese_restaurant',
+      'japanese_restaurant',
+      'thai_restaurant',
+      'indian_restaurant',
+      'vietnamese_restaurant',
+      'korean_restaurant',
+      // 'indonesian_restaurant', // Not supported by Google Places API
+      // 'filipino_restaurant', // Not supported by Google Places API
+      
+      // Middle Eastern / Mediterranean
+      'middle_eastern_restaurant',
+      'lebanese_restaurant',
+      'mediterranean_restaurant',
+      
+      // Americas
+      'mexican_restaurant',
+      'brazilian_restaurant',
+      'american_restaurant',
+      
+      // Specific Styles
+      'seafood_restaurant',
+      'steak_house',
+      'sushi_restaurant',
+      'ramen_restaurant',
+      'hamburger_restaurant',
+      
+      // Dietary / Lifestyle
+      'vegan_restaurant',
+      'vegetarian_restaurant',
+      
+      // Meal Times / Formats
+      'brunch_restaurant',
+      'breakfast_restaurant',
+      
+      // Upscale / Casual
+      'fine_dining_restaurant',
+      'bistro'
+    ],
     displayName: SYSTEM_CATEGORY_LABEL.restaurant
   },
   cafe: {
@@ -24,7 +75,15 @@ export const CATEGORY_MAPPING: Record<SystemCategory, CategoryConfig> = {
     displayName: SYSTEM_CATEGORY_LABEL.bakery
   },
   bar: {
-    googleTypes: ['bar', 'night_club', 'wine_bar'],
+    googleTypes: [
+      'bar',
+      'night_club',
+      'wine_bar',
+      'cocktail_bar',
+      'sports_bar',
+      'dive_bar',
+      'lounge'
+    ],
     displayName: SYSTEM_CATEGORY_LABEL.bar
   },
   pub: {

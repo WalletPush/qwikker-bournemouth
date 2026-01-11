@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
+import { getSystemCategoryFromDisplayLabel, isValidSystemCategory } from '@/lib/constants/system-categories'
 
 export async function POST(request: NextRequest) {
   try {
@@ -124,7 +125,27 @@ export async function POST(request: NextRequest) {
         if (claim.edited_address) businessUpdate.business_address = claim.edited_address
         if (claim.edited_phone) businessUpdate.phone = claim.edited_phone
         if (claim.edited_website) businessUpdate.website = claim.edited_website
-        if (claim.edited_category) businessUpdate.business_category = claim.edited_category
+        
+        // ✅ CATEGORY: Write to system_category + display_category (NEVER business_category)
+        if (claim.edited_category) {
+          const displayLabel = claim.edited_category.trim()
+          const systemCat = getSystemCategoryFromDisplayLabel(displayLabel)
+          
+          // Only update category if mapping is valid
+          if (!systemCat || !isValidSystemCategory(systemCat)) {
+            console.warn(`⚠️ Cannot map edited_category: "${displayLabel}" - leaving existing category unchanged`)
+            // Do NOT update category fields - keep existing values intact
+          } else {
+            businessUpdate.display_category = displayLabel
+            businessUpdate.system_category = systemCat
+            // Sanity check before write
+            if (!isValidSystemCategory(businessUpdate.system_category)) {
+              throw new Error(`Invalid system_category: "${businessUpdate.system_category}" derived from "${displayLabel}"`)
+            }
+          }
+          // NEVER write business_category (trigger will backfill during Phase 1)
+        }
+        
         if (claim.edited_type) businessUpdate.business_type = claim.edited_type
         if (claim.edited_description) businessUpdate.business_description = claim.edited_description
         if (claim.edited_hours) businessUpdate.business_hours = claim.edited_hours

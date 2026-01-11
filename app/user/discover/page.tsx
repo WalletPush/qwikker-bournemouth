@@ -121,7 +121,9 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
     .in('status', ['approved', 'unclaimed', 'claimed_free']) // Show all discoverable businesses
     .eq('city', currentCity) // SECURITY: Filter by franchise city
     .not('business_name', 'is', null)
-    .order('created_at', { ascending: false })
+    .order('rating', { ascending: false, nullsFirst: false }) // Quality first (nulls last)
+    .order('review_count', { ascending: false, nullsFirst: false }) // More reviews = more trustworthy
+    .order('created_at', { ascending: false }) // Recency as tiebreaker
   
   if (error) {
     console.error('❌ Error fetching businesses for discover page:', error, JSON.stringify(error))
