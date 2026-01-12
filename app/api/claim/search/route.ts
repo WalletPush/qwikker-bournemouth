@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getCityFromHostname } from '@/lib/utils/city-detection'
 
 /**
  * Search for unclaimed businesses
  * POST /api/claim/search
- * Body: { query: string, city?: string }
+ * Body: { query: string }
+ * Note: City is derived from subdomain (server-side) for security
  */
 export async function POST(request: NextRequest) {
   try {
-    const { query, city = 'bournemouth' } = await request.json()
+    const { query } = await request.json() // Don't accept city from client!
+    
+    // SECURITY: Derive city from subdomain (server-side, cannot be spoofed)
+    const hostname = request.headers.get('host') || ''
+    const city = await getCityFromHostname(hostname)
 
     if (!query || query.trim().length < 2) {
       return NextResponse.json({ 

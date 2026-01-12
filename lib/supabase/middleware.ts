@@ -1,8 +1,13 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getCityFromHostname } from '@/lib/utils/city-detection'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
+  
+  // 🌍 MULTI-CITY: Detect city from subdomain and set for RLS
+  const hostname = request.headers.get('host') || ''
+  const currentCity = await getCityFromHostname(hostname)
 
   // 🎯 PUBLIC ROUTES: Allow access without Supabase auth session
   const publicPaths = [
@@ -39,6 +44,15 @@ export async function updateSession(request: NextRequest) {
       },
     }
   )
+  
+  // 🔒 SECURITY: Set city context for RLS policies
+  // This ensures public queries are scoped to the current subdomain's city
+  try {
+    await supabase.rpc('set_current_city', { city_name: currentCity })
+  } catch (error) {
+    // Function may not exist yet - that's okay during migration
+    console.warn(`Could not set city context: ${error}`)
+  }
 
   const { data } = await supabase.auth.getClaims()
   const user = data?.claims

@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getCityFromRequest } from '@/lib/utils/city-detection'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const city = searchParams.get('city')
-
-    if (!city) {
-      return NextResponse.json(
-        { error: 'City parameter is required' },
-        { status: 400 }
-      )
-    }
+    // 🔒 SECURITY: Derive city from hostname (can't be spoofed by client)
+    const city = await getCityFromRequest(request.headers)
 
     const supabase = createAdminClient()
 
-    // Get current franchise configuration
+    // Get current franchise configuration for THIS city only
     const { data, error } = await supabase
       .from('franchise_crm_configs')
       .select(`
@@ -47,7 +41,8 @@ export async function GET(request: NextRequest) {
         resend_from_email,
         resend_from_name,
         openai_api_key,
-        anthropic_api_key
+        anthropic_api_key,
+        google_places_api_key
       `)
       .eq('city', city)
       .single()
@@ -76,24 +71,27 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { city, config } = await request.json()
+    // 🔒 SECURITY: Derive city from hostname (can't be spoofed by client)
+    const city = await getCityFromRequest(request.headers)
+    
+    const { config } = await request.json()
 
-    if (!city || !config) {
+    if (!config) {
       return NextResponse.json(
-        { error: 'City and config are required' },
+        { error: 'Config is required' },
         { status: 400 }
       )
     }
 
     const supabase = createAdminClient()
 
-    // Update or insert franchise configuration
+    // Update or insert franchise configuration for THIS city only
     const { error } = await supabase
       .from('franchise_crm_configs')
       .upsert({
-        city,
+        city, // ✅ Server-derived city (secure)
         display_name: config.display_name,
-        subdomain: config.subdomain,
+        subdomain: config.subdomain || city, // Default to city name if not provided
         owner_name: config.owner_name,
         owner_email: config.owner_email,
         owner_phone: config.owner_phone,
@@ -115,12 +113,13 @@ export async function POST(request: NextRequest) {
         business_registration: config.business_registration,
         business_address: config.business_address,
         billing_email: config.billing_email,
-        // NEW: Franchise-Paid API Services
+        // Franchise-Paid API Services
         resend_api_key: config.resend_api_key,
         resend_from_email: config.resend_from_email,
         resend_from_name: config.resend_from_name,
         openai_api_key: config.openai_api_key,
         anthropic_api_key: config.anthropic_api_key,
+        google_places_api_key: config.google_places_api_key,
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'city' // Tell Supabase to UPDATE if city already exists

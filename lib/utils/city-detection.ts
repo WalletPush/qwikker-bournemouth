@@ -7,60 +7,122 @@ import { isValidFranchiseCity } from './franchise-areas'
 
 export type FranchiseCity = string // Now dynamic instead of hard-coded
 
+type GetCityOptions = {
+  /**
+   * When true, allows main hosts (qwikker.com / www / app / api / vercel.app)
+   * to fall back to a default city instead of throwing.
+   * Use in DEV/STAGING only.
+   */
+  allowUnsafeFallbacks?: boolean
+  defaultCity?: FranchiseCity
+}
+
+/**
+ * Extract a clean hostname:
+ * - prefers x-forwarded-host when present (proxy/CDN/Vercel)
+ * - strips port (:3000)
+ * - lowercases
+ */
+export function getCleanHostnameFromHeaders(headers: Headers): string {
+  const forwarded = headers.get('x-forwarded-host') || headers.get('host') || ''
+  // x-forwarded-host can be a comma-separated list
+  const raw = forwarded.split(',')[0].trim()
+  return raw.split(':')[0].toLowerCase()
+}
+
 /**
  * Extract city from hostname/subdomain
  * Examples:
  * - bournemouth.qwikker.com -> 'bournemouth'
  * - calgary.qwikker.com -> 'calgary' 
- * - localhost:3000 -> 'bournemouth' (default for development)
- * - qwikker.com -> 'bournemouth' (default for main domain)
+ * - localhost:3000 -> 'bournemouth' (DEV ONLY)
+ * - qwikker.com -> ERROR (PROD) or 'bournemouth' (DEV)
  */
-export async function getCityFromHostname(hostname: string): Promise<FranchiseCity> {
-  // Handle localhost and development
-  if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
-    return 'bournemouth' // Default for local development
-  }
+export async function getCityFromHostname(
+  hostname: string,
+  opts: GetCityOptions = {}
+): Promise<FranchiseCity> {
+  const cleanHost = (hostname || '').split(',')[0].trim().split(':')[0].toLowerCase()
+
+  const defaultCity = (opts.defaultCity ?? 'bournemouth') as FranchiseCity
+
+  // Decide "safe fallbacks" by environment
+  // CRITICAL: Use VERCEL_ENV, NOT NODE_ENV
+  // On Vercel Preview, NODE_ENV='production' but VERCEL_ENV='preview'
+  const vercelEnv = process.env.VERCEL_ENV // 'production' | 'preview' | 'development' | undefined
+  const isProd = vercelEnv === 'production' // ✅ Only strict in actual production
+  const allowUnsafeFallbacks =
+    opts.allowUnsafeFallbacks ??
+    (!isProd) // ✅ preview/dev: allow fallback; production: strict
   
-  // 🧪 LOCAL TESTING: Handle .local domains for testing custom domains
-  if (hostname.includes('.local')) {
-    const parts = hostname.split('.')
-    if (parts.length >= 2) {
-      const subdomain = parts[0].toLowerCase()
-      
-      // Allow any subdomain for .local testing (bypass database validation)
-      console.log(`🧪 LOCAL TESTING: Using ${subdomain} from ${hostname}`)
-      return subdomain
-    }
+  // 🔍 Temporary logging (remove after verifying)
+  if (process.env.NODE_ENV !== 'production' || vercelEnv === 'preview') {
+    console.log('🔍 City Detection Debug:', {
+      hostname: cleanHost,
+      VERCEL_ENV: vercelEnv,
+      NODE_ENV: process.env.NODE_ENV,
+      isProd,
+      allowUnsafeFallbacks
+    })
   }
-  
-  // Handle Vercel deployments
-  if (hostname.includes('vercel.app')) {
-    return 'bournemouth' // Default for Vercel deployments
+
+  // ✅ Local dev convenience:
+  // - localhost:3000
+  // - bournemouth.localhost:3000 (works on most systems without /etc/hosts)
+  // - 127.0.0.1
+  if (cleanHost === 'localhost' || cleanHost.endsWith('.localhost') || cleanHost === '127.0.0.1') {
+    const sub = cleanHost.endsWith('.localhost') ? cleanHost.split('.')[0] : null
+    if (sub) {
+      const isValid = await isValidFranchiseCity(sub)
+      if (isValid) return sub as FranchiseCity
+      // If someone tries random.localhost, keep dev smooth:
+      if (allowUnsafeFallbacks) return defaultCity
+      throw new Error(`Access denied: Unknown franchise subdomain '${sub}'`)
+    }
+    return defaultCity
   }
-  
-  // Extract subdomain
-  const parts = hostname.split('.')
-  if (parts.length >= 2) {
-    const subdomain = parts[0].toLowerCase()
-    
-    // Validate against database instead of hard-coded switch
-    const isValid = await isValidFranchiseCity(subdomain)
-    if (isValid) {
-      return subdomain
-    }
-    
-    // Check if it's the main domain (www, app, etc.)
-    if (['www', 'app', 'api'].includes(subdomain)) {
-      return 'bournemouth' // Default for main domain
-    }
-    
-    // SECURITY: Block unknown subdomains instead of defaulting
-    console.error(`🚨 SECURITY: Unknown subdomain blocked: ${subdomain}`)
+
+  // ✅ Vercel preview domains (your-project.vercel.app)
+  // IMPORTANT: In production, do NOT silently default.
+  if (cleanHost.endsWith('.vercel.app')) {
+    if (allowUnsafeFallbacks) return defaultCity
+    throw new Error(`Access denied: vercel.app host not allowed in production (${cleanHost})`)
+  }
+
+  // If it's your root domain (qwikker.com) or common main subdomains:
+  // In production you usually want these to go to marketing or a selector page,
+  // NOT silently to Bournemouth.
+  const parts = cleanHost.split('.')
+  const subdomain = parts.length >= 3 ? parts[0] : null // bournemouth.qwikker.com => bournemouth; qwikker.com => null
+
+  if (!subdomain) {
+    if (allowUnsafeFallbacks) return defaultCity
+    throw new Error(`Access denied: No franchise subdomain provided (${cleanHost})`)
+  }
+
+  // Main subdomains are NOT franchise cities (www/app/api)
+  if (['www', 'app', 'api'].includes(subdomain)) {
+    if (allowUnsafeFallbacks) return defaultCity
+    throw new Error(`Access denied: Main host not allowed for city routes (${subdomain}.${parts.slice(1).join('.')})`)
+  }
+
+  // ✅ Real city subdomain must exist in DB
+  const isValid = await isValidFranchiseCity(subdomain)
+  if (!isValid) {
+    console.error(`🚨 SECURITY: Unknown franchise subdomain blocked: ${subdomain}`)
     throw new Error(`Access denied: Unknown franchise subdomain '${subdomain}'`)
   }
-  
-  // Fallback to bournemouth for main domain
-  return 'bournemouth'
+
+  return subdomain as FranchiseCity
+}
+
+/**
+ * ✅ Helper for server routes/components:
+ * Derives city from the request headers (proxy-safe) and applies the same rules.
+ */
+export async function getCityFromRequestHeaders(headers: Headers, opts?: GetCityOptions) {
+  const hostname = getCleanHostnameFromHeaders(headers)
+  return getCityFromHostname(hostname, opts)
 }
 
 /**

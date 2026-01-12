@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Building2, Star, MapPin, Globe, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -57,6 +57,34 @@ export default function ClaimPage() {
   
   // Edited business data
   const [editedBusinessData, setEditedBusinessData] = useState<any>(null)
+  
+  // SECURITY: Detect city from subdomain (server-derived)
+  const [city, setCity] = useState<string | null>(null)
+  const [cityLoading, setCityLoading] = useState(true)
+  
+  // Fetch city on mount
+  useEffect(() => {
+    async function fetchCity() {
+      try {
+        const response = await fetch('/api/internal/get-city')
+        const data = await response.json()
+        if (data.success) {
+          setCity(data.city)
+          console.log(`🌍 Claim page city detected: ${data.city}`)
+        } else {
+          console.warn('Failed to detect city, using fallback')
+          setCity('bournemouth')
+        }
+      } catch (error) {
+        console.error('Error fetching city:', error)
+        setCity('bournemouth')
+      } finally {
+        setCityLoading(false)
+      }
+    }
+    
+    fetchCity()
+  }, [])
 
   const handleSearch = async (query: string = searchQuery) => {
     // Real search - call API
@@ -78,7 +106,8 @@ export default function ClaimPage() {
       const response = await fetch('/api/claim/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: trimmedQuery, city: 'bournemouth' })
+        body: JSON.stringify({ query: trimmedQuery })
+        // Note: City is derived server-side from subdomain for security
       })
 
       const data = await response.json()
@@ -547,12 +576,12 @@ export default function ClaimPage() {
         )}
 
         {/* Step 6: Submitted / Pending Approval */}
-        {step === 'submitted' && selectedBusiness && (
+        {step === 'submitted' && selectedBusiness && city && (
           <PendingApproval
             businessName={selectedBusiness.name}
             email={email}
-            franchiseCity="Bournemouth"
-            supportEmail="bournemouth@qwikker.com"
+            franchiseCity={city.charAt(0).toUpperCase() + city.slice(1)}
+            supportEmail={`${city}@qwikker.com`}
           />
         )}
       </div>
