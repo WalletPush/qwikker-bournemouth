@@ -18,15 +18,16 @@ export default async function HQAdminLayout({
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
-    redirect('/auth/login?redirect=/hqadmin')
+    redirect('/hq-login')
   }
   
   // Check HQ admin status
   const isHQ = await isHQAdmin(user.id)
   
   if (!isHQ) {
-    // Not authorized - redirect to home
-    redirect('/')
+    // Not HQ admin - sign them out and redirect to login
+    await supabase.auth.signOut()
+    redirect('/hq-login')
   }
   
   return (
