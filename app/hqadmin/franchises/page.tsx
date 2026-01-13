@@ -4,22 +4,15 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 interface Franchise {
+  id: string
   city: string
   subdomain: string
-  display_name: string
-  country: string
   status: string
   created_at: string
-  health: {
+  health?: {
     email: boolean
     sms: boolean
   }
-  owner: {
-    email: string
-    name: string | null
-    status: string
-    last_login: string | null
-  } | null
 }
 
 export default function FranchisesPage() {
@@ -110,9 +103,6 @@ export default function FranchisesPage() {
                   City
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                  Owner
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
@@ -128,11 +118,11 @@ export default function FranchisesPage() {
             </thead>
             <tbody className="divide-y divide-slate-800">
               {franchises.map((franchise) => (
-                <tr key={franchise.city} className="hover:bg-slate-800/30">
+                <tr key={franchise.id} className="hover:bg-slate-800/30">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-white">
-                        {franchise.display_name}
+                      <div className="text-sm font-medium text-white capitalize">
+                        {franchise.city}
                       </div>
                       <div className="text-xs text-slate-400">
                         {franchise.subdomain}.qwikker.com
@@ -140,26 +130,12 @@ export default function FranchisesPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {franchise.owner ? (
-                      <div>
-                        <div className="text-sm text-white">
-                          {franchise.owner.name || 'Unknown'}
-                        </div>
-                        <div className="text-xs text-slate-400">
-                          {franchise.owner.email}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-slate-500">No owner</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
                     <StatusBadge status={franchise.status} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex gap-2">
-                      <HealthIndicator active={franchise.health.email} label="Email" />
-                      <HealthIndicator active={franchise.health.sms} label="SMS" />
+                      <HealthIndicator active={!!franchise.health?.email} label="Email" />
+                      <HealthIndicator active={!!franchise.health?.sms} label="SMS" />
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
@@ -167,7 +143,7 @@ export default function FranchisesPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Link
-                      href={`/hqadmin/franchises/${franchise.city}`}
+                      href={`/hqadmin/franchises/${franchise.id}`}
                       className="text-[#00D083] hover:text-[#00b86f]"
                     >
                       View

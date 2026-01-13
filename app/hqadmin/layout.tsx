@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { isHQAdmin } from '@/lib/auth/hq-admin'
 
 export const metadata = {
   title: 'QWIKKER HQ',
@@ -21,13 +20,18 @@ export default async function HQAdminLayout({
     redirect('/hq-login')
   }
   
-  // Check HQ admin status
-  const isHQ = await isHQAdmin(user.id)
+  // Check if user is an active HQ admin
+  const { data: hqAdmin } = await supabase
+    .from('hq_admins')
+    .select('user_id, is_active')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .maybeSingle()
   
-  if (!isHQ) {
+  if (!hqAdmin) {
     // Not HQ admin - sign them out and redirect to login
     await supabase.auth.signOut()
-    redirect('/hq-login')
+    redirect('/hq-login?error=access_denied')
   }
   
   return (
@@ -78,13 +82,13 @@ export default async function HQAdminLayout({
             <NavLink href="/hqadmin/users" icon="users">
               Users
             </NavLink>
-            <NavLink href="/hqadmin/health" icon="heart">
+            <NavLink href="/hqadmin/system-health" icon="heart">
               System Health
             </NavLink>
-            <NavLink href="/hqadmin/flags" icon="flag">
+            <NavLink href="/hqadmin/feature-flags" icon="flag">
               Feature Flags
             </NavLink>
-            <NavLink href="/hqadmin/audit" icon="list">
+            <NavLink href="/hqadmin/audit-logs" icon="list">
               Audit Logs
             </NavLink>
             
@@ -168,4 +172,3 @@ function Icon({ name }: { name: string }) {
   
   return icons[name] || null
 }
-
