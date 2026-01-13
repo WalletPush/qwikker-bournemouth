@@ -25,6 +25,7 @@ interface BusinessData {
 
 interface ConfirmBusinessDetailsProps {
   business: BusinessData
+  smsOptInAvailable: boolean
   onConfirm: (editedData: {
     business_name: string
     address: string
@@ -36,11 +37,13 @@ interface ConfirmBusinessDetailsProps {
     hours: string
     logo?: File
     heroImage?: File
+    sms_opt_in?: boolean
+    phone_e164?: string
   }) => void
   onBack: () => void
 }
 
-export function ConfirmBusinessDetails({ business, onConfirm, onBack }: ConfirmBusinessDetailsProps) {
+export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm, onBack }: ConfirmBusinessDetailsProps) {
   // Form state
   const [businessName, setBusinessName] = useState(business.name || '')
   const [address, setAddress] = useState(business.address || '')
@@ -50,6 +53,10 @@ export function ConfirmBusinessDetails({ business, onConfirm, onBack }: ConfirmB
   const [type, setType] = useState(business.type || '')
   const [description, setDescription] = useState(business.description || '')
   const [hours, setHours] = useState(business.hours || '')
+  
+  // SMS opt-in state (only relevant if smsOptInAvailable)
+  const [smsOptIn, setSmsOptIn] = useState(false)
+  const [phoneE164, setPhoneE164] = useState('')
   
   // Image upload state
   const [logoFile, setLogoFile] = useState<File | null>(null)
@@ -134,6 +141,15 @@ export function ConfirmBusinessDetails({ business, onConfirm, onBack }: ConfirmB
       newErrors.website = 'Website must start with http:// or https://'
     }
     
+    // SMS opt-in validation
+    if (smsOptIn && smsOptInAvailable) {
+      if (!phoneE164.trim()) {
+        newErrors.phoneE164 = 'Phone number is required for SMS updates'
+      } else if (!/^\+[1-9]\d{1,14}$/.test(phoneE164.trim())) {
+        newErrors.phoneE164 = 'Phone must be in E.164 format (e.g., +447700900123)'
+      }
+    }
+    
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -160,7 +176,10 @@ export function ConfirmBusinessDetails({ business, onConfirm, onBack }: ConfirmB
       description: description.trim(),
       hours: hours.trim(),
       logo: logoFile || undefined,
-      heroImage: heroImageFile || undefined
+      heroImage: heroImageFile || undefined,
+      // Include SMS opt-in data only if available and opted in
+      sms_opt_in: smsOptInAvailable && smsOptIn,
+      phone_e164: (smsOptInAvailable && smsOptIn) ? phoneE164.trim() : undefined
     })
   }
 
@@ -435,6 +454,66 @@ export function ConfirmBusinessDetails({ business, onConfirm, onBack }: ConfirmB
                 {description.length}/500 characters (optional)
               </p>
             </div>
+
+            {/* SMS Opt-in (only shown if franchise has verified SMS) */}
+            {smsOptInAvailable && (
+              <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="smsOptIn"
+                      checked={smsOptIn}
+                      onChange={(e) => {
+                        setSmsOptIn(e.target.checked)
+                        if (!e.target.checked) {
+                          // Clear phone if unchecked
+                          setPhoneE164('')
+                          setErrors({ ...errors, phoneE164: '' })
+                        }
+                      }}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <label htmlFor="smsOptIn" className="text-sm cursor-pointer">
+                      <span className="font-medium text-slate-900 dark:text-slate-100">
+                        Get SMS updates about this claim
+                      </span>
+                      <span className="block text-slate-600 dark:text-slate-400 mt-0.5">
+                        Transactional only. Reply STOP to opt out.
+                      </span>
+                    </label>
+                  </div>
+                  
+                  {smsOptIn && (
+                    <div className="space-y-2 ml-7" id="phoneE164">
+                      <Label htmlFor="phoneE164" className="text-sm">
+                        Phone Number (E.164 format) *
+                      </Label>
+                      <Input
+                        id="phoneE164"
+                        type="tel"
+                        value={phoneE164}
+                        onChange={(e) => {
+                          setPhoneE164(e.target.value)
+                          if (errors.phoneE164) setErrors({ ...errors, phoneE164: '' })
+                        }}
+                        placeholder="+447700900123 or +12025551234"
+                        className={errors.phoneE164 ? 'border-destructive' : ''}
+                      />
+                      {errors.phoneE164 && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.phoneE164}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Include country code (+ and digits only)
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Google Places Info Banner */}
             {business.rating && (

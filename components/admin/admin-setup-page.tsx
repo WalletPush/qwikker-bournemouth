@@ -19,37 +19,68 @@ interface FranchiseConfig {
   timezone: string
   status: string
 
-  // Franchise-Paid API Services (NEW)
-  resend_api_key?: string
+  // Franchise-Paid API Services
+  resend_api_key?: string | null // Masked when returned from API
   resend_from_email?: string
   resend_from_name?: string
-  openai_api_key?: string
-  anthropic_api_key?: string
+  openai_api_key?: string | null // Masked
+  anthropic_api_key?: string | null // Masked
+  google_places_api_key?: string | null // Masked
+  
+  // "has_*" flags indicate if a secret is configured (without exposing value)
+  has_resend_api_key?: boolean
+  has_openai_api_key?: boolean
+  has_anthropic_api_key?: boolean
+  has_google_places_api_key?: boolean
   
   // CRM Integration (GHL)
-  ghl_webhook_url: string
-  ghl_update_webhook_url: string
-  ghl_api_key: string
+  ghl_webhook_url: string | null // Masked
+  ghl_update_webhook_url: string | null // Masked
+  ghl_api_key: string | null // Masked
+  has_ghl_webhook_url?: boolean
+  has_ghl_update_webhook_url?: boolean
+  has_ghl_api_key?: boolean
   
   // Mobile Wallet (WalletPush)
-  walletpush_api_key: string
+  walletpush_api_key: string | null // Masked
   walletpush_template_id: string
   walletpush_endpoint_url: string
+  has_walletpush_api_key?: boolean
   
   // Notifications (Slack)
-  slack_webhook_url: string
+  slack_webhook_url: string | null // Masked
   slack_channel: string
+  has_slack_webhook_url?: boolean
   
   // Payment Processing (Stripe)
   stripe_account_id: string
-  stripe_publishable_key: string
-  stripe_webhook_secret: string
+  stripe_publishable_key: string // Safe (publishable)
+  stripe_webhook_secret: string | null // Masked
   stripe_onboarding_completed: boolean
+  has_stripe_webhook_secret?: boolean
   
   // Legal & Billing
   business_registration: string
   business_address: string
   billing_email: string
+  
+  // SMS Notifications (Twilio)
+  sms_enabled?: boolean
+  sms_provider?: string
+  sms_verified?: boolean
+  sms_test_mode?: boolean
+  sms_country_code?: string | null
+  sms_default_calling_code?: string | null
+  sms_last_verified_at?: string | null
+  sms_last_error?: string | null
+  twilio_account_sid?: string | null
+  twilio_auth_token?: string | null
+  twilio_messaging_service_sid?: string | null
+  twilio_from_number?: string | null
+  has_twilio_account_sid?: boolean
+  has_twilio_auth_token?: boolean
+  has_twilio_messaging_service_sid?: boolean
+  has_twilio_from_number?: boolean
 }
 
 interface AdminSetupPageProps {
@@ -142,8 +173,8 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
             
             // Franchise-Paid Services
             resend_api_key: '',
-            resend_from_email: `hello@${city.toLowerCase()}.qwikker.com`,
-            resend_from_name: `${city.charAt(0).toUpperCase() + city.slice(1)} Qwikker`,
+            resend_from_email: `no-reply@${city.toLowerCase()}.qwikker.com`,
+            resend_from_name: `QWIKKER ${city.charAt(0).toUpperCase() + city.slice(1)}`,
             openai_api_key: '',
             anthropic_api_key: '',
             
@@ -170,7 +201,21 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
             // Legal
             business_registration: '',
             business_address: '',
-            billing_email: `billing@${city.toLowerCase()}.qwikker.com`
+            billing_email: `billing@${city.toLowerCase()}.qwikker.com`,
+            
+            // SMS Notifications (disabled by default)
+            sms_enabled: false,
+            sms_provider: 'none',
+            sms_verified: false,
+            sms_test_mode: false,
+            sms_country_code: null,
+            sms_default_calling_code: null,
+            sms_last_verified_at: null,
+            sms_last_error: null,
+            twilio_account_sid: null,
+            twilio_auth_token: null,
+            twilio_messaging_service_sid: null,
+            twilio_from_number: null
           })
         }
       } catch (error) {
@@ -279,65 +324,66 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-8 px-4">
-      {/* Hero Header - Discover Page Style */}
-      <div className="text-center mb-12">
-        <div className="flex flex-col items-center gap-6 mb-6">
-          <div className="p-4 bg-[#00d083]/10 rounded-full border-2 border-[#00d083]/30 shadow-xl shadow-[#00d083]/20">
-            <svg className="w-12 h-12 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-5xl font-bold text-[#00d083] mb-3">
-              Franchise Setup
-            </h1>
-            <div className="h-1 w-48 mx-auto bg-gradient-to-r from-transparent via-[#00d083] to-transparent rounded-full" />
+    <div className="max-w-5xl mx-auto py-8 px-4">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-xl font-medium text-white">
+            {config.display_name} Configuration
+          </h1>
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${config.status === 'active' ? 'bg-[#00D083]' : 'bg-slate-500'}`} />
+            <span className="text-sm text-slate-400">{config.status || 'setup'}</span>
           </div>
         </div>
-        <p className="text-slate-300 text-lg max-w-3xl mx-auto leading-relaxed">
-          Configure your <span className="text-[#00d083] font-semibold">{config.display_name}</span> franchise. 
-          Manage your API services, integrations, and platform settings.
+        <p className="text-sm text-slate-500">
+          API services, integrations, and platform configuration
         </p>
       </div>
 
-      {/* Progress Steps - Clickable Filter Cards Style */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-12">
-        {steps.map((step) => {
+      {/* Stepper */}
+      <div className="flex items-center gap-2 mb-10 pb-6 border-b border-slate-800">
+        {steps.map((step, index) => {
           const isActive = activeStep === step.id
           const isComplete = activeStep > step.id
           
           return (
-            <button
-              key={step.id}
-              onClick={() => setActiveStep(step.id)}
-              className={`
-                relative p-5 rounded-2xl border-2 transition-all duration-300
-                ${isActive 
-                  ? 'bg-gradient-to-br from-slate-800/80 to-slate-700/80 border-[#00d083] shadow-xl shadow-[#00d083]/20 scale-105' 
-                  : isComplete
-                  ? 'bg-gradient-to-br from-slate-800/60 to-slate-700/60 border-green-500/50 hover:border-green-500/80'
-                  : 'bg-gradient-to-br from-slate-800/40 to-slate-700/40 border-slate-600/50 hover:border-slate-500'
-                }
-                hover:scale-105 cursor-pointer
-              `}
-            >
-              {isComplete && (
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-slate-900">
-                  ✓
+            <div key={step.id} className="flex items-center flex-1">
+              <button
+                onClick={() => setActiveStep(step.id)}
+                className="flex items-center gap-3 w-full group"
+              >
+                <div className={`
+                  flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium transition-colors
+                  ${isComplete 
+                    ? 'bg-[#00D083] text-white' 
+                    : isActive 
+                      ? 'bg-slate-700 text-white ring-2 ring-slate-600'
+                      : 'bg-slate-800 text-slate-500 group-hover:bg-slate-700'
+                  }
+                `}>
+                  {isComplete ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    step.id
+                  )}
                 </div>
+                <div className="text-left flex-1 min-w-0">
+                  <div className={`text-xs font-medium truncate transition-colors ${
+                    isActive ? 'text-white' : isComplete ? 'text-slate-400' : 'text-slate-500 group-hover:text-slate-400'
+                  }`}>
+                    {step.name}
+                  </div>
+                </div>
+              </button>
+              {index < steps.length - 1 && (
+                <div className={`h-px w-full mx-2 transition-colors ${
+                  isComplete ? 'bg-[#00D083]' : 'bg-slate-800'
+                }`} />
               )}
-              <div className="text-center">
-                <div className={`text-2xl font-bold mb-2 ${isActive ? 'text-[#00d083]' : isComplete ? 'text-green-400' : 'text-slate-400'}`}>{step.icon}</div>
-                <div className={`font-bold text-xs ${isActive ? 'text-[#00d083]' : isComplete ? 'text-green-400' : 'text-slate-400'}`}>
-                  Step {step.id}
-                </div>
-                <div className={`text-xs mt-1 ${isActive ? 'text-white' : 'text-slate-400'}`}>
-                  {step.name}
-                </div>
-              </div>
-            </button>
+            </div>
           )
         })}
       </div>
@@ -357,32 +403,21 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
       <div className="space-y-6">
         {/* STEP 1: Admin Account */}
         {activeStep === 1 && (
-          <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-blue-500/50 shadow-2xl backdrop-blur-sm">
+          <Card className="bg-slate-800/50 border border-slate-700">
             <CardHeader>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <CardTitle className="text-white text-2xl">Your Admin Account</CardTitle>
-                  <p className="text-slate-400 text-sm mt-1">Manage your personal admin login credentials</p>
-                </div>
+              <div className="mb-6">
+                <CardTitle className="text-white text-lg font-medium mb-1">Admin Account</CardTitle>
+                <p className="text-slate-400 text-sm">Your personal admin login credentials</p>
               </div>
               
-              {/* Info Banner */}
-              <div className="bg-blue-900/30 border-2 border-blue-500/30 rounded-xl p-4 mt-4">
-                <div className="flex items-start gap-3">
-                  <svg className="w-6 h-6 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4">
+                <div className="flex gap-3">
+                  <svg className="w-5 h-5 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <div>
-                    <p className="text-blue-300 text-sm font-semibold mb-1">Security First</p>
-                    <p className="text-blue-200 text-sm">
-                      This is YOUR admin account for managing your franchise. Use a strong, unique password and keep your email secure for important system notifications.
-                    </p>
-                  </div>
+                  <p className="text-slate-300 text-sm">
+                    Use a strong, unique password and keep your email secure for system notifications.
+                  </p>
                 </div>
               </div>
             </CardHeader>
@@ -466,12 +501,12 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
               </div>
 
               <div className="flex justify-end pt-4">
-                <Button
+                <button
                   onClick={() => setActiveStep(2)}
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg shadow-blue-500/30"
+                  className="bg-[#00D083] hover:bg-[#00b86f] text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors"
                 >
-                  Next: Franchise Details →
-                </Button>
+                  Continue
+                </button>
               </div>
             </CardContent>
           </Card>
@@ -575,12 +610,12 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 >
                   ← Back
                 </Button>
-                <Button
+                <button
                   onClick={() => setActiveStep(3)}
-                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg shadow-purple-500/30"
+                  className="bg-[#00D083] hover:bg-[#00b86f] text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors"
                 >
-                  Next: Your API Services →
-                </Button>
+                  Continue
+                </button>
               </div>
             </CardContent>
           </Card>
@@ -623,21 +658,42 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 {/* Resend (Email) */}
                 <div className="border-2 border-slate-700/50 rounded-xl p-6 hover:border-slate-600 transition-colors bg-slate-800/30">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                      RS
+                    <div className="w-12 h-12 bg-slate-700 rounded-xl flex items-center justify-center shadow-lg">
+                      <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-white font-bold text-lg">Resend (Email Service)</h3>
-                      <p className="text-slate-400 text-sm">Send transactional emails to businesses and customers</p>
+                      <h3 className="text-white font-bold text-lg">Email Service</h3>
+                      <p className="text-slate-400 text-sm">Transactional emails (claims, approvals, notifications)</p>
                     </div>
                     <a 
                       href="https://resend.com/signup" 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      className="px-4 py-2 border border-slate-600 text-slate-300 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
                     >
-                      Sign Up →
+                      Sign Up to Resend
                     </a>
+                  </div>
+
+                  {/* Architecture explanation */}
+                  <div className="mb-6 p-4 bg-slate-700/30 border border-slate-600/50 rounded-lg">
+                    <h4 className="text-sm font-semibold text-slate-200 mb-2">Domain & Email Setup</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                      QWIKKER manages all franchise subdomains and DNS centrally to ensure deliverability, security, and consistent sending reputation.
+                    </p>
+                    <p className="text-xs text-slate-300 font-medium mb-2">How email sending works:</p>
+                    <ol className="text-xs text-slate-400 leading-relaxed space-y-2 mb-4 ml-4 list-decimal">
+                      <li>Create a Resend account and generate an API key</li>
+                      <li>In Resend, add your sending domain: <span className="text-slate-300 font-mono">{config.subdomain || 'yourcity'}.qwikker.com</span></li>
+                      <li>Resend will provide DNS records for verification</li>
+                      <li>Send those DNS records to <span className="text-slate-300 font-medium">support@qwikker.com</span> — we'll apply them for you</li>
+                      <li>Once verified, paste your Resend API key below</li>
+                    </ol>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      You pay Resend directly for email usage. QWIKKER handles domain configuration and ongoing DNS management.
+                    </p>
                   </div>
 
                   <div className="space-y-4">
@@ -668,6 +724,9 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                           )}
                         </button>
                       </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Create at <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:underline">resend.com/api-keys</a>
+                      </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -676,8 +735,11 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                           value={config.resend_from_name || ''}
                           onChange={(e) => setConfig({...config, resend_from_name: e.target.value})}
                           className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg"
-                          placeholder="Bournemouth Qwikker"
+                          placeholder="QWIKKER Bournemouth"
                         />
+                        <p className="text-xs text-slate-400 mt-1">
+                          Example: {config.subdomain ? config.subdomain.charAt(0).toUpperCase() + config.subdomain.slice(1) : 'Bournemouth'} Qwikker
+                        </p>
                       </div>
                       <div>
                         <Label className="text-slate-300 text-sm mb-2 block">From Email Address</Label>
@@ -686,11 +748,13 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                           value={config.resend_from_email || ''}
                           onChange={(e) => setConfig({...config, resend_from_email: e.target.value})}
                           className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg"
-                          placeholder="hello@bournemouth.qwikker.com"
+                          placeholder={`no-reply@${config.subdomain || 'yourcity'}.qwikker.com`}
                         />
+                        <p className="text-xs text-slate-400 mt-1">
+                          Use <span className="font-mono text-slate-300">no-reply@{config.subdomain || 'yourcity'}.qwikker.com</span> once verified (You can use <span className="font-mono text-slate-300">onboarding@resend.dev</span> temporarily for testing)
+                        </p>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-400">Note: You'll need to verify this domain in Resend</p>
                   </div>
                 </div>
 
@@ -799,59 +863,59 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 {/* Google Places API */}
                 <div className="border-2 border-slate-700/50 rounded-xl p-6 hover:border-slate-600 transition-colors bg-slate-800/30">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-yellow-500 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                      GP
+                    <div className="w-12 h-12 bg-slate-700 rounded-xl flex items-center justify-center shadow-lg">
+                      <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-white font-bold text-lg">Google Places API (Business Import)</h3>
-                      <p className="text-slate-400 text-sm">Auto-import local businesses to populate your city</p>
+                      <h3 className="text-white font-bold text-lg">Google Places API</h3>
+                      <p className="text-slate-400 text-sm">Import businesses from Google</p>
                     </div>
                     <a 
                       href="https://console.cloud.google.com/apis/credentials" 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="px-4 py-2 bg-gradient-to-r from-red-600 to-yellow-600 hover:from-red-700 hover:to-yellow-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      className="px-4 py-2 border border-slate-600 text-slate-300 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
                     >
-                      Get API Key →
+                      Get API Key
                     </a>
                   </div>
 
                   <div>
-                    <Label className="text-slate-300 text-sm mb-2 block">Google Places API Key</Label>
-                    <div className="relative">
+                    <Label className="text-slate-300 text-sm mb-2 block">API Key</Label>
+                    {config.has_google_places_api_key && !config.google_places_api_key?.startsWith('AIza') ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg">
+                          <svg className="w-4 h-4 text-[#00D083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="text-sm text-slate-300">API key configured</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setConfig({...config, google_places_api_key: '', has_google_places_api_key: false})}
+                          className="text-sm text-slate-400 hover:text-slate-300"
+                        >
+                          Replace key
+                        </button>
+                      </div>
+                    ) : (
                       <Input
-                        type={showKeys.googlePlaces ? "text" : "password"}
+                        type="text"
                         value={config.google_places_api_key || ''}
                         onChange={(e) => setConfig({...config, google_places_api_key: e.target.value})}
-                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
+                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
                         placeholder="AIzaSy..."
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowKeys({...showKeys, googlePlaces: !showKeys.googlePlaces})}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
-                      >
-                        {showKeys.googlePlaces ? (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                          </svg>
-                        ) : (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                    <div className="mt-3 p-4 bg-gradient-to-br from-blue-500/10 to-yellow-500/10 border border-blue-500/30 rounded-lg space-y-2">
-                      <p className="text-xs text-blue-300">
-                        <strong>💡 Why needed:</strong> For auto-importing businesses from Google (Nearby Search + Place Details + Photos)
+                    )}
+                    <div className="mt-3 p-3 bg-slate-800/80 border border-slate-700 rounded-lg">
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        Used for importing businesses via Google Places API. Enable "Places API (new)" in Google Cloud Console, create an API key, and restrict it to Places API only.
                       </p>
-                      <p className="text-xs text-yellow-300">
-                        <strong>💰 Cost:</strong> ~£0.075 per business • £15 for 200 businesses • £37.50 for 500 businesses
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        <strong>📝 Setup:</strong> Enable Places API (new) in Google Cloud Console → Create API Key → Restrict to Places API only
+                      <p className="text-xs text-slate-500 mt-2">
+                        Cost: ~£0.075 per business
                       </p>
                     </div>
                   </div>
@@ -868,12 +932,12 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
               >
                 ← Back
               </Button>
-              <Button
+              <button
                 onClick={() => setActiveStep(4)}
-                className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg shadow-orange-500/30"
+                className="bg-[#00D083] hover:bg-[#00b86f] text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors"
               >
-                Next: Integrations →
-              </Button>
+                Continue
+              </button>
             </div>
           </div>
         )}
@@ -1270,6 +1334,213 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   )}
                 </div>
 
+                {/* SMS Notifications (Twilio) - OPTIONAL */}
+                <div className="border-2 border-slate-700/50 rounded-xl p-6 hover:border-slate-600 transition-colors bg-slate-800/30">
+                  <div className="flex items-center justify-between gap-3 mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-white font-bold text-lg">SMS Notifications (Optional)</h3>
+                        <p className="text-slate-400 text-sm">Transactional SMS for Claim Submitted & Claim Approved</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setConfig({...config, sms_enabled: !config.sms_enabled})}
+                      className={`relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-800 ${
+                        config.sms_enabled ? 'bg-blue-600' : 'bg-slate-600'
+                      }`}
+                    >
+                      <span className="sr-only">Enable SMS</span>
+                      <span
+                        className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          config.sms_enabled ? 'translate-x-7' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {config.sms_enabled && (
+                    <>
+                      {/* Architecture explanation */}
+                      <div className="mb-6 p-4 bg-slate-700/30 border border-slate-600/50 rounded-lg">
+                        <h4 className="text-sm font-semibold text-slate-200 mb-2">SMS Service Setup</h4>
+                        <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                          QWIKKER manages phone number configuration and compliance requirements centrally. You connect your Twilio account and pay for usage directly.
+                        </p>
+                        <p className="text-xs text-slate-300 font-medium mb-2">How SMS sending works:</p>
+                        <ol className="text-xs text-slate-400 leading-relaxed space-y-2 mb-4 ml-4 list-decimal">
+                          <li>Create a Twilio account and purchase a phone number</li>
+                          <li>Set up a Messaging Service in Twilio</li>
+                          <li>Copy your Account SID, Auth Token, and Messaging Service SID</li>
+                          <li>Paste your credentials below and run a test</li>
+                          <li>Once verified, SMS opt-in will automatically appear in your claim form</li>
+                        </ol>
+                        <p className="text-xs text-slate-400 leading-relaxed mb-2">
+                          You pay Twilio directly for SMS usage. QWIKKER handles compliance configuration and opt-out management.
+                        </p>
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                          <a href="/api/admin/sms/guide.pdf" target="_blank" className="text-[#00D083] hover:underline font-medium">Download full setup guide (PDF)</a> · Need help with compliance? Email support@qwikker.com
+                        </p>
+                      </div>
+
+                      {/* Country Selection (Optional, for guidance) */}
+                      <div className="mb-6">
+                        <Label className="text-slate-300 text-sm mb-2 block">Country (Optional)</Label>
+                        <select
+                          value={config.sms_country_code || ''}
+                          onChange={(e) => setConfig({...config, sms_country_code: e.target.value})}
+                          className="w-full bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg px-4"
+                        >
+                          <option value="">Select country (for guidance)</option>
+                          <option value="GB">🇬🇧 United Kingdom (+44)</option>
+                          <option value="US">🇺🇸 United States (+1)</option>
+                          <option value="CA">🇨🇦 Canada (+1)</option>
+                          <option value="AU">🇦🇺 Australia (+61)</option>
+                          <option value="NZ">🇳🇿 New Zealand (+64)</option>
+                          <option value="IE">🇮🇪 Ireland (+353)</option>
+                          <option value="FR">🇫🇷 France (+33)</option>
+                          <option value="DE">🇩🇪 Germany (+49)</option>
+                          <option value="ES">🇪🇸 Spain (+34)</option>
+                          <option value="IT">🇮🇹 Italy (+39)</option>
+                        </select>
+                        <p className="text-xs text-slate-400 mt-1">Used to tailor setup guidance and default calling codes</p>
+                      </div>
+
+                      {/* Twilio Credentials */}
+                      <div className="space-y-4 mb-6">
+                        <div>
+                          <Label className="text-slate-300 text-sm mb-2 block">Twilio Account SID</Label>
+                          <Input
+                            value={config.twilio_account_sid || ''}
+                            onChange={(e) => setConfig({...config, twilio_account_sid: e.target.value})}
+                            className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
+                            placeholder="AC..."
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-sm mb-2 block">Twilio Auth Token</Label>
+                          <Input
+                            type="password"
+                            value={config.twilio_auth_token || ''}
+                            onChange={(e) => setConfig({...config, twilio_auth_token: e.target.value})}
+                            className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
+                            placeholder="••••••••••••••••••••••••••••••••"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-sm mb-2 block">Messaging Service SID (Recommended)</Label>
+                          <Input
+                            value={config.twilio_messaging_service_sid || ''}
+                            onChange={(e) => setConfig({...config, twilio_messaging_service_sid: e.target.value})}
+                            className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
+                            placeholder="MG..."
+                          />
+                          <p className="text-xs text-slate-400 mt-1">Best for compliance: supports multiple senders and auto-routing</p>
+                        </div>
+                        <div>
+                          <Label className="text-slate-300 text-sm mb-2 block">From Number (Alternative)</Label>
+                          <Input
+                            value={config.twilio_from_number || ''}
+                            onChange={(e) => setConfig({...config, twilio_from_number: e.target.value})}
+                            className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
+                            placeholder="+447700900123"
+                          />
+                          <p className="text-xs text-slate-400 mt-1">Use if not using Messaging Service. Must be E.164 format (+country...)</p>
+                        </div>
+                      </div>
+
+                      {/* Setup Guide */}
+                      <div className="mb-6">
+                        <a 
+                          href="/api/admin/sms/guide.pdf" 
+                          target="_blank" 
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition-colors border border-slate-600"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Download Twilio Setup Guide (PDF)
+                        </a>
+                      </div>
+
+                      {/* Status */}
+                      <div className="mb-6 flex items-center gap-2 text-sm">
+                        <span className="text-slate-400">Status:</span>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full ${
+                            config.sms_verified ? 'bg-[#00D083]' : 'bg-slate-500'
+                          }`} />
+                          <span className={config.sms_verified ? 'text-white' : 'text-slate-400'}>
+                            {config.sms_verified ? 'Verified' : 'Not verified'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Test Buttons */}
+                      <div className="space-y-3">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const result = confirm('This will simulate an SMS send without actually sending. Continue?')
+                            if (!result) return
+                            
+                            try {
+                              const res = await fetch('/api/admin/sms/test?mode=simulated', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({})
+                              })
+                              const data = await res.json()
+                              if (data.success) {
+                                alert(`Simulated Test Successful\n\nMessage Preview:\n${data.message}`)
+                              } else {
+                                alert(`Test failed: ${data.error}`)
+                              }
+                            } catch (err) {
+                              alert('Test failed: Network error')
+                            }
+                          }}
+                          className="w-full px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors border border-slate-600"
+                        >
+                          Simulated Test
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const phone = prompt('Enter phone number to send test SMS (E.164 format, e.g., +447700900123):')
+                            if (!phone) return
+                            
+                            try {
+                              const res = await fetch('/api/admin/sms/test?mode=real', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ to_e164: phone })
+                              })
+                              const data = await res.json()
+                              if (data.success) {
+                                alert(`Real SMS Sent\n\nYour SMS is now verified.\nClaim form will show SMS opt-in checkbox.`)
+                                location.reload()
+                              } else {
+                                alert(`Failed to send SMS:\n\n${data.error}\n\n${data.troubleshooting ? data.troubleshooting.join('\n• ') : ''}`)
+                              }
+                            } catch (err) {
+                              alert('Test failed: Network error')
+                            }
+                          }}
+                          className="w-full px-4 py-2.5 border border-[#00D083] text-[#00D083] hover:bg-[#00D083]/10 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          Send Real Test SMS
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
               </CardContent>
             </Card>
 
@@ -1281,90 +1552,87 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
               >
                 ← Back
               </Button>
-              <Button
+              <button
                 onClick={() => setActiveStep(5)}
-                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg shadow-green-500/30"
+                className="bg-[#00D083] hover:bg-[#00b86f] text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors"
               >
-                Next: Save & Launch →
-              </Button>
+                Continue
+              </button>
             </div>
           </div>
         )}
 
-        {/* STEP 5: Save & Launch */}
+        {/* STEP 5: Review & Save */}
         {activeStep === 5 && (
-          <Card className="bg-gradient-to-br from-[#00d083]/10 to-[#00b86f]/10 border-2 border-[#00d083]/50 shadow-2xl backdrop-blur-sm">
-            <CardHeader className="text-center pb-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-[#00d083]/30 animate-bounce">
-                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+          <Card className="bg-slate-800/50 border border-slate-700">
+            <CardHeader>
+              <div className="mb-6">
+                <CardTitle className="text-white text-lg font-medium mb-1">Review & Save</CardTitle>
+                <p className="text-slate-400 text-sm">
+                  Your configuration will be saved and applied immediately.
+                </p>
               </div>
-              <CardTitle className="text-white text-4xl mb-3">Ready to Save!</CardTitle>
-              <p className="text-slate-300 text-lg max-w-2xl mx-auto">
-                Review your configuration and save your changes. Your franchise will be updated with the latest settings.
-              </p>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="bg-[#00d083]/10 border-2 border-[#00d083]/30 rounded-xl p-8">
-                <h3 className="text-white font-bold text-xl mb-4 text-center">What gets saved?</h3>
+              <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-6">
+                <h3 className="text-white font-medium text-sm mb-4">Configuration Summary</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-300 text-sm">
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-[#00d083] rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">1</div>
+                    <div className="w-1.5 h-1.5 bg-slate-500 rounded-full mt-2 flex-shrink-0" />
                     <div>
-                      <p className="font-semibold text-white">Admin Account</p>
-                      <p className="text-slate-400">Owner details and login credentials</p>
+                      <p className="font-medium text-slate-300">Admin Account</p>
+                      <p className="text-slate-500 text-xs">Owner details and credentials</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-[#00d083] rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">2</div>
+                    <div className="w-1.5 h-1.5 bg-slate-500 rounded-full mt-2 flex-shrink-0" />
                     <div>
-                      <p className="font-semibold text-white">Franchise Info</p>
-                      <p className="text-slate-400">Display name, subdomain, and contact details</p>
+                      <p className="font-medium text-slate-300">Franchise Info</p>
+                      <p className="text-slate-500 text-xs">Display name, subdomain, contact details</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-[#00d083] rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">3</div>
+                    <div className="w-1.5 h-1.5 bg-slate-500 rounded-full mt-2 flex-shrink-0" />
                     <div>
-                      <p className="font-semibold text-white">Your API Services</p>
-                      <p className="text-slate-400">Resend, OpenAI, and Anthropic keys</p>
+                      <p className="font-medium text-slate-300">API Services</p>
+                      <p className="text-slate-500 text-xs">Resend, OpenAI, Anthropic</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-[#00d083] rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">4</div>
+                    <div className="w-1.5 h-1.5 bg-slate-500 rounded-full mt-2 flex-shrink-0" />
                     <div>
-                      <p className="font-semibold text-white">Integrations</p>
-                      <p className="text-slate-400">GHL, WalletPush, Slack, and Stripe settings</p>
+                      <p className="font-medium text-slate-300">Integrations</p>
+                      <p className="text-slate-500 text-xs">CRM, wallet, notifications, payments</p>
                     </div>
                   </div>
                 </div>
               </div>
               
               <div className="flex flex-col items-center gap-4 pt-6">
-                <Button
+                <button
                   onClick={saveConfig}
                   disabled={saveStatus === 'saving'}
-                  className={`px-16 py-6 text-xl font-bold text-white transition-all rounded-2xl ${
+                  className={`px-8 py-2.5 text-sm font-medium text-white transition-colors rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                     saveStatus === 'saved' 
-                      ? 'bg-green-500 hover:bg-green-600 shadow-green-500/50' 
+                      ? 'bg-[#00D083] hover:bg-[#00b86f]' 
                       : saveStatus === 'error'
-                      ? 'bg-red-600 hover:bg-red-700 shadow-red-500/50'
-                      : 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00d083] shadow-[#00d083]/50'
-                  } shadow-2xl hover:scale-105 transition-transform`}
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-[#00D083] hover:bg-[#00b86f]'
+                  }`}
                 >
                   {saveStatus === 'saving' && (
                     <>
-                      <svg className="animate-spin -ml-1 mr-3 h-6 w-6 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Saving Configuration...
+                      Saving...
                     </>
                   )}
-                  {saveStatus === 'saved' && 'Configuration Saved!'}
-                  {saveStatus === 'error' && 'Try Again'}
+                  {saveStatus === 'saved' && 'Saved'}
+                  {saveStatus === 'error' && 'Error - Try Again'}
                   {saveStatus === 'idle' && 'Save Configuration'}
-                </Button>
+                </button>
                 
                 <Button
                   onClick={() => setActiveStep(4)}

@@ -44,7 +44,7 @@ const MOCK_BUSINESSES = [
   }
 ]
 
-type Step = 'search' | 'confirm' | 'details' | 'verify' | 'account' | 'submitted'
+type Step = 'search' | 'confirm' | 'email-verify' | 'verify-code' | 'business-details' | 'account' | 'submitted'
 
 export default function ClaimPage() {
   const [step, setStep] = useState<Step>('search')
@@ -62,28 +62,41 @@ export default function ClaimPage() {
   const [city, setCity] = useState<string | null>(null)
   const [cityLoading, setCityLoading] = useState(true)
   
-  // Fetch city on mount
+  // Franchise capabilities (determines what features to show)
+  const [smsOptInAvailable, setSmsOptInAvailable] = useState(false)
+  
+  // Fetch city and capabilities on mount
   useEffect(() => {
-    async function fetchCity() {
+    async function fetchCityAndCapabilities() {
       try {
-        const response = await fetch('/api/internal/get-city')
-        const data = await response.json()
-        if (data.success) {
-          setCity(data.city)
-          console.log(`🌍 Claim page city detected: ${data.city}`)
+        // Fetch city
+        const cityResponse = await fetch('/api/internal/get-city')
+        const cityData = await cityResponse.json()
+        if (cityData.success) {
+          setCity(cityData.city)
+          console.log(`🌍 Claim page city detected: ${cityData.city}`)
         } else {
           console.warn('Failed to detect city, using fallback')
           setCity('bournemouth')
         }
+        
+        // Fetch franchise capabilities
+        const capabilitiesResponse = await fetch('/api/public/franchise-capabilities')
+        const capabilitiesData = await capabilitiesResponse.json()
+        if (capabilitiesData.success && capabilitiesData.capabilities) {
+          setSmsOptInAvailable(capabilitiesData.capabilities.sms_opt_in_available)
+          console.log(`📱 SMS opt-in available: ${capabilitiesData.capabilities.sms_opt_in_available}`)
+        }
       } catch (error) {
-        console.error('Error fetching city:', error)
+        console.error('Error fetching city/capabilities:', error)
         setCity('bournemouth')
+        setSmsOptInAvailable(false) // Fail safely: no SMS
       } finally {
         setCityLoading(false)
       }
     }
     
-    fetchCity()
+    fetchCityAndCapabilities()
   }, [])
 
   const handleSearch = async (query: string = searchQuery) => {
@@ -130,15 +143,17 @@ export default function ClaimPage() {
   }
 
   const handleConfirm = () => {
-    setStep('details')
+    setStep('email-verify')
   }
 
   const handleBack = () => {
     if (step === 'account') {
-      setStep('details')
-    } else if (step === 'details') {
-      setStep('verify')
-    } else if (step === 'verify') {
+      setStep('business-details')
+    } else if (step === 'business-details') {
+      setStep('verify-code')
+    } else if (step === 'verify-code') {
+      setStep('email-verify')
+    } else if (step === 'email-verify') {
       setStep('confirm')
     } else if (step === 'confirm') {
       setStep('search')
@@ -161,7 +176,7 @@ export default function ClaimPage() {
       const data = await response.json()
 
       if (data.success) {
-        setStep('verify')
+        setStep('verify-code')
       } else {
         alert(data.error || 'Failed to send verification code')
       }
@@ -173,7 +188,7 @@ export default function ClaimPage() {
 
   const handleVerified = (code: string) => {
     setVerificationCode(code)
-    setStep('details')
+    setStep('business-details')
   }
 
   const handleBusinessDetailsConfirmed = (editedData: any) => {
@@ -237,8 +252,13 @@ export default function ClaimPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-      <div className="container max-w-4xl mx-auto px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 relative">
+      {/* Subtle green radial glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[#00d083] opacity-[0.03] blur-[120px] rounded-full" />
+      </div>
+      
+      <div className="container max-w-4xl mx-auto px-4 py-12 relative">
         {/* Header */}
         <div className="text-center mb-12">
           {/* QWIKKER Logo */}
@@ -251,30 +271,30 @@ export default function ClaimPage() {
             />
           </div>
           
-          <h1 className="text-4xl font-bold mb-3">Claim Your Listing</h1>
-          <p className="text-lg text-muted-foreground">
-            Already listed on QWIKKER? Claim your business to unlock your dashboard
+          <h1 className="text-3xl md:text-4xl font-semibold mb-2">Claim Your Business</h1>
+          <p className="text-base text-muted-foreground">
+            Already listed? Verify ownership to start managing your listing.
           </p>
         </div>
 
         {/* Step 1: Search */}
         {step === 'search' && (
           <div className="space-y-6">
-            <Card>
+            <Card className="dark:bg-[#181818] border-white/[0.06] shadow-[0_10px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.6)] border-t-[#00d083]/20">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
                   <Search className="w-5 h-5" />
                   Find Your Business
                 </CardTitle>
                 <CardDescription>
-                  Search for your business by name or category
+                  Search by name or category
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
                   <Input
                     type="text"
-                    placeholder="e.g. The Larder House, Coffee Shop, Barber..."
+                    placeholder="e.g. The Larder House, Scissors Barbers, Ember & Oak"
                     value={searchQuery}
                     onChange={(e) => {
                       setSearchQuery(e.target.value)
@@ -283,10 +303,13 @@ export default function ClaimPage() {
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     className="flex-1"
                   />
-                  <Button onClick={handleSearch}>
-                    <Search className="w-4 h-4 mr-2" />
+                  <button
+                    onClick={handleSearch}
+                    className="bg-[#00d083] hover:bg-[#00b86f] text-[#0a0a0a] px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <Search className="w-4 h-4" />
                     Search
-                  </Button>
+                  </button>
                 </div>
 
                 {searchResults.length > 0 && (
@@ -334,26 +357,26 @@ export default function ClaimPage() {
 
                 {searchQuery && searchResults.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
-                    <Building2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <Building2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p className="mb-2">No businesses found matching "{searchQuery}"</p>
                     <p className="text-sm">We may not have imported your business yet.</p>
-                    <Button variant="link" className="mt-2">
+                    <button className="mt-3 text-sm text-[#00d083] hover:underline">
                       Contact us to add your business
-                    </Button>
+                    </button>
                   </div>
                 )}
 
                 {!searchQuery && searchResults.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
-                    <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <Search className="w-12 h-12 mx-auto mb-3 opacity-30 animate-pulse" />
                     <p className="text-sm">Start typing to search for your business</p>
-                    <p className="text-xs mt-2 opacity-75">(minimum 2 characters)</p>
+                    <p className="text-xs mt-2 opacity-60">(minimum 2 characters)</p>
                   </div>
                 )}
 
                 {searchQuery.length === 1 && searchResults.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
-                    <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <Search className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p className="text-sm">Type at least 2 characters to search</p>
                   </div>
                 )}
@@ -361,12 +384,12 @@ export default function ClaimPage() {
             </Card>
 
             <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-2">
+              <p className="text-sm text-muted-foreground mb-3">
                 Can't find your business?
               </p>
-              <Button variant="outline">
-                Request to Add My Business
-              </Button>
+              <button className="px-5 py-2.5 border border-[#00d083]/30 text-[#00d083] hover:bg-[#00d083]/10 rounded-lg font-medium transition-colors text-sm">
+                Request a listing
+              </button>
             </div>
           </div>
         )}
@@ -380,9 +403,9 @@ export default function ClaimPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Confirm This Is Your Business</CardTitle>
+                <CardTitle>Confirm Your Business</CardTitle>
                 <CardDescription>
-                  Make sure all the details match your business before claiming
+                  Verify the details match before proceeding
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -413,9 +436,9 @@ export default function ClaimPage() {
                 </div>
 
                 {/* Notice */}
-                <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                  <p className="text-sm text-blue-900 dark:text-blue-100">
-                    ℹ️ This information is from Google. You'll be able to update it once your claim is approved.
+                <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    This information is from Google. You'll be able to update it once verified.
                   </p>
                 </div>
 
@@ -434,7 +457,7 @@ export default function ClaimPage() {
         )}
 
         {/* Step 3: Contact Details */}
-        {step === 'details' && selectedBusiness && (
+        {step === 'email-verify' && selectedBusiness && (
           <div className="space-y-6">
             <Button variant="ghost" onClick={handleBack} className="mb-4">
               ← Back
@@ -535,7 +558,7 @@ export default function ClaimPage() {
         )}
 
         {/* Step 4: Email Verification */}
-        {step === 'verify' && (
+        {step === 'verify-code' && (
           <EmailVerification
             email={email}
             onVerified={handleVerified}
@@ -545,7 +568,7 @@ export default function ClaimPage() {
         )}
 
         {/* Step 5: Confirm Business Details */}
-        {step === 'details' && selectedBusiness && (
+        {step === 'business-details' && selectedBusiness && (
           <ConfirmBusinessDetails
             business={{
               id: selectedBusiness.id,
@@ -560,6 +583,7 @@ export default function ClaimPage() {
               rating: selectedBusiness.rating,
               reviewCount: selectedBusiness.reviewCount || selectedBusiness.review_count
             }}
+            smsOptInAvailable={smsOptInAvailable}
             onConfirm={handleBusinessDetailsConfirmed}
             onBack={handleBack}
           />

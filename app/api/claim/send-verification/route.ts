@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
       const cityDisplayName = franchiseConfig.display_name || business.city
 
-      await resend.emails.send({
+      const resendResponse = await resend.emails.send({
         from: `${fromName} <${franchiseConfig.resend_from_email}>`,
         to: email,
         subject: `Your ${cityDisplayName} Verification Code: ${verificationCode}`,
@@ -148,7 +148,17 @@ export async function POST(request: NextRequest) {
         `
       })
 
-      console.log(`✅ Verification email sent to ${email} for business claim`)
+      console.log('📧 Resend API Response:', JSON.stringify(resendResponse, null, 2))
+      
+      if (resendResponse.error) {
+        console.error('🚨 Resend returned an error:', resendResponse.error)
+        return NextResponse.json({ 
+          success: false, 
+          error: `Email service error: ${resendResponse.error.message || 'Unknown error'}` 
+        }, { status: 500 })
+      }
+
+      console.log(`✅ Verification email sent to ${email} (ID: ${resendResponse.data?.id}) for business claim`)
     } catch (emailError) {
       console.error('Error sending verification email:', emailError)
       return NextResponse.json({ 
