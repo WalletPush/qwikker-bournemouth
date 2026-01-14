@@ -146,12 +146,14 @@ export async function POST(request: NextRequest) {
       try {
         const { sendBusinessApprovalNotification } = await import('@/lib/notifications/email-notifications')
         
+        // Use deployment URL (Vercel preview) until custom domains are live
+        const deploymentUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://qwikkerdashboard-theta.vercel.app'
         if (data.email && data.business_name) {
           const emailResult = await sendBusinessApprovalNotification({
             firstName: data.first_name || 'Business Owner',
             businessName: data.business_name,
             city: requestCity,
-            dashboardUrl: `https://${requestCity}.qwikker.com/dashboard`,
+            dashboardUrl: `${deploymentUrl}/dashboard`,
             supportEmail: process.env.SUPPORT_EMAIL || 'support@qwikker.com'
           })
           

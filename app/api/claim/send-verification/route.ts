@@ -100,15 +100,22 @@ export async function POST(request: NextRequest) {
     // Send verification email using franchise's Resend API key (multi-tenant)
     try {
       const { Resend } = await import('resend')
+      const { escapeHtml } = await import('@/lib/utils/escape-html')
       const resend = new Resend(franchiseConfig.resend_api_key)
 
       const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
       const cityDisplayName = franchiseConfig.display_name || business.city
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `https://${business.city}.qwikker.com`
+      
+      // Use Cloudinary URL for logo (publicly accessible in emails)
+      // TODO: Replace with your actual Cloudinary logo URL once uploaded
+      const logoUrl = process.env.CLOUDINARY_LOGO_URL || 
+                      `https://res.cloudinary.com/demo/image/upload/v1/qwikker-logo.svg` // Placeholder - replace with your actual Cloudinary URL
 
       const resendResponse = await resend.emails.send({
         from: `${fromName} <${franchiseConfig.resend_from_email}>`,
         to: email,
-        subject: `Your ${cityDisplayName} Verification Code: ${verificationCode}`,
+        subject: `Verify your QWIKKER claim: ${verificationCode}`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -116,33 +123,57 @@ export async function POST(request: NextRequest) {
               <meta charset="utf-8">
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
             </head>
-            <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-                <h1 style="color: white; margin: 0; font-size: 28px;">QWIKKER</h1>
+            <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #0a0a0a; max-width: 600px; margin: 0 auto; padding: 0; background-color: #ffffff;">
+              
+              <!-- Header with dark background for white logo -->
+              <div style="padding: 40px 30px 30px; text-align: center; background-color: #0a0a0a; border-bottom: 1px solid #e5e7eb;">
+                <img 
+                  src="${logoUrl}" 
+                  alt="QWIKKER" 
+                  width="160"
+                  style="display: block; height: 32px; width: auto; margin: 0 auto; border: 0;"
+                />
               </div>
               
-              <div style="background: #f9fafb; padding: 40px 30px; border-radius: 0 0 10px 10px;">
-                <h2 style="color: #1f2937; margin-top: 0;">Verify Your Business Claim</h2>
+              <!-- Body -->
+              <div style="padding: 40px 30px;">
+                <h2 style="color: #0a0a0a; margin: 0 0 8px 0; font-size: 24px; font-weight: 600;">
+                  Verify your email
+                </h2>
                 
-                <p>You're claiming <strong>${business.business_name}</strong> on QWIKKER.</p>
+                <p style="color: #525252; margin: 0 0 24px 0; font-size: 15px;">
+                  You're claiming <strong style="color: #0a0a0a;">${escapeHtml(business.business_name)}</strong> on QWIKKER ${escapeHtml(cityDisplayName)}.
+                </p>
                 
-                <p>Your 6-digit verification code is:</p>
+                <p style="color: #525252; margin: 0 0 16px 0; font-size: 15px;">
+                  Enter this verification code:
+                </p>
                 
-                <div style="background: white; border: 2px solid #667eea; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;">
-                  <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #667eea;">${verificationCode}</span>
+                <!-- Code Box -->
+                <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; text-align: center; margin: 0 0 24px 0;">
+                  <span style="font-size: 36px; font-weight: 600; letter-spacing: 6px; color: #0a0a0a; font-family: 'SF Mono', Monaco, monospace;">
+                    ${verificationCode}
+                  </span>
                 </div>
                 
-                <p style="color: #6b7280; font-size: 14px;">
-                  ⏱️ This code expires in 15 minutes.<br>
-                  🔒 Don't share this code with anyone.
+                <!-- Info -->
+                <div style="background: #fafafa; border-left: 3px solid #00d083; border-radius: 4px; padding: 16px 20px; margin: 0 0 32px 0;">
+                  <p style="color: #525252; margin: 0; font-size: 14px;">
+                    This code expires in <strong style="color: #0a0a0a;">15 minutes</strong>. Don't share it with anyone.
+                  </p>
+                </div>
+              </div>
+              
+              <!-- Footer -->
+              <div style="padding: 30px; border-top: 1px solid #e5e7eb;">
+                <p style="color: #a3a3a3; font-size: 13px; margin: 0;">
+                  If you didn't request this code, you can safely ignore this email.
                 </p>
-                
-                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-                
-                <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                  If you didn't request this code, please ignore this email or contact us if you have concerns.
+                <p style="color: #a3a3a3; font-size: 13px; margin: 8px 0 0 0;">
+                  QWIKKER ${escapeHtml(cityDisplayName)}
                 </p>
               </div>
+              
             </body>
           </html>
         `

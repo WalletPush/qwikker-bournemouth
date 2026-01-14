@@ -14,7 +14,7 @@ export default function Home() {
             {/* Logo */}
             <div className="mb-12">
               <Image
-                src="/Qwikker Logo web.svg"
+                src="/qwikker-logo-web.svg"
                 alt="QWIKKER"
                 width={280}
                 height={100}

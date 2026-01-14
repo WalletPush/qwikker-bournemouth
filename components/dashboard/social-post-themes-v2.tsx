@@ -85,7 +85,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             <span className="text-white text-xs sm:text-sm font-bold drop-shadow-lg whitespace-nowrap">Install QWIKKER Pass</span>
             <div className="bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-lg flex-shrink-0">
               <img 
-                src="/Qwikker Logo web.svg" 
+                src="/qwikker-logo-web.svg" 
                 alt="QWIKKER" 
                 className="h-3.5 w-auto"
                 style={{ 
@@ -131,7 +131,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             <span className="text-black text-xs sm:text-sm font-bold whitespace-nowrap">Install QWIKKER Pass</span>
             <div className="bg-white/60 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-gray-200 flex-shrink-0">
               <img 
-                src="/Qwikker Logo web.svg" 
+                src="/qwikker-logo-web.svg" 
                 alt="QWIKKER" 
                 className="h-3.5 w-auto"
                 style={{ 
@@ -179,7 +179,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
               <span className="text-white text-sm font-bold drop-shadow-lg">📱 Install QWIKKER Pass</span>
               <div className="bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg">
                 <img 
-                  src="/Qwikker Logo web.svg" 
+                  src="/qwikker-logo-web.svg" 
                   alt="QWIKKER" 
                   className="h-4 w-auto"
                   style={{ 
@@ -230,7 +230,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             <span className="text-white text-xs sm:text-sm font-bold drop-shadow-lg whitespace-nowrap">Install QWIKKER Pass</span>
             <div className="bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-lg flex-shrink-0">
               <img 
-                src="/Qwikker Logo web.svg" 
+                src="/qwikker-logo-web.svg" 
                 alt="QWIKKER" 
                 className="h-3.5 w-auto"
                 style={{ 
@@ -283,7 +283,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
             <span className="text-white text-xs sm:text-sm font-bold drop-shadow-lg whitespace-nowrap">Install QWIKKER Pass</span>
             <div className="bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-lg flex-shrink-0">
               <img 
-                src="/Qwikker Logo web.svg" 
+                src="/qwikker-logo-web.svg" 
                 alt="QWIKKER" 
                 className="h-3.5 w-auto"
                 style={{ 

@@ -1208,7 +1208,7 @@ Qwikker Admin Team`
           <div className="text-center space-y-2">
               {/* QWIKKER Logo */}
               <img 
-                src="/Qwikker Logo web.svg" 
+                src="/qwikker-logo-web.svg" 
                 alt="QWIKKER Admin Dashboard" 
                 className="qwikker-logo mx-auto"
                 style={{ maxHeight: '32px' }}

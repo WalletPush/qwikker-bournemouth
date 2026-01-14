@@ -1,9 +1,12 @@
 import { NextRequest } from 'next/server'
+import { cookies } from 'next/headers'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getCityFromHostname } from '@/lib/utils/city-detection'
+import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { mapGoogleTypesToSystemCategory, SYSTEM_CATEGORY_LABEL, isValidSystemCategory, type SystemCategory } from '@/lib/constants/system-categories'
 
 interface ImportRequest {
-  city: string
+  city?: string // DEPRECATED: Now derived from hostname server-side (ignored if provided)
   placeIds: string[]
   systemCategory: SystemCategory // Stable enum (e.g. 'restaurant', 'cafe')
   displayCategory: string // User-facing label (e.g. 'Restaurant', 'Cafe / Coffee Shop')
@@ -133,6 +136,40 @@ function normalizeTo24h(input: string): string | null {
 }
 
 export async function POST(request: NextRequest) {
+  // 🔒 SECURITY: Require admin authentication BEFORE starting stream
+  const cookieStore = await cookies()
+  const adminSessionCookie = cookieStore.get('qwikker_admin_session')
+
+  if (!adminSessionCookie?.value) {
+    return new Response(JSON.stringify({ error: 'Admin authentication required' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+
+  let adminSession
+  try {
+    adminSession = JSON.parse(adminSessionCookie.value)
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid admin session' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+
+  // 🔒 SECURITY: Derive city from hostname (never trust client)
+  const hostname = request.headers.get('host') || ''
+  const requestCity = await getCityFromHostname(hostname)
+
+  // Verify admin exists and has permission for this city
+  const admin = await getAdminById(adminSession.adminId)
+  if (!admin || !await isAdminForCity(adminSession.adminId, requestCity)) {
+    return new Response(JSON.stringify({ error: 'Insufficient permissions' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+
   const encoder = new TextEncoder()
   
   // Create a streaming response
@@ -140,9 +177,12 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       try {
         const body: ImportRequest = await request.json()
-        const { city, placeIds, systemCategory, displayCategory, skipDuplicates = true } = body
+        const { placeIds, systemCategory, displayCategory, skipDuplicates = true } = body
 
-        if (!city || !placeIds || placeIds.length === 0) {
+        // Use requestCity (from hostname), ignore body.city if provided
+        const city = requestCity
+
+        if (!placeIds || placeIds.length === 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: 'error',
             message: 'Invalid import parameters'

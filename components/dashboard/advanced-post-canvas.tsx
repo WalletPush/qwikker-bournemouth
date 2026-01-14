@@ -297,7 +297,7 @@ export function AdvancedPostCanvas({
         </div>
         <div className="bg-black/60 backdrop-blur-md rounded-lg px-3 py-1.5">
           <img
-            src="/Qwikker Logo web.svg"
+            src="/qwikker-logo-web.svg"
             alt="QWIKKER"
             className="h-4 w-auto"
             style={{ filter: 'brightness(0) invert(1)' }}

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getCityFromHostname } from '@/lib/utils/city-detection'
+import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { CATEGORY_MAPPING } from '@/lib/constants/category-mapping'
 import { type SystemCategory, SYSTEM_CATEGORY_LABEL, isValidSystemCategory } from '@/lib/constants/system-categories'
 
@@ -8,7 +11,7 @@ const GOOGLE_PLACES_NEARBY_BASIC_GBP = 0.025  // £0.025 per Nearby Search reque
 const GOOGLE_PLACES_DETAILS_BASIC_GBP = 0.017 // £0.017 per Place Details request
 
 interface PreviewRequest {
-  city: string
+  city?: string // DEPRECATED: Now derived from hostname server-side (ignored if provided)
   location: string // e.g., "Bournemouth, UK"
   category: SystemCategory // Now uses canonical system_category enum (e.g. 'restaurant', 'cafe')
   minRating: number
@@ -40,11 +43,48 @@ interface PlaceResult {
 
 export async function POST(request: NextRequest) {
   try {
+    // 🔒 SECURITY: Require admin authentication
+    const cookieStore = await cookies()
+    const adminSessionCookie = cookieStore.get('qwikker_admin_session')
+
+    if (!adminSessionCookie?.value) {
+      return NextResponse.json({
+        success: false,
+        error: 'Admin authentication required'
+      }, { status: 401 })
+    }
+
+    let adminSession
+    try {
+      adminSession = JSON.parse(adminSessionCookie.value)
+    } catch {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid admin session'
+      }, { status: 401 })
+    }
+
+    // 🔒 SECURITY: Derive city from hostname (never trust client)
+    const hostname = request.headers.get('host') || ''
+    const requestCity = await getCityFromHostname(hostname)
+
+    // Verify admin exists and has permission for this city
+    const admin = await getAdminById(adminSession.adminId)
+    if (!admin || !await isAdminForCity(adminSession.adminId, requestCity)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Insufficient permissions'
+      }, { status: 403 })
+    }
+
     const body: PreviewRequest = await request.json()
-    const { city, location, category, minRating, radius, maxResults, skipDuplicates = true } = body
+    const { location, category, minRating, radius, maxResults, skipDuplicates = true } = body
+
+    // Use requestCity (from hostname), ignore body.city if provided
+    const city = requestCity
 
     // Validate inputs
-    if (!city || !location || !category || minRating < 1 || radius < 100 || maxResults < 1) {
+    if (!location || !category || minRating < 1 || radius < 100 || maxResults < 1) {
       return NextResponse.json({
         success: false,
         error: 'Invalid search parameters'

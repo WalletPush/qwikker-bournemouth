@@ -220,7 +220,7 @@ export function DynamicPostTheme({
           {/* QWIKKER Logo - Right */}
           <div className="bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-lg flex-shrink-0">
             <img 
-              src="/Qwikker Logo web.svg" 
+              src="/qwikker-logo-web.svg" 
               alt="QWIKKER" 
               className="h-3.5 w-auto"
               style={{ 

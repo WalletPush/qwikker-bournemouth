@@ -254,7 +254,7 @@ export function generateConfirmationWelcomeEmailHTML(data: ConfirmationWelcomeEm
     <div class="container">
         <div class="header">
             <div class="logo">
-                <img src="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/Qwikker Logo web.svg" alt="QWIKKER" />
+                <img src="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/qwikker-logo-web.svg" alt="QWIKKER" />
             </div>
             <p class="header-text">Your Business Dashboard Awaits</p>
         </div>

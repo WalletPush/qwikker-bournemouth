@@ -17,7 +17,7 @@ export default function Page() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img 
-              src="/Qwikker Logo web.svg" 
+              src="/qwikker-logo-web.svg" 
               alt="QWIKKER" 
               className="qwikker-logo"
             />

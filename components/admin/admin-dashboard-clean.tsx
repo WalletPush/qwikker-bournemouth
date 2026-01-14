@@ -335,7 +335,7 @@ export function AdminDashboard({ businesses, adminEmail }: AdminDashboardProps) 
         <div className="flex-shrink-0 p-6 border-b border-slate-800">
           <div className="text-center space-y-2">
             <img 
-              src="/Qwikker Logo web.svg" 
+              src="/qwikker-logo-web.svg" 
               alt="QWIKKER Admin Dashboard" 
               className="h-8 w-auto sm:h-10 mx-auto"
             />

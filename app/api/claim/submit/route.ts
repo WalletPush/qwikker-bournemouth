@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getCityFromHostname } from '@/lib/utils/city-detection'
 
 /**
  * Submit business claim with account creation
@@ -8,16 +9,22 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
  *   email, password, firstName, lastName, businessId, verificationCode, website
  *   editedBusinessName, editedAddress, editedPhone, editedWebsite, editedCategory, editedType, editedDescription, editedHours
  *   logo (File), heroImage (File)
+ * 
+ * SECURITY: City is derived from hostname (multi-tenant isolation)
  */
 export async function POST(request: NextRequest) {
   try {
+    // 🔒 SECURITY: Derive city from hostname (never trust client)
+    const hostname = request.headers.get('host') || ''
+    const requestCity = await getCityFromHostname(hostname)
+    
     const formData = await request.formData()
     
     // Extract required fields
-    const email = formData.get('email') as string
+    const email = (formData.get('email') as string)?.toLowerCase().trim()
     const password = formData.get('password') as string
-    const firstName = formData.get('firstName') as string
-    const lastName = formData.get('lastName') as string
+    const firstName = (formData.get('firstName') as string)?.trim()
+    const lastName = (formData.get('lastName') as string)?.trim()
     const businessId = formData.get('businessId') as string
     const verificationCode = formData.get('verificationCode') as string
     const website = formData.get('website') as string
@@ -30,11 +37,43 @@ export async function POST(request: NextRequest) {
     const editedCategory = formData.get('editedCategory') as string
     const editedType = formData.get('editedType') as string
     const editedDescription = formData.get('editedDescription') as string
+    const editedTagline = formData.get('editedTagline') as string
     const editedHours = formData.get('editedHours') as string
     
     // Extract image files
     const logoFile = formData.get('logo') as File | null
     const heroImageFile = formData.get('heroImage') as File | null
+
+    // 🔒 SECURITY: Validate image files server-side
+    if (logoFile) {
+      if (!logoFile.type.startsWith('image/')) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Logo must be an image file' 
+        }, { status: 400 })
+      }
+      if (logoFile.size > 5 * 1024 * 1024) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Logo must be less than 5MB' 
+        }, { status: 400 })
+      }
+    }
+
+    if (heroImageFile) {
+      if (!heroImageFile.type.startsWith('image/')) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Hero image must be an image file' 
+        }, { status: 400 })
+      }
+      if (heroImageFile.size > 10 * 1024 * 1024) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Hero image must be less than 10MB' 
+        }, { status: 400 })
+      }
+    }
 
     // Validate required fields
     if (!email || !password || !firstName || !lastName || !businessId || !verificationCode) {
@@ -44,13 +83,21 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Validate input lengths
+    if (email.length > 255 || firstName.length > 100 || lastName.length > 100) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Input exceeds maximum length' 
+      }, { status: 400 })
+    }
+
     const supabase = createServiceRoleClient()
 
     // 1. Verify the code one more time
     const { data: verification, error: verifyError } = await supabase
       .from('verification_codes')
       .select('*')
-      .eq('email', email.toLowerCase())
+      .eq('email', email)
       .eq('type', 'business_claim')
       .eq('code', verificationCode)
       .eq('business_id', businessId)
@@ -71,7 +118,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // 2. Verify business is still unclaimed
+    // 2. Verify business exists and load city
     const { data: business, error: businessError } = await supabase
       .from('business_profiles')
       .select('id, business_name, status, city')
@@ -85,14 +132,54 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
+    // 🔒 SECURITY: Enforce city isolation - prevent cross-city claims
+    // Normalize both cities (trim + lowercase) to avoid whitespace/case mismatches
+    const bizCity = business.city?.trim().toLowerCase()
+    const reqCity = requestCity?.trim().toLowerCase()
+    
+    if (!bizCity || !reqCity || bizCity !== reqCity) {
+      console.error(`🚨 SECURITY: Cross-city claim attempt blocked. Business city: ${business.city}, Request city: ${requestCity}`)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'City isolation error' 
+      }, { status: 403 })
+    }
+
+    // Already checked above, but keep for clarity
     if (business.status !== 'unclaimed') {
       return NextResponse.json({ 
         success: false, 
         error: 'This business is no longer available for claiming' 
-      }, { status: 400 })
+      }, { status: 409 })
     }
 
-    // 3. Create Supabase Auth user
+    // 3. 🔒 SECURITY: Prevent race conditions - claim business atomically
+    // CRITICAL: Lock the business BEFORE creating the auth user
+    // This prevents creating orphaned users if the claim fails
+    const { data: lockedRows, error: lockError } = await supabase
+      .from('business_profiles')
+      .update({ status: 'pending_claim', updated_at: new Date().toISOString() })
+      .eq('id', businessId)
+      .eq('status', 'unclaimed') // Conditional update - only if still unclaimed
+      .select('id')
+
+    if (lockError) {
+      console.error('Business claim lock error:', lockError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to claim business. Please try again.' 
+      }, { status: 500 })
+    }
+
+    if (!lockedRows || lockedRows.length !== 1) {
+      console.error('Business claim race condition: business no longer available')
+      return NextResponse.json({ 
+        success: false, 
+        error: 'This business is no longer available for claiming' 
+      }, { status: 409 })
+    }
+
+    // 4. Create Supabase Auth user (only after successful lock)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.toLowerCase(),
       password: password,
@@ -123,18 +210,20 @@ export async function POST(request: NextRequest) {
 
     const userId = authData.user.id
 
-    // 4. Upload images to Cloudinary using unsigned preset (same as existing onboarding flow)
+    // 5. Upload images to Cloudinary
+    // 🔒 SECURITY: Use server-derived folder paths only (never client input)
     let logoUrl: string | null = null
     let heroImageUrl: string | null = null
+    
+    const { getCloudinaryConfig, getBusinessAssetFolder } = await import('@/lib/cloudinary/config')
+    const { uploadUrl, unsignedPreset } = getCloudinaryConfig()
     
     if (logoFile) {
       try {
         const logoFormData = new FormData()
         logoFormData.append('file', logoFile)
-        logoFormData.append('upload_preset', 'unsigned_qwikker')
-        logoFormData.append('folder', `business_logos/${businessId}`)
-        
-        const uploadUrl = 'https://api.cloudinary.com/v1_1/dsh32kke7/image/upload'
+        logoFormData.append('upload_preset', unsignedPreset)
+        logoFormData.append('folder', getBusinessAssetFolder(business.city, businessId, 'logo'))
         
         const response = await fetch(uploadUrl, {
           method: 'POST',
@@ -147,9 +236,31 @@ export async function POST(request: NextRequest) {
           console.log('✅ Logo uploaded to Cloudinary:', logoUrl)
         } else {
           console.error('Logo upload failed:', await response.text())
+          // Rollback: delete auth user and reset business status
+          await supabase.auth.admin.deleteUser(userId)
+          await supabase
+            .from('business_profiles')
+            .update({ status: 'unclaimed', updated_at: new Date().toISOString() })
+            .eq('id', businessId)
+            .eq('status', 'pending_claim')
+          return NextResponse.json({ 
+            success: false, 
+            error: 'Failed to upload logo. Please try again.' 
+          }, { status: 500 })
         }
       } catch (err) {
         console.error('Logo upload exception:', err)
+        // Rollback
+        await supabase.auth.admin.deleteUser(userId)
+        await supabase
+          .from('business_profiles')
+          .update({ status: 'unclaimed', updated_at: new Date().toISOString() })
+          .eq('id', businessId)
+          .eq('status', 'pending_claim')
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Failed to upload logo. Please try again.' 
+        }, { status: 500 })
       }
     }
     
@@ -157,10 +268,8 @@ export async function POST(request: NextRequest) {
       try {
         const heroFormData = new FormData()
         heroFormData.append('file', heroImageFile)
-        heroFormData.append('upload_preset', 'unsigned_qwikker')
-        heroFormData.append('folder', `business_heroes/${businessId}`)
-        
-        const uploadUrl = 'https://api.cloudinary.com/v1_1/dsh32kke7/image/upload'
+        heroFormData.append('upload_preset', unsignedPreset)
+        heroFormData.append('folder', getBusinessAssetFolder(business.city, businessId, 'hero'))
         
         const response = await fetch(uploadUrl, {
           method: 'POST',
@@ -173,24 +282,46 @@ export async function POST(request: NextRequest) {
           console.log('✅ Hero image uploaded to Cloudinary:', heroImageUrl)
         } else {
           console.error('Hero image upload failed:', await response.text())
+          // Rollback
+          await supabase.auth.admin.deleteUser(userId)
+          await supabase
+            .from('business_profiles')
+            .update({ status: 'unclaimed', updated_at: new Date().toISOString() })
+            .eq('id', businessId)
+            .eq('status', 'pending_claim')
+          return NextResponse.json({ 
+            success: false, 
+            error: 'Failed to upload hero image. Please try again.' 
+          }, { status: 500 })
         }
       } catch (err) {
         console.error('Hero image upload exception:', err)
+        // Rollback
+        await supabase.auth.admin.deleteUser(userId)
+        await supabase
+          .from('business_profiles')
+          .update({ status: 'unclaimed', updated_at: new Date().toISOString() })
+          .eq('id', businessId)
+          .eq('status', 'pending_claim')
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Failed to upload hero image. Please try again.' 
+          }, { status: 500 })
       }
     }
 
-    // 5. Create claim_request record with edited data
+    // 6. Create claim_request record with edited data
     const { data: claimRequest, error: claimError} = await supabase
       .from('claim_requests')
       .insert({
         business_id: businessId,
         user_id: userId,
-        city: business.city || 'bournemouth',
+        city: business.city,
         status: 'pending',
         verification_method: 'email',
-        verification_code: verificationCode,
+        // 🔒 SECURITY/GDPR: Do not store verification_code (already verified)
         submitted_at: new Date().toISOString(),
-        business_email: email.toLowerCase(),
+        business_email: email,
         business_website: website || null,
         first_name: firstName,
         last_name: lastName,
@@ -202,10 +333,11 @@ export async function POST(request: NextRequest) {
         edited_category: editedCategory || null,
         edited_type: editedType || null,
         edited_description: editedDescription || null,
+        edited_tagline: editedTagline || null,
         edited_hours: editedHours || null,
         logo_upload: logoUrl,
         hero_image_upload: heroImageUrl,
-        data_edited: !!(editedBusinessName || editedAddress || editedPhone || editedWebsite || editedCategory || editedType || editedDescription || editedHours)
+        data_edited: !!(editedBusinessName || editedAddress || editedPhone || editedWebsite || editedCategory || editedType || editedDescription || editedTagline || editedHours)
       })
       .select()
       .single()
@@ -213,8 +345,16 @@ export async function POST(request: NextRequest) {
     if (claimError) {
       console.error('Error creating claim request:', claimError)
       
-      // Rollback: delete the auth user we just created
+      // 🔒 SECURITY: Rollback on failure
+      // Delete the auth user we just created
       await supabase.auth.admin.deleteUser(userId)
+      
+      // Reset business status back to unclaimed (only if still pending_claim)
+      await supabase
+        .from('business_profiles')
+        .update({ status: 'unclaimed', updated_at: new Date().toISOString() })
+        .eq('id', businessId)
+        .eq('status', 'pending_claim')
 
       return NextResponse.json({ 
         success: false, 
@@ -222,19 +362,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // 6. Update business status to pending_claim
-    const { error: updateError } = await supabase
-      .from('business_profiles')
-      .update({
-        status: 'pending_claim',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', businessId)
-
-    if (updateError) {
-      console.error('Error updating business status:', updateError)
-      // Non-critical - claim is still recorded
-    }
+    // Note: Business status already updated to 'pending_claim' in step 3 (atomic claim)
 
     // 7. Delete used verification code
     await supabase
@@ -248,21 +376,27 @@ export async function POST(request: NextRequest) {
       const { data: franchiseConfig } = await supabase
         .from('franchise_crm_configs')
         .select('resend_api_key, resend_from_email, resend_from_name, display_name, founding_member_enabled, founding_member_trial_days, founding_member_discount_percent')
-        .eq('city', business.city || 'bournemouth')
+        .eq('city', business.city)
         .single()
 
       if (franchiseConfig?.resend_api_key && franchiseConfig?.resend_from_email) {
         const { Resend } = await import('resend')
+        const { escapeHtml } = await import('@/lib/utils/escape-html')
         const resend = new Resend(franchiseConfig.resend_api_key)
 
         const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
         const cityDisplayName = franchiseConfig.display_name || business.city
         const foundingMemberOffer = franchiseConfig.founding_member_enabled
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `https://${business.city}.qwikker.com`
+        
+        // Use Cloudinary URL for logo (publicly accessible in emails)
+        const logoUrl = process.env.CLOUDINARY_LOGO_URL || 
+                        `https://res.cloudinary.com/demo/image/upload/v1/qwikker-logo.svg` // Placeholder - replace with your actual Cloudinary URL
 
         await resend.emails.send({
           from: `${fromName} <${franchiseConfig.resend_from_email}>`,
           to: email,
-          subject: `✅ Claim Submitted for ${business.business_name}`,
+          subject: `Claim submitted: ${business.business_name}`,
           html: `
             <!DOCTYPE html>
             <html>
@@ -270,72 +404,79 @@ export async function POST(request: NextRequest) {
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
               </head>
-              <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+              <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #0a0a0a; max-width: 600px; margin: 0 auto; padding: 0; background-color: #ffffff;">
                 
-                <!-- Header -->
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-                  <h1 style="color: white; margin: 0; font-size: 28px;">✅ Claim Submitted!</h1>
+                <!-- Header with dark background for white logo -->
+                <div style="padding: 40px 30px 30px; text-align: center; background-color: #0a0a0a; border-bottom: 1px solid #e5e7eb;">
+                  <img 
+                    src="${logoUrl}" 
+                    alt="QWIKKER" 
+                    width="160"
+                    style="display: block; height: 32px; width: auto; margin: 0 auto; border: 0;"
+                  />
                 </div>
                 
                 <!-- Body -->
-                <div style="background: white; padding: 40px 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                  <p style="font-size: 18px; margin-top: 0;">Hi ${firstName},</p>
+                <div style="padding: 40px 30px;">
+                  <h2 style="color: #0a0a0a; margin: 0 0 8px 0; font-size: 24px; font-weight: 600;">
+                    Claim submitted
+                  </h2>
                   
-                  <p>Thank you for claiming <strong>${business.business_name}</strong> on QWIKKER ${cityDisplayName}!</p>
+                  <p style="color: #525252; margin: 0 0 24px 0; font-size: 15px;">
+                    Hi ${escapeHtml(firstName)}, we've received your claim for <strong style="color: #0a0a0a;">${escapeHtml(business.business_name)}</strong>.
+                  </p>
                   
-                  <div style="background: #f0f9ff; border-left: 4px solid #0284c7; padding: 15px; margin: 25px 0; border-radius: 4px;">
-                    <p style="margin: 0; color: #0369a1;"><strong>📧 Confirmation sent to:</strong> ${email}</p>
-                  </div>
-
-                  <h2 style="color: #1f2937; font-size: 20px; margin-top: 30px;">What Happens Next?</h2>
-                  
-                  <div style="margin: 20px 0;">
-                    <div style="display: flex; align-items: start; margin: 15px 0;">
-                      <span style="display: inline-block; width: 30px; height: 30px; background: #667eea; color: white; border-radius: 50%; text-align: center; line-height: 30px; margin-right: 15px; flex-shrink: 0;">1</span>
-                      <div>
-                        <strong>Review (24-48 hours)</strong><br>
-                        <span style="color: #6b7280; font-size: 14px;">Our ${cityDisplayName} team will verify your business ownership and details.</span>
-                      </div>
-                    </div>
-                    
-                    <div style="display: flex; align-items: start; margin: 15px 0;">
-                      <span style="display: inline-block; width: 30px; height: 30px; background: #667eea; color: white; border-radius: 50%; text-align: center; line-height: 30px; margin-right: 15px; flex-shrink: 0;">2</span>
-                      <div>
-                        <strong>Approval Notification</strong><br>
-                        <span style="color: #6b7280; font-size: 14px;">You'll receive an email when your claim is approved.</span>
-                      </div>
-                    </div>
-                    
-                    <div style="display: flex; align-items: start; margin: 15px 0;">
-                      <span style="display: inline-block; width: 30px; height: 30px; background: #667eea; color: white; border-radius: 50%; text-align: center; line-height: 30px; margin-right: 15px; flex-shrink: 0;">3</span>
-                      <div>
-                        <strong>Dashboard Access</strong><br>
-                        <span style="color: #6b7280; font-size: 14px;">Log in to manage your listing, add photos, and update your profile.</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  ${foundingMemberOffer ? `
-                  <div style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); padding: 20px; border-radius: 8px; margin: 30px 0;">
-                    <h3 style="color: white; margin: 0 0 10px 0; font-size: 18px;">🎉 Founding Member Bonus</h3>
-                    <p style="color: white; margin: 0; font-size: 14px;">
-                      Once approved, you'll unlock:<br>
-                      • <strong>${franchiseConfig.founding_member_trial_days || 90}-day FREE Featured tier trial</strong><br>
-                      • <strong>${franchiseConfig.founding_member_discount_percent || 20}% OFF FOR LIFE</strong> on annual plans<br>
-                      • Exclusive founding member badge
+                  <!-- Status Box -->
+                  <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 0 0 32px 0;">
+                    <p style="color: #525252; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">
+                      What happens next
                     </p>
+                    <div style="margin: 12px 0;">
+                      <p style="color: #525252; margin: 0 0 8px 0; font-size: 14px;">
+                        <strong style="color: #0a0a0a;">1. Review</strong><br>
+                        <span style="color: #737373; font-size: 13px;">Our ${escapeHtml(cityDisplayName)} team will verify your ownership (24-48 hours).</span>
+                      </p>
+                    </div>
+                    <div style="margin: 12px 0;">
+                      <p style="color: #525252; margin: 0 0 8px 0; font-size: 14px;">
+                        <strong style="color: #0a0a0a;">2. Notification</strong><br>
+                        <span style="color: #737373; font-size: 13px;">You'll receive an email when approved.</span>
+                      </p>
+                    </div>
+                    <div style="margin: 12px 0;">
+                      <p style="color: #525252; margin: 0; font-size: 14px;">
+                        <strong style="color: #0a0a0a;">3. Dashboard access</strong><br>
+                        <span style="color: #737373; font-size: 13px;">Log in to manage your listing and explore upgrade options.</span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  ${foundingMemberOffer ? `
+                  <!-- Founding Member Offer -->
+                  <div style="background: #fffbeb; border: 1px solid #fbbf24; border-radius: 8px; padding: 20px; margin: 0 0 32px 0;">
+                    <p style="color: #0a0a0a; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">
+                      Founding Member Bonus
+                    </p>
+                    <ul style="margin: 0; padding-left: 20px; color: #525252; font-size: 14px;">
+                      <li style="margin: 6px 0;"><strong>${franchiseConfig.founding_member_trial_days || 90}-day FREE Featured tier trial</strong></li>
+                      <li style="margin: 6px 0;"><strong>${franchiseConfig.founding_member_discount_percent || 20}% OFF FOR LIFE</strong> on annual plans</li>
+                      <li style="margin: 6px 0;">Exclusive founding member badge</li>
+                    </ul>
                   </div>
                   ` : ''}
-
-                  <h2 style="color: #1f2937; font-size: 20px; margin-top: 30px;">Need Help?</h2>
-                  <p style="color: #6b7280;">If you have any questions about your claim, contact us at <a href="mailto:${franchiseConfig.resend_from_email}" style="color: #667eea; text-decoration: none;">${franchiseConfig.resend_from_email}</a></p>
-
-                  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
                   
-                  <p style="color: #9ca3af; font-size: 12px; margin: 0; text-align: center;">
-                    You're receiving this email because you claimed a business listing on QWIKKER ${cityDisplayName}.
+                </div>
+                
+                <!-- Footer -->
+                <div style="padding: 30px; border-top: 1px solid #e5e7eb;">
+                  <p style="color: #a3a3a3; font-size: 13px; margin: 0;">
+                    Questions? Reply to this email or contact us at <a href="mailto:${escapeHtml(franchiseConfig.resend_from_email)}" style="color: #00d083; text-decoration: none;">${escapeHtml(franchiseConfig.resend_from_email)}</a>
+                  </p>
+                  <p style="color: #a3a3a3; font-size: 13px; margin: 8px 0 0 0;">
+                    QWIKKER ${escapeHtml(cityDisplayName)}
                   </p>
                 </div>
+                
               </body>
             </html>
           `

@@ -8,7 +8,7 @@ export default function PrivacyPolicyPage() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
             <img 
-              src="/Qwikker Logo web.svg" 
+              src="/qwikker-logo-web.svg" 
               alt="QWIKKER" 
               className="h-12"
             />

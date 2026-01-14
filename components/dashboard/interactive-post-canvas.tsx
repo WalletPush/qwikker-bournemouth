@@ -204,7 +204,7 @@ export function InteractivePostCanvas({
             className="bg-black/40 backdrop-blur-sm rounded-lg px-3 py-1 flex items-center justify-center"
           >
             <img
-              src="/Qwikker Logo web.svg"
+              src="/qwikker-logo-web.svg"
               alt="QWIKKER"
               className="h-full w-auto"
               style={{ filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))' }}

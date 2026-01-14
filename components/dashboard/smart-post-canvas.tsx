@@ -159,7 +159,7 @@ export function SmartPostCanvas({
       {/* QWIKKER Badge - Bottom Right */}
       <div className="absolute bottom-4 right-4 bg-black/80 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 z-10">
         <img
-          src="/Qwikker Logo web.svg"
+          src="/qwikker-logo-web.svg"
           alt="QWIKKER"
           className="h-4 w-auto"
           style={{ filter: 'brightness(0) invert(1)' }}

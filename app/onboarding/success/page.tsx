@@ -25,7 +25,7 @@ function SuccessContent({ email }: { email?: string }) {
             {/* QWIKKER Logo */}
             <div className="flex justify-center">
               <img 
-                src="/Qwikker Logo web.svg" 
+                src="/qwikker-logo-web.svg" 
                 alt="QWIKKER" 
                 className="h-12 w-auto animate-fade-in-down"
               />

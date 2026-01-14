@@ -88,7 +88,7 @@ export default function FranchiseAdminLogin({ city, cityDisplayName }: Franchise
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img 
-              src="/Qwikker Logo web.svg" 
+              src="/qwikker-logo-web.svg" 
               alt="QWIKKER" 
               className="qwikker-logo"
             />

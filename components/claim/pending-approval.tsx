@@ -54,10 +54,9 @@ export function PendingApproval({
                     1
                   </div>
                   <div className="flex-1 pt-1">
-                    <h3 className="font-medium mb-1">⏳ Review (24-48 hours)</h3>
+                    <h3 className="font-medium mb-1">Review (24-48 hours)</h3>
                     <p className="text-sm text-muted-foreground">
-                      Our {franchiseCity} team will verify you own {businessName}. 
-                      We'll check your email, website, and business details.
+                      The {franchiseCity} team will verify ownership of {businessName} by checking your email, website, and business details.
                     </p>
                   </div>
                 </div>
@@ -68,10 +67,9 @@ export function PendingApproval({
                     2
                   </div>
                   <div className="flex-1 pt-1">
-                    <h3 className="font-medium mb-1">📧 Approval Notification</h3>
+                    <h3 className="font-medium mb-1">Approval Notification</h3>
                     <p className="text-sm text-muted-foreground">
-                      You'll receive an email when your claim is approved. 
-                      Check your inbox at <strong>{email}</strong>
+                      You'll receive an email at <strong>{email}</strong> when your claim is approved.
                     </p>
                   </div>
                 </div>
@@ -82,41 +80,9 @@ export function PendingApproval({
                     3
                   </div>
                   <div className="flex-1 pt-1">
-                    <h3 className="font-medium mb-1">🎉 Dashboard Access</h3>
+                    <h3 className="font-medium mb-1">Dashboard Access</h3>
                     <p className="text-sm text-muted-foreground">
-                      Once approved, you'll unlock your FREE business dashboard. 
-                      You can update your profile, add photos, and manage your listing.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Step 4 */}
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400">
-                    4
-                  </div>
-                  <div className="flex-1 pt-1">
-                    <h3 className="font-medium mb-1">🚀 Optional: Start Your Featured Trial</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Get a 90-day FREE trial of our Featured tier to unlock AI recommendations, 
-                      offers, analytics, and more premium features.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Founding Member Teaser */}
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                <div className="flex gap-3">
-                  <Sparkles className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
-                      🏅 Founding Member Bonus
-                    </h3>
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      Start your Featured trial within 30 days of approval and 
-                      upgrade to paid within 90 days to get{' '}
-                      <strong>20% OFF FOR LIFE</strong> on annual plans!
+                      Once approved, you can log in to update your profile, manage your listing, and access analytics.
                     </p>
                   </div>
                 </div>
@@ -142,7 +108,7 @@ export function PendingApproval({
                 </p>
                 <Button variant="outline" asChild>
                   <a href={`mailto:${supportEmail}?subject=Claim Question - ${businessName}`}>
-                    📧 Email {franchiseCity} Team
+                    Email {franchiseCity} Team
                   </a>
                 </Button>
                 <p className="text-xs text-muted-foreground mt-2">

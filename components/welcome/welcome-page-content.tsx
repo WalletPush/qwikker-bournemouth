@@ -188,7 +188,7 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
           }`}>
             <div className="absolute inset-0 bg-gradient-to-r from-[#00d083]/20 to-transparent rounded-full blur-3xl"></div>
             <Image
-              src="/Qwikker Logo web.svg"
+              src="/qwikker-logo-web.svg"
               alt="Qwikker"
               width={320}
               height={128}
@@ -270,7 +270,7 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
           <div className="max-w-2xl mx-auto">
             <div className="mb-12">
               <Image
-                src="/Qwikker Logo web.svg"
+                src="/qwikker-logo-web.svg"
                 alt="Qwikker"
                 width={280}
                 height={112}

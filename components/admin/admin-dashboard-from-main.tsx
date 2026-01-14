@@ -833,7 +833,7 @@ Qwikker Admin Team`
             <div className="text-center space-y-4 mb-8 border-b border-slate-700/50 pb-6">
               {/* QWIKKER Logo */}
               <img 
-                src="/Qwikker Logo web.svg" 
+                src="/qwikker-logo-web.svg" 
                 alt="QWIKKER Admin Dashboard" 
                 className="h-8 w-auto sm:h-10 mx-auto"
               />

@@ -60,7 +60,9 @@ export async function POST(request: NextRequest) {
           id,
           business_name,
           city,
-          business_images
+          business_images,
+          email,
+          billing_email
         )
       `)
       .eq('id', claimId)
@@ -83,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'approve') {
       // 🔒 CRITICAL GUARDRAIL: Cannot approve claim without at least 1 uploaded image
-      if (!claim.logo_upload_url && !claim.hero_image_upload_url) {
+      if (!claim.logo_upload && !claim.hero_image_upload) {
         return NextResponse.json(
           { 
             error: 'Cannot approve claim: Business must upload at least one photo (logo or hero image) before approval.' 
@@ -119,6 +121,24 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString()
       }
       
+      // ✅ EMAIL HANDLING: Set billing_email from claim, only set public email if currently null
+      if (claim.business_email) {
+        // Always set billing_email from claim for contact/billing purposes
+        if (!claim.business.billing_email) {
+          businessUpdate.billing_email = claim.business_email
+        }
+        
+        // Only set public listing email if it's currently null (preserve existing public emails)
+        if (!claim.business.email) {
+          businessUpdate.email = claim.business_email
+        }
+      }
+      
+      // Always apply logo if uploaded (not dependent on data_edited flag)
+      if (claim.logo_upload) {
+        businessUpdate.logo = claim.logo_upload
+      }
+      
       // Add edited data if claimer provided it
       if (claim.data_edited) {
         if (claim.edited_business_name) businessUpdate.business_name = claim.edited_business_name
@@ -148,13 +168,17 @@ export async function POST(request: NextRequest) {
         
         if (claim.edited_type) businessUpdate.business_type = claim.edited_type
         if (claim.edited_description) businessUpdate.business_description = claim.edited_description
+        if (claim.edited_tagline) businessUpdate.business_tagline = claim.edited_tagline
         if (claim.edited_hours) businessUpdate.business_hours = claim.edited_hours
-        if (claim.logo_upload) businessUpdate.logo = claim.logo_upload
-        if (claim.hero_image_upload) {
-          // Add hero image to business_images array
-          const existingImages = claim.business.business_images || []
-          businessUpdate.business_images = [claim.hero_image_upload, ...existingImages]
-        }
+      }
+      
+      // Always apply hero image if uploaded (not dependent on data_edited flag)
+      if (claim.hero_image_upload) {
+        // Add hero image to business_images array (deduplicate using Set)
+        const existing = Array.isArray(claim.business.business_images) ? claim.business.business_images : []
+        const nextImages = [claim.hero_image_upload, ...existing].filter(Boolean)
+        const deduped = Array.from(new Set(nextImages))
+        businessUpdate.business_images = deduped
       }
       
       const { error: updateBusinessError } = await supabaseAdmin
@@ -185,22 +209,35 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // 4. Create a subscription entry for the free tier
-      const { error: subscriptionError } = await supabaseAdmin
+      // 4. Create a subscription entry for the free tier (idempotent)
+      // Check if subscription already exists to prevent duplicates
+      const { data: existingSubscription } = await supabaseAdmin
         .from('business_subscriptions')
-        .insert({
-          user_id: claim.user_id,
-          business_id: claim.business_id,
-          tier_id: freeTier.id,
-          status: 'active',
-          is_in_free_trial: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .select('id')
+        .eq('business_id', claim.business_id)
+        .eq('tier_id', freeTier.id)
+        .eq('status', 'active')
+        .maybeSingle()
 
-      if (subscriptionError) {
-        console.error('Error creating subscription:', subscriptionError)
-        // Non-critical - continue
+      if (!existingSubscription) {
+        const { error: subscriptionError } = await supabaseAdmin
+          .from('business_subscriptions')
+          .insert({
+            user_id: claim.user_id,
+            business_id: claim.business_id,
+            tier_id: freeTier.id,
+            status: 'active',
+            is_in_free_trial: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+
+        if (subscriptionError) {
+          console.error('Error creating subscription:', subscriptionError)
+          // Non-critical - continue
+        }
+      } else {
+        console.log('Subscription already exists for this business/tier combination - skipping')
       }
 
       // 5. Send approval email to business owner
@@ -214,16 +251,24 @@ export async function POST(request: NextRequest) {
 
         if (franchiseConfig?.resend_api_key && franchiseConfig?.resend_from_email && claim.business_email) {
           const { Resend } = await import('resend')
+          const { escapeHtml } = await import('@/lib/utils/escape-html')
           const resend = new Resend(franchiseConfig.resend_api_key)
 
           const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
           const cityDisplayName = franchiseConfig.display_name || claim.business.city
-          const loginUrl = `https://${claim.business.city}.qwikker.com/auth/login`
+          // Use deployment URL (Vercel preview) until custom domains are live
+          const deploymentUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://qwikkerdashboard-theta.vercel.app'
+          const loginUrl = `${deploymentUrl}/auth/login`
+          const baseUrl = deploymentUrl
+          
+          // Use Cloudinary URL for logo (publicly accessible in emails)
+          const logoUrl = process.env.CLOUDINARY_LOGO_URL || 
+                          `https://res.cloudinary.com/demo/image/upload/v1/qwikker-logo.svg` // Placeholder - replace with your actual Cloudinary URL
 
           await resend.emails.send({
             from: `${fromName} <${franchiseConfig.resend_from_email}>`,
             to: claim.business_email,
-            subject: `Welcome to QWIKKER ${cityDisplayName}! Your listing is approved`,
+            subject: `Your QWIKKER listing is approved`,
             html: `
               <!DOCTYPE html>
               <html>
@@ -231,52 +276,82 @@ export async function POST(request: NextRequest) {
                   <meta charset="utf-8">
                   <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 </head>
-                <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
-                  
-                  <!-- Header -->
-                  <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-                    <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Claim Approved!</h1>
+            <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #0a0a0a; max-width: 600px; margin: 0 auto; padding: 0; background-color: #ffffff;">
+              
+              <!-- Header with dark background for white logo -->
+              <div style="padding: 40px 30px 30px; text-align: center; background-color: #0a0a0a; border-bottom: 1px solid #e5e7eb;">
+                <img 
+                  src="${logoUrl}" 
+                  alt="QWIKKER" 
+                  width="160"
+                  style="display: block; height: 32px; width: auto; margin: 0 auto; border: 0;"
+                />
                   </div>
                   
                   <!-- Body -->
-                  <div style="background: white; padding: 40px 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <p style="font-size: 18px; margin-top: 0;">Hi ${claim.first_name || 'there'},</p>
+                  <div style="padding: 40px 30px;">
                     
-                    <p>Great news! Your claim for <strong>${claim.business.business_name}</strong> has been approved.</p>
+                    <!-- Success Badge -->
+                    <div style="text-align: center; margin: 0 0 24px 0;">
+                      <div style="display: inline-block; background: #f0fdf4; border: 1px solid #00d083; border-radius: 8px; padding: 12px 24px;">
+                        <span style="color: #00d083; font-size: 14px; font-weight: 600;">Claim approved</span>
+                      </div>
+                    </div>
                     
-                    <h3 style="color: #1f2937; font-size: 18px; margin-top: 30px;">What's Next?</h3>
+                    <h2 style="color: #0a0a0a; margin: 0 0 8px 0; font-size: 24px; font-weight: 600; text-align: center;">
+                      Welcome to QWIKKER
+                    </h2>
                     
-                    <div style="background: #f1f5f9; padding: 20px; margin: 20px 0; border-radius: 6px;">
-                      <p style="margin: 0 0 15px 0; font-weight: 600;">Your Free Listing Includes:</p>
-                      <ul style="margin: 0; padding-left: 20px; color: #475569;">
-                        <li>Visible in the ${cityDisplayName} Discover section</li>
-                        <li>Basic business profile with contact details</li>
-                        <li>Dashboard access to manage your listing</li>
+                    <p style="color: #525252; margin: 0 0 32px 0; font-size: 15px; text-align: center;">
+                      Hi ${escapeHtml(claim.first_name || 'there')}, your claim for <strong style="color: #0a0a0a;">${escapeHtml(claim.business.business_name)}</strong> has been approved.
+                    </p>
+                    
+                    <!-- CTA Button -->
+                    <div style="text-align: center; margin: 0 0 32px 0;">
+                      <a href="${loginUrl}" style="display: inline-block; background: #00d083; color: #0a0a0a; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">
+                        Log in to your dashboard
+                      </a>
+                    </div>
+                    
+                    <!-- Free Tier Info -->
+                    <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 0 0 32px 0;">
+                      <p style="color: #525252; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">
+                        Your free listing includes
+                      </p>
+                      <ul style="margin: 0; padding-left: 20px; color: #525252; font-size: 14px;">
+                        <li style="margin: 6px 0;">Visible in the ${escapeHtml(cityDisplayName)} Discover section</li>
+                        <li style="margin: 6px 0;">Basic business profile with contact details</li>
+                        <li style="margin: 6px 0;">Dashboard access to manage your listing</li>
                       </ul>
                     </div>
-
-                    <a href="${loginUrl}" style="display: inline-block; background: #10b981; color: white; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0;">
-                      Log In to Your Dashboard
-                    </a>
-
-                    <h3 style="color: #1f2937; font-size: 18px; margin-top: 30px;">Want More Features?</h3>
-                    <p>Upgrade to unlock:</p>
-                    <ul style="color: #475569;">
-                      <li><strong>AI Chat Visibility:</strong> Get discovered by users asking our AI assistant</li>
-                      <li><strong>Exclusive Offers:</strong> Create and manage special deals</li>
-                      <li><strong>Secret Menu:</strong> Add exclusive items for QWIKKER members</li>
-                      <li><strong>Events:</strong> Promote your events to locals</li>
-                      <li><strong>Analytics:</strong> Track views and engagement</li>
-                    </ul>
-
-                    <p style="margin-top: 30px;">You can upgrade anytime from your dashboard.</p>
-
-                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
                     
-                    <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                      Questions? Reply to this email or contact us at <a href="mailto:${franchiseConfig.resend_from_email}" style="color: #10b981; text-decoration: none;">${franchiseConfig.resend_from_email}</a>
+                    <!-- Upgrade Info -->
+                    <div style="border-top: 1px solid #e5e7eb; padding-top: 24px;">
+                      <p style="color: #525252; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">
+                        Upgrade to unlock
+                      </p>
+                      <ul style="margin: 0; padding-left: 20px; color: #525252; font-size: 14px;">
+                        <li style="margin: 6px 0;"><strong style="color: #0a0a0a;">AI Chat Visibility:</strong> Get discovered by users asking our AI assistant</li>
+                        <li style="margin: 6px 0;"><strong style="color: #0a0a0a;">Exclusive Offers:</strong> Create and manage special deals</li>
+                        <li style="margin: 6px 0;"><strong style="color: #0a0a0a;">Analytics:</strong> Track views and engagement</li>
+                      </ul>
+                      <p style="color: #737373; margin: 12px 0 0 0; font-size: 13px;">
+                        You can upgrade anytime from your dashboard.
+                      </p>
+                    </div>
+                    
+                  </div>
+                  
+                  <!-- Footer -->
+                  <div style="padding: 30px; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #a3a3a3; font-size: 13px; margin: 0;">
+                      Questions? Reply to this email or contact us at <a href="mailto:${escapeHtml(franchiseConfig.resend_from_email)}" style="color: #00d083; text-decoration: none;">${escapeHtml(franchiseConfig.resend_from_email)}</a>
+                    </p>
+                    <p style="color: #a3a3a3; font-size: 13px; margin: 8px 0 0 0;">
+                      QWIKKER ${escapeHtml(cityDisplayName)}
                     </p>
                   </div>
+                  
                 </body>
               </html>
             `

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, type KeyboardEvent, type ClipboardEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -48,13 +48,13 @@ export function EmailVerification({ email, onVerified, onResend, onBack }: Email
     }
   }
 
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace' && !code[index] && index > 0) {
       inputRefs.current[index - 1]?.focus()
     }
   }
 
-  const handlePaste = (e: React.ClipboardEvent) => {
+  const handlePaste = (e: ClipboardEvent) => {
     e.preventDefault()
     const pastedData = e.clipboardData.getData('text').slice(0, 6)
     if (!/^\d+$/.test(pastedData)) return
@@ -123,7 +123,7 @@ export function EmailVerification({ email, onVerified, onResend, onBack }: Email
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Mail className="w-8 h-8 text-primary" />
           </div>
-          <CardTitle>📧 Check Your Email</CardTitle>
+          <CardTitle>Check Your Email</CardTitle>
           <CardDescription>
             We sent a 6-digit verification code to:
             <br />

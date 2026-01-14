@@ -239,7 +239,7 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
           {/* QWIKKER Logo */}
           <div className="flex justify-center">
             <img 
-              src="/Qwikker Logo web.svg" 
+              src="/qwikker-logo-web.svg" 
               alt="QWIKKER" 
               className="h-12 w-auto animate-fade-in-down"
             />

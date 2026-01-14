@@ -9,9 +9,11 @@ import { EmailVerification } from '@/components/claim/email-verification'
 import { CreateAccount } from '@/components/claim/create-account'
 import { PendingApproval } from '@/components/claim/pending-approval'
 import { ConfirmBusinessDetails } from '@/components/claim/confirm-business-details'
+import type { ClaimBusiness } from '@/types/claim'
+import { getDisplayName, getDisplayAddress, getDisplayCategory, getDisplayType, getDisplayDescription, getDisplayReviewCount } from '@/types/claim'
 
-// Mock business data (will be replaced with real API)
-const MOCK_BUSINESSES = [
+// Mock businesses for testing (dev/preview only)
+const MOCK_BUSINESSES: ClaimBusiness[] = [
   {
     id: 'larder-house',
     name: 'The Larder House',
@@ -49,8 +51,8 @@ type Step = 'search' | 'confirm' | 'email-verify' | 'verify-code' | 'business-de
 export default function ClaimPage() {
   const [step, setStep] = useState<Step>('search')
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<typeof MOCK_BUSINESSES>([])
-  const [selectedBusiness, setSelectedBusiness] = useState<typeof MOCK_BUSINESSES[0] | null>(null)
+  const [searchResults, setSearchResults] = useState<ClaimBusiness[]>([])
+  const [selectedBusiness, setSelectedBusiness] = useState<ClaimBusiness | null>(null)
   const [email, setEmail] = useState('')
   const [website, setWebsite] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
@@ -74,7 +76,6 @@ export default function ClaimPage() {
         const cityData = await cityResponse.json()
         if (cityData.success) {
           setCity(cityData.city)
-          console.log(`🌍 Claim page city detected: ${cityData.city}`)
         } else {
           console.warn('Failed to detect city, using fallback')
           setCity('bournemouth')
@@ -85,7 +86,6 @@ export default function ClaimPage() {
         const capabilitiesData = await capabilitiesResponse.json()
         if (capabilitiesData.success && capabilitiesData.capabilities) {
           setSmsOptInAvailable(capabilitiesData.capabilities.sms_opt_in_available)
-          console.log(`📱 SMS opt-in available: ${capabilitiesData.capabilities.sms_opt_in_available}`)
         }
       } catch (error) {
         console.error('Error fetching city/capabilities:', error)
@@ -98,6 +98,18 @@ export default function ClaimPage() {
     
     fetchCityAndCapabilities()
   }, [])
+
+  // Debounce search (auto-search after 250ms of no typing)
+  useEffect(() => {
+    if (searchQuery.trim().length >= 2) {
+      const timer = setTimeout(() => {
+        handleSearch(searchQuery)
+      }, 250)
+      return () => clearTimeout(timer)
+    } else if (searchQuery.trim().length === 0) {
+      setSearchResults([])
+    }
+  }, [searchQuery])
 
   const handleSearch = async (query: string = searchQuery) => {
     // Real search - call API
@@ -125,19 +137,50 @@ export default function ClaimPage() {
 
       const data = await response.json()
 
-      if (data.success) {
-        setSearchResults(data.results || [])
+      if (data.success && data.results && data.results.length > 0) {
+        setSearchResults(data.results)
       } else {
-        console.error('Search failed:', data.error)
-        setSearchResults([])
+        // Fallback to mock businesses in development or when ?mock=1 is present
+        const isDev = process.env.NODE_ENV !== 'production'
+        const useMock = isDev || (typeof window !== 'undefined' && window.location.search.includes('mock=1'))
+        
+        if (useMock) {
+          // Filter mock businesses by search query (case-insensitive)
+          const filtered = MOCK_BUSINESSES.filter(business => {
+            const searchLower = trimmedQuery.toLowerCase()
+            const name = getDisplayName(business).toLowerCase()
+            const category = getDisplayCategory(business).toLowerCase()
+            const address = getDisplayAddress(business).toLowerCase()
+            return name.includes(searchLower) || category.includes(searchLower) || address.includes(searchLower)
+          })
+          setSearchResults(filtered)
+        } else {
+          setSearchResults([])
+        }
       }
     } catch (error) {
       console.error('Search error:', error)
-      setSearchResults([])
+      
+      // Fallback to mock businesses in development
+      const isDev = process.env.NODE_ENV !== 'production'
+      const useMock = isDev || (typeof window !== 'undefined' && window.location.search.includes('mock=1'))
+      
+      if (useMock && trimmedQuery) {
+        const filtered = MOCK_BUSINESSES.filter(business => {
+          const searchLower = trimmedQuery.toLowerCase()
+          const name = getDisplayName(business).toLowerCase()
+          const category = getDisplayCategory(business).toLowerCase()
+          const address = getDisplayAddress(business).toLowerCase()
+          return name.includes(searchLower) || category.includes(searchLower) || address.includes(searchLower)
+        })
+        setSearchResults(filtered)
+      } else {
+        setSearchResults([])
+      }
     }
   }
 
-  const handleSelectBusiness = (business: typeof MOCK_BUSINESSES[0]) => {
+  const handleSelectBusiness = (business: ClaimBusiness) => {
     setSelectedBusiness(business)
     setStep('confirm')
   }
@@ -222,6 +265,7 @@ export default function ClaimPage() {
         formData.append('editedCategory', editedBusinessData.category)
         formData.append('editedType', editedBusinessData.type)
         formData.append('editedDescription', editedBusinessData.description)
+        formData.append('editedTagline', editedBusinessData.tagline)
         formData.append('editedHours', editedBusinessData.hours)
         
         // Add image files if they exist
@@ -264,7 +308,7 @@ export default function ClaimPage() {
           {/* QWIKKER Logo */}
           <div className="flex justify-center mb-8">
             <img 
-              src="/Qwikker Logo web.svg" 
+              src="/qwikker-logo-web.svg" 
               alt="QWIKKER" 
               className="h-8 md:h-10"
               style={{ maxHeight: '40px' }}
@@ -296,15 +340,12 @@ export default function ClaimPage() {
                     type="text"
                     placeholder="e.g. The Larder House, Scissors Barbers, Ember & Oak"
                     value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value)
-                      handleSearch(e.target.value)
-                    }}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     className="flex-1"
                   />
                   <button
-                    onClick={handleSearch}
+                    onClick={() => handleSearch()}
                     className="bg-[#00d083] hover:bg-[#00b86f] text-[#0a0a0a] px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 whitespace-nowrap"
                   >
                     <Search className="w-4 h-4" />
@@ -317,41 +358,56 @@ export default function ClaimPage() {
                     <p className="text-sm font-medium text-muted-foreground">
                       {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
                     </p>
-                    {searchResults.map((business) => (
-                      <Card 
-                        key={business.id}
-                        className="hover:border-primary cursor-pointer transition-all"
-                        onClick={() => handleSelectBusiness(business)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex gap-4">
-                            <img 
-                              src={business.image} 
-                              alt={business.name}
-                              className="w-20 h-20 rounded-lg object-cover"
-                            />
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-lg mb-1">{business.name}</h3>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                  <span>{business.rating} ({business.reviewCount} reviews)</span>
+                    {searchResults.map((business) => {
+                      const displayName = getDisplayName(business)
+                      const displayAddress = getDisplayAddress(business)
+                      const displayCategory = getDisplayCategory(business)
+                      const displayReviewCount = getDisplayReviewCount(business)
+                      
+                      return (
+                        <Card 
+                          key={business.id}
+                          className="hover:border-primary cursor-pointer transition-all"
+                          onClick={() => handleSelectBusiness(business)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex gap-4">
+                              {business.image && (
+                                <img 
+                                  src={business.image} 
+                                  alt={displayName}
+                                  className="w-20 h-20 rounded-lg object-cover"
+                                />
+                              )}
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-lg mb-1">{displayName}</h3>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  {business.rating && (
+                                    <div className="flex items-center gap-1">
+                                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                      <span>{business.rating} ({displayReviewCount} reviews)</span>
+                                    </div>
+                                  )}
+                                  {displayAddress && (
+                                    <div className="flex items-center gap-1">
+                                      <MapPin className="w-4 h-4" />
+                                      <span>{displayAddress}</span>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <MapPin className="w-4 h-4" />
-                                  <span>{business.address}</span>
-                                </div>
-                              </div>
-                              <div className="mt-2">
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                                  {business.category}
-                                </span>
+                                {displayCategory && (
+                                  <div className="mt-2">
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                                      {displayCategory}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
                   </div>
                 )}
 
@@ -445,10 +501,10 @@ export default function ClaimPage() {
                 {/* Confirm Buttons */}
                 <div className="flex gap-3">
                   <Button onClick={handleConfirm} className="flex-1" size="lg">
-                    ✅ Yes, This Is My Business
+                    Yes, This Is My Business
                   </Button>
                   <Button onClick={handleBack} variant="outline" className="flex-1" size="lg">
-                    ❌ Not My Business
+                    Not My Business
                   </Button>
                 </div>
               </CardContent>
@@ -465,9 +521,9 @@ export default function ClaimPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>📧 Business Contact Information</CardTitle>
+                <CardTitle>Business Contact Information</CardTitle>
                 <CardDescription>
-                  We need your business email to verify you own this listing
+                  We need your business email to verify ownership
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -485,15 +541,14 @@ export default function ClaimPage() {
                     className="text-base"
                   />
                   <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-2 text-sm">
-                    <p className="font-medium">💡 Use your business email, not personal</p>
-                    <p className="text-muted-foreground">Examples of BUSINESS emails:</p>
-                    <ul className="space-y-1 text-muted-foreground ml-4">
-                      <li>✅ info@yourbusiness.com</li>
-                      <li>✅ yourbusinessname@gmail.com</li>
-                      <li>✅ owner.name@yourbusiness.com</li>
+                    <p className="font-medium">Business email examples:</p>
+                    <ul className="space-y-1 text-muted-foreground ml-4 list-disc">
+                      <li>info@yourbusiness.com</li>
+                      <li>yourbusinessname@gmail.com</li>
+                      <li>owner.name@yourbusiness.com</li>
                     </ul>
-                    <p className="text-muted-foreground mt-2">
-                      ❌ Don't use: yourname123@gmail.com (personal email)
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      Using a business email helps us verify ownership more quickly.
                     </p>
                   </div>
                 </div>
@@ -511,13 +566,9 @@ export default function ClaimPage() {
                     onChange={(e) => setWebsite(e.target.value)}
                     className="text-base"
                   />
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 text-sm space-y-2">
-                    <p className="font-medium">💡 If you have a website, add it here</p>
-                    <p className="text-muted-foreground">
-                      This helps us verify ownership faster! If you don't have a website, 
-                      leave this blank. (Many small businesses don't - that's totally fine!)
-                    </p>
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Adding your website helps us verify ownership faster. Leave blank if not applicable.
+                  </p>
                 </div>
 
                 {/* Submit Button */}
@@ -527,7 +578,7 @@ export default function ClaimPage() {
                   disabled={!email}
                   onClick={handleSendVerification}
                 >
-                  📧 Send Verification Code
+                  Send Verification Code
                 </Button>
 
                 {/* What Happens Next */}
@@ -540,15 +591,15 @@ export default function ClaimPage() {
                     </li>
                     <li className="flex gap-2">
                       <span className="font-medium">2.</span>
-                      <span>Create your QWIKKER account password</span>
+                      <span>Enter the code and create your account</span>
                     </li>
                     <li className="flex gap-2">
                       <span className="font-medium">3.</span>
-                      <span>Your claim will be reviewed by the Bournemouth team (usually within 48 hours)</span>
+                      <span>Your claim will be reviewed (usually within 48 hours)</span>
                     </li>
                     <li className="flex gap-2">
                       <span className="font-medium">4.</span>
-                      <span>Once approved, you'll get dashboard access and can upgrade to unlock premium features</span>
+                      <span>Once approved, you'll receive dashboard access</span>
                     </li>
                   </ol>
                 </div>
@@ -572,16 +623,16 @@ export default function ClaimPage() {
           <ConfirmBusinessDetails
             business={{
               id: selectedBusiness.id,
-              name: selectedBusiness.name || selectedBusiness.business_name,
-              address: selectedBusiness.address || selectedBusiness.business_address,
+              name: getDisplayName(selectedBusiness) || '',
+              address: getDisplayAddress(selectedBusiness) || '',
               phone: selectedBusiness.phone,
               website: selectedBusiness.website || website,
-              category: selectedBusiness.category || selectedBusiness.business_category,
-              type: selectedBusiness.type || selectedBusiness.business_type,
-              description: selectedBusiness.description || selectedBusiness.business_description,
+              category: getDisplayCategory(selectedBusiness) || '',
+              type: getDisplayType(selectedBusiness) || '',
+              description: getDisplayDescription(selectedBusiness) || '',
               hours: selectedBusiness.hours,
               rating: selectedBusiness.rating,
-              reviewCount: selectedBusiness.reviewCount || selectedBusiness.review_count
+              reviewCount: getDisplayReviewCount(selectedBusiness)
             }}
             smsOptInAvailable={smsOptInAvailable}
             onConfirm={handleBusinessDetailsConfirmed}
@@ -593,16 +644,16 @@ export default function ClaimPage() {
         {step === 'account' && selectedBusiness && (
           <CreateAccount
             email={email}
-            businessName={selectedBusiness.name}
+            businessName={getDisplayName(selectedBusiness)}
             onSubmit={handleCreateAccount}
             onBack={handleBack}
           />
         )}
 
-        {/* Step 6: Submitted / Pending Approval */}
+        {/* Step 7: Submitted / Pending Approval */}
         {step === 'submitted' && selectedBusiness && city && (
           <PendingApproval
-            businessName={selectedBusiness.name}
+            businessName={getDisplayName(selectedBusiness)}
             email={email}
             franchiseCity={city.charAt(0).toUpperCase() + city.slice(1)}
             supportEmail={`${city}@qwikker.com`}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, type ChangeEvent, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,7 @@ interface BusinessData {
   category?: string
   type?: string
   description?: string
+  tagline?: string
   hours?: string
   rating?: number
   reviewCount?: number
@@ -34,6 +35,7 @@ interface ConfirmBusinessDetailsProps {
     category: string
     type: string
     description: string
+    tagline: string
     hours: string
     logo?: File
     heroImage?: File
@@ -52,6 +54,7 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
   const [category, setCategory] = useState(business.category || '')
   const [type, setType] = useState(business.type || '')
   const [description, setDescription] = useState(business.description || '')
+  const [tagline, setTagline] = useState(business.tagline || '')
   const [hours, setHours] = useState(business.hours || '')
   
   // SMS opt-in state (only relevant if smsOptInAvailable)
@@ -70,7 +73,7 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       // Validate file type
@@ -91,7 +94,7 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
     }
   }
 
-  const handleHeroImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleHeroImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       // Validate file type
@@ -141,6 +144,11 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
       newErrors.website = 'Website must start with http:// or https://'
     }
     
+    // Tagline validation (optional but has max length)
+    if (tagline && tagline.length > 80) {
+      newErrors.tagline = 'Tagline must be 80 characters or less'
+    }
+    
     // SMS opt-in validation
     if (smsOptIn && smsOptInAvailable) {
       if (!phoneE164.trim()) {
@@ -150,19 +158,22 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
       }
     }
     
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return newErrors
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     
-    if (!validate()) {
+    const newErrors = validate()
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
       // Scroll to first error
-      const firstError = Object.keys(errors)[0]
-      document.getElementById(firstError)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const firstErrorKey = Object.keys(newErrors)[0]
+      document.getElementById(firstErrorKey)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
+    
+    setErrors({})
     
     setIsSubmitting(true)
     
@@ -174,6 +185,7 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
       category: category.trim(),
       type: type.trim(),
       description: description.trim(),
+      tagline: tagline.trim(),
       hours: hours.trim(),
       logo: logoFile || undefined,
       heroImage: heroImageFile || undefined,
@@ -203,8 +215,8 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
           <form onSubmit={handleSubmit} className="space-y-6">
             
             {/* Logo Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="logo">Business Logo *</Label>
+            <div id="logo" className="space-y-2">
+              <Label htmlFor="logo-input">Business Logo *</Label>
               <div className="flex items-start gap-4">
                 {logoPreview ? (
                   <div className="relative w-32 h-32 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden">
@@ -248,7 +260,7 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
               </div>
               <input
                 ref={logoInputRef}
-                id="logo"
+                id="logo-input"
                 type="file"
                 accept="image/*"
                 onChange={handleLogoUpload}
@@ -257,8 +269,8 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
             </div>
 
             {/* Hero Image Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="heroImage">Cover Image *</Label>
+            <div id="heroImage" className="space-y-2">
+              <Label htmlFor="heroImage-input">Cover Image *</Label>
               <div className="flex items-start gap-4">
                 {heroImagePreview ? (
                   <div className="relative w-full h-48 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden">
@@ -300,7 +312,7 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
               )}
               <input
                 ref={heroImageInputRef}
-                id="heroImage"
+                id="heroImage-input"
                 type="file"
                 accept="image/*"
                 onChange={handleHeroImageUpload}
@@ -327,6 +339,28 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
               {errors.businessName && (
                 <p className="text-sm text-destructive">{errors.businessName}</p>
               )}
+            </div>
+
+            {/* Tagline */}
+            <div className="space-y-2" id="tagline">
+              <Label htmlFor="tagline">Business Tagline</Label>
+              <Input
+                id="tagline"
+                value={tagline}
+                onChange={(e) => {
+                  setTagline(e.target.value)
+                  if (errors.tagline) setErrors({ ...errors, tagline: '' })
+                }}
+                placeholder="e.g., Artisan coffee & fresh pastries daily"
+                maxLength={80}
+                className={errors.tagline ? 'border-destructive' : ''}
+              />
+              {errors.tagline && (
+                <p className="text-sm text-destructive">{errors.tagline}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {tagline.length}/80 characters · This appears on your discover card
+              </p>
             </div>
 
             {/* Address */}

@@ -1002,7 +1002,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                   <button
                     type="button"
                     onClick={() => {
-                      setLogoUrl('/Qwikker Logo web.svg')
+                      setLogoUrl('/qwikker-logo-web.svg')
                       console.log('✅ Qwikker logo selected for download overlay')
                     }}
                     className={`p-4 rounded-lg border-2 transition-all ${
@@ -1013,7 +1013,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                   >
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 bg-white rounded-lg p-2 flex items-center justify-center">
-                        <img src="/Qwikker Logo web.svg" alt="Qwikker" className="w-full h-full object-contain" />
+                        <img src="/qwikker-logo-web.svg" alt="Qwikker" className="w-full h-full object-contain" />
                       </div>
                       <span className="text-white text-sm font-medium">Qwikker Logo</span>
                       {logoUrl && (
@@ -1070,7 +1070,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                     />
                     {logoUrl && (
                       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-lg">
-                        <img src="/Qwikker Logo web.svg" alt="Qwikker" className="w-10 h-10 object-contain" />
+                        <img src="/qwikker-logo-web.svg" alt="Qwikker" className="w-10 h-10 object-contain" />
                       </div>
                     )}
                   </div>

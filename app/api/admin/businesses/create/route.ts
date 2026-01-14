@@ -188,6 +188,9 @@ export async function POST(request: NextRequest) {
       console.error('⚠️ Slack notification error (non-critical):', error)
     }
 
+    // Use deployment URL (Vercel preview) until custom domains are live
+    const deploymentUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://qwikkerdashboard-theta.vercel.app'
+    
     return NextResponse.json({
       success: true,
       message: `Business "${businessName}" created successfully`,
@@ -198,7 +201,7 @@ export async function POST(request: NextRequest) {
         contactEmail,
         tempPassword, // Return this so admin can share with business owner
         status: businessProfile.status,
-        loginUrl: `https://${city}.qwikker.com/auth/login`
+        loginUrl: `${deploymentUrl}/auth/login`
       }
     })
 

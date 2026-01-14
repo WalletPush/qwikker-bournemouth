@@ -51,7 +51,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           
           {/* QWIKKER Logo - SMALL */}
           <img 
-            src="/Qwikker Logo web.svg" 
+            src="/qwikker-logo-web.svg" 
             alt="QWIKKER" 
             className="absolute bottom-6 right-6 h-6 opacity-90"
             style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))' }}
@@ -99,7 +99,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-gray-600">{businessName}</span>
             <img 
-              src="/Qwikker Logo web.svg" 
+              src="/qwikker-logo-web.svg" 
               alt="QWIKKER" 
               className="h-6 opacity-80"
             />
@@ -144,7 +144,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           
           {/* QWIKKER Logo - bottom right */}
           <img 
-            src="/Qwikker Logo web.svg" 
+            src="/qwikker-logo-web.svg" 
             alt="QWIKKER" 
             className="absolute bottom-6 right-6 h-6 opacity-80"
             style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))' }}
@@ -195,7 +195,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           
           {/* QWIKKER Logo - SMALL bottom right */}
           <img 
-            src="/Qwikker Logo web.svg" 
+            src="/qwikker-logo-web.svg" 
             alt="QWIKKER" 
             className="absolute bottom-6 right-6 h-6 opacity-90"
             style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))' }}
@@ -244,7 +244,7 @@ export function PostTheme({ theme, headline, caption, backgroundImage, logoUrl, 
           <div className="flex items-center justify-between pt-6 border-t border-white/20">
             <span className="text-sm font-semibold text-white/70">{businessName}</span>
             <img 
-              src="/Qwikker Logo web.svg" 
+              src="/qwikker-logo-web.svg" 
               alt="QWIKKER" 
               className="h-6 opacity-80"
               style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))' }}
