@@ -119,14 +119,24 @@ export async function POST(request: NextRequest) {
 
       // 🔔 SEND PUSH NOTIFICATIONS: Business approved
       try {
+        // 🔒 GUARD: Never send notifications to auto-imported unclaimed businesses
+        // Three-way check (status already changed to 'approved' by this point)
+        const isUnclaimedImport = 
+          data.auto_imported === true && 
+          !data.owner_user_id && 
+          !data.claimed_at
+        
         // Notify business owner
-        if (data.user_id) {
+        if (data.user_id && !isUnclaimedImport) {
           await sendBusinessApprovedNotification(data.user_id, data.business_name || 'Your Business')
           console.log(`🔔 Approval notification sent to business owner: ${data.business_name}`)
+        } else if (isUnclaimedImport) {
+          console.log(`⏭️ Skipped notification (auto-imported, unclaimed): ${data.business_name}`)
         }
 
         // Notify users about new business (if has offers)
-        if (data.offer_name && data.offer_value) {
+        // 🔒 GUARD: Only notify users if this is a real claimed business (not auto-imported unclaimed)
+        if (data.offer_name && data.offer_value && !isUnclaimedImport) {
           const userIds = await getUsersForBusinessNotifications(data.city || 'bournemouth', data.business_type)
           if (userIds.length > 0) {
             await sendNewOfferNotification(
@@ -146,9 +156,16 @@ export async function POST(request: NextRequest) {
       try {
         const { sendBusinessApprovalNotification } = await import('@/lib/notifications/email-notifications')
         
+        // 🔒 GUARD: Never send emails to auto-imported unclaimed businesses
+        // Three-way check (status already changed to 'approved' by this point)
+        const isUnclaimedImport = 
+          data.auto_imported === true && 
+          !data.owner_user_id && 
+          !data.claimed_at
+        
         // Use deployment URL (Vercel preview) until custom domains are live
         const deploymentUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://qwikkerdashboard-theta.vercel.app'
-        if (data.email && data.business_name) {
+        if (data.email && data.business_name && !isUnclaimedImport) {
           const emailResult = await sendBusinessApprovalNotification({
             firstName: data.first_name || 'Business Owner',
             businessName: data.business_name,
@@ -162,6 +179,8 @@ export async function POST(request: NextRequest) {
           } else {
             console.error(`❌ Failed to send approval email: ${emailResult.error}`)
           }
+        } else if (isUnclaimedImport) {
+          console.log(`⏭️ Skipped email (auto-imported, unclaimed): ${data.business_name}`)
         }
       } catch (error) {
         console.error('⚠️ Email notification error (non-critical):', error)

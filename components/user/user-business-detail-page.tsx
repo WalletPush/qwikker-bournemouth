@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { BusinessCardImage } from '@/components/ui/business-card-image'
 import type { SystemCategory } from '@/lib/constants/system-categories'
+import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
 import { mockBusinesses, mockOffers, mockSecretMenus, mockClaimedOffers } from '@/lib/mock-data/user-mock-data'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
@@ -226,40 +227,73 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
 
       {/* Hero Section with Image Carousel or Placeholder */}
       <div className="relative h-64 md:h-80 rounded-xl overflow-hidden">
-        {business.status === 'unclaimed' || (!business.images || business.images.length === 0) ? (
-          // Unclaimed or no images → Show placeholder with subtle info message
-          <>
-            <BusinessCardImage
-              businessName={business.name}
-              businessId={business.id}
-              googlePlaceId={business.google_place_id ?? business.id}
-              imageSource="placeholder"
-              systemCategory={(business.system_category ?? 'other') as SystemCategory}
-              placeholderVariant={business.placeholder_variant ?? null}
-              showUnclaimedBadge={false}
-              businessStatus={business.status}
-              className="h-full w-full"
-            />
-            {business.status === 'unclaimed' && (
-              <div className="absolute top-4 left-4 z-20">
+        {(() => {
+          const systemCategory = resolveSystemCategory(business)
+
+          return business.status === 'unclaimed' || (!business.images || business.images.length === 0) ? (
+            // Unclaimed or no images → Show placeholder with subtle info message
+            <>
+              <BusinessCardImage
+                businessName={business.name}
+                businessId={business.id}
+                systemCategory={systemCategory}
+                showUnclaimedBadge={false}
+                className="h-full w-full"
+              />
+              {business.status === 'unclaimed' && !business.owner_user_id && (
+              <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
                 <div className="px-3 py-2 rounded-lg bg-slate-800/90 backdrop-blur-md border border-slate-700/50">
                   <p className="text-sm text-slate-300 font-medium">
                     ℹ️ Listing not yet claimed by business owner
                   </p>
                 </div>
+                <a
+                  href={`/claim?business_id=${business.id}`}
+                  className="px-3 py-2 rounded-lg bg-[#00d083]/10 hover:bg-[#00d083]/20 backdrop-blur-md border border-[#00d083]/30 hover:border-[#00d083]/50 transition-colors"
+                >
+                  <p className="text-sm text-[#00d083] font-medium">
+                    Is this your business? Claim this listing
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Claims are reviewed. We may ask for proof.
+                  </p>
+                </a>
               </div>
             )}
           </>
         ) : (
           // Has real images → ImageCarousel
-          <ImageCarousel
-            images={business.images || []}
-            alt={business.name}
-            className="w-full h-full"
-            showArrows={true}
-            showDots={true}
-          />
-        )}
+          <>
+            <ImageCarousel
+              images={business.images || []}
+              alt={business.name}
+              className="w-full h-full"
+              showArrows={true}
+              showDots={true}
+            />
+            {business.status === 'unclaimed' && !business.owner_user_id && (
+              <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
+                <div className="px-3 py-2 rounded-lg bg-slate-800/90 backdrop-blur-md border border-slate-700/50">
+                  <p className="text-sm text-slate-300 font-medium">
+                    ℹ️ Listing not yet claimed by business owner
+                  </p>
+                </div>
+                <a
+                  href={`/claim?business_id=${business.id}`}
+                  className="px-3 py-2 rounded-lg bg-[#00d083]/10 hover:bg-[#00d083]/20 backdrop-blur-md border border-[#00d083]/30 hover:border-[#00d083]/50 transition-colors"
+                >
+                  <p className="text-sm text-[#00d083] font-medium">
+                    Is this your business? Claim this listing
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Claims are reviewed. We may ask for proof.
+                  </p>
+                </a>
+              </div>
+            )}
+          </>
+        )
+        })()}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
         
         {/* Badges - Based on Subscription Plan */}

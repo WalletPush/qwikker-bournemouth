@@ -1,0 +1,96 @@
+═══════════════════════════════════════════════════════════════════════
+  IMPORT 404 ERROR & MISLEADING SUCCESS MESSAGE - FIXED ✅
+═══════════════════════════════════════════════════════════════════════
+
+🔴 PROBLEM 1: Google Places API 404 Error
+
+Root Cause: Search returns bare IDs ("ChIJ..."), but Details API 
+            expects full resource names ("places/ChIJ...")
+
+Fix: Added normalizePlaceResourceName() helper
+     Old URL: https://places.googleapis.com/v1/ChIJ...  ❌ 404
+     New URL: https://places.googleapis.com/v1/places/ChIJ...  ✅ 200
+
+─────────────────────────────────────────────────────────────────────
+
+🔴 PROBLEM 2: Misleading Success Message
+
+Root Cause: Always showed "🎉 Successfully imported 0 businesses!" 
+            even when all imports failed
+
+Fix: Context-aware completion messages
+
+     imported > 0:           🎉 Successfully imported X businesses!
+     imported = 0, failed:   Import completed with errors
+     imported = 0, skipped:  All X businesses were skipped
+     all zeros:              No businesses were imported
+
+═══════════════════════════════════════════════════════════════════════
+  CONSOLE OUTPUT (DEV MODE)
+═══════════════════════════════════════════════════════════════════════
+
+Old (404):
+❌ Google Place Details failed for ChIJ...: empty body (status=404)
+
+New (200):
+🔎 Place Details request: {
+  rawPlaceId: 'ChIJI33ztsahc0gRbYtjpcoo3jI',
+  placeResource: 'places/ChIJI33ztsahc0gRbYtjpcoo3jI',
+  detailsUrl: 'https://places.googleapis.com/v1/places/ChIJI33ztsahc0gRbYtjpcoo3jI'
+}
+✅ Import complete: 1 imported, 0 skipped, 0 failed
+
+═══════════════════════════════════════════════════════════════════════
+  UI MESSAGES (EXAMPLES)
+═══════════════════════════════════════════════════════════════════════
+
+Success (some imported):
+  ┌─────────────────────────────────────────────┐
+  │ 🎉 Successfully imported 5 businesses!      │
+  │ 2 businesses failed to import               │
+  └─────────────────────────────────────────────┘
+
+Failure (all failed):
+  ┌─────────────────────────────────────────────┐
+  │ Import completed with errors                │
+  │ 1 business failed to import. Check console. │
+  └─────────────────────────────────────────────┘
+
+Skipped (all duplicates):
+  ┌─────────────────────────────────────────────┐
+  │ Import complete                             │
+  │ All 3 businesses were skipped (duplicates)  │
+  └─────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════
+  FILES CHANGED
+═══════════════════════════════════════════════════════════════════════
+
+1. app/api/admin/import-businesses/import/route.ts
+   - Added normalizePlaceResourceName() helper
+   - Updated URL construction to use normalized resource name
+   - Added dev logging for diagnostics
+
+2. components/admin/import-progress-modal.tsx
+   - Replaced single success message with 4 context-aware variants
+   - Party popper emoji now only shows for actual successes
+
+═══════════════════════════════════════════════════════════════════════
+  TEST IT
+═══════════════════════════════════════════════════════════════════════
+
+1. Restart dev server: pnpm dev
+
+2. Try importing a business
+
+3. Check console for:
+   🔎 Place Details request: { rawPlaceId, placeResource, detailsUrl }
+
+4. Import should now succeed with 200 OK (not 404)
+
+5. UI modal should show appropriate message based on results
+
+═══════════════════════════════════════════════════════════════════════
+
+Full details: IMPORT_404_FIX_SUMMARY.md
+

@@ -8,7 +8,7 @@ import {
   logSmsActivity,
   isValidE164PhoneNumber
 } from '@/lib/utils/sms-verification'
-import { SMS_TEMPLATES } from '@/lib/utils/sms'
+import { sendTestSMS } from '@/lib/utils/sms'
 import twilio from 'twilio'
 
 /**
@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { to_e164 } = body
     
-    // Generate test message using centralized template
-    const testMessage = SMS_TEMPLATES.TEST(city)
+    // Generate test message
+    const testMessage = `QWIKKER ${city.toUpperCase()}: Test SMS. Your notifications are working. Reply STOP to opt out.`
     
     // =============================
     // SIMULATED MODE

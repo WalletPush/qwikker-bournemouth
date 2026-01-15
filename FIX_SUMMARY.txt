@@ -1,0 +1,103 @@
+═══════════════════════════════════════════════════════════════════════
+  PLACEHOLDER SELECTOR FIX - FINAL VERSION
+═══════════════════════════════════════════════════════════════════════
+
+🔴 PROBLEM: Placeholder selector not showing in Admin CRM card
+
+🔍 ROOT CAUSE: Wrong field name + missing TypeScript interface field
+
+✅ FIX APPLIED:
+   1. Changed gate logic from user_id → owner_user_id
+   2. Added owner_user_id to BusinessCRMData interface
+   3. Enhanced DEV logging for debugging
+
+═══════════════════════════════════════════════════════════════════════
+  WHAT WAS WRONG
+═══════════════════════════════════════════════════════════════════════
+
+Database has TWO user fields:
+  • user_id        = Original business creator (may exist for all)
+  • owner_user_id  = Who CLAIMED the business (NULL = unclaimed) ← KEY
+
+Gate logic was checking WRONG field:
+  ❌ const isUnclaimed = !business.user_id
+  ✅ const isUnclaimed = !business.owner_user_id
+
+TypeScript interface was missing owner_user_id field entirely.
+
+═══════════════════════════════════════════════════════════════════════
+  FILES CHANGED (3)
+═══════════════════════════════════════════════════════════════════════
+
+1. types/billing.ts
+   → Added: owner_user_id: string | null
+
+2. components/admin/comprehensive-business-crm-card.tsx
+   → Fixed: Gate now checks !business.owner_user_id
+   → Added: DEV-only console.log for debugging
+
+3. app/api/admin/import-businesses/preview/route.ts
+   → Fixed: categoryMapping typo → categoryConfig
+
+═══════════════════════════════════════════════════════════════════════
+  HOW TO VERIFY (3 STEPS)
+═══════════════════════════════════════════════════════════════════════
+
+1️⃣  RESTART DEV SERVER
+   $ pkill -f "next dev" && pnpm dev
+
+2️⃣  OPEN ADMIN + EXPAND BUSINESS
+   → http://localhost:3000/admin
+   → Click on "The Golden Spoon" (or any unclaimed business)
+   → Click "Files & Assets" tab
+
+3️⃣  CHECK BROWSER CONSOLE (F12)
+   Should see:
+   
+   [PlaceholderSelector gate] {
+     owner_user_id: null,           ✅ NULL = unclaimed
+     system_category: "restaurant", ✅ Has category
+     canShowPlaceholderSelector: true ✅ WILL RENDER
+   }
+
+═══════════════════════════════════════════════════════════════════════
+  EXPECTED RESULT
+═══════════════════════════════════════════════════════════════════════
+
+You should see this in Files & Assets tab:
+
+   ┌─────────────────────────────────┐
+   │ 📷 Placeholder Image Selector   │
+   │ [Preview Image]                 │
+   │ Category: restaurant            │
+   │ Variant: 00                     │
+   │                                 │
+   │ Select Placeholder Variant:     │
+   │ [Dropdown: 00, 01, 02]         │
+   │                                 │
+   │ [Save Placeholder]              │
+   └─────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════
+  IF STILL NOT SHOWING
+═══════════════════════════════════════════════════════════════════════
+
+Check console log:
+
+  canShowPlaceholderSelector: false  → Check these:
+
+  • owner_user_id: <UUID>     = Business is claimed (correct behavior)
+  • system_category: null     = Missing category in database
+  • status: "approved"        = Wrong status for unclaimed business
+
+Fix with SQL:
+  UPDATE business_profiles 
+  SET status = 'unclaimed', 
+      owner_user_id = NULL,
+      system_category = 'restaurant'
+  WHERE business_name = 'The Golden Spoon';
+
+═══════════════════════════════════════════════════════════════════════
+
+Full details: PLACEHOLDER_SELECTOR_FINAL_FIX.md
+

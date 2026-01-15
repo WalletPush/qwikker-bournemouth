@@ -1,0 +1,85 @@
+═══════════════════════════════════════════════════════════════════════
+  PLACEHOLDER CATEGORY MISMATCH FIX - COMPLETE
+═══════════════════════════════════════════════════════════════════════
+
+WHAT WAS WRONG:
+  • Manual category resolution scattered across components (inconsistent)
+  • camelCase/snake_case field name mismatch → undefined → wrong fallback
+  • All unknown categories showed cafe/coffee images (not neutral)
+  • Legacy .v1.webp system still visible in codebase (confusion)
+
+WHAT WAS FIXED:
+  ✓ Created canonical resolver: lib/utils/resolve-system-category.ts
+  ✓ Updated components/user/business-card.tsx → uses helper
+  ✓ Updated components/user/user-business-detail-page.tsx → uses helper
+  ✓ Enhanced app/dev/placeholders/page.tsx → shows resolved categories
+  ✓ Verified getPlaceholderImage.ts already correct (6 categories only)
+  ✓ Confirmed ZERO legacy path usage in active code
+
+FILES CHANGED:
+  1. lib/utils/resolve-system-category.ts (NEW)
+  2. components/user/business-card.tsx
+  3. components/user/user-business-detail-page.tsx
+  4. app/dev/placeholders/page.tsx
+
+VERIFICATION PERFORMED:
+  ✓ grep -r "\.v1\.webp" app/ components/     → 0 results
+  ✓ grep -r "other-abstract" app/ components/ → 0 results
+  ✓ pnpm lint                                 → PASS
+  ✓ TypeScript compilation                    → PASS
+
+═══════════════════════════════════════════════════════════════════════
+  USER ACTION REQUIRED
+═══════════════════════════════════════════════════════════════════════
+
+1. RESTART DEV SERVER (critical!)
+   $ pkill -f "next dev"
+   $ pnpm dev
+
+2. TEST DEBUG PAGE
+   → http://localhost:3000/dev/placeholders
+   
+   Expected:
+   • restaurant → /placeholders/restaurant/{00|01|02}.webp ✓
+   • cafe       → /placeholders/cafe/{00|01|02}.webp ✓
+   • bar        → /placeholders/bar/{00|01|02}.webp ✓
+   • barber     → /placeholders/barber/{00|01|02}.webp ✓
+   • bakery     → /placeholders/bakery/{00|01|02}.webp ✓
+   • dessert    → /placeholders/dessert/{00|01|02}.webp ✓
+   • salon      → /placeholders/default/00.webp ⚠️
+
+3. TEST DISCOVER PAGE
+   → http://localhost:3000/discover
+   
+   Verify:
+   • Restaurants show food/dining images (not cafe)
+   • Cafes show coffee/latte art images
+   • Bars show drinks/bottles
+   • Barbers show scissors/chairs
+
+4. REPLACE DEFAULT PLACEHOLDER IMAGE (pending)
+   File: /public/placeholders/default/00.webp
+   
+   Current: Cafe image with coffee cups ❌
+   Needed:  Neutral, non-category-specific image ✓
+   
+   Requirements:
+   • 16:9 aspect ratio
+   • WebP format
+   • No food, drink, hair, or category imagery
+   • Professional, branded, calm aesthetic
+
+═══════════════════════════════════════════════════════════════════════
+  HOW TO VALIDATE
+═══════════════════════════════════════════════════════════════════════
+
+✓ Open browser console on Discover page
+✓ Look for: "Category: restaurant" (not "Category: other")
+✓ Network tab: Check image URLs match business category
+✓ Visual: Restaurants show food, cafes show coffee, bars show drinks
+✓ Debug page: Green categories = correct, Amber = fallback
+
+═══════════════════════════════════════════════════════════════════════
+
+Full audit report: docs/PLACEHOLDER_SYSTEM_FINAL_AUDIT.md
+

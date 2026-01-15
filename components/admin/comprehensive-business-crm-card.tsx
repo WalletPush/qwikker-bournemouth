@@ -21,7 +21,6 @@ import { OfferDeletionModal } from '@/components/admin/offer-deletion-modal'
 import { TierManagementCard } from './tier-management-card'
 import { ExtendTrialButton } from './extend-trial-button'
 import { PlaceholderSelector } from './placeholder-selector'
-import { PLACEHOLDER_LIBRARY } from '@/lib/constants/category-placeholders'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 
 interface ComprehensiveBusinessCRMCardProps {
@@ -1143,40 +1142,154 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 </div>
 
                 {/* Placeholder Image Selector (Unclaimed Only) */}
-                {business.status === 'unclaimed' && business.system_category && (
-                  <div className="mb-4">
-                    <PlaceholderSelector
-                      businessId={business.id}
-                      businessName={business.business_name}
-                      status={business.status}
-                      systemCategory={business.system_category as SystemCategory}
-                      googlePlaceId={business.google_place_id || business.id}
-                      placeholderVariant={business.placeholder_variant ?? 0}
-                      unclaimedMaxVariantId={PLACEHOLDER_LIBRARY[business.system_category as SystemCategory]?.unclaimedMaxVariantId ?? 10}
-                      onSave={async (variant: number) => {
-                        try {
-                          const response = await fetch('/api/admin/businesses/placeholder-variant', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              businessId: business.id,
-                              placeholderVariant: variant
-                            })
-                          })
-                          if (!response.ok) {
-                            const error = await response.json()
-                            throw new Error(error.error || 'Failed to update placeholder')
-                          }
-                          // Refresh the page to show updated placeholder
-                          window.location.reload()
-                        } catch (error) {
-                          console.error('Failed to update placeholder:', error)
-                          alert(error instanceof Error ? error.message : 'Failed to update placeholder')
-                        }
-                      }}
-                    />
-                  </div>
-                )}
+                {(() => {
+                  // Resolve category from either camelCase or snake_case
+                  const resolvedCategory = business.system_category ?? (business as any).systemCategory ?? null
+                  
+                  // Gate: Show only for unclaimed businesses (no owner) with a valid category
+                  const isUnclaimed = !business.owner_user_id && 
+                    (business.status === 'unclaimed' || business.status === 'incomplete' || business.status === 'pending_review')
+                  const hasCategory = !!resolvedCategory && resolvedCategory !== 'other'
+                  const canShowSelector = isUnclaimed && hasCategory
+                  
+                  // 🔍 DEV DEBUG BLOCK (Always visible in development)
+                  if (process.env.NODE_ENV === 'development') {
+                    return (
+                      <div className="mb-6 p-4 bg-yellow-900/20 border-2 border-yellow-600/50 rounded-lg">
+                        <h5 className="text-sm font-semibold text-yellow-400 mb-3">🔍 PlaceholderSelector Debug (DEV ONLY) - UNCLAIMED TAB</h5>
+                        <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-black/30 p-3 rounded">
+                          <div>
+                            <span className="text-slate-400">status:</span>
+                            <span className="text-white ml-2">{business.status || 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">owner_user_id:</span>
+                            <span className="text-white ml-2">{business.owner_user_id ? `"${business.owner_user_id.substring(0, 8)}..."` : 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">user_id:</span>
+                            <span className="text-white ml-2">{business.user_id ? `"${business.user_id.substring(0, 8)}..."` : 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">system_category:</span>
+                            <span className="text-white ml-2">{business.system_category || 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">systemCategory:</span>
+                            <span className="text-white ml-2">{(business as any).systemCategory || 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">resolvedCategory:</span>
+                            <span className="text-white ml-2">{resolvedCategory || 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">placeholder_variant:</span>
+                            <span className="text-white ml-2">{business.placeholder_variant ?? 'null'}</span>
+                          </div>
+                          <div className="col-span-2 mt-2 pt-2 border-t border-yellow-600/30">
+                            <span className="text-slate-400">isUnclaimed:</span>
+                            <span className={`ml-2 font-bold ${isUnclaimed ? 'text-green-400' : 'text-red-400'}`}>
+                              {isUnclaimed ? 'true ✅' : 'false ❌'}
+                            </span>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-slate-400">hasCategory:</span>
+                            <span className={`ml-2 font-bold ${hasCategory ? 'text-green-400' : 'text-red-400'}`}>
+                              {hasCategory ? 'true ✅' : 'false ❌'}
+                            </span>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-slate-400">canShowSelector:</span>
+                            <span className={`ml-2 font-bold ${canShowSelector ? 'text-green-400' : 'text-red-400'}`}>
+                              {canShowSelector ? 'true ✅ (Selector should show below)' : 'false ❌ (Selector hidden)'}
+                            </span>
+                          </div>
+                          {!canShowSelector && (
+                            <div className="col-span-2 mt-2 p-2 bg-red-900/20 border border-red-600/30 rounded">
+                              <span className="text-red-400 font-bold">❌ Gate Failed:</span>
+                              <ul className="text-red-300 mt-1 ml-4 list-disc list-inside text-xs">
+                                {!isUnclaimed && <li>Business is not unclaimed (has owner or wrong status)</li>}
+                                {!hasCategory && <li>No valid system_category found (or is 'other')</li>}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Show selector if gate passes */}
+                        {canShowSelector && (
+                          <div className="mt-4 pt-4 border-t border-yellow-600/30">
+                            <h6 className="text-sm font-semibold text-white mb-3">Placeholder Image (Unclaimed Listings)</h6>
+                            <PlaceholderSelector
+                              businessId={business.id}
+                              businessName={business.business_name}
+                              status={business.status}
+                              systemCategory={resolvedCategory as SystemCategory}
+                              placeholderVariant={business.placeholder_variant ?? 0}
+                              onSave={async (variant: number) => {
+                                try {
+                                  const response = await fetch('/api/admin/businesses/placeholder-variant', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      businessId: business.id,
+                                      placeholderVariant: variant
+                                    })
+                                  })
+                                  if (!response.ok) {
+                                    const error = await response.json()
+                                    throw new Error(error.error || 'Failed to update placeholder')
+                                  }
+                                  window.location.reload()
+                                } catch (error) {
+                                  console.error('Failed to update placeholder:', error)
+                                  alert(error instanceof Error ? error.message : 'Failed to update placeholder')
+                                }
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
+                  
+                  // PRODUCTION: Only show selector (no debug block)
+                  if (canShowSelector) {
+                    return (
+                      <div className="mb-6 p-4 bg-slate-800/40 border border-slate-600 rounded-lg">
+                        <h5 className="text-sm font-semibold text-white mb-3">Placeholder Image (Unclaimed Listings)</h5>
+                        <PlaceholderSelector
+                          businessId={business.id}
+                          businessName={business.business_name}
+                          status={business.status}
+                          systemCategory={resolvedCategory as SystemCategory}
+                          placeholderVariant={business.placeholder_variant ?? 0}
+                          onSave={async (variant: number) => {
+                            try {
+                              const response = await fetch('/api/admin/businesses/placeholder-variant', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  businessId: business.id,
+                                  placeholderVariant: variant
+                                })
+                              })
+                              if (!response.ok) {
+                                const error = await response.json()
+                                throw new Error(error.error || 'Failed to update placeholder')
+                              }
+                              window.location.reload()
+                            } catch (error) {
+                              console.error('Failed to update placeholder:', error)
+                              alert(error instanceof Error ? error.message : 'Failed to update placeholder')
+                            }
+                          }}
+                        />
+                      </div>
+                    )
+                  }
+                  
+                  return null
+                })()}
 
                 {/* Logo */}
                 <Card className="bg-slate-800/30 border-slate-700">

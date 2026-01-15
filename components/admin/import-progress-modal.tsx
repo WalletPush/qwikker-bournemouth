@@ -136,16 +136,52 @@ export function ImportProgressModal({
 
           {/* Completion Message */}
           {isComplete && (
-            <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-              <p className="text-sm text-green-800 dark:text-green-200 text-center font-medium">
-                🎉 Successfully imported {progress.imported} business{progress.imported !== 1 ? 'es' : ''}!
-              </p>
-              {progress.skipped > 0 && (
-                <p className="text-xs text-green-700 dark:text-green-300 text-center mt-1">
-                  {progress.skipped} already existed or didn't meet criteria
-                </p>
+            <>
+              {progress.imported > 0 ? (
+                <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <p className="text-sm text-green-800 dark:text-green-200 text-center font-medium">
+                    🎉 Successfully imported {progress.imported} business{progress.imported !== 1 ? 'es' : ''}!
+                  </p>
+                  {progress.skipped > 0 && (
+                    <p className="text-xs text-green-700 dark:text-green-300 text-center mt-1">
+                      {progress.skipped} already existed or didn't meet criteria
+                    </p>
+                  )}
+                  {progress.failed > 0 && (
+                    <p className="text-xs text-green-700 dark:text-green-300 text-center mt-1">
+                      {progress.failed} business{progress.failed !== 1 ? 'es' : ''} failed to import
+                    </p>
+                  )}
+                </div>
+              ) : progress.failed > 0 ? (
+                <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <p className="text-sm text-red-800 dark:text-red-200 text-center font-medium">
+                    Import completed with errors
+                  </p>
+                  <p className="text-xs text-red-700 dark:text-red-300 text-center mt-1">
+                    {progress.failed} business{progress.failed !== 1 ? 'es' : ''} failed to import. Check the console for details.
+                  </p>
+                </div>
+              ) : progress.skipped > 0 ? (
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200 text-center font-medium">
+                    Import complete
+                  </p>
+                  <p className="text-xs text-yellow-700 dark:text-yellow-300 text-center mt-1">
+                    All {progress.skipped} business{progress.skipped !== 1 ? 'es' : ''} were skipped (already existed or didn't meet criteria)
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 bg-slate-50 dark:bg-slate-950/20 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <p className="text-sm text-slate-800 dark:text-slate-200 text-center font-medium">
+                    Import complete
+                  </p>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 text-center mt-1">
+                    No businesses were imported
+                  </p>
+                </div>
               )}
-            </div>
+            </>
           )}
 
           {/* Cancelled Message */}

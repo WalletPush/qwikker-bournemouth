@@ -1955,11 +1955,16 @@ Qwikker Admin Team`
                       // Build CRM-compatible business object for unclaimed listings
                       const crmBusiness = {
                         id: business.id,
+                        user_id: business.user_id || null, // ✅ CRITICAL: Required for proper CRM display
+                        owner_user_id: business.owner_user_id || null, // ✅ CRITICAL: Required for PlaceholderSelector gate
                         business_name: business.business_name || 'Unnamed Business',
                         first_name: '',
                         last_name: '',
                         business_category: business.business_category || 'Uncategorized',
                         business_type: business.business_type,
+                        system_category: business.system_category || null, // ✅ CRITICAL: Required for placeholder images
+                        display_category: business.display_category || null, // ✅ For display purposes
+                        placeholder_variant: business.placeholder_variant ?? 0, // ✅ CRITICAL: Current placeholder selection
                         business_address: business.business_address || '',
                         business_town: business.business_town || '',
                         business_postcode: business.business_postcode || '',

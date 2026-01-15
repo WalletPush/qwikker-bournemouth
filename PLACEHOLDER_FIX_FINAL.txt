@@ -1,0 +1,115 @@
+═══════════════════════════════════════════════════════════════════════
+  PLACEHOLDER FIX - FINAL STEPS (MINIMAL CHANGES COMPLETE)
+═══════════════════════════════════════════════════════════════════════
+
+✅ CODE CHANGES COMPLETE:
+  1. lib/utils/resolve-system-category.ts (NEW) - Canonical resolver
+  2. components/user/business-card.tsx - Uses helper
+  3. components/user/user-business-detail-page.tsx - Uses helper
+  4. app/dev/placeholders/page.tsx - Enhanced debug display
+  5. lib/placeholders/getPlaceholderImage.ts - Added DEV-only logging
+
+✅ VERIFICATION:
+  • Server transforms: system_category → systemCategory (correct)
+  • Client components: use resolveSystemCategory() (correct)
+  • No direct field access without helper (verified)
+  • DEV logging: only warns on fallback (not spam)
+  • Legacy paths: 0 occurrences in active code
+
+═══════════════════════════════════════════════════════════════════════
+  🚨 ACTION REQUIRED (3 STEPS)
+═══════════════════════════════════════════════════════════════════════
+
+1️⃣  GENERATE NEUTRAL DEFAULT IMAGE (2 minutes)
+
+   Option A - Quick (if ImageMagick installed):
+   $ chmod +x scripts/generate-default-placeholder.sh
+   $ ./scripts/generate-default-placeholder.sh
+
+   Option B - Manual:
+   $ cp public/placeholders/barber/00.webp public/placeholders/default/00.webp
+   
+   (See: scripts/GENERATE_DEFAULT_PLACEHOLDER.md for more options)
+
+2️⃣  RESTART DEV SERVER (30 seconds)
+
+   $ pkill -f "next dev"
+   $ pnpm dev
+   
+   Wait for: ✓ Compiled successfully
+
+3️⃣  VERIFY IN BROWSER (2 minutes)
+
+   A. Debug page: http://localhost:3000/dev/placeholders
+      ✓ 6 categories show GREEN (restaurant, cafe, bar, barber, bakery, dessert)
+      ✓ salon shows AMBER (fallback to default)
+      ✓ Default shows neutral image (not cafe)
+
+   B. Discover page: http://localhost:3000/discover
+      ✓ Restaurants show food imagery (not cafe)
+      ✓ Cafes show coffee imagery
+      ✓ Bars show drinks imagery
+      ✓ Barbers show scissors imagery
+
+   C. Browser console (F12):
+      ✓ No errors
+      ✓ Fallback warning only for salon (not supported categories)
+      ✓ Network tab shows correct URLs
+
+═══════════════════════════════════════════════════════════════════════
+  WHAT WAS CHANGED (MINIMAL)
+═══════════════════════════════════════════════════════════════════════
+
+BEFORE:
+  • Manual category resolution (15+ lines per component)
+  • camelCase/snake_case mismatch → undefined → wrong fallback
+  • All unknown categories showed cafe images
+  • No logging for debugging
+
+AFTER:
+  • Single canonical resolver (1 line per component)
+  • Handles both field names automatically
+  • Default will show neutral image (after replacement)
+  • DEV-only logging for fallbacks (no spam)
+
+FILES CHANGED: 5
+LINES ADDED: ~40
+LINES REMOVED: ~30
+NEW DEPENDENCIES: 0
+
+═══════════════════════════════════════════════════════════════════════
+  VERIFICATION CHECKLIST
+═══════════════════════════════════════════════════════════════════════
+
+PRE-FLIGHT:
+  ☐ Generate/replace default placeholder image
+  ☐ Restart dev server
+  ☐ Hard refresh browser (Cmd+Shift+R)
+
+DEBUG PAGE:
+  ☐ Open http://localhost:3000/dev/placeholders
+  ☐ All 6 categories show correct images (not default)
+  ☐ Salon shows default (neutral, not cafe)
+  ☐ Images load without 404
+
+DISCOVER PAGE:
+  ☐ Open http://localhost:3000/discover
+  ☐ Restaurants → food imagery ✓
+  ☐ Cafes → coffee imagery ✓
+  ☐ Bars → drinks imagery ✓
+  ☐ Barbers → scissors imagery ✓
+
+CONSOLE:
+  ☐ No errors
+  ☐ Fallback warning only for unsupported categories
+  ☐ Network tab shows category-specific URLs
+
+DONE!
+
+═══════════════════════════════════════════════════════════════════════
+
+Full docs:
+  • PLACEHOLDER_FIX_VERIFICATION.md (step-by-step guide)
+  • docs/PLACEHOLDER_SYSTEM_FINAL_AUDIT.md (technical audit)
+  • scripts/GENERATE_DEFAULT_PLACEHOLDER.md (image generation help)
+

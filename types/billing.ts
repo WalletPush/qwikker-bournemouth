@@ -105,17 +105,20 @@ export interface BusinessCRMData {
   // Basic business info
   id: string
   user_id: string | null // Auth user ID (needed for subscription updates)
+  owner_user_id: string | null // User who claimed/owns this business (NULL for unclaimed)
   business_name: string
   first_name: string | null
   last_name: string | null
   business_category: string
   business_type: string | null
+  system_category: string | null // For placeholder image logic
+  placeholder_variant: number | null // Admin-selected placeholder variant (0, 1, 2)
   business_address: string
   business_town: string
   business_postcode: string
   email: string
   phone: string
-  status: 'incomplete' | 'pending_review' | 'approved' | 'rejected'
+  status: 'incomplete' | 'pending_review' | 'approved' | 'rejected' | 'unclaimed' | 'claimed' | 'claimed_free'
   approved_at: string | null
   admin_notes: string | null
   

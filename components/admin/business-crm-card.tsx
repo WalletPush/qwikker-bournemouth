@@ -15,6 +15,9 @@ import {
   calculateTrialStatus
 } from '@/types/billing'
 import { InitialAvatar } from '@/components/admin/initial-avatar'
+import { PlaceholderSelector } from './placeholder-selector'
+import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
+import type { SystemCategory } from '@/lib/constants/system-categories'
 
 interface BusinessCRMCardProps {
   business: BusinessCRMData
@@ -763,6 +766,160 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
               </svg>
               Files & Assets
             </h4>
+
+            {/* ✅ PLACEHOLDER SELECTOR FOR UNCLAIMED BUSINESSES */}
+            {(() => {
+              // Resolve category from either camelCase or snake_case
+              const resolvedCategory = resolveSystemCategory(business)
+              
+              // Gate: Show only for unclaimed businesses (no owner) with a valid category
+              const isUnclaimed = !business.owner_user_id && business.status === 'unclaimed'
+              const hasCategory = !!resolvedCategory && resolvedCategory !== 'other'
+              const canShowSelector = isUnclaimed && hasCategory
+              
+              // 🔍 DEV DEBUG BLOCK (Always visible in development)
+              if (process.env.NODE_ENV === 'development') {
+                return (
+                  <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
+                    <h5 className="text-sm font-semibold text-yellow-400 mb-2">🔍 PlaceholderSelector Debug (DEV ONLY)</h5>
+                    <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                      <div>
+                        <span className="text-slate-400">status:</span>
+                        <span className="text-white ml-2">{business.status || 'null'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">owner_user_id:</span>
+                        <span className="text-white ml-2">{business.owner_user_id ? `"${business.owner_user_id.substring(0, 8)}..."` : 'null'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">system_category:</span>
+                        <span className="text-white ml-2">{business.system_category || 'null'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">systemCategory:</span>
+                        <span className="text-white ml-2">{(business as any).systemCategory || 'null'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">resolvedCategory:</span>
+                        <span className="text-white ml-2">{resolvedCategory || 'null'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">placeholder_variant:</span>
+                        <span className="text-white ml-2">{business.placeholder_variant ?? 'null'}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-slate-400">isUnclaimed:</span>
+                        <span className={`ml-2 font-bold ${isUnclaimed ? 'text-green-400' : 'text-red-400'}`}>
+                          {isUnclaimed ? 'true ✅' : 'false ❌'}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-slate-400">hasCategory:</span>
+                        <span className={`ml-2 font-bold ${hasCategory ? 'text-green-400' : 'text-red-400'}`}>
+                          {hasCategory ? 'true ✅' : 'false ❌'}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-slate-400">canShowSelector:</span>
+                        <span className={`ml-2 font-bold ${canShowSelector ? 'text-green-400' : 'text-red-400'}`}>
+                          {canShowSelector ? 'true ✅ (Selector should show below)' : 'false ❌ (Selector hidden)'}
+                        </span>
+                      </div>
+                      {!canShowSelector && (
+                        <div className="col-span-2 mt-2 p-2 bg-red-900/20 border border-red-600/30 rounded">
+                          <span className="text-red-400 font-bold">❌ Gate Failed:</span>
+                          <ul className="text-red-300 mt-1 ml-4 list-disc list-inside">
+                            {!isUnclaimed && <li>Business is not unclaimed (has owner or wrong status)</li>}
+                            {!hasCategory && <li>No valid system_category found (or is 'other')</li>}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Show selector if gate passes */}
+                    {canShowSelector && (
+                      <div className="mt-4 pt-4 border-t border-yellow-600/30">
+                        <h6 className="text-sm font-semibold text-white mb-3">Placeholder Image (Unclaimed Listings)</h6>
+                        <PlaceholderSelector
+                          businessId={business.id}
+                          businessName={business.business_name}
+                          status={business.status}
+                          systemCategory={resolvedCategory as SystemCategory}
+                          placeholderVariant={business.placeholder_variant ?? 0}
+                          onSave={async (variant: number) => {
+                            try {
+                              const response = await fetch('/api/admin/businesses/placeholder-variant', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  businessId: business.id,
+                                  placeholderVariant: variant
+                                })
+                              })
+                              
+                              if (!response.ok) {
+                                const error = await response.json()
+                                alert(`❌ Failed to save: ${error.error || 'Unknown error'}`)
+                                return
+                              }
+                              
+                              // Success - reload to show new variant
+                              window.location.reload()
+                            } catch (error) {
+                              console.error('Failed to save placeholder variant:', error)
+                              alert('❌ Failed to save placeholder variant. Check console for details.')
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+              
+              // PRODUCTION: Only show selector (no debug block)
+              if (canShowSelector) {
+                return (
+                  <div className="mb-6 p-4 bg-slate-800/40 border border-slate-600 rounded-lg">
+                    <h5 className="text-sm font-semibold text-white mb-3">Placeholder Image (Unclaimed Listings)</h5>
+                    <PlaceholderSelector
+                      businessId={business.id}
+                      businessName={business.business_name}
+                      status={business.status}
+                      systemCategory={resolvedCategory as SystemCategory}
+                      placeholderVariant={business.placeholder_variant ?? 0}
+                      onSave={async (variant: number) => {
+                        try {
+                          const response = await fetch('/api/admin/businesses/placeholder-variant', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              businessId: business.id,
+                              placeholderVariant: variant
+                            })
+                          })
+                          
+                          if (!response.ok) {
+                            const error = await response.json()
+                            alert(`❌ Failed to save: ${error.error || 'Unknown error'}`)
+                            return
+                          }
+                          
+                          // Success - reload to show new variant
+                          window.location.reload()
+                        } catch (error) {
+                          console.error('Failed to save placeholder variant:', error)
+                          alert('❌ Failed to save placeholder variant. Check console for details.')
+                        }
+                      }}
+                    />
+                  </div>
+                )
+              }
+              
+              return null
+            })()}
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <label className="text-sm font-medium text-slate-400">Logo</label>

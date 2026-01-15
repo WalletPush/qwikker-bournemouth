@@ -4,7 +4,12 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { CATEGORY_MAPPING } from '@/lib/constants/category-mapping'
-import { type SystemCategory, SYSTEM_CATEGORY_LABEL, isValidSystemCategory } from '@/lib/constants/system-categories'
+import {
+  type SystemCategory,
+  SYSTEM_CATEGORY_LABEL,
+  isValidSystemCategory,
+} from '@/lib/constants/system-categories'
+import { validateCategoryMatch } from '@/lib/import/category-filters'
 
 // Google Places API (New) Pricing (GBP) - Update here if pricing changes
 const GOOGLE_PLACES_NEARBY_BASIC_GBP = 0.025  // £0.025 per Nearby Search request
@@ -302,6 +307,8 @@ export async function POST(request: NextRequest) {
     console.log(`📊 Total raw results: ${searchResults.length}`)
 
     // Step 3: Filter and validate results
+    const rejectedBusinesses: Array<{ name: string; reason: string }> = []
+    
     const validBusinesses = searchResults
       .filter((place, index, self) => {
         // Deduplication by place id
@@ -319,12 +326,14 @@ export async function POST(request: NextRequest) {
         const types = new Set(place.types ?? [])
         if (types.has('lodging')) {
           console.log(`❌ Skipping lodging: ${place.displayName.text}`)
+          rejectedBusinesses.push({ name: place.displayName.text, reason: 'Lodging (not a business)' })
           return false
         }
 
         // Must meet minimum rating (if rating exists)
         if (place.rating && place.rating < minRating) {
           console.log(`❌ Skipping ${place.displayName.text}: Rating ${place.rating} < ${minRating}`)
+          rejectedBusinesses.push({ name: place.displayName.text, reason: `Rating ${place.rating} < ${minRating}` })
           return false
         }
 
@@ -332,12 +341,14 @@ export async function POST(request: NextRequest) {
         // Temporarily closed businesses can reopen, but we exclude them by default to keep imports clean
         if (place.businessStatus === 'CLOSED_PERMANENTLY' || place.businessStatus === 'CLOSED_TEMPORARILY') {
           console.log(`❌ Skipping ${place.displayName.text}: ${place.businessStatus}`)
+          rejectedBusinesses.push({ name: place.displayName.text, reason: place.businessStatus })
           return false
         }
 
         // Must have at least 10 reviews (avoid fake/new businesses)
         if (!place.userRatingCount || place.userRatingCount < 10) {
           console.log(`❌ Skipping ${place.displayName.text}: Only ${place.userRatingCount || 0} reviews`)
+          rejectedBusinesses.push({ name: place.displayName.text, reason: `Only ${place.userRatingCount || 0} reviews` })
           return false
         }
 
@@ -351,8 +362,31 @@ export async function POST(request: NextRequest) {
           )
           if (distance > radiusMeters) {
             console.log(`❌ Skipping ${place.displayName.text}: ${distance}m > ${radiusMeters}m`)
+            rejectedBusinesses.push({ name: place.displayName.text, reason: `${Math.round(distance)}m > ${radiusMeters}m radius` })
             return false
           }
+        }
+
+        // 🔒 TWO-STAGE CATEGORY FILTERING (CRITICAL QUALITY CHECK)
+        // Stage 1: Google search (broad, keeps costs predictable)
+        // Stage 2: Hard filter (precise, prevents category pollution)
+        const categoryKey = categoryConfig.categoryKey
+        const categoryValidation = validateCategoryMatch(
+          {
+            name: place.displayName.text,
+            types: place.types,
+            primary_type: place.types?.[0], // Google returns primary type first
+          },
+          categoryKey
+        )
+
+        if (!categoryValidation.valid) {
+          console.log(`❌ CATEGORY MISMATCH: ${place.displayName.text} - ${categoryValidation.reason}`)
+          rejectedBusinesses.push({ 
+            name: place.displayName.text, 
+            reason: `Category mismatch: ${categoryValidation.reason}` 
+          })
+          return false
         }
 
         return true
@@ -392,7 +426,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       results: previewResults,
-      totalFound: validBusinesses.length,
+      totalRaw: searchResults.length, // Total raw results from Google (before filtering)
+      totalFound: validBusinesses.length, // Valid businesses after all filters
+      totalRejected: rejectedBusinesses.length, // Businesses rejected by filters
+      rejected: rejectedBusinesses, // Array of rejected businesses with reasons
       costs: {
         preview: {
           amount: previewCost,
@@ -407,7 +444,7 @@ export async function POST(request: NextRequest) {
         }
       },
       center: { lat: latNum, lng: lngNum },
-      message: `Found ${validBusinesses.length} businesses matching your criteria`
+      message: `Found ${validBusinesses.length} valid businesses from ${searchResults.length} raw results (${rejectedBusinesses.length} rejected by quality filters)`
     })
 
   } catch (error: any) {

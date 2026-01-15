@@ -3,7 +3,14 @@ import { cookies } from 'next/headers'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
-import { mapGoogleTypesToSystemCategory, SYSTEM_CATEGORY_LABEL, isValidSystemCategory, type SystemCategory } from '@/lib/constants/system-categories'
+import {
+  mapGoogleTypesToSystemCategory,
+  SYSTEM_CATEGORY_LABEL,
+  isValidSystemCategory,
+  type SystemCategory,
+} from '@/lib/constants/system-categories'
+import { validateCategoryMatch } from '@/lib/import/category-filters'
+import { generateTagline } from '@/lib/import/tagline-generator'
 
 interface ImportRequest {
   city?: string // DEPRECATED: Now derived from hostname server-side (ignored if provided)
@@ -99,6 +106,84 @@ function parseWeekdayDescriptionsToStructured(
   }
 
   return { structured, text }
+}
+
+/**
+ * Normalize Place ID to Google Places API (New) resource name format
+ * 
+ * The New Places API expects resource names like "places/ChIJ..."
+ * Search results return bare IDs like "ChIJ..." 
+ * 
+ * @param input - Raw place ID (e.g., "ChIJ...") or resource name (e.g., "places/ChIJ...")
+ * @returns Normalized resource name (e.g., "places/ChIJ...")
+ */
+function normalizePlaceResourceName(input: string): string {
+  const trimmed = input.trim()
+  
+  // Already in correct format
+  if (trimmed.startsWith('places/')) {
+    return trimmed
+  }
+  
+  // Convert bare ID to resource name
+  return `places/${trimmed}`
+}
+
+/**
+ * Safely parse JSON response from Google Places API
+ * Handles empty bodies, non-JSON responses, and provides detailed error info
+ */
+async function parseJsonResponseSafe(
+  response: Response,
+  label: string,
+  placeId?: string
+): Promise<any> {
+  const contentType = response.headers.get('content-type') || ''
+  const status = response.status
+  const statusText = response.statusText
+  
+  // Read body as text first (only once)
+  const rawBody = await response.text()
+  
+  // Check for empty body
+  if (!rawBody.trim()) {
+    const error = `${label} returned empty body (status=${status} ${statusText})`
+    console.error(`❌ ${label} failed${placeId ? ` for ${placeId}` : ''}: ${error}`)
+    throw new Error(error)
+  }
+  
+  // Try to parse JSON
+  let parsed: any
+  try {
+    parsed = JSON.parse(rawBody)
+  } catch (parseError) {
+    const bodySnippet = rawBody.substring(0, 300)
+    const error = `${label} returned non-JSON response (status=${status} ${statusText}, contentType=${contentType})`
+    console.error(`❌ ${label} failed${placeId ? ` for ${placeId}` : ''}:`, {
+      status,
+      statusText,
+      contentType,
+      bodySnippet,
+      parseError: parseError instanceof Error ? parseError.message : String(parseError)
+    })
+    throw new Error(`${error}. Body snippet: ${bodySnippet}`)
+  }
+  
+  // Check for HTTP error status
+  if (!response.ok) {
+    const bodySnippet = rawBody.substring(0, 300)
+    const error = `${label} returned error status (status=${status} ${statusText}, contentType=${contentType})`
+    console.error(`❌ ${label} failed${placeId ? ` for ${placeId}` : ''}:`, {
+      status,
+      statusText,
+      contentType,
+      bodySnippet,
+      error: parsed.error || parsed
+    })
+    throw new Error(`${error}. ${parsed.error?.message || bodySnippet}`)
+  }
+  
+  return parsed
 }
 
 function normalizeTo24h(input: string): string | null {
@@ -265,7 +350,18 @@ export async function POST(request: NextRequest) {
 
           try {
             // Get Place Details from Google using Places API (New)
-            const detailsUrl = `https://places.googleapis.com/v1/${placeId}`
+            // IMPORTANT: Search returns bare IDs like "ChIJ...", but Details API expects "places/ChIJ..."
+            const placeResource = normalizePlaceResourceName(placeId)
+            const detailsUrl = `https://places.googleapis.com/v1/${placeResource}`
+            
+            // DEV LOGGING: Track exact URL being called
+            if (process.env.NODE_ENV === 'development') {
+              console.log('🔎 Place Details request:', {
+                rawPlaceId: placeId,
+                placeResource,
+                detailsUrl
+              })
+            }
             
             const detailsResponse = await fetch(detailsUrl, {
               method: 'GET',
@@ -277,10 +373,11 @@ export async function POST(request: NextRequest) {
               }
             })
             
-            const place = await detailsResponse.json()
+            // 🔒 SAFE JSON PARSING: Handle empty bodies, non-JSON, and error responses
+            const place = await parseJsonResponseSafe(detailsResponse, 'Google Place Details', placeId)
 
-            if (detailsResponse.status !== 200 || place.error) {
-              console.error(`❌ Failed to get details for ${placeId}:`, place.error?.message || detailsResponse.statusText)
+            if (place.error) {
+              console.error(`❌ Failed to get details for ${placeId}:`, place.error.message)
               failed++
               
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({
@@ -290,7 +387,7 @@ export async function POST(request: NextRequest) {
                 imported,
                 skipped,
                 failed,
-                currentBusiness: place.displayName?.text || `Failed: ${placeId}`,
+                currentBusiness: `Failed: ${placeId}`,
                 status: 'failed'
               })}\n\n`))
               
@@ -314,6 +411,36 @@ export async function POST(request: NextRequest) {
                 reason: 'Permanently closed'
               })}\n\n`))
               
+              continue
+            }
+
+            // 🔒 TWO-STAGE CATEGORY FILTERING (ENFORCED - prevents bypassing via UI bugs)
+            // This is the same validation as preview, ensuring no mismatched businesses slip through
+            const categoryValidation = validateCategoryMatch(
+              {
+                name: place.displayName?.text || '',
+                types: place.types,
+                primary_type: place.types?.[0],
+              },
+              systemCategory
+            )
+
+            if (!categoryValidation.valid) {
+              console.log(`❌ CATEGORY MISMATCH: ${place.displayName?.text} - ${categoryValidation.reason}`)
+              skipped++
+
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                type: 'progress',
+                current: i + 1,
+                total,
+                imported,
+                skipped,
+                failed,
+                currentBusiness: place.displayName?.text || placeId,
+                status: 'skipped',
+                reason: `Category mismatch: ${categoryValidation.reason}`
+              })}\n\n`))
+
               continue
             }
 
@@ -362,6 +489,17 @@ export async function POST(request: NextRequest) {
               continue
             }
 
+            // Generate deterministic tagline for Discover card
+            // For restaurants, this creates cuisine-specific taglines like:
+            // "Italian dining in Bournemouth" instead of generic "Comfort food, done right"
+            const generatedTagline = generateTagline(
+              placeId,                     // businessId (stable, deterministic)
+              place.displayName?.text || '', // businessName (for specialty detection)
+              systemCategory,              // category (e.g., "restaurant")
+              city,                        // city (e.g., "bournemouth")
+              displayCategory              // displayCategory (e.g., "Italian Restaurant")
+            )
+
             // Create business profile (use systemCategory from admin form)
             const { error: insertError } = await supabase
               .from('business_profiles')
@@ -373,7 +511,7 @@ export async function POST(request: NextRequest) {
                 business_type: systemCategory, // Map system_category to business_type (legacy field)
                 business_town: city.charAt(0).toUpperCase() + city.slice(1),
                 city: city.toLowerCase(),
-                address: place.formattedAddress || '',
+                business_address: place.formattedAddress || '', // ✅ FIXED: Use correct column name
                 phone: place.nationalPhoneNumber || null,
                 website: place.websiteUri || null,
                 rating: place.rating || null,
@@ -384,6 +522,8 @@ export async function POST(request: NextRequest) {
                 longitude: place.location?.longitude || null,
                 google_place_id: placeId,
                 google_photo_name: place.photos?.[0]?.name || null,
+                business_tagline: generatedTagline, // Auto-generated tagline (owner can overwrite when claiming)
+                tagline_source: 'generated', // Mark as auto-generated
                 placeholder_variant: 0, // 🔒 CRITICAL: Always use neutral default (variant 0) on import
                 status: 'unclaimed',
                 visibility: 'discover_only',
@@ -429,7 +569,12 @@ export async function POST(request: NextRequest) {
             await new Promise(resolve => setTimeout(resolve, 100))
 
           } catch (error: any) {
-            console.error(`❌ Error processing ${placeId}:`, error)
+            // Enhanced error logging with details
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            console.error(`❌ Error processing ${placeId}:`, errorMessage)
+            if (error.stack) {
+              console.error('Stack trace:', error.stack)
+            }
             failed++
             
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({
@@ -440,7 +585,8 @@ export async function POST(request: NextRequest) {
               skipped,
               failed,
               currentBusiness: `Error: ${placeId}`,
-              status: 'failed'
+              status: 'failed',
+              errorMessage: errorMessage.substring(0, 100) // Include brief error in progress
             })}\n\n`))
           }
         }

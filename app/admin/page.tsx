@@ -55,6 +55,7 @@ export default async function AdminPage() {
     .select(`
       id,
       user_id,
+      owner_user_id,
       city,
       business_name,
       email,
@@ -62,6 +63,9 @@ export default async function AdminPage() {
       last_name,
       business_type,
       business_category,
+      system_category,
+      display_category,
+      placeholder_variant,
       business_town,
       business_address,
       business_postcode,
@@ -80,6 +84,9 @@ export default async function AdminPage() {
       additional_notes,
       admin_notes,
       status,
+      visibility,
+      auto_imported,
+      google_place_id,
       approved_at,
       profile_completion_percentage,
       business_tier,
@@ -104,7 +111,7 @@ export default async function AdminPage() {
       )
     `)
     .in('city', coveredCities) // 🎯 FRANCHISE FILTERING: Use covered cities for franchise
-    .not('email', 'is', null)
+    // ✅ REMOVED: .not('email', 'is', null) - Allow unclaimed/imported businesses to show
     .order('created_at', { ascending: false })
   
   if (businessError) {

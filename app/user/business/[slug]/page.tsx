@@ -101,6 +101,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       additional_notes,
       created_at,
       status,
+      owner_user_id,
       business_offers!left(
         id,
         offer_name,

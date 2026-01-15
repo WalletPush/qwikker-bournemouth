@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
-import { getCategoryVariants, PLACEHOLDER_LIBRARY } from '@/lib/constants/category-placeholders'
-import type { SystemCategory } from '@/lib/constants/system-categories'
 
 /**
  * Admin-only API route to update placeholder_variant for a business
+ * 
+ * Simple system: variants 0, 1, 2 (corresponding to 00.webp, 01.webp, 02.webp)
  * 
  * Safety rules:
  * - Only admins can access
  * - Only unclaimed businesses can have placeholder overrides
  * - Franchise-scoped (admin can only modify businesses in their city)
- * - Variant must exist for the business's system_category
+ * - Variant must be 0, 1, or 2
  */
 export async function POST(req: Request) {
   try {
@@ -25,13 +25,21 @@ export async function POST(req: Request) {
       )
     }
 
+    // Validate variant is 0, 1, or 2
+    if (![0, 1, 2].includes(placeholderVariant)) {
+      return NextResponse.json(
+        { error: 'placeholderVariant must be 0, 1, or 2' },
+        { status: 400 }
+      )
+    }
+
     const supabase = createServiceRoleClient()
     const franchise = getFranchiseCityFromRequest(req)
 
     // 1) Load business (ensure franchise scope)
     const { data: business, error: bErr } = await supabase
       .from('business_profiles')
-      .select('id, franchise_id, status, system_category, business_name')
+      .select('id, franchise_id, status, business_name')
       .eq('id', businessId)
       .single()
 
@@ -52,30 +60,6 @@ export async function POST(req: Request) {
         { error: 'Only unclaimed listings can use placeholder overrides. Claimed businesses should upload real images.' },
         { status: 400 }
       )
-    }
-
-    const systemCategory = (business.system_category ?? 'other') as SystemCategory
-
-    // 2) Validate variant exists for category
-    const categoryData = PLACEHOLDER_LIBRARY[systemCategory]
-    const selectedVariant = categoryData?.variants.find(v => v.id === placeholderVariant)
-    
-    if (!selectedVariant || !categoryData) {
-      return NextResponse.json(
-        { error: `Invalid placeholderVariant (${placeholderVariant}) for category ${systemCategory}` },
-        { status: 400 }
-      )
-    }
-
-    // Unclaimed range enforcement: Unclaimed businesses can only use variants 0 to unclaimedMax
-    if (business.status === 'unclaimed') {
-      const unclaimedMax = categoryData.unclaimedMaxVariantId
-      if (placeholderVariant < 0 || placeholderVariant > unclaimedMax) {
-        return NextResponse.json(
-          { error: `For unclaimed listings, variant must be between 0 and ${unclaimedMax}. Variant ${placeholderVariant} is too specific and could misrepresent the business.` },
-          { status: 400 }
-        )
-      }
     }
 
     // 3) Update business

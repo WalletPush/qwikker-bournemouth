@@ -1,34 +1,26 @@
 import Image from 'next/image'
-import { getPlaceholder } from '@/lib/constants/category-placeholders'
+import { getPlaceholderUrl, getFallbackPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 
 interface BusinessCardImageProps {
   businessName: string
   businessId: string
-  googlePlaceId: string
-  imageSource: 'placeholder' | 'cloudinary'
-  systemCategory: SystemCategory // ✅ Now properly typed as SystemCategory enum
-  placeholderVariant?: number | null
+  systemCategory: SystemCategory
   heroImage?: string | null
-  showUnclaimedBadge?: boolean // NEW: Control UNCLAIMED badge visibility
-  businessStatus?: string // NEW: For runtime safety assertion
+  showUnclaimedBadge?: boolean
   className?: string
 }
 
 export function BusinessCardImage({
   businessName,
   businessId,
-  googlePlaceId,
-  imageSource,
-  systemCategory, // UPDATED: Now uses system_category
-  placeholderVariant,
+  systemCategory,
   heroImage,
-  showUnclaimedBadge = true, // Default to true for backward compatibility
-  businessStatus, // NEW: For runtime safety assertion
+  showUnclaimedBadge = true,
   className = ''
 }: BusinessCardImageProps) {
   // Claimed businesses with uploaded photos: Use Cloudinary (Next.js Image for optimization)
-  if (imageSource === 'cloudinary' && heroImage) {
+  if (heroImage) {
     return (
       <div className={`relative ${className}`}>
         <Image
@@ -44,67 +36,26 @@ export function BusinessCardImage({
     )
   }
 
-  // Unclaimed businesses: Use deterministic placeholder with regular <img> (simpler, faster)
-  // Hash-based auto-selection unless admin overrides with manual variant
-  // Safe fallback seed: google_place_id ?? id ?? business_name
-  const safeId = googlePlaceId || businessId || businessName
-  const placeholder = getPlaceholder(systemCategory, safeId, placeholderVariant, businessStatus)
+  // Unclaimed businesses: Use deterministic placeholder from local /public/placeholders/
+  const placeholderUrl = getPlaceholderUrl(systemCategory, businessId)
   
   return (
     <div className={`relative ${className} overflow-hidden`}>
       {/* Abstract detail shot - empty alt since this is decorative */}
       <img
-        src={placeholder.imagePath}
+        src={placeholderUrl}
         alt=""
         className="absolute inset-0 w-full h-full object-cover"
         loading="lazy"
         onError={(e) => {
-          // Fallback: If placeholder image 404s (not generated yet), show solid gradient
+          // Fallback to default placeholder if category-specific one doesn't exist
           const target = e.target as HTMLImageElement
-          target.style.display = 'none'
-          const parent = target.parentElement
-          if (parent) {
-            parent.style.background = `linear-gradient(135deg, ${
-              systemCategory === 'restaurant' ? '#f97316, #ea580c' :
-              systemCategory === 'cafe' ? '#8b5cf6, #7c3aed' :
-              systemCategory === 'bar' ? '#ec4899, #db2777' :
-              systemCategory === 'pub' ? '#dc2626, #b91c1c' :
-              systemCategory === 'dessert' ? '#f43f5e, #e11d48' :
-              systemCategory === 'takeaway' ? '#f59e0b, #d97706' :
-              systemCategory === 'fast_food' ? '#f59e0b, #d97706' :
-              systemCategory === 'bakery' ? '#fbbf24, #f59e0b' :
-              systemCategory === 'barber' ? '#06b6d4, #0891b2' :
-              systemCategory === 'salon' ? '#ec4899, #db2777' :
-              systemCategory === 'tattoo' ? '#6366f1, #4f46e5' :
-              systemCategory === 'fitness' ? '#10b981, #059669' :
-              systemCategory === 'wellness' ? '#8b5cf6, #7c3aed' :
-              systemCategory === 'retail' ? '#f97316, #ea580c' :
-              systemCategory === 'hotel' ? '#3b82f6, #2563eb' :
-              systemCategory === 'venue' ? '#a855f7, #9333ea' :
-              systemCategory === 'entertainment' ? '#ec4899, #db2777' :
-              systemCategory === 'professional' ? '#0ea5e9, #0284c7' :
-              systemCategory === 'sports' ? '#22c55e, #16a34a' :
-              systemCategory === 'other' ? '#64748b, #475569' :
-              '#64748b, #475569' // Default fallback
-            })`
-          }
+          target.src = getFallbackPlaceholderUrl()
         }}
       />
       
       {/* Dark overlay gradient to ensure text is readable */}
-      <div className={`absolute inset-0 bg-gradient-to-t ${placeholder.overlayGradient}`} />
-
-      {/* Top-left: Category badge with icon - hide for "other" category */}
-      {placeholder.label !== 'Other' && (
-        <div className="absolute top-3 left-3 z-10">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/20">
-            <span className="text-base">{placeholder.icon}</span>
-            <span className={`text-sm font-medium ${placeholder.accentColor}`}>
-              {placeholder.label}
-            </span>
-          </div>
-        </div>
-      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/40 to-transparent" />
 
       {/* Bottom-right: Clear messaging about photos - subtle and calm */}
       {showUnclaimedBadge && (

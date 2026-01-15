@@ -6,6 +6,7 @@ import { BusinessCardImage } from '@/components/ui/business-card-image'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 import { formatPrice } from '@/lib/utils/price-formatter'
 import type { SystemCategory } from '@/lib/constants/system-categories'
+import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
 
 interface BusinessCardProps {
   business: any
@@ -26,45 +27,47 @@ export function BusinessCard({
     <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden ${className}`}>
       {/* Business Image - Conditional logic based on status + images */}
       <div className="relative h-48 overflow-hidden">
-        {business.status === 'unclaimed' ? (
-          // Case 1: Unclaimed → Placeholder WITH "UNCLAIMED" badge
-          <BusinessCardImage
-            businessName={business.name}
-            businessId={business.id}
-            googlePlaceId={business.google_place_id ?? business.id}
-            imageSource="placeholder"
-            systemCategory={(business.system_category ?? 'other') as SystemCategory}
-            placeholderVariant={business.placeholder_variant ?? null}
-            showUnclaimedBadge={true}
-            businessStatus={business.status}
-            className="h-full w-full"
-          />
-        ) : business.images && business.images.length > 0 ? (
-          // Case 2: Claimed + has images → ImageCarousel
-          <>
-            <ImageCarousel
-              images={business.images}
-              alt={business.name}
-              className="w-full h-full"
-              showArrows={true}
-              showDots={false}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-          </>
-        ) : (
-          // Case 3: Claimed + NO images → Placeholder WITHOUT "UNCLAIMED" badge (shows "No Photos Yet")
-          <BusinessCardImage
-            businessName={business.name}
-            businessId={business.id}
-            googlePlaceId={business.google_place_id ?? business.id ?? business.slug ?? business.name}
-            imageSource="placeholder"
-            systemCategory={(business.system_category ?? 'other') as SystemCategory}
-            placeholderVariant={business.placeholder_variant ?? null}
-            showUnclaimedBadge={false}
-            businessStatus={business.status}
-            className="h-full w-full"
-          />
-        )}
+        {(() => {
+          const systemCategory = resolveSystemCategory(business)
+
+          if (business.status === 'unclaimed') {
+            // Case 1: Unclaimed → Placeholder WITH "UNCLAIMED" badge
+            return (
+              <BusinessCardImage
+                businessName={business.name}
+                businessId={business.id}
+                systemCategory={systemCategory}
+                showUnclaimedBadge={true}
+                className="h-full w-full"
+              />
+            )
+          } else if (business.images && business.images.length > 0) {
+            // Case 2: Claimed + has images → ImageCarousel
+            return (
+              <>
+                <ImageCarousel
+                  images={business.images}
+                  alt={business.name}
+                  className="w-full h-full"
+                  showArrows={true}
+                  showDots={false}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+              </>
+            )
+          } else {
+            // Case 3: Claimed + NO images → Placeholder WITHOUT "UNCLAIMED" badge
+            return (
+              <BusinessCardImage
+                businessName={business.name}
+                businessId={business.id}
+                systemCategory={systemCategory}
+                showUnclaimedBadge={false}
+                className="h-full w-full"
+              />
+            )
+          }
+        })()}
         
         {/* Hero Badge - Show for ALL claimed businesses (regardless of images) */}
         {business.status !== 'unclaimed' && (

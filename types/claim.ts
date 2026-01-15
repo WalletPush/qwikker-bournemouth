@@ -10,6 +10,8 @@ export interface ClaimBusiness {
   business_address?: string
   category?: string
   business_category?: string
+  system_category?: string  // ✅ CRITICAL: For placeholder images (e.g., 'restaurant', 'cafe')
+  display_category?: string // ✅ Display label (e.g., 'Italian Restaurant')
   type?: string
   business_type?: string
   phone?: string

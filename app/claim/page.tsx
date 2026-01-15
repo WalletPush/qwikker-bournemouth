@@ -11,6 +11,8 @@ import { PendingApproval } from '@/components/claim/pending-approval'
 import { ConfirmBusinessDetails } from '@/components/claim/confirm-business-details'
 import type { ClaimBusiness } from '@/types/claim'
 import { getDisplayName, getDisplayAddress, getDisplayCategory, getDisplayType, getDisplayDescription, getDisplayReviewCount } from '@/types/claim'
+import { getPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
+import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
 
 // Mock businesses for testing (dev/preview only)
 const MOCK_BUSINESSES: ClaimBusiness[] = [
@@ -97,6 +99,46 @@ export default function ClaimPage() {
     }
     
     fetchCityAndCapabilities()
+  }, [])
+
+  // Handle pre-selection from URL params (e.g. /claim?business_id=xyz)
+  // SECURITY: Uses server-side validation endpoint that checks city + unclaimed status
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const businessId = params.get('business_id')
+      
+      if (businessId && !selectedBusiness) {
+        const validateAndPreselect = async () => {
+          try {
+            const response = await fetch(`/api/claim/preselect?business_id=${encodeURIComponent(businessId)}`)
+            
+            if (response.ok) {
+              const { business } = await response.json()
+              if (business) {
+                // Server confirmed this business is eligible
+                setSelectedBusiness({
+                  id: business.id,
+                  name: business.name,
+                  business_name: business.name,
+                  address: business.address,
+                  business_address: business.address,
+                  category: business.category,
+                  business_category: business.category,
+                  status: 'unclaimed'
+                })
+                setStep('confirm')
+              }
+            }
+            // If 404 or non-ok response: silently ignore and show normal search
+          } catch (error) {
+            // Network error: silently ignore and show normal search
+            console.error('Preselect validation failed:', error)
+          }
+        }
+        validateAndPreselect()
+      }
+    }
   }, [])
 
   // Debounce search (auto-search after 250ms of no typing)
@@ -372,13 +414,23 @@ export default function ClaimPage() {
                         >
                           <CardContent className="p-4">
                             <div className="flex gap-4">
-                              {business.image && (
-                                <img 
-                                  src={business.image} 
-                                  alt={displayName}
-                                  className="w-20 h-20 rounded-lg object-cover"
-                                />
-                              )}
+                              {/* ✅ Always show image - use placeholder for unclaimed businesses */}
+                              <img 
+                                src={
+                                  business.image || 
+                                  getPlaceholderUrl(
+                                    resolveSystemCategory(business),
+                                    business.id
+                                  )
+                                }
+                                alt={displayName}
+                                className="w-20 h-20 rounded-lg object-cover"
+                                onError={(e) => {
+                                  // Fallback to default placeholder if image fails to load
+                                  const target = e.target as HTMLImageElement
+                                  target.src = getPlaceholderUrl('other', business.id)
+                                }}
+                              />
                               <div className="flex-1">
                                 <h3 className="font-semibold text-lg mb-1">{displayName}</h3>
                                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -468,9 +520,19 @@ export default function ClaimPage() {
                 {/* Business Preview */}
                 <div className="flex gap-4">
                   <img 
-                    src={selectedBusiness.image} 
-                    alt={selectedBusiness.name}
+                    src={
+                      selectedBusiness.image || 
+                      getPlaceholderUrl(
+                        resolveSystemCategory(selectedBusiness),
+                        selectedBusiness.id
+                      )
+                    }
+                    alt={selectedBusiness.name || selectedBusiness.business_name || ''}
                     className="w-24 h-24 rounded-lg object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.src = getPlaceholderUrl('other', selectedBusiness.id)
+                    }}
                   />
                   <div className="flex-1">
                     <h3 className="font-bold text-2xl mb-2">{selectedBusiness.name}</h3>

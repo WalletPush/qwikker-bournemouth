@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { getCategoryVariants, getPlaceholder } from '@/lib/constants/category-placeholders'
+import { getPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,38 +12,35 @@ type Props = {
   businessName: string
   status: string
   systemCategory: SystemCategory
-  googlePlaceId: string
   placeholderVariant: number | null
-  unclaimedMaxVariantId: number // Pass from category data
   onSave: (variant: number) => Promise<void>
 }
+
+// Simple variants: 00, 01, 02
+const VARIANTS = [
+  { id: 0, label: 'Variant 00' },
+  { id: 1, label: 'Variant 01' },
+  { id: 2, label: 'Variant 02' },
+]
 
 export function PlaceholderSelector({
   businessId,
   businessName,
   status,
   systemCategory,
-  googlePlaceId,
   placeholderVariant,
-  unclaimedMaxVariantId,
   onSave,
 }: Props) {
   const [isSaving, setIsSaving] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState(placeholderVariant ?? 0)
 
-  const variants = useMemo(() => getCategoryVariants(systemCategory), [systemCategory])
-
-  // Filter to neutral variants only for unclaimed businesses
   const isUnclaimed = status === 'unclaimed'
-  const availableVariants = useMemo(() => {
-    if (!isUnclaimed) return variants
-    return variants.filter(v => v.id <= unclaimedMaxVariantId)
-  }, [variants, isUnclaimed, unclaimedMaxVariantId])
 
-  // Preview what will show
-  const preview = useMemo(() => {
-    return getPlaceholder(systemCategory, googlePlaceId || businessId, selectedVariant, status)
-  }, [systemCategory, googlePlaceId, businessId, selectedVariant, status])
+  // Preview URL
+  const previewUrl = useMemo(() => {
+    const variantStr = selectedVariant.toString().padStart(2, '0')
+    return `/placeholders/${systemCategory}/${variantStr}.webp`
+  }, [systemCategory, selectedVariant])
 
   async function handleSave() {
     try {
@@ -88,17 +85,17 @@ export function PlaceholderSelector({
       {/* Preview thumbnail */}
       <div className="flex items-center gap-3">
         <img
-          src={preview.imagePath}
+          src={previewUrl}
           alt={`${businessName} placeholder preview`}
           className="h-16 w-24 rounded-md object-cover border border-slate-700"
         />
         <div className="text-xs">
-          <div className="text-slate-200 font-medium">{preview.label}</div>
+          <div className="text-slate-200 font-medium">{systemCategory}</div>
           <div className="text-slate-400">
-            Variant {selectedVariant} • {preview.selectedVariant?.description ?? 'Unknown'}
+            Variant {selectedVariant.toString().padStart(2, '0')}
           </div>
           <Badge variant="outline" className="mt-1 text-[10px]">
-            {selectedVariant === 0 ? 'Default' : `Custom ${selectedVariant}/${unclaimedMaxVariantId}`}
+            {selectedVariant === 0 ? 'Default' : `Variant ${selectedVariant}`}
           </Badge>
         </div>
       </div>
@@ -112,14 +109,14 @@ export function PlaceholderSelector({
           disabled={isSaving}
           onChange={(e) => setSelectedVariant(parseInt(e.target.value, 10))}
         >
-          {availableVariants.map((v) => (
+          {VARIANTS.map((v) => (
             <option key={v.id} value={v.id}>
-              {v.id === 0 ? '⭐ ' : ''}Variant {v.id} — {v.description}
+              {v.id === 0 ? '⭐ ' : ''}{v.label}
             </option>
           ))}
         </select>
         <p className="text-xs text-slate-400">
-          Showing variants 0-{unclaimedMaxVariantId} (generic images only for unclaimed listings)
+          3 variants available (00, 01, 02)
         </p>
       </div>
 
