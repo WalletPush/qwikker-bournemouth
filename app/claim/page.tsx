@@ -406,6 +406,11 @@ export default function ClaimPage() {
                       const displayCategory = getDisplayCategory(business)
                       const displayReviewCount = getDisplayReviewCount(business)
                       
+                      // Resolve category and placeholder URL
+                      const resolvedCategory = resolveSystemCategory(business) || (business as any).system_category || (business as any).systemCategory || 'other'
+                      const placeholderVariant = (business as any).placeholder_variant ?? undefined
+                      const imgSrc = business.image || getPlaceholderUrl(resolvedCategory, business.id, placeholderVariant)
+                      
                       return (
                         <Card 
                           key={business.id}
@@ -416,19 +421,15 @@ export default function ClaimPage() {
                             <div className="flex gap-4">
                               {/* ✅ Always show image - use placeholder for unclaimed businesses */}
                               <img 
-                                src={
-                                  business.image || 
-                                  getPlaceholderUrl(
-                                    resolveSystemCategory(business),
-                                    business.id
-                                  )
-                                }
+                                src={imgSrc}
                                 alt={displayName}
                                 className="w-20 h-20 rounded-lg object-cover"
                                 onError={(e) => {
                                   // Fallback to default placeholder if image fails to load
                                   const target = e.target as HTMLImageElement
-                                  target.src = getPlaceholderUrl('other', business.id)
+                                  if (target.src !== '/placeholders/default/00.webp') {
+                                    target.src = '/placeholders/default/00.webp'
+                                  }
                                 }}
                               />
                               <div className="flex-1">

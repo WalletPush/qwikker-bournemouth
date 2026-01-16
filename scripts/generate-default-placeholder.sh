@@ -32,4 +32,3 @@ else
     echo "❌ Failed to create placeholder"
     exit 1
 fi
-

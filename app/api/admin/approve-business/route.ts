@@ -1,9 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+import { createAdminClient } from '@/lib/supabase/admin'
+import { canApprove } from '@/lib/utils/verification-utils'
+
 export async function POST(request: NextRequest) {
   try {
-    const { businessId, action, adminEmail } = await request.json()
+    const { businessId, action, adminEmail, manualOverride } = await request.json()
     
     if (!businessId || !action || !adminEmail) {
       return NextResponse.json(
@@ -13,6 +16,7 @@ export async function POST(request: NextRequest) {
     }
     
     const supabase = await createClient()
+    const supabaseAdmin = createAdminClient()
     
     // Verify admin authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -39,35 +43,105 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Update business status
-    const newStatus = action === 'approve' ? 'approved' : 'rejected'
-    
-    const { data, error } = await supabase
-      .from('business_profiles')
-      .update({
-        status: newStatus,
+    // If approving, fetch profile and enforce verification gates
+    if (action === 'approve') {
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('business_profiles')
+        .select('id, business_name, verification_method, google_place_id, rating, manual_override')
+        .eq('id', businessId)
+        .single()
+      
+      if (profileError || !profile) {
+        return NextResponse.json(
+          { error: 'Business profile not found' },
+          { status: 404 }
+        )
+      }
+      
+      // Check if approval is allowed
+      const approvalCheck = canApprove(profile, manualOverride === true)
+      
+      if (!approvalCheck.canApprove) {
+        console.warn(`❌ Approval blocked for ${profile.business_name}: ${approvalCheck.reason}`)
+        return NextResponse.json(
+          { error: approvalCheck.reason },
+          { status: 400 }
+        )
+      }
+      
+      // Build update data
+      const updateData: any = {
+        status: 'approved',
         approved_by: user.id,
         approved_at: new Date().toISOString()
+      }
+      
+      // If manual listing and manual override requested, set the fields
+      if (profile.verification_method === 'manual' && manualOverride === true) {
+        updateData.manual_override = true
+        updateData.manual_override_at = new Date().toISOString()
+        updateData.manual_override_by = user.id
+      }
+      
+      const { data, error } = await supabaseAdmin
+        .from('business_profiles')
+        .update(updateData)
+        .eq('id', businessId)
+        .select()
+        .single()
+      
+      if (error) {
+        console.error('Database error:', error)
+        return NextResponse.json(
+          { error: 'Failed to update business status' },
+          { status: 500 }
+        )
+      }
+      
+      console.log(`✅ Business approved: ${profile.business_name}`, {
+        verification_method: profile.verification_method,
+        manual_override: updateData.manual_override || false
       })
-      .eq('id', businessId)
-      .select()
-      .single()
-    
-    if (error) {
-      console.error('Database error:', error)
-      return NextResponse.json(
-        { error: 'Failed to update business status' },
-        { status: 500 }
-      )
+      
+      return NextResponse.json({
+        success: true,
+        business: data,
+        message: `Business approved successfully`
+      })
     }
     
-    // TODO: Send email notification to business owner
+    // Reject action
+    if (action === 'reject') {
+      const { data, error } = await supabaseAdmin
+        .from('business_profiles')
+        .update({
+          status: 'rejected',
+          approved_by: user.id,
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', businessId)
+        .select()
+        .single()
+      
+      if (error) {
+        console.error('Database error:', error)
+        return NextResponse.json(
+          { error: 'Failed to update business status' },
+          { status: 500 }
+        )
+      }
+      
+      return NextResponse.json({
+        success: true,
+        business: data,
+        message: `Business rejected successfully`
+      })
+    }
     
-    return NextResponse.json({
-      success: true,
-      business: data,
-      message: `Business ${action}d successfully`
-    })
+    return NextResponse.json(
+      { error: 'Invalid action' },
+      { status: 400 }
+    )
     
   } catch (error) {
     console.error('API error:', error)

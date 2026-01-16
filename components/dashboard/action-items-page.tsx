@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { submitBusinessForReview } from '@/lib/actions/business-actions'
 import { getPendingChanges } from '@/lib/actions/pending-changes'
+import { switchToManualListing } from '@/lib/actions/verification-actions'
+import { verificationSatisfied } from '@/lib/utils/verification-utils'
 import { useState, useEffect } from 'react'
 import { ElegantModal } from '@/components/ui/elegant-modal'
 
@@ -18,6 +20,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   const [loadingPendingChanges, setLoadingPendingChanges] = useState(false)
   const [showCompletionModal, setShowCompletionModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [isSwitchingToManual, setIsSwitchingToManual] = useState(false)
 
   // Fetch pending changes on component mount
   useEffect(() => {
@@ -151,6 +154,22 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
     })
   }
 
+  // VERIFICATION REQUIREMENT: Google mode only
+  if (profile?.verification_method === 'google' && !profile?.google_place_id) {
+    requiredTodos.push({
+      title: 'Verify your business on Google',
+      href: '/dashboard/profile#google-verification',
+      priority: 'REQUIRED',
+      description: 'Required to submit for review. Alternatively, you can switch to Manual Listing.',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      ),
+      isVerification: true
+    })
+  }
+
   // Menu upload is now RECOMMENDED (moved to optionalTodos section below)
 
   // Featured services/items are recommended - helps with customer attraction
@@ -268,14 +287,16 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
 
   // 🚀 SPECIAL ACTION ITEM: If profile is complete but not yet submitted, add submission as an action item
   const submissionTodos = []
-  const isReadyToSubmit = requiredTodos.length === 0
+  const isReadyToSubmit = requiredTodos.length === 0 && verificationSatisfied(profile)
   
   if (isReadyToSubmit && profile?.status === 'incomplete') {
     submissionTodos.push({
       title: 'Submit Your Listing for Review',
       href: '#submit-listing',
       priority: 'ACTION REQUIRED',
-      description: 'Your profile is complete! Submit it to our team for review and go live.',
+      description: profile?.verification_method === 'manual' 
+        ? 'Your profile is complete! Manual listings require admin override to go live.'
+        : 'Your profile is complete! Submit it to our team for review and go live.',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -674,6 +695,43 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                             {item.title}
                           </h4>
                           <p className="text-sm text-gray-400 mb-3">{item.description}</p>
+                          {item.isVerification && (
+                            <Button 
+                              onClick={async () => {
+                                if (!profile?.user_id || isSwitchingToManual) return
+                                setIsSwitchingToManual(true)
+                                try {
+                                  const result = await switchToManualListing(profile.user_id)
+                                  if (result.success) {
+                                    alert(result.message)
+                                    window.location.reload()
+                                  } else {
+                                    alert(result.error || 'Failed to switch to manual listing')
+                                  }
+                                } catch (error) {
+                                  alert('Error switching to manual listing')
+                                } finally {
+                                  setIsSwitchingToManual(false)
+                                }
+                              }}
+                              disabled={isSwitchingToManual}
+                              variant="outline"
+                              size="sm"
+                              className="border-amber-500 text-amber-400 hover:bg-amber-500/10 mt-2"
+                            >
+                              {isSwitchingToManual ? (
+                                <span className="flex items-center gap-2">
+                                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Switching...
+                                </span>
+                              ) : (
+                                '↔️ Switch to Manual Listing'
+                              )}
+                            </Button>
+                          )}
                         </div>
                         {!item.isSubmission && (
                           <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white flex-shrink-0">

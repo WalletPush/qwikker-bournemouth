@@ -130,4 +130,3 @@ The fix was purely TypeScript-related. No changes to:
 - ❌ UI components (already conditional on the field)
 
 Just needed to tell TypeScript the field exists!
-

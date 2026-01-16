@@ -301,4 +301,3 @@ onError={(e) => {
 2. Claim page → Search → Should see placeholder images (no broken icons) ✅
 
 **The placeholder system now works consistently across the entire app! 🎉**
-

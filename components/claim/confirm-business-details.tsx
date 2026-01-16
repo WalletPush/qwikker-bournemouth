@@ -135,6 +135,11 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
     if (!category.trim()) newErrors.category = 'Category is required'
     if (!type.trim()) newErrors.type = 'Business type is required'
     
+    // ✅ CRITICAL: Cover image is REQUIRED (logo is optional)
+    if (!heroImageFile) {
+      newErrors.heroImage = 'Cover image is required - this will be your business\'s main photo on QWIKKER'
+    }
+    
     // Optional but validate format if provided
     if (phone && !/^[\d\s\-\+\(\)]+$/.test(phone)) {
       newErrors.phone = 'Invalid phone number format'
@@ -216,7 +221,7 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
             
             {/* Logo Upload */}
             <div id="logo" className="space-y-2">
-              <Label htmlFor="logo-input">Business Logo *</Label>
+              <Label htmlFor="logo-input">Business Logo (Optional)</Label>
               <div className="flex items-start gap-4">
                 {logoPreview ? (
                   <div className="relative w-32 h-32 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden">
@@ -245,10 +250,10 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
                 )}
                 <div className="flex-1 space-y-1">
                   <p className="text-sm text-muted-foreground">
-                    Upload a square logo (recommended: 400x400px). Max size: 5MB.
+                    <strong>Optional:</strong> Upload a square logo (recommended: 400x400px). Max size: 5MB.
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Accepted formats: JPG, PNG, WebP
+                    Logos are not displayed on discover cards. Accepted formats: JPG, PNG, WebP
                   </p>
                   {errors.logo && (
                     <p className="text-sm text-destructive flex items-center gap-1">
@@ -270,7 +275,10 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
 
             {/* Hero Image Upload */}
             <div id="heroImage" className="space-y-2">
-              <Label htmlFor="heroImage-input">Cover Image *</Label>
+              <Label htmlFor="heroImage-input" className="flex items-center gap-2">
+                Cover Image *
+                <span className="text-xs font-normal text-muted-foreground">(Required)</span>
+              </Label>
               <div className="flex items-start gap-4">
                 {heroImagePreview ? (
                   <div className="relative w-full h-48 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden">
@@ -291,7 +299,11 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
                 ) : (
                   <div 
                     onClick={() => heroImageInputRef.current?.click()}
-                    className="w-full h-48 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 transition-colors"
+                    className={`w-full h-48 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                      errors.heroImage 
+                        ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20' 
+                        : 'border-slate-300 dark:border-slate-700 hover:border-blue-500'
+                    }`}
                   >
                     <Upload className="w-12 h-12 text-slate-400 mb-2" />
                     <p className="text-sm text-slate-500">Upload Cover Image</p>
@@ -301,7 +313,7 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
               </div>
               {!heroImagePreview && (
                 <p className="text-sm text-muted-foreground">
-                  Upload a wide cover image to showcase your business. Max size: 10MB.
+                  <strong>Required:</strong> Upload a high-quality cover image to showcase your business. This will be your main photo on QWIKKER. Max size: 10MB.
                 </p>
               )}
               {errors.heroImage && (

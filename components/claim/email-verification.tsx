@@ -198,13 +198,6 @@ export function EmailVerification({ email, onVerified, onResend, onBack }: Email
               <li>• The code expires after 15 minutes</li>
             </ul>
           </div>
-
-          {/* For Demo/Testing */}
-          <div className="border-t pt-4">
-            <p className="text-xs text-center text-muted-foreground">
-              🧪 <strong>Demo Mode:</strong> Use code <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">123456</code> to test
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>

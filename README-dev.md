@@ -138,4 +138,3 @@ Qwikker uses subdomain-based multi-tenancy:
 **Local dev:** Uses `localhost:3000` (defaults to Bournemouth for testing)
 
 **Production:** Each city gets its own subdomain with isolated data.
-

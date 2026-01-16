@@ -133,4 +133,3 @@ LIMIT 10;
 Once issue is identified and fixed:
 1. Remove or comment out the dev console.logs
 2. Test in production mode to ensure no logging overhead
-

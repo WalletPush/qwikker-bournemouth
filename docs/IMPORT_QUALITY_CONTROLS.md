@@ -438,4 +438,3 @@ WHERE auto_imported = true AND tagline_source IS NULL;
 **Status:** Production-ready  
 **Last Updated:** 2026-01-14  
 **Author:** QWIKKER HQ
-

@@ -137,4 +137,3 @@ To quickly test if it's working:
 8. Page refreshes and new image should appear
 
 If you don't see it, the business might not be marked as "unclaimed" in the database.
-

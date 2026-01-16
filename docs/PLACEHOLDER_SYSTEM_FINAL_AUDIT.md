@@ -411,4 +411,3 @@ If placeholder images still don't match categories after restart:
 **Audit completed:** 2026-01-14  
 **Status:** ✅ Code changes complete, awaiting user verification  
 **Blocker:** Default placeholder image needs replacement (neutral/generic)
-

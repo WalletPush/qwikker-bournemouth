@@ -12,6 +12,7 @@ import Link from 'next/link'
 import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 import { formatPrice } from '@/lib/utils/price-formatter'
+import { getHeroLine } from '@/lib/utils/business-labels'
 
 interface UserBusinessDetailPageProps {
   slug: string
@@ -187,29 +188,7 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
     { id: 'reviews', label: 'Reviews', count: business.reviewCount || 0 },
   ]
 
-  const mockReviews = [
-    {
-      id: '1',
-      author: 'Sarah M.',
-      rating: 5,
-      date: '2 days ago',
-      comment: 'Absolutely incredible! The atmosphere is perfect and the staff are so friendly. Will definitely be back!'
-    },
-    {
-      id: '2', 
-      author: 'James K.',
-      rating: 5,
-      date: '1 week ago',
-      comment: 'Hidden gem! The quality is outstanding and the prices are very reasonable. Highly recommend!'
-    },
-    {
-      id: '3',
-      author: 'Emma L.',
-      rating: 4,
-      date: '2 weeks ago',
-      comment: 'Great experience overall. Love the ambiance and the service was excellent.'
-    }
-  ]
+  // Reviews are from Google Places - link to Google Maps to view them
 
   return (
     <div className="space-y-6">
@@ -318,7 +297,17 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
         {/* Business Info Overlay */}
         <div className="absolute bottom-4 left-4 right-4">
           <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-2">{business.name}</h1>
-          <p className="text-xl text-[#00d083] mb-3">{business.tagline}</p>
+          <p className="text-xl text-[#00d083] mb-3">
+            {getHeroLine({
+              business_tagline: business.tagline || business.business_tagline,
+              business_town: business.town || business.business_town,
+              city: business.city,
+              google_types: business.google_types,
+              google_primary_type: business.google_primary_type,
+              display_category: business.display_category,
+              system_category: business.system_category
+            })}
+          </p>
           
           <div className="flex items-center gap-4 mb-4">
             <div className="flex items-center gap-1">
@@ -821,31 +810,36 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
 
         {activeTab === 'reviews' && (
           <div className="space-y-4">
-            {mockReviews.map((review) => (
-              <Card key={review.id} className="bg-slate-800/50 border-slate-700">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="text-slate-100 font-semibold">{review.author}</h4>
-                      <p className="text-slate-400 text-sm">{review.date}</p>
-                    </div>
-                    <div className="flex">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <svg
-                          key={star}
-                          className={`w-4 h-4 ${star <= review.rating ? 'text-yellow-400' : 'text-gray-600'}`}
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-8 text-center">
+                <div className="mb-4">
+                  <svg className="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                  </svg>
+                  <h3 className="text-xl font-semibold text-slate-100 mb-2">
+                    {business.reviewCount ? `${business.reviewCount} Reviews` : 'Customer Reviews'}
+                  </h3>
+                  <p className="text-slate-400 mb-6">
+                    See what customers are saying on Google Maps
+                  </p>
+                  {business.google_place_id && (
+                    <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+                      <a 
+                        href={`https://www.google.com/maps/search/?api=1&query_place_id=${business.google_place_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2"
+                      >
+                        View Reviews on Google
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-slate-300 leading-relaxed">{review.comment}</p>
-                </CardContent>
-              </Card>
-            ))}
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>

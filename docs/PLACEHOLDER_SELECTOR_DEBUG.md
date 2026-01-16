@@ -199,4 +199,3 @@ AND city = 'bournemouth';
 - Use schema generators or code-first ORMs
 - Add explicit select lists for critical fields
 - Log missing required fields in development mode
-

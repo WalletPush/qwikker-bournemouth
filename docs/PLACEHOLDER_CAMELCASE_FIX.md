@@ -87,4 +87,3 @@ UPDATE business_profiles
 SET system_category = 'barber' 
 WHERE business_name = 'Urban Cuts Barbers';
 ```
-

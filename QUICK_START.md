@@ -34,4 +34,3 @@ pkill -f "next dev" && pnpm dev
 ---
 
 **Full guide:** `PLACEHOLDER_FIX_VERIFICATION.md`
-

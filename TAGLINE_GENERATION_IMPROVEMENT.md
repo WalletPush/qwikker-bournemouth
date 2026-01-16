@@ -264,4 +264,3 @@ El Murrino: "Italian dining in Bournemouth" ✅
 ---
 
 **Try importing a restaurant now - taglines should be cuisine-specific! 🎉**
-

@@ -683,9 +683,9 @@ export async function submitBusinessForReview(userId: string) {
     console.log('🔧 SERVER ACTION: Using admin client to bypass RLS')
     
     // First check if the profile exists and what fields it has
-    const { data: existingProfile, error: checkError } = await supabaseAdmin
+    const { data: existingProfile, error: checkError} = await supabaseAdmin
       .from('business_profiles')
-      .select('user_id, status, business_name, business_hours, business_hours_structured, business_description, business_tagline, logo, business_images, business_address, business_town, display_category, system_category')
+      .select('user_id, status, business_name, business_hours, business_hours_structured, business_description, business_tagline, logo, business_images, business_address, business_town, display_category, system_category, verification_method, google_place_id')
       .eq('user_id', userId)
       .single()
     
@@ -713,6 +713,15 @@ export async function submitBusinessForReview(userId: string) {
     if (!existingProfile?.business_images || (Array.isArray(existingProfile.business_images) && existingProfile.business_images.length === 0)) missingFields.push('business_images')
     
     console.log('🔧 SERVER ACTION: Missing required fields:', missingFields)
+    
+    // VERIFICATION GATE: check if verification satisfied
+    if (existingProfile?.verification_method === 'google' && !existingProfile?.google_place_id) {
+      console.error('🔧 SERVER ACTION: Google verification required but google_place_id missing')
+      return { 
+        success: false, 
+        error: 'Verify your business on Google or switch to Manual Listing before submitting for review.' 
+      }
+    }
     
     // Update status to pending_review and fix empty business_hours if structured hours exist
     const updateFields: any = { 
@@ -798,6 +807,21 @@ export async function submitBusinessForReview(userId: string) {
     if (profileError || !profile) {
       console.error('Error fetching profile:', profileError)
       return { success: false, error: 'Profile not found' }
+    }
+    
+    // If manual listing, append admin note
+    if (profile.verification_method === 'manual') {
+      const existingNotes = profile.admin_notes || ''
+      const manualNote = 'Manual listing submitted; requires manual override to go live.'
+      
+      if (!existingNotes.includes(manualNote)) {
+        await supabaseAdmin
+          .from('business_profiles')
+          .update({
+            admin_notes: existingNotes ? `${existingNotes}\n\n${manualNote}` : manualNote
+          })
+          .eq('user_id', userId)
+      }
     }
 
     // 📢 SEND SLACK NOTIFICATION: Business submitted for review

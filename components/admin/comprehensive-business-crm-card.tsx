@@ -156,20 +156,59 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     billing_starts_date: business.billing_starts_date
   }
 
-  // CRM data based on Julie's Sports Bar - Mix of real data and realistic projections
-  const contactHistory = [
-    { id: 1, type: 'approval', date: '2024-09-23', duration: '2 min', notes: 'Business approved by bournemouth admin', outcome: 'positive' },
-    { id: 2, type: 'sync', date: '2024-09-23', subject: 'GoHighLevel sync completed', status: 'success' },
-    { id: 3, type: 'knowledge', date: '2024-09-23', notes: 'Basic knowledge added for Julie\'s Sports Bar', outcome: 'positive' },
-    { id: 4, type: 'signup', date: '2024-09-20', notes: 'Initial business registration', outcome: 'positive' },
-  ]
+  // ✅ SINGLE SOURCE OF TRUTH: Status flags for UI gating
+  // ✅ SINGLE SOURCE OF TRUTH: Define flags ONCE (never redefine inline)
+  const isClaimed = !!business.owner_user_id
+  const isUnclaimed = !business.owner_user_id && business.status === 'unclaimed'
+  const isImported = business.auto_imported === true
+  const isImportedUnclaimed = isUnclaimed && isImported
+  
+  // 🔒 CRITICAL DISTINCTION:
+  // - SAFETY GATES (tier lock, feature access): Use `isClaimed` / `!isClaimed` (owner_user_id check)
+  // - UI MESSAGING (labels, wording): Use `isImportedUnclaimed` (for "Imported from Google", "Import Date", etc.)
 
-  // Generate real tasks based on business completion status
+  // ✅ Prove gating at runtime (DEV only)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[CRM RUNTIME - comprehensive-business-crm-card.tsx]', {
+      id: business.id,
+      name: business.business_name,
+      status: business.status,
+      owner_user_id: business.owner_user_id ? `${String(business.owner_user_id).substring(0, 8)}...` : null,
+      auto_imported: business.auto_imported,
+      website_url: business.website_url,  // ✅ ONLY valid website column
+      website_url_type: typeof business.website_url,
+      website_url_length: business.website_url?.length || 0,
+      isClaimed,
+      isUnclaimed,
+      isImported,
+      isImportedUnclaimed,
+    })
+  }
+
+  // ✅ NO HARDCODED DEMO DATA - Contact history should be real or empty
+  const contactHistory: any[] = [] // Real contact history would come from DB
+
+  // ✅ Generate tasks based on IMPORTED+UNCLAIMED vs CLAIMED/ONBOARDED
   const generateBusinessTasks = () => {
     const tasks = []
     let taskId = 1
-
-    // Check for missing essential items and create tasks
+    
+    // ✅ ONLY for imported+unclaimed: show waiting task
+    if (isImportedUnclaimed) {
+      return [
+        {
+          id: 1,
+          title: 'Waiting for business to claim listing',
+          due: null,
+          priority: 'low',
+          completed: false,
+          category: 'admin'
+        }
+      ]
+    }
+    
+    // For claimed/onboarded businesses: real tasks based on completion
+    // Check for missing essential items
     if (!business.logo) {
       tasks.push({
         id: taskId++,
@@ -214,8 +253,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
       })
     }
 
-    // Integration tasks only
-
+    // Integration tasks
     if (business.status === 'approved' && !business.last_ghl_sync) {
       tasks.push({
         id: taskId++,
@@ -250,7 +288,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
       })
     }
 
-    // Add some completed tasks for context
+    // Add completed tasks for context
     if (business.logo) {
       tasks.push({
         id: taskId++,
@@ -261,7 +299,6 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
         category: 'setup'
       })
     }
-
 
     if (business.business_hours || business.business_hours_structured) {
       tasks.push({
@@ -279,14 +316,89 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
   const businessTasks = generateBusinessTasks()
 
-  const activityFeed = [
-    { id: 1, type: 'status_change', message: `${business.business_name} approved`, timestamp: '2024-09-23 10:30', user: 'bournemouth' },
-    { id: 2, type: 'knowledge_added', message: 'Basic knowledge added', timestamp: '2024-09-23 10:30', user: 'System' },
-    { id: 3, type: 'sync_completed', message: 'GoHighLevel sync completed', timestamp: '2024-09-23 10:29', user: 'System' },
-    { id: 4, type: 'registration', message: 'Business profile created', timestamp: business.created_at || '2024-09-20 14:20', user: 'Business' },
-  ]
+  // ✅ Activity feed logic: ONLY minimal truthful events
+  const generateActivityFeed = () => {
+    // For imported+unclaimed: ONLY show import event (truthful, no fake approvals/syncs)
+    if (isImportedUnclaimed) {
+      return [
+        { 
+          id: 1, 
+          type: 'import', 
+          message: 'Imported from Google Places by admin', 
+          timestamp: business.created_at || new Date().toISOString(), 
+          user: 'Admin' 
+        },
+      ]
+    }
+    
+    // For manually created unclaimed (no auto_imported flag)
+    if (isUnclaimed && !isImported) {
+      return [
+        { 
+          id: 1, 
+          type: 'registration', 
+          message: 'Business profile created', 
+          timestamp: business.created_at || new Date().toISOString(), 
+          user: 'Admin' 
+        },
+      ]
+    }
+    
+    // For claimed/onboarded/live: Show real events ONLY (no fake data)
+    const events = []
+    let eventId = 1
+    
+    // Approval event (only if truly approved)
+    if (business.status === 'approved' || business.status === 'live') {
+      events.push({
+        id: eventId++,
+        type: 'status_change',
+        message: `${business.business_name} approved`,
+        timestamp: business.updated_at || business.created_at || new Date().toISOString(),
+        user: 'admin'
+      })
+    }
+    
+    // Knowledge added (only if has description/tagline AND is claimed)
+    if ((business.business_description || business.business_tagline) && isClaimed) {
+      events.push({
+        id: eventId++,
+        type: 'knowledge_added',
+        message: 'Business information updated',
+        timestamp: business.updated_at || business.created_at || new Date().toISOString(),
+        user: 'Business'
+      })
+    }
+    
+    // GHL sync (only if last_ghl_sync exists AND claimed)
+    if (business.last_ghl_sync && isClaimed) {
+      events.push({
+        id: eventId++,
+        type: 'sync_completed',
+        message: 'GoHighLevel sync completed',
+        timestamp: business.last_ghl_sync,
+        user: 'System'
+      })
+    }
+    
+    // Registration/creation (always show for claimed/onboarded)
+    if (isClaimed) {
+      events.push({
+        id: eventId++,
+        type: 'registration',
+        message: business.auto_imported ? 'Business profile imported and claimed' : 'Business profile created',
+        timestamp: business.created_at || new Date().toISOString(),
+        user: business.auto_imported ? 'System' : 'Business'
+      })
+    }
+    
+    // If no events generated, return empty array (UI will show "No activity yet")
+    return events.length > 0 ? events : []
+  }
+  
+  const activityFeed = generateActivityFeed()
 
-  // Real business metrics for Julie's Sports Bar
+  // Real business metrics
   const businessMetrics = {
     totalUsers: 1, // From analytics
     walletPasses: 0, // No passes created yet
@@ -485,6 +597,13 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
   return (
     <>
+      {/* 🔴 DEV WATERMARK - WHICH COMPONENT IS RENDERING? */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-3 right-3 z-[9999] rounded-md bg-red-600 px-3 py-2 text-xs font-bold text-white shadow-lg">
+          CRM COMPONENT: comprehensive-business-crm-card.tsx
+        </div>
+      )}
+      
       {/* Main Card - COMPLETELY REDESIGNED */}
       <div className={`relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 backdrop-blur-xl border-2 ${getTierBorderColor(business)} rounded-2xl overflow-hidden shadow-xl shadow-black/40 hover:shadow-2xl hover:shadow-black/80 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 ${className}`}>
 
@@ -1053,11 +1172,11 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 text-sm">Last Sync:</span>
                         <span className="text-white text-sm">
-                          {formatLastSync(business.last_ghl_sync)}
+                          {isImportedUnclaimed ? 'Never' : formatLastSync(business.last_ghl_sync)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-sm">Joined:</span>
+                        <span className="text-slate-400 text-sm">{isImportedUnclaimed ? 'Import Date:' : 'Joined:'}</span>
                         <span className="text-white text-sm">
                           {formatDate(business.created_at)}
                         </span>
@@ -1065,7 +1184,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 text-sm">Updated:</span>
                         <span className="text-white text-sm">
-                          {formatDate(business.updated_at)}
+                          {isImportedUnclaimed ? 'Unknown' : formatDate(business.updated_at)}
                         </span>
                       </div>
                     </CardContent>
@@ -1146,9 +1265,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                   // Resolve category from either camelCase or snake_case
                   const resolvedCategory = business.system_category ?? (business as any).systemCategory ?? null
                   
-                  // Gate: Show only for unclaimed businesses (no owner) with a valid category
-                  const isUnclaimed = !business.owner_user_id && 
-                    (business.status === 'unclaimed' || business.status === 'incomplete' || business.status === 'pending_review')
+                  // ✅ PlaceholderSelector: Show for ANY unclaimed business (imported or manual)
+                  // This lets admins choose placeholder variants for all unclaimed listings
                   const hasCategory = !!resolvedCategory && resolvedCategory !== 'other'
                   const canShowSelector = isUnclaimed && hasCategory
                   
@@ -1208,7 +1326,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                             <div className="col-span-2 mt-2 p-2 bg-red-900/20 border border-red-600/30 rounded">
                               <span className="text-red-400 font-bold">❌ Gate Failed:</span>
                               <ul className="text-red-300 mt-1 ml-4 list-disc list-inside text-xs">
-                                {!isUnclaimed && <li>Business is not unclaimed (has owner or wrong status)</li>}
+                                {!isUnclaimed && <li>Business is claimed or has an owner (Placeholder selector is for unclaimed businesses only)</li>}
                                 {!hasCategory && <li>No valid system_category found (or is 'other')</li>}
                               </ul>
                             </div>
@@ -1933,19 +2051,38 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white">Business Controls</h3>
                 
-                {/* Tier & Feature Management */}
-                <TierManagementCard 
-                  business={business} 
-                  onUpdate={() => {
-                    // Close modal and force full page reload to get fresh data
-                    setIsExpanded(false)
-                    // Use window.location.reload() instead of router.refresh() for now
-                    // router.refresh() doesn't always invalidate server component cache
-                    setTimeout(() => {
-                      window.location.reload()
-                    }, 500)
-                  }} 
-                />
+                {/* Tier & Feature Management - LOCKED for ANY unclaimed business (safety) */}
+                {!isClaimed ? (
+                  <Card className="bg-yellow-900/20 border-2 border-yellow-500/30">
+                    <CardHeader>
+                      <CardTitle className="text-yellow-400 text-sm flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Subscription Upgrades Locked
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-yellow-200 text-sm">
+                        This business must claim their listing before subscription tiers or features can be modified. 
+                        Unclaimed businesses cannot be upgraded by admin until they complete the claim process.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <TierManagementCard 
+                    business={business} 
+                    onUpdate={() => {
+                      // Close modal and force full page reload to get fresh data
+                      setIsExpanded(false)
+                      // Use window.location.reload() instead of router.refresh() for now
+                      // router.refresh() doesn't always invalidate server component cache
+                      setTimeout(() => {
+                        window.location.reload()
+                      }, 500)
+                    }} 
+                  />
+                )}
                 
                 {/* Trial Extension - Show if trial is active or expired */}
                 {business.subscription?.is_in_free_trial && (
@@ -2130,16 +2267,28 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400 text-sm">Email Notifications:</span>
-                      <span className="text-green-400 text-sm">Enabled</span>
+                      <span className={business.email_notifications_enabled !== false ? "text-green-400 text-sm" : "text-slate-500 text-sm"}>
+                        {business.email_notifications_enabled !== false ? 'Enabled' : 'Disabled'}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400 text-sm">SMS Notifications:</span>
-                      <span className="text-slate-500 text-sm">Disabled</span>
+                      <span className={business.sms_notifications_enabled ? "text-green-400 text-sm" : "text-slate-500 text-sm"}>
+                        {business.sms_notifications_enabled ? 'Enabled' : 'Disabled'}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400 text-sm">Marketing Emails:</span>
-                      <span className="text-green-400 text-sm">Enabled</span>
+                      <span className={business.marketing_emails_enabled ? "text-green-400 text-sm" : "text-slate-500 text-sm"}>
+                        {/* ✅ FIXED: Default to DISABLED until business opts in */}
+                        {business.marketing_emails_enabled ? 'Enabled' : 'Disabled'}
+                      </span>
                     </div>
+                    {!business.marketing_emails_enabled && (
+                      <div className="text-xs text-slate-500 italic mt-2 p-2 bg-slate-900/30 rounded border border-slate-700/30">
+                        ℹ️ Marketing emails disabled by default. Business must opt-in to receive marketing communications.
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -2207,20 +2356,64 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <Card className="bg-slate-800/30 border-slate-700">
                   <CardContent className="p-4">
                     <h4 className="text-white font-semibold mb-3">Business Health Score</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-sm">Profile Completion:</span>
-                        <span className="text-green-400 text-sm">85%</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-sm">Content Quality:</span>
-                        <span className="text-yellow-400 text-sm">Good</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-sm">Engagement:</span>
-                        <span className="text-blue-400 text-sm">New</span>
-                      </div>
-                    </div>
+                    {(() => {
+                      // ✅ ONLY for imported+unclaimed: Show Google baseline
+                      if (isImportedUnclaimed) {
+                        return (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400 text-sm">Content Source:</span>
+                              <span className="text-blue-400 text-sm">Google Places</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400 text-sm">Profile Completeness:</span>
+                              <span className="text-slate-500 text-sm">Google baseline</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400 text-sm">Claimed Profile:</span>
+                              <span className="text-orange-400 text-sm">Not started</span>
+                            </div>
+                            <div className="text-xs text-slate-500 italic mt-3 p-2 bg-slate-900/30 rounded border border-slate-700/30">
+                              ℹ️ Full health score available after business claims listing and completes their profile
+                            </div>
+                          </div>
+                        )
+                      }
+                      
+                      // ✅ For claimed businesses: Calculate real health score
+                      const profileCompletion = Math.round(((business.logo ? 1 : 0) + 
+                                                            (business.business_menus?.length > 0 ? 1 : 0) + 
+                                                            (business.business_images?.length > 0 ? 1 : 0) +
+                                                            (business.business_description ? 1 : 0) +
+                                                            (business.business_hours ? 1 : 0)) / 5 * 100)
+                      
+                      const contentQuality = profileCompletion > 80 ? 'Excellent' : 
+                                           profileCompletion > 60 ? 'Good' : 
+                                           profileCompletion > 40 ? 'Fair' : 'Poor'
+                      
+                      const contentQualityColor = profileCompletion > 80 ? 'text-green-400' : 
+                                                 profileCompletion > 60 ? 'text-yellow-400' : 
+                                                 profileCompletion > 40 ? 'text-orange-400' : 'text-red-400'
+                      
+                      return (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400 text-sm">Profile Completion:</span>
+                            <span className="text-green-400 text-sm">{profileCompletion}%</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400 text-sm">Content Quality:</span>
+                            <span className={`${contentQualityColor} text-sm`}>{contentQuality}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400 text-sm">Engagement:</span>
+                            <span className="text-blue-400 text-sm">
+                              {business.last_sync_at ? 'Active' : 'New'}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </CardContent>
                 </Card>
               </div>

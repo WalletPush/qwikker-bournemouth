@@ -112,4 +112,3 @@ Full docs:
   • PLACEHOLDER_FIX_VERIFICATION.md (step-by-step guide)
   • docs/PLACEHOLDER_SYSTEM_FINAL_AUDIT.md (technical audit)
   • scripts/GENERATE_DEFAULT_PLACEHOLDER.md (image generation help)
-

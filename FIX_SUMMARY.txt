@@ -100,4 +100,3 @@ Fix with SQL:
 ═══════════════════════════════════════════════════════════════════════
 
 Full details: PLACEHOLDER_SELECTOR_FINAL_FIX.md
-

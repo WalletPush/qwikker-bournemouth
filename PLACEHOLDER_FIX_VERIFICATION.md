@@ -355,4 +355,3 @@ Before marking complete:
 - `docs/PLACEHOLDER_SYSTEM_FINAL_AUDIT.md` (technical details)
 - `MASTER_TASK_COMPLETION_REPORT.md` (full audit report)
 - `scripts/GENERATE_DEFAULT_PLACEHOLDER.md` (image generation help)
-

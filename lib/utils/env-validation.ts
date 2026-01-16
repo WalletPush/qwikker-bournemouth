@@ -43,4 +43,3 @@ export function validateSupabaseEnv() {
     requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'Supabase authentication')
   }
 }
-

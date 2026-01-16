@@ -18,4 +18,3 @@ export function resolveSystemCategory(
   const resolved = business.systemCategory ?? business.system_category ?? 'other'
   return resolved as SystemCategory
 }
-

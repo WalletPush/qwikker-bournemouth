@@ -113,4 +113,3 @@ Look for `salon` category - should show the new neutral default.
 ❌ Don't make it category-specific  
 
 ✅ Keep it neutral, abstract, and professional
-

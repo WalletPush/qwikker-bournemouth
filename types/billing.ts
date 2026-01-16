@@ -122,6 +122,24 @@ export interface BusinessCRMData {
   approved_at: string | null
   admin_notes: string | null
   
+  // Verification fields
+  verification_method?: 'google' | 'manual' | null
+  google_place_id?: string | null
+  google_verified_at?: string | null
+  manual_override?: boolean | null
+  manual_override_at?: string | null
+  manual_override_by?: string | null
+  rating?: number | null
+  review_count?: number | null
+  google_primary_type?: string | null
+  
+  // Import tracking
+  auto_imported?: boolean | null
+  website_url?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+  business_offers?: any[] | null
+  
   // GHL sync tracking
   last_ghl_sync: string | null
   ghl_contact_id: string | null

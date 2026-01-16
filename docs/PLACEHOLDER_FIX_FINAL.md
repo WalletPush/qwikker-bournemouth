@@ -127,4 +127,3 @@ business.system_category → folder name (validated)
 ✅ **Deterministic URL format:** `/placeholders/{category}/{00|01|02}.webp`
 ✅ **Automatic fallback** for categories without images
 ✅ **Dev logging** for verification
-

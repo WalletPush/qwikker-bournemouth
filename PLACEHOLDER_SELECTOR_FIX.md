@@ -300,4 +300,3 @@ Before marking complete:
 
 **Status:** ✅ Both issues fixed, ready for testing  
 **Next:** Restart server → Test import preview → Check placeholder selector in admin
-

@@ -23,10 +23,24 @@ interface BusinessCRMCardProps {
   business: BusinessCRMData
   onApprove?: (businessId: string, action: 'approve' | 'reject' | 'restore') => void
   onInspect?: (business: BusinessCRMData) => void
+  adminEmail?: string
   className?: string
 }
 
-export function BusinessCRMCard({ business, onApprove, onInspect, className }: BusinessCRMCardProps) {
+export function BusinessCRMCard({ business, onApprove, onInspect, adminEmail, className }: BusinessCRMCardProps) {
+  // ✅ DEV RUNTIME LOG - WHICH COMPONENT + DATA CHECK
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[CRM RUNTIME - business-crm-card.tsx]', {
+      id: business.id,
+      name: business.business_name,
+      status: business.status,
+      owner_user_id: business.owner_user_id ? `${String(business.owner_user_id).substring(0, 8)}...` : null,
+      auto_imported: business.auto_imported,
+      website_url: business.website_url,  // ✅ ONLY valid website column
+      importedGate: business.status === 'unclaimed' && !business.owner_user_id && business.auto_imported === true,
+    })
+  }
+
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [adminNotes, setAdminNotes] = useState(business.admin_notes || '')
@@ -35,6 +49,7 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
   const [activeTab, setActiveTab] = useState<'overview' | 'contact' | 'activity' | 'tasks' | 'offers' | 'analytics'>('overview')
   const [newTask, setNewTask] = useState('')
   const [isAddingTask, setIsAddingTask] = useState(false)
+  const [manualOverrideChecked, setManualOverrideChecked] = useState(false)
 
   // Use trial info directly from business data (already calculated in admin actions)
   const trialInfo = {
@@ -44,10 +59,41 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
   }
   
   const handleAction = async (action: 'approve' | 'reject' | 'restore') => {
-    if (!onApprove) return
+    // Validation for manual listings
+    if (action === 'approve' && business.verification_method === 'manual' && !manualOverrideChecked) {
+      alert('⚠️ Manual listings require the Manual Override checkbox to be ticked.')
+      return
+    }
+    
     setIsLoading(true)
     try {
-      await onApprove(business.id, action)
+      // If onApprove callback exists, use it (legacy support)
+      if (onApprove) {
+        await onApprove(business.id, action)
+      } else if (adminEmail) {
+        // Otherwise, call API directly
+        const response = await fetch('/api/admin/approve-business', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            businessId: business.id,
+            action,
+            adminEmail,
+            manualOverride: manualOverrideChecked
+          })
+        })
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Approval failed')
+        }
+        
+        // Success - refresh page to show updated status
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error('Approval error:', error)
+      alert(error instanceof Error ? error.message : 'Failed to process approval')
     } finally {
       setIsLoading(false)
     }
@@ -158,11 +204,14 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
   }
 
   const getStatusBadge = () => {
-    const statusConfig = {
+    const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
       'incomplete': { bg: 'bg-orange-500/20', text: 'text-orange-300', label: 'INCOMPLETE' },
       'pending_review': { bg: 'bg-yellow-500/20', text: 'text-yellow-300', label: 'PENDING REVIEW' },
       'approved': { bg: 'bg-green-500/20', text: 'text-green-300', label: 'APPROVED' },
       'rejected': { bg: 'bg-red-500/20', text: 'text-red-300', label: 'REJECTED' },
+      'unclaimed': { bg: 'bg-slate-500/20', text: 'text-slate-300', label: 'UNCLAIMED' },
+      'claimed': { bg: 'bg-cyan-500/20', text: 'text-cyan-300', label: 'CLAIMED' },
+      'claimed_free': { bg: 'bg-teal-500/20', text: 'text-teal-300', label: 'CLAIMED (FREE)' },
       'trial_expired': { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'TRIAL EXPIRED' },
       'inactive': { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'INACTIVE' }
     }
@@ -212,9 +261,17 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
   }
 
   return (
-    <div className={`bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl overflow-hidden hover:border-slate-600 transition-all duration-300 ${className}`}>
-      {/* Header Section */}
-      <div className={`bg-gradient-to-r ${getHeaderColor()} px-4 sm:px-6 py-4`}>
+    <>
+      {/* 🔵 DEV WATERMARK - WHICH COMPONENT IS RENDERING? */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-3 right-3 z-[9999] rounded-md bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-lg">
+          CRM COMPONENT: business-crm-card.tsx
+        </div>
+      )}
+      
+      <div className={`bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl overflow-hidden hover:border-slate-600 transition-all duration-300 ${className}`}>
+        {/* Header Section */}
+        <div className={`bg-gradient-to-r ${getHeaderColor()} px-4 sm:px-6 py-4`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {/* Business Type Icon */}
@@ -239,12 +296,40 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
                 {getStatusBadge()}
                 {getTrialBadge()}
                 
+                {/* Verification Badges */}
+                {business.verification_method === 'google' && business.google_place_id && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-600 text-white">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Google {business.rating}★
+                  </span>
+                )}
+                
+                {business.verification_method === 'manual' && !business.manual_override && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-600 text-white">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Needs Override
+                  </span>
+                )}
+                
+                {business.verification_method === 'manual' && business.manual_override && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-600 text-white">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Manual Override
+                  </span>
+                )}
+                
                 {/* Sync Status Badge */}
                 <SyncStatusBadge
                   businessId={business.id}
                   businessName={business.business_name}
                   ghlStatus={'synced'}
-                  lastSync={business.last_ghl_sync}
+                  lastSync={business.last_ghl_sync || undefined}
                   errors={[]}
                   onForceSync={async (businessId) => {
                     try {
@@ -1066,27 +1151,72 @@ export function BusinessCRMCard({ business, onApprove, onInspect, className }: B
           )}
 
           {/* Action Buttons */}
-          {business.status === 'pending_review' && onApprove && (
-            <div className="flex gap-3 pt-4 border-t border-slate-600">
-              <Button
-                onClick={() => handleAction('approve')}
-                disabled={isLoading}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-              >
-                {isLoading ? 'Processing...' : 'Approve Business'}
-              </Button>
-              <Button
-                onClick={() => handleAction('reject')}
-                disabled={isLoading}
-                variant="outline"
-                className="flex-1 border-red-500 text-red-400 hover:bg-red-500/20"
-              >
-                {isLoading ? 'Processing...' : 'Reject'}
-              </Button>
+          {business.status === 'pending_review' && (onApprove || adminEmail) && (
+            <div className="pt-4 border-t border-slate-600">
+              {/* Manual Override Checkbox (for manual listings only) */}
+              {business.verification_method === 'manual' && !business.manual_override && (
+                <div className="mb-4 border-2 border-amber-500 bg-amber-950/30 rounded-lg p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={manualOverrideChecked}
+                      onChange={(e) => setManualOverrideChecked(e.target.checked)}
+                      className="w-5 h-5 mt-0.5 text-amber-500 border-amber-600 rounded focus:ring-amber-500 focus:ring-2"
+                    />
+                    <div className="flex-1">
+                      <span className="text-amber-200 font-medium block">
+                        ✓ Approve as Manual Listing (Manual Override Required)
+                      </span>
+                      <p className="text-xs text-amber-300/80 mt-1">
+                        This business is not verified on Google and requires explicit manual override to go live. Tick this box to confirm you have verified the business legitimacy.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
+              
+              {/* Google Rating Warning (if below 4.4★) */}
+              {business.verification_method === 'google' && business.rating && business.rating < 4.4 && (
+                <div className="mb-4 border-2 border-red-500 bg-red-950/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div className="flex-1">
+                      <span className="text-red-200 font-medium block">
+                        ⚠️ Rating Below 4.4★ Threshold
+                      </span>
+                      <p className="text-xs text-red-300/80 mt-1">
+                        QWIKKER requires a minimum 4.4★ Google rating. This business currently has {business.rating}★. You cannot approve until they improve their rating or switch to manual listing.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Approval Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => handleAction('approve')}
+                  disabled={isLoading}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Processing...' : 'Approve Business'}
+                </Button>
+                <Button
+                  onClick={() => handleAction('reject')}
+                  disabled={isLoading}
+                  variant="outline"
+                  className="flex-1 border-red-500 text-red-400 hover:bg-red-500/20"
+                >
+                  {isLoading ? 'Processing...' : 'Reject'}
+                </Button>
+              </div>
             </div>
           )}
         </div>
       )}
     </div>
+    </>
   )
 }

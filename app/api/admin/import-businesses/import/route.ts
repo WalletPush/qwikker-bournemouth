@@ -220,6 +220,19 @@ function normalizeTo24h(input: string): string | null {
   return `${String(h).padStart(2,'0')}:${min}`
 }
 
+/**
+ * Extract postcode from Google Places address components
+ */
+function extractPostcode(addressComponents: any[] | undefined): string | null {
+  if (!addressComponents) return null
+  
+  const postcodeComponent = addressComponents.find(
+    (comp: any) => comp.types?.includes('postal_code')
+  )
+  
+  return postcodeComponent?.longText || postcodeComponent?.shortText || null
+}
+
 export async function POST(request: NextRequest) {
   // 🔒 SECURITY: Require admin authentication BEFORE starting stream
   const cookieStore = await cookies()
@@ -369,12 +382,25 @@ export async function POST(request: NextRequest) {
                 'Content-Type': 'application/json',
                 'X-Goog-Api-Key': apiKey,
                 // IMPORTANT: Include regularOpeningHours.weekdayDescriptions to get hours data
-                'X-Goog-FieldMask': 'id,displayName,formattedAddress,nationalPhoneNumber,websiteUri,rating,userRatingCount,types,location,businessStatus,regularOpeningHours.weekdayDescriptions,photos'
+                // ENRICHMENT: Include primaryType and addressComponents for richer categorization
+                'X-Goog-FieldMask': 'id,displayName,formattedAddress,addressComponents,nationalPhoneNumber,websiteUri,rating,userRatingCount,types,primaryType,location,businessStatus,regularOpeningHours.weekdayDescriptions,photos'
               }
             })
             
             // 🔒 SAFE JSON PARSING: Handle empty bodies, non-JSON, and error responses
             const place = await parseJsonResponseSafe(detailsResponse, 'Google Place Details', placeId)
+
+            // 🔍 DEV LOGGING: See what Google actually returns
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`🔍 Google response for ${place.displayName?.text}:`, {
+                hasWebsiteUri: !!place.websiteUri,
+                websiteUri: place.websiteUri,
+                hasPhone: !!place.nationalPhoneNumber,
+                phone: place.nationalPhoneNumber,
+                hasAddress: !!place.formattedAddress,
+                fields: Object.keys(place).slice(0, 10) // First 10 fields returned
+              })
+            }
 
             if (place.error) {
               console.error(`❌ Failed to get details for ${placeId}:`, place.error.message)
@@ -489,6 +515,10 @@ export async function POST(request: NextRequest) {
               continue
             }
 
+            // Extract richer Google data for better labeling
+            const googlePrimaryType = place.primaryType || null
+            const businessPostcode = extractPostcode(place.addressComponents)
+
             // Generate deterministic tagline for Discover card
             // For restaurants, this creates cuisine-specific taglines like:
             // "Italian dining in Bournemouth" instead of generic "Comfort food, done right"
@@ -507,13 +537,15 @@ export async function POST(request: NextRequest) {
                 business_name: place.displayName?.text || 'Unknown',
                 system_category: systemCategory, // Use category selected in import form
                 display_category: displayCategory, // Use display label from import form
-                google_types: googleTypes, // Store raw Google types for reference
+                google_types: googleTypes, // Store raw Google types for reference (includes cuisine types like 'nepalese_restaurant')
+                google_primary_type: googlePrimaryType, // Primary type from Google (e.g., 'nepalese_restaurant', 'coffee_shop')
                 business_type: systemCategory, // Map system_category to business_type (legacy field)
                 business_town: city.charAt(0).toUpperCase() + city.slice(1),
                 city: city.toLowerCase(),
                 business_address: place.formattedAddress || '', // ✅ FIXED: Use correct column name
+                business_postcode: businessPostcode, // Extract postcode from address components
                 phone: place.nationalPhoneNumber || null,
-                website: place.websiteUri || null,
+                website_url: place.websiteUri || null, // ✅ FIXED: Use correct column name (website_url, not website)
                 rating: place.rating || null,
                 review_count: place.userRatingCount || null,
                 business_hours: businessHoursText, // Human-readable text
@@ -530,6 +562,7 @@ export async function POST(request: NextRequest) {
                 auto_imported: true,
                 user_id: null,
                 owner_user_id: null
+                // NOTE: plan and trial fields are NOT set here - the trigger will normalize them to free/null
               })
 
             if (insertError) {

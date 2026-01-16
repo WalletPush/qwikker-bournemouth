@@ -355,4 +355,3 @@ GET /placeholders/default/00.webp     ❌ (for everything)
 ---
 
 **End of Report**
-

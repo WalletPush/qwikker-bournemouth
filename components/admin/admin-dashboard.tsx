@@ -1980,6 +1980,10 @@ Qwikker Admin Team`
                         instagram_handle: business.instagram_handle || '',
                         facebook_page: business.facebook_page || '',
                         status: 'unclaimed',
+                        auto_imported: business.auto_imported || false, // ✅ CRITICAL: Required for isImportedUnclaimed gate
+                        google_place_id: business.google_place_id || null,
+                        created_at: business.created_at,
+                        updated_at: business.updated_at,
                         subscription: null, // No subscription for unclaimed
                         business_tier: null,
                         offer_name: '',

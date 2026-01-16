@@ -277,8 +277,46 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     }
   }
 
+  // ✅ SAFETY: Lock tiers for ANY unclaimed business (not just imported)
+  const isUnclaimed = !business?.owner_user_id
+
+  // DEV-ONLY: Log tier overlay gate status
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[TIER OVERLAY GATE]', {
+      business_name: business?.business_name,
+      status: business?.status,
+      owner_user_id: business?.owner_user_id,
+      auto_imported: business?.auto_imported,
+      isUnclaimed,
+      will_show_overlay: isUnclaimed
+    })
+  }
+  
   return (
-    <Card className="bg-slate-800/50 border-slate-700">
+    <Card className="bg-slate-800/50 border-slate-700 relative">
+      {/* ✅ OVERLAY for ANY unclaimed business (SAFETY: owner_user_id IS NULL) */}
+      {isUnclaimed && (
+        <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
+          <div className="text-center p-6">
+            <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h4 className="text-xl font-semibold text-white mb-2">Business Must Claim Before Upgrading</h4>
+            <p className="text-slate-300 mb-4">
+              This business listing is unclaimed. Subscription tiers and features can only be managed after the business owner claims their listing.
+            </p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-sm text-slate-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Current Status: <span className="text-orange-400 font-semibold">Unclaimed</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <CardHeader>
         <CardTitle className="text-white">Tier & Feature Management</CardTitle>
         <p className="text-sm text-slate-400">

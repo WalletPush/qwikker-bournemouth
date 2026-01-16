@@ -396,4 +396,3 @@ if (!isUnclaimedImport) {
 Three checks, not four. Status check doesn't work because we check after update. Guard blocks only auto-imported unclaimed businesses. Doesn't block claimed or self-onboarded businesses. Prevents PR disaster. Zero migrations needed. Production-ready.
 
 **Deploy with confidence.** 🚀
-

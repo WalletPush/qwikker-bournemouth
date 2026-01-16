@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // Search for unclaimed businesses matching the query
     const { data: businesses, error } = await supabase
       .from('business_profiles')
-      .select('id, business_name, business_address, business_town, business_postcode, business_type, business_category, system_category, display_category, business_tagline, email, phone, website, business_images, rating, review_count, years_on_google, google_place_id, status')
+      .select('id, business_name, business_address, business_town, business_postcode, business_type, business_category, system_category, display_category, placeholder_variant, owner_user_id, business_tagline, email, phone, website, business_images, rating, review_count, years_on_google, google_place_id, status')
       .eq('city', city)
       .eq('status', 'unclaimed')
       .or(`business_name.ilike.%${query}%,business_category.ilike.%${query}%,business_type.ilike.%${query}%`)
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Format results for the UI
     const results = (businesses || []).map(business => {
       // Get first business image from array
-      const firstImage = business.business_images?.[0] || '/placeholder-business.jpg'
+      const firstImage = business.business_images?.[0] || null
       
       return {
         id: business.id,
@@ -66,6 +66,8 @@ export async function POST(request: NextRequest) {
         category: business.business_category || business.business_type,
         system_category: business.system_category, // ✅ CRITICAL: Required for correct placeholder images
         display_category: business.display_category,
+        placeholder_variant: business.placeholder_variant ?? 0, // ✅ CRITICAL: Current placeholder selection (0, 1, 2)
+        owner_user_id: business.owner_user_id, // ✅ For checking claimed status
         tagline: business.business_tagline,
         image: firstImage,
         email: business.email,

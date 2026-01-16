@@ -379,4 +379,3 @@ grep -rn "system_category" components/admin/
 ---
 
 **Summary:** The placeholder selector lives in the Files & Assets tab of the comprehensive business CRM card, only shows for unclaimed businesses with a system_category, and updates via a secure admin-only API route.
-

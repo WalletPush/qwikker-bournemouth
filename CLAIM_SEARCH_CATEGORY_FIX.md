@@ -229,4 +229,3 @@ El Murrino (Italian Restaurant)
 ---
 
 **Try searching for "el" again - should show restaurant placeholder, not coffee cup! 🎉**
-

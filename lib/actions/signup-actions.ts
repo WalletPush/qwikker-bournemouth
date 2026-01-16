@@ -46,7 +46,25 @@ interface SignupData {
   notes?: string
 }
 
-export async function createUserAndProfile(formData: SignupData, files: { logo?: File, menu?: File[], offer?: File }, referralCode?: string, urlLocation?: string) {
+interface VerificationData {
+  method: 'google' | 'manual'
+  placeId?: string
+  googleData?: {
+    name: string
+    formattedAddress: string
+    latitude: number
+    longitude: number
+    website: string | null
+    types: string[]
+    rating: number
+    userRatingsTotal: number
+    googlePrimaryType: string | null
+    normalizedTown: string | null
+    postcode: string | null
+  }
+}
+
+export async function createUserAndProfile(formData: SignupData, files: { logo?: File, menu?: File[], offer?: File }, referralCode?: string, urlLocation?: string, verification?: VerificationData) {
   const supabaseAdmin = createAdminClient()
   
   try {
@@ -167,19 +185,9 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       return mapping[type] || 'other'
     }
 
-    const mapBusinessTown = (town: string) => {
-      const cleanTown = town.toLowerCase().trim()
-      const mapping: Record<string, string> = {
-        'bournemouth': 'bournemouth',
-        'poole': 'poole', 
-        'christchurch': 'christchurch',
-        'wimborne': 'wimborne',
-        'ferndown': 'ferndown',
-        'ringwood': 'ringwood',
-        'new milton': 'new_milton',
-        'newmilton': 'new_milton'
-      }
-      return mapping[cleanTown] || 'other'
+    const normalizeTownFn = (town: string) => {
+      if (!town || !town.trim()) return null
+      return town.trim().toLowerCase().replace(/\s+/g, ' ')
     }
 
     const mapOfferType = (type: string) => {
@@ -208,25 +216,30 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       return mapping[amount] || 'unlimited'
     }
 
-    const profileData = {
+    // Handle Google verification data
+    const verificationMethod = verification?.method || 'manual'
+    const isGoogleVerified = verificationMethod === 'google' && verification?.googleData
+    
+    const profileData: any = {
       user_id: authData.user.id,
       first_name: formData.firstName,
       last_name: formData.lastName,
       email: formData.email,
       phone: normalizePhoneNumber(formData.phone),
-      business_name: formData.businessName,
+      business_name: isGoogleVerified ? verification.googleData!.name : formData.businessName,
       business_type: mapBusinessType(formData.businessType),
-      // business_category: formData.businessCategory, // REMOVED: No longer writing to this field (legacy)
-      system_category: getSystemCategoryFromDisplayLabel(formData.businessCategory), // NEW: Stable enum
-      display_category: formData.businessCategory, // NEW: User-facing label
-      business_address: formData.businessAddress,
-      business_town: mapBusinessTown(formData.town),
-      business_postcode: formData.postcode,
-      website_url: formData.website || null,
+      system_category: getSystemCategoryFromDisplayLabel(formData.businessCategory),
+      display_category: formData.businessCategory,
+      business_address: isGoogleVerified ? verification.googleData!.formattedAddress : formData.businessAddress,
+      business_town: isGoogleVerified ? (verification.googleData!.normalizedTown || normalizeTownFn(formData.town)) : normalizeTownFn(formData.town),
+      business_postcode: isGoogleVerified ? (verification.googleData!.postcode || formData.postcode) : formData.postcode,
+      latitude: isGoogleVerified ? verification.googleData!.latitude : null,
+      longitude: isGoogleVerified ? verification.googleData!.longitude : null,
+      website_url: isGoogleVerified ? (verification.googleData!.website || formData.website || null) : (formData.website || null),
       instagram_handle: formData.instagram || null,
       facebook_url: formData.facebook || null,
       logo: logoUrl || null,
-      menu_url: menuUrls.length > 0 ? menuUrls[0] : null, // Fix: Use first menu URL
+      menu_url: menuUrls.length > 0 ? menuUrls[0] : null,
       offer_name: formData.offerName || null,
       offer_type: mapOfferType(formData.offerType || ''),
       offer_value: formData.offerValue || null,
@@ -238,14 +251,26 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       referral_source: mapReferralSource(formData.referralSource || ''),
       goals: mapGoals(formData.goals || ''),
       notes: formData.notes || null,
-      plan: 'featured', // Free trial users get Featured plan access during 120-day trial
+      plan: 'featured',
       is_founder: new Date() < new Date('2025-12-31'),
-      city: locationInfo.city, // SECURITY: Use validated franchise city from request, not Google Places
-      status: 'incomplete', // Fix: Add default status
-      profile_completion_percentage: 25, // Fix: Add default completion percentage
-      business_tier: 'free_trial', // Fix: Add correct business tier for onboarding
-      rating: 0, // Fix: Add default rating
-      review_count: 0, // Fix: Add default review count
+      city: locationInfo.city, // SECURITY: Use validated franchise city from request
+      status: 'incomplete',
+      profile_completion_percentage: 25,
+      business_tier: 'free_trial',
+      // Verification fields
+      verification_method: verificationMethod,
+      google_place_id: isGoogleVerified ? verification.placeId : null,
+      google_verified_at: isGoogleVerified ? new Date().toISOString() : null,
+      rating: isGoogleVerified ? verification.googleData!.rating : 0,
+      review_count: isGoogleVerified ? verification.googleData!.userRatingsTotal : 0,
+      google_types: isGoogleVerified ? verification.googleData!.types : null,
+      google_primary_type: isGoogleVerified ? verification.googleData!.googlePrimaryType : null,
+      manual_override: false, // Always false on signup, admin will set if needed
+    }
+    
+    // Normalize tagline if provided
+    if (profileData.business_tagline) {
+      profileData.tagline_normalized = profileData.business_tagline.trim().toLowerCase().replace(/\s+/g, ' ')
     }
 
     // POST-WRITE SANITY CHECK: Ensure system_category is valid
@@ -266,6 +291,12 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
 
     if (profileError) {
       console.error('Profile creation failed:', profileError)
+      
+      // Handle tagline duplicate error
+      if (profileError.code === '23505' && profileError.message?.includes('uq_business_tagline_normalized')) {
+        throw new Error('That tagline is already used by another listing. Please choose something unique.')
+      }
+      
       throw new Error(`Profile creation failed: ${profileError.message}`)
     }
 

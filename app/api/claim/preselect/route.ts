@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/service-role-client'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 
 /**
@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Use service role client for read (bypasses RLS for franchise-level queries)
-    const supabase = createServiceRoleClient()
+    // Use admin client for read (bypasses RLS for franchise-level queries)
+    const supabase = createAdminClient()
 
     // Query business_profiles with strict eligibility checks
     const { data: business, error } = await supabase

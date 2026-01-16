@@ -7,6 +7,8 @@ import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 import { formatPrice } from '@/lib/utils/price-formatter'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
+import { getCategoryLabel } from '@/lib/utils/google-category-label'
+import { getPrimaryLabel, getHeroLine } from '@/lib/utils/business-labels'
 
 interface BusinessCardProps {
   business: any
@@ -114,36 +116,114 @@ export function BusinessCard({
             </CardTitle>
             <p className="text-slate-400 text-sm">
               {(() => {
-                const category = business.display_category ?? business.business_category ?? business.category ?? 'Other'
-                // Hide "Other" label - show nothing instead (display_category is more descriptive)
-                return category === 'Other' ? '' : category
+                // Use smart label (cuisine-specific if available, fallback to category)
+                const label = getPrimaryLabel({
+                  google_types: business.google_types,
+                  google_primary_type: business.google_primary_type,
+                  display_category: business.display_category,
+                  system_category: business.system_category
+                })
+                // Hide "Other" and "Local business" - show nothing instead
+                return (label === 'Other' || label === 'Local business') ? '' : label
               })()}
             </p>
-            <p className="text-[#00d083] text-sm font-medium mt-1">{business.tagline}</p>
+            <p className="text-[#00d083] text-sm font-medium mt-1">
+              {(() => {
+                // Use smart hero line (tagline if exists, otherwise generated)
+                const heroLine = getHeroLine({
+                  business_tagline: business.tagline || business.business_tagline,
+                  business_town: business.town || business.business_town,
+                  city: business.city,
+                  google_types: business.google_types,
+                  google_primary_type: business.google_primary_type,
+                  display_category: business.display_category,
+                  system_category: business.system_category
+                })
+                return heroLine
+              })()}
+            </p>
           </div>
         </div>
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {/* Rating and Reviews */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1">
-            <div className="flex">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <svg
-                  key={star}
-                  className={`w-4 h-4 ${star <= (business.rating || 4.5) ? 'text-yellow-400' : 'text-gray-600'}`}
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              ))}
+        {/* Rating and Reviews (REAL ONLY - no fake defaults) */}
+        {(() => {
+          // 🔍 DEV DEBUG: See what fields are actually present
+          if (process.env.NODE_ENV === 'development' && business.name) {
+            console.log('🔍 BUSINESS RATING DATA:', business.name, {
+              rating: business.rating,
+              review_count: business.review_count,
+              reviewCount: business.reviewCount,
+              user_ratings_total: business.user_ratings_total,
+              google_rating: business.google_rating,
+              google_review_count: business.google_review_count
+            })
+          }
+
+          const ratingRaw =
+            typeof business.rating === 'number'
+              ? business.rating
+              : typeof business.google_rating === 'number'
+                ? business.google_rating
+                : typeof business.rating === 'string'
+                  ? Number(business.rating)
+                  : null
+
+          const rating = Number.isFinite(ratingRaw as number) ? (ratingRaw as number) : null
+
+          const reviewCount =
+            business.review_count ??
+            business.reviewCount ??
+            business.user_ratings_total ??
+            business.google_review_count ??
+            0
+
+          const safeReviewCount = Number.isFinite(Number(reviewCount)) ? Number(reviewCount) : 0
+
+          // If we don't have a REAL rating, show "No rating yet"
+          if (rating === null) {
+            return (
+              <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <span>No rating yet</span>
+              </div>
+            )
+          }
+
+          const fullStars = Math.floor(rating)
+          const hasHalf = rating - fullStars >= 0.5
+
+          return (
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1">
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const isFull = star <= fullStars
+                    const isHalfStar = star === fullStars + 1 && hasHalf
+
+                    return (
+                      <svg
+                        key={star}
+                        className={`w-4 h-4 ${
+                          isFull || isHalfStar ? 'text-yellow-400' : 'text-gray-600'
+                        }`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    )
+                  })}
+                </div>
+
+                <span className="text-slate-100 font-semibold">{rating.toFixed(1)}</span>
+                <span className="text-slate-400 text-sm">
+                  ({safeReviewCount.toLocaleString()} reviews)
+                </span>
+              </div>
             </div>
-            <span className="text-slate-100 font-semibold">{business.rating || 4.5}</span>
-            <span className="text-slate-400 text-sm">({business.reviewCount || 0} reviews)</span>
-          </div>
-        </div>
+          )
+        })()}
 
         {/* Location */}
         <div className="flex items-center gap-2 text-slate-400">

@@ -133,4 +133,3 @@ public/placeholders/
 - ✅ **Predictable:** No versioning, no cache busting needed
 - ✅ **Lightweight:** No heavy config object loaded in memory
 - ✅ **Type-safe:** Fewer moving parts, fewer potential bugs
-
