@@ -30,7 +30,64 @@ export function VerificationStatusWidget({ business }: VerificationStatusWidgetP
     window.location.href = `/dashboard/profile?action=verify-google`
   }
   
-  // FREE TIER: Show locked state (no confusing "Verify with Google" CTA)
+  // STATE B: FREE TIER + VERIFIED = Show Atlas Upgrade Promo (not locked verification)
+  if (isFree && isVerified) {
+    return (
+      <div className="bg-gradient-to-br from-purple-900/20 to-blue-900/20 backdrop-blur-sm border border-purple-500/30 rounded-xl p-6 relative overflow-hidden">
+        {/* Subtle gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5 pointer-events-none" />
+        
+        <div className="relative z-10">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-500/10 text-purple-400">
+                <Lock className="w-6 h-6" />
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  🔒 Atlas Placement Locked
+                </h3>
+                <p className="text-sm font-medium text-purple-400">
+                  Premium Feature
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Message */}
+          <div className="mb-4">
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Atlas is QWIKKER's AI-guided discovery map. Upgrading your plan unlocks placement, directions, and real-time local discovery.
+            </p>
+          </div>
+          
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/dashboard/billing"
+              className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
+            >
+              <span>Upgrade to appear on Atlas</span>
+            </Link>
+            
+            <a
+              href="https://qwikker.com/atlas"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 border border-slate-600/50"
+            >
+              <span className="text-sm">What is Atlas?</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  
+  // STATE A: FREE TIER + NOT VERIFIED = Show locked state
   if (isFree) {
     return (
       <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">

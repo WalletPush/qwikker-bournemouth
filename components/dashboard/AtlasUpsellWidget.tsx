@@ -59,15 +59,15 @@ export function AtlasUpsellWidget({ businessId }: AtlasUpsellWidgetProps) {
         <div className="space-y-2 mb-5">
           <div className="flex items-start gap-2.5 text-sm text-slate-300">
             <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-2 flex-shrink-0" />
-            <span>Placement in QWIKKER Atlas (map discovery)</span>
+            <span>Unlock Atlas map placement</span>
           </div>
           <div className="flex items-start gap-2.5 text-sm text-slate-300">
             <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-2 flex-shrink-0" />
-            <span>Priority visibility in AI recommendations</span>
+            <span>Become eligible for Atlas discovery</span>
           </div>
           <div className="flex items-start gap-2.5 text-sm text-slate-300">
             <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-2 flex-shrink-0" />
-            <span>Real distance & directions for customers</span>
+            <span>Show customers real distance & directions</span>
           </div>
         </div>
         
