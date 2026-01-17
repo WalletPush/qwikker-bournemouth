@@ -83,9 +83,10 @@ export async function getCityFromHostname(
   }
 
   // ✅ Vercel preview domains (your-project.vercel.app)
-  // IMPORTANT: In production, do NOT silently default.
+  // Allow on preview deployments, but not on production
   if (cleanHost.endsWith('.vercel.app')) {
-    if (allowUnsafeFallbacks) return defaultCity
+    // Always allow Vercel preview deployments (VERCEL_ENV=preview)
+    if (vercelEnv === 'preview' || allowUnsafeFallbacks) return defaultCity
     throw new Error(`Access denied: vercel.app host not allowed in production (${cleanHost})`)
   }
 
