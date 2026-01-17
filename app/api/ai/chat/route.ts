@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
       response: result.response,
       sources: result.sources || [],
       quickReplies,
+      hasBusinessResults: result.hasBusinessResults, // For Atlas "earned moment"
       businessCarousel: result.businessCarousel,
       walletActions: result.walletActions,
       eventCards: result.eventCards,

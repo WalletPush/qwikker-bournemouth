@@ -36,6 +36,7 @@ interface ChatResponse {
   error?: string
   modelUsed?: 'gpt-4o-mini' | 'gpt-4o'
   classification?: any
+  hasBusinessResults?: boolean // For Atlas "earned moment" without carousel spam
   businessCarousel?: Array<{
     id: string
     business_name: string
@@ -130,15 +131,15 @@ export async function generateHybridAIResponse(
     const businessResults = await searchBusinessKnowledge(enhancedQuery, city, { matchCount: searchLimit })
     const cityResults = await searchCityKnowledge(userMessage, city, { matchCount: 6 })
     
-    // 🎯 Fetch offer counts for businesses to enrich context
+    // 🎯 Fetch offer counts for businesses to enrich context (DEDUPED)
     const supabase = createServiceRoleClient()
     const businessOfferCounts: Record<string, number> = {}
     
     if (businessResults.success && businessResults.results.length > 0) {
-      const businessIds = businessResults.results
-        .map(r => r.business_id)
-        .filter(Boolean)
-        .slice(0, 5) // Check top 5 businesses only
+      // FIX: Dedupe business IDs first to avoid counting same business multiple times
+      const businessIds = Array.from(new Set(
+        businessResults.results.map(r => r.business_id).filter(Boolean) as string[]
+      )).slice(0, 6) // Check top 6 unique businesses
       
       if (businessIds.length > 0) {
         const { data: offerCounts } = await supabase
@@ -493,36 +494,120 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     
     console.log(`✅ Response generated (${aiResponse.length} chars) using ${modelToUse}`)
     
-    // 🗺️ ATLAS: Build business carousel if we have business results
+    // 🗺️ ATLAS: Build business carousel with proper deduplication and enrichment
     let businessCarousel: ChatResponse['businessCarousel'] = undefined
+    let hasBusinessResults = false
     
     if (businessResults.success && businessResults.results.length > 0) {
-      businessCarousel = businessResults.results
-        .filter(r => r.business_id && r.business_name) // Only businesses with IDs
-        .slice(0, 6) // Top 6 for carousel
-        .map(r => ({
-          id: r.business_id!,
-          business_name: r.business_name!,
-          business_tagline: r.tagline || undefined,
-          system_category: r.system_category || undefined,
-          display_category: r.display_category || r.system_category || undefined,
-          business_tier: r.tier || 'free_trial',
-          business_address: r.address || undefined,
-          business_town: r.town || city,
-          logo: r.logo || undefined,
-          business_images: r.images ? (Array.isArray(r.images) ? r.images : [r.images]) : undefined,
-          rating: r.rating || undefined,
-          offers_count: businessOfferCounts[r.business_id!] || 0
-        }))
+      // STEP 1: Dedupe by business_id (KB returns multiple rows per business)
+      type KBRow = (typeof businessResults.results)[number]
+      const bestHitByBusiness = new Map<string, KBRow>()
       
-      console.log(`🗺️ Built business carousel with ${businessCarousel.length} businesses`)
+      for (const r of businessResults.results) {
+        if (!r.business_id || !r.business_name) continue
+        
+        const key = r.business_id
+        const existing = bestHitByBusiness.get(key)
+        
+        // Keep highest similarity row per business
+        const rScore = (r as any).similarity ?? 0
+        const eScore = existing ? ((existing as any).similarity ?? 0) : -Infinity
+        
+        if (!existing || rScore > eScore) bestHitByBusiness.set(key, r)
+      }
+      
+      const uniqueBusinessIds = Array.from(bestHitByBusiness.keys())
+      hasBusinessResults = uniqueBusinessIds.length > 0
+      
+      // STEP 2: Fetch canonical business data from business_profiles
+      // (Don't trust KB rows for tier/rating/categories/images)
+      const { data: businesses } = await supabase
+        .from('business_profiles')
+        .select(`
+          id,
+          business_name,
+          business_tagline,
+          system_category,
+          display_category,
+          business_tier,
+          business_address,
+          business_town,
+          logo,
+          business_images,
+          rating,
+          owner_user_id,
+          claimed_at
+        `)
+        .in('id', uniqueBusinessIds)
+      
+      const businessById = new Map((businesses || []).map(b => [b.id, b]))
+      
+      // STEP 3: Tier priority and exclusions
+      const tierPriority: Record<string, number> = {
+        qwikker_picks: 0,
+        featured: 1,
+        free_trial: 2,     // treat as featured trial
+        recommended: 3,    // "starter"
+        free_tier: 9       // EXCLUDE: unclaimed/imported
+      }
+      
+      const normalizeTier = (tier: string | null | undefined) => tier ?? 'free_tier'
+      const isExcludedTier = (tier: string) => tier === 'free_tier'
+      
+      // STEP 4: Carousel gating: only show when user asks for options/list/map
+      const msg = userMessage.toLowerCase()
+      const wantsList = /show|list|options|recommend|suggest|places|where should|near me|map|atlas|on the map|pins|results/.test(msg)
+      
+      const shouldAttachCarousel = wantsList
+      
+      // STEP 5: Build final carousel (deduped, tier-ordered, enriched)
+      if (shouldAttachCarousel && uniqueBusinessIds.length > 0) {
+        const candidates = uniqueBusinessIds
+          .map(id => businessById.get(id))
+          .filter(Boolean)
+          .map(b => ({
+            id: b!.id,
+            business_name: b!.business_name,
+            business_tagline: b!.business_tagline || undefined,
+            system_category: b!.system_category || undefined,
+            display_category: b!.display_category || b!.system_category || undefined,
+            business_tier: normalizeTier(b!.business_tier),
+            business_address: b!.business_address || undefined,
+            business_town: b!.business_town || city,
+            logo: b!.logo || undefined,
+            business_images: Array.isArray(b!.business_images) 
+              ? b!.business_images 
+              : (b!.business_images ? [b!.business_images] : undefined),
+            rating: (b!.rating && b!.rating > 0) ? b!.rating : undefined,
+            offers_count: businessOfferCounts[b!.id] || 0
+          }))
+          .filter(b => !isExcludedTier(b.business_tier)) // EXCLUDE free_tier always
+        
+        // Tier sort + rating/offers tie-breaks
+        candidates.sort((a, b) => {
+          const ap = tierPriority[a.business_tier] ?? 99
+          const bp = tierPriority[b.business_tier] ?? 99
+          if (ap !== bp) return ap - bp
+          const ar = a.rating ?? 0
+          const br = b.rating ?? 0
+          if (br !== ar) return br - ar
+          return (b.offers_count ?? 0) - (a.offers_count ?? 0)
+        })
+        
+        businessCarousel = candidates.slice(0, 6)
+        
+        console.log(`🗺️ Built business carousel with ${businessCarousel.length} UNIQUE businesses`)
+      } else {
+        console.log(`🗺️ Business results available but carousel gated (no list query)`)
+      }
     }
     
     return {
       success: true,
       response: aiResponse,
       sources,
-      businessCarousel, // CRITICAL: Include carousel for Atlas
+      hasBusinessResults, // For "Show on map" CTA without carousel spam
+      businessCarousel, // Only populated when user asks for list/map
       walletActions,
       eventCards,
       modelUsed: modelToUse,

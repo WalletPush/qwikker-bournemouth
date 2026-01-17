@@ -25,6 +25,7 @@ interface ChatMessage {
     similarity: number
   }>
   quickReplies?: string[]
+  hasBusinessResults?: boolean // For Atlas "earned moment" without carousel spam
   businessCarousel?: Array<{
     id: string
     business_name: string
@@ -241,6 +242,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
         timestamp: new Date().toISOString(),
         sources: data.sources || [],
         quickReplies: data.quickReplies || [],
+        hasBusinessResults: data.hasBusinessResults,
         businessCarousel: data.businessCarousel,
         walletActions: data.walletActions,
         eventCards: data.eventCards
@@ -677,7 +679,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
                 )}
                 
                 {/* ATLAS: Show on Map Button */}
-                {atlasEnabled && message.type === 'ai' && message.businessCarousel && message.businessCarousel.length > 0 && (
+                {atlasEnabled && message.type === 'ai' && message.hasBusinessResults && (
                   <div className="mt-3">
                     <button
                       onClick={() => {
