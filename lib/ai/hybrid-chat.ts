@@ -493,10 +493,36 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     
     console.log(`✅ Response generated (${aiResponse.length} chars) using ${modelToUse}`)
     
+    // 🗺️ ATLAS: Build business carousel if we have business results
+    let businessCarousel: ChatResponse['businessCarousel'] = undefined
+    
+    if (businessResults.success && businessResults.results.length > 0) {
+      businessCarousel = businessResults.results
+        .filter(r => r.business_id && r.business_name) // Only businesses with IDs
+        .slice(0, 6) // Top 6 for carousel
+        .map(r => ({
+          id: r.business_id!,
+          business_name: r.business_name!,
+          business_tagline: r.tagline || undefined,
+          system_category: r.system_category || undefined,
+          display_category: r.display_category || r.system_category || undefined,
+          business_tier: r.tier || 'free_trial',
+          business_address: r.address || undefined,
+          business_town: r.town || city,
+          logo: r.logo || undefined,
+          business_images: r.images ? (Array.isArray(r.images) ? r.images : [r.images]) : undefined,
+          rating: r.rating || undefined,
+          offers_count: businessOfferCounts[r.business_id!] || 0
+        }))
+      
+      console.log(`🗺️ Built business carousel with ${businessCarousel.length} businesses`)
+    }
+    
     return {
       success: true,
       response: aiResponse,
       sources,
+      businessCarousel, // CRITICAL: Include carousel for Atlas
       walletActions,
       eventCards,
       modelUsed: modelToUse,
