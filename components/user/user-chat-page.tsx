@@ -500,6 +500,10 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
           onClose={() => setView('chat')}
           soundEnabled={soundEnabled}
           onToggleSound={() => setSoundEnabled(!soundEnabled)}
+          city={tenantConfig.city || 'unknown'}
+          userId={currentUser?.wallet_pass_id}
+          lastUserQuery={messages.length > 0 ? messages.filter(m => m.type === 'user').slice(-1)[0]?.content : undefined}
+          lastAIResponse={messages.length > 0 ? messages.filter(m => m.type === 'ai').slice(-1)[0]?.content : undefined}
         />
       )}
       

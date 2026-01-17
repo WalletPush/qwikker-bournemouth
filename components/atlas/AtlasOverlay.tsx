@@ -24,6 +24,8 @@ interface AtlasOverlayProps {
   userLocation: Coordinates | null
   soundEnabled: boolean
   onToggleSound: () => void
+  onBusinessSelected?: (businessId: string) => void
+  onDirectionsClicked?: (businessId: string) => void
 }
 
 export function AtlasOverlay({
@@ -33,7 +35,9 @@ export function AtlasOverlay({
   selectedBusiness,
   userLocation,
   soundEnabled,
-  onToggleSound
+  onToggleSound,
+  onBusinessSelected,
+  onDirectionsClicked
 }: AtlasOverlayProps) {
   const [query, setQuery] = useState('')
   
@@ -55,6 +59,11 @@ export function AtlasOverlay({
   // Open in maps app
   const openInMaps = () => {
     if (!selectedBusiness) return
+    
+    // Track directions click
+    if (onDirectionsClicked) {
+      onDirectionsClicked(selectedBusiness.id)
+    }
     
     const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
     const isAndroid = /Android/.test(navigator.userAgent)

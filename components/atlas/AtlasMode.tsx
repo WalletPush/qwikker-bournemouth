@@ -13,6 +13,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { Map as MapboxMap, LngLatLike, MapboxGeoJSONFeature } from 'mapbox-gl'
 import { AtlasOverlay } from './AtlasOverlay'
+import { ChatContextStrip } from './ChatContextStrip'
+import { usePerformanceMode } from '@/lib/atlas/usePerformanceMode'
+import { useAtlasAnalytics } from '@/lib/atlas/useAtlasAnalytics'
 import type { Coordinates } from '@/lib/location/useUserLocation'
 
 export interface Business {
@@ -47,6 +50,10 @@ interface AtlasModeProps {
   onClose: () => void
   soundEnabled: boolean
   onToggleSound: () => void
+  city: string
+  userId?: string
+  lastUserQuery?: string
+  lastAIResponse?: string
 }
 
 export function AtlasMode({
@@ -55,7 +62,11 @@ export function AtlasMode({
   userLocation,
   onClose,
   soundEnabled,
-  onToggleSound
+  onToggleSound,
+  city,
+  userId,
+  lastUserQuery,
+  lastAIResponse
 }: AtlasModeProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<MapboxMap | null>(null)
@@ -63,6 +74,20 @@ export function AtlasMode({
   const [searching, setSearching] = useState(false)
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null)
+  
+  // Performance mode detection
+  const performanceMode = usePerformanceMode()
+  
+  // Analytics tracking
+  const { trackEvent } = useAtlasAnalytics(city, userId)
+  
+  // Track Atlas opened on mount
+  useEffect(() => {
+    trackEvent({
+      eventType: 'atlas_opened',
+      performanceMode: performanceMode.enabled
+    })
+  }, [trackEvent, performanceMode.enabled])
   
   // Audio refs
   const audioWakeRef = useRef<HTMLAudioElement | null>(null)
@@ -111,21 +136,23 @@ export function AtlasMode({
           style: config.styleUrl || 'mapbox://styles/mapbox/dark-v11',
           center: [center.lng, center.lat],
           zoom: config.defaultZoom,
-          pitch: config.pitch,
+          pitch: performanceMode.enabled ? performanceMode.pitch : config.pitch,
           bearing: config.bearing,
-          antialias: true,
-          fadeDuration: 300
+          antialias: !performanceMode.enabled,
+          fadeDuration: performanceMode.enabled ? 150 : 300
         })
         
-        // Add fog for atmosphere
+        // Add fog for atmosphere (only if performance mode OFF)
         mapInstance.on('load', () => {
-          mapInstance.setFog({
-            color: 'rgb(5, 5, 15)',
-            'high-color': 'rgb(10, 15, 30)',
-            'horizon-blend': 0.3,
-            'space-color': 'rgb(0, 0, 5)',
-            'star-intensity': 0.5
-          })
+          if (!performanceMode.enabled && performanceMode.fog) {
+            mapInstance.setFog({
+              color: 'rgb(5, 5, 15)',
+              'high-color': 'rgb(10, 15, 30)',
+              'horizon-blend': 0.3,
+              'space-color': 'rgb(0, 0, 5)',
+              'star-intensity': 0.5
+            })
+          }
           
           setMapLoaded(true)
           
@@ -303,12 +330,23 @@ export function AtlasMode({
     setSelectedBusiness(null)
     
     try {
-      const response = await fetch(`/api/atlas/search?q=${encodeURIComponent(query)}`)
+      // Apply performance mode result limit
+      const limit = performanceMode.enabled ? performanceMode.maxMarkers : config.maxResults
+      
+      const response = await fetch(`/api/atlas/search?q=${encodeURIComponent(query)}&limit=${limit}`)
       const data = await response.json()
       
       if (data.ok && data.results) {
         setBusinesses(data.results)
         await addBusinessMarkers(data.results)
+        
+        // Track search performed
+        trackEvent({
+          eventType: 'atlas_search_performed',
+          query,
+          resultsCount: data.results.length,
+          performanceMode: performanceMode.enabled
+        })
         
         // Fly to first result
         if (data.results.length > 0) {
@@ -322,22 +360,53 @@ export function AtlasMode({
     } finally {
       setSearching(false)
     }
-  }, [addBusinessMarkers, flyToBusiness])
+  }, [addBusinessMarkers, flyToBusiness, config.maxResults, performanceMode, trackEvent])
+  
+  // Handle close with analytics
+  const handleClose = useCallback(() => {
+    trackEvent({
+      eventType: 'atlas_returned_to_chat',
+      performanceMode: performanceMode.enabled
+    })
+    onClose()
+  }, [trackEvent, performanceMode.enabled, onClose])
   
   return (
     <div className="fixed inset-0 z-50 bg-black">
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0" />
       
+      {/* Chat Context Strip */}
+      {mapLoaded && (lastUserQuery || lastAIResponse) && (
+        <ChatContextStrip
+          userQuery={lastUserQuery}
+          aiResponse={lastAIResponse}
+        />
+      )}
+      
       {/* Overlay UI */}
       <AtlasOverlay
-        onClose={onClose}
+        onClose={handleClose}
         onSearch={handleSearch}
         searching={searching}
         selectedBusiness={selectedBusiness}
         userLocation={userLocation}
         soundEnabled={soundEnabled}
         onToggleSound={onToggleSound}
+        onBusinessSelected={(businessId) => {
+          trackEvent({
+            eventType: 'atlas_business_selected',
+            businessId,
+            performanceMode: performanceMode.enabled
+          })
+        }}
+        onDirectionsClicked={(businessId) => {
+          trackEvent({
+            eventType: 'atlas_directions_clicked',
+            businessId,
+            performanceMode: performanceMode.enabled
+          })
+        }}
       />
       
       {/* Loading State */}
