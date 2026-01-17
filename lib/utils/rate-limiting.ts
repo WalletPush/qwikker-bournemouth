@@ -33,8 +33,9 @@ async function initializeRedis() {
   
   try {
     // Dynamic import to avoid bundling Redis in environments that don't need it
-    const { createClient } = await import('redis')
-    redisClient = createClient({ url: redisUrl })
+    // Use eval to prevent bundler from trying to resolve redis at build time
+    const redis = await eval('import("redis")')
+    redisClient = redis.createClient({ url: redisUrl })
     await redisClient.connect()
     redisAvailable = true
     console.log('🚀 Rate limiting: Connected to Redis for distributed rate limiting')
