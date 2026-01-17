@@ -43,6 +43,13 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
   const [selectedCategory, setSelectedCategory] = useState<string>('all') // NEW: Category filter
   const [showAllCategories, setShowAllCategories] = useState(false) // NEW: Show More toggle
   
+  // Quick filters state
+  const [quickFilters, setQuickFilters] = useState({
+    openNow: false,
+    hasOffers: false,
+    hasSecretMenu: false
+  })
+  
   // Helper function to scroll to results after filter change
   const scrollToResults = () => {
     setTimeout(() => {
@@ -53,6 +60,15 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
     }, 100)
   }
   const [searchQuery, setSearchQuery] = useState<string>('')
+  
+  // Toggle quick filter
+  const toggleQuickFilter = (filter: 'openNow' | 'hasOffers' | 'hasSecretMenu') => {
+    setQuickFilters(prev => ({
+      ...prev,
+      [filter]: !prev[filter]
+    }))
+    scrollToResults()
+  }
   
   // Track badge progress for visiting discover page
   useEffect(() => {
@@ -110,6 +126,37 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
     // NEW: Then filter by category if selected
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(b => b.systemCategory === selectedCategory)
+    }
+    
+    // Quick filters
+    if (quickFilters.openNow) {
+      filtered = filtered.filter(b => {
+        // Import getBusinessStatusProps inline to avoid circular deps
+        const { getBusinessStatusProps } = require('@/lib/utils/business-hours')
+        const status = getBusinessStatusProps(
+          (b as any).hours || (b as any).business_hours, 
+          (b as any).hours_structured || (b as any).business_hours_structured
+        )
+        return status?.isOpen === true
+      })
+    }
+    
+    if (quickFilters.hasOffers) {
+      filtered = filtered.filter(b => {
+        const offersCount = (b as any).activeOffers 
+          || b.offers?.length 
+          || (b as any).offers_count 
+          || 0
+        return offersCount > 0
+      })
+    }
+    
+    if (quickFilters.hasSecretMenu) {
+      filtered = filtered.filter(b => 
+        (b as any).hasSecretMenu 
+        || ((b as any).secretMenuCount && (b as any).secretMenuCount > 0)
+        || ((b as any).secret_menu_count && (b as any).secret_menu_count > 0)
+      )
     }
 
     // Then filter by search query if present
@@ -211,20 +258,64 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
         </Card>
       </div>
 
-      {/* NEW: Category Filter Pills */}
-      {availableCategories.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-slate-400 mb-3">Filter by Category</h3>
-          <div className="flex flex-wrap gap-2">
+      {/* Sticky Filters Container - Both quick and category filters */}
+      <div className="sticky top-0 z-50 -mx-4 bg-[#0b1020]/95 backdrop-blur-md border-b border-white/5 sm:static sm:mx-0 sm:bg-transparent sm:backdrop-blur-0 sm:border-0">
+        {/* Quick Filters */}
+        <div className="px-4 py-2.5 border-b border-white/10 sm:px-0 sm:py-0 sm:mb-4 sm:border-0">
+          <h3 className="hidden sm:block text-sm font-medium text-slate-400 mb-2">Quick Filters</h3>
+          <div className="flex gap-2 overflow-x-auto whitespace-nowrap [-webkit-overflow-scrolling:touch] pb-1 sm:flex-wrap sm:overflow-x-visible scrollbar-hidden">
+            <button
+              onClick={() => toggleQuickFilter('openNow')}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                quickFilters.openNow
+                  ? 'bg-[#00d083] text-black font-semibold shadow-lg'
+                  : 'bg-slate-800/60 border border-slate-700 text-slate-200 hover:bg-slate-700'
+              }`}
+            >
+              {quickFilters.openNow && <span className="text-xs">✓</span>}
+              <span className={quickFilters.openNow ? '' : 'sm:before:content-["🟢_"]'}>Open now</span>
+            </button>
+            
+            <button
+              onClick={() => toggleQuickFilter('hasOffers')}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                quickFilters.hasOffers
+                  ? 'bg-[#00d083] text-black font-semibold shadow-lg'
+                  : 'bg-slate-800/60 border border-slate-700 text-slate-200 hover:bg-slate-700'
+              }`}
+            >
+              {quickFilters.hasOffers && <span className="text-xs">✓</span>}
+              <span>Has offers</span>
+            </button>
+            
+            <button
+              onClick={() => toggleQuickFilter('hasSecretMenu')}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                quickFilters.hasSecretMenu
+                  ? 'bg-[#00d083] text-black font-semibold shadow-lg'
+                  : 'bg-slate-800/60 border border-slate-700 text-slate-200 hover:bg-slate-700'
+              }`}
+            >
+              {quickFilters.hasSecretMenu && <span className="text-xs">✓</span>}
+              <span>Secret menu</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Category Filter Pills */}
+        {availableCategories.length > 0 && (
+          <div className="px-4 py-2 mb-6 sm:px-0 sm:py-0 sm:mb-6">
+          <h3 className="hidden sm:block text-sm font-medium text-slate-400 mb-3">Filter by Category</h3>
+          <div className="flex gap-2 overflow-x-auto whitespace-nowrap [-webkit-overflow-scrolling:touch] pb-1 sm:flex-wrap sm:overflow-x-visible scrollbar-hidden">
             <button
               onClick={() => {
                 setSelectedCategory('all')
                 scrollToResults()
               }}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              className={`flex-shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
                 selectedCategory === 'all'
-                  ? 'bg-[#00d083] text-white'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                  ? 'bg-[#00d083] text-black font-semibold'
+                  : 'bg-slate-800/60 border border-slate-700 text-slate-200'
               }`}
             >
               All <span className="hidden sm:inline">({businesses.length})</span>
@@ -236,10 +327,10 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
                   setSelectedCategory(cat)
                   scrollToResults()
                 }}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                className={`flex-shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
                   selectedCategory === cat
-                    ? 'bg-[#00d083] text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                    ? 'bg-[#00d083] text-black font-semibold'
+                    : 'bg-slate-800/60 border border-slate-700 text-slate-200'
                 }`}
               >
                 {SYSTEM_CATEGORY_LABEL[cat as SystemCategory] || cat} <span className="hidden sm:inline">({getCategoryCount(cat)})</span>
@@ -248,14 +339,16 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
             {availableCategories.length > 5 && (
               <button
                 onClick={() => setShowAllCategories(!showAllCategories)}
-                className="px-4 py-2 rounded-full text-sm font-medium transition-colors bg-slate-800/50 text-slate-400 hover:bg-slate-700 border border-slate-700/50 hover:border-slate-600"
+                className="flex-shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors bg-slate-800/50 text-slate-400 hover:bg-slate-700 border border-slate-700/50 hover:border-slate-600"
               >
-                {showAllCategories ? '← Show Less' : `More (${availableCategories.length - 5}) →`}
+                <span className="sm:hidden">More</span>
+                <span className="hidden sm:inline">{showAllCategories ? '← Show Less' : `More (${availableCategories.length - 5}) →`}</span>
               </button>
             )}
           </div>
         </div>
       )}
+      </div>
 
       {/* AI Companion Card - After Filter Cards */}
       <div className="mb-4">
@@ -320,7 +413,18 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <h3 className="text-xl font-semibold text-slate-300 mb-2">
-              {searchQuery ? 'No businesses found' : 'No businesses in this category'}
+              {searchQuery 
+                ? 'No businesses found' 
+                : quickFilters.openNow 
+                  ? 'No businesses open right now'
+                  : quickFilters.hasOffers && quickFilters.hasSecretMenu
+                    ? 'No businesses with offers and secret menus'
+                    : quickFilters.hasOffers
+                      ? 'No businesses with offers'
+                      : quickFilters.hasSecretMenu
+                        ? 'No businesses with secret menus'
+                        : 'No businesses in this category'
+              }
             </h3>
             <p className="text-slate-400 mb-4">
               {searchQuery 

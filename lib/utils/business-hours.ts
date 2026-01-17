@@ -53,6 +53,53 @@ export function parseBusinessHours(hoursString: string | null | undefined): Pars
     }
   }
 
+  // Try to parse 24-hour format first (e.g., "09:00 - 23:00" or "12:00 - 03:00")
+  const format24Pattern = /(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/
+  const match24 = hoursString.match(format24Pattern)
+  
+  if (match24) {
+    const [, openHourStr, openMinStr, closeHourStr, closeMinStr] = match24
+    
+    const openHour = parseInt(openHourStr)
+    const openMin = parseInt(openMinStr)
+    const closeHour = parseInt(closeHourStr)
+    const closeMin = parseInt(closeMinStr)
+    
+    // Convert to minutes since midnight
+    const openMinutes = openHour * 60 + openMin
+    const closeMinutes = closeHour * 60 + closeMin
+    
+    // Handle overnight hours (e.g., 20:00 - 03:00)
+    let isOpen = false
+    if (closeMinutes < openMinutes) {
+      // Overnight: open if current time >= opening OR current time < closing
+      isOpen = (currentTime >= openMinutes) || (currentTime < closeMinutes)
+    } else {
+      // Same day: open if current time between opening and closing
+      isOpen = (currentTime >= openMinutes) && (currentTime < closeMinutes)
+    }
+    
+    // Calculate next change
+    let nextChange = null
+    if (isOpen) {
+      const closingPeriod = closeHour >= 12 ? 'PM' : 'AM'
+      const displayHour = closeHour === 0 ? 12 : (closeHour > 12 ? closeHour - 12 : closeHour)
+      const displayMin = closeMin === 0 ? '' : `:${closeMin.toString().padStart(2, '0')}`
+      nextChange = `Closes at ${displayHour}${displayMin} ${closingPeriod}`
+    } else {
+      const openingPeriod = openHour >= 12 ? 'PM' : 'AM'
+      const displayHour = openHour === 0 ? 12 : (openHour > 12 ? openHour - 12 : openHour)
+      const displayMin = openMin === 0 ? '' : `:${openMin.toString().padStart(2, '0')}`
+      nextChange = `Opens at ${displayHour}${displayMin} ${openingPeriod}`
+    }
+    
+    return {
+      isOpen,
+      nextChange,
+      displayText: isOpen ? 'Open now' : 'Closed now'
+    }
+  }
+
   // Try to parse simple format like "9am - 5pm" or "12pm - 10pm"
   const simpleTimePattern = /(\d{1,2})(am|pm)\s*-\s*(\d{1,2})(am|pm)/i
   const match = hoursString.match(simpleTimePattern)
@@ -109,12 +156,12 @@ export function parseBusinessHours(hoursString: string | null | undefined): Pars
     }
   }
 
-  // For complex formats or unrecognized patterns, return a safe default
-  // This handles cases like "Mon-Fri 9AM-5PM, Sat-Sun 10AM-4PM"
+  // For complex formats or unrecognized patterns, return UNKNOWN.
+  // We should never claim "open" unless we're sure.
   return {
-    isOpen: true, // Assume open for complex schedules to avoid showing "closed" incorrectly
+    isOpen: false, // Conservative: don't claim open unless we can parse it
     nextChange: null,
-    displayText: 'Open now' // Default to showing as open for complex schedules
+    displayText: 'Hours unavailable'
   }
 }
 

@@ -25,10 +25,227 @@ export function BusinessCard({
   showDistance = true,
   className = '' 
 }: BusinessCardProps) {
+  const systemCategory = resolveSystemCategory(business)
+  
+  // Helper to get utility line for mobile
+  const getUtilityLine = () => {
+    const raw = business.hours || business.business_hours
+    const structured = business.hours_structured || business.business_hours_structured
+
+    // If we have ANY hours data, try to parse it
+    if (raw || structured) {
+      const statusProps = getBusinessStatusProps(raw, structured)
+      
+      if (statusProps) {
+        // Better time extractor: handles "7 PM", "7:30 PM", "21:00", "09:00"
+        const extractTime = (s?: string | null) => {
+          if (!s) return null
+          // Try AM/PM format first (e.g., "7:30 PM" or "7 PM")
+          const ampm = s.match(/(\d{1,2})(?::(\d{2}))?\s*([AP]M)/i)
+          if (ampm) {
+            const h = ampm[1]
+            const m = ampm[2]
+            const ap = ampm[3].toUpperCase()
+            return m && m !== '00' ? `${h}:${m} ${ap}` : `${h} ${ap}`
+          }
+          // Try 24-hour format (e.g., "21:00" or "09:00")
+          const hm = s.match(/(\d{1,2}):(\d{2})/)
+          if (hm) {
+            let h = parseInt(hm[1], 10)
+            const m = hm[2]
+            const ap = h >= 12 ? 'PM' : 'AM'
+            if (h === 0) h = 12
+            else if (h > 12) h -= 12
+            return m !== '00' ? `${h}:${m} ${ap}` : `${h} ${ap}`
+          }
+          return null
+        }
+
+        const t = extractTime(statusProps.nextChange)
+
+        // Show status if we know it
+        if (statusProps.isOpen === true) {
+          return t ? `Open • Closes ${t}` : 'Open'
+        } else if (statusProps.isOpen === false) {
+          return t ? `Closed • Opens ${t}` : 'Closed'
+        }
+      }
+    }
+    
+    // Fallback to town
+    return business.town || business.location || business.city || 'Bournemouth'
+  }
+  
+  // Helper to resolve offers count from various possible fields
+  const getOffersCount = () => {
+    return business.activeOffers 
+      || business.offers?.length 
+      || business.offers_count 
+      || 0
+  }
+  
+  // Helper to resolve secret menu presence
+  const hasSecretMenu = () => {
+    return business.hasSecretMenu 
+      || (business.secretMenuCount && business.secretMenuCount > 0)
+      || (business.secret_menu_count && business.secret_menu_count > 0)
+      || false
+  }
+  
+  // Helper to check if business has real photos
+  const hasRealPhotos = () => {
+    return business.status !== 'unclaimed' 
+      && business.images 
+      && business.images.length > 0
+  }
+  
   const cardContent = (
-    <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden ${className}`}>
+    <div className="relative">
+      {/* Tier badge - half on/half off card (MOBILE ONLY) - OUTSIDE card to avoid clipping */}
+      {(business.plan === 'spotlight' || business.plan === 'featured') && (
+        <div className="absolute -top-2 right-3 z-30 sm:hidden">
+          {business.plan === 'spotlight' && (
+            <span className="inline-block px-3 py-1 rounded-full shadow-lg border border-white/10 backdrop-blur bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-[11px] font-extrabold tracking-wide uppercase">
+              QWIKKER PICK
+            </span>
+          )}
+          {business.plan === 'featured' && (
+            <span className="inline-block px-3 py-1 rounded-full shadow-lg border border-white/10 backdrop-blur bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-[11px] font-extrabold tracking-wide uppercase">
+              FEATURED
+            </span>
+          )}
+        </div>
+      )}
+      
+      <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden ${className}`}>
+        
+        {/* MOBILE LAYOUT: Thumbnail-left (default, hidden on sm:) */}
+        <div className="sm:hidden p-2.5">
+          <div className="flex gap-2.5">
+          {/* Left: Thumbnail */}
+          <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden">
+            {(() => {
+              if (business.status === 'unclaimed') {
+                return (
+                  <BusinessCardImage
+                    businessName={business.name}
+                    businessId={business.id}
+                    systemCategory={systemCategory}
+                    showUnclaimedBadge={false}
+                    className="h-full w-full"
+                  />
+                )
+              } else if (business.images && business.images.length > 0) {
+                return (
+                  <img 
+                    src={business.images[0]} 
+                    alt={business.name}
+                    className="w-full h-full object-cover"
+                  />
+                )
+              } else {
+                return (
+                  <BusinessCardImage
+                    businessName={business.name}
+                    businessId={business.id}
+                    systemCategory={systemCategory}
+                    showUnclaimedBadge={false}
+                    className="h-full w-full"
+                  />
+                )
+              }
+            })()}
+          </div>
+          
+          {/* Right: Info stack */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            <h3 className="text-slate-100 text-sm font-semibold mb-0.5 truncate group-hover:text-[#00d083] transition-colors">
+              {business.name}
+            </h3>
+            
+            <p className="text-slate-400 text-xs mb-0.5 truncate">
+              {(() => {
+                const label = getPrimaryLabel({
+                  google_types: business.google_types,
+                  google_primary_type: business.google_primary_type,
+                  display_category: business.display_category,
+                  system_category: business.system_category
+                })
+                return (label === 'Other' || label === 'Local business') ? '' : label
+              })()}
+            </p>
+            
+            {/* Compact meta row: rating + hours/location */}
+            <div className="text-xs text-slate-400 mb-1 truncate">
+              {(() => {
+                const rating = typeof business.rating === 'number' ? business.rating : null
+                const reviewCount = business.review_count ?? business.reviewCount ?? 0
+                const utilityText = getUtilityLine()
+                
+                if (rating) {
+                  return (
+                    <span>
+                      <span className="text-yellow-400">★</span>{' '}
+                      <span className="text-slate-100 font-semibold">{rating.toFixed(1)}</span>
+                      <span className="text-slate-400"> ({reviewCount})</span>
+                      <span className="text-slate-500"> • </span>
+                      <span>{utilityText}</span>
+                    </span>
+                  )
+                } else {
+                  return <span>{utilityText}</span>
+                }
+              })()}
+            </div>
+            
+            {/* Signal badges (clean pills, no emojis) */}
+            <div className="mt-auto">
+              {/* Reserve consistent space so cards don't look randomly empty */}
+              <div className="flex flex-wrap gap-1.5 min-h-[26px] items-center">
+                {/* OFFERS */}
+                {getOffersCount() > 0 && (
+                  <span className="bg-[#00d083]/15 border border-[#00d083]/25 text-[#00d083] text-[10px] leading-none px-2 py-1 rounded-full font-semibold">
+                    {getOffersCount()} {getOffersCount() === 1 ? 'Offer' : 'Offers'}
+                  </span>
+                )}
+
+                {/* SECRET MENU */}
+                {hasSecretMenu() && (
+                  <span className="bg-purple-500/15 border border-purple-500/25 text-purple-200 text-[10px] leading-none px-2 py-1 rounded-full font-semibold">
+                    Secret Menu
+                  </span>
+                )}
+
+                {/* Listing not claimed (only for status === unclaimed) */}
+                {business.status === 'unclaimed' && (
+                  <span className="bg-slate-700/40 border border-slate-600/40 text-slate-200 text-[10px] leading-none px-2 py-1 rounded-full">
+                    Listing not claimed
+                  </span>
+                )}
+
+                {/* Claimed but no photos */}
+                {business.status !== 'unclaimed' && !hasRealPhotos() && (
+                  <span className="bg-slate-700/40 border border-slate-600/40 text-slate-200 text-[10px] leading-none px-2 py-1 rounded-full">
+                    No photos yet
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Heart button */}
+          <button className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-400 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      {/* DESKTOP LAYOUT: Image-top (hidden by default, visible on sm:) */}
+      <div className="hidden sm:block">
       {/* Business Image - Conditional logic based on status + images */}
-      <div className="relative h-32 sm:h-48 overflow-hidden">
+      <div className="relative h-48 overflow-hidden">
         {(() => {
           const systemCategory = resolveSystemCategory(business)
 
@@ -260,12 +477,28 @@ export function BusinessCard({
             </svg>
             <span className="text-sm">{business.hours}</span>
             {(() => {
-              const status = getBusinessStatusProps(business.hours)
-              return (
-                <span className={`${status.statusColor} text-sm font-medium`}>
-                  • {status.statusText}
-                </span>
-              )
+              const raw = business.hours
+              const structured = business.hours_structured || business.business_hours_structured
+              
+              // If we have any hours data, try to show status
+              if (!raw && !structured) return null
+              
+              const status = getBusinessStatusProps(raw, structured)
+              if (!status) return null
+              
+              // Show status if we know it (true or false)
+              if (status.isOpen === true || status.isOpen === false) {
+                const line = getUtilityLine()
+                // Don't show if it's just the town fallback
+                if (!line || line === (business.town || business.location || business.city || 'Bournemouth')) return null
+                return (
+                  <span className="text-sm font-medium text-slate-300">
+                    • {line}
+                  </span>
+                )
+              }
+              
+              return null
             })()}
           </div>
         )}
@@ -314,7 +547,10 @@ export function BusinessCard({
           </Button>
         </div>
       </CardContent>
+      </div>
+      {/* End Desktop Layout */}
     </Card>
+    </div>
   )
 
   // If onClick is provided, make it clickable without Link

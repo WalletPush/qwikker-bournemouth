@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     const uniqueBusinessIds = Array.from(businessScoreMap.keys()).slice(0, maxResults * 2) // Fetch more, filter later
 
     // 🔒 CRITICAL: Fetch from AI-safe view (excludes free_tier automatically)
-    const { data: businesses, error: fetchError } = await supabase
+    const { data: businessesRaw, error: fetchError } = await supabase
       .from('business_profiles_ai_eligible')
       .select('id, business_name, rating, latitude, longitude, business_tier')
       .in('id', uniqueBusinessIds)
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!businesses || businesses.length === 0) {
+    if (!businessesRaw || businessesRaw.length === 0) {
       return NextResponse.json({
         summary: 'No high-rated matches nearby.',
         businessIds: [],
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     }
     
     // 🔒 RUNTIME GUARD: Verify no tier leakage (should be impossible via view)
-    const leaked = businesses.filter(b => !isAtlasEligible({
+    const leaked = businessesRaw.filter(b => !isAtlasEligible({
       business_tier: b.business_tier,
       latitude: b.latitude,
       longitude: b.longitude
@@ -127,13 +127,14 @@ export async function POST(request: NextRequest) {
         lat: b.latitude,
         lng: b.longitude
       })))
-      // Filter them out as safety net
-      businesses = businesses.filter(b => isAtlasEligible({
-        business_tier: b.business_tier,
-        latitude: b.latitude,
-        longitude: b.longitude
-      }))
     }
+    
+    // Filter out any ineligible businesses as safety net
+    const businesses = businessesRaw.filter(b => isAtlasEligible({
+      business_tier: b.business_tier,
+      latitude: b.latitude,
+      longitude: b.longitude
+    }))
     
     // Sort by tier priority, then rating, then similarity
     businesses.sort((a, b) => {

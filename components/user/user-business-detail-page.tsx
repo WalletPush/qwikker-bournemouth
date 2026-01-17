@@ -220,20 +220,18 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                 className="h-full w-full"
               />
               {business.status === 'unclaimed' && !business.owner_user_id && (
-              <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
-                <div className="px-3 py-2 rounded-lg bg-slate-800/90 backdrop-blur-md border border-slate-700/50">
-                  <p className="text-sm text-slate-300 font-medium">
-                    ℹ️ Listing not yet claimed by business owner
-                  </p>
-                </div>
+              <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 items-end max-w-[180px]">
+                <span className="px-2.5 py-1.5 rounded-lg bg-slate-800/90 backdrop-blur-md border border-slate-700/50 text-[11px] font-medium text-slate-300 text-right">
+                  ℹ️ Listing not yet claimed by business owner
+                </span>
                 <a
                   href={`/claim?business_id=${business.id}`}
-                  className="px-3 py-2 rounded-lg bg-[#00d083]/10 hover:bg-[#00d083]/20 backdrop-blur-md border border-[#00d083]/30 hover:border-[#00d083]/50 transition-colors"
+                  className="px-2.5 py-1.5 rounded-lg bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-md border border-[#00d083]/40 hover:border-[#00d083]/60 transition-colors"
                 >
-                  <p className="text-sm text-[#00d083] font-medium">
+                  <p className="text-[11px] text-[#00d083] font-medium text-right">
                     Is this your business? Claim this listing
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-[9px] text-slate-400 mt-0.5 text-right">
                     Claims are reviewed. We may ask for proof.
                   </p>
                 </a>
@@ -251,20 +249,18 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
               showDots={true}
             />
             {business.status === 'unclaimed' && !business.owner_user_id && (
-              <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
-                <div className="px-3 py-2 rounded-lg bg-slate-800/90 backdrop-blur-md border border-slate-700/50">
-                  <p className="text-sm text-slate-300 font-medium">
-                    ℹ️ Listing not yet claimed by business owner
-                  </p>
-                </div>
+              <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 items-end max-w-[180px]">
+                <span className="px-2.5 py-1.5 rounded-lg bg-slate-800/90 backdrop-blur-md border border-slate-700/50 text-[11px] font-medium text-slate-300 text-right">
+                  ℹ️ Listing not yet claimed by business owner
+                </span>
                 <a
                   href={`/claim?business_id=${business.id}`}
-                  className="px-3 py-2 rounded-lg bg-[#00d083]/10 hover:bg-[#00d083]/20 backdrop-blur-md border border-[#00d083]/30 hover:border-[#00d083]/50 transition-colors"
+                  className="px-2.5 py-1.5 rounded-lg bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-md border border-[#00d083]/40 hover:border-[#00d083]/60 transition-colors"
                 >
-                  <p className="text-sm text-[#00d083] font-medium">
+                  <p className="text-[11px] text-[#00d083] font-medium text-right">
                     Is this your business? Claim this listing
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-[9px] text-slate-400 mt-0.5 text-right">
                     Claims are reviewed. We may ask for proof.
                   </p>
                 </a>
@@ -275,21 +271,21 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
         })()}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
         
-        {/* Badges - Based on Subscription Plan */}
-        <div className="absolute top-4 right-4 flex flex-col gap-2">
+        {/* Tier Badges - Top Left (MOBILE: keep on left side to avoid claim badges on right) */}
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5 sm:top-4 sm:left-4 sm:gap-2">
           {business.plan === 'spotlight' && (
-            <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-sm px-3 py-1 rounded-full font-bold shadow-lg">
+            <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-[10px] px-2.5 py-1 rounded-full font-extrabold shadow-lg sm:text-sm sm:px-3 uppercase tracking-wide">
               QWIKKER PICK
             </span>
           )}
           {business.plan === 'featured' && (
-            <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-sm px-3 py-1 rounded-full font-bold shadow-lg">
+            <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-[10px] px-2.5 py-1 rounded-full font-extrabold shadow-lg sm:text-sm sm:px-3 uppercase tracking-wide">
               FEATURED
             </span>
           )}
           {business.activeOffers > 0 && (
-            <span className="bg-orange-500 text-slate-100 text-sm px-3 py-1 rounded-full shadow-lg">
-              {business.activeOffers} ACTIVE OFFERS
+            <span className="bg-orange-500 text-slate-100 text-[10px] px-2.5 py-1 rounded-full shadow-lg font-medium sm:text-sm sm:px-3">
+              {business.activeOffers} {business.activeOffers === 1 ? 'Offer' : 'Offers'}
             </span>
           )}
         </div>
