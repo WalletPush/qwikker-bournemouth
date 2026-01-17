@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveRequestCity } from '@/lib/utils/tenant-city'
+import { isAtlasEligible } from '@/lib/atlas/eligibility'
 
 /**
  * GET /api/atlas/search
@@ -14,8 +15,9 @@ import { resolveRequestCity } from '@/lib/utils/tenant-city'
  * SECURITY:
  * - City derived from hostname server-side (never trust client)
  * - Only returns businesses for current tenant city
+ * - Uses business_profiles_ai_eligible view (excludes free_tier)
  * - Only returns businesses with rating >= atlas_min_rating
- * - Only returns businesses with latitude/longitude
+ * - Only returns businesses with latitude/longitude (enforced by view)
  * - Only returns approved or unclaimed businesses
  * 
  * Returns array of businesses with:
@@ -69,12 +71,13 @@ export async function GET(request: NextRequest) {
     const limitParam = url.searchParams.get('limit')
     const limit = limitParam ? parseInt(limitParam, 10) : (config.atlas_max_results ?? 12)
     
-    // Build query
+    // Build query using AI-safe view (excludes free_tier automatically)
     let dbQuery = supabase
-      .from('business_profiles')
+      .from('business_profiles_ai_eligible')
       .select(`
         id,
         business_name,
+        business_tier,
         latitude,
         longitude,
         rating,
@@ -87,8 +90,6 @@ export async function GET(request: NextRequest) {
         phone
       `)
       .eq('city', city)
-      .not('latitude', 'is', null)
-      .not('longitude', 'is', null)
       .gte('rating', config.atlas_min_rating ?? 4.4)
       .in('status', ['approved', 'unclaimed'])
     
@@ -114,6 +115,27 @@ export async function GET(request: NextRequest) {
         ok: false,
         error: 'Search failed'
       }, { status: 500 })
+    }
+    
+    // 🔒 CRITICAL: Runtime check for tier leakage (should never happen via view)
+    const leakedBusinesses = (businesses || []).filter(b => 
+      !isAtlasEligible({ 
+        business_tier: b.business_tier, 
+        latitude: b.latitude, 
+        longitude: b.longitude 
+      })
+    )
+    
+    if (leakedBusinesses.length > 0) {
+      console.error('❌ CRITICAL: free_tier or invalid tier leaked into Atlas search:', 
+        leakedBusinesses.map(b => ({ id: b.id, name: b.business_name, tier: b.business_tier }))
+      )
+      // Filter them out as a safety net
+      businesses = businesses!.filter(b => isAtlasEligible({
+        business_tier: b.business_tier,
+        latitude: b.latitude,
+        longitude: b.longitude
+      }))
     }
     
     if (isDev) {

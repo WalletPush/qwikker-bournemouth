@@ -11,6 +11,9 @@ import { getBusinessVisits } from '@/lib/actions/business-visit-actions'
 import { SuccessModal, ErrorModal } from '@/components/ui/success-modal'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { ElegantModal } from '@/components/ui/elegant-modal'
+import { VerificationStatusWidget } from './VerificationStatusWidget'
+import { AtlasUpsellWidget } from './AtlasUpsellWidget'
+import { isFreeTier } from '@/lib/atlas/eligibility'
 
 interface ImprovedDashboardHomeProps {
   profile?: {
@@ -743,6 +746,34 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </Link>
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Atlas & Verification Widgets */}
+      {isFreeTier(profile?.business_tier) ? (
+        // FREE TIER: Show upsell first, then locked verification
+        <div className="space-y-6 mb-6">
+          <AtlasUpsellWidget businessId={profile?.id || ''} />
+          <VerificationStatusWidget business={{
+            id: profile?.id || '',
+            business_name: profile?.business_name || '',
+            google_place_id: profile?.google_place_id,
+            latitude: profile?.latitude,
+            longitude: profile?.longitude,
+            business_tier: profile?.business_tier
+          }} />
+        </div>
+      ) : (
+        // PAID/TRIAL TIERS: Show verification widget only
+        <div className="mb-6">
+          <VerificationStatusWidget business={{
+            id: profile?.id || '',
+            business_name: profile?.business_name || '',
+            google_place_id: profile?.google_place_id,
+            latitude: profile?.latitude,
+            longitude: profile?.longitude,
+            business_tier: profile?.business_tier
+          }} />
         </div>
       )}
 

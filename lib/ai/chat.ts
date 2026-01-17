@@ -1194,6 +1194,19 @@ export async function generateQuickReplies(
   const hasRecentBusinessMentions = recentConversation.includes('david') || recentConversation.includes('julie') || recentConversation.includes('orchid') || recentConversation.includes('adams')
   const hasRecentOfferMentions = recentConversation.includes('offer') || recentConversation.includes('deal') || recentConversation.includes('discount')
   
+  // 🗺️ ATLAS: If AI is conversational but has business results, offer to show them
+  const isConversationalButHasResults = hasBusinessResults && 
+    !lowerAIResponse.match(/\b(here's|here are|check out|try|recommend)\b/) &&
+    !lowerMessage.match(/\b(show|list|map|atlas|options|recommend|suggest)\b/)
+  
+  if (isConversationalButHasResults) {
+    return tidy([
+      'Show top picks',
+      'See on map',
+      'Compare options'
+    ])
+  }
+  
   // 🎯 PRIORITY: Check if AI is asking clarifying questions about preferences
   if (lowerAIResponse.includes('hunting for deals') || lowerAIResponse.includes('any specific cuisine') || lowerAIResponse.includes('before i point you') || lowerAIResponse.includes('before we dive in')) {
     return [

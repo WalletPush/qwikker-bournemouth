@@ -13,10 +13,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { Map as MapboxMap, LngLatLike, MapboxGeoJSONFeature } from 'mapbox-gl'
 import { AtlasOverlay } from './AtlasOverlay'
+import { AtlasHudBubble } from './AtlasHudBubble'
 import { ChatContextStrip } from './ChatContextStrip'
 import { usePerformanceMode } from '@/lib/atlas/usePerformanceMode'
 import { useAtlasAnalytics } from '@/lib/atlas/useAtlasAnalytics'
 import type { Coordinates } from '@/lib/location/useUserLocation'
+import type { AtlasResponse } from '@/lib/ai/prompts/atlas'
 
 export interface Business {
   id: string
@@ -75,6 +77,14 @@ export function AtlasMode({
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null)
   
+  // HUD bubble state
+  const [hudVisible, setHudVisible] = useState(false)
+  const [hudSummary, setHudSummary] = useState('')
+  const [hudPrimaryBusinessName, setHudPrimaryBusinessName] = useState<string | null>(null)
+  const hudDismissTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [lastAtlasQuery, setLastAtlasQuery] = useState<string | null>(null)
+  const [lastAtlasBusinessIds, setLastAtlasBusinessIds] = useState<string[]>([])
+  
   // Performance mode detection
   const performanceMode = usePerformanceMode()
   
@@ -130,9 +140,10 @@ export function AtlasMode({
     const initMap = async () => {
       try {
         // Dynamic import to avoid SSR issues
-        const mapboxgl = await import('mapbox-gl')
+        const mapboxglModule = await import('mapbox-gl')
+        const mapboxgl = mapboxglModule.default
         
-        // @ts-ignore
+        // Set access token (use default export for compatibility)
         mapboxgl.accessToken = config.mapboxPublicToken
         
         const mapInstance = new mapboxgl.Map({
@@ -198,7 +209,8 @@ export function AtlasMode({
     if (!map.current || !mapLoaded) return
     
     try {
-      const mapboxgl = await import('mapbox-gl')
+      const mapboxglModule = await import('mapbox-gl')
+      const mapboxgl = mapboxglModule.default
       
       // Remove existing source and layer
       if (map.current.getLayer('business-markers')) {
@@ -328,46 +340,126 @@ export function AtlasMode({
     
   }, [playSound])
   
-  // Search handler
+  // Search handler (calls Atlas query endpoint for HUD bubble response)
   const handleSearch = useCallback(async (query: string) => {
     setSearching(true)
     setSelectedBusiness(null)
+    setHudVisible(false) // Hide previous bubble
+    
+    // Clear any existing dismiss timer
+    if (hudDismissTimerRef.current) {
+      clearTimeout(hudDismissTimerRef.current)
+      hudDismissTimerRef.current = null
+    }
     
     try {
-      // Apply performance mode result limit
-      const limit = performanceMode.enabled ? performanceMode.maxMarkers : config.maxResults
-      
-      const response = await fetch(`/api/atlas/search?q=${encodeURIComponent(query)}&limit=${limit}`)
-      const data = await response.json()
-      
-      if (data.ok && data.results) {
-        setBusinesses(data.results)
-        await addBusinessMarkers(data.results)
-        
-        // Track search performed
-        trackEvent({
-          eventType: 'atlas_search_performed',
-          query,
-          resultsCount: data.results.length,
-          performanceMode: performanceMode.enabled
+      // Call Atlas query endpoint (ephemeral HUD bubble response)
+      const response = await fetch('/api/atlas/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: query,
+          userLocation: userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null
         })
+      })
+      
+      const atlasResponse: AtlasResponse = await response.json()
+      
+      // Store query and business IDs for state handoff
+      setLastAtlasQuery(query)
+      setLastAtlasBusinessIds(atlasResponse.businessIds)
+      
+      if (atlasResponse.businessIds.length > 0) {
+        // Fetch full business data for map markers
+        const limit = performanceMode.enabled ? performanceMode.maxMarkers : config.maxResults
+        const detailsResponse = await fetch(`/api/atlas/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+        const detailsData = await detailsResponse.json()
         
-        // Fly to first result
-        if (data.results.length > 0) {
-          const firstBusiness = data.results[0]
-          setSelectedBusiness(firstBusiness)
-          flyToBusiness(firstBusiness)
+        if (detailsData.ok && detailsData.results) {
+          const filteredResults = detailsData.results.filter((b: Business) => 
+            atlasResponse.businessIds.includes(b.id)
+          )
+          
+          setBusinesses(filteredResults)
+          await addBusinessMarkers(filteredResults)
+          
+          // Fly to first result
+          if (filteredResults.length > 0) {
+            const firstBusiness = filteredResults[0]
+            setSelectedBusiness(firstBusiness)
+            flyToBusiness(firstBusiness)
+          }
+          
+          // Find primary business name (if specified)
+          let primaryBusinessName: string | null = null
+          if (atlasResponse.primaryBusinessId) {
+            const primaryBusiness = filteredResults.find((b: Business) => 
+              b.id === atlasResponse.primaryBusinessId
+            )
+            primaryBusinessName = primaryBusiness?.business_name || null
+          }
+          
+          // Show HUD bubble with AI response
+          setHudSummary(atlasResponse.summary)
+          setHudPrimaryBusinessName(primaryBusinessName)
+          
+          // Delay bubble appearance (120ms after map begins moving)
+          setTimeout(() => {
+            setHudVisible(true)
+            
+            // Set auto-dismiss timer
+            hudDismissTimerRef.current = setTimeout(() => {
+              setHudVisible(false)
+            }, atlasResponse.ui.autoDismissMs)
+          }, 120)
+          
+          // Track search performed
+          trackEvent({
+            eventType: 'atlas_search_performed',
+            query,
+            resultsCount: filteredResults.length,
+            performanceMode: performanceMode.enabled
+          })
         }
+      } else {
+        // No results - show HUD bubble with message
+        setHudSummary(atlasResponse.summary)
+        setHudPrimaryBusinessName(null)
+        
+        setTimeout(() => {
+          setHudVisible(true)
+          
+          hudDismissTimerRef.current = setTimeout(() => {
+            setHudVisible(false)
+          }, atlasResponse.ui.autoDismissMs)
+        }, 120)
       }
+      
     } catch (error) {
       console.error('[Atlas] Search failed:', error)
+      setHudSummary('Something went wrong. Please try again.')
+      setHudPrimaryBusinessName(null)
+      
+      setTimeout(() => {
+        setHudVisible(true)
+        
+        hudDismissTimerRef.current = setTimeout(() => {
+          setHudVisible(false)
+        }, 3000)
+      }, 120)
     } finally {
       setSearching(false)
     }
-  }, [addBusinessMarkers, flyToBusiness, config.maxResults, performanceMode, trackEvent])
+  }, [userLocation, addBusinessMarkers, flyToBusiness, config.maxResults, performanceMode, trackEvent])
   
   // Handle close with analytics
   const handleClose = useCallback(() => {
+    // Clean up HUD dismiss timer
+    if (hudDismissTimerRef.current) {
+      clearTimeout(hudDismissTimerRef.current)
+      hudDismissTimerRef.current = null
+    }
+    
     trackEvent({
       eventType: 'atlas_returned_to_chat',
       performanceMode: performanceMode.enabled
@@ -375,10 +467,35 @@ export function AtlasMode({
     onClose()
   }, [trackEvent, performanceMode.enabled, onClose])
   
+  // HUD bubble handlers
+  const handleHudDismiss = useCallback(() => {
+    if (hudDismissTimerRef.current) {
+      clearTimeout(hudDismissTimerRef.current)
+      hudDismissTimerRef.current = null
+    }
+    setHudVisible(false)
+  }, [])
+  
+  const handleHudMoreDetails = useCallback(() => {
+    // Pass state back to chat mode
+    handleHudDismiss()
+    handleClose()
+    // State handoff is handled via lastAtlasQuery and lastAtlasBusinessIds
+  }, [handleHudDismiss, handleClose])
+  
   return (
     <div className="fixed inset-0 z-50 bg-black">
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0" />
+      
+      {/* HUD Bubble (ephemeral AI response) */}
+      <AtlasHudBubble
+        visible={hudVisible}
+        summary={hudSummary}
+        primaryBusinessName={hudPrimaryBusinessName || undefined}
+        onDismiss={handleHudDismiss}
+        onMoreDetails={handleHudMoreDetails}
+      />
       
       {/* Chat Context Strip */}
       {mapLoaded && (lastUserQuery || lastAIResponse) && (

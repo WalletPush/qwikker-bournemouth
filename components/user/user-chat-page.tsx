@@ -548,18 +548,38 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
           </div>
         </div>
         
-        {/* Clear Chat Button - Only show if there are multiple messages */}
-        {messages.length > 1 && (
-          <button
-            onClick={handleClearChat}
-            className="absolute top-0 right-0 p-2 text-slate-500 hover:text-slate-300 transition-colors duration-200 opacity-60 hover:opacity-100"
-            title="Start new conversation"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-        )}
+        {/* Header Actions */}
+        <div className="absolute top-0 right-0 flex items-center gap-2">
+          {/* Atlas Button - Always visible if enabled */}
+          {atlasEnabled && (
+            <button
+              onClick={() => {
+                setView('atlas')
+                if (userLocation === null) {
+                  requestPermission()
+                }
+              }}
+              className="p-2 text-[#00d083] hover:bg-[#00d083]/10 rounded-lg transition-all duration-200 opacity-80 hover:opacity-100 flex items-center gap-1.5"
+              title="Open Atlas (map discovery)"
+            >
+              <Map className="w-4 h-4" />
+              <span className="text-xs font-medium hidden sm:inline">Atlas</span>
+            </button>
+          )}
+          
+          {/* Clear Chat Button - Only show if there are multiple messages */}
+          {messages.length > 1 && (
+            <button
+              onClick={handleClearChat}
+              className="p-2 text-slate-500 hover:text-slate-300 transition-colors duration-200 opacity-60 hover:opacity-100"
+              title="Start new conversation"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Chat Container with Rounded Edges */}

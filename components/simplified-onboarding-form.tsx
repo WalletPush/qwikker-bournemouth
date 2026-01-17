@@ -423,14 +423,23 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
                             Verify with Google
                           </h3>
                           <p className="text-sm text-slate-400 mb-4">
-                            Auto-fill from Google Maps
+                            Unlock QWIKKER Atlas & premium discovery
                           </p>
                           
                           <ul className="text-xs text-slate-400 space-y-2 text-left">
-                            <li>• Auto-fills business details</li>
-                            <li>• Shows real ratings & reviews</li>
+                            <li>• Auto-fills business details from Google</li>
+                            <li>• Appears on QWIKKER Atlas (map discovery)</li>
+                            <li>• Shows real distance & directions</li>
                             <li>• Faster approval process</li>
                           </ul>
+                          
+                          <p className="text-xs text-gray-500 mt-3 italic">
+                            Atlas uses verified location data for accurate pins & directions.
+                          </p>
+                          
+                          <p className="text-xs text-[#00d083] mt-2 font-medium">
+                            Required for Atlas map placement
+                          </p>
                         </div>
                       </div>
                       
@@ -466,7 +475,7 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
                             Create Listing
                           </h3>
                           <p className="text-sm text-slate-400 mb-4">
-                            Standard onboarding
+                            Standard onboarding (Atlas unlock later)
                           </p>
                           
                           <ul className="text-xs text-slate-400 space-y-2 text-left">
@@ -474,6 +483,10 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
                             <li>• Best for new or unlisted businesses</li>
                             <li>• Reviewed by our team before going live</li>
                           </ul>
+                          
+                          <p className="text-xs text-slate-500 mt-3">
+                            Verify later to unlock Atlas
+                          </p>
                         </div>
                       </div>
                     </div>

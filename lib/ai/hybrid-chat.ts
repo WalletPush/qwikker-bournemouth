@@ -36,6 +36,7 @@ interface ChatResponse {
   error?: string
   modelUsed?: 'gpt-4o-mini' | 'gpt-4o'
   classification?: any
+  uiMode?: 'conversational' | 'suggestions' | 'map' // Explicit UI mode for carousel gating
   hasBusinessResults?: boolean // For Atlas "earned moment" without carousel spam
   businessCarousel?: Array<{
     id: string
@@ -228,6 +229,13 @@ EVENT HANDLING:
 - After mentioning, say: "Want me to pull up the event card with full details?"
 - When they say yes/interested, just say "Here you go!" - the visual card will appear automatically
 - NEVER manually format event info with dashes or structured text - let the cards do that!
+
+🗺️ ATLAS (MAP) HANDLING:
+- When user asks to see places on a map, NEVER say "I can't show you a map"
+- Atlas (our interactive map) is available and will appear automatically
+- Use phrases like: "Want to see these on Atlas?", "I can show you where they are!", or "Ready to explore on the map?"
+- The "Show on Map" button will appear below your message when businesses are available
+- Stay conversational—don't over-explain the tech, just offer it naturally
 
 FLOW:
 ${state.currentBusiness ? 
@@ -497,6 +505,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     // 🗺️ ATLAS: Build business carousel with proper deduplication and enrichment
     let businessCarousel: ChatResponse['businessCarousel'] = undefined
     let hasBusinessResults = false
+    let uiMode: 'conversational' | 'suggestions' | 'map' = 'conversational'
     
     if (businessResults.success && businessResults.results.length > 0) {
       // STEP 1: Dedupe by business_id (KB returns multiple rows per business)
@@ -519,10 +528,11 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       const uniqueBusinessIds = Array.from(bestHitByBusiness.keys())
       hasBusinessResults = uniqueBusinessIds.length > 0
       
-      // STEP 2: Fetch canonical business data from business_profiles
+      // STEP 2: Fetch canonical business data from business_profiles_ai_eligible
       // (Don't trust KB rows for tier/rating/categories/images)
+      // CRITICAL: Use AI-safe view to prevent free_tier leakage
       const { data: businesses } = await supabase
-        .from('business_profiles')
+        .from('business_profiles_ai_eligible')
         .select(`
           id,
           business_name,
@@ -551,14 +561,28 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         free_tier: 9       // EXCLUDE: unclaimed/imported
       }
       
+      // CRITICAL: null tier → free_tier (EXCLUDED by default for safety)
+      // If tier is unknown, don't show in AI (conservative approach)
       const normalizeTier = (tier: string | null | undefined) => tier ?? 'free_tier'
       const isExcludedTier = (tier: string) => tier === 'free_tier'
       
-      // STEP 4: Carousel gating: only show when user asks for options/list/map
+      // STEP 4: UI Mode classifier (deterministic carousel gating)
       const msg = userMessage.toLowerCase()
-      const wantsList = /show|list|options|recommend|suggest|places|where should|near me|map|atlas|on the map|pins|results/.test(msg)
+      const wantsMap = /\b(map|atlas|on the map|pins|show.*location|where.*located)\b/.test(msg)
+      const wantsList = /\b(show|list|options|recommend|suggest|places|where should|near me|results|give me)\b/.test(msg)
       
-      const shouldAttachCarousel = wantsList
+      let uiMode: 'conversational' | 'suggestions' | 'map'
+      if (wantsMap) {
+        uiMode = 'map'
+      } else if (wantsList) {
+        uiMode = 'suggestions'
+      } else {
+        uiMode = 'conversational'
+      }
+      
+      const shouldAttachCarousel = uiMode !== 'conversational'
+      
+      console.log(`🎨 UI Mode: ${uiMode}, shouldAttachCarousel: ${shouldAttachCarousel}`)
       
       // STEP 5: Build final carousel (deduped, tier-ordered, enriched)
       if (shouldAttachCarousel && uniqueBusinessIds.length > 0) {
@@ -606,6 +630,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       success: true,
       response: aiResponse,
       sources,
+      uiMode, // Explicit UI mode for carousel gating
       hasBusinessResults, // For "Show on map" CTA without carousel spam
       businessCarousel, // Only populated when user asks for list/map
       walletActions,

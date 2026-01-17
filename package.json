@@ -28,6 +28,7 @@
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.26.2",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.544.0",
     "mapbox-gl": "^3.18.0",
