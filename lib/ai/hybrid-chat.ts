@@ -13,6 +13,7 @@ import {
   generateStateContext 
 } from './conversation-state'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { isFreeTier, isAiEligibleTier, getTierPriority } from '@/lib/atlas/eligibility'
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -553,18 +554,12 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       const businessById = new Map((businesses || []).map(b => [b.id, b]))
       
       // STEP 3: Tier priority and exclusions
-      const tierPriority: Record<string, number> = {
-        qwikker_picks: 0,
-        featured: 1,
-        free_trial: 2,     // treat as featured trial
-        recommended: 3,    // "starter"
-        free_tier: 9       // EXCLUDE: unclaimed/imported
-      }
+      // Now using centralized helpers from lib/atlas/eligibility.ts
       
       // CRITICAL: null tier → free_tier (EXCLUDED by default for safety)
       // If tier is unknown, don't show in AI (conservative approach)
+      // Use centralized helpers from lib/atlas/eligibility.ts
       const normalizeTier = (tier: string | null | undefined) => tier ?? 'free_tier'
-      const isExcludedTier = (tier: string) => tier === 'free_tier'
       
       // STEP 4: UI Mode classifier (deterministic carousel gating)
       const msg = userMessage.toLowerCase()
@@ -605,12 +600,12 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             rating: (b!.rating && b!.rating > 0) ? b!.rating : undefined,
             offers_count: businessOfferCounts[b!.id] || 0
           }))
-          .filter(b => !isExcludedTier(b.business_tier)) // EXCLUDE free_tier always
+          .filter(b => !isFreeTier(b.business_tier)) // EXCLUDE free_tier always (centralized helper)
         
-        // Tier sort + rating/offers tie-breaks
+        // Tier sort + rating/offers tie-breaks (using centralized getTierPriority)
         candidates.sort((a, b) => {
-          const ap = tierPriority[a.business_tier] ?? 99
-          const bp = tierPriority[b.business_tier] ?? 99
+          const ap = getTierPriority(a.business_tier)
+          const bp = getTierPriority(b.business_tier)
           if (ap !== bp) return ap - bp
           const ar = a.rating ?? 0
           const br = b.rating ?? 0
