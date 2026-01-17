@@ -406,6 +406,63 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         </CardContent>
       </Card>
 
+      {/* Atlas Intro Card */}
+      <Card className="bg-gradient-to-br from-blue-900/30 via-purple-900/20 to-blue-900/30 border border-blue-500/30 relative overflow-hidden group hover:border-blue-400/50 transition-all duration-300">
+        {/* Animated gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/10 to-blue-500/5"></div>
+        
+        <CardContent className="relative p-6">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            {/* Icon */}
+            <div className="relative flex-shrink-0">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl blur-lg opacity-40"></div>
+              <div className="relative p-4 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl border-2 border-blue-400/40 backdrop-blur-sm">
+                <svg className="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+              </div>
+            </div>
+            
+            <div className="flex-1 text-center md:text-left">
+              {/* Title */}
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Explore {franchiseCity ? franchiseCity.charAt(0).toUpperCase() + franchiseCity.slice(1) : 'Your City'} with Atlas
+              </h2>
+              
+              {/* Description */}
+              <p className="text-slate-300 text-sm mb-4">
+                A live, AI-guided map that shows you exactly where to go — based on what you want, right now.
+              </p>
+              
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+                <Button asChild className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400 text-white font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all duration-200">
+                  <Link href={getNavUrl("/user/chat")}>
+                    <span className="flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                      </svg>
+                      Open Atlas
+                    </span>
+                  </Link>
+                </Button>
+                
+                <Button asChild variant="outline" className="border-slate-600 hover:border-blue-400/50 text-slate-300 hover:text-blue-300 bg-slate-800/50 hover:bg-slate-700/50">
+                  <Link href={`${getNavUrl("/user/chat")}${walletPassId ? '&' : '?'}message=${encodeURIComponent("Show me the best coffee shops on the map")}`}>
+                    <span className="flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      Ask Atlas something
+                    </span>
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Navigation Cards - Bigger */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* Discover Places */}
