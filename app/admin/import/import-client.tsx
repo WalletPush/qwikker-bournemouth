@@ -34,6 +34,7 @@ interface AdminImportClientProps {
   currencyCode: string
   countryName: string
   displayName: string
+  importMaxRadiusM: number
 }
 
 interface BusinessResult {
@@ -51,7 +52,7 @@ interface BusinessResult {
   photoName: string | null
 }
 
-export default function AdminImportClient({ city: defaultCity, currencyCode, countryName, displayName }: AdminImportClientProps) {
+export default function AdminImportClient({ city: defaultCity, currencyCode, countryName, displayName, importMaxRadiusM }: AdminImportClientProps) {
   const [city, setCity] = useState(defaultCity)
   // Default location is just the city name - country is automatically appended by backend
   const [location, setLocation] = useState(displayName)
@@ -448,18 +449,18 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Search Radius</Label>
-              <Badge variant="secondary">{(radius[0] / 1609.34).toFixed(1)} miles</Badge>
+              <Badge variant="secondary">{(radius[0] / 1609.34).toFixed(1)} miles ({(radius[0] / 1000).toFixed(1)} km)</Badge>
             </div>
             <Slider
               value={radius}
               onValueChange={setRadius}
               min={1609}
-              max={16093}
+              max={importMaxRadiusM}
               step={805}
               className="w-full"
             />
             <p className="text-xs text-muted-foreground">
-              How far from city center to search (3-6 miles recommended)
+              Max: {(importMaxRadiusM / 1609.34).toFixed(0)} miles ({(importMaxRadiusM / 1000).toFixed(0)} km) — set by HQ Admin
             </p>
           </div>
 

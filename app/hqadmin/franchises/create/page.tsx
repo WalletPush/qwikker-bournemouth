@@ -18,7 +18,15 @@ export default function CreateFranchisePage() {
     owner_email: '',
     owner_phone: '',
     send_invite: true,
-    force_password_reset: true
+    force_password_reset: true,
+    // Atlas optional fields
+    atlas_enabled: false,
+    mapbox_public_token: '',
+    mapbox_style_url: 'mapbox://styles/mapbox/dark-v11',
+    atlas_min_rating: 4.4,
+    atlas_max_results: 12,
+    city_lat: null as number | null,
+    city_lng: null as number | null
   })
 
   // Auto-generate subdomain from city name
@@ -257,6 +265,134 @@ export default function CreateFranchisePage() {
               </div>
             </label>
           </div>
+        </div>
+
+        {/* Section 4: Map & Atlas (Optional) */}
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-white">Map & Atlas (Optional)</h2>
+              <p className="text-sm text-slate-400 mt-1">
+                Enable interactive map discovery mode. You can configure this later if needed.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <span className="text-sm text-slate-300">Enable</span>
+              <input
+                type="checkbox"
+                checked={formData.atlas_enabled}
+                onChange={(e) => setFormData({ ...formData, atlas_enabled: e.target.checked })}
+                className="w-4 h-4 text-[#00D083] bg-slate-800 border-slate-700 rounded focus:ring-[#00D083]"
+              />
+            </label>
+          </div>
+
+          {formData.atlas_enabled && (
+            <div className="space-y-4 pt-4 border-t border-slate-800">
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-300">
+                  <strong>About Mapbox:</strong> Mapbox includes a generous free tier (50,000+ web map loads/month). 
+                  Most small cities stay free early on. Each Atlas open = 1 map load. You'll use your own Mapbox account (no central billing).
+                </p>
+                <a 
+                  href="https://account.mapbox.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-[#00D083] hover:underline mt-2 inline-block"
+                >
+                  Get free Mapbox token →
+                </a>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Mapbox Public Token *
+                </label>
+                <input
+                  type="text"
+                  required={formData.atlas_enabled}
+                  value={formData.mapbox_public_token}
+                  onChange={(e) => setFormData({ ...formData, mapbox_public_token: e.target.value })}
+                  placeholder="pk.eyJ1Ijoi..."
+                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#00D083]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Mapbox Style URL (optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.mapbox_style_url}
+                  onChange={(e) => setFormData({ ...formData, mapbox_style_url: e.target.value })}
+                  placeholder="mapbox://styles/mapbox/dark-v11"
+                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#00D083]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    City Center Latitude *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    required={formData.atlas_enabled}
+                    value={formData.city_lat || ''}
+                    onChange={(e) => setFormData({ ...formData, city_lat: e.target.value ? parseFloat(e.target.value) : null })}
+                    placeholder="50.7192"
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00D083]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    City Center Longitude *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    required={formData.atlas_enabled}
+                    value={formData.city_lng || ''}
+                    onChange={(e) => setFormData({ ...formData, city_lng: e.target.value ? parseFloat(e.target.value) : null })}
+                    placeholder="-1.8808"
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00D083]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Min Rating (0-5)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="5"
+                    value={formData.atlas_min_rating}
+                    onChange={(e) => setFormData({ ...formData, atlas_min_rating: parseFloat(e.target.value) })}
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00D083]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Max Results (1-50)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={formData.atlas_max_results}
+                    onChange={(e) => setFormData({ ...formData, atlas_max_results: parseInt(e.target.value) })}
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00D083]"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Submit */}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { AtlasConfigSection } from '@/components/hqadmin/AtlasConfigSection'
 
 interface FranchiseDetail {
   franchise: {
@@ -18,6 +19,20 @@ interface FranchiseDetail {
     google_places_api_key: string | null
     twilio_account_sid: string | null
     created_at: string
+    // Atlas fields
+    atlas_enabled: boolean
+    mapbox_public_token: string | null
+    mapbox_style_url: string | null
+    atlas_min_rating: number
+    atlas_max_results: number
+    atlas_default_zoom: number
+    atlas_pitch: number
+    atlas_bearing: number
+    lat: number | null
+    lng: number | null
+    onboarding_search_radius_m: number
+    import_search_radius_m: number
+    import_max_radius_m: number
   }
   admins: Array<{
     id: string
@@ -236,8 +251,45 @@ export default function FranchiseDetailPage() {
           <ConfigRow label="AI (OpenAI)" configured={!!franchise.openai_api_key} />
           <ConfigRow label="Payments (Stripe)" configured={!!franchise.stripe_secret_key} />
           <ConfigRow label="Maps (Google Places)" configured={!!franchise.google_places_api_key} />
+          <ConfigRow label="Atlas (Mapbox)" configured={franchise.atlas_enabled && !!franchise.mapbox_public_token} />
         </div>
       </div>
+
+      {/* Atlas Configuration */}
+      <AtlasConfigSection 
+        city={franchise.city}
+        initialConfig={{
+          atlas_enabled: franchise.atlas_enabled,
+          mapbox_public_token: franchise.mapbox_public_token || '',
+          mapbox_style_url: franchise.mapbox_style_url || 'mapbox://styles/mapbox/dark-v11',
+          atlas_min_rating: franchise.atlas_min_rating || 4.4,
+          atlas_max_results: franchise.atlas_max_results || 12,
+          atlas_default_zoom: franchise.atlas_default_zoom || 13,
+          atlas_pitch: franchise.atlas_pitch || 45,
+          atlas_bearing: franchise.atlas_bearing || 0,
+          lat: franchise.lat,
+          lng: franchise.lng,
+          onboarding_search_radius_m: franchise.onboarding_search_radius_m || 5000,
+          import_search_radius_m: franchise.import_search_radius_m || 10000,
+          import_max_radius_m: franchise.import_max_radius_m || 200000
+        }}
+        onSave={async (config) => {
+          const res = await fetch(`/api/hq/franchises/${franchiseId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+          })
+          
+          if (!res.ok) throw new Error('Failed to save')
+          
+          // Refresh data
+          const refreshRes = await fetch(`/api/hq/franchises/${franchiseId}`)
+          const refreshData = await refreshRes.json()
+          setData(refreshData)
+          
+          alert('Atlas configuration saved successfully!')
+        }}
+      />
 
       {/* Admins */}
       <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">

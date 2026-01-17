@@ -161,3 +161,67 @@ export async function PATCH(
     )
   }
 }
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Verify HQ admin (session-based)
+    const auth = await requireHQAdmin()
+    if (!auth.ok) return auth.response
+
+    const body = await request.json()
+    
+    // Use service role for writes
+    const adminClient = createServiceRoleClient()
+
+    // Update Atlas config
+    const { data: franchise, error: updateError } = await adminClient
+      .from('franchise_crm_configs')
+      .update({
+        atlas_enabled: body.atlas_enabled,
+        mapbox_public_token: body.mapbox_public_token,
+        mapbox_style_url: body.mapbox_style_url,
+        atlas_min_rating: body.atlas_min_rating,
+        atlas_max_results: body.atlas_max_results,
+        atlas_default_zoom: body.atlas_default_zoom,
+        atlas_pitch: body.atlas_pitch,
+        atlas_bearing: body.atlas_bearing,
+        lat: body.lat,
+        lng: body.lng,
+        onboarding_search_radius_m: body.onboarding_search_radius_m,
+        import_search_radius_m: body.import_search_radius_m,
+        import_max_radius_m: body.import_max_radius_m
+      })
+      .eq('id', params.id)
+      .select('city')
+      .single()
+    
+    if (updateError) {
+      console.error('Error updating Atlas config:', updateError)
+      return NextResponse.json({ error: 'Failed to update config' }, { status: 500 })
+    }
+
+    // Log audit event
+    await adminClient.from('hq_audit_logs').insert({
+      actor_user_id: auth.user.id,
+      actor_email: auth.hqAdmin.email,
+      actor_type: 'hq_admin',
+      action: 'atlas_config_updated',
+      resource_type: 'franchise',
+      resource_id: params.id,
+      city: franchise.city,
+      metadata: { atlas_enabled: body.atlas_enabled }
+    })
+
+    return NextResponse.json({ success: true })
+
+  } catch (error) {
+    console.error('Atlas config update API error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
