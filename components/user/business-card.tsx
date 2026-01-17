@@ -28,7 +28,7 @@ export function BusinessCard({
   const cardContent = (
     <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden ${className}`}>
       {/* Business Image - Conditional logic based on status + images */}
-      <div className="relative h-48 overflow-hidden">
+      <div className="relative h-36 sm:h-48 overflow-hidden">
         {(() => {
           const systemCategory = resolveSystemCategory(business)
 
@@ -73,14 +73,14 @@ export function BusinessCard({
         
         {/* Hero Badge - Show for ALL claimed businesses (regardless of images) */}
         {business.status !== 'unclaimed' && (
-          <div className="absolute top-3 right-3 z-20">
+          <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20">
             {business.plan === 'spotlight' && (
-              <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg animate-pulse">
+              <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 rounded-full font-bold shadow-lg animate-pulse">
                 ⭐ QWIKKER PICK
               </span>
             )}
             {business.plan === 'featured' && (
-              <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-xs px-3 py-2 rounded-full font-bold shadow-lg">
+              <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 rounded-full font-bold shadow-lg">
                 FEATURED
               </span>
             )}
@@ -89,9 +89,9 @@ export function BusinessCard({
 
         {/* Case 3 Override: Add "No Photos Yet" badge for claimed businesses without images */}
         {business.status !== 'unclaimed' && (!business.images || business.images.length === 0) && (
-          <div className="absolute top-3 right-3 z-20">
-            <div className="px-2.5 py-1 rounded-md bg-slate-700/90 backdrop-blur-sm border border-slate-600/30">
-              <span className="text-xs font-semibold text-white uppercase tracking-wide">
+          <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20">
+            <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-slate-700/90 backdrop-blur-sm border border-slate-600/30">
+              <span className="text-[10px] sm:text-xs font-semibold text-white uppercase tracking-wide">
                 No Photos Yet
               </span>
             </div>
@@ -100,21 +100,21 @@ export function BusinessCard({
 
         {/* Distance Badge - Show for ALL businesses */}
         {showDistance && business.distance && (
-          <div className="absolute bottom-3 left-3 z-20">
-            <span className="bg-black/70 text-slate-100 text-xs px-3 py-2 rounded-full backdrop-blur-sm flex items-center gap-1">
-              🚶 {Math.round(parseFloat(business.distance) * 20)} min walk • {business.distance} miles
+          <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 z-20">
+            <span className="bg-black/70 text-slate-100 text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 rounded-full backdrop-blur-sm flex items-center gap-1">
+              🚶 {Math.round(parseFloat(business.distance) * 20)} min • {business.distance} mi
             </span>
           </div>
         )}
       </div>
 
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4 px-3 sm:px-6">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-slate-100 text-lg mb-1 group-hover:text-[#00d083] transition-colors">
+            <CardTitle className="text-slate-100 text-base sm:text-lg mb-1 group-hover:text-[#00d083] transition-colors">
               {business.name}
             </CardTitle>
-            <p className="text-slate-400 text-sm">
+            <p className="text-slate-400 text-xs sm:text-sm">
               {(() => {
                 // Use smart label (cuisine-specific if available, fallback to category)
                 const label = getPrimaryLabel({
@@ -127,7 +127,7 @@ export function BusinessCard({
                 return (label === 'Other' || label === 'Local business') ? '' : label
               })()}
             </p>
-            <p className="text-[#00d083] text-sm font-medium mt-1">
+            <p className="text-[#00d083] text-xs sm:text-sm font-medium mt-1">
               {(() => {
                 // Use smart hero line (tagline if exists, otherwise generated)
                 const heroLine = getHeroLine({
@@ -146,7 +146,7 @@ export function BusinessCard({
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6 pb-3 sm:pb-6">
         {/* Rating and Reviews (REAL ONLY - no fake defaults) */}
         {(() => {
           // 🔍 DEV DEBUG: See what fields are actually present
@@ -184,7 +184,7 @@ export function BusinessCard({
           // If we don't have a REAL rating, show "No rating yet"
           if (rating === null) {
             return (
-              <div className="flex items-center gap-2 text-slate-400 text-sm">
+              <div className="flex items-center gap-2 text-slate-400 text-xs sm:text-sm">
                 <span>No rating yet</span>
               </div>
             )
@@ -194,7 +194,7 @@ export function BusinessCard({
           const hasHalf = rating - fullStars >= 0.5
 
           return (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <div className="flex items-center gap-1">
                 <div className="flex">
                   {[1, 2, 3, 4, 5].map((star) => {
@@ -204,7 +204,7 @@ export function BusinessCard({
                     return (
                       <svg
                         key={star}
-                        className={`w-4 h-4 ${
+                        className={`w-3 h-3 sm:w-4 sm:h-4 ${
                           isFull || isHalfStar ? 'text-yellow-400' : 'text-gray-600'
                         }`}
                         fill="currentColor"
@@ -216,17 +216,17 @@ export function BusinessCard({
                   })}
                 </div>
 
-                <span className="text-slate-100 font-semibold">{rating.toFixed(1)}</span>
-                <span className="text-slate-400 text-sm">
-                  ({safeReviewCount.toLocaleString()} reviews)
+                <span className="text-slate-100 font-semibold text-sm">{rating.toFixed(1)}</span>
+                <span className="text-slate-400 text-xs sm:text-sm">
+                  ({safeReviewCount.toLocaleString()})
                 </span>
               </div>
             </div>
           )
         })()}
 
-        {/* Location */}
-        <div className="flex items-center gap-2 text-slate-400">
+        {/* Location - Hidden on mobile */}
+        <div className="hidden sm:flex items-center gap-2 text-slate-400">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -234,9 +234,9 @@ export function BusinessCard({
           <span className="text-sm">{business.address}, {business.town || business.location}</span>
         </div>
 
-        {/* Phone */}
+        {/* Phone - Hidden on mobile */}
         {business.phone && (
-          <div className="flex items-center gap-2 text-slate-400">
+          <div className="hidden sm:flex items-center gap-2 text-slate-400">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
@@ -244,9 +244,9 @@ export function BusinessCard({
           </div>
         )}
 
-        {/* Hours */}
+        {/* Hours - Hidden on mobile */}
         {business.hours && (
-          <div className="flex items-center gap-2 text-slate-400">
+          <div className="hidden sm:flex items-center gap-2 text-slate-400">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>

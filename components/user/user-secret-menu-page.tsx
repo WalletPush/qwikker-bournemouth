@@ -302,10 +302,10 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
         )}
         
         {/* Top badges row */}
-        <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-10">
+        <div className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 flex justify-between items-start z-10">
           {/* Rarity Badge - Only for Spotlight subscribers */}
           {(item.rarity || 0) >= 5 && (
-            <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs px-2 py-1 rounded-full font-bold shadow-lg">
+            <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full font-bold shadow-lg">
               LEGENDARY
             </span>
           )}
@@ -313,14 +313,14 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
           {/* Lock/Unlock Status */}
           <div className="ml-auto">
             {isUnlocked ? (
-              <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg">
-                <svg className="w-4 h-4 text-slate-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-1.5 sm:p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-slate-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                 </svg>
               </div>
             ) : (
-              <div className="p-2 bg-slate-700/80 rounded-full">
-                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-1.5 sm:p-2 bg-slate-700/80 rounded-full">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
@@ -329,33 +329,33 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
         </div>
 
 
-        <CardHeader className="pb-3 pt-12">
+        <CardHeader className="pb-2 sm:pb-3 pt-10 sm:pt-12 px-3 sm:px-6">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className={`text-lg mb-2 transition-all duration-300 ${
+              <CardTitle className={`text-base sm:text-lg mb-1.5 sm:mb-2 transition-all duration-300 ${
                 isUnlocked 
                   ? 'text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text' 
                   : 'text-slate-300'
               }`}>
                 {isUnlocked ? item.name : '• • • • • • • •'}
               </CardTitle>
-              <p className="text-sm text-slate-400 mb-1">{business?.name}</p>
-              <p className="text-xs text-gray-500">{business?.category}</p>
+              <p className="text-xs sm:text-sm text-slate-400 mb-0.5 sm:mb-1">{business?.name}</p>
+              <p className="text-[10px] sm:text-xs text-gray-500">{business?.category}</p>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6 pb-3 sm:pb-6">
           {/* Item Description */}
           <div className={`transition-all duration-500 ${isUnlocked ? 'opacity-100' : 'opacity-30'}`}>
-            <p className={`text-sm leading-relaxed ${isUnlocked ? 'text-slate-300' : 'text-gray-500 blur-sm'}`}>
+            <p className={`text-xs sm:text-sm leading-relaxed ${isUnlocked ? 'text-slate-300' : 'text-gray-500 blur-sm'}`}>
               {isUnlocked ? item.description : 'Unlock this secret to reveal the mysterious description...'}
             </p>
           </div>
 
           {/* Price */}
           <div className="flex items-center justify-between">
-            <span className={`font-bold text-lg ${
+            <span className={`font-bold text-base sm:text-lg ${
               isUnlocked 
                 ? 'text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text' 
                 : 'text-gray-500'
@@ -364,9 +364,9 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
             </span>
             
             {/* Difficulty/Rarity */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 sm:gap-1">
               {Array.from({ length: item.rarity || 3 }).map((_, i) => (
-                <svg key={i} className="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg key={i} className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.381-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
                 </svg>
               ))}
@@ -374,16 +374,16 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
           </div>
 
           {/* Status and Action */}
-          <div className="space-y-2">
+          <div className="space-y-1.5 sm:space-y-2">
             {isLocked ? (
-              <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 text-center">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-2.5 sm:p-3 text-center">
+                <div className="flex items-center justify-center gap-2 mb-1.5 sm:mb-2">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
-                  <span className="text-red-300 font-semibold">Badge Required</span>
+                  <span className="text-red-300 font-semibold text-xs sm:text-sm">Badge Required</span>
                 </div>
-                <p className="text-red-200 text-sm">
+                <p className="text-red-200 text-xs sm:text-sm">
                   Earn the "{requiredBadge?.replace('_', ' ')}" badge to unlock this secret
                 </p>
               </div>
@@ -397,7 +397,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
                     `"${item.name}" has been added to your collection. Click the card to see how to order it.`
                   )
                 }}
-                className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold shadow-lg"
+                className="w-full h-[44px] text-sm sm:text-base bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold shadow-lg"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
@@ -405,14 +405,14 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
                 Unlock Secret Item (Free!)
               </Button>
             ) : (
-              <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-lg p-3 text-center">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-lg p-2.5 sm:p-3 text-center">
+                <div className="flex items-center justify-center gap-2 mb-0.5 sm:mb-1">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-purple-300 font-semibold">Unlocked!</span>
+                  <span className="text-purple-300 font-semibold text-xs sm:text-sm">Unlocked!</span>
                 </div>
-                <p className="text-purple-200 text-sm">Click card for ordering info</p>
+                <p className="text-purple-200 text-[10px] sm:text-sm">Click card for ordering info</p>
               </div>
             )}
           </div>
@@ -575,20 +575,20 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
               }`}
             >
               {/* Business Header */}
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-4">
+              <CardHeader className="pb-3 sm:pb-4 pt-3 sm:pt-6 px-3 sm:px-6">
+                <div className="flex items-center gap-3 sm:gap-4">
                   {business?.image && (
                     <img 
                       src={business.image} 
                       alt={business.name}
-                      className="w-16 h-16 rounded-full object-cover border-2 border-purple-500/30"
+                      className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-purple-500/30"
                     />
                   )}
                   <div>
-                    <CardTitle className="text-xl text-slate-100 mb-1">
+                    <CardTitle className="text-base sm:text-xl text-slate-100 mb-1">
                       {business?.name || 'Unknown Business'}
                     </CardTitle>
-                    <p className="text-slate-400 text-sm">
+                    <p className="text-slate-400 text-xs sm:text-sm">
                       {business?.category} • Secret Menu Collection
                     </p>
                   </div>
@@ -596,8 +596,8 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
               </CardHeader>
               
               {/* Secret Items Grid */}
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {menu.items.map((item: any, index: number) => (
                     <SecretMenuItem 
                       key={`${menu.businessId}-${item.name}-${index}`} 

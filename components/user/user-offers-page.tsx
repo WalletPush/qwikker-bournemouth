@@ -613,7 +613,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         }`}
       >
         {/* Header with Image */}
-        <div className="relative h-52 sm:h-48 overflow-hidden rounded-t-xl">
+        <div className="relative h-40 sm:h-48 overflow-hidden rounded-t-xl">
           <img 
             src={businessImage} 
             alt={businessName}
@@ -625,21 +625,21 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
           
           {/* Offer type badge (top right) */}
-          <div className="absolute top-3 right-3">
-            <span className={`${getBadgeColor(offer.type)} text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg`}>
+          <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
+            <span className={`${getBadgeColor(offer.type)} text-white text-[10px] sm:text-xs px-2 py-1 sm:px-3 rounded-full font-bold shadow-lg`}>
               {getBadgeText()}
             </span>
           </div>
 
           {/* Status badges (top left) */}
-          <div className="absolute top-3 left-3 flex flex-col gap-1">
+          <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1">
             {offer.isPopular && (
-              <span className="bg-yellow-500 text-black text-xs px-2 py-1 rounded-full font-bold shadow-lg">
+              <span className="bg-yellow-500 text-black text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full font-bold shadow-lg">
                 POPULAR
               </span>
             )}
             {offer.isEndingSoon && (
-              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold animate-pulse shadow-lg">
+              <span className="bg-red-500 text-white text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full font-bold animate-pulse shadow-lg">
                 ENDING SOON
               </span>
             )}
@@ -651,10 +651,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               e.stopPropagation()
               toggleFavorite(offer.id)
             }}
-            className="absolute bottom-2 right-3 p-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/70 transition-all duration-200"
+            className="absolute bottom-2 right-2 sm:right-3 p-1.5 sm:p-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/70 transition-all duration-200"
           >
             <svg 
-              className={`w-4 h-4 transition-colors duration-200 ${
+              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-200 ${
                 isFavorite ? 'text-red-500 fill-current' : 'text-white'
               }`} 
               fill={isFavorite ? 'currentColor' : 'none'} 
@@ -666,9 +666,9 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           </button>
 
           {/* Business name in bottom corner */}
-          <div className="absolute bottom-2 left-3 right-12">
-            <p className="text-white font-semibold text-sm drop-shadow-lg truncate">{businessName}</p>
-            <p className="text-white/90 text-xs drop-shadow-md truncate">{isRealOffer ? offer.businessCategory : business?.category}</p>
+          <div className="absolute bottom-2 left-2 sm:left-3 right-10 sm:right-12">
+            <p className="text-white font-semibold text-xs sm:text-sm drop-shadow-lg truncate">{businessName}</p>
+            <p className="text-white/90 text-[10px] sm:text-xs drop-shadow-md truncate">{isRealOffer ? offer.businessCategory : business?.category}</p>
           </div>
 
           {/* In Wallet Badge */}
@@ -687,39 +687,39 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         <CardContent className="p-3 sm:p-4 flex flex-col flex-grow">
           {/* Title and description - flexible content */}
           <div className="flex-grow">
-            <h3 className="text-slate-100 font-bold text-lg mb-2">{offer.title}</h3>
-            <p className="text-slate-300 text-sm leading-relaxed mb-3 line-clamp-2">{offer.description}</p>
+            <h3 className="text-slate-100 font-bold text-base sm:text-lg mb-1.5 sm:mb-2">{offer.title}</h3>
+            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-2 sm:mb-3 line-clamp-2">{offer.description}</p>
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 setShowModal(true)
               }}
-              className="text-[#00d083] text-xs font-medium hover:text-[#00b86f] transition-colors mb-3"
+              className="text-[#00d083] text-xs font-medium hover:text-[#00b86f] transition-colors mb-2 sm:mb-3"
             >
               ...more
             </button>
             
             {/* Value highlight */}
-            <div className="bg-gradient-to-r from-green-500/15 to-emerald-500/15 border border-green-500/25 rounded-lg p-3 mb-3">
+            <div className="bg-gradient-to-r from-green-500/15 to-emerald-500/15 border border-green-500/25 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
               <div className="flex items-center justify-between">
-                <span className="text-green-300 font-semibold">You Save:</span>
-                <span className="text-green-400 font-bold text-lg">{offer.value}</span>
+                <span className="text-green-300 font-semibold text-xs sm:text-sm">You Save:</span>
+                <span className="text-green-400 font-bold text-base sm:text-lg">{offer.value}</span>
             </div>
           </div>
 
-          {/* Clean Terms & Expiry */}
-          <div className="mb-4 text-xs text-slate-400 space-y-1">
+          {/* Clean Terms & Expiry - Hidden on mobile */}
+          <div className="hidden sm:block mb-4 text-xs text-slate-400 space-y-1">
             <p><span className="font-medium">Terms:</span> {isRealOffer ? (offer.termsAndConditions || 'Standard terms apply') : (offer.terms || 'Standard terms apply')}</p>
             <p><span className="font-medium">Valid until:</span> {isRealOffer ? (offer.validUntil || 'No expiry date') : (offer.expiryDate || 'No expiry date')}</p>
             </div>
           </div>
 
           {/* Action buttons - Always at bottom */}
-          <div className="mt-auto space-y-2">
+          <div className="mt-auto space-y-1.5 sm:space-y-2">
             {!isClaimed ? (
               <Button 
                 onClick={() => claimOffer(offer.id, offer.title, businessName)}
-                className="w-full h-[44px] bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-green-500/20"
+                className="w-full h-[44px] text-sm sm:text-base bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-green-500/20"
               >
                 Claim Offer
               </Button>
@@ -727,7 +727,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               isInWallet ? (
                 <Button
                   disabled
-                  className="w-full h-[44px] bg-green-600 text-white font-semibold cursor-default opacity-75"
+                  className="w-full h-[44px] text-sm sm:text-base bg-green-600 text-white font-semibold cursor-default opacity-75"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -737,7 +737,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               ) : (
                 <Button
                   onClick={() => handleAddToWallet(offer.id, offer.title, businessName)}
-                  className="w-full h-[44px] bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20"
+                  className="w-full h-[44px] text-sm sm:text-base bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
