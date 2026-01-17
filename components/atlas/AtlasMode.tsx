@@ -15,6 +15,7 @@ import type { Map as MapboxMap, LngLatLike, MapboxGeoJSONFeature } from 'mapbox-
 import { AtlasOverlay } from './AtlasOverlay'
 import { AtlasHudBubble } from './AtlasHudBubble'
 import { ChatContextStrip } from './ChatContextStrip'
+import { AtlasIntroOverlay } from './AtlasIntroOverlay'
 import { usePerformanceMode } from '@/lib/atlas/usePerformanceMode'
 import { useAtlasAnalytics } from '@/lib/atlas/useAtlasAnalytics'
 import type { Coordinates } from '@/lib/location/useUserLocation'
@@ -487,6 +488,9 @@ export function AtlasMode({
     <div className="fixed inset-0 z-50 bg-black">
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0" />
+      
+      {/* First-Visit Intro Overlay */}
+      <AtlasIntroOverlay />
       
       {/* HUD Bubble (ephemeral AI response) */}
       <AtlasHudBubble
