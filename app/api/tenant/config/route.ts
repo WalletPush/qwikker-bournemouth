@@ -47,12 +47,13 @@ export async function GET(request: NextRequest) {
     }
     
     // Query franchise_crm_configs (only public fields, never server key)
-    // Include legacy lat/lng as fallback
+    // Include legacy lat/lng as fallback + Atlas configuration
     const supabase = createServiceRoleClient()
     const { data: config, error } = await supabase
       .from('franchise_crm_configs')
       .select(`
         city,
+        status,
         google_places_public_key,
         google_places_country,
         city_center_lat,
@@ -61,7 +62,17 @@ export async function GET(request: NextRequest) {
         lng,
         onboarding_search_radius_m,
         import_search_radius_m,
-        import_max_radius_m
+        import_max_radius_m,
+        atlas_enabled,
+        atlas_provider,
+        mapbox_public_token,
+        mapbox_style_url,
+        atlas_default_zoom,
+        atlas_pitch,
+        atlas_bearing,
+        atlas_max_results,
+        atlas_min_rating,
+        atlas_mode
       `)
       .eq('city', city)
       .single()
@@ -106,10 +117,17 @@ export async function GET(request: NextRequest) {
       })
     }
     
-    // Return safe config (never include server key)
+    // Check if franchise is active
+    const isActive = config.status === 'active'
+    
+    // Atlas only available if franchise is active AND atlas_enabled=true
+    const atlasEnabled = isActive && (config.atlas_enabled ?? false)
+    
+    // Return safe config (never include server keys, only public tokens)
     return NextResponse.json({
       ok: true,
       city: config.city,
+      status: config.status,
       googlePlacesPublicKey: config.google_places_public_key || null,
       country: config.google_places_country || 'gb',
       center: hasCenter ? {
@@ -119,6 +137,18 @@ export async function GET(request: NextRequest) {
       onboardingRadiusMeters: config.onboarding_search_radius_m ?? 35000,
       importDefaultRadiusMeters: config.import_search_radius_m ?? 75000,
       importMaxRadiusMeters: config.import_max_radius_m ?? 200000,
+      atlas: {
+        enabled: atlasEnabled,
+        provider: config.atlas_provider || 'mapbox',
+        mapboxPublicToken: config.mapbox_public_token || null,
+        styleUrl: config.mapbox_style_url || null,
+        defaultZoom: config.atlas_default_zoom ?? 13,
+        pitch: config.atlas_pitch ?? 45,
+        bearing: config.atlas_bearing ?? 0,
+        maxResults: config.atlas_max_results ?? 12,
+        minRating: config.atlas_min_rating ?? 4.4,
+        mode: config.atlas_mode || 'curated'
+      },
       meta: {
         source: cityRes.source,
         fallback: cityRes.fallback,

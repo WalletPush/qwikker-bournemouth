@@ -4,10 +4,14 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { BusinessCarousel } from '@/components/ui/business-carousel'
 import { EventCarousel } from '@/components/ui/event-carousel'
+import { AtlasMode } from '@/components/atlas/AtlasMode'
+import { useTenantAtlasConfig } from '@/lib/atlas/useTenantAtlasConfig'
+import { useUserLocation } from '@/lib/location/useUserLocation'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import React from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { Map } from 'lucide-react'
 
 interface ChatMessage {
   id: string
@@ -65,6 +69,19 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [hasAutoSent, setHasAutoSent] = useState(false)
+  
+  // ATLAS: View state management
+  const [view, setView] = useState<'chat' | 'atlas'>('chat')
+  const [soundEnabled, setSoundEnabled] = useState(false)
+  
+  // ATLAS: Load tenant config
+  const { config: tenantConfig, loading: configLoading } = useTenantAtlasConfig()
+  const atlasEnabled = tenantConfig?.atlas?.enabled && tenantConfig?.atlas?.mapboxPublicToken
+  
+  // ATLAS: User location
+  const { coords: userLocation, requestPermission } = useUserLocation(
+    tenantConfig?.center ? { lat: tenantConfig.center.lat, lng: tenantConfig.center.lng } : undefined
+  )
   
   // Session storage key for chat memory
   const chatSessionKey = `qwikker-chat-session-${currentUser?.wallet_pass_id || 'guest'}`
@@ -473,6 +490,21 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
   }
 
   return (
+    <>
+      {/* ATLAS MODE: Full-screen map */}
+      {view === 'atlas' && atlasEnabled && tenantConfig?.atlas && tenantConfig?.center && (
+        <AtlasMode
+          config={tenantConfig.atlas}
+          center={tenantConfig.center}
+          userLocation={userLocation}
+          onClose={() => setView('chat')}
+          soundEnabled={soundEnabled}
+          onToggleSound={() => setSoundEnabled(!soundEnabled)}
+        />
+      )}
+      
+      {/* CHAT MODE: Regular chat interface */}
+      {view === 'chat' && (
     <div className="flex flex-col h-[calc(100vh-8rem)] max-w-4xl mx-auto">
       <style jsx>{`
         @keyframes fade-in {
@@ -640,6 +672,24 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
                   </div>
                 )}
                 
+                {/* ATLAS: Show on Map Button */}
+                {atlasEnabled && message.type === 'ai' && message.businessCarousel && message.businessCarousel.length > 0 && (
+                  <div className="mt-3">
+                    <button
+                      onClick={() => {
+                        setView('atlas')
+                        if (userLocation === null) {
+                          requestPermission()
+                        }
+                      }}
+                      className="flex items-center gap-2 bg-[#00d083]/10 hover:bg-[#00d083]/20 text-[#00d083] px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 border border-[#00d083]/30"
+                    >
+                      <Map className="w-4 h-4" />
+                      <span>Show on Map</span>
+                    </button>
+                  </div>
+                )}
+                
                 {/* Timestamp */}
                 <p className="text-xs text-slate-400 mt-2 px-2">
                   {new Date(message.timestamp).toLocaleTimeString('en-GB', { 
@@ -744,5 +794,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
         
       </div>
     </div>
+      )}
+    </>
   )
 }
