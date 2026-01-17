@@ -3,6 +3,9 @@
  * 
  * Tracks Atlas engagement and conversions
  * Stores events in atlas_analytics table
+ * 
+ * SECURITY: City is derived server-side from hostname.
+ * The client should NOT pass city to this hook.
  */
 
 import { useRef, useCallback } from 'react'
@@ -23,7 +26,7 @@ interface TrackEventParams {
   performanceMode?: boolean
 }
 
-export function useAtlasAnalytics(city: string, userId?: string) {
+export function useAtlasAnalytics(userId?: string) {
   const sessionId = useRef<string>(`atlas-${Date.now()}-${Math.random().toString(36).slice(2)}`)
   const startTime = useRef<number>(Date.now())
   const events = useRef<AtlasEventType[]>([])
@@ -50,7 +53,7 @@ export function useAtlasAnalytics(city: string, userId?: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventType,
-          city,
+          // City derived server-side from hostname (SECURITY)
           userId: userId || 'anonymous',
           sessionId: sessionId.current,
           query,
@@ -65,16 +68,15 @@ export function useAtlasAnalytics(city: string, userId?: string) {
       })
       
       console.log(`📊 Atlas Analytics: ${eventType}`, {
-        city,
         timeInAtlas: `${timeInAtlasSeconds}s`,
         deviceType,
         performanceMode
       })
     } catch (error) {
       // Don't break the experience if analytics fail
-      console.warn('Analytics tracking failed:', error)
+      console.warn('Atlas analytics tracking failed:', error)
     }
-  }, [city, userId])
+  }, [userId])
 
   return {
     trackEvent,

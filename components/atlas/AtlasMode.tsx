@@ -78,8 +78,8 @@ export function AtlasMode({
   // Performance mode detection
   const performanceMode = usePerformanceMode()
   
-  // Analytics tracking
-  const { trackEvent } = useAtlasAnalytics(city, userId)
+  // Analytics tracking (city derived server-side from hostname)
+  const { trackEvent } = useAtlasAnalytics(userId)
   
   // Track Atlas opened on mount
   useEffect(() => {
@@ -99,14 +99,18 @@ export function AtlasMode({
   useEffect(() => {
     if (typeof window === 'undefined') return
     
-    audioWakeRef.current = new Audio('/sfx/atlas-wake.mp3')
-    audioMoveRef.current = new Audio('/sfx/atlas-move.mp3')
-    audioArriveRef.current = new Audio('/sfx/atlas-arrive.mp3')
-    
-    // Preload
-    audioWakeRef.current.load()
-    audioMoveRef.current.load()
-    audioArriveRef.current.load()
+    try {
+      audioWakeRef.current = new Audio('/sfx/atlas-wake.mp3')
+      audioMoveRef.current = new Audio('/sfx/atlas-move.mp3')
+      audioArriveRef.current = new Audio('/sfx/atlas-arrive.mp3')
+      
+      // Preload (fails silently if files not found)
+      audioWakeRef.current.load()
+      audioMoveRef.current.load()
+      audioArriveRef.current.load()
+    } catch (error) {
+      console.warn('Atlas audio files not loaded (optional):', error)
+    }
   }, [])
   
   // Play sound helper
@@ -115,7 +119,7 @@ export function AtlasMode({
     
     audio.currentTime = 0
     audio.play().catch(() => {
-      // Ignore autoplay restrictions
+      // Ignore autoplay restrictions or missing files
     })
   }, [soundEnabled])
   

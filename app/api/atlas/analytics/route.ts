@@ -1,20 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { resolveRequestCity } from '@/lib/utils/tenant-city'
 
 /**
  * POST /api/atlas/analytics
  * 
  * Track Atlas engagement events
  * Uses service role to bypass RLS (analytics are sensitive)
+ * 
+ * SECURITY:
+ * - City derived from hostname server-side (NEVER trust client)
+ * - Client cannot poison analytics with fake city data
  */
 
 export async function POST(request: NextRequest) {
   try {
+    // Derive city from hostname server-side (SECURITY CRITICAL)
+    const cityRes = await resolveRequestCity(request, { allowQueryOverride: true })
+    
+    if (!cityRes.ok) {
+      return NextResponse.json({
+        ok: false,
+        error: 'Could not resolve tenant city'
+      }, { status: 400 })
+    }
+    
+    const city = cityRes.city
+    
     const body = await request.json()
     
     const {
       eventType,
-      city,
       userId,
       sessionId,
       query,
@@ -28,10 +44,10 @@ export async function POST(request: NextRequest) {
     } = body
     
     // Validate required fields
-    if (!eventType || !city) {
+    if (!eventType) {
       return NextResponse.json({
         ok: false,
-        error: 'Missing required fields'
+        error: 'Missing eventType'
       }, { status: 400 })
     }
     
