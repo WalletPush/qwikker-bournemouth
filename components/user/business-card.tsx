@@ -28,7 +28,7 @@ export function BusinessCard({
   const cardContent = (
     <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden ${className}`}>
       {/* Business Image - Conditional logic based on status + images */}
-      <div className="relative h-36 sm:h-48 overflow-hidden">
+      <div className="relative h-32 sm:h-48 overflow-hidden">
         {(() => {
           const systemCategory = resolveSystemCategory(business)
 
@@ -108,13 +108,13 @@ export function BusinessCard({
         )}
       </div>
 
-      <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4 px-3 sm:px-6">
+      <CardHeader className="pb-2 sm:pb-3 pt-2 sm:pt-4 px-3 sm:px-6">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-slate-100 text-base sm:text-lg mb-1 group-hover:text-[#00d083] transition-colors">
+            <CardTitle className="text-slate-100 text-base sm:text-lg mb-0.5 sm:mb-1 group-hover:text-[#00d083] transition-colors">
               {business.name}
             </CardTitle>
-            <p className="text-slate-400 text-xs sm:text-sm">
+            <p className="text-slate-400 text-xs sm:text-sm mb-0.5 sm:mb-1">
               {(() => {
                 // Use smart label (cuisine-specific if available, fallback to category)
                 const label = getPrimaryLabel({
@@ -127,7 +127,7 @@ export function BusinessCard({
                 return (label === 'Other' || label === 'Local business') ? '' : label
               })()}
             </p>
-            <p className="text-[#00d083] text-xs sm:text-sm font-medium mt-1">
+            <p className="text-[#00d083] text-xs sm:text-sm font-medium">
               {(() => {
                 // Use smart hero line (tagline if exists, otherwise generated)
                 const heroLine = getHeroLine({
@@ -146,7 +146,7 @@ export function BusinessCard({
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6 pb-3 sm:pb-6">
+      <CardContent className="space-y-2 sm:space-y-4 px-3 sm:px-6 pb-2 sm:pb-6">
         {/* Rating and Reviews (REAL ONLY - no fake defaults) */}
         {(() => {
           // 🔍 DEV DEBUG: See what fields are actually present
@@ -224,6 +224,14 @@ export function BusinessCard({
             </div>
           )
         })()}
+
+        {/* Town/Area - Mobile only micro line */}
+        <div className="flex sm:hidden items-center gap-1 text-slate-400 text-xs">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          </svg>
+          <span>{business.town || business.location || business.city}</span>
+        </div>
 
         {/* Location - Hidden on mobile */}
         <div className="hidden sm:flex items-center gap-2 text-slate-400">

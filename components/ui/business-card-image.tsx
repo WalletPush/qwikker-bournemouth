@@ -45,7 +45,7 @@ export function BusinessCardImage({
       <img
         src={placeholderUrl}
         alt=""
-        className="absolute inset-0 w-full h-full object-cover"
+        className="w-full h-full object-cover"
         loading="lazy"
         onError={(e) => {
           // Fallback to default placeholder if category-specific one doesn't exist
