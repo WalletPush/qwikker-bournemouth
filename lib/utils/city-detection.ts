@@ -83,11 +83,10 @@ export async function getCityFromHostname(
   }
 
   // ✅ Vercel preview domains (your-project.vercel.app)
-  // Allow on preview deployments, but not on production
+  // TEMPORARY: Always allow .vercel.app for testing
   if (cleanHost.endsWith('.vercel.app')) {
-    // Always allow Vercel preview deployments (VERCEL_ENV=preview)
-    if (vercelEnv === 'preview' || allowUnsafeFallbacks) return defaultCity
-    throw new Error(`Access denied: vercel.app host not allowed in production (${cleanHost})`)
+    console.log('🔧 Allowing Vercel deployment:', cleanHost)
+    return defaultCity
   }
 
   // If it's your root domain (qwikker.com) or common main subdomains:
