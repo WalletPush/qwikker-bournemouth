@@ -12,6 +12,7 @@ import { BusinessHoursInput } from '@/components/business-hours-input'
 import { BusinessHoursStructured } from '@/types/business-hours'
 import { uploadToCloudinary } from '@/lib/integrations'
 import { updateProfileFile } from '@/lib/actions/file-actions'
+import { GoogleVerificationSection } from './GoogleVerificationSection'
 
 interface CleanProfilePageProps {
   profile: Profile
@@ -537,8 +538,11 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
             </SaveButton>
             </div>
           </CardContent>
-        </Card>
-      </div>
+          </Card>
+        </div>
+
+        {/* Google Location Verification Section */}
+        <GoogleVerificationSection profile={profile} />
 
         {/* Business Hours Section */}
         <div id="business-hours" className="group relative">
