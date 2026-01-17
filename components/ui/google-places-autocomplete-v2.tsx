@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Input } from './input'
 import { Label } from './label'
+import { loadGoogleMaps } from '@/lib/google/loadGoogleMaps'
 
 interface TenantConfig {
   ok: boolean
@@ -68,65 +69,41 @@ export function GooglePlacesAutocompleteV2({
         }
         
         if (!config.ok || !config.googlePlacesPublicKey) {
-          setError(config.message || 'Google Places not configured')
+          // Clean UX: don't expose technical details
+          setError('unavailable')
           setIsLoading(false)
           return
         }
         
         setTenantConfig(config)
         
-        // Load Google Maps JS API
-        await loadGoogleMapsScript(config.googlePlacesPublicKey)
+        // Load Google Maps JS API using singleton loader
+        try {
+          await loadGoogleMaps(config.googlePlacesPublicKey)
+          
+          if (isDev) {
+            console.debug('[GooglePlaces] Google Maps API loaded successfully')
+          }
+          
+          initializeServices()
+          setIsLoading(false)
+        } catch (loadErr) {
+          console.error('[GooglePlaces] Failed to load Google Maps:', loadErr)
+          setError('unavailable')
+          setIsLoading(false)
+        }
         
       } catch (err) {
-        console.error('[GooglePlaces] Failed to load tenant config:', err)
-        setError('Failed to load configuration')
+        if (isDev) {
+          console.error('[GooglePlaces] Failed to load tenant config:', err)
+        }
+        setError('unavailable')
         setIsLoading(false)
       }
     }
     
     loadTenantConfig()
   }, [cityOverride, isDev])
-  
-  // Load Google Maps JS API dynamically
-  async function loadGoogleMapsScript(apiKey: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // Check if already loaded
-      if (window.google?.maps?.places) {
-        if (isDev) {
-          console.debug('[GooglePlaces] Google Maps API already loaded')
-        }
-        initializeServices()
-        setIsLoading(false)
-        resolve()
-        return
-      }
-      
-      // Load script
-      const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
-      script.async = true
-      script.defer = true
-      
-      script.onload = () => {
-        if (isDev) {
-          console.debug('[GooglePlaces] Google Maps API loaded successfully')
-        }
-        initializeServices()
-        setIsLoading(false)
-        resolve()
-      }
-      
-      script.onerror = () => {
-        console.error('[GooglePlaces] Failed to load Google Maps API')
-        setError('Failed to load Google Maps')
-        setIsLoading(false)
-        reject(new Error('Failed to load Google Maps script'))
-      }
-      
-      document.head.appendChild(script)
-    })
-  }
   
   // Initialize Google Places services
   function initializeServices() {
@@ -227,17 +204,19 @@ export function GooglePlacesAutocompleteV2({
     onPlaceSelected(placeId)
   }
   
-  // Render error state
+  // Render error state (clean UX: no technical details)
   if (error) {
     return (
       <div className={className}>
         <Label htmlFor="google-search" className="text-white mb-2 block">
-          Search for your business on Google <span className="text-red-500">*</span>
+          Search for your business on Google
         </Label>
-        <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
-          <p className="text-slate-400 text-sm">{error}</p>
-          <p className="text-slate-500 text-xs mt-2">
-            Please use "Create Listing" to continue with manual entry.
+        <div className="rounded-lg border border-blue-800/50 bg-blue-950/20 p-4">
+          <p className="text-blue-200 text-sm">
+            Google search is temporarily unavailable.
+          </p>
+          <p className="text-blue-300/70 text-xs mt-2">
+            Please continue with "Create Listing" below.
           </p>
         </div>
       </div>
@@ -255,6 +234,7 @@ export function GooglePlacesAutocompleteV2({
           id="google-search"
           type="text"
           placeholder="Loading..."
+          value=""
           disabled
           className="bg-slate-900 border-slate-600 text-white h-14 text-lg"
         />
@@ -267,13 +247,6 @@ export function GooglePlacesAutocompleteV2({
       <Label htmlFor="google-search" className="text-white mb-2 block">
         Search for your business on Google <span className="text-red-500">*</span>
       </Label>
-      
-      {/* Debug info in DEV */}
-      {isDev && tenantConfig && (
-        <div className="mb-2 text-xs text-slate-500 font-mono bg-slate-900/50 rounded px-2 py-1">
-          City: {tenantConfig.city} | Radius: {tenantConfig.onboardingRadiusMeters ? `${Math.round(tenantConfig.onboardingRadiusMeters / 1000)}km` : 'none'} | Key: {tenantConfig.googlePlacesPublicKey ? 'yes' : 'no'}
-        </div>
-      )}
       
       <div className="relative">
         <Input

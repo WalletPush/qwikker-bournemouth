@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Input } from './input'
 import { Label } from './label'
+import { loadGoogleMaps, isGoogleMapsLoaded } from '@/lib/google/loadGoogleMaps'
 
 interface GooglePlacesAutocompleteProps {
   onPlaceSelected: (placeId: string) => void
@@ -20,10 +21,10 @@ export function GooglePlacesAutocomplete({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load Google Places API script
-    const loadGooglePlaces = () => {
+    // Load Google Places API script (using singleton loader)
+    const loadGooglePlaces = async () => {
       // Check if already loaded
-      if (window.google && window.google.maps && window.google.maps.places) {
+      if (isGoogleMapsLoaded()) {
         initAutocomplete()
         return
       }
@@ -31,22 +32,20 @@ export function GooglePlacesAutocomplete({
       // Check for API key
       const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
       if (!apiKey) {
-        setError('Google Places API key not configured')
+        setError('unavailable')
         setIsLoading(false)
         return
       }
 
-      // Load script
-      const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
-      script.async = true
-      script.defer = true
-      script.onload = () => initAutocomplete()
-      script.onerror = () => {
-        setError('Failed to load Google Places API')
+      // Load using singleton loader
+      try {
+        await loadGoogleMaps(apiKey)
+        initAutocomplete()
+      } catch (err) {
+        console.error('[GooglePlacesAutocomplete] Failed to load Google Maps:', err)
+        setError('unavailable')
         setIsLoading(false)
       }
-      document.head.appendChild(script)
     }
 
     const initAutocomplete = () => {

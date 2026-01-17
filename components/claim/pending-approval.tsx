@@ -82,7 +82,7 @@ export function PendingApproval({
                   <div className="flex-1 pt-1">
                     <h3 className="font-medium mb-1">Dashboard Access</h3>
                     <p className="text-sm text-muted-foreground">
-                      Once approved, you can log in to update your profile, manage your listing, and access analytics.
+                      Once approved, you can log in to update your profile and manage your listing.
                     </p>
                   </div>
                 </div>
@@ -116,11 +116,11 @@ export function PendingApproval({
                 </p>
               </div>
 
-              {/* Return Home */}
+              {/* Return to Dashboard */}
               <div className="border-t pt-6 text-center">
                 <Button asChild size="lg" className="w-full sm:w-auto">
-                  <a href="/">
-                    Return to QWIKKER Home
+                  <a href="/dashboard">
+                    Return to Business Dashboard
                   </a>
                 </Button>
               </div>

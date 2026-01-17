@@ -822,7 +822,7 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
                       type="button"
                       variant="outline"
                       onClick={prevStep}
-                      disabled={currentStep === 1}
+                      disabled={isSubmitting}
                       className="border-slate-600 text-gray-300 hover:bg-slate-800 h-12 px-8 transition-colors"
                     >
                       ← Previous

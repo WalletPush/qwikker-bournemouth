@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import { resolveRequestCity } from '@/lib/utils/tenant-city'
 
 /**
  * GET /api/tenant/config
@@ -8,115 +9,71 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * This endpoint is called client-side to get the franchise's public API key and bounds.
  * 
  * Query params (DEV ONLY):
- * - ?city=X - Override city on localhost/vercel/app.qwikker.com (ignored on real subdomains)
+ * - ?city=X - Override city on localhost/vercel/app.qwikker.com (403 on real subdomains)
  * 
  * SECURITY:
  * - Only returns public API key (never server key)
  * - City derived from hostname server-side
- * - Safe fallback for non-subdomain hosts
+ * - Query overrides only allowed on fallback hosts
+ * 
+ * NOTE:
+ * - Google Places API keys are stored per-franchise in DB (franchise_crm_configs)
+ * - Only Supabase env vars (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) required
  */
-
-// Helper: Check if hostname is a "safe fallback" host (allows ?city override)
-function isFallbackHost(hostname: string): boolean {
-  if (!hostname) return false
-  
-  // Localhost
-  if (hostname.startsWith('localhost') || hostname.startsWith('127.0.0.1')) {
-    return true
-  }
-  
-  // Vercel previews
-  if (hostname.includes('.vercel.app')) {
-    return true
-  }
-  
-  // Staging/app domain (no city subdomain)
-  if (hostname.startsWith('app.qwikker.')) {
-    return true
-  }
-  
-  return false
-}
-
-// Helper: Extract city from hostname (simplified tenant detection)
-function getCityFromHostname(hostname: string): string | null {
-  if (!hostname) return null
-  
-  // Extract subdomain
-  const parts = hostname.split('.')
-  
-  // If hostname is like "bournemouth.qwikker.co.uk" or "bournemouth.qwikker.com"
-  if (parts.length >= 3 && parts[1] === 'qwikker') {
-    const subdomain = parts[0].toLowerCase()
-    
-    // Known city subdomains
-    const validCities = ['bournemouth', 'poole', 'christchurch', 'london']
-    if (validCities.includes(subdomain)) {
-      return subdomain
-    }
-  }
-  
-  return null
-}
 
 export async function GET(request: NextRequest) {
   const isDev = process.env.NODE_ENV !== 'production'
   
   try {
-    // Get hostname from request
-    const hostname = request.headers.get('host') || ''
+    // Resolve city using centralized, secure resolver
+    const cityRes = await resolveRequestCity(request, { allowQueryOverride: true })
     
-    // Determine if we're on a fallback host
-    const isFallback = isFallbackHost(hostname)
-    
-    // Try to derive city from hostname
-    let city = getCityFromHostname(hostname)
-    
-    // If on fallback host AND city param provided, use it (DEV ONLY)
-    if (isFallback && !city) {
-      const searchParams = request.nextUrl.searchParams
-      const cityParam = searchParams.get('city')
-      
-      if (cityParam) {
-        city = cityParam.toLowerCase()
-        
-        if (isDev) {
-          console.debug(`[Tenant Config] Fallback host detected, using ?city=${city}`)
-        }
-      }
-    }
-    
-    // If still no city, return error
-    if (!city) {
+    if (!cityRes.ok) {
       if (isDev) {
-        console.debug(`[Tenant Config] No city detected. Hostname: ${hostname}, Fallback: ${isFallback}`)
+        console.debug(`[Tenant Config] ${cityRes.error}`)
       }
       
       return NextResponse.json({
         ok: false,
-        message: isFallback 
-          ? 'Please specify ?city=yourCity for development/staging'
-          : 'Unable to determine franchise city from hostname'
-      }, { status: 400 })
+        message: cityRes.error,
+        hostname: request.headers.get('host') || ''
+      }, { status: cityRes.status })
     }
     
-    // Query franchise_crm_configs
-    const supabase = createAdminClient()
+    const city = cityRes.city
+    
+    if (isDev) {
+      console.debug(`[Tenant Config] city=${city} source=${cityRes.source} fallback=${cityRes.fallback}`)
+    }
+    
+    // Query franchise_crm_configs (only public fields, never server key)
+    // Include legacy lat/lng as fallback
+    const supabase = createServiceRoleClient()
     const { data: config, error } = await supabase
       .from('franchise_crm_configs')
-      .select('city, google_places_public_key, google_places_country, city_center_lat, city_center_lng, onboarding_search_radius_m, import_search_radius_m, import_max_radius_m, is_active')
+      .select(`
+        city,
+        google_places_public_key,
+        google_places_country,
+        city_center_lat,
+        city_center_lng,
+        lat,
+        lng,
+        onboarding_search_radius_m,
+        import_search_radius_m,
+        import_max_radius_m
+      `)
       .eq('city', city)
-      .eq('is_active', true)
       .single()
     
     if (error || !config) {
       if (isDev) {
-        console.debug(`[Tenant Config] No active config found for city: ${city}`)
+        console.debug(`[Tenant Config] No config found for city: ${city}`, error)
       }
       
       return NextResponse.json({
         ok: false,
-        message: `No active franchise configuration found for ${city}`
+        message: `No franchise configuration found for city: ${city}`
       }, { status: 404 })
     }
     
@@ -133,14 +90,17 @@ export async function GET(request: NextRequest) {
       }, { status: 200 }) // Not a server error, just not configured
     }
     
-    // Check if center coordinates are set
-    const hasCenter = config.city_center_lat != null && config.city_center_lng != null
+    // Use city_center_lat/lng if set, otherwise fallback to legacy lat/lng
+    const centerLat = config.city_center_lat ?? config.lat ?? null
+    const centerLng = config.city_center_lng ?? config.lng ?? null
+    const hasCenter = centerLat != null && centerLng != null
     
     if (isDev) {
       console.debug(`[Tenant Config] Loaded config for ${city}:`, {
         hasKey: !!config.google_places_public_key,
         hasCenter,
-        center: hasCenter ? `${config.city_center_lat},${config.city_center_lng}` : null,
+        center: hasCenter ? `${centerLat},${centerLng}` : null,
+        usingLegacyCenter: !config.city_center_lat && !!config.lat,
         onboardingRadius: config.onboarding_search_radius_m,
         country: config.google_places_country
       })
@@ -150,16 +110,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       city: config.city,
-      googlePlacesPublicKey: config.google_places_public_key,
+      googlePlacesPublicKey: config.google_places_public_key || null,
       country: config.google_places_country || 'gb',
       center: hasCenter ? {
-        lat: parseFloat(config.city_center_lat as any),
-        lng: parseFloat(config.city_center_lng as any)
+        lat: parseFloat(centerLat as any),
+        lng: parseFloat(centerLng as any)
       } : null,
-      onboardingRadiusMeters: config.onboarding_search_radius_m || 30000,
-      importDefaultRadiusMeters: config.import_search_radius_m || 50000,
-      importMaxRadiusMeters: config.import_max_radius_m || 200000,
-      message: 'Configuration loaded successfully'
+      onboardingRadiusMeters: config.onboarding_search_radius_m ?? 35000,
+      importDefaultRadiusMeters: config.import_search_radius_m ?? 75000,
+      importMaxRadiusMeters: config.import_max_radius_m ?? 200000,
+      meta: {
+        source: cityRes.source,
+        fallback: cityRes.fallback,
+        usingLegacyCenter: !config.city_center_lat && !!config.lat
+      }
     })
     
   } catch (error) {

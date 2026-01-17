@@ -1,10 +1,13 @@
 import { createBrowserClient } from '@supabase/ssr'
-import { requireEnv } from '@/lib/utils/env-validation'
 
 export function createClient() {
-  // Validate env vars in development
-  const supabaseUrl = requireEnv('NEXT_PUBLIC_SUPABASE_URL', 'Supabase client') || process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseKey = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'Supabase client') || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  // Read from environment variables (will be properly injected by Next.js/Vercel)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase environment variables. Check your .env.local file.')
+  }
   
   return createBrowserClient(supabaseUrl, supabaseKey)
 }

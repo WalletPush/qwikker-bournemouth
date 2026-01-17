@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getCityFromHostname } from '@/lib/utils/city-detection'
+import { resolveRequestCity } from '@/lib/utils/tenant-city'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import {
   mapGoogleTypesToSystemCategory,
@@ -256,13 +256,25 @@ export async function POST(request: NextRequest) {
   }
 
   // 🔒 SECURITY: Derive city from hostname (never trust client)
-  const hostname = request.headers.get('host') || ''
-  const requestCity = await getCityFromHostname(hostname)
+  // Allow ?city= override on fallback hosts (localhost/vercel preview) for development
+  const cityRes = await resolveRequestCity(request, { allowQueryOverride: true })
+  
+  if (!cityRes.ok) {
+    return new Response(JSON.stringify({ 
+      error: cityRes.error,
+      hostname: request.headers.get('host') || ''
+    }), {
+      status: cityRes.status,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+  
+  const requestCity = cityRes.city
 
   // Verify admin exists and has permission for this city
   const admin = await getAdminById(adminSession.adminId)
   if (!admin || !await isAdminForCity(adminSession.adminId, requestCity)) {
-    return new Response(JSON.stringify({ error: 'Insufficient permissions' }), {
+    return new Response(JSON.stringify({ error: 'Insufficient permissions for this city' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' }
     })

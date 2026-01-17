@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveRequestCity } from '@/lib/utils/tenant-city'
 
 const requestSchema = z.object({
   placeId: z.string().min(1, 'Place ID is required')
@@ -27,30 +28,6 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * c // Distance in meters
 }
 
-/**
- * Extract city from hostname (same logic as /api/tenant/config)
- */
-function getCityFromHostname(hostname: string): string | null {
-  if (!hostname) return null
-  
-  const parts = hostname.split('.')
-  
-  if (parts.length >= 3 && parts[1] === 'qwikker') {
-    const subdomain = parts[0].toLowerCase()
-    const validCities = ['bournemouth', 'poole', 'christchurch', 'london']
-    if (validCities.includes(subdomain)) {
-      return subdomain
-    }
-  }
-  
-  return null
-}
-
-function isFallbackHost(hostname: string): boolean {
-  return hostname.startsWith('localhost') || 
-         hostname.includes('.vercel.app') || 
-         hostname.startsWith('app.qwikker.')
-}
 
 /**
  * Derive a user-friendly primary type from Google types array
@@ -118,45 +95,35 @@ export async function POST(request: NextRequest) {
     
     const { placeId } = validation.data
     
-    // Derive tenant city from hostname
-    const hostname = request.headers.get('host') || ''
-    const isFallback = isFallbackHost(hostname)
-    let city = getCityFromHostname(hostname)
+    // Derive tenant city from hostname using centralized resolver
+    const cityRes = await resolveRequestCity(request, { allowQueryOverride: true })
     
-    // Allow query param override on fallback hosts (DEV ONLY)
-    if (isFallback && !city) {
-      const url = new URL(request.url)
-      const cityParam = url.searchParams.get('city')
-      if (cityParam) {
-        city = cityParam.toLowerCase()
-      }
-    }
-    
-    if (!city) {
+    if (!cityRes.ok) {
       return NextResponse.json(
-        { error: 'Unable to determine franchise city' },
-        { status: 400 }
+        { error: cityRes.error },
+        { status: cityRes.status }
       )
     }
     
-    // Fetch tenant configuration
+    const city = cityRes.city
+    
+    // Fetch tenant configuration (include legacy fields for fallback)
     const supabase = createAdminClient()
     const { data: config, error: configError } = await supabase
       .from('franchise_crm_configs')
-      .select('city, google_places_server_key, city_center_lat, city_center_lng, onboarding_search_radius_m')
+      .select('city, google_places_server_key, google_places_api_key, city_center_lat, city_center_lng, lat, lng, onboarding_search_radius_m')
       .eq('city', city)
-      .eq('is_active', true)
       .single()
     
     if (configError || !config) {
       return NextResponse.json(
-        { error: `No active configuration found for ${city}` },
+        { error: `No configuration found for ${city}` },
         { status: 404 }
       )
     }
     
-    // Check for API key (tenant key OR fallback)
-    const apiKey = config.google_places_server_key || FALLBACK_API_KEY
+    // Check for API key: use server key first, then legacy key, then env fallback
+    const apiKey = config.google_places_server_key || config.google_places_api_key || FALLBACK_API_KEY
     
     if (!apiKey) {
       if (isDev) {
@@ -167,6 +134,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    
+    // Use city_center coordinates if set, otherwise fallback to legacy lat/lng
+    const centerLat = config.city_center_lat ?? config.lat
+    const centerLng = config.city_center_lng ?? config.lng
     
     // Call Google Places API Details endpoint
     const fields = [
@@ -217,13 +188,16 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // ENFORCE RADIUS (if center configured)
-    if (config.city_center_lat != null && config.city_center_lng != null) {
-      const centerLat = parseFloat(config.city_center_lat as any)
-      const centerLng = parseFloat(config.city_center_lng as any)
-      const maxRadius = config.onboarding_search_radius_m || 30000
+    // ENFORCE RADIUS (if center configured - using fallback if needed)
+    if (centerLat != null && centerLng != null) {
+      const maxRadius = config.onboarding_search_radius_m || 35000
       
-      const distance = calculateDistance(centerLat, centerLng, lat, lng)
+      const distance = calculateDistance(
+        parseFloat(centerLat as any), 
+        parseFloat(centerLng as any), 
+        lat, 
+        lng
+      )
       
       if (isDev) {
         console.debug(`[Places Details] Distance check:`, {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { loadGoogleMaps, isGoogleMapsLoaded } from '@/lib/google/loadGoogleMaps'
 
 interface GoogleAddressAutocompleteProps {
   onAddressSelected: (addressData: {
@@ -26,10 +27,10 @@ export function GoogleAddressAutocomplete({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load Google Places API script
-    const loadGooglePlaces = () => {
+    // Load Google Places API script (using singleton loader)
+    const loadGooglePlaces = async () => {
       // Check if already loaded
-      if (window.google && window.google.maps && window.google.maps.places) {
+      if (isGoogleMapsLoaded()) {
         initAutocomplete()
         return
       }
@@ -37,22 +38,20 @@ export function GoogleAddressAutocomplete({
       // Check for API key
       const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
       if (!apiKey) {
-        setError('Google Places API key not configured')
+        setError('unavailable')
         setIsLoading(false)
         return
       }
 
-      // Load script
-      const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
-      script.async = true
-      script.defer = true
-      script.onload = () => initAutocomplete()
-      script.onerror = () => {
-        setError('Failed to load Google Places API')
+      // Load using singleton loader
+      try {
+        await loadGoogleMaps(apiKey)
+        initAutocomplete()
+      } catch (err) {
+        console.error('[GoogleAddressAutocomplete] Failed to load Google Maps:', err)
+        setError('unavailable')
         setIsLoading(false)
       }
-      document.head.appendChild(script)
     }
 
     const initAutocomplete = () => {
@@ -118,7 +117,7 @@ export function GoogleAddressAutocomplete({
           ref={inputRef}
           type="text"
           placeholder="Start typing your address..."
-          value={value}
+          value={value ?? ''}
           onChange={(e) => onChange?.(e.target.value)}
           disabled={disabled}
           className={className || "h-14 text-lg bg-slate-900 border-slate-600 rounded-lg focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 transition-all w-full px-4 text-white"}
@@ -136,7 +135,7 @@ export function GoogleAddressAutocomplete({
         ref={inputRef}
         type="text"
         placeholder={isLoading ? "Loading..." : "Start typing your address..."}
-        value={value}
+        value={value ?? ''}
         onChange={(e) => onChange?.(e.target.value)}
         disabled={disabled || isLoading}
         className={className || "h-14 text-lg bg-slate-900 border-slate-600 rounded-lg focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 transition-all w-full px-4 text-white"}

@@ -19,7 +19,11 @@ interface GooglePlacesConfig {
 interface Props {
   franchiseId: string
   city: string
+  displayName: string
+  countryName: string
   currentConfig: GooglePlacesConfig
+  legacyLat: number | null
+  legacyLng: number | null
   onUpdate: () => void
 }
 
@@ -31,22 +35,59 @@ const RADIUS_PRESETS = [
   { name: 'Large Metro', onboarding: 120000, import: 200000, max: 400000 },
 ]
 
-export function FranchiseGooglePlacesConfig({ franchiseId, city, currentConfig, onUpdate }: Props) {
+export function FranchiseGooglePlacesConfig({ 
+  franchiseId, 
+  city, 
+  displayName,
+  countryName,
+  currentConfig, 
+  legacyLat,
+  legacyLng,
+  onUpdate 
+}: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isGeocodingCenter, setIsGeocodingCenter] = useState(false)
   const [showKeys, setShowKeys] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
   
-  const [config, setConfig] = useState<GooglePlacesConfig>(currentConfig)
+  // Use a single API key field that gets split server-side
+  const [apiKey, setApiKey] = useState(
+    currentConfig.google_places_public_key || 
+    currentConfig.google_places_server_key || 
+    ''
+  )
+  
+  // Auto-fill center from legacy if available and center is not set
+  const initialCenter = {
+    lat: currentConfig.city_center_lat ?? legacyLat ?? null,
+    lng: currentConfig.city_center_lng ?? legacyLng ?? null
+  }
+  
+  const [config, setConfig] = useState<GooglePlacesConfig>({
+    ...currentConfig,
+    city_center_lat: initialCenter.lat,
+    city_center_lng: initialCenter.lng,
+    onboarding_search_radius_m: currentConfig.onboarding_search_radius_m ?? 35000,
+    import_search_radius_m: currentConfig.import_search_radius_m ?? 75000,
+    import_max_radius_m: currentConfig.import_max_radius_m ?? 200000,
+  })
   
   const handleSave = async () => {
     if (!confirm('Save Google Places configuration?')) return
     
     setIsSaving(true)
     try {
+      // Send the single API key (or null if empty) which will be duplicated server-side
+      const payload = {
+        ...config,
+        google_places_api_key: apiKey.trim() || null, // Server will split this into public/server keys
+      }
+      
       const res = await fetch(`/api/hq/franchises/${franchiseId}/google-places`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        body: JSON.stringify(payload)
       })
       
       if (!res.ok) {
@@ -64,6 +105,45 @@ export function FranchiseGooglePlacesConfig({ franchiseId, city, currentConfig, 
     }
   }
   
+  const handleGeocodeCenter = async () => {
+    // Use entered key, or existing server/public key, or show error
+    const keyToUse = apiKey.trim() || currentConfig.google_places_server_key || currentConfig.google_places_public_key
+    
+    if (!keyToUse) {
+      alert('Please enter an API key first, or save a key before geocoding')
+      return
+    }
+    
+    setIsGeocodingCenter(true)
+    try {
+      const res = await fetch(`/api/hq/franchises/${franchiseId}/geocode-center`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          apiKey: keyToUse
+        })
+      })
+      
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.message || 'Failed to geocode city center')
+      }
+      
+      const data = await res.json()
+      setConfig({
+        ...config,
+        city_center_lat: data.lat,
+        city_center_lng: data.lng
+      })
+      
+      alert(`✅ City center set to: ${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}`)
+    } catch (err) {
+      alert(`❌ Error: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    } finally {
+      setIsGeocodingCenter(false)
+    }
+  }
+  
   const applyPreset = (preset: typeof RADIUS_PRESETS[0]) => {
     setConfig({
       ...config,
@@ -73,77 +153,56 @@ export function FranchiseGooglePlacesConfig({ franchiseId, city, currentConfig, 
     })
   }
   
-  const hasPublicKey = !!config.google_places_public_key
-  const hasServerKey = !!config.google_places_server_key
+  const hasApiKey = !!apiKey || !!currentConfig.google_places_public_key || !!currentConfig.google_places_server_key
   const hasCenter = config.city_center_lat != null && config.city_center_lng != null
-  const isFullyConfigured = hasPublicKey && hasServerKey && hasCenter
+  const isFullyConfigured = hasApiKey && hasCenter
   
   if (!isEditing) {
     return (
       <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">Google Places Configuration</h3>
+          <h3 className="text-lg font-semibold text-white">Google Places (Pilot)</h3>
           <Button
             onClick={() => setIsEditing(true)}
             size="sm"
             className="bg-blue-600 hover:bg-blue-700"
           >
-            Edit Config
+            {hasApiKey ? 'Edit Config' : 'Setup'}
           </Button>
         </div>
         
         <div className="space-y-3 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-neutral-400">Public API Key:</span>
-            <span className={hasPublicKey ? 'text-green-400' : 'text-red-400'}>
-              {hasPublicKey ? '✓ Configured' : '✗ Not Set'}
-            </span>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <span className="text-neutral-400">Server API Key:</span>
-            <span className={hasServerKey ? 'text-green-400' : 'text-red-400'}>
-              {hasServerKey ? '✓ Configured' : '✗ Not Set'}
+            <span className="text-neutral-400">API Key:</span>
+            <span className={hasApiKey ? 'text-green-400' : 'text-red-400'}>
+              {hasApiKey ? '✓ Configured' : '✗ Not Set'}
             </span>
           </div>
           
           <div className="flex items-center justify-between">
             <span className="text-neutral-400">City Center:</span>
-            <span className={hasCenter ? 'text-green-400' : 'text-red-400'}>
-              {hasCenter ? `${config.city_center_lat}, ${config.city_center_lng}` : '✗ Not Set'}
+            <span className={hasCenter ? 'text-green-400' : 'text-yellow-400'}>
+              {hasCenter ? `${config.city_center_lat?.toFixed(4)}, ${config.city_center_lng?.toFixed(4)}` : '⚠ Auto-detected'}
             </span>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <span className="text-neutral-400">Country:</span>
-            <span className="text-white">{config.google_places_country || 'gb'}</span>
           </div>
           
           <div className="flex items-center justify-between">
             <span className="text-neutral-400">Onboarding Radius:</span>
             <span className="text-white">
-              {config.onboarding_search_radius_m ? `${(config.onboarding_search_radius_m / 1000).toFixed(1)}km` : '30km (default)'}
-            </span>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <span className="text-neutral-400">Import Default Radius:</span>
-            <span className="text-white">
-              {config.import_search_radius_m ? `${(config.import_search_radius_m / 1000).toFixed(1)}km` : '50km (default)'}
-            </span>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <span className="text-neutral-400">Import Max Radius:</span>
-            <span className="text-white">
-              {config.import_max_radius_m ? `${(config.import_max_radius_m / 1000).toFixed(1)}km` : '200km (default)'}
+              {(config.onboarding_search_radius_m! / 1000).toFixed(0)}km
             </span>
           </div>
         </div>
         
-        {!isFullyConfigured && (
+        {!isFullyConfigured && !hasApiKey && (
+          <div className="mt-4 bg-blue-950/30 border border-blue-800/50 rounded p-3 text-xs text-blue-200">
+            💡 Add a Google Places API key to enable onboarding autocomplete and admin import tools.
+          </div>
+        )}
+        
+        {hasApiKey && !hasCenter && (
           <div className="mt-4 bg-amber-950/30 border border-amber-800/50 rounded p-3 text-xs text-amber-200">
-            ⚠️ Google Places is not fully configured. Onboarding and import features will be disabled.
+            ⚠️ City center not set. Using fallback coordinates. Edit config to set precise center.
           </div>
         )}
       </div>
@@ -153,10 +212,11 @@ export function FranchiseGooglePlacesConfig({ franchiseId, city, currentConfig, 
   return (
     <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-white">Edit Google Places Configuration</h3>
+        <h3 className="text-lg font-semibold text-white">Configure Google Places (Pilot)</h3>
         <div className="flex gap-2">
           <Button
             onClick={() => {
+              setApiKey(currentConfig.google_places_public_key || currentConfig.google_places_server_key || '')
               setConfig(currentConfig)
               setIsEditing(false)
             }}
@@ -170,213 +230,193 @@ export function FranchiseGooglePlacesConfig({ franchiseId, city, currentConfig, 
           <Button
             onClick={handleSave}
             size="sm"
-            disabled={isSaving}
+            disabled={isSaving || !apiKey.trim()}
             className="bg-green-600 hover:bg-green-700"
           >
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving ? 'Saving...' : 'Save Configuration'}
           </Button>
         </div>
       </div>
       
       <div className="space-y-6">
-        {/* API Keys */}
+        {/* Single API Key */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-white">API Keys</h4>
+            <h4 className="text-sm font-semibold text-white">API Key</h4>
             <button
               type="button"
               onClick={() => setShowKeys(!showKeys)}
               className="text-xs text-blue-400 hover:text-blue-300"
             >
-              {showKeys ? 'Hide' : 'Show'} Keys
+              {showKeys ? 'Hide' : 'Show'} Key
             </button>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="publicKey" className="text-neutral-300">
-              Public API Key (Client-Side)
+            <Label htmlFor="apiKey" className="text-neutral-300">
+              Google Places API Key
             </Label>
             <Input
-              id="publicKey"
+              id="apiKey"
               type={showKeys ? 'text' : 'password'}
-              value={config.google_places_public_key || ''}
-              onChange={(e) => setConfig({ ...config, google_places_public_key: e.target.value })}
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
               placeholder="AIza..."
               className="bg-neutral-800 border-neutral-700 text-white"
             />
             <p className="text-xs text-neutral-500">
-              Used in browser. Restrict by HTTP referrers in Google Cloud Console.
-            </p>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="serverKey" className="text-neutral-300">
-              Server API Key (Server-Side)
-            </Label>
-            <Input
-              id="serverKey"
-              type={showKeys ? 'text' : 'password'}
-              value={config.google_places_server_key || ''}
-              onChange={(e) => setConfig({ ...config, google_places_server_key: e.target.value })}
-              placeholder="AIza..."
-              className="bg-neutral-800 border-neutral-700 text-white"
-            />
-            <p className="text-xs text-neutral-500">
-              Used for Places Details API. Restrict by IP addresses in Google Cloud Console.
-            </p>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="country" className="text-neutral-300">
-              Country Code
-            </Label>
-            <Input
-              id="country"
-              type="text"
-              value={config.google_places_country || 'gb'}
-              onChange={(e) => setConfig({ ...config, google_places_country: e.target.value })}
-              placeholder="gb"
-              maxLength={2}
-              className="bg-neutral-800 border-neutral-700 text-white"
-            />
-            <p className="text-xs text-neutral-500">
-              ISO country code (e.g., "gb", "us", "ca")
+              Get your API key from <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Google Cloud Console</a>. 
+              Enable "Places API (New)" for your project. This key will be used for both client and server requests.
             </p>
           </div>
         </div>
         
         {/* Geographic Center */}
         <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-white">City Center Coordinates</h4>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="lat" className="text-neutral-300">
-                Latitude
-              </Label>
-              <Input
-                id="lat"
-                type="number"
-                step="0.0001"
-                value={config.city_center_lat || ''}
-                onChange={(e) => setConfig({ ...config, city_center_lat: parseFloat(e.target.value) || null })}
-                placeholder="50.7192"
-                className="bg-neutral-800 border-neutral-700 text-white"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="lng" className="text-neutral-300">
-                Longitude
-              </Label>
-              <Input
-                id="lng"
-                type="number"
-                step="0.0001"
-                value={config.city_center_lng || ''}
-                onChange={(e) => setConfig({ ...config, city_center_lng: parseFloat(e.target.value) || null })}
-                placeholder="-1.8808"
-                className="bg-neutral-800 border-neutral-700 text-white"
-              />
-            </div>
-          </div>
-          
-          <p className="text-xs text-neutral-500">
-            Used to restrict Google Places searches to your franchise area. Find coordinates at{' '}
-            <a href="https://www.latlong.net/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-              latlong.net
-            </a>
-          </p>
-        </div>
-        
-        {/* Radius Configuration */}
-        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-white">Search Radii (meters)</h4>
-            <div className="flex gap-2">
-              {RADIUS_PRESETS.map((preset) => (
+            <h4 className="text-sm font-semibold text-white">City Center (Optional)</h4>
+            <Button
+              onClick={handleGeocodeCenter}
+              disabled={
+                isGeocodingCenter || 
+                (!apiKey.trim() && !currentConfig.google_places_server_key && !currentConfig.google_places_public_key)
+              }
+              size="sm"
+              variant="outline"
+              className="border-neutral-700 text-neutral-300"
+            >
+              {isGeocodingCenter ? 'Geocoding...' : 'Set Center Automatically'}
+            </Button>
+          </div>
+          
+          {hasCenter ? (
+            <div className="bg-neutral-800 border border-neutral-700 rounded p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-neutral-400">Current Center:</span>
                 <button
-                  key={preset.name}
                   type="button"
-                  onClick={() => applyPreset(preset)}
-                  className="text-xs px-2 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded border border-neutral-700"
+                  onClick={() => setConfig({ ...config, city_center_lat: null, city_center_lng: null })}
+                  className="text-xs text-red-400 hover:text-red-300"
                 >
-                  {preset.name}
+                  Clear
                 </button>
-              ))}
+              </div>
+              <div className="text-white font-mono text-sm">
+                {config.city_center_lat?.toFixed(4)}, {config.city_center_lng?.toFixed(4)}
+              </div>
             </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="onboardingRadius" className="text-neutral-300">
-              Onboarding Radius (meters)
-            </Label>
-            <Input
-              id="onboardingRadius"
-              type="number"
-              min="5000"
-              max="500000"
-              step="1000"
-              value={config.onboarding_search_radius_m || 30000}
-              onChange={(e) => setConfig({ ...config, onboarding_search_radius_m: parseInt(e.target.value) || 30000 })}
-              className="bg-neutral-800 border-neutral-700 text-white"
-            />
+          ) : legacyLat && legacyLng ? (
+            <div className="bg-blue-950/30 border border-blue-800/50 rounded p-3 text-xs text-blue-200">
+              💡 Using legacy coordinates: {legacyLat.toFixed(4)}, {legacyLng.toFixed(4)}. 
+              Click "Set Center Automatically" to update.
+            </div>
+          ) : (
             <p className="text-xs text-neutral-500">
-              Maximum distance for business signup Google Places searches. 
-              {config.onboarding_search_radius_m && ` (${(config.onboarding_search_radius_m / 1000).toFixed(1)}km)`}
+              Click "Set Center Automatically" to geocode "{displayName}, {countryName}" using Google, 
+              or leave empty to use franchise default coordinates.
             </p>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="importDefaultRadius" className="text-neutral-300">
-              Import Default Radius (meters)
-            </Label>
-            <Input
-              id="importDefaultRadius"
-              type="number"
-              min="5000"
-              max="1000000"
-              step="1000"
-              value={config.import_search_radius_m || 50000}
-              onChange={(e) => setConfig({ ...config, import_search_radius_m: parseInt(e.target.value) || 50000 })}
-              className="bg-neutral-800 border-neutral-700 text-white"
-            />
-            <p className="text-xs text-neutral-500">
-              Default radius for admin import tool. 
-              {config.import_search_radius_m && ` (${(config.import_search_radius_m / 1000).toFixed(1)}km)`}
-            </p>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="importMaxRadius" className="text-neutral-300">
-              Import Maximum Radius (meters)
-            </Label>
-            <Input
-              id="importMaxRadius"
-              type="number"
-              min="10000"
-              max="1000000"
-              step="1000"
-              value={config.import_max_radius_m || 200000}
-              onChange={(e) => setConfig({ ...config, import_max_radius_m: parseInt(e.target.value) || 200000 })}
-              className="bg-neutral-800 border-neutral-700 text-white"
-            />
-            <p className="text-xs text-neutral-500">
-              Maximum slider limit in import tool (prevents excessive API usage). 
-              {config.import_max_radius_m && ` (${(config.import_max_radius_m / 1000).toFixed(1)}km)`}
-            </p>
-          </div>
+          )}
         </div>
         
-        <div className="bg-blue-950/30 border border-blue-800/50 rounded p-4 text-xs text-blue-200">
-          <p className="font-semibold mb-2">💡 Configuration Tips:</p>
-          <ul className="space-y-1 ml-4 list-disc">
-            <li>Get API keys from <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="underline">Google Cloud Console</a></li>
-            <li>Enable "Places API" and "Maps JavaScript API" for your project</li>
-            <li>Restrict public key by HTTP referrers (your domains)</li>
-            <li>Restrict server key by IP addresses (your server IPs)</li>
-            <li>Larger radii = more API costs. Start conservative.</li>
-          </ul>
+        {/* Advanced Settings */}
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center justify-between w-full text-left"
+          >
+            <h4 className="text-sm font-semibold text-white">Advanced Settings (Optional)</h4>
+            <span className="text-neutral-400 text-xs">
+              {showAdvanced ? '▼ Hide' : '▶ Show'}
+            </span>
+          </button>
+          
+          {showAdvanced && (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-neutral-400">Search Radius Presets:</span>
+                <div className="flex gap-2">
+                  {RADIUS_PRESETS.map((preset) => (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => applyPreset(preset)}
+                      className="text-xs px-2 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded border border-neutral-700"
+                    >
+                      {preset.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="onboardingRadius" className="text-neutral-300 text-xs">
+                  Onboarding Radius
+                </Label>
+                <Input
+                  id="onboardingRadius"
+                  type="number"
+                  min="5000"
+                  max="500000"
+                  step="1000"
+                  value={config.onboarding_search_radius_m || 35000}
+                  onChange={(e) => setConfig({ ...config, onboarding_search_radius_m: parseInt(e.target.value) || 35000 })}
+                  className="bg-neutral-800 border-neutral-700 text-white text-sm"
+                />
+                <p className="text-xs text-neutral-500">
+                  Max distance for business signup searches ({(config.onboarding_search_radius_m! / 1000).toFixed(0)}km)
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="importDefaultRadius" className="text-neutral-300 text-xs">
+                  Import Default Radius
+                </Label>
+                <Input
+                  id="importDefaultRadius"
+                  type="number"
+                  min="5000"
+                  max="1000000"
+                  step="1000"
+                  value={config.import_search_radius_m || 75000}
+                  onChange={(e) => setConfig({ ...config, import_search_radius_m: parseInt(e.target.value) || 75000 })}
+                  className="bg-neutral-800 border-neutral-700 text-white text-sm"
+                />
+                <p className="text-xs text-neutral-500">
+                  Default for admin import tool ({(config.import_search_radius_m! / 1000).toFixed(0)}km)
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="importMaxRadius" className="text-neutral-300 text-xs">
+                  Import Maximum Radius
+                </Label>
+                <Input
+                  id="importMaxRadius"
+                  type="number"
+                  min="10000"
+                  max="1000000"
+                  step="1000"
+                  value={config.import_max_radius_m || 200000}
+                  onChange={(e) => setConfig({ ...config, import_max_radius_m: parseInt(e.target.value) || 200000 })}
+                  className="bg-neutral-800 border-neutral-700 text-white text-sm"
+                />
+                <p className="text-xs text-neutral-500">
+                  Slider limit in import tool ({(config.import_max_radius_m! / 1000).toFixed(0)}km)
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+        
+        <div className="bg-green-950/20 border border-green-800/40 rounded p-4 text-xs text-green-200">
+          <p className="font-semibold mb-2">✅ Quick Setup:</p>
+          <ol className="space-y-1 ml-4 list-decimal">
+            <li>Paste your Google Places API key above</li>
+            <li>Click "Set Center Automatically" (or leave empty for defaults)</li>
+            <li>Click "Save Configuration"</li>
+            <li>Done! Onboarding will now work on localhost with ?city={city}</li>
+          </ol>
         </div>
       </div>
     </div>
