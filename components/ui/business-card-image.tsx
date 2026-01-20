@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { getPlaceholderUrl, getFallbackPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
+import { optimizeCloudinaryUrl, getBusinessImageSizes } from '@/lib/utils/optimize-image-url'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 
 interface BusinessCardImageProps {
@@ -21,15 +22,19 @@ export function BusinessCardImage({
 }: BusinessCardImageProps) {
   // Claimed businesses with uploaded photos: Use Cloudinary (Next.js Image for optimization)
   if (heroImage) {
+    // Optimize Cloudinary URL with auto-format, auto-quality, and size limits
+    const optimizedUrl = optimizeCloudinaryUrl(heroImage, 1200) || heroImage
+    
     return (
       <div className={`relative ${className}`}>
         <Image
-          src={heroImage}
+          src={optimizedUrl}
           alt={businessName}
           fill
           className="object-cover"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          sizes={getBusinessImageSizes()}
           priority={false}
+          loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
       </div>
