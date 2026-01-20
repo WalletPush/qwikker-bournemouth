@@ -21,7 +21,7 @@ export function ChatContextStrip({ userQuery, aiResponse }: ChatContextStripProp
   if (!userQuery && !aiResponse) return null
 
   return (
-    <div className="absolute top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 pointer-events-none z-10">
+    <div className="absolute top-40 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 pointer-events-none z-10">
       <div className="pointer-events-auto bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
         {/* Collapsed View */}
         {!expanded && (

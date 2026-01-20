@@ -83,6 +83,34 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [loadingClaims, setLoadingClaims] = useState(true)
   const [expandedClaims, setExpandedClaims] = useState<Set<string>>(new Set())
 
+  // ✅ KB ELIGIBLE BUSINESSES (for Knowledge Base dropdown lockdown)
+  // ONLY businesses eligible for paid AI exposure (approved + subscribed + not expired)
+  const [kbEligibleBusinesses, setKbEligibleBusinesses] = useState<Business[]>([])
+  const [loadingKbEligible, setLoadingKbEligible] = useState(true)
+
+  // Load KB eligible businesses from business_profiles_kb_eligible view
+  useEffect(() => {
+    const loadKbEligible = async () => {
+      try {
+        const response = await fetch(`/api/admin/kb-eligible?city=${city}`)
+        const data = await response.json()
+        
+        if (data.success && data.businesses) {
+          setKbEligibleBusinesses(data.businesses)
+          console.log(`✅ Loaded ${data.businesses.length} KB-eligible businesses (excludes auto-imported, unclaimed, expired trials)`)
+        }
+      } catch (error) {
+        console.error('Failed to load KB-eligible businesses:', error)
+        // Fallback to liveBusinesses if API fails (graceful degradation)
+        console.warn('⚠️ Falling back to liveBusinesses for KB dropdown')
+      } finally {
+        setLoadingKbEligible(false)
+      }
+    }
+    
+    loadKbEligible()
+  }, [city])
+
   // Load real claims from database
   useEffect(() => {
     const loadClaims = async () => {
@@ -405,17 +433,19 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
         matchesTier = true
       } else {
         const crm = crmData.find(c => c.id === business.id)
+        // ✅ FIXED: Handle subscription as array
+        const sub = Array.isArray(crm?.subscription) ? crm.subscription[0] : crm?.subscription
         if (filterTier === 'trial') {
-          matchesTier = crm?.subscription?.is_in_free_trial === true
+          matchesTier = sub?.is_in_free_trial === true
         } else if (filterTier === 'free') {
           // CRITICAL: Only show truly free listings (unclaimed or claimed_free WITHOUT trial)
           // EXCLUDE businesses on free trial (they show in 'trial' filter)
-          const isOnTrial = crm?.subscription?.is_in_free_trial === true
-          matchesTier = !isOnTrial && (business.status === 'unclaimed' || business.status === 'claimed_free' || crm?.subscription?.tier_name === 'free')
+          const isOnTrial = sub?.is_in_free_trial === true
+          matchesTier = !isOnTrial && (business.status === 'unclaimed' || business.status === 'claimed_free' || sub?.tier_name === 'free')
         } else if (filterTier === 'synced') {
           matchesTier = !!crm?.last_ghl_sync
         } else {
-          matchesTier = crm?.subscription?.tier_name === filterTier
+          matchesTier = sub?.tier_name === filterTier
         }
       }
 
@@ -1502,8 +1532,9 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
-                            // ONLY check subscription data, ignore legacy trial_days_remaining
-                            return crm?.subscription?.is_in_free_trial
+                            // ✅ FIXED: Handle subscription as array
+                            const sub = Array.isArray(crm?.subscription) ? crm.subscription[0] : crm?.subscription
+                            return sub?.is_in_free_trial
                           }).length}
                         </p>
                       </div>
@@ -1528,9 +1559,10 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
-                            // CRITICAL: Only count truly free listings, NOT free trials
-                            const isOnTrial = crm?.subscription?.is_in_free_trial === true
-                            return !isOnTrial && (b.status === 'unclaimed' || b.status === 'claimed_free' || crm?.subscription?.tier_name === 'free')
+                            // ✅ FIXED: Handle subscription as array
+                            const sub = Array.isArray(crm?.subscription) ? crm.subscription[0] : crm?.subscription
+                            const isOnTrial = sub?.is_in_free_trial === true
+                            return !isOnTrial && (b.status === 'unclaimed' || b.status === 'claimed_free' || sub?.tier_name === 'free')
                           }).length}
                         </p>
                       </div>
@@ -1555,9 +1587,10 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
-                            // Starter tier EXCLUDING trials
-                            const isTrial = crm?.subscription?.is_in_free_trial
-                            return !isTrial && crm?.subscription?.tier_name === 'starter'
+                            // ✅ FIXED: Handle subscription as array
+                            const sub = Array.isArray(crm?.subscription) ? crm.subscription[0] : crm?.subscription
+                            const isTrial = sub?.is_in_free_trial
+                            return !isTrial && sub?.tier_name === 'starter'
                           }).length}
                         </p>
                       </div>
@@ -1582,9 +1615,10 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
-                            // Featured tier EXCLUDING trials
-                            const isTrial = crm?.subscription?.is_in_free_trial
-                            return !isTrial && crm?.subscription?.tier_name === 'featured'
+                            // ✅ FIXED: Handle subscription as array
+                            const sub = Array.isArray(crm?.subscription) ? crm.subscription[0] : crm?.subscription
+                            const isTrial = sub?.is_in_free_trial
+                            return !isTrial && sub?.tier_name === 'featured'
                           }).length}
                         </p>
                       </div>
@@ -1609,9 +1643,10 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
-                            // Spotlight tier EXCLUDING trials
-                            const isTrial = crm?.subscription?.is_in_free_trial
-                            return !isTrial && crm?.subscription?.tier_name === 'spotlight'
+                            // ✅ FIXED: Handle subscription as array
+                            const sub = Array.isArray(crm?.subscription) ? crm.subscription[0] : crm?.subscription
+                            const isTrial = sub?.is_in_free_trial
+                            return !isTrial && sub?.tier_name === 'spotlight'
                           }).length}
                         </p>
                       </div>
@@ -2940,23 +2975,43 @@ Qwikker Admin Team`
                     </h3>
                     
                     <div className="mb-6">
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Choose Business or General Knowledge
-                      </label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-slate-300">
+                          Choose Business or General Knowledge
+                        </label>
+                        {/* ✅ DEBUG LABEL: Show KB eligible count + filter applied */}
+                        {process.env.NODE_ENV === 'development' && (
+                          <span className="text-xs text-blue-400 font-mono">
+                            {loadingKbEligible ? '⏳ Loading...' : `✅ ${kbEligibleBusinesses.length} eligible (paid/trial only)`}
+                          </span>
+                        )}
+                      </div>
                       <select 
                         value={selectedTarget}
                         onChange={(e) => setSelectedTarget(e.target.value)}
                         className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-[#00d083] focus:ring-1 focus:ring-[#00d083] transition-colors"
+                        disabled={loadingKbEligible}
                       >
                         <option value="general">General {cityDisplayName} Knowledge</option>
-                        <optgroup label="Live Businesses">
-                          {liveBusinesses.map((business) => (
-                            <option key={business.id} value={business.id}>
-                              {business.business_name} - {business.business_category}
-                            </option>
-                          ))}
+                        <optgroup label="✅ KB Eligible Businesses (Paid/Trial Only)">
+                          {kbEligibleBusinesses.length > 0 ? (
+                            kbEligibleBusinesses.map((business) => (
+                              <option key={business.id} value={business.id}>
+                                {business.business_name} - {business.business_category}
+                              </option>
+                            ))
+                          ) : (
+                            !loadingKbEligible && (
+                              <option disabled>No eligible businesses (all must have paid/trial subscription)</option>
+                            )
+                          )}
                         </optgroup>
                       </select>
+                      {/* ✅ HELPER TEXT: Explain what's eligible */}
+                      <p className="text-xs text-slate-400 mt-2">
+                        Only businesses with active paid subscriptions or trials are eligible for KB ingestion.
+                        Excludes: auto-imported, unclaimed, expired trials, and free listings.
+                      </p>
                     </div>
                   </div>
 

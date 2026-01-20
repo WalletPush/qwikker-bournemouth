@@ -77,7 +77,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
   
   // Fetch all discoverable businesses (approved, unclaimed, claimed_free)
   // CRITICAL: Free tier businesses (unclaimed/claimed_free) appear in Discover but NOT AI chat
-  // Updated: 2026-01-09 21:12 GMT - FORCE TURBOPACK RECOMPILE NOW
+  // ✅ CRITICAL FIX: Include subscription data to filter out expired trials!
   const { data: approvedBusinesses, error } = await supabase
     .from('business_profiles')
     .select(`
@@ -116,6 +116,11 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
         offer_value,
         offer_image,
         status
+      ),
+      business_subscriptions!business_subscriptions_business_id_fkey(
+        is_in_free_trial,
+        free_trial_end_date,
+        status
       )
     `)
     .in('status', ['approved', 'unclaimed', 'claimed_free']) // Show all discoverable businesses
@@ -132,21 +137,21 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
   console.log('🔍 DISCOVER DEBUG: Total businesses fetched:', approvedBusinesses?.length)
   approvedBusinesses?.forEach(b => {
     console.log(`🔍 ${b.business_name}:`, {
-      hasSubscription: !!b.subscription,
-      subscriptionData: b.subscription,
-      isArray: Array.isArray(b.subscription)
+      hasSubscription: !!b.business_subscriptions,
+      subscriptionData: b.business_subscriptions,
+      isArray: Array.isArray(b.business_subscriptions)
     })
   })
   
   // ✅ CRITICAL: Filter out expired trials
   const activeBusinesses = (approvedBusinesses || []).filter(business => {
     // If no subscription data, assume active (legacy businesses)
-    if (!business.subscription || !Array.isArray(business.subscription) || business.subscription.length === 0) {
+    if (!business.business_subscriptions || !Array.isArray(business.business_subscriptions) || business.business_subscriptions.length === 0) {
       console.log(`✅ ${business.business_name}: No subscription data, showing (legacy)`)
       return true
     }
     
-    const sub = business.subscription[0]
+    const sub = business.business_subscriptions[0]
     
     // If not in trial, they're active (paid customers)
     if (!sub.is_in_free_trial) {

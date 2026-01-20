@@ -86,9 +86,7 @@ export function useUserLocation(fallbackCenter?: Coordinates): UseUserLocationRe
     if (typeof window === 'undefined' || !navigator.geolocation) {
       setStatus('unavailable')
       setError('Geolocation is not supported by your browser')
-      if (fallbackCenter) {
-        setCoords(fallbackCenter)
-      }
+      // DON'T set fallback - keep coords null
       return
     }
 
@@ -98,8 +96,8 @@ export function useUserLocation(fallbackCenter?: Coordinates): UseUserLocationRe
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: false,
-          timeout: 10000,
+          enableHighAccuracy: true, // More accurate for Atlas
+          timeout: 6000, // Faster timeout for better UX
           maximumAge: CACHE_DURATION_MS
         })
       })
@@ -109,12 +107,18 @@ export function useUserLocation(fallbackCenter?: Coordinates): UseUserLocationRe
         lng: position.coords.longitude
       }
 
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Atlas] User location granted:', userCoords)
+      }
+
       setCoords(userCoords)
       setStatus('granted')
       setCachedLocation(userCoords)
       
     } catch (err: any) {
-      console.warn('[Location] Permission denied or failed:', err)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Atlas] Location request failed:', err.code, err.message)
+      }
       
       if (err.code === 1) {
         // Permission denied
@@ -125,10 +129,8 @@ export function useUserLocation(fallbackCenter?: Coordinates): UseUserLocationRe
         setError('Could not get your location')
       }
       
-      // Fallback to city center
-      if (fallbackCenter) {
-        setCoords(fallbackCenter)
-      }
+      // DON'T set fallback coords - keep coords null so recenter won't appear
+      // (Map will stay at city center but won't pretend it's user location)
     }
   }, [fallbackCenter])
 

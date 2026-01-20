@@ -18,6 +18,7 @@ import { InitialAvatar } from '@/components/admin/initial-avatar'
 import { formatDate, formatLastSync, formatJoinedDate } from '@/lib/utils/date-formatter'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { OfferDeletionModal } from '@/components/admin/offer-deletion-modal'
+import { computeEntitlementState } from '@/lib/utils/entitlement-helpers'
 import { TierManagementCard } from './tier-management-card'
 import { ExtendTrialButton } from './extend-trial-button'
 import { PlaceholderSelector } from './placeholder-selector'
@@ -47,11 +48,17 @@ const formatDateConsistent = (dateString: string | null | undefined): string => 
   }
 }
 
+// ✅ CRITICAL HELPER: Extract subscription from array format
+const getSubscription = (business: BusinessCRMData) => {
+  return Array.isArray(business.subscription) ? business.subscription[0] : business.subscription
+}
+
 // Helper function to get tier-specific border color
 const getTierBorderColor = (business: BusinessCRMData) => {
-  // PRIORITY 1: Check subscription data FIRST (trial and paid tiers)
-  const isTrial = business.subscription?.is_in_free_trial
-  const tierName = business.subscription?.tier_name
+  // ✅ FIXED: Handle subscription as array
+  const sub = getSubscription(business)
+  const isTrial = sub?.is_in_free_trial
+  const tierName = sub?.tier_name
   
   if (isTrial) return 'border-blue-500/50' // Free trial → Blue
   if (tierName === 'spotlight') return 'border-amber-500/50' // Spotlight → Gold
@@ -67,9 +74,10 @@ const getTierBorderColor = (business: BusinessCRMData) => {
 
 // Helper function to get tier-specific accent gradient
 const getTierAccentGradient = (business: BusinessCRMData) => {
-  // PRIORITY 1: Check subscription data FIRST (trial and paid tiers)
-  const isTrial = business.subscription?.is_in_free_trial
-  const tierName = business.subscription?.tier_name
+  // ✅ FIXED: Handle subscription as array
+  const sub = getSubscription(business)
+  const isTrial = sub?.is_in_free_trial
+  const tierName = sub?.tier_name
   
   if (isTrial) return 'from-blue-500 via-blue-600 to-blue-500' // Free trial → Blue
   if (tierName === 'spotlight') return 'from-amber-500 via-amber-600 to-amber-500' // Spotlight → Gold
@@ -88,16 +96,28 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   
+  // ✅ CRITICAL: Extract subscription from array format ONCE at the top!
+  const sub = getSubscription(business)
+  
+  // ✅ LOCKDOWN: Compute canonical entitlement state (DO NOT use business.plan!)
+  const entitlement = computeEntitlementState(
+    {
+      owner_user_id: business.owner_user_id,
+      status: business.status
+    },
+    sub
+  )
+  
   // DEBUG: Log subscription data to see what we're getting
   console.log(`🔍 CRM Card for ${business.business_name}:`, {
-    tier_display_name: business.subscription?.tier_display_name,
-    tier_name: business.subscription?.tier_name,
-    is_in_free_trial: business.subscription?.is_in_free_trial,
+    tier_display_name: sub?.tier_display_name,
+    tier_name: sub?.tier_name,
+    is_in_free_trial: sub?.is_in_free_trial,
     trial_days_remaining: business.trial_days_remaining,
     trial_status: business.trial_status,
     profile_plan: business.plan,
-    subscription_updated_at: business.subscription?.updated_at,
-    CHECK: `Will show Free Trial? ${(business.subscription?.is_in_free_trial || (business.trial_days_remaining !== null && business.trial_days_remaining > 0)) ? 'YES' : 'NO'}`
+    subscription_updated_at: sub?.updated_at,
+    CHECK: `Will show Free Trial? ${(sub?.is_in_free_trial || (business.trial_days_remaining !== null && business.trial_days_remaining > 0)) ? 'YES' : 'NO'}`
   })
   const [adminNotes, setAdminNotes] = useState(business.admin_notes || '')
   const [deletionModal, setDeletionModal] = useState<{ isOpen: boolean; offer: any | null }>({
@@ -113,9 +133,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   // DEBUG: Check subscription data
   console.log(`🔍 CRM Card for ${business.business_name}:`, {
     has_subscription: !!business.subscription,
-    subscription_status: business.subscription?.status,
-    tier_name: business.subscription?.tier_name,
-    is_in_free_trial: business.subscription?.is_in_free_trial,
+    subscription_status: sub?.status,
+    tier_name: sub?.tier_name,
+    is_in_free_trial: sub?.is_in_free_trial,
     user_id: business.user_id,
     business_id: business.id
   })
@@ -359,6 +379,20 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
       })
     }
     
+    // ✅ NEW: Trial expired event
+    if (business.trial_status === 'expired') {
+      const sub = Array.isArray(business.subscription) ? business.subscription[0] : business.subscription
+      if (sub?.free_trial_end_date) {
+        events.push({
+          id: eventId++,
+          type: 'trial_expired',
+          message: `Trial expired on ${new Date(sub.free_trial_end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`,
+          timestamp: sub.free_trial_end_date,
+          user: 'System'
+        })
+      }
+    }
+    
     // Knowledge added (only if has description/tagline AND is claimed)
     if ((business.business_description || business.business_tagline) && isClaimed) {
       events.push({
@@ -545,7 +579,16 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
       )
     }
     
-    // PRIORITY 4: Default = LIVE (for approved, claimed_free, and everything else active)
+    // PRIORITY 4: ✅ NEW - Expired trial (check before LIVE!)
+    if (business.trial_status === 'expired') {
+      return (
+        <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border bg-red-500/20 text-red-300 border-red-500/30 inline-flex items-center justify-center">
+          EXPIRED
+        </span>
+      )
+    }
+    
+    // PRIORITY 5: Default = LIVE (for approved, claimed_free, and everything else active)
     return (
       <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border bg-green-500/20 text-green-300 border-green-500/30 inline-flex items-center justify-center">
         LIVE
@@ -557,8 +600,11 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     // Don't show badge if user is on paid plan (upgraded status)
     if (trialInfo.trial_status === 'not_applicable' || trialInfo.trial_status === 'upgraded') return null
     
+    // ✅ FIXED: Extract subscription from array
+    const sub = Array.isArray(business.subscription) ? business.subscription[0] : business.subscription
+    
     // Check if business has an active subscription (not on trial)
-    if (business.subscription && business.subscription.status === 'active' && !business.subscription.is_in_free_trial) {
+    if (sub && sub.status === 'active' && !sub.is_in_free_trial) {
       return null // Don't show badge for paid subscribers
     }
     
@@ -676,29 +722,19 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
               <span className="text-slate-400 text-xs font-medium mb-2">Tier</span>
-              <span className={`font-bold text-lg leading-none ${
-                // PRIORITY 1: Check subscription data FIRST (trial and paid tiers)
-                business.subscription?.is_in_free_trial ? 'text-blue-400' :
-                business.subscription?.tier_display_name === 'Spotlight' ? 'text-amber-400' :
-                business.subscription?.tier_display_name === 'Featured' ? 'text-purple-400' :
-                business.subscription?.tier_name === 'starter' ? 'text-slate-300' :
-                // PRIORITY 2: Then check status for free tier businesses
-                business.status === 'unclaimed' ? 'text-slate-400' :
-                business.status === 'claimed_free' ? 'text-emerald-400' :
-                'text-slate-300'
-              }`}>
-                {/* PRIORITY 1: Show subscription tier first */}
-                {business.subscription?.is_in_free_trial
+              <span className={`font-bold text-lg leading-none ${entitlement.displayColor}`}>
+                {/* ✅ LOCKDOWN: Use entitlement state ONLY (no business.plan!) */}
+                {entitlement.state === 'PAID_ACTIVE'
+                  ? (entitlement.tierNameOrNull || 'Paid')
+                  : entitlement.state === 'TRIAL_ACTIVE'
                   ? 'Free Trial'
-                  : business.subscription?.tier_display_name
-                  ? business.subscription.tier_display_name
-                  : business.subscription?.tier_name === 'starter'
-                  ? 'Starter'
-                  : business.status === 'unclaimed' 
-                  ? 'Unclaimed'
-                  : business.status === 'claimed_free'
+                  : entitlement.state === 'TRIAL_EXPIRED'
+                  ? 'N/A'
+                  : entitlement.state === 'NO_SUB'
                   ? 'Free Listing'
-                  : business.plan?.charAt(0).toUpperCase() + business.plan?.slice(1) || 'Starter'}
+                  : entitlement.state === 'UNCLAIMED'
+                  ? 'Unclaimed'
+                  : 'N/A'}
               </span>
             </div>
 
@@ -710,27 +746,25 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <span className="text-slate-400 text-xs font-medium block mb-2">Billing</span>
                 <span className="font-medium text-white text-base leading-tight block">
                   {/* Show trial end date if on trial (subscription OR legacy) */}
-                  {business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date
-                    ? formatDateConsistent(business.subscription.free_trial_end_date)
+                  {sub?.is_in_free_trial && sub?.free_trial_end_date
+                    ? formatDateConsistent(sub.free_trial_end_date)
                     : business.billing_starts_date && business.trial_days_remaining !== null && business.trial_days_remaining > 0
                     ? formatDateConsistent(business.billing_starts_date)
-                    : business.subscription?.current_period_end
-                    ? formatDateConsistent(business.subscription.current_period_end)
+                    : sub?.current_period_end
+                    ? formatDateConsistent(sub.current_period_end)
                     : 'N/A'}
                 </span>
             </div>
 
             {/* Status */}
             <div className={`backdrop-blur-sm px-5 py-5 rounded-xl border text-center ${
-              // Check for expired trial FIRST
-              (business.trial_days_remaining !== null && business.trial_days_remaining < 0) ||
-              (business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date && new Date(business.subscription.free_trial_end_date) < new Date())
+              // ✅ FIXED: Check trial_status directly (cleaner logic)
+              business.trial_status === 'expired'
                 ? 'bg-gradient-to-br from-red-950/40 to-red-900/20 border-red-500/20'
                 : 'bg-gradient-to-br from-emerald-950/40 to-emerald-900/20 border-emerald-500/20'
             }`}>
               <svg className={`w-4 h-4 mx-auto mb-2 ${
-                (business.trial_days_remaining !== null && business.trial_days_remaining < 0) ||
-                (business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date && new Date(business.subscription.free_trial_end_date) < new Date())
+                business.trial_status === 'expired'
                   ? 'text-red-400'
                   : 'text-emerald-400'
               }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -738,34 +772,32 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Status</span>
               <span className={`font-semibold text-xl leading-tight block ${
-                // PRIORITY 1: Check for expired trial
-                ((business.trial_days_remaining !== null && business.trial_days_remaining < 0) ||
-                 (business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date && new Date(business.subscription.free_trial_end_date) < new Date()))
+                // PRIORITY 1: Expired trial
+                business.trial_status === 'expired'
                   ? 'text-red-400'
-                // PRIORITY 2: Live if approved, unclaimed, claimed_free, active subscription, or on trial
+                // PRIORITY 2: Live (approved, unclaimed, claimed_free, active subscription, or on trial)
                 : (business.status === 'approved' || 
                    business.status === 'unclaimed' ||
                    business.status === 'claimed_free' ||
-                   business.subscription?.status === 'active' || 
-                   (business.subscription?.is_in_free_trial && business.trial_days_remaining !== null && business.trial_days_remaining > 0))
+                   sub?.status === 'active' || 
+                   business.trial_status === 'active')
                   ? 'text-[#00d083]'
                 // PRIORITY 3: Paused
-                : business.subscription?.status === 'paused'
+                : sub?.status === 'paused'
                   ? 'text-slate-400'
                 // DEFAULT: Inactive
                 : 'text-red-400'
               }`}>
-                {/* Show status based on priority */}
-                {((business.trial_days_remaining !== null && business.trial_days_remaining < 0) ||
-                  (business.subscription?.is_in_free_trial && business.subscription?.free_trial_end_date && new Date(business.subscription.free_trial_end_date) < new Date()))
-                  ? 'Trial Expired' 
+                {/* ✅ FIXED: Show "EXPIRED" not "LIVE" */}
+                {business.trial_status === 'expired'
+                  ? 'EXPIRED' 
                   : (business.status === 'approved' || 
                      business.status === 'unclaimed' ||
                      business.status === 'claimed_free' ||
-                     business.subscription?.status === 'active' || 
-                     (business.subscription?.is_in_free_trial && business.trial_days_remaining !== null && business.trial_days_remaining > 0))
-                    ? 'Live' 
-                    : business.subscription?.status === 'paused' 
+                     sub?.status === 'active' || 
+                     business.trial_status === 'active')
+                    ? 'LIVE' 
+                    : sub?.status === 'paused' 
                       ? 'Paused' 
                       : 'Inactive'}
               </span>
@@ -811,28 +843,18 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     <h2 className="text-2xl font-bold text-white flex items-center gap-3">
                       {business.business_name}
                       <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${
-                        // PRIORITY 1: Check subscription data FIRST (trial and paid tiers)
-                        business.subscription?.is_in_free_trial ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                        business.subscription?.tier_name === 'spotlight' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                        business.subscription?.tier_name === 'featured' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                        business.subscription?.tier_name === 'starter' ? 'bg-slate-700/50 text-slate-400 border border-slate-600/30' :
-                        // PRIORITY 2: Then check status for free tier businesses
-                        business.status === 'unclaimed' ? 'bg-slate-700/50 text-slate-400 border border-slate-600/30' :
-                        business.status === 'claimed_free' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                        // ✅ LOCKDOWN: Use entitlement state colors
+                        entitlement.state === 'TRIAL_EXPIRED' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                        entitlement.state === 'TRIAL_ACTIVE' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                        entitlement.state === 'PAID_ACTIVE' && entitlement.tierNameOrNull === 'Spotlight' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                        entitlement.state === 'PAID_ACTIVE' && entitlement.tierNameOrNull === 'Featured' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                        entitlement.state === 'PAID_ACTIVE' ? 'bg-slate-700/50 text-slate-400 border border-slate-600/30' :
+                        entitlement.state === 'UNCLAIMED' ? 'bg-slate-700/50 text-slate-400 border border-slate-600/30' :
+                        entitlement.state === 'NO_SUB' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                         'bg-slate-700/50 text-slate-400 border border-slate-600/30'
                       }`}>
-                        {/* PRIORITY 1: Show subscription tier first */}
-                        {business.subscription?.is_in_free_trial
-                          ? 'Free Trial'
-                          : business.subscription?.tier_display_name
-                          ? business.subscription.tier_display_name
-                          : business.subscription?.tier_name === 'starter'
-                          ? 'Starter'
-                          : business.status === 'unclaimed'
-                          ? 'Unclaimed'
-                          : business.status === 'claimed_free'
-                          ? 'Free Listing'
-                          : 'Starter'}
+                        {/* ✅ LOCKDOWN: Display from entitlement state ONLY */}
+                        {entitlement.displayLabel}
                       </span>
                     </h2>
                     <p className="text-slate-400 text-sm mt-1">
@@ -908,15 +930,15 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <div>
                 <span className="text-slate-400 font-medium">Tier:</span>
                 <span className={`ml-2 font-semibold ${
-                  business.subscription?.tier_name === 'spotlight' ? 'text-purple-400' :
-                  business.subscription?.tier_name === 'featured' ? 'text-blue-400' :
-                  business.subscription?.tier_name === 'starter' ? 'text-slate-400' :
-                  business.subscription?.tier_name === 'free' ? 'text-amber-400' :
+                  sub?.tier_name === 'spotlight' ? 'text-purple-400' :
+                  sub?.tier_name === 'featured' ? 'text-blue-400' :
+                  sub?.tier_name === 'starter' ? 'text-slate-400' :
+                  sub?.tier_name === 'free' ? 'text-amber-400' :
                   trialInfo.trial_status === 'active' ? 'text-amber-400' :
                   trialInfo.trial_status === 'expired' ? 'text-red-400' :
                   'text-green-400'
                 }`}>
-                  {business.subscription?.tier_display_name || 
+                  {sub?.tier_display_name || 
                    (trialInfo.trial_status === 'active' ? 'Trial' :
                     trialInfo.trial_status === 'expired' ? 'Expired' :
                     trialInfo.trial_status === 'upgraded' ? 'Paid' : 
@@ -1006,60 +1028,56 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
           </div>
 
-          {/* Admin Notes Section - Inside Expanded Area */}
-          <div className="px-6 py-4 bg-orange-900/20 border-b border-slate-600">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <label className="text-sm font-medium text-orange-300 mb-2 block">Admin Notes</label>
-                {isEditingNotes ? (
-                  <div className="space-y-2">
-                    <textarea
-                      value={adminNotes}
-                      onChange={(e) => setAdminNotes(e.target.value)}
-                      className="w-full p-3 bg-slate-700 border border-slate-600 rounded-md text-sm text-white placeholder-slate-400 resize-none focus:outline-none focus:border-orange-500"
-                      rows={3}
-                      placeholder="Add internal notes about this business..."
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleSaveNotes}
-                        disabled={isSavingNotes}
-                        className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 disabled:opacity-50"
-                      >
-                        {isSavingNotes ? 'Saving...' : 'Save'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsEditingNotes(false)
-                          setAdminNotes(business.admin_notes || '')
-                        }}
-                        className="px-3 py-1 bg-slate-600 text-slate-300 text-sm rounded hover:bg-slate-500"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div 
-                    onClick={() => setIsEditingNotes(true)}
-                    className="min-h-[60px] p-3 bg-slate-700/50 border border-slate-600 rounded-md cursor-pointer hover:border-orange-500 transition-colors"
-                  >
-                    {adminNotes ? (
-                      <p className="text-sm text-white">{adminNotes}</p>
-                    ) : (
-                      <p className="text-sm text-slate-400 italic">Click to add admin notes...</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
           {/* CRM Tab Content */}
           <div className="px-6 py-6">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
+                {/* Admin Notes - ONLY in Overview Tab */}
+                <div className="p-4 bg-orange-900/20 border border-slate-600 rounded-lg">
+                  <label className="text-sm font-medium text-orange-300 mb-2 block">Admin Notes</label>
+                  {isEditingNotes ? (
+                    <div className="space-y-2">
+                      <textarea
+                        value={adminNotes}
+                        onChange={(e) => setAdminNotes(e.target.value)}
+                        className="w-full p-3 bg-slate-700 border border-slate-600 rounded-md text-sm text-white placeholder-slate-400 resize-none focus:outline-none focus:border-orange-500"
+                        rows={3}
+                        placeholder="Add internal notes about this business..."
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveNotes}
+                          disabled={isSavingNotes}
+                          className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 disabled:opacity-50"
+                        >
+                          {isSavingNotes ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditingNotes(false)
+                            setAdminNotes(business.admin_notes || '')
+                          }}
+                          className="px-3 py-1 bg-slate-600 text-slate-300 text-sm rounded hover:bg-slate-500"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div 
+                      onClick={() => setIsEditingNotes(true)}
+                      className="min-h-[60px] p-3 bg-slate-700/50 border border-slate-600 rounded-md cursor-pointer hover:border-orange-500 transition-colors"
+                    >
+                      {adminNotes ? (
+                        <p className="text-sm text-white">{adminNotes}</p>
+                      ) : (
+                        <p className="text-sm text-slate-400 italic">Click to add admin notes...</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <Card className="bg-gradient-to-br from-slate-950/90 to-slate-900/90 border-2 border-purple-500/20 backdrop-blur-sm shadow-xl shadow-purple-500/10 hover:border-purple-500/30 hover:shadow-purple-500/20 transition-all">
                     <CardContent className="p-4 text-center">
@@ -1270,8 +1288,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                   const hasCategory = !!resolvedCategory && resolvedCategory !== 'other'
                   const canShowSelector = isUnclaimed && hasCategory
                   
-                  // 🔍 DEV DEBUG BLOCK (Always visible in development)
-                  if (process.env.NODE_ENV === 'development') {
+                  // 🔍 DEV DEBUG BLOCK (Only for UNCLAIMED businesses in development)
+                  if (process.env.NODE_ENV === 'development' && isUnclaimed) {
                     return (
                       <div className="mb-6 p-4 bg-yellow-900/20 border-2 border-yellow-600/50 rounded-lg">
                         <h5 className="text-sm font-semibold text-yellow-400 mb-3">🔍 PlaceholderSelector Debug (DEV ONLY) - UNCLAIMED TAB</h5>
@@ -2051,8 +2069,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white">Business Controls</h3>
                 
-                {/* Tier & Feature Management - LOCKED for ANY unclaimed business (safety) */}
-                {!isClaimed ? (
+                {/* Tier & Feature Management - LOCKED for UNCLAIMED ONLY (not expired trials!) */}
+                {/* ✅ FIXED: Only lock for unclaimed, NOT for expired trials */}
+                {business.status === 'unclaimed' || isUnclaimed ? (
                   <Card className="bg-yellow-900/20 border-2 border-yellow-500/30">
                     <CardHeader>
                       <CardTitle className="text-yellow-400 text-sm flex items-center gap-2">
@@ -2085,7 +2104,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 )}
                 
                 {/* Trial Extension - Show if trial is active or expired */}
-                {business.subscription?.is_in_free_trial && (
+                {sub?.is_in_free_trial && (
                   <Card className="bg-slate-800/30 border-slate-700 border-yellow-500/20">
                     <CardHeader>
                       <CardTitle className="text-white text-sm flex items-center gap-2">
@@ -2097,10 +2116,10 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="text-sm text-slate-400">
-                        {business.subscription?.free_trial_end_date && new Date(business.subscription.free_trial_end_date) < new Date() ? (
-                          <>Trial expired on {new Date(business.subscription.free_trial_end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</>
-                        ) : business.subscription?.free_trial_end_date ? (
-                          <>Trial ends on {new Date(business.subscription.free_trial_end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+                        {sub?.free_trial_end_date && new Date(sub.free_trial_end_date) < new Date() ? (
+                          <>Trial expired on {new Date(sub.free_trial_end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+                        ) : sub?.free_trial_end_date ? (
+                          <>Trial ends on {new Date(sub.free_trial_end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</>
                         ) : (
                           <>Trial end date not set</>
                         )}
@@ -2108,7 +2127,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       <ExtendTrialButton 
                         businessId={business.id} 
                         businessName={business.business_name}
-                        currentEndDate={business.subscription?.free_trial_end_date}
+                        currentEndDate={sub?.free_trial_end_date}
                       />
                     </CardContent>
                   </Card>
@@ -2124,7 +2143,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       <div>
                         <div className="text-white font-medium">Listing Status</div>
                         <div className="text-slate-400 text-sm">
-                          {business.status === 'approved' ? 'Currently live and visible to users' : 
+                          {/* ✅ FIXED: Check for expired trial FIRST */}
+                          {business.trial_status === 'expired' ? 'Trial expired - not visible to users' :
+                           business.status === 'approved' ? 'Currently live and visible to users' : 
                            business.status === 'pending_review' ? 'Awaiting approval' :
                            business.status === 'rejected' ? 'Rejected - not visible' :
                            'Incomplete profile'}
@@ -2165,10 +2186,10 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                         <div className="text-slate-400 text-sm mb-1">Current Tier</div>
                         <div className={`font-semibold ${
                           // PRIORITY 1: Check subscription data FIRST
-                          business.subscription?.is_in_free_trial ? 'text-blue-400' :
-                          business.subscription?.tier_display_name === 'Spotlight' ? 'text-amber-400' :
-                          business.subscription?.tier_display_name === 'Featured' ? 'text-purple-400' :
-                          business.subscription?.tier_display_name === 'Starter' ? 'text-slate-400' :
+                          sub?.is_in_free_trial ? 'text-blue-400' :
+                          sub?.tier_display_name === 'Spotlight' ? 'text-amber-400' :
+                          sub?.tier_display_name === 'Featured' ? 'text-purple-400' :
+                          sub?.tier_display_name === 'Starter' ? 'text-slate-400' :
                           // PRIORITY 2: Then check status for free tier
                           business.status === 'unclaimed' ? 'text-slate-500' :
                           business.status === 'claimed_free' ? 'text-emerald-400' :
@@ -2178,10 +2199,10 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                           'text-slate-400'
                         }`}>
                           {/* PRIORITY 1: Show subscription tier first */}
-                          {business.subscription?.is_in_free_trial
+                          {sub?.is_in_free_trial
                             ? 'Free Trial'
-                            : business.subscription?.tier_display_name
-                            ? business.subscription.tier_display_name
+                            : sub?.tier_display_name
+                            ? sub.tier_display_name
                             : business.status === 'unclaimed'
                             ? 'Unclaimed'
                             : business.status === 'claimed_free'
@@ -2212,7 +2233,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
                     <div className="flex gap-2">
                       {/* Only show trial actions for businesses actually on trial */}
-                      {business.subscription?.is_in_free_trial && (
+                      {sub?.is_in_free_trial && (
                         <>
                           <Button
                             size="sm"

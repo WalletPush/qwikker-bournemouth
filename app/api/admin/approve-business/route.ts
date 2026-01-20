@@ -69,44 +69,42 @@ export async function POST(request: NextRequest) {
         )
       }
       
-      // Build update data
-      const updateData: any = {
-        status: 'approved',
-        approved_by: user.id,
-        approved_at: new Date().toISOString()
-      }
+      // ✅ LOCKDOWN: Use atomic RPC to ensure trial subscription is created
+      const { data: rpcResult, error: rpcError } = await supabaseAdmin
+        .rpc('approve_business_with_trial', {
+          p_business_id: businessId,
+          p_approved_by: user.id,
+          p_manual_override: profile.verification_method === 'manual' && manualOverride === true,
+          p_manual_override_by: profile.verification_method === 'manual' && manualOverride === true ? user.id : null
+        })
       
-      // If manual listing and manual override requested, set the fields
-      if (profile.verification_method === 'manual' && manualOverride === true) {
-        updateData.manual_override = true
-        updateData.manual_override_at = new Date().toISOString()
-        updateData.manual_override_by = user.id
-      }
-      
-      const { data, error } = await supabaseAdmin
-        .from('business_profiles')
-        .update(updateData)
-        .eq('id', businessId)
-        .select()
-        .single()
-      
-      if (error) {
-        console.error('Database error:', error)
+      if (rpcError) {
+        console.error('❌ Atomic approval failed:', rpcError)
         return NextResponse.json(
-          { error: 'Failed to update business status' },
+          { error: `Failed to approve business: ${rpcError.message}` },
           { status: 500 }
         )
       }
       
-      console.log(`✅ Business approved: ${profile.business_name}`, {
+      console.log(`✅ Business approved atomically: ${profile.business_name}`, {
         verification_method: profile.verification_method,
-        manual_override: updateData.manual_override || false
+        manual_override: profile.verification_method === 'manual' && manualOverride === true,
+        trial_end_date: rpcResult?.trial_end_date,
+        trial_days: rpcResult?.trial_days
       })
+      
+      // Fetch updated business for response
+      const { data: updatedBusiness } = await supabaseAdmin
+        .from('business_profiles')
+        .select()
+        .eq('id', businessId)
+        .single()
       
       return NextResponse.json({
         success: true,
-        business: data,
-        message: `Business approved successfully`
+        business: updatedBusiness,
+        trial_info: rpcResult,
+        message: `Business approved successfully with ${rpcResult?.trial_days || 90}-day trial`
       })
     }
     

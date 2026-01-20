@@ -13,7 +13,7 @@ interface Business {
   business_tagline?: string
   business_town?: string
   business_images?: string[]
-  business_tier: 'free_trial' | 'featured' | 'qwikker_picks' | 'recommended'
+  business_tier: 'qwikker_picks' | 'featured' | 'starter' | 'recommended' | 'free_trial'
   rating?: number
   offers_count?: number
 }
@@ -28,15 +28,18 @@ interface BusinessCarouselProps {
 export function BusinessCarousel({ businesses, currentUser, className = '', onShowOffers }: BusinessCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
 
-  // Sort businesses by tier priority
+  // Sort businesses by tier priority (CRITICAL: qwikker_picks ALWAYS first)
   const sortedBusinesses = [...businesses].sort((a, b) => {
     const tierPriority = {
-      'qwikker_picks': 0,
-      'featured': 1, 
-      'recommended': 2,
-      'free_trial': 3
+      'qwikker_picks': 0,  // ⭐ QWIKKER PICK - ALWAYS FIRST
+      'featured': 1,       // Featured badge
+      'free_trial': 1,     // Free trial = Featured tier (same priority)
+      'starter': 2,        // No badge
+      'recommended': 3
     }
-    return tierPriority[a.business_tier] - tierPriority[b.business_tier]
+    const aPriority = tierPriority[a.business_tier] ?? 999
+    const bPriority = tierPriority[b.business_tier] ?? 999
+    return aPriority - bPriority
   })
 
   const getTierBadge = (tier: string) => {
@@ -44,11 +47,11 @@ export function BusinessCarousel({ businesses, currentUser, className = '', onSh
       case 'qwikker_picks':
         return <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold px-2 py-1 rounded-full">⭐ Qwikker Pick</span>
       case 'featured':
+      case 'free_trial':  // Free trial = Featured badge
         return <span className="bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded-full">Featured</span>
+      case 'starter':
       case 'recommended':
-        return <span className="bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded-full">Recommended</span>
-      case 'free_trial':
-        return <span className="bg-slate-600 text-white text-xs font-semibold px-2 py-1 rounded-full">Free Trial</span>
+        return null // No badge
       default:
         return null
     }
@@ -59,10 +62,10 @@ export function BusinessCarousel({ businesses, currentUser, className = '', onSh
       case 'qwikker_picks':
         return 'border-2 border-yellow-400 shadow-lg shadow-yellow-400/20 bg-gradient-to-br from-slate-800 to-slate-900'
       case 'featured':
+      case 'free_trial':  // Free trial = Featured styling
         return 'border-2 border-blue-500 shadow-lg shadow-blue-500/20 bg-gradient-to-br from-slate-800 to-slate-900'
+      case 'starter':
       case 'recommended':
-        return 'border-2 border-green-500 shadow-lg shadow-green-500/20 bg-gradient-to-br from-slate-800 to-slate-900'
-      case 'free_trial':
         return 'border border-slate-700 bg-slate-800'
       default:
         return 'border border-slate-700 bg-slate-800'
@@ -132,14 +135,14 @@ export function BusinessCarousel({ businesses, currentUser, className = '', onSh
                     </p>
                   )}
 
-                  {/* Rating & Offers */}
+                  {/* Rating & Offers - Only show if > 0 */}
                   <div className="flex items-center justify-between mb-3 text-xs">
-                    {business.rating && (
+                    {business.rating && business.rating > 0 && (
                       <div className="flex items-center gap-1">
                         <svg className="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                         </svg>
-                        <span className="text-slate-300">{business.rating}</span>
+                        <span className="text-slate-300">{business.rating.toFixed(1)}</span>
                       </div>
                     )}
                     

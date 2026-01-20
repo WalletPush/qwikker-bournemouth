@@ -764,14 +764,62 @@ export async function generateAIResponse(
     }
  
     const uniqueBusinessResults = collectUniqueBusinessResults(businessResults.results || [])
+    
+    // 🚨 CRITICAL: Sort business results by tier BEFORE passing to AI
+    // This ensures qwikker_picks always appear FIRST in AI responses
+    uniqueBusinessResults.sort((a, b) => {
+      const tierPriority = {
+        'qwikker_picks': 0,  // ⭐ QWIKKER PICK - ALWAYS FIRST
+        'featured': 1,       // Featured badge
+        'free_trial': 1,     // Free trial = Featured tier (same priority)
+        'starter': 2,        // No badge
+        'recommended': 3
+      }
+      const aTier = a.business_tier || 'recommended'
+      const bTier = b.business_tier || 'recommended'
+      const aPriority = tierPriority[aTier] ?? 999
+      const bPriority = tierPriority[bTier] ?? 999
+      return aPriority - bPriority
+    })
+    
     const sources = buildKnowledgeSources(businessResults, cityResults)
     const autoRecommendationActive = shouldAutoRecommend && uniqueBusinessResults.length > 0
 
 
     // 2. Build context from search results (clean format)
-    const businessContext = businessResults.success && businessResults.results.length > 0
-      ? businessResults.results.map(result => 
-          `${result.business_name}: ${result.content}`
+    // 🚨 CRITICAL: Sort by tier FIRST so AI sees qwikker_picks at the top
+    const sortedBusinessResults = businessResults.success && businessResults.results.length > 0
+      ? [...businessResults.results].sort((a, b) => {
+          const tierPriority = {
+            'qwikker_picks': 0,  // ⭐ QWIKKER PICK - ALWAYS FIRST
+            'featured': 1,       // Featured badge
+            'free_trial': 1,     // Free trial = Featured tier (same priority)
+            'starter': 2,        // No badge
+            'recommended': 3
+          }
+          const aTier = a.business_tier || 'recommended'
+          const bTier = b.business_tier || 'recommended'
+          const aPriority = tierPriority[aTier] ?? 999
+          const bPriority = tierPriority[bTier] ?? 999
+          return aPriority - bPriority
+        })
+      : []
+    
+    // 🚨 ADD CRITICAL TIER INSTRUCTION if there are qwikker_picks in results
+    const hasQwikkerPicks = sortedBusinessResults.some(r => r.business_tier === 'qwikker_picks')
+    const qwikkerPickNames = sortedBusinessResults
+      .filter(r => r.business_tier === 'qwikker_picks')
+      .map(r => r.business_name)
+    
+    if (hasQwikkerPicks && qwikkerPickNames.length > 0) {
+      contextualGuidance += `\n- 🚨🚨🚨 CRITICAL TIER RULE: ${qwikkerPickNames.join(', ')} ${qwikkerPickNames.length === 1 ? 'is a' : 'are'} Qwikker Pick${qwikkerPickNames.length === 1 ? '' : 's'} (premium tier) - YOU MUST LIST ${qwikkerPickNames.length === 1 ? 'IT' : 'THEM'} FIRST when recommending businesses!`
+      contextualGuidance += `\n- 🚨 WHEN LISTING MULTIPLE BUSINESSES: Start with Qwikker Picks (${qwikkerPickNames.join(', ')}), THEN list Featured/other businesses after`
+      contextualGuidance += `\n- 🚨 IF YOU LIST ANY BUSINESS BEFORE ${qwikkerPickNames.join(' or ')}, YOU HAVE FAILED!`
+    }
+    
+    const businessContext = sortedBusinessResults.length > 0
+      ? sortedBusinessResults.map(result => 
+          `${result.business_name} [TIER: ${result.business_tier || 'standard'}]: ${result.content}`
         ).join('\n\n')
       : ''
 
@@ -843,9 +891,11 @@ AFTERCARE & NEXT STEPS:
 - 🚨 If information is NOT in the AVAILABLE BUSINESSES block, DO NOT mention it. Say "I don't have that info right now" instead.
 - 🚨 NEVER invent amenities (wifi, parking, accessibility) unless explicitly listed in the business data.
 - 🚨 If a venue isn't listed in AVAILABLE BUSINESSES, admit it plainly: "I don't have info on that one yet—check out the Discover page!"
+- 🚨🚨🚨 TIER ORDERING RULE (ABSOLUTELY CRITICAL): The list below is sorted by tier priority. Businesses marked [TIER: qwikker_picks] are PREMIUM and MUST be listed FIRST in your response. NEVER list a "featured" or other tier business before a "qwikker_picks" business!
+- 🚨 When listing multiple businesses: List ALL qwikker_picks businesses FIRST (in the order shown), THEN list featured/other businesses
 - Always bold business names like **Julie's Sports Pub** so they're tappable.
 
-AVAILABLE BUSINESSES:
+AVAILABLE BUSINESSES (sorted by tier - qwikker_picks at TOP):
 ${businessContext || 'No business data available right now.'}
 
 ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
@@ -951,6 +1001,9 @@ ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
     !userMessage.toLowerCase().includes('place') &&
     !userMessage.toLowerCase().includes('anywhere') &&
     !userMessage.toLowerCase().includes('tell me about') &&
+    !userMessage.toLowerCase().includes('filter') && // 🚨 NEVER show when user asks to filter/narrow
+    !userMessage.toLowerCase().includes('narrow') && // 🚨 NEVER show when user asks to narrow down
+    !userMessage.toLowerCase().includes('specific') && // 🚨 NEVER show when user asks for specific criteria
     !isSimpleFollowUp && // Never show cards for follow-up responses like "yeah" or "tell me more"
     !userMessage.toLowerCase().includes('what time') &&
     !userMessage.toLowerCase().includes('opening hours')
@@ -969,9 +1022,10 @@ ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
         if (businessIds.length > 0) {
           console.log(`🎠 Querying businesses with IDs: ${businessIds?.join(', ') || 'none'} in city: ${city}`)
           
-          // 🎯 ONLY QWIKKER PICKS AND FEATURED - NO STARTER BUSINESSES!
+          // 🎯 Use subscription-based chat eligibility view - NO FREE LISTINGS!
+          // This view already filters by: status=approved + valid subscription + (paid OR trial active)
           const { data: businesses, error } = await supabase
-            .from('business_profiles')
+            .from('business_profiles_chat_eligible')
             .select(`
               id,
               business_name,
@@ -980,13 +1034,13 @@ ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
               business_tagline,
               business_town,
               business_images,
-              business_tier,
+              effective_tier,
+              tier_priority,
               business_offers(id)
             `)
             .in('id', businessIds)
-            .eq('status', 'approved')
             .eq('city', city)
-            .in('business_tier', ['qwikker_picks', 'featured']) // 🚨 ONLY PREMIUM BUSINESSES
+            // ✅ NO TIER FILTER NEEDED: The view only returns eligible businesses (spotlight/featured/trial/starter)
           
           if (error) {
             console.error('❌ Supabase query error:', error)
@@ -994,26 +1048,42 @@ ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
           
           console.log(`🎠 Fetched ${businesses?.length || 0} businesses for carousel`)
           console.log(`🎠 Business tiers: ${businesses?.map(b => `${b.business_name}(${b.business_tier})`).join(', ') || 'none'}`)
+          console.log(`🎠 Business IDs: ${businesses?.map(b => `${b.business_name}:${b.id}`).join(', ') || 'none'}`)
           
           if (businesses && businesses.length > 0) {
             businessCarousel = businesses.map(business => ({
               ...business,
+              business_tier: business.effective_tier || 'starter', // ✅ Rename for frontend compatibility
+              tier_priority: business.tier_priority || 999,
               offers_count: business.business_offers?.length || 0,
               rating: 4.5 // Mock rating for now
             }))
             
-            // Sort by tier priority for carousel
+            // Sort by tier_priority from view (spotlight=1, featured/trial=2, starter=3)
+            // The view already computed this correctly from subscriptions
             businessCarousel.sort((a, b) => {
-              const tierPriority = {
-                'qwikker_picks': 0,
-                'featured': 1,
-                'recommended': 2,
-                'free_trial': 3
-              }
-              return tierPriority[a.business_tier] - tierPriority[b.business_tier]
+              if (a.tier_priority !== b.tier_priority) return a.tier_priority - b.tier_priority
+              return 0 // Keep original order for same priority
             })
             
             console.log(`🎠 Final carousel: ${businessCarousel.length} businesses ready`)
+            console.log(`🎠 Tier distribution: ${businessCarousel.map(b => `${b.business_name}(${b.business_tier})`).join(', ')}`)
+            
+            // 🚨 CRITICAL: Add tier guidance for AI responses
+            const allAreQwikkerPicks = businessCarousel.every(b => b.business_tier === 'spotlight')
+            
+            // Add tier-based closing copy guidance
+            if (businessCarousel.length > 0) {
+              if (allAreQwikkerPicks) {
+                contextualGuidance += '\n- 🏆 CLOSING: End with "These are Qwikker Picks for a reason!" because ALL businesses shown are qwikker_picks tier'
+              } else {
+                contextualGuidance += '\n- 🏆 CLOSING: Use neutral ending like "Want to see these on Atlas or check their offers?" (DO NOT say "Qwikker Picks" unless ALL businesses are qwikker_picks tier)'
+              }
+              
+              contextualGuidance += '\n- 🚨 TIER RULES: NEVER call a business a "Qwikker Pick" unless its tier is "qwikker_picks"'
+              contextualGuidance += '\n- 🚨 TIER RULES: qwikker_picks = Qwikker Pick badge, featured/free_trial = Featured badge, starter = no badge'
+              contextualGuidance += '\n- 🚨 TIER RULES: NEVER invent or guess tier/priority information'
+            }
           }
         }
       } catch (error) {
@@ -1047,30 +1117,46 @@ ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
         console.log(`🎫 Checking offers for businesses: ${businessIds?.join(', ') || 'none'}`)
         
         if (businessIds.length > 0) {
+          // ✅ Use chat_active_deals view to enforce business eligibility + offer validity
+          // This prevents expired offers and offers from ineligible businesses (trial expired, auto_imported, etc.)
           const { data: offers, error } = await supabase
-            .from('business_offers')
+            .from('chat_active_deals')
             .select(`
-              id,
+              offer_id,
               offer_name,
               offer_value,
               business_id,
-              business_profiles!inner(business_name, city)
+              business_name,
+              city,
+              effective_tier,
+              tier_priority,
+              valid_until
             `)
             .in('business_id', businessIds)
-            .eq('status', 'approved')
-            .eq('business_profiles.city', city)
+            .eq('city', city)
+            .order('tier_priority', { ascending: true }) // Spotlight first, then featured/trial, then starter
+            .order('offer_updated_at', { ascending: false }) // Within tier, newest first
             .limit(5)
           
           if (!error && offers && offers.length > 0) {
             walletActions = offers.map(offer => ({
               type: 'add_to_wallet',
-              offerId: offer.id,
+              offerId: offer.offer_id,
               offerName: `${offer.offer_name} - ${offer.offer_value}`,
-              businessName: offer.business_profiles.business_name,
+              businessName: offer.business_name,
               businessId: offer.business_id
             }))
             
-            console.log(`🎫 Found ${walletActions.length} wallet actions available`)
+            console.log(`🎫 Found ${walletActions.length} wallet actions available (all from eligible businesses, all valid)`)
+            
+            // ✅ DEV LOG: Show each deal with expiry date (Jan 20 verification)
+            if (process.env.NODE_ENV === 'development') {
+              console.log('📋 Current Deals (Jan 20 verification):')
+              offers.forEach(o => {
+                const expiryDate = o.valid_until ? new Date(o.valid_until).toLocaleDateString() : 'No expiry'
+                console.log(`  - ${o.business_name} | ${o.offer_name} | ends ${expiryDate}`)
+              })
+            }
           }
         }
       } catch (error) {
@@ -1184,11 +1270,28 @@ export async function generateQuickReplies(
   aiResponse?: string,
   conversationHistory?: ChatMessage[]
 ): Promise<string[]> {
+  // Variables needed by helper functions (MUST be declared first to avoid TDZ)
   const lowerMessage = userMessage.toLowerCase()
   const lowerAIResponse = aiResponse?.toLowerCase() || ''
   const hasBusinessResults = businessResults.length > 0
   const primaryBusiness = businessResults[0]?.business_name as string | undefined
   const lastUserMessage = conversationHistory?.filter(msg => msg.role === 'user').slice(-1)[0]?.content.toLowerCase() || ''
+  
+  // Helper to remove duplicates and limit to 4 options
+  function tidy(options: string[]): string[] {
+    const seen = new Set<string>()
+    return options
+      .map(option => option.trim())
+      .filter(Boolean)
+      .filter(option => {
+        const lower = option.toLowerCase()
+        if (lower === lowerMessage || lower === lastUserMessage) return false
+        if (seen.has(lower)) return false
+        seen.add(lower)
+        return true
+      })
+      .slice(0, 4)
+  }
 
   const recentConversation = conversationHistory?.slice(-4)?.map(msg => msg.content.toLowerCase()).join(' ') || ''
   const hasRecentBusinessMentions = recentConversation.includes('david') || recentConversation.includes('julie') || recentConversation.includes('orchid') || recentConversation.includes('adams')
@@ -1229,21 +1332,6 @@ export async function generateQuickReplies(
   const hasRecentFoodMentions = !isCocktailConversation && (recentConversation.includes('food') || recentConversation.includes('burger') || (recentConversation.includes('menu') && !recentConversation.includes('cocktail')))
 
   const detailIntent = detectDetailRequest(userMessage) || detectDetailRequest(aiResponse || '')
-
-  const tidy = (options: string[]) => {
-    const seen = new Set<string>()
-    return options
-      .map(option => option.trim())
-      .filter(Boolean)
-      .filter(option => {
-        const lower = option.toLowerCase()
-        if (lower === lowerMessage || lower === lastUserMessage) return false
-        if (seen.has(lower)) return false
-        seen.add(lower)
-        return true
-      })
-      .slice(0, 3)
-  }
 
   // ⚡ PRIORITY 1: Current user intent (overrides conversation history!)
   if (isCurrentlyAskingLocation) {

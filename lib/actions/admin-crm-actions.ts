@@ -344,6 +344,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       return {
         id: business.id,
         user_id: business.user_id, // CRITICAL: Need this for subscription updates!
+        owner_user_id: business.owner_user_id, // ✅ CRITICAL: Need this to check if claimed!
         business_name: business.business_name || 'Unnamed Business',
         first_name: business.first_name,
         last_name: business.last_name,
@@ -376,7 +377,8 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         ghl_contact_id: syncData?.ghl_contact_id || null,
         
         // Subscription: Use business_subscriptions if available, otherwise null (use legacy trial calculation)
-        subscription: subscription || null,
+        // 🔥 CRITICAL: Must be an array for admin dashboard filter compatibility!
+        subscription: subscription ? [subscription] : null,
         tier: null,
         recent_payments: [], // Will be populated when billing system is implemented
         
@@ -602,19 +604,54 @@ export async function updateBusinessTier(params: {
   try {
     console.log('🚀 SERVER ACTION: updateBusinessTier', { businessId, userId, city, selectedTier, features, trialDays })
 
+    // ✅ LOCKDOWN: Guard against setting paid tiers for unapproved businesses
+    const { data: businessProfile, error: profileFetchError } = await supabaseAdmin
+      .from('business_profiles')
+      .select('status, business_name')
+      .eq('id', businessId)
+      .single()
+    
+    if (profileFetchError || !businessProfile) {
+      console.error('❌ Business profile not found:', profileFetchError)
+      return { success: false, error: 'Business profile not found' }
+    }
+    
+    // Enforce: paid tiers ONLY for approved businesses
+    const paidTiers = ['trial', 'featured', 'spotlight']
+    if (paidTiers.includes(selectedTier) && businessProfile.status !== 'approved') {
+      console.error(`❌ GUARD: Cannot assign ${selectedTier} tier to unapproved business (status: ${businessProfile.status})`)
+      return { 
+        success: false, 
+        error: `Cannot assign paid tier to unapproved business. Current status: ${businessProfile.status}` 
+      }
+    }
+
     // 1. Get tier ID
+    // ✅ FIX: Use 'trial' tier_name when selectedTier is 'trial', NOT 'starter'!
+    // This was causing NEON NEXUS bug: status='trial' + is_in_free_trial=true but tier_id pointing to 'starter'
     const { data: tierData, error: tierError } = await supabaseAdmin
       .from('subscription_tiers')
-      .select('id')
-      .eq('tier_name', selectedTier === 'trial' ? 'starter' : selectedTier)
+      .select('id, tier_name')
+      .eq('tier_name', selectedTier) // ✅ Use selectedTier directly, not conditional mapping
       .single()
 
     if (tierError || !tierData) {
       console.error('❌ Tier lookup failed:', tierError)
-      return { success: false, error: `Tier '${selectedTier}' not found` }
+      return { success: false, error: `Tier '${selectedTier}' not found in subscription_tiers` }
     }
 
-    console.log('✅ Tier ID found:', tierData.id)
+    console.log('✅ Tier ID found:', tierData.id, 'for tier_name:', tierData.tier_name)
+
+    // 🔒 GUARD: Enforce tier consistency for trials
+    const isTrial = selectedTier === 'trial'
+    if (isTrial && tierData.tier_name !== 'trial') {
+      console.error('❌ GUARD: is_in_free_trial=true requires tier_id to resolve to tier_name="trial"')
+      console.error(`   Got: tier_name="${tierData.tier_name}" (tier_id=${tierData.id})`)
+      return { 
+        success: false, 
+        error: `Internal error: trial subscription must use tier_name='trial' in subscription_tiers` 
+      }
+    }
 
     // 2. Get existing subscription to check for original trial dates
     const { data: existingSubscription } = await supabaseAdmin
@@ -625,7 +662,7 @@ export async function updateBusinessTier(params: {
 
     // 3. Calculate trial dates
     const now = new Date()
-    const isTrial = selectedTier === 'trial'
+    // Note: isTrial already defined above in guard section
     
     // If downgrading to trial AND original trial dates exist, preserve them
     // Otherwise, create new trial with custom days or default 90
@@ -646,11 +683,19 @@ export async function updateBusinessTier(params: {
       }
     }
 
-    // 4. Update business_profiles (plan AND features)
+    // 4. Update business_profiles (plan AND business_tier AND features)
+    // 🚨 CRITICAL: Must update BOTH plan and business_tier!
+    // - plan: For display/admin UI
+    // - business_tier: For AI/embeddings/search (THIS WAS MISSING!)
+    const tierForDB = selectedTier === 'trial' ? 'free_trial' : 
+                      selectedTier === 'spotlight' ? 'qwikker_picks' : 
+                      selectedTier // 'featured' or 'starter'
+    
     const { error: profileError } = await supabaseAdmin
       .from('business_profiles')
       .update({
         plan: selectedTier === 'trial' ? 'featured' : selectedTier,
+        business_tier: tierForDB, // 🚨 FIX: Update business_tier too!
         features: features, // Save individual feature toggles
         updated_at: now.toISOString()
       })

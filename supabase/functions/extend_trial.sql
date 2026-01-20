@@ -74,9 +74,21 @@ BEGIN
   UPDATE business_subscriptions
   SET 
     free_trial_end_date = v_new_end_date,
+    status = 'trial', -- 🔥 Restore status if it was 'expired'
     updated_at = NOW()
   WHERE business_id = p_business_id
   AND is_in_free_trial = true;
+  
+  -- 🔥 NEW: Restore business_tier if it was downgraded
+  UPDATE business_profiles
+  SET 
+    business_tier = 'free_trial', -- Restore from 'starter' back to 'free_trial'
+    plan = 'featured', -- Free trials get featured benefits
+    updated_at = NOW()
+  WHERE id = p_business_id;
+  
+  -- ⚠️ NOTE: Knowledge base entries were DELETED on expiry
+  -- Business owner must re-add their menus/info manually
   
   -- Log the extension (optional - add to audit table if you have one)
   -- INSERT INTO trial_extensions_log (business_id, extended_by_days, new_end_date, extended_by_admin)
@@ -84,7 +96,7 @@ BEGIN
   
   RETURN QUERY SELECT 
     true, 
-    format('Trial extended by %s days for %s. New end date: %s', 
+    format('✅ Trial extended by %s days for %s. New end date: %s. ⚠️ They must re-add KB entries manually.', 
       p_additional_days, 
       v_business_name, 
       to_char(v_new_end_date, 'DD Mon YYYY')

@@ -1,4 +1,3 @@
- WARN  Cannot switch to pnpm@9: "9" is not a valid version
 export type Json =
   | string
   | number

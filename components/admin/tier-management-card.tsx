@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { updateBusinessTier } from '@/lib/actions/admin-crm-actions'
+import { computeEntitlementState } from '@/lib/utils/entitlement-helpers'
 
 interface TierManagementCardProps {
   business: any
@@ -21,45 +22,42 @@ interface FeatureAccess {
 }
 
 export function TierManagementCard({ business, onUpdate }: TierManagementCardProps) {
-  // Get current tier from subscription or fallback to business profile
-  const getCurrentTier = (): PlanTier => {
-    console.log('🔍 Getting current tier:', {
-      business_status: business?.status,
-      subscription_tier_name: business?.subscription?.tier_name,
-      is_in_free_trial: business?.subscription?.is_in_free_trial,
-      profile_plan: business?.plan
+  // ✅ LOCKDOWN: Extract subscription properly
+  const sub = Array.isArray(business?.subscription) ? business?.subscription[0] : business?.subscription
+  
+  // ✅ LOCKDOWN: Compute entitlement state (DO NOT use business.plan!)
+  const entitlement = computeEntitlementState(
+    {
+      owner_user_id: business?.owner_user_id,
+      status: business?.status
+    },
+    sub
+  )
+  
+  // Get current tier from entitlement state ONLY
+  const getCurrentTier = (): PlanTier | null => {
+    console.log('🔍 Getting current tier from entitlement:', {
+      state: entitlement.state,
+      tierNameOrNull: entitlement.tierNameOrNull,
+      business_status: business?.status
     })
     
-    // Check business status first (free tier)
-    if (business?.status === 'unclaimed') {
-      return 'free' // Unclaimed businesses have no tier yet
+    // ✅ LOCKDOWN: Use entitlement state to determine tier
+    if (entitlement.state === 'UNCLAIMED') return null // No tier yet
+    if (entitlement.state === 'NO_SUB') return null // Free listing, no tier
+    if (entitlement.state === 'TRIAL_EXPIRED') return null // NO TIER!
+    if (entitlement.state === 'TRIAL_ACTIVE') return 'trial'
+    if (entitlement.state === 'PAID_ACTIVE' && entitlement.tierNameOrNull) {
+      return entitlement.tierNameOrNull as PlanTier
     }
     
-    if (business?.status === 'claimed_free') {
-      return 'free' // Claimed free listings
-    }
-    
-    // ONLY check subscription data (ignore legacy trial_days_remaining)
-    if (business?.subscription?.is_in_free_trial) {
-      return 'trial'
-    }
-    
-    // Then check subscription tier
-    if (business?.subscription?.tier_name) {
-      if (business.subscription.tier_name === 'free') return 'free'
-      if (business.subscription.tier_name === 'trial') return 'trial'
-      return business.subscription.tier_name as PlanTier
-    }
-    
-    // Fallback to profile plan
-    if (business?.plan) {
-      return business.plan as PlanTier
-    }
-    
-    return 'starter'
+    return null // Default: no tier selected
   }
 
-  const [selectedTier, setSelectedTier] = useState<PlanTier>(getCurrentTier())
+  // ✅ LOCKDOWN: Initialize with current tier OR null (for expired/no-sub)
+  const currentTier = getCurrentTier()
+  const [selectedTier, setSelectedTier] = useState<PlanTier | null>(currentTier)
+  const [userHasSelected, setUserHasSelected] = useState(false) // Track if user clicked a tier
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showErrorModal, setShowErrorModal] = useState(false)
@@ -177,6 +175,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
   const handleTierChange = (tier: PlanTier) => {
     console.log('🎯 TIER CHANGED TO:', tier)
     setSelectedTier(tier)
+    setUserHasSelected(true) // ✅ Track that user made a selection
     
     // Auto-enable features based on tier
     if (tier === 'spotlight') {
@@ -278,7 +277,8 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
   }
 
   // ✅ SAFETY: Lock tiers for ANY unclaimed business (not just imported)
-  const isUnclaimed = !business?.owner_user_id
+  // ✅ LOCKDOWN: Use entitlement state for lock logic
+  const isUnclaimed = entitlement.shouldLockControls
 
   // DEV-ONLY: Log tier overlay gate status
   if (process.env.NODE_ENV === 'development') {
@@ -324,6 +324,30 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* ✅ LOCKDOWN: Expired trial notice from entitlement state */}
+        {entitlement.state === 'TRIAL_EXPIRED' && (() => {
+          return (
+            <div className="p-4 rounded-lg border-2 border-red-500/30 bg-red-500/10">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-red-400 mb-1">⚠️ Trial Has Expired - No Active Subscription</h4>
+                  <p className="text-sm text-red-300 mb-3">
+                    This business's free trial ended on {sub?.free_trial_end_date 
+                      ? new Date(sub.free_trial_end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                      : 'recently'}. They currently have <strong>no active subscription tier</strong>.
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    👉 To reactivate this business, extend their trial or select a paid tier below.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+        
         {/* Tier Selection */}
         <div>
           <Label className="text-slate-300 mb-3 block">Select Subscription Tier</Label>
@@ -354,10 +378,12 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
                     {tier === 'spotlight' && 'All premium features'}
                   </div>
                   <div className="mt-2 flex items-center gap-2">
-                    {isCurrent && (
+                    {/* ✅ LOCKDOWN: Only show "Current" if business has an active tier */}
+                    {isCurrent && currentTier !== null && (
                       <span className="text-xs font-medium text-blue-400">Current</span>
                     )}
-                    {isSelected && (
+                    {/* ✅ LOCKDOWN: Only show "Selected" if user manually clicked */}
+                    {isSelected && (userHasSelected || currentTier !== null) && (
                       <span className="text-xs font-medium text-[#00d083]">✓ Selected</span>
                     )}
                   </div>
@@ -368,19 +394,27 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         </div>
 
         {/* Current Tier Features */}
-        <div className={`p-4 rounded-lg border ${tierDetails[selectedTier].color} ${tierDetails[selectedTier].bgColor}`}>
-          <h4 className={`font-medium mb-2 ${tierDetails[selectedTier].textColor}`}>
-            {tierDetails[selectedTier].name} Features
-          </h4>
-          <ul className="space-y-1 text-xs text-slate-400">
-            {tierDetails[selectedTier].features.map((feature, index) => (
-              <li key={index} className="flex items-start gap-2">
-                <span className="text-[#00d083] mt-0.5">•</span>
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {selectedTier ? (
+          <div className={`p-4 rounded-lg border ${tierDetails[selectedTier].color} ${tierDetails[selectedTier].bgColor}`}>
+            <h4 className={`font-medium mb-2 ${tierDetails[selectedTier].textColor}`}>
+              {tierDetails[selectedTier].name} Features
+            </h4>
+            <ul className="space-y-1 text-xs text-slate-400">
+              {tierDetails[selectedTier].features.map((feature, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <span className="text-[#00d083] mt-0.5">•</span>
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="p-4 rounded-lg border border-slate-600 bg-slate-700/30">
+            <p className="text-sm text-slate-400 text-center">
+              Select a tier above to view features and manage subscription
+            </p>
+          </div>
+        )}
 
         {/* Free Trial Management - Only shown when trial tier is selected */}
         {selectedTier === 'trial' && (

@@ -1,70 +1,64 @@
 /**
- * City detection utilities for franchise support
- * Detects city from URL subdomain for multi-city deployment
+ * City Detection & Multi-Tenant Hostname Resolution
+ * 
+ * Safely derives franchise city from hostname, preventing unauthorized access.
+ * 
+ * KEY SECURITY:
+ * - Only allows localhost & Vercel domains in dev/preview
+ * - All production domains must have valid franchise city subdomain (bournemouth.qwikker.com)
+ * - Validates cities against franchise_crm_configs table
+ * 
+ * USAGE:
+ * - getCityFromHostname('bournemouth.qwikker.com') => 'bournemouth'
+ * - getCityFromHostname('localhost') => 'bournemouth' (dev fallback)
+ * - getCityFromHostname('poole.qwikker.com') => 'poole' (if exists in DB)
+ * - getCityFromHostname('random.qwikker.com') => Error (not in DB)
  */
 
-import { isValidFranchiseCity } from './franchise-areas'
+import { createClient } from '@supabase/supabase-js'
 
-export type FranchiseCity = string // Now dynamic instead of hard-coded
+export type FranchiseCity = 'bournemouth' | 'poole' | 'christchurch'
 
-type GetCityOptions = {
-  /**
-   * When true, allows main hosts (qwikker.com / www / app / api / vercel.app)
-   * to fall back to a default city instead of throwing.
-   * Use in DEV/STAGING only.
-   */
+const defaultCity: FranchiseCity = 'bournemouth'
+
+// Service role client for franchise lookups (server-side only)
+// This is safe because it's only used for READ operations on franchise config
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+const supabase = supabaseUrl && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null
+
+// Validate city against database
+async function isValidFranchiseCity(city: string): Promise<boolean> {
+  if (!supabase) return false
+
+  const { data, error } = await supabase
+    .from('franchise_crm_configs')
+    .select('city')
+    .eq('city', city)
+    .single()
+
+  return !error && !!data
+}
+
+export interface GetCityOptions {
   allowUnsafeFallbacks?: boolean
-  defaultCity?: FranchiseCity
 }
 
-/**
- * Extract a clean hostname:
- * - prefers x-forwarded-host when present (proxy/CDN/Vercel)
- * - strips port (:3000)
- * - lowercases
- */
-export function getCleanHostnameFromHeaders(headers: Headers): string {
-  const forwarded = headers.get('x-forwarded-host') || headers.get('host') || ''
-  // x-forwarded-host can be a comma-separated list
-  const raw = forwarded.split(',')[0].trim()
-  return raw.split(':')[0].toLowerCase()
-}
-
-/**
- * Extract city from hostname/subdomain
- * Examples:
- * - bournemouth.qwikker.com -> 'bournemouth'
- * - calgary.qwikker.com -> 'calgary' 
- * - localhost:3000 -> 'bournemouth' (DEV ONLY)
- * - qwikker.com -> ERROR (PROD) or 'bournemouth' (DEV)
- */
 export async function getCityFromHostname(
   hostname: string,
-  opts: GetCityOptions = {}
+  opts?: GetCityOptions
 ): Promise<FranchiseCity> {
-  const cleanHost = (hostname || '').split(',')[0].trim().split(':')[0].toLowerCase()
-
-  const defaultCity = (opts.defaultCity ?? 'bournemouth') as FranchiseCity
-
-  // Decide "safe fallbacks" by environment
-  // CRITICAL: Use VERCEL_ENV, NOT NODE_ENV
-  // On Vercel Preview, NODE_ENV='production' but VERCEL_ENV='preview'
-  const vercelEnv = process.env.VERCEL_ENV // 'production' | 'preview' | 'development' | undefined
-  const isProd = vercelEnv === 'production' // ✅ Only strict in actual production
+  const vercelEnv = process.env.VERCEL_ENV
+  const isProd = vercelEnv === 'production'
+  const cleanHost = hostname.toLowerCase().trim()
   const allowUnsafeFallbacks =
-    opts.allowUnsafeFallbacks ??
+    opts?.allowUnsafeFallbacks ??
     (!isProd) // ✅ preview/dev: allow fallback; production: strict
   
-  // 🔍 Temporary logging (remove after verifying)
-  if (process.env.NODE_ENV !== 'production' || vercelEnv === 'preview') {
-    console.log('🔍 City Detection Debug:', {
-      hostname: cleanHost,
-      VERCEL_ENV: vercelEnv,
-      NODE_ENV: process.env.NODE_ENV,
-      isProd,
-      allowUnsafeFallbacks
-    })
-  }
+  // Debug logging removed - was spamming console
 
   // ✅ Local dev convenience:
   // - localhost:3000
@@ -85,7 +79,6 @@ export async function getCityFromHostname(
   // ✅ Vercel preview domains (your-project.vercel.app)
   // TEMPORARY: Always allow .vercel.app for testing
   if (cleanHost.endsWith('.vercel.app')) {
-    console.log('🔧 Allowing Vercel deployment:', cleanHost)
     return defaultCity
   }
 
@@ -134,74 +127,72 @@ export async function getCityFromRequest(headers: Headers): Promise<FranchiseCit
 }
 
 /**
- * Get display name for city
+ * Extract clean hostname from various header formats
+ * Handles: x-forwarded-host, host, port removal
+ */
+function getCleanHostnameFromHeaders(headers: Headers): string {
+  const forwardedHost = headers.get('x-forwarded-host')
+  const host = headers.get('host')
+  const rawHost = forwardedHost || host || ''
+  
+  // Remove port if present
+  const cleanHost = rawHost.split(':')[0].toLowerCase().trim()
+  
+  return cleanHost
+}
+
+/**
+ * City display names for UI
+ */
+export const cityDisplayNames: Record<FranchiseCity, string> = {
+  bournemouth: 'Bournemouth',
+  poole: 'Poole',
+  christchurch: 'Christchurch'
+}
+
+/**
+ * Get display name for a city
  */
 export function getCityDisplayName(city: FranchiseCity): string {
-  const names: Record<FranchiseCity, string> = {
-    bournemouth: 'Bournemouth',
-    calgary: 'Calgary',
-    london: 'London',
-    paris: 'Paris'
-  }
-  return names[city]
+  return cityDisplayNames[city] || city
 }
 
 /**
- * Get admin emails for a specific city
- * This is a simple configuration - can be moved to database later
+ * Type guard to check if a string is a valid franchise city
  */
-export function getAdminEmailsForCity(city: FranchiseCity): string[] {
-  const adminConfig: Record<FranchiseCity, string[]> = {
-    bournemouth: [
-      'admin@qwikker.com',
-      'admin@walletpush.io',
-      'freespiritfamilies@gmail.com' // TEMPORARY: For testing
-    ],
-    calgary: [
-      'terence@calgary.qwikker.com',
-      'admin@calgary.qwikker.com'
-    ],
-    london: [
-      'admin@london.qwikker.com'
-    ],
-    paris: [
-      'admin@paris.qwikker.com'
-    ]
-  }
-  
-  return adminConfig[city] || adminConfig.bournemouth
+export function isFranchiseCity(city: string): city is FranchiseCity {
+  return ['bournemouth', 'poole', 'christchurch'].includes(city.toLowerCase())
 }
 
 /**
- * Check if user is admin for a specific city
+ * Get all available franchise cities
  */
-export function isUserAdminForCity(userEmail: string, city: FranchiseCity): boolean {
-  const adminEmails = getAdminEmailsForCity(city)
-  return adminEmails.includes(userEmail)
+export function getAllFranchiseCities(): FranchiseCity[] {
+  return ['bournemouth', 'poole', 'christchurch']
 }
 
 /**
- * Get franchise branding for city
+ * Server-side helper to get current city from Next.js request
+ * Throws error if city cannot be determined
  */
-export function getCityBranding(city: FranchiseCity) {
-  const branding: Record<FranchiseCity, { name: string; tagline: string }> = {
-    bournemouth: {
-      name: 'Qwikker Bournemouth',
-      tagline: 'Discover the best of Bournemouth'
-    },
-    calgary: {
-      name: 'Qwikker Calgary', 
-      tagline: 'Discover the best of Calgary'
-    },
-    london: {
-      name: 'Qwikker London',
-      tagline: 'Discover the best of London'
-    },
-    paris: {
-      name: 'Qwikker Paris',
-      tagline: 'Découvrez le meilleur de Paris'
-    }
+export async function getCurrentCityFromRequest(request: Request): Promise<FranchiseCity> {
+  const url = new URL(request.url)
+  return await getCityFromHostname(url.hostname)
+}
+
+/**
+ * Validate that a business belongs to the current franchise city
+ */
+export function validateBusinessCity(businessCity: string, requiredCity: FranchiseCity): boolean {
+  return businessCity.toLowerCase() === requiredCity.toLowerCase()
+}
+
+/**
+ * Get city from various request objects
+ */
+export async function extractCityFromRequest(req: { headers: Headers } | Request): Promise<FranchiseCity> {
+  if (req instanceof Request) {
+    return getCurrentCityFromRequest(req)
   }
-  
-  return branding[city]
+  return getCityFromRequest(req.headers)
 }

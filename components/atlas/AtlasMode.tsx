@@ -1,17 +1,20 @@
 'use client'
 
 /**
- * AtlasMode Component
+ * AtlasMode Component — QWIKKER ATLAS
  * 
- * Full-screen map discovery mode for QWIKKER
- * - Dark atmospheric theme with fog
- * - Animated business markers
- * - Smooth flyTo transitions
- * - Curved route visualization
+ * Premium AI-controlled neon map experience:
+ * - Cinematic dark basemap with vignette overlay
+ * - Neon glowing pins (cyan for businesses, green for active)
+ * - Premium "YOU" marker (big bright green with pulse)
+ * - Animated curved route from user to active business
+ * - Smooth flyTo + arrival ping animations
+ * - Manual location button for Safari compatibility
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { Map as MapboxMap, LngLatLike, MapboxGeoJSONFeature } from 'mapbox-gl'
+import Head from 'next/head'
 import { AtlasOverlay } from './AtlasOverlay'
 import { AtlasHudBubble } from './AtlasHudBubble'
 import { ChatContextStrip } from './ChatContextStrip'
@@ -19,7 +22,17 @@ import { AtlasIntroOverlay } from './AtlasIntroOverlay'
 import { usePerformanceMode } from '@/lib/atlas/usePerformanceMode'
 import { useAtlasAnalytics } from '@/lib/atlas/useAtlasAnalytics'
 import type { Coordinates } from '@/lib/location/useUserLocation'
+import type { LocationStatus } from '@/lib/location/useUserLocation'
 import type { AtlasResponse } from '@/lib/ai/prompts/atlas'
+import {
+  getUserLocationLayers,
+  getBusinessPinLayers,
+  getActiveBusinessLayers,
+  getRouteLayers,
+  QWIKKER_GREEN,
+  QWIKKER_GREEN_BRIGHT,
+  NEON_CYAN
+} from '@/lib/atlas/atlas-styles'
 
 export interface Business {
   id: string
@@ -50,6 +63,7 @@ interface AtlasModeProps {
   config: AtlasConfig
   center: Coordinates
   userLocation: Coordinates | null
+  locationStatus?: LocationStatus
   onClose: () => void
   soundEnabled: boolean
   onToggleSound: () => void
@@ -57,19 +71,26 @@ interface AtlasModeProps {
   userId?: string
   lastUserQuery?: string
   lastAIResponse?: string
+  onRequestLocation?: () => void  // Manual location request trigger
+  initialQuery?: string | null  // Query to run when Atlas opens (from chat CTA)
+  onInitialQueryConsumed?: () => void  // Callback after initial query is consumed
 }
 
 export function AtlasMode({
   config,
   center,
   userLocation,
+  locationStatus,
   onClose,
   soundEnabled,
   onToggleSound,
   city,
   userId,
   lastUserQuery,
-  lastAIResponse
+  lastAIResponse,
+  onRequestLocation,
+  initialQuery,
+  onInitialQueryConsumed
 }: AtlasModeProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<MapboxMap | null>(null)
@@ -78,6 +99,10 @@ export function AtlasMode({
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null)
   
+  // Track if event handlers are attached (prevent duplicates)
+  const businessHandlersAttachedRef = useRef(false)
+  const businessesRef = useRef<Business[]>([])
+  
   // HUD bubble state
   const [hudVisible, setHudVisible] = useState(false)
   const [hudSummary, setHudSummary] = useState('')
@@ -85,6 +110,7 @@ export function AtlasMode({
   const hudDismissTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [lastAtlasQuery, setLastAtlasQuery] = useState<string | null>(null)
   const [lastAtlasBusinessIds, setLastAtlasBusinessIds] = useState<string[]>([])
+  const ranInitialQueryRef = useRef(false)
   
   // Performance mode detection
   const performanceMode = usePerformanceMode()
@@ -136,7 +162,14 @@ export function AtlasMode({
   
   // Initialize Mapbox map
   useEffect(() => {
-    if (!mapContainer.current || map.current || !config.mapboxPublicToken) return
+    if (!mapContainer.current || map.current || !config.mapboxPublicToken) {
+      if (process.env.NODE_ENV === 'development') {
+        if (!config.mapboxPublicToken) {
+          console.error('[Atlas] No Mapbox token provided')
+        }
+      }
+      return
+    }
     
     const initMap = async () => {
       try {
@@ -146,6 +179,10 @@ export function AtlasMode({
         
         // Set access token (use default export for compatibility)
         mapboxgl.accessToken = config.mapboxPublicToken
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Atlas] Initializing map at:', center)
+        }
         
         const mapInstance = new mapboxgl.Map({
           container: mapContainer.current!,
@@ -160,6 +197,13 @@ export function AtlasMode({
         
         // Add fog for atmosphere (only if performance mode OFF)
         mapInstance.on('load', () => {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Atlas] Map loaded successfully')
+            // Debug: Store map instance globally for Fast Refresh debugging
+            ;(window as any).__atlasMap = mapInstance
+            console.log('[Atlas] window.__atlasMap set for debugging')
+          }
+          
           if (!performanceMode.enabled && performanceMode.fog) {
             mapInstance.setFog({
               color: 'rgb(5, 5, 15)',
@@ -182,30 +226,390 @@ export function AtlasMode({
         map.current = mapInstance
       } catch (error) {
         console.error('[Atlas] Failed to initialize map:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[Atlas] Config:', { 
+            hasToken: !!config.mapboxPublicToken,
+            hasStyle: !!config.styleUrl,
+            center 
+          })
+        }
       }
     }
     
     initMap()
     
     return () => {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove()
+      }
       if (map.current) {
         map.current.remove()
         map.current = null
       }
     }
-  }, [config, center, playSound])
+  }, [
+    config.mapboxPublicToken,
+    config.styleUrl,
+    config.defaultZoom,
+    config.pitch,
+    config.bearing,
+    performanceMode.enabled,
+    performanceMode.pitch,
+    performanceMode.fog,
+    playSound,
+    center.lat,
+    center.lng
+  ])
+  
+  // Pending flyTo request (queue if map not loaded yet)
+  const pendingFlyToRef = useRef<{ coords: Coordinates; zoom: number } | null>(null)
+  
+  // User location marker ref (HTML marker for 3D pin)
+  const userMarkerRef = useRef<any>(null)
+  
+  // User location marker management (3D PIN STYLE) - always on top!
+  const addUserLocationMarker = useCallback(async (coords: Coordinates) => {
+    if (!map.current || !mapLoaded) {
+      console.log('[Atlas] ⚠️ Cannot add marker: mapLoaded=', mapLoaded)
+      return
+    }
+    
+    try {
+      const mapboxglModule = await import('mapbox-gl')
+      const mapboxgl = mapboxglModule.default
+      
+      console.log('[Atlas] 📍 Creating 3D pin marker at:', coords)
+      
+      // Remove existing marker if it exists
+      if (userMarkerRef.current) {
+        console.log('[Atlas] Removing old marker')
+        userMarkerRef.current.remove()
+      }
+      
+      // Create 3D pin element
+      const el = document.createElement('div')
+      el.className = 'user-location-3d-pin'
+      el.style.cssText = 'width: 40px; height: 60px; cursor: pointer; position: relative;'
+      el.innerHTML = `
+        <div class="pin-container" style="position: relative; width: 100%; height: 100%; animation: pinDrop 0.6s ease-out;">
+          <div class="pin-head" style="
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #00ff9d 0%, #00d083 50%, #00a066 100%);
+            border-radius: 50% 50% 50% 0;
+            transform: translateX(-50%) rotate(-45deg);
+            box-shadow: 0 3px 6px rgba(0, 208, 131, 0.4), inset -2px -2px 4px rgba(0, 0, 0, 0.2), inset 2px 2px 4px rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+          ">
+            <div class="pin-dot" style="
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(45deg);
+              width: 12px;
+              height: 12px;
+              background: radial-gradient(circle at 30% 30%, #ffffff, #00ff9d);
+              border-radius: 50%;
+            "></div>
+          </div>
+          <div class="pin-shadow" style="
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 8px;
+            background: radial-gradient(ellipse at center, rgba(0, 208, 131, 0.4) 0%, transparent 70%);
+            border-radius: 50%;
+          "></div>
+        </div>
+      `
+      
+      // Create marker
+      userMarkerRef.current = new mapboxgl.Marker({ 
+        element: el,
+        anchor: 'bottom'
+      })
+        .setLngLat([coords.lng, coords.lat])
+        .addTo(map.current)
+      
+      console.log('[Atlas] ✅ 3D pin marker created and added to map!')
+      
+    } catch (error) {
+      console.error('[Atlas] ❌ Failed to add user location marker:', error)
+    }
+  }, [mapLoaded])
+  
+  // FlyTo helper with queue support
+  const flyToLocation = useCallback((coords: Coordinates, zoom: number) => {
+    if (!map.current) return
+    
+    if (!mapLoaded) {
+      // Queue the request until map loads
+      pendingFlyToRef.current = { coords, zoom }
+      return
+    }
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Atlas] Flying to location:', coords)
+    }
+    
+    map.current.flyTo({
+      center: [coords.lng, coords.lat],
+      zoom,
+      duration: 1500,
+      essential: true,
+      curve: 1.2
+    })
+  }, [mapLoaded])
+  
+  // Execute pending flyTo when map loads
+  useEffect(() => {
+    if (mapLoaded && pendingFlyToRef.current) {
+      const pending = pendingFlyToRef.current
+      pendingFlyToRef.current = null
+      flyToLocation(pending.coords, pending.zoom)
+    }
+  }, [mapLoaded, flyToLocation])
+  
+  // Handle user location updates
+  useEffect(() => {
+    console.log('[Atlas] 🔍 User location effect:', {
+      mapLoaded,
+      hasUserLocation: !!userLocation,
+      userLocation,
+      locationStatus
+    })
+    
+    if (!mapLoaded || !userLocation) return
+    
+    // Add user marker
+    addUserLocationMarker(userLocation)
+    
+    // Always fly to user location when granted (shows permission was acknowledged)
+    // Calculate distance to determine animation style
+    const distanceFromCenter = Math.sqrt(
+      Math.pow(userLocation.lat - center.lat, 2) + 
+      Math.pow(userLocation.lng - center.lng, 2)
+    )
+    
+    console.log('[Atlas] Distance from center:', distanceFromCenter)
+    
+    // If far from center (>0.01 degrees ~1km), do full flyTo
+    if (distanceFromCenter > 0.01) {
+      console.log('[Atlas] Flying to user location (far from center)')
+      flyToLocation(userLocation, 14)
+    } else {
+      // If already near center, do subtle "acknowledge" animation
+      if (map.current) {
+        console.log('[Atlas] Easing to user location (near center)')
+        map.current.easeTo({
+          center: [userLocation.lng, userLocation.lat],
+          zoom: Math.max(map.current.getZoom(), 14),
+          duration: 900,
+          essential: true
+        })
+      }
+    }
+  }, [mapLoaded, userLocation, center, addUserLocationMarker, flyToLocation, locationStatus])
   
   // Clear markers helper
   const clearMarkers = useCallback(() => {
-    if (!map.current || !map.current.getSource('businesses')) return
+    if (!map.current) return
     
-    map.current.getSource('businesses').setData({
-      type: 'FeatureCollection',
-      features: []
+    // Clear business layers
+    const businessLayerIds = ['business-pins-glow', 'business-pins']
+    businessLayerIds.forEach(id => {
+      if (map.current!.getLayer(id)) {
+        map.current!.removeLayer(id)
+      }
     })
+    if (map.current.getSource('businesses')) {
+      map.current.removeSource('businesses')
+    }
+    
+    // Clear active business layers
+    const activeLayerIds = ['active-business-pulse', 'active-business-pin']
+    activeLayerIds.forEach(id => {
+      if (map.current!.getLayer(id)) {
+        map.current!.removeLayer(id)
+      }
+    })
+    if (map.current.getSource('active-business')) {
+      map.current.removeSource('active-business')
+    }
+    
+    // Clear route layers
+    const routeLayerIds = ['route-glow', 'route-line']
+    routeLayerIds.forEach(id => {
+      if (map.current!.getLayer(id)) {
+        map.current!.removeLayer(id)
+      }
+    })
+    if (map.current.getSource('route')) {
+      map.current.removeSource('route')
+    }
   }, [])
   
-  // Add markers for businesses
+  // Add route line from user to active business
+  const addRouteLineToActive = useCallback(async (activeBusiness: Business) => {
+    if (!map.current || !mapLoaded || !userLocation) return
+    
+    try {
+      // Remove existing route
+      const routeLayerIds = ['route-glow', 'route-line']
+      routeLayerIds.forEach(id => {
+        if (map.current!.getLayer(id)) {
+          map.current!.removeLayer(id)
+        }
+      })
+      if (map.current.getSource('route')) {
+        map.current.removeSource('route')
+      }
+      
+      // Add route source (straight line for now, can be bezier curve later)
+      map.current.addSource('route', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: [{
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: [
+                [userLocation.lng, userLocation.lat],
+                [activeBusiness.longitude, activeBusiness.latitude]
+              ]
+            }
+          }]
+        }
+      })
+      
+      // Add route layers (glow + line) BELOW all markers
+      const routeLayers = getRouteLayers()
+      const beforeLayer = map.current.getLayer('business-pins-glow') ? 'business-pins-glow' : undefined
+      
+      routeLayers.forEach(layer => {
+        map.current!.addLayer(layer, beforeLayer)
+      })
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Atlas] Route line drawn to active business')
+      }
+    } catch (error) {
+      console.error('[Atlas] Failed to add route line:', error)
+    }
+  }, [mapLoaded, userLocation])
+  
+  // Update active business marker
+  const updateActiveBusinessMarker = useCallback(async (business: Business) => {
+    if (!map.current || !mapLoaded) return
+    
+    try {
+      // Remove existing active business layers
+      const activeLayerIds = ['active-business-pulse', 'active-business-pin']
+      activeLayerIds.forEach(id => {
+        if (map.current!.getLayer(id)) {
+          map.current!.removeLayer(id)
+        }
+      })
+      if (map.current.getSource('active-business')) {
+        map.current.removeSource('active-business')
+      }
+      
+      // Add active business source
+      map.current.addSource('active-business', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: [{
+            type: 'Feature',
+            properties: {
+              id: business.id,
+              name: business.business_name
+            },
+            geometry: {
+              type: 'Point',
+              coordinates: [business.longitude, business.latitude]
+            }
+          }]
+        }
+      })
+      
+      // Add active business layers (bigger, brighter) - but still below user location
+      const activeLayers = getActiveBusinessLayers()
+      const beforeLayer = map.current.getLayer('user-location-outer-glow') ? 'user-location-outer-glow' : undefined
+      
+      activeLayers.forEach(layer => {
+        map.current!.addLayer(layer, beforeLayer)
+      })
+      
+      // Draw route line if user location available
+      if (userLocation) {
+        await addRouteLineToActive(business)
+      }
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Atlas] Active business marker updated:', business.business_name)
+      }
+    } catch (error) {
+      console.error('[Atlas] Failed to update active business:', error)
+    }
+  }, [mapLoaded, userLocation, addRouteLineToActive])
+  
+  // Arrival ping animation (pulse effect)
+  const triggerArrivalPing = useCallback(async (business: Business) => {
+    if (!map.current || !mapLoaded) return
+    
+    try {
+      // Briefly intensify the active business pulse
+      // For now just log (can add visual effect later)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Atlas] 🎯 Arrival ping at:', business.business_name)
+      }
+    } catch (error) {
+      console.error('[Atlas] Failed to trigger arrival ping:', error)
+    }
+  }, [mapLoaded])
+  
+  // Fly to business with smooth animation + arrival ping
+  const flyToBusiness = useCallback((business: Business) => {
+    if (!map.current) return
+    
+    // Throttle move sound (max once per 8s)
+    const now = Date.now()
+    if (now - lastMoveTime.current > 8000) {
+      playSound(audioMoveRef.current)
+      lastMoveTime.current = now
+    }
+    
+    // Update active business marker immediately
+    updateActiveBusinessMarker(business)
+    
+    map.current.flyTo({
+      center: [business.longitude, business.latitude],
+      zoom: 16,
+      pitch: 60,
+      bearing: 0,
+      duration: 2000,
+      essential: true,
+      curve: 1.42 // More curved trajectory
+    })
+    
+    // Play arrive sound and trigger "arrival ping" animation at end
+    setTimeout(() => {
+      playSound(audioArriveRef.current)
+      // Arrival ping animation (flash the pulse layer)
+      triggerArrivalPing(business)
+    }, 2000)
+    
+  }, [playSound, updateActiveBusinessMarker, triggerArrivalPing])
+  
+  // Add markers for businesses (NEON CYAN PINS) - but keep user marker on top
   const addBusinessMarkers = useCallback(async (businesses: Business[]) => {
     if (!map.current || !mapLoaded) return
     
@@ -213,10 +617,16 @@ export function AtlasMode({
       const mapboxglModule = await import('mapbox-gl')
       const mapboxgl = mapboxglModule.default
       
-      // Remove existing source and layer
-      if (map.current.getLayer('business-markers')) {
-        map.current.removeLayer('business-markers')
-      }
+      // Update ref for event handlers
+      businessesRef.current = businesses
+      
+      // Remove existing business layers only (preserve user location!)
+      const layerIds = ['business-pins-glow', 'business-pins']
+      layerIds.forEach(id => {
+        if (map.current!.getLayer(id)) {
+          map.current!.removeLayer(id)
+        }
+      })
       if (map.current.getSource('businesses')) {
         map.current.removeSource('businesses')
       }
@@ -245,101 +655,120 @@ export function AtlasMode({
         }
       })
       
-      // Add circle layer with glow
-      map.current.addLayer({
-        id: 'business-markers',
-        type: 'circle',
-        source: 'businesses',
-        paint: {
-          'circle-radius': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            12, 8,
-            16, 20
-          ],
-          'circle-color': '#00d083',
-          'circle-opacity': 0.9,
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#00ff9d',
-          'circle-stroke-opacity': 0.6
-        }
+      // Add neon business pin layers (these go BELOW user location layers)
+      const pinLayers = getBusinessPinLayers()
+      
+      // Insert before user-location layers to keep user on top
+      const beforeLayer = map.current.getLayer('user-location-outer-glow') ? 'user-location-outer-glow' : undefined
+      
+      pinLayers.forEach(layer => {
+        map.current!.addLayer(layer, beforeLayer)
       })
       
-      // Add glow layer
-      map.current.addLayer({
-        id: 'business-markers-glow',
-        type: 'circle',
-        source: 'businesses',
-        paint: {
-          'circle-radius': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            12, 16,
-            16, 40
-          ],
-          'circle-color': '#00d083',
-          'circle-opacity': 0.2,
-          'circle-blur': 1
+      // Attach event handlers ONCE only (or re-attach if layer was recreated)
+      if (!businessHandlersAttachedRef.current && map.current.getLayer('business-pins')) {
+        // Define handlers that read from refs
+        const handleClick = (e: any) => {
+          if (!e.features || e.features.length === 0) return
+          
+          const feature = e.features[0]
+          const businessId = feature.properties?.id
+          const business = businessesRef.current.find(b => b.id === businessId)
+          
+          if (business) {
+            setSelectedBusiness(business)
+            updateActiveBusinessMarker(business)
+            flyToBusiness(business)
+          }
         }
-      })
-      
-      // Click handler
-      map.current.on('click', 'business-markers', (e) => {
-        if (!e.features || e.features.length === 0) return
         
-        const feature = e.features[0]
-        const businessId = feature.properties?.id
-        const business = businesses.find(b => b.id === businessId)
-        
-        if (business) {
-          setSelectedBusiness(business)
-          flyToBusiness(business)
+        const handleMouseEnter = () => {
+          if (map.current) map.current.getCanvas().style.cursor = 'pointer'
         }
-      })
+        
+        const handleMouseLeave = () => {
+          if (map.current) map.current.getCanvas().style.cursor = ''
+        }
+        
+        // Remove any existing handlers (safe for re-attachment)
+        map.current.off('click', 'business-pins', handleClick)
+        map.current.off('mouseenter', 'business-pins', handleMouseEnter)
+        map.current.off('mouseleave', 'business-pins', handleMouseLeave)
+        
+        // Attach fresh handlers
+        map.current.on('click', 'business-pins', handleClick)
+        map.current.on('mouseenter', 'business-pins', handleMouseEnter)
+        map.current.on('mouseleave', 'business-pins', handleMouseLeave)
+        
+        businessHandlersAttachedRef.current = true
+      }
       
-      // Cursor style
-      map.current.on('mouseenter', 'business-markers', () => {
-        if (map.current) map.current.getCanvas().style.cursor = 'pointer'
-      })
-      
-      map.current.on('mouseleave', 'business-markers', () => {
-        if (map.current) map.current.getCanvas().style.cursor = ''
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Atlas] Neon business pins added:', businesses.length, '(user marker stays on top)')
+      }
       
     } catch (error) {
       console.error('[Atlas] Failed to add markers:', error)
     }
-  }, [mapLoaded])
+  }, [mapLoaded, updateActiveBusinessMarker, flyToBusiness])
   
-  // Fly to business with smooth animation
-  const flyToBusiness = useCallback((business: Business) => {
-    if (!map.current) return
+  // Recenter to user location (BULLETPROOF - stop + resize + flyTo)
+  const handleRecenterToUser = useCallback(() => {
+    console.log('[Atlas] 🔘 RECENTER BUTTON CLICKED')
+    console.log('[Atlas] userLocation:', userLocation)
+    console.log('[Atlas] map.current:', !!map.current)
+    console.log('[Atlas] locationStatus:', locationStatus)
     
-    // Throttle move sound (max once per 8s)
-    const now = Date.now()
-    if (now - lastMoveTime.current > 8000) {
-      playSound(audioMoveRef.current)
-      lastMoveTime.current = now
+    if (!userLocation || !map.current) {
+      console.warn('[Atlas] ❌ Cannot recenter: no location or map')
+      alert(`Cannot recenter:\n- Has location: ${!!userLocation}\n- Has map: ${!!map.current}\n- Status: ${locationStatus}`)
+      return
     }
     
+    const target = [userLocation.lng, userLocation.lat] as [number, number]
+    
+    if (process.env.NODE_ENV === 'development') {
+      const currentCenter = map.current.getCenter()
+      const canvas = map.current.getCanvas()
+      const isStyleLoaded = map.current.isStyleLoaded()
+      
+      console.log('[Atlas] 🎯 RECENTER DEBUG:')
+      console.log('  Current:', currentCenter.lng.toFixed(6), currentCenter.lat.toFixed(6))
+      console.log('  Target:', target[0].toFixed(6), target[1].toFixed(6))
+      console.log('  Canvas size:', canvas?.width, 'x', canvas?.height)
+      console.log('  Style loaded:', isStyleLoaded)
+      console.log('  mapLoaded:', mapLoaded)
+      console.log('  Container match:', map.current.getContainer() === mapContainer.current)
+    }
+    
+    // Guard: ensure map is fully ready
+    if (!mapLoaded || !map.current.isStyleLoaded()) {
+      console.warn('[Atlas] Cannot recenter: map not fully loaded')
+      return
+    }
+    
+    // CRITICAL: Stop any ongoing animation
+    map.current.stop()
+    
+    // CRITICAL: Resize map (fixes Safari/iOS layout shift issues)
+    map.current.resize()
+    
+    // Smooth fly to user location
     map.current.flyTo({
-      center: [business.longitude, business.latitude],
-      zoom: 16,
-      pitch: 60,
+      center: target,
+      zoom: 16.5,
+      pitch: 0,
       bearing: 0,
-      duration: 2000,
-      essential: true,
-      curve: 1.42 // More curved trajectory
+      duration: 900,
+      essential: true
     })
     
-    // Play arrive sound at end
-    setTimeout(() => {
-      playSound(audioArriveRef.current)
-    }, 2000)
+    playSound(audioMoveRef.current)
     
-  }, [playSound])
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Atlas] ✅ Recenter flyTo executed')
+    }
+  }, [userLocation, playSound, mapLoaded])
   
   // Search handler (calls Atlas query endpoint for HUD bubble response)
   const handleSearch = useCallback(async (query: string) => {
@@ -384,10 +813,11 @@ export function AtlasMode({
           setBusinesses(filteredResults)
           await addBusinessMarkers(filteredResults)
           
-          // Fly to first result
+          // Select first result as active and fly to it
           if (filteredResults.length > 0) {
             const firstBusiness = filteredResults[0]
             setSelectedBusiness(firstBusiness)
+            await updateActiveBusinessMarker(firstBusiness)
             flyToBusiness(firstBusiness)
           }
           
@@ -453,6 +883,35 @@ export function AtlasMode({
     }
   }, [userLocation, addBusinessMarkers, flyToBusiness, config.maxResults, performanceMode, trackEvent])
   
+  // Auto-run initial query when Atlas opens with chat context (run once only)
+  useEffect(() => {
+    if (!mapLoaded || !initialQuery || ranInitialQueryRef.current) return
+    ranInitialQueryRef.current = true
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Atlas] Running initial query from chat:', initialQuery)
+    }
+    
+    handleSearch(initialQuery)
+    onInitialQueryConsumed?.()
+  }, [mapLoaded, initialQuery, handleSearch, onInitialQueryConsumed])
+  
+  // Force resize on mount to handle container sizing edge cases
+  useEffect(() => {
+    if (!mapLoaded || !map.current) return
+    
+    // Defer resize to ensure container is fully laid out
+    requestAnimationFrame(() => {
+      if (map.current) {
+        map.current.resize()
+        if (process.env.NODE_ENV === 'development') {
+          const canvas = map.current.getCanvas()
+          console.log('[Atlas] Map resized on mount. Canvas size:', canvas?.width, 'x', canvas?.height)
+        }
+      }
+    })
+  }, [mapLoaded])
+  
   // Handle close with analytics
   const handleClose = useCallback(() => {
     // Clean up HUD dismiss timer
@@ -485,12 +944,30 @@ export function AtlasMode({
   }, [handleHudDismiss, handleClose])
   
   return (
-    <div className="fixed inset-0 z-50 bg-black">
-      {/* Map Container */}
-      <div ref={mapContainer} className="absolute inset-0" />
+    <>
+      {/* Mapbox CSS - Must be in head */}
+      <Head>
+        <link
+          href="https://api.mapbox.com/mapbox-gl-js/v3.18.0/mapbox-gl.css"
+          rel="stylesheet"
+        />
+      </Head>
       
-      {/* First-Visit Intro Overlay */}
-      <AtlasIntroOverlay />
+      <div className="fixed inset-0 z-50 bg-black">
+        {/* Map Container - Explicit height and width for Mapbox */}
+        <div ref={mapContainer} className="absolute inset-0 w-full h-full" style={{ minHeight: '100vh' }} />
+        
+        {/* VIGNETTE OVERLAY - Cinematic lighting effect */}
+        <div 
+          className="absolute inset-0 pointer-events-none z-[1]"
+          style={{
+            background: 'radial-gradient(ellipse at center, transparent 20%, rgba(0,0,0,0.4) 80%, rgba(0,0,0,0.8) 100%)',
+            mixBlendMode: 'multiply'
+          }}
+        />
+        
+        {/* First-Visit Intro Overlay */}
+        <AtlasIntroOverlay />
       
       {/* HUD Bubble (ephemeral AI response) */}
       <AtlasHudBubble
@@ -500,14 +977,6 @@ export function AtlasMode({
         onDismiss={handleHudDismiss}
         onMoreDetails={handleHudMoreDetails}
       />
-      
-      {/* Chat Context Strip */}
-      {mapLoaded && (lastUserQuery || lastAIResponse) && (
-        <ChatContextStrip
-          userQuery={lastUserQuery}
-          aiResponse={lastAIResponse}
-        />
-      )}
       
       {/* Overlay UI */}
       <AtlasOverlay
@@ -534,9 +1003,17 @@ export function AtlasMode({
         }}
       />
       
+      {/* Chat Context Strip - Moved below search bar to avoid overlap */}
+      {mapLoaded && (lastUserQuery || lastAIResponse) && (
+        <ChatContextStrip
+          userQuery={lastUserQuery}
+          aiResponse={lastAIResponse}
+        />
+      )}
+      
       {/* Loading State */}
       {!mapLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/90">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-50">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-[#00d083]/30 border-t-[#00d083] rounded-full animate-spin mx-auto mb-4" />
             <p className="text-white/60">Loading Atlas...</p>
@@ -544,11 +1021,83 @@ export function AtlasMode({
         </div>
       )}
       
-      {/* Mapbox CSS */}
-      <link
-        href="https://api.mapbox.com/mapbox-gl-js/v3.18.0/mapbox-gl.css"
-        rel="stylesheet"
-      />
+      {/* ATLAS STATUS PILL - Bottom left */}
+      {mapLoaded && (
+        <div className="absolute bottom-6 left-6 z-10 pointer-events-none">
+          <div className="px-4 py-2.5 rounded-full bg-black/60 backdrop-blur-md border border-[#00d083]/30 shadow-lg">
+            <div className="flex items-center gap-2.5">
+              <div className="w-2 h-2 rounded-full bg-[#00d083] animate-pulse" />
+              <p className="text-sm font-medium text-white/90">Atlas Active</p>
+              <span className="text-xs text-white/50">·</span>
+              <p className="text-xs text-white/60">{city}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* MANUAL LOCATION BUTTON - Show when location is idle/denied (Safari fix) */}
+      {mapLoaded && locationStatus && (locationStatus === 'idle' || locationStatus === 'denied' || locationStatus === 'unavailable') && onRequestLocation && (
+        <div className="absolute bottom-24 right-6 z-10">
+          <button
+            onClick={onRequestLocation}
+            className="px-4 py-3 rounded-full bg-[#00d083] hover:bg-[#00ff9d] transition-colors shadow-lg border border-white/20 flex items-center gap-2"
+          >
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-sm font-semibold text-white">Use my location</span>
+          </button>
+        </div>
+      )}
+      
+      {/* RECENTER TO USER BUTTON - Show when user location is available */}
+      {mapLoaded && userLocation && (
+        <div className="absolute bottom-32 right-6 z-[9999]">
+          <button
+            onClick={() => {
+              alert('Button clicked!')
+              handleRecenterToUser()
+            }}
+            className="w-12 h-12 rounded-full bg-[#00d083] hover:bg-[#00ff9d] transition-colors shadow-lg border-2 border-white flex items-center justify-center group pointer-events-auto"
+            title="Recenter to my location"
+            style={{ cursor: 'pointer' }}
+          >
+            <svg 
+              className="w-6 h-6 text-white" 
+              fill="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v4m0 12v4M2 12h4m12 0h4" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+      )}
+      
+      {/* DEBUG: Show if userLocation exists */}
+      {mapLoaded && (
+        <div className="absolute top-20 left-6 z-10 bg-black/80 text-white px-3 py-2 rounded text-xs">
+          Location: {userLocation ? `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}` : 'NONE'}
+        </div>
+      )}
+      
+      {/* Location Fallback Pill - Show when viewing city center */}
+      {mapLoaded && locationStatus && (locationStatus === 'denied' || locationStatus === 'unavailable') && !userLocation && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+          <div className="px-4 py-2.5 rounded-full bg-slate-800/90 backdrop-blur-md border border-slate-700/50 shadow-lg">
+            <p className="text-xs text-slate-300 whitespace-nowrap flex items-center gap-2">
+              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Showing {city} city center
+            </p>
+          </div>
+        </div>
+      )}
+      
     </div>
+  </>
   )
 }

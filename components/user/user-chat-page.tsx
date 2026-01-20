@@ -26,6 +26,10 @@ interface ChatMessage {
   }>
   quickReplies?: string[]
   hasBusinessResults?: boolean // For Atlas "earned moment" without carousel spam
+  intent?: 'near_me' | 'browse' | 'events' | 'offers' | 'unknown'
+  needsLocation?: boolean // If true, user asked "near me" but no location available
+  showAtlasCta?: boolean // If true, show inline Atlas CTA in message
+  locationReason?: string // Why we need location (for CTA copy)
   businessCarousel?: Array<{
     id: string
     business_name: string
@@ -75,14 +79,76 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
   const [view, setView] = useState<'chat' | 'atlas'>('chat')
   const [soundEnabled, setSoundEnabled] = useState(false)
   
+  // Near-me query flow
+  const [pendingNearMeQuery, setPendingNearMeQuery] = useState<string | null>(null)
+  const [lastBusinessQuery, setLastBusinessQuery] = useState<string | null>(null)
+  const [atlasInitialQuery, setAtlasInitialQuery] = useState<string | null>(null)
+  
   // ATLAS: Load tenant config
   const { config: tenantConfig, loading: configLoading } = useTenantAtlasConfig()
   const atlasEnabled = tenantConfig?.atlas?.enabled && tenantConfig?.atlas?.mapboxPublicToken
   
+  // Debug logging
+  useEffect(() => {
+    if (tenantConfig) {
+      console.log('🗺️ [Atlas Debug] Config loaded:', {
+        atlasEnabled,
+        hasToken: !!tenantConfig?.atlas?.mapboxPublicToken,
+        hasCenter: !!tenantConfig?.center,
+        view,
+        config: tenantConfig.atlas
+      })
+    }
+  }, [tenantConfig, atlasEnabled, view])
+  
+  // STABLE center prop (prevent map re-init)
+  const atlasCenter = useMemo(() => {
+    const c = tenantConfig?.center
+    return c ? { lat: c.lat, lng: c.lng } : null
+  }, [tenantConfig?.center?.lat, tenantConfig?.center?.lng])
+  
   // ATLAS: User location
-  const { coords: userLocation, requestPermission } = useUserLocation(
+  const { coords: userLocation, requestPermission, status: locationStatus } = useUserLocation(
     tenantConfig?.center ? { lat: tenantConfig.center.lat, lng: tenantConfig.center.lng } : undefined
   )
+  
+  // ATLAS: Auto-request location when Atlas opens (once per session)
+  const locationRequestedRef = useRef(false)
+  const autoResentRef = useRef<string | null>(null)
+  
+  useEffect(() => {
+    if (view !== 'atlas') {
+      // Reset when leaving Atlas so it can request again next time
+      locationRequestedRef.current = false
+      return
+    }
+    
+    if (!locationRequestedRef.current && locationStatus === 'idle') {
+      locationRequestedRef.current = true
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Atlas] Auto-requesting location permission')
+      }
+      requestPermission()
+    }
+  }, [view, locationStatus, requestPermission])
+  
+  // Auto-resend near-me query when location becomes available (prevent double-sends)
+  useEffect(() => {
+    if (locationStatus === 'granted' && userLocation && pendingNearMeQuery) {
+      // Guard: prevent double-send of the same query
+      if (autoResentRef.current === pendingNearMeQuery) return
+      autoResentRef.current = pendingNearMeQuery
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Chat] Location granted, auto-resending query:', pendingNearMeQuery)
+      }
+      handleSendMessage(pendingNearMeQuery)
+      setPendingNearMeQuery(null)
+      
+      // Reset ref after clearing
+      setTimeout(() => { autoResentRef.current = null }, 0)
+    }
+  }, [locationStatus, userLocation, pendingNearMeQuery])
   
   // Session storage key for chat memory
   const chatSessionKey = `qwikker-chat-session-${currentUser?.wallet_pass_id || 'guest'}`
@@ -221,7 +287,8 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
         body: JSON.stringify({
           message,
           walletPassId: currentUser?.wallet_pass_id,
-          conversationHistory: fullConversationHistory
+          conversationHistory: fullConversationHistory,
+          userLocation: locationStatus === 'granted' && userLocation ? userLocation : null
         })
       })
 
@@ -229,10 +296,22 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
 
       console.log('📦 AI Response Data:', {
         hasResponse: !!data.response,
+        intent: data.intent,
+        needsLocation: data.needsLocation,
+        showAtlasCta: data.showAtlasCta,
         hasEventCards: !!data.eventCards,
-        eventCardsCount: data.eventCards?.length || 0,
-        eventCards: data.eventCards
+        eventCardsCount: data.eventCards?.length || 0
       })
+      
+      // Store pending query if location is needed
+      if (data.needsLocation) {
+        setPendingNearMeQuery(message)
+      }
+      
+      // Store last business query for Atlas CTA
+      if (data.hasBusinessResults) {
+        setLastBusinessQuery(message)
+      }
 
       // Add AI response
       const aiMessage: ChatMessage = {
@@ -245,7 +324,11 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
         hasBusinessResults: data.hasBusinessResults,
         businessCarousel: data.businessCarousel,
         walletActions: data.walletActions,
-        eventCards: data.eventCards
+        eventCards: data.eventCards,
+        intent: data.intent,
+        needsLocation: data.needsLocation,
+        showAtlasCta: data.showAtlasCta,
+        locationReason: data.locationReason
       }
 
       console.log('💬 AI Message created:', {
@@ -494,11 +577,12 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
   return (
     <>
       {/* ATLAS MODE: Full-screen map */}
-      {view === 'atlas' && atlasEnabled && tenantConfig?.atlas && tenantConfig?.center && (
+      {view === 'atlas' && atlasEnabled && tenantConfig?.atlas && atlasCenter && (
         <AtlasMode
           config={tenantConfig.atlas}
-          center={tenantConfig.center}
+          center={atlasCenter}
           userLocation={userLocation}
+          locationStatus={locationStatus}
           onClose={() => setView('chat')}
           soundEnabled={soundEnabled}
           onToggleSound={() => setSoundEnabled(!soundEnabled)}
@@ -506,6 +590,9 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
           userId={currentUser?.wallet_pass_id}
           lastUserQuery={messages.length > 0 ? messages.filter(m => m.type === 'user').slice(-1)[0]?.content : undefined}
           lastAIResponse={messages.length > 0 ? messages.filter(m => m.type === 'ai').slice(-1)[0]?.content : undefined}
+          onRequestLocation={requestPermission}
+          initialQuery={atlasInitialQuery}
+          onInitialQueryConsumed={() => setAtlasInitialQuery(null)}
         />
       )}
       
@@ -620,6 +707,55 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
                   )}
                 </div>
                 
+                {/* Location Permission CTA - Show when needsLocation is true */}
+                {message.type === 'ai' && message.needsLocation && (
+                  <div className="mt-3 p-4 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-blue-500/30 rounded-xl">
+                    <p className="text-xs text-slate-300 mb-3">
+                      {message.locationReason || 'I need your location to help you find the best places nearby'}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                          await requestPermission()
+                        }}
+                        className="flex-1 bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+                      >
+                        📍 Use my location
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPendingNearMeQuery(null)
+                          handleSendMessage(`Show me options in ${tenantConfig?.city || 'the city centre'}`)
+                        }}
+                        className="flex-1 bg-slate-700/60 hover:bg-slate-600/60 text-slate-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 border border-slate-600/50"
+                      >
+                        Show city centre
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Atlas CTA - Show inline when showAtlasCta is true */}
+                {message.type === 'ai' && message.showAtlasCta && !message.needsLocation && atlasEnabled && (
+                  <div className="mt-3">
+                    <button
+                      onClick={() => {
+                        if (lastBusinessQuery) {
+                          setAtlasInitialQuery(lastBusinessQuery)
+                        }
+                        setView('atlas')
+                      }}
+                      className="w-full bg-gradient-to-r from-cyan-600/20 to-blue-600/20 hover:from-cyan-600/30 hover:to-blue-600/30 border border-cyan-500/30 hover:border-cyan-400/50 text-cyan-300 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 group"
+                    >
+                      <Map className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      <span>Show me on Atlas</span>
+                      <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+                
                 {/* Business Carousel */}
                 {message.businessCarousel && message.businessCarousel.length > 0 && (
                   <div className="mt-3 -mx-2 sm:mx-0">
@@ -695,24 +831,6 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
                         </button>
                       ))}
                     </div>
-                  </div>
-                )}
-                
-                {/* ATLAS: Show on Map Button */}
-                {atlasEnabled && message.type === 'ai' && message.hasBusinessResults && (
-                  <div className="mt-3">
-                    <button
-                      onClick={() => {
-                        setView('atlas')
-                        if (userLocation === null) {
-                          requestPermission()
-                        }
-                      }}
-                      className="flex items-center gap-2 bg-[#00d083]/10 hover:bg-[#00d083]/20 text-[#00d083] px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 border border-[#00d083]/30"
-                    >
-                      <Map className="w-4 h-4" />
-                      <span>Show on Map</span>
-                    </button>
                   </div>
                 )}
                 

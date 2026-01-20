@@ -56,7 +56,7 @@ export function AtlasHudBubble({
           initial="hidden"
           animate="visible"
           exit="exit"
-          className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-md w-[90%] pointer-events-auto"
+          className="fixed top-24 sm:top-20 right-6 z-50 max-w-xs sm:max-w-sm w-[calc(100%-3rem)] sm:w-auto pointer-events-auto"
         >
           {/* Glassmorphism bubble */}
           <div className="relative bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden">

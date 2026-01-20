@@ -45,7 +45,8 @@ interface ChatResponse {
     business_tagline?: string
     system_category?: string // Stable enum for filtering
     display_category?: string // User-friendly label
-    business_tier: string
+    business_tier: string // ✅ effective_tier from subscription-based view (spotlight, featured, starter)
+    tier_priority?: number // ✅ Sort priority from view (1=spotlight, 2=featured/trial, 3=starter)
     business_address?: string
     business_town?: string
     logo?: string
@@ -144,11 +145,11 @@ export async function generateHybridAIResponse(
       )).slice(0, 6) // Check top 6 unique businesses
       
       if (businessIds.length > 0) {
+        // ✅ Count ONLY active, valid offers from eligible businesses
         const { data: offerCounts } = await supabase
-          .from('business_offers')
+          .from('chat_active_deals')
           .select('business_id')
           .in('business_id', businessIds)
-          .eq('status', 'approved')
         
         if (offerCounts) {
           offerCounts.forEach(offer => {
@@ -159,11 +160,37 @@ export async function generateHybridAIResponse(
     }
     
     // Build knowledge context with offer availability
-    const businessContext = businessResults.success && businessResults.results.length > 0
-      ? businessResults.results.map(result => {
+    // 🚨 CRITICAL: Sort by tier FIRST so qwikker_picks appear at TOP
+    const sortedBusinessResults = businessResults.success && businessResults.results.length > 0
+      ? [...businessResults.results].sort((a, b) => {
+          const tierPriority = {
+            'qwikker_picks': 0,  // ⭐ QWIKKER PICK - ALWAYS FIRST
+            'featured': 1,       // Featured badge
+            'free_trial': 1,     // Free trial = Featured tier (same priority)
+            'starter': 2,        // No badge
+            'recommended': 3
+          }
+          const aTier = a.business_tier || 'recommended'
+          const bTier = b.business_tier || 'recommended'
+          const aPriority = tierPriority[aTier] ?? 999
+          const bPriority = tierPriority[bTier] ?? 999
+          return aPriority - bPriority
+        })
+      : []
+    
+    // 🚨 DEBUG: Log sorted order with tiers
+    if (sortedBusinessResults.length > 0) {
+      console.log('🎯 SORTED BUSINESS ORDER:')
+      sortedBusinessResults.forEach((b, idx) => {
+        console.log(`  ${idx + 1}. ${b.business_name} [TIER: ${b.business_tier || 'unknown'}]`)
+      })
+    }
+    
+    const businessContext = sortedBusinessResults.length > 0
+      ? sortedBusinessResults.map(result => {
           const offerCount = result.business_id ? businessOfferCounts[result.business_id] || 0 : 0
           const offerText = offerCount > 0 ? ` [Has ${offerCount} ${offerCount === 1 ? 'offer' : 'offers'} available]` : ''
-          return `**${result.business_name}**: ${result.content}${offerText}`
+          return `**${result.business_name}** [TIER: ${result.business_tier || 'standard'}]: ${result.content}${offerText}`
         }).join('\n\n')
       : ''
 
@@ -175,6 +202,15 @@ export async function generateHybridAIResponse(
     
     // 🎯 STEP 3: Build context-aware system prompt (SIMPLE AND CLEAR)
     const stateContext = generateStateContext(state)
+    
+    // 🚨 CHECK: Is this a broad query that needs clarification?
+    const isBroadQuery = conversationHistory.length <= 2 && 
+                        (userMessage.toLowerCase().includes('find restaurants') || 
+                         userMessage.toLowerCase().includes('restaurant') ||
+                         userMessage.toLowerCase().includes('find food') ||
+                         userMessage.toLowerCase().includes('where should i eat') ||
+                         userMessage.toLowerCase().includes('best place')) &&
+                        !userMessage.toLowerCase().match(/(deal|offer|discount|italian|pizza|burger|chinese|indian|thai|mexican|japanese|cocktail|cheap|expensive|fancy|upscale|qwikker pick)/i)
     
     const systemPrompt = `You're the Bournemouth Local—a witty, knowledgeable companion who helps people discover amazing businesses.
 
@@ -190,6 +226,20 @@ INTELLIGENCE:
 - Make smart inferences (if discussing cocktails, "sweet" means sweet drinks)
 - Build naturally on their answers
 
+${isBroadQuery ? `
+🚨 BROAD QUERY DETECTED 🚨
+User just asked "${userMessage}" - this is TOO broad!
+
+❌ DO NOT list businesses yet
+❌ DO NOT dump restaurant recommendations
+❌ DO NOT show offers or cards
+
+✅ INSTEAD: Ask what they're in the mood for
+Example: "Hey! Before I point you in the right direction—are you hunting for deals, or just want the absolute best spots? Any specific cuisine you're craving?"
+
+Quick replies should be: "Best spots", "Current deals", "Italian", "Surprise me"
+` : ''}
+
 ${stateContext ? `\nCONVERSATION CONTEXT:\n${stateContext}\n` : ''}
 
 KNOWLEDGE RULES:
@@ -199,6 +249,7 @@ KNOWLEDGE RULES:
 - Only say "I don't have that info" if you've genuinely checked the business entry and it's missing
 - Never make up amenities, addresses, or hours
 - Always bold business names like **David's Grill Shack**
+- 🚨🚨🚨 CRITICAL: Businesses are listed in TIER ORDER - [TIER: qwikker_picks] businesses MUST be mentioned FIRST when listing multiple options!
 
 🔒 STRICT NO-HALLUCINATION RULES (CRITICAL):
 - ONLY mention menu items, specials, or dishes if they EXPLICITLY appear in the AVAILABLE BUSINESSES or CITY INFO sections
@@ -215,11 +266,19 @@ KNOWLEDGE RULES:
 - The offer cards will appear automatically after your message
 
 🎯 CRITICAL: TIER-BASED PRESENTATION (PAID VISIBILITY!)
+- 🚨 Businesses marked [TIER: qwikker_picks] are PREMIUM and MUST be listed FIRST
+- 🚨 When recommending multiple businesses, ALWAYS list qwikker_picks tier businesses at positions 1, 2, 3, etc BEFORE any featured/other businesses
+- 🚨 SPOTLIGHT = QWIKKER PICKS = PREMIUM TIER - they pay for priority placement!
 - Businesses are sorted by TIER (Spotlight → Featured → Starter)
 - When multiple businesses match the query, mention ALL businesses of the SAME TIER together in your response
 - SPOTLIGHT businesses are QWIKKER PICKS—they're paying for visibility and MUST be mentioned together and prominently
-- When mentioning Spotlight businesses, casually add context like "...and that's why it's a Qwikker Pick!" or "These are Qwikker Picks for a reason!"
-- Example: "**David's Grill Shack** and **Ember & Oak** both have excellent kids menus—these are Qwikker Picks for a reason!"
+
+🚨🚨🚨 CLOSING COPY RULES (LEGAL/BRAND PROTECTION!): 🚨🚨🚨
+- ONLY say "These are Qwikker Picks for a reason!" if EVERY SINGLE business you mentioned is [TIER: qwikker_picks]
+- If you mention ANY business that is NOT [TIER: qwikker_picks], you MUST use neutral copy like "Want to see them on Atlas?" or "Need more details?"
+- NEVER call a [TIER: featured] or [TIER: free_trial] or [TIER: starter] business a "Qwikker Pick" - that's FALSE ADVERTISING!
+- Example: If you mention David's [TIER: qwikker_picks] + Ember [TIER: featured] + Julie's [TIER: featured], DO NOT say "Qwikker Picks for a reason" - ONLY David's is a Pick!
+
 - NEVER drip-feed Spotlight businesses one at a time across multiple messages
 - If user asks "any other places?", show the NEXT TIER (Featured), not more Spotlight businesses you forgot to mention!
 - NEVER include debug messages like "⚠️ DEBUG:" or "eventCards array" in your responses—users should never see technical information
@@ -245,7 +304,7 @@ ${state.currentBusiness ?
   'Help them discover what they want, then dive into specifics.'
 }
 
-AVAILABLE BUSINESSES:
+AVAILABLE BUSINESSES (sorted by tier - qwikker_picks at TOP):
 ${businessContext || 'No specific business data available - suggest they check the Discover page.'}
 
 ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
@@ -321,34 +380,51 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         }
         
         if (targetBusinessIds.length > 0) {
+          // ✅ Use chat_active_deals view to enforce business eligibility + offer validity
+          // This prevents expired offers and offers from ineligible businesses (trial expired, auto_imported, etc.)
           const { data: offers, error } = await supabase
-            .from('business_offers')
+            .from('chat_active_deals')
             .select(`
-              id,
+              offer_id,
               offer_name,
               offer_value,
               business_id,
-              business_profiles!inner(business_name, city)
+              business_name,
+              city,
+              effective_tier,
+              tier_priority,
+              valid_until
             `)
             .in('business_id', targetBusinessIds)
-            .eq('status', 'approved')
-            .eq('business_profiles.city', city)
+            .eq('city', city)
+            .order('tier_priority', { ascending: true }) // Spotlight first, then featured/trial, then starter
+            .order('offer_updated_at', { ascending: false }) // Within tier, newest first
             .limit(10)
           
           if (!error && offers && offers.length > 0) {
             walletActions = offers.map(offer => ({
               type: 'add_to_wallet',
-              offerId: offer.id,
+              offerId: offer.offer_id,
               offerName: `${offer.offer_name} - ${offer.offer_value}`,
-              businessName: offer.business_profiles.business_name,
+              businessName: offer.business_name,
               businessId: offer.business_id
             }))
             
-            console.log(`🎫 Found ${walletActions.length} wallet actions`)
+            console.log(`🎫 Found ${walletActions.length} wallet actions (all from eligible businesses, all valid)`)
+            console.log(`🎫 Tier distribution: ${offers.map(o => `${o.business_name}(${o.effective_tier})`).join(', ')}`)
+            
+            // ✅ DEV LOG: Show each deal with expiry date (Jan 20 verification)
+            if (process.env.NODE_ENV === 'development') {
+              console.log('📋 Current Deals (Jan 20 verification):')
+              offers.forEach(o => {
+                const expiryDate = o.valid_until ? new Date(o.valid_until).toLocaleDateString() : 'No expiry'
+                console.log(`  - ${o.business_name} | ${o.offer_name} | ends ${expiryDate}`)
+              })
+            }
           } else if (error) {
             console.error('❌ Error fetching offers:', error)
           } else {
-            console.log('ℹ️ No offers found for these businesses')
+            console.log('ℹ️ No active, valid offers found for these eligible businesses')
           }
         }
       } catch (error) {
@@ -529,18 +605,20 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       const uniqueBusinessIds = Array.from(bestHitByBusiness.keys())
       hasBusinessResults = uniqueBusinessIds.length > 0
       
-      // STEP 2: Fetch canonical business data from business_profiles_ai_eligible
+      // STEP 2: Fetch canonical business data from business_profiles_chat_eligible
       // (Don't trust KB rows for tier/rating/categories/images)
-      // CRITICAL: Use AI-safe view to prevent free_tier leakage
+      // CRITICAL: Use subscription-based view to prevent free listing leakage
+      // This view computes effective_tier from subscriptions, NOT from stale business_tier column
       const { data: businesses } = await supabase
-        .from('business_profiles_ai_eligible')
+        .from('business_profiles_chat_eligible')
         .select(`
           id,
           business_name,
           business_tagline,
           system_category,
           display_category,
-          business_tier,
+          effective_tier,
+          tier_priority,
           business_address,
           business_town,
           logo,
@@ -554,12 +632,9 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       const businessById = new Map((businesses || []).map(b => [b.id, b]))
       
       // STEP 3: Tier priority and exclusions
-      // Now using centralized helpers from lib/atlas/eligibility.ts
-      
-      // CRITICAL: null tier → free_tier (EXCLUDED by default for safety)
-      // If tier is unknown, don't show in AI (conservative approach)
-      // Use centralized helpers from lib/atlas/eligibility.ts
-      const normalizeTier = (tier: string | null | undefined) => tier ?? 'free_tier'
+      // ✅ NO LONGER NEEDED: The view business_profiles_chat_eligible already filters out ineligible businesses
+      // effective_tier is computed from subscriptions and is NEVER null for eligible businesses
+      // If a business appears in this view, it's safe to show in chat
       
       // STEP 4: UI Mode classifier (deterministic carousel gating)
       const msg = userMessage.toLowerCase()
@@ -583,14 +658,15 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       if (shouldAttachCarousel && uniqueBusinessIds.length > 0) {
         const candidates = uniqueBusinessIds
           .map(id => businessById.get(id))
-          .filter(Boolean)
+          .filter(Boolean) // Remove nulls
           .map(b => ({
             id: b!.id,
             business_name: b!.business_name,
             business_tagline: b!.business_tagline || undefined,
             system_category: b!.system_category || undefined,
             display_category: b!.display_category || b!.system_category || undefined,
-            business_tier: normalizeTier(b!.business_tier),
+            business_tier: b!.effective_tier || 'starter', // ✅ Use effective_tier from subscription-based view
+            tier_priority: b!.tier_priority || 999, // ✅ Use computed tier_priority from view
             business_address: b!.business_address || undefined,
             business_town: b!.business_town || city,
             logo: b!.logo || undefined,
@@ -600,13 +676,12 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             rating: (b!.rating && b!.rating > 0) ? b!.rating : undefined,
             offers_count: businessOfferCounts[b!.id] || 0
           }))
-          .filter(b => !isFreeTier(b.business_tier)) // EXCLUDE free_tier always (centralized helper)
+        // ✅ NO FILTER NEEDED: business_profiles_chat_eligible view already excludes free tier/unclaimed/expired!
         
-        // Tier sort + rating/offers tie-breaks (using centralized getTierPriority)
+        // Sort by tier_priority from view (spotlight=1, featured/trial=2, starter=3)
+        // Then by rating, then by offers_count
         candidates.sort((a, b) => {
-          const ap = getTierPriority(a.business_tier)
-          const bp = getTierPriority(b.business_tier)
-          if (ap !== bp) return ap - bp
+          if (a.tier_priority !== b.tier_priority) return a.tier_priority - b.tier_priority
           const ar = a.rating ?? 0
           const br = b.rating ?? 0
           if (br !== ar) return br - ar
