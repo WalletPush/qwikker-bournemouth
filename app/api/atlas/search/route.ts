@@ -126,12 +126,14 @@ export async function GET(request: NextRequest) {
       })
     )
     
+    let filteredBusinesses = businesses || []
+    
     if (leakedBusinesses.length > 0) {
       console.error('❌ CRITICAL: free_tier or invalid tier leaked into Atlas search:', 
         leakedBusinesses.map(b => ({ id: b.id, name: b.business_name, tier: b.business_tier }))
       )
       // Filter them out as a safety net
-      businesses = businesses!.filter(b => isAtlasEligible({
+      filteredBusinesses = filteredBusinesses.filter(b => isAtlasEligible({
         business_tier: b.business_tier,
         latitude: b.latitude,
         longitude: b.longitude
@@ -139,12 +141,12 @@ export async function GET(request: NextRequest) {
     }
     
     if (isDev) {
-      console.debug(`[Atlas Search] city=${city} query="${query}" results=${businesses?.length || 0}`)
+      console.debug(`[Atlas Search] city=${city} query="${query}" results=${filteredBusinesses.length}`)
     }
     
     return NextResponse.json({
       ok: true,
-      results: businesses || [],
+      results: filteredBusinesses,
       meta: {
         city,
         query,
