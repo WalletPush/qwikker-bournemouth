@@ -141,12 +141,97 @@ export default function CreateFranchisePage() {
                 onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                 className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00D083]"
               >
-                <option value="GB">🇬🇧 United Kingdom</option>
-                <option value="US">🇺🇸 United States</option>
-                <option value="CA">🇨🇦 Canada</option>
-                <option value="AU">🇦🇺 Australia</option>
-                <option value="NZ">🇳🇿 New Zealand</option>
-                <option value="IE">🇮🇪 Ireland</option>
+                {/* English-Speaking Countries */}
+                <optgroup label="🌍 English-Speaking">
+                  <option value="GB">🇬🇧 United Kingdom</option>
+                  <option value="US">🇺🇸 United States</option>
+                  <option value="CA">🇨🇦 Canada</option>
+                  <option value="AU">🇦🇺 Australia</option>
+                  <option value="NZ">🇳🇿 New Zealand</option>
+                  <option value="IE">🇮🇪 Ireland</option>
+                  <option value="ZA">🇿🇦 South Africa</option>
+                  <option value="SG">🇸🇬 Singapore</option>
+                </optgroup>
+                
+                {/* Western Europe */}
+                <optgroup label="🇪🇺 Western Europe">
+                  <option value="FR">🇫🇷 France</option>
+                  <option value="DE">🇩🇪 Germany</option>
+                  <option value="ES">🇪🇸 Spain</option>
+                  <option value="IT">🇮🇹 Italy</option>
+                  <option value="PT">🇵🇹 Portugal</option>
+                  <option value="NL">🇳🇱 Netherlands</option>
+                  <option value="BE">🇧🇪 Belgium</option>
+                  <option value="CH">🇨🇭 Switzerland</option>
+                  <option value="AT">🇦🇹 Austria</option>
+                  <option value="LU">🇱🇺 Luxembourg</option>
+                </optgroup>
+                
+                {/* Northern Europe */}
+                <optgroup label="❄️ Northern Europe">
+                  <option value="SE">🇸🇪 Sweden</option>
+                  <option value="NO">🇳🇴 Norway</option>
+                  <option value="DK">🇩🇰 Denmark</option>
+                  <option value="FI">🇫🇮 Finland</option>
+                  <option value="IS">🇮🇸 Iceland</option>
+                </optgroup>
+                
+                {/* Eastern Europe */}
+                <optgroup label="🏛️ Eastern Europe">
+                  <option value="PL">🇵🇱 Poland</option>
+                  <option value="CZ">🇨🇿 Czech Republic</option>
+                  <option value="HU">🇭🇺 Hungary</option>
+                  <option value="RO">🇷🇴 Romania</option>
+                  <option value="BG">🇧🇬 Bulgaria</option>
+                  <option value="HR">🇭🇷 Croatia</option>
+                  <option value="SI">🇸🇮 Slovenia</option>
+                  <option value="SK">🇸🇰 Slovakia</option>
+                  <option value="EE">🇪🇪 Estonia</option>
+                  <option value="LV">🇱🇻 Latvia</option>
+                  <option value="LT">🇱🇹 Lithuania</option>
+                </optgroup>
+                
+                {/* Asia-Pacific */}
+                <optgroup label="🌏 Asia-Pacific">
+                  <option value="JP">🇯🇵 Japan</option>
+                  <option value="KR">🇰🇷 South Korea</option>
+                  <option value="CN">🇨🇳 China</option>
+                  <option value="HK">🇭🇰 Hong Kong</option>
+                  <option value="TW">🇹🇼 Taiwan</option>
+                  <option value="IN">🇮🇳 India</option>
+                  <option value="TH">🇹🇭 Thailand</option>
+                  <option value="MY">🇲🇾 Malaysia</option>
+                  <option value="ID">🇮🇩 Indonesia</option>
+                  <option value="PH">🇵🇭 Philippines</option>
+                  <option value="VN">🇻🇳 Vietnam</option>
+                </optgroup>
+                
+                {/* Middle East */}
+                <optgroup label="🕌 Middle East">
+                  <option value="AE">🇦🇪 UAE</option>
+                  <option value="SA">🇸🇦 Saudi Arabia</option>
+                  <option value="QA">🇶🇦 Qatar</option>
+                  <option value="IL">🇮🇱 Israel</option>
+                  <option value="TR">🇹🇷 Turkey</option>
+                </optgroup>
+                
+                {/* Americas */}
+                <optgroup label="🌎 Americas">
+                  <option value="MX">🇲🇽 Mexico</option>
+                  <option value="BR">🇧🇷 Brazil</option>
+                  <option value="AR">🇦🇷 Argentina</option>
+                  <option value="CL">🇨🇱 Chile</option>
+                  <option value="CO">🇨🇴 Colombia</option>
+                  <option value="PE">🇵🇪 Peru</option>
+                </optgroup>
+                
+                {/* Africa */}
+                <optgroup label="🦁 Africa">
+                  <option value="EG">🇪🇬 Egypt</option>
+                  <option value="KE">🇰🇪 Kenya</option>
+                  <option value="NG">🇳🇬 Nigeria</option>
+                  <option value="MA">🇲🇦 Morocco</option>
+                </optgroup>
               </select>
             </div>
             
@@ -160,13 +245,91 @@ export default function CreateFranchisePage() {
                 onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
                 className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00D083]"
               >
-                <option value="Europe/London">Europe/London (GMT)</option>
-                <option value="America/New_York">America/New_York (EST)</option>
-                <option value="America/Chicago">America/Chicago (CST)</option>
-                <option value="America/Denver">America/Denver (MST)</option>
-                <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
-                <option value="America/Toronto">America/Toronto</option>
-                <option value="Australia/Sydney">Australia/Sydney</option>
+                {/* Europe */}
+                <optgroup label="🇪🇺 Europe">
+                  <option value="Europe/London">Europe/London (GMT+0)</option>
+                  <option value="Europe/Dublin">Europe/Dublin (GMT+0)</option>
+                  <option value="Europe/Paris">Europe/Paris (GMT+1)</option>
+                  <option value="Europe/Berlin">Europe/Berlin (GMT+1)</option>
+                  <option value="Europe/Rome">Europe/Rome (GMT+1)</option>
+                  <option value="Europe/Madrid">Europe/Madrid (GMT+1)</option>
+                  <option value="Europe/Amsterdam">Europe/Amsterdam (GMT+1)</option>
+                  <option value="Europe/Brussels">Europe/Brussels (GMT+1)</option>
+                  <option value="Europe/Zurich">Europe/Zurich (GMT+1)</option>
+                  <option value="Europe/Vienna">Europe/Vienna (GMT+1)</option>
+                  <option value="Europe/Stockholm">Europe/Stockholm (GMT+1)</option>
+                  <option value="Europe/Copenhagen">Europe/Copenhagen (GMT+1)</option>
+                  <option value="Europe/Oslo">Europe/Oslo (GMT+1)</option>
+                  <option value="Europe/Helsinki">Europe/Helsinki (GMT+2)</option>
+                  <option value="Europe/Warsaw">Europe/Warsaw (GMT+1)</option>
+                  <option value="Europe/Prague">Europe/Prague (GMT+1)</option>
+                  <option value="Europe/Budapest">Europe/Budapest (GMT+1)</option>
+                  <option value="Europe/Bucharest">Europe/Bucharest (GMT+2)</option>
+                  <option value="Europe/Athens">Europe/Athens (GMT+2)</option>
+                  <option value="Europe/Istanbul">Europe/Istanbul (GMT+3)</option>
+                </optgroup>
+                
+                {/* North America */}
+                <optgroup label="🇺🇸 North America">
+                  <option value="America/New_York">America/New_York (EST, GMT-5)</option>
+                  <option value="America/Chicago">America/Chicago (CST, GMT-6)</option>
+                  <option value="America/Denver">America/Denver (MST, GMT-7)</option>
+                  <option value="America/Phoenix">America/Phoenix (MST, no DST)</option>
+                  <option value="America/Los_Angeles">America/Los_Angeles (PST, GMT-8)</option>
+                  <option value="America/Anchorage">America/Anchorage (AKST, GMT-9)</option>
+                  <option value="Pacific/Honolulu">Pacific/Honolulu (HST, GMT-10)</option>
+                  <option value="America/Toronto">America/Toronto (EST, GMT-5)</option>
+                  <option value="America/Vancouver">America/Vancouver (PST, GMT-8)</option>
+                  <option value="America/Edmonton">America/Edmonton (MST, GMT-7)</option>
+                  <option value="America/Halifax">America/Halifax (AST, GMT-4)</option>
+                  <option value="America/Mexico_City">America/Mexico_City (CST, GMT-6)</option>
+                </optgroup>
+                
+                {/* South America */}
+                <optgroup label="🌎 South America">
+                  <option value="America/Sao_Paulo">America/Sao_Paulo (BRT, GMT-3)</option>
+                  <option value="America/Buenos_Aires">America/Buenos_Aires (ART, GMT-3)</option>
+                  <option value="America/Santiago">America/Santiago (CLT, GMT-3)</option>
+                  <option value="America/Bogota">America/Bogota (COT, GMT-5)</option>
+                  <option value="America/Lima">America/Lima (PET, GMT-5)</option>
+                </optgroup>
+                
+                {/* Asia-Pacific */}
+                <optgroup label="🌏 Asia-Pacific">
+                  <option value="Asia/Tokyo">Asia/Tokyo (JST, GMT+9)</option>
+                  <option value="Asia/Seoul">Asia/Seoul (KST, GMT+9)</option>
+                  <option value="Asia/Shanghai">Asia/Shanghai (CST, GMT+8)</option>
+                  <option value="Asia/Hong_Kong">Asia/Hong_Kong (HKT, GMT+8)</option>
+                  <option value="Asia/Taipei">Asia/Taipei (CST, GMT+8)</option>
+                  <option value="Asia/Singapore">Asia/Singapore (SGT, GMT+8)</option>
+                  <option value="Asia/Bangkok">Asia/Bangkok (ICT, GMT+7)</option>
+                  <option value="Asia/Jakarta">Asia/Jakarta (WIB, GMT+7)</option>
+                  <option value="Asia/Manila">Asia/Manila (PHT, GMT+8)</option>
+                  <option value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (MYT, GMT+8)</option>
+                  <option value="Asia/Kolkata">Asia/Kolkata (IST, GMT+5:30)</option>
+                  <option value="Asia/Dubai">Asia/Dubai (GST, GMT+4)</option>
+                  <option value="Asia/Riyadh">Asia/Riyadh (AST, GMT+3)</option>
+                  <option value="Asia/Jerusalem">Asia/Jerusalem (IST, GMT+2)</option>
+                </optgroup>
+                
+                {/* Oceania */}
+                <optgroup label="🦘 Oceania">
+                  <option value="Australia/Sydney">Australia/Sydney (AEDT, GMT+11)</option>
+                  <option value="Australia/Melbourne">Australia/Melbourne (AEDT, GMT+11)</option>
+                  <option value="Australia/Brisbane">Australia/Brisbane (AEST, GMT+10)</option>
+                  <option value="Australia/Perth">Australia/Perth (AWST, GMT+8)</option>
+                  <option value="Australia/Adelaide">Australia/Adelaide (ACDT, GMT+10:30)</option>
+                  <option value="Pacific/Auckland">Pacific/Auckland (NZDT, GMT+13)</option>
+                </optgroup>
+                
+                {/* Africa */}
+                <optgroup label="🦁 Africa">
+                  <option value="Africa/Cairo">Africa/Cairo (EET, GMT+2)</option>
+                  <option value="Africa/Johannesburg">Africa/Johannesburg (SAST, GMT+2)</option>
+                  <option value="Africa/Nairobi">Africa/Nairobi (EAT, GMT+3)</option>
+                  <option value="Africa/Lagos">Africa/Lagos (WAT, GMT+1)</option>
+                  <option value="Africa/Casablanca">Africa/Casablanca (WET, GMT+1)</option>
+                </optgroup>
               </select>
             </div>
           </div>
