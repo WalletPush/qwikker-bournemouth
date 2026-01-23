@@ -4,19 +4,22 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify HQ admin (session-based)
     const auth = await requireHQAdmin()
     if (!auth.ok) return auth.response
 
+    // Await params (Next.js 15+ requirement)
+    const { id } = await params
+
     // Use service role for reads (HQ operates above RLS)
     const supabase = createServiceRoleClient()
     const { data: franchise, error: franchiseError } = await supabase
       .from('franchise_crm_configs')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
     
     if (franchiseError || !franchise) {
@@ -109,12 +112,15 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify HQ admin (session-based)
     const auth = await requireHQAdmin()
     if (!auth.ok) return auth.response
+
+    // Await params (Next.js 15+ requirement)
+    const { id } = await params
 
     const body = await request.json()
     const { status } = body
@@ -130,7 +136,7 @@ export async function PATCH(
     const { data: franchise, error: updateError } = await adminClient
       .from('franchise_crm_configs')
       .update({ status })
-      .eq('id', params.id)
+      .eq('id', id)
       .select('city')
       .single()
     
@@ -146,7 +152,7 @@ export async function PATCH(
       actor_type: 'hq_admin',
       action: 'franchise_status_changed',
       resource_type: 'franchise',
-      resource_id: params.id,
+      resource_id: id,
       city: franchise.city,
       metadata: { new_status: status }
     })
@@ -164,12 +170,15 @@ export async function PATCH(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify HQ admin (session-based)
     const auth = await requireHQAdmin()
     if (!auth.ok) return auth.response
+
+    // Await params (Next.js 15+ requirement)
+    const { id } = await params
 
     const body = await request.json()
     
@@ -194,7 +203,7 @@ export async function PUT(
         import_search_radius_m: body.import_search_radius_m,
         import_max_radius_m: body.import_max_radius_m
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select('city')
       .single()
     
@@ -210,7 +219,7 @@ export async function PUT(
       actor_type: 'hq_admin',
       action: 'atlas_config_updated',
       resource_type: 'franchise',
-      resource_id: params.id,
+      resource_id: id,
       city: franchise.city,
       metadata: { atlas_enabled: body.atlas_enabled }
     })

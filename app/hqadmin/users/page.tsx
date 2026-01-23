@@ -220,7 +220,7 @@ export default function UsersPage() {
                         {admin.city}
                       </td>
                       <td className="p-3 text-xs text-neutral-400 font-mono">
-                        {admin.user_id.slice(0, 8)}...
+                        {admin.user_id ? admin.user_id.slice(0, 8) + '...' : '—'}
                       </td>
                       <td className="p-3">
                         <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-neutral-800 text-neutral-300">

@@ -29,12 +29,94 @@ export default function CreateFranchisePage() {
     city_lng: null as number | null
   })
 
+  // Country to default timezone mapping
+  const countryToTimezone: Record<string, string> = {
+    // English-Speaking
+    'GB': 'Europe/London',
+    'US': 'America/New_York',
+    'CA': 'America/Toronto',
+    'AU': 'Australia/Sydney',
+    'NZ': 'Pacific/Auckland',
+    'IE': 'Europe/Dublin',
+    'ZA': 'Africa/Johannesburg',
+    'SG': 'Asia/Singapore',
+    // Western Europe
+    'FR': 'Europe/Paris',
+    'DE': 'Europe/Berlin',
+    'ES': 'Europe/Madrid',
+    'IT': 'Europe/Rome',
+    'PT': 'Europe/Lisbon',
+    'NL': 'Europe/Amsterdam',
+    'BE': 'Europe/Brussels',
+    'CH': 'Europe/Zurich',
+    'AT': 'Europe/Vienna',
+    'LU': 'Europe/Luxembourg',
+    // Northern Europe
+    'SE': 'Europe/Stockholm',
+    'NO': 'Europe/Oslo',
+    'DK': 'Europe/Copenhagen',
+    'FI': 'Europe/Helsinki',
+    'IS': 'Atlantic/Reykjavik',
+    // Eastern Europe
+    'PL': 'Europe/Warsaw',
+    'CZ': 'Europe/Prague',
+    'HU': 'Europe/Budapest',
+    'RO': 'Europe/Bucharest',
+    'BG': 'Europe/Sofia',
+    'HR': 'Europe/Zagreb',
+    'SI': 'Europe/Ljubljana',
+    'SK': 'Europe/Bratislava',
+    'EE': 'Europe/Tallinn',
+    'LV': 'Europe/Riga',
+    'LT': 'Europe/Vilnius',
+    // Asia-Pacific
+    'JP': 'Asia/Tokyo',
+    'KR': 'Asia/Seoul',
+    'CN': 'Asia/Shanghai',
+    'HK': 'Asia/Hong_Kong',
+    'TW': 'Asia/Taipei',
+    'IN': 'Asia/Kolkata',
+    'TH': 'Asia/Bangkok',
+    'MY': 'Asia/Kuala_Lumpur',
+    'ID': 'Asia/Jakarta',
+    'PH': 'Asia/Manila',
+    'VN': 'Asia/Ho_Chi_Minh',
+    // Middle East
+    'AE': 'Asia/Dubai',
+    'SA': 'Asia/Riyadh',
+    'QA': 'Asia/Qatar',
+    'IL': 'Asia/Jerusalem',
+    'TR': 'Europe/Istanbul',
+    // Americas
+    'MX': 'America/Mexico_City',
+    'BR': 'America/Sao_Paulo',
+    'AR': 'America/Buenos_Aires',
+    'CL': 'America/Santiago',
+    'CO': 'America/Bogota',
+    'PE': 'America/Lima',
+    // Africa
+    'EG': 'Africa/Cairo',
+    'KE': 'Africa/Nairobi',
+    'NG': 'Africa/Lagos',
+    'MA': 'Africa/Casablanca'
+  }
+
   // Auto-generate subdomain from city name
   const handleCityNameChange = (value: string) => {
     setFormData(prev => ({
       ...prev,
       city_name: value,
       subdomain: value.toLowerCase().replace(/[^a-z0-9]/g, '')
+    }))
+  }
+
+  // Auto-select timezone when country changes
+  const handleCountryChange = (countryCode: string) => {
+    const defaultTimezone = countryToTimezone[countryCode] || 'Europe/London'
+    setFormData(prev => ({
+      ...prev,
+      country: countryCode,
+      timezone: defaultTimezone
     }))
   }
 
@@ -138,7 +220,7 @@ export default function CreateFranchisePage() {
               <select
                 required
                 value={formData.country}
-                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                onChange={(e) => handleCountryChange(e.target.value)}
                 className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00D083]"
               >
                 {/* English-Speaking Countries */}
@@ -249,21 +331,31 @@ export default function CreateFranchisePage() {
                 <optgroup label="🇪🇺 Europe">
                   <option value="Europe/London">Europe/London (GMT+0)</option>
                   <option value="Europe/Dublin">Europe/Dublin (GMT+0)</option>
+                  <option value="Europe/Lisbon">Europe/Lisbon (GMT+0)</option>
+                  <option value="Atlantic/Reykjavik">Atlantic/Reykjavik (GMT+0)</option>
                   <option value="Europe/Paris">Europe/Paris (GMT+1)</option>
                   <option value="Europe/Berlin">Europe/Berlin (GMT+1)</option>
                   <option value="Europe/Rome">Europe/Rome (GMT+1)</option>
                   <option value="Europe/Madrid">Europe/Madrid (GMT+1)</option>
                   <option value="Europe/Amsterdam">Europe/Amsterdam (GMT+1)</option>
                   <option value="Europe/Brussels">Europe/Brussels (GMT+1)</option>
+                  <option value="Europe/Luxembourg">Europe/Luxembourg (GMT+1)</option>
                   <option value="Europe/Zurich">Europe/Zurich (GMT+1)</option>
                   <option value="Europe/Vienna">Europe/Vienna (GMT+1)</option>
                   <option value="Europe/Stockholm">Europe/Stockholm (GMT+1)</option>
                   <option value="Europe/Copenhagen">Europe/Copenhagen (GMT+1)</option>
                   <option value="Europe/Oslo">Europe/Oslo (GMT+1)</option>
-                  <option value="Europe/Helsinki">Europe/Helsinki (GMT+2)</option>
                   <option value="Europe/Warsaw">Europe/Warsaw (GMT+1)</option>
                   <option value="Europe/Prague">Europe/Prague (GMT+1)</option>
                   <option value="Europe/Budapest">Europe/Budapest (GMT+1)</option>
+                  <option value="Europe/Zagreb">Europe/Zagreb (GMT+1)</option>
+                  <option value="Europe/Ljubljana">Europe/Ljubljana (GMT+1)</option>
+                  <option value="Europe/Bratislava">Europe/Bratislava (GMT+1)</option>
+                  <option value="Europe/Sofia">Europe/Sofia (GMT+2)</option>
+                  <option value="Europe/Helsinki">Europe/Helsinki (GMT+2)</option>
+                  <option value="Europe/Tallinn">Europe/Tallinn (GMT+2)</option>
+                  <option value="Europe/Riga">Europe/Riga (GMT+2)</option>
+                  <option value="Europe/Vilnius">Europe/Vilnius (GMT+2)</option>
                   <option value="Europe/Bucharest">Europe/Bucharest (GMT+2)</option>
                   <option value="Europe/Athens">Europe/Athens (GMT+2)</option>
                   <option value="Europe/Istanbul">Europe/Istanbul (GMT+3)</option>
@@ -302,12 +394,14 @@ export default function CreateFranchisePage() {
                   <option value="Asia/Hong_Kong">Asia/Hong_Kong (HKT, GMT+8)</option>
                   <option value="Asia/Taipei">Asia/Taipei (CST, GMT+8)</option>
                   <option value="Asia/Singapore">Asia/Singapore (SGT, GMT+8)</option>
+                  <option value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (MYT, GMT+8)</option>
+                  <option value="Asia/Manila">Asia/Manila (PHT, GMT+8)</option>
                   <option value="Asia/Bangkok">Asia/Bangkok (ICT, GMT+7)</option>
                   <option value="Asia/Jakarta">Asia/Jakarta (WIB, GMT+7)</option>
-                  <option value="Asia/Manila">Asia/Manila (PHT, GMT+8)</option>
-                  <option value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (MYT, GMT+8)</option>
+                  <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (ICT, GMT+7)</option>
                   <option value="Asia/Kolkata">Asia/Kolkata (IST, GMT+5:30)</option>
                   <option value="Asia/Dubai">Asia/Dubai (GST, GMT+4)</option>
+                  <option value="Asia/Qatar">Asia/Qatar (AST, GMT+3)</option>
                   <option value="Asia/Riyadh">Asia/Riyadh (AST, GMT+3)</option>
                   <option value="Asia/Jerusalem">Asia/Jerusalem (IST, GMT+2)</option>
                 </optgroup>

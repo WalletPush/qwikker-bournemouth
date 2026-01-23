@@ -157,14 +157,6 @@ export default function FranchiseAdminLogin({ city, cityDisplayName }: Franchise
               )}
             </button>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-slate-700">
-            <div className="text-center text-xs text-slate-400 space-y-1">
-              <p className="font-medium text-slate-300">Testing Credentials:</p>
-              <p><strong>Username:</strong> {city}</p>
-              <p><strong>Password:</strong> Admin123</p>
-            </div>
-          </div>
         </div>
         
         {/* Footer */}

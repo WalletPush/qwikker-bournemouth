@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
     // Temporarily disable TypeScript errors during builds - too many errors to fix at once
     ignoreBuildErrors: true,
   },
+  // Reduce verbose logging in development
+  logging: {
+    fetches: {
+      fullUrl: false, // Don't log full URLs
+    },
+  },
   // Removed compiler config to avoid styled-jsx issues
   images: {
     remotePatterns: [

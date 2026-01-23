@@ -1,25 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
-import { validateWebhookSignature } from '@/lib/utils/webhook-security'
 import { withRateLimit, RATE_LIMIT_PRESETS } from '@/lib/utils/rate-limiting'
 
 /**
  * SECURE USER CREATION WEBHOOK
  * 
  * Security improvements:
- * 1. Webhook signature validation
- * 2. Dynamic city detection (no hardcoded 'bournemouth')
- * 3. Franchise validation
- * 4. Rate limiting considerations
+ * 1. Webhook secret validation (simple shared secret, GHL-compatible)
+ * 2. Dynamic city detection (no hardcoded cities)
+ * 3. Database-driven franchise validation
+ * 4. Rate limiting
+ * 5. Status-aware (supports active and pending_setup franchises)
  */
-
-// Using imported validateWebhookSignature from lib/utils/webhook-security.ts
 
 /**
  * Detect franchise city from webhook data or request
  */
-function detectCityFromWebhookData(data: Record<string, unknown>): string | null {
+function detectCityFromWebhookData(data: any): string | null {
   // Try to get city from webhook data
   const cityFromData = data.customData?.franchise_city || 
                       data.franchise_city || 
@@ -33,11 +31,13 @@ function detectCityFromWebhookData(data: Record<string, unknown>): string | null
   
   // Try to detect from domain/subdomain in webhook data
   const domain = data.customData?.domain || data.domain
-  if (domain) {
-    if (domain.includes('calgary')) return 'calgary'
-    if (domain.includes('london')) return 'london'
-    if (domain.includes('paris')) return 'paris'
-    if (domain.includes('bournemouth')) return 'bournemouth'
+  if (domain && typeof domain === 'string') {
+    // Extract subdomain dynamically (e.g., "calgary.qwikker.com" → "calgary")
+    const subdomain = domain.split('.')[0]
+    if (subdomain && subdomain !== 'www' && subdomain !== 'qwikker') {
+      console.log(`🏙️ City detected from domain: ${subdomain}`)
+      return subdomain.toLowerCase()
+    }
   }
   
   return null
@@ -76,29 +76,26 @@ export async function POST(request: NextRequest) {
     const body = await request.text()
     const data = JSON.parse(body)
     
-    // SECURITY: Validate webhook signature with proper HMAC
-    const signature = request.headers.get('x-webhook-signature') || 
-                     request.headers.get('x-ghl-signature') ||
-                     request.headers.get('authorization')
-    
+    // SECURITY: Validate webhook secret (GHL-compatible shared secret header)
+    const providedSecret =
+      request.headers.get('x-qwikker-secret') ||
+      request.headers.get('x-webhook-secret') // optional fallback if you prefer this name
+
     const webhookSecret = process.env.GHL_WEBHOOK_SECRET
-    
+
     if (!webhookSecret) {
       console.error('❌ Webhook secret not configured')
       return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 })
     }
-    
-    if (!signature) {
-      console.error('❌ No webhook signature provided')
-      return NextResponse.json({ error: 'Unauthorized: Missing signature' }, { status: 401 })
+
+    if (!providedSecret || providedSecret !== webhookSecret) {
+      console.error('❌ Invalid webhook secret', {
+        hasProvidedSecret: !!providedSecret,
+      })
+      return NextResponse.json({ error: 'Unauthorized: Invalid secret' }, { status: 401 })
     }
-    
-    if (!validateWebhookSignature(body, signature, webhookSecret)) {
-      console.error('❌ Invalid webhook signature')
-      return NextResponse.json({ error: 'Unauthorized: Invalid signature' }, { status: 401 })
-    }
-    
-    console.log('✅ Webhook signature validated with HMAC')
+
+    console.log('✅ Webhook secret validated')
     console.log('Data received:', JSON.stringify(data, null, 2))
     
     // Extract basic data
@@ -135,16 +132,30 @@ export async function POST(request: NextRequest) {
     
     console.log(`🏙️ Final city for user creation: ${city}`)
     
-    // SECURITY: Validate that the detected city is a valid franchise
-    const validCities = ['bournemouth', 'calgary', 'london', 'paris']
-    if (!validCities.includes(city)) {
-      console.error(`❌ Invalid franchise city: ${city}`)
+    const supabase = createServiceRoleClient()
+    
+    // SECURITY: Validate that the detected city is a valid, active franchise
+    const { data: franchise, error: franchiseError } = await supabase
+      .from('franchise_crm_configs')
+      .select('city, status')
+      .eq('city', city)
+      .single()
+
+    if (franchiseError || !franchise) {
+      console.error(`❌ Franchise not found: ${city}`)
       return NextResponse.json({ 
-        error: `Invalid franchise city: ${city}` 
+        error: `Unknown franchise: ${city}. Please contact support.` 
       }, { status: 400 })
     }
-    
-    const supabase = createServiceRoleClient()
+
+    if (franchise.status !== 'active' && franchise.status !== 'pending_setup') {
+      console.error(`❌ Franchise inactive: ${city} (status: ${franchise.status})`)
+      return NextResponse.json({ 
+        error: `Franchise ${city} is not currently accepting new users (status: ${franchise.status})` 
+      }, { status: 403 })
+    }
+
+    console.log(`✅ Franchise validated: ${city} (status: ${franchise.status})`)
     
     // Check if user already exists
     const { data: existingUser } = await supabase
@@ -196,7 +207,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Webhook error:', error)
     return NextResponse.json({ 
-      error: error.message || 'Internal server error' 
+      error: error instanceof Error ? error.message : 'Internal server error' 
     }, { status: 500 })
   }
 }
