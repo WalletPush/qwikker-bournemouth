@@ -6,7 +6,6 @@ import { ImageCarousel } from '@/components/ui/image-carousel'
 import { BusinessCardImage } from '@/components/ui/business-card-image'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
-import { mockBusinesses, mockOffers, mockSecretMenus, mockClaimedOffers } from '@/lib/mock-data/user-mock-data'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import AddToWalletButton from '@/components/ui/add-to-wallet-button'
@@ -24,7 +23,7 @@ interface UserBusinessDetailPageProps {
   } | null
 }
 
-export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, walletPassId, trackingData }: UserBusinessDetailPageProps) {
+export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, trackingData }: UserBusinessDetailPageProps) {
   
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
@@ -60,9 +59,6 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
       const saved = localStorage.getItem(`qwikker-claimed-${userId}`)
       if (saved) {
         setClaimedOffers(new Set(JSON.parse(saved)))
-      } else {
-        // For development, start with mock data, but real users start fresh
-        setClaimedOffers(new Set(mockClaimedOffers.map(co => co.offerId)))
       }
     }
   }, [walletPassId])
@@ -179,7 +175,7 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
 
   // Get related data - Use real business offers from transformed data
   const businessOffers = business.offers || []
-  const secretMenu = mockSecretMenus.find(menu => menu.businessId === business.id)
+  const secretMenu = business.secretMenu || null // Real secret menus come from business data
   
   const tabs = [
     { id: 'overview', label: 'Overview', count: null },
@@ -530,7 +526,6 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                   <div className="space-y-3">
                     {businessOffers.map((offer) => {
                       const isClaimed = claimedOffers.has(offer.id)
-                      const claimedOfferData = mockClaimedOffers.find(co => co.offerId === offer.id)
                       
                       return (
                         <div key={offer.id} className="bg-slate-700/50 rounded-lg p-4">
@@ -557,15 +552,7 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                               <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                               </svg>
-                              <span className="text-green-400 text-sm font-medium">
-                                {claimedOfferData?.status === 'redeemed' ? 'Redeemed' : 
-                                 claimedOfferData?.status === 'wallet_added' ? 'In Your Wallet' : 'Claimed'}
-                              </span>
-                              {claimedOfferData?.redemptionCode && (
-                                <span className="text-xs text-slate-400 ml-auto">
-                                  Code: {claimedOfferData.redemptionCode}
-                                </span>
-                              )}
+                              <span className="text-green-400 text-sm font-medium">Claimed</span>
                             </div>
                           )}
                           
@@ -576,16 +563,6 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                                 className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold text-sm"
                               >
                                 Claim Offer
-                              </Button>
-                            ) : claimedOfferData?.status === 'redeemed' ? (
-                              <Button 
-                                disabled
-                                className="flex-1 bg-gradient-to-r from-gray-600 to-gray-700 text-gray-300 font-semibold text-sm cursor-not-allowed"
-                              >
-                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                                Already Redeemed
                               </Button>
                             ) : (
                               <AddToWalletButton 
@@ -605,18 +582,15 @@ export function UserBusinessDetailPage({ slug, businesses = mockBusinesses, wall
                               />
                             )}
                             
-                            {/* Only show Ask AI for non-redeemed offers */}
-                            {claimedOfferData?.status !== 'redeemed' && (
-                              <Button 
-                                asChild
-                                variant="outline" 
-                                className="border-[#00d083]/50 text-[#00d083] hover:bg-[#00d083]/10 text-sm"
-                              >
-                                <Link href={getNavUrl(`/user/chat?business=${business.name}&topic=offer&offer=${offer.title}`)}>
-                                  Ask About Offer
-                                </Link>
-                              </Button>
-                            )}
+                            <Button 
+                              asChild
+                              variant="outline" 
+                              className="border-[#00d083]/50 text-[#00d083] hover:bg-[#00d083]/10 text-sm"
+                            >
+                              <Link href={getNavUrl(`/user/chat?business=${business.name}&topic=offer&offer=${offer.title}`)}>
+                                Ask About Offer
+                              </Link>
+                            </Button>
                           </div>
                         </div>
                       )

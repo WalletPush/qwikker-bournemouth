@@ -8,6 +8,8 @@
 import { createClient } from '@/lib/supabase/client'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 // headers import removed - not used in current implementation
 
 /**
@@ -19,12 +21,82 @@ export async function createTenantAwareClient() {
   
   // Set the current city context for RLS policies
   try {
-    const city = await getFranchiseCityFromRequest()
-    await client.rpc('set_current_city', { city_name: city })
+    // Get tenant city (never null due to fallback in getFranchiseFromHostname)
+    const tenantCity = await getFranchiseCityFromRequest()
+    
+    // ✅ CRITICAL: Always use tenantCity (no override in this function)
+    const effectiveCity = tenantCity
+    
+    // Debug log to track city resolution
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔍 [TENANT] City resolution (client):`, {
+        tenantCity,
+        effectiveCity
+      })
+    }
+    
+    await client.rpc('set_current_city', { city_name: effectiveCity })
   } catch (error) {
     console.error('🚨 SECURITY: Could not set city context:', error)
     // SECURITY: Block request instead of falling back
     throw new Error('Tenant context required - access denied')
+  }
+  
+  return client
+}
+
+/**
+ * Creates a tenant-aware Supabase client for SERVER API routes
+ * Use this instead of createServiceRoleClient() for user-facing queries
+ * This enforces RLS + city isolation
+ */
+export async function createTenantAwareServerClient(city?: string) {
+  // Get tenant city from request (never null due to fallback in getFranchiseFromHostname)
+  const tenantCity = await getFranchiseCityFromRequest()
+  
+  // Optional override from parameter (e.g., chat detected city)
+  const detectedCity = city
+  
+  // ✅ CRITICAL: Never allow null/undefined to overwrite tenant city
+  const effectiveCity = detectedCity ?? tenantCity
+  
+  // Debug log to track city resolution
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🔍 [TENANT] City resolution:`, {
+      tenantCity,
+      detectedCity,
+      effectiveCity
+    })
+  }
+  
+  // Create anon server client (respects RLS, unlike service_role)
+  const cookieStore = await cookies()
+  const client = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // ✅ ANON key, not service_role
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: (cookies) => {
+          cookies.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+  
+  // ✅ CRITICAL: Set tenant context BEFORE any queries (using effectiveCity)
+  const { error: ctxErr } = await client.rpc('set_current_city', { city_name: effectiveCity })
+  if (ctxErr) {
+    console.error('🚨 SECURITY: Failed to set city context:', ctxErr)
+    throw new Error('Tenant context required - access denied')
+  }
+  
+  // Optional dev-only sanity check
+  if (process.env.NODE_ENV === 'development') {
+    const { data: currentCity } = await client.rpc('get_current_city')
+    console.log(`✅ [TENANT] City context set to: ${currentCity}`)
   }
   
   return client
@@ -37,11 +109,27 @@ export async function createTenantAwareClient() {
 export async function createCityFilteredServiceClient(city?: string) {
   const client = createServiceRoleClient()
   
-  const targetCity = city || await getFranchiseCityFromRequest()
+  // Get tenant city from request (never null due to fallback)
+  const tenantCity = await getFranchiseCityFromRequest()
+  
+  // Optional override from parameter
+  const detectedCity = city
+  
+  // ✅ CRITICAL: Never allow null/undefined to overwrite tenant city
+  const effectiveCity = detectedCity ?? tenantCity
+  
+  // Debug log to track city resolution
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🔍 [TENANT] City resolution (service):`, {
+      tenantCity,
+      detectedCity,
+      effectiveCity
+    })
+  }
   
   // Set city context even for service role (for logging/audit)
   try {
-    await client.rpc('set_current_city', { city_name: targetCity })
+    await client.rpc('set_current_city', { city_name: effectiveCity })
   } catch (error) {
     console.warn('Could not set city context for service client:', error)
   }

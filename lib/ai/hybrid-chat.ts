@@ -12,7 +12,7 @@ import {
   updateConversationState, 
   generateStateContext 
 } from './conversation-state'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createTenantAwareServerClient } from '@/lib/utils/tenant-security'
 import { isFreeTier, isAiEligibleTier, getTierPriority } from '@/lib/atlas/eligibility'
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
@@ -58,6 +58,13 @@ interface ChatResponse {
     type: 'add_to_wallet'
     offerId: string
     offerName: string
+    offerDescription: string | null
+    offerType: string | null
+    offerValue: string
+    offerTerms: string | null
+    offerStartDate: string | null
+    offerEndDate: string | null
+    offerImage: string | null
     businessName: string
     businessId: string
   }>
@@ -107,35 +114,83 @@ export async function generateHybridAIResponse(
     
     logClassification(userMessage, classification, modelToUse)
     
-    // 🎯 STEP 2: Search knowledge base with context-aware query expansion
-    const searchLimit = userMessage.toLowerCase().includes('list all') ? 30 : 12
+    // 🔒 KB AUTHORITY GATE: Distinguish HARD queries from MIXED queries
+    // HARD queries (pure offers/events) → DB-only, no KB
+    // MIXED queries (discovery + offers) → KB for discovery, DB for filtering
+    const lowerMessage = userMessage.toLowerCase()
     
-    // If user uses pronouns (their, they, it), inject current business name into search
-    let enhancedQuery = userMessage
-    const usesPronoun = /\b(their|they|them|it|its)\b/i.test(userMessage.toLowerCase())
+    // Detect if offers/events are mentioned
+    const isOfferQuery = /\b(offers?|deals?|discounts?|promos?|specials?)\b/i.test(lowerMessage) ||
+                         /\b(show|list|all|any|get|find|see|tell me).*(deals?|offers?)\b/i.test(lowerMessage)
+    const isEventQuery = /\b(events?|shows?|concerts?|gigs?|happening|what'?s on|things to do)\b/i.test(lowerMessage)
     
-    if (usesPronoun && state.currentBusiness) {
-      // Extract the last mentioned business from conversation
-      const lastBusiness = conversationHistory
-        .slice(-6) // Look at last 6 messages
-        .reverse()
-        .find(msg => msg.role === 'assistant' && /\*\*([^*]+)\*\*/g.test(msg.content))
-      
-      if (lastBusiness) {
-        const businessMatch = lastBusiness.content.match(/\*\*([^*]+)\*\*/)
-        if (businessMatch) {
-          const businessName = businessMatch[1]
-          enhancedQuery = `${businessName} ${userMessage}`
-          console.log(`🎯 Enhanced query with context: "${enhancedQuery}"`)
-        }
-      }
+    // 🎯 CRITICAL FIX: Distinguish HARD queries (DB-only) from MIXED queries (KB + DB)
+    // HARD = pure offer/event query (e.g., "show me offers", "current deals")
+    // MIXED = discovery with constraints (e.g., "restaurants with offers", "family friendly with deals")
+    const isMixedQuery = /(with|that has|which has|anywhere|places|restaurants?|bars?|cafes?|family|kids?|cheap|good|best)/i.test(userMessage)
+    
+    const isHardOfferQuery = isOfferQuery && !isMixedQuery
+    const isHardEventQuery = isEventQuery && !isMixedQuery
+    
+    const isKbDisabled = isHardOfferQuery || isHardEventQuery
+    const intent = isOfferQuery ? 'offers' : (isEventQuery ? 'events' : 'general')
+    
+    console.log(`🔍 KB GATE CHECK: query="${userMessage}"`)
+    console.log(`  isOfferQuery=${isOfferQuery}, isEventQuery=${isEventQuery}`)
+    console.log(`  isMixedQuery=${isMixedQuery} (discovery with constraints)`)
+    console.log(`  isHardOfferQuery=${isHardOfferQuery} (pure offers, no discovery)`)
+    console.log(`  isKbDisabled=${isKbDisabled}, intent="${intent}"`)
+    
+    if (isKbDisabled) {
+      console.log(`🚫 KB search DISABLED: HARD ${intent} query (DB-authoritative only)`)
+    } else if (isOfferQuery || isEventQuery) {
+      console.log(`✅ KB search ENABLED: MIXED query (discovery with ${intent} constraint)`)
+    } else {
+      console.log(`✅ KB search ENABLED: General discovery query`)
     }
     
-    const businessResults = await searchBusinessKnowledge(enhancedQuery, city, { matchCount: searchLimit })
-    const cityResults = await searchCityKnowledge(userMessage, city, { matchCount: 6 })
+    // 🎯 STEP 2: Search knowledge base with context-aware query expansion
+    // ❗ SKIP ENTIRELY if intent requires DB authority (offers, events)
+    const searchLimit = userMessage.toLowerCase().includes('list all') ? 30 : 12
+    
+    let businessResults = { success: true, results: [] as any[] }
+    let cityResults = { success: true, results: [] as any[] }
+    
+    if (!isKbDisabled) {
+      // If user uses pronouns (their, they, it), inject current business name into search
+      let enhancedQuery = userMessage
+      const usesPronoun = /\b(their|they|them|it|its)\b/i.test(userMessage.toLowerCase())
+      
+      if (usesPronoun && state.currentBusiness) {
+        // Extract the last mentioned business from conversation
+        const lastBusiness = conversationHistory
+          .slice(-6) // Look at last 6 messages
+          .reverse()
+          .find(msg => msg.role === 'assistant' && /\*\*([^*]+)\*\*/g.test(msg.content))
+        
+        if (lastBusiness) {
+          const businessMatch = lastBusiness.content.match(/\*\*([^*]+)\*\*/)
+          if (businessMatch) {
+            const businessName = businessMatch[1]
+            enhancedQuery = `${businessName} ${userMessage}`
+            console.log(`🎯 Enhanced query with context: "${enhancedQuery}"`)
+          }
+        }
+      }
+      
+      businessResults = await searchBusinessKnowledge(enhancedQuery, city, { matchCount: searchLimit })
+      cityResults = await searchCityKnowledge(userMessage, city, { matchCount: 6 })
+    }
     
     // 🎯 Fetch offer counts for businesses to enrich context (DEDUPED)
-    const supabase = createServiceRoleClient()
+    const supabase = await createTenantAwareServerClient(city)
+    
+    // ✅ VERIFY: Tenant context is actually set (dev-only)
+    if (process.env.NODE_ENV !== 'production') {
+      const { data: currentCity, error } = await supabase.rpc('get_current_city')
+      console.log('🔒 [TENANT DEBUG] current city =', currentCity, error ? error.message : '')
+    }
+    
     const businessOfferCounts: Record<string, number> = {}
     
     if (businessResults.success && businessResults.results.length > 0) {
@@ -147,7 +202,7 @@ export async function generateHybridAIResponse(
       if (businessIds.length > 0) {
         // ✅ Count ONLY active, valid offers from eligible businesses
         const { data: offerCounts } = await supabase
-          .from('chat_active_deals')
+          .from('business_offers_chat_eligible')
           .select('business_id')
           .in('business_id', businessIds)
         
@@ -156,6 +211,105 @@ export async function generateHybridAIResponse(
             businessOfferCounts[offer.business_id] = (businessOfferCounts[offer.business_id] || 0) + 1
           })
         }
+      }
+    }
+    
+    // 🚨 STEP 3: HARD STOP FOR HARD OFFER QUERIES (DB-AUTHORITATIVE MODE)
+    // ONLY for PURE offer queries (e.g., "show me offers")
+    // MIXED queries (e.g., "restaurants with offers") go through normal KB flow
+    if (isHardOfferQuery) {
+      try {
+        console.log(`🎫 Fetching ALL active offers in ${city}`)
+        
+        // 🔒 THE ONLY SOURCE: business_offers_chat_eligible view
+        // ✅ Join business_profiles to filter by city (view doesn't have city column)
+        const { data: offers, error } = await supabase
+          .from('business_offers_chat_eligible')
+          .select(`
+            id,
+            business_id,
+            offer_name,
+            offer_description,
+            offer_type,
+            offer_value,
+            offer_terms,
+            offer_start_date,
+            offer_end_date,
+            offer_image,
+            business_profiles!inner(
+              business_name,
+              city
+            )
+          `)
+          .eq('business_profiles.city', city)
+          .order('offer_end_date', { ascending: false })
+          .limit(10)
+        
+        if (error) {
+          console.error('❌ Error fetching offers:', error)
+        }
+        
+        // 🚨 ZERO OFFERS: Return authoritative "no offers" message
+        if (!offers || offers.length === 0) {
+          console.log(`🚫 ZERO OFFERS in DB → returning authoritative "no offers" response`)
+          return {
+            success: true,
+            response: `There are no active offers in ${city} right now. Check back soon, or explore our great businesses and restaurants!`,
+            sources: [],
+            businessCarousel: [],
+            walletActions: [],
+            eventCards: [],
+            uiMode: 'conversational',
+            hasBusinessResults: false,
+            modelUsed: 'gpt-4o-mini',
+            classification
+          }
+        }
+        
+        // 🎉 OFFERS EXIST: Return static message + offers (DO NOT CALL AI MODEL)
+        const walletActions = offers.map(offer => ({
+          type: 'add_to_wallet' as const,
+          offerId: offer.id,
+          offerName: offer.offer_name,
+          offerDescription: offer.offer_description || null,
+          offerType: offer.offer_type || null,
+          offerValue: offer.offer_value,
+          offerTerms: offer.offer_terms || null,
+          offerStartDate: offer.offer_start_date || null,
+          offerEndDate: offer.offer_end_date || null,
+          offerImage: offer.offer_image || null,
+          businessName: offer.business_profiles?.business_name || 'Unknown',
+          businessId: offer.business_id
+        }))
+        
+        console.log(`✅ Found ${walletActions.length} offers from business_offers_chat_eligible`)
+        console.log(`🎫 First offer: ID=${offers[0].id}, Business=${offers[0].business_profiles?.business_name}`)
+        
+        // ✅ DEV LOG: Show each deal with expiry date
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📋 Current Deals (business_offers_chat_eligible view = THE ONLY SOURCE):')
+          offers.forEach(o => {
+            const expiryDate = o.offer_end_date ? new Date(o.offer_end_date).toLocaleDateString() : 'No expiry'
+            console.log(`  - ${o.business_profiles?.business_name} | ${o.offer_name} | ends ${expiryDate}`)
+          })
+        }
+        
+        // 🎯 DETERMINISTIC RESPONSE: Static message + offer cards (NO AI MODEL CALL)
+        return {
+          success: true,
+          response: `Here are the current deals in ${city}:`,
+          sources: [],
+          businessCarousel: [],
+          walletActions,
+          eventCards: [],
+          uiMode: 'conversational',
+          hasBusinessResults: false,
+          modelUsed: 'gpt-4o-mini',
+          classification
+        }
+      } catch (error) {
+        console.error('❌ Error in offer hard stop:', error)
+        // Fall through to normal flow on error
       }
     }
     
@@ -200,7 +354,7 @@ export async function generateHybridAIResponse(
         ).join('\n\n')
       : ''
     
-    // 🎯 STEP 3: Build context-aware system prompt (SIMPLE AND CLEAR)
+    // 🎯 STEP 4: Build context-aware system prompt (SIMPLE AND CLEAR)
     const stateContext = generateStateContext(state)
     
     // 🚨 CHECK: Is this a broad query that needs clarification?
@@ -259,11 +413,19 @@ KNOWLEDGE RULES:
 - Secret menu items are exclusive content - they MUST be in the knowledge base to mention them
 - If you don't see it in the provided data, it doesn't exist in your knowledge!
 
-💳 OFFER HANDLING:
+💳 OFFER HANDLING (CRITICAL - DB AUTHORITATIVE ONLY):
+- 🚨🚨🚨 NEVER invent, assume, or recall offers from memory/training data
+- 🚨 ONLY mention offers if they are EXPLICITLY listed in the AVAILABLE BUSINESSES section below
+- 🚨 If no offers are listed in the data, offers DO NOT EXIST - do not suggest "they might have deals"
+- 🚨 DB AUTHORITY RULE: Never state an offer exists unless it appears in business_offers_chat_eligible for this city
+- 🚨 EXPIRED OFFERS DO NOT EXIST: If an offer is not in the current data, it is expired/deleted - never mention it
+- 🚨 Knowledge Base is for descriptions only - OFFERS COME FROM DATABASE ONLY, NEVER FROM KB OR MEMORY
 - If a business entry shows "[Has X offers available]", mention this naturally when relevant
 - Example: "I don't have info on that specific special, but they do have 3 current offers I can show you!"
 - When mentioning offers, use friendly phrasing like "Want to see their current offers?" or "I can show you what deals they have!"
 - The offer cards will appear automatically after your message
+- ❌ FORBIDDEN: "usually have deals", "often run offers", "might have a discount", "check if they have offers"
+- ✅ ONLY mention offers that are explicitly provided in the data below
 
 🎯 CRITICAL: TIER-BASED PRESENTATION (PAID VISIBILITY!)
 - 🚨 Businesses marked [TIER: qwikker_picks] are PREMIUM and MUST be listed FIRST
@@ -309,14 +471,14 @@ ${businessContext || 'No specific business data available - suggest they check t
 
 ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
 
-    // 🎯 STEP 4: Build conversation messages
+    // 🎯 STEP 5: Build conversation messages
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
       ...conversationHistory.slice(-8), // Last 8 messages
       { role: 'user', content: userMessage }
     ]
     
-    // 🎯 STEP 5: Call appropriate model
+    // 🎯 STEP 6: Call appropriate model
     console.log(`\n🤖 CALLING ${modelToUse.toUpperCase()} for query: "${userMessage}"`)
     console.log(`📊 Conversation depth: ${conversationHistory.length} messages`)
     console.log(`🎯 State: ${stateContext}`)
@@ -332,7 +494,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
 
     const aiResponse = completion.choices[0]?.message?.content || ''
     
-    // 🎯 STEP 6: Update conversation state
+    // 🎯 STEP 7: Update conversation state
     const extractedBusinesses = extractBusinessNamesFromText(aiResponse)
     const updatedState = updateConversationState(state, userMessage, aiResponse, extractedBusinesses)
     
@@ -344,95 +506,12 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       similarity: result.similarity
     })) : []
     
-    // 🎯 STEP 7: Fetch wallet actions (offers) if user is asking about deals/offers
+    // 🎯 STEP 8: Wallet actions for offers
+    // ⚠️ NOTE: Offer queries are now handled by HARD STOP above (before AI model call)
+    // This code path only runs for non-offer queries
     let walletActions: ChatResponse['walletActions'] = []
-    const isOfferQuery = /\b(deal|offer|discount|promo|current deal|what'?s on|special)\b/i.test(userMessage) ||
-                         /\b(show|list|all|any|get|find|see|tell me).*(deal|offer)\b/i.test(userMessage)
     
-    if (isOfferQuery && businessResults.success && businessResults.results.length > 0) {
-      try {
-        const supabase = createServiceRoleClient()
-        
-        // 🎯 SMART FILTERING: Only fetch offers for the business being discussed
-        let targetBusinessIds: string[] = []
-        
-        // Check recent conversation for business mentions
-        const recentContext = conversationHistory.slice(-2).map(m => m.content).join(' ')
-        const mentionedBusinesses = businessResults.results.filter(result => 
-          recentContext.includes(result.business_name)
-        )
-        
-        if (state.currentBusiness?.id) {
-          // User is discussing a specific business - only show their offers
-          targetBusinessIds = [state.currentBusiness.id]
-          console.log(`🎫 Fetching offers for current business: ${state.currentBusiness.name}`)
-        } else if (mentionedBusinesses.length > 0) {
-          // Use business mentioned in recent conversation (last 2 messages)
-          targetBusinessIds = [mentionedBusinesses[0].business_id]
-          console.log(`🎫 Fetching offers for recently mentioned business: ${mentionedBusinesses[0].business_name}`)
-        } else {
-          // General offer query - use TOP search result
-          const topResult = businessResults.results[0]
-          if (topResult?.business_id) {
-            targetBusinessIds = [topResult.business_id]
-            console.log(`🎫 Fetching offers for top result: ${topResult.title}`)
-          }
-        }
-        
-        if (targetBusinessIds.length > 0) {
-          // ✅ Use chat_active_deals view to enforce business eligibility + offer validity
-          // This prevents expired offers and offers from ineligible businesses (trial expired, auto_imported, etc.)
-          const { data: offers, error } = await supabase
-            .from('chat_active_deals')
-            .select(`
-              offer_id,
-              offer_name,
-              offer_value,
-              business_id,
-              business_name,
-              city,
-              effective_tier,
-              tier_priority,
-              valid_until
-            `)
-            .in('business_id', targetBusinessIds)
-            .eq('city', city)
-            .order('tier_priority', { ascending: true }) // Spotlight first, then featured/trial, then starter
-            .order('offer_updated_at', { ascending: false }) // Within tier, newest first
-            .limit(10)
-          
-          if (!error && offers && offers.length > 0) {
-            walletActions = offers.map(offer => ({
-              type: 'add_to_wallet',
-              offerId: offer.offer_id,
-              offerName: `${offer.offer_name} - ${offer.offer_value}`,
-              businessName: offer.business_name,
-              businessId: offer.business_id
-            }))
-            
-            console.log(`🎫 Found ${walletActions.length} wallet actions (all from eligible businesses, all valid)`)
-            console.log(`🎫 Tier distribution: ${offers.map(o => `${o.business_name}(${o.effective_tier})`).join(', ')}`)
-            
-            // ✅ DEV LOG: Show each deal with expiry date (Jan 20 verification)
-            if (process.env.NODE_ENV === 'development') {
-              console.log('📋 Current Deals (Jan 20 verification):')
-              offers.forEach(o => {
-                const expiryDate = o.valid_until ? new Date(o.valid_until).toLocaleDateString() : 'No expiry'
-                console.log(`  - ${o.business_name} | ${o.offer_name} | ends ${expiryDate}`)
-              })
-            }
-          } else if (error) {
-            console.error('❌ Error fetching offers:', error)
-          } else {
-            console.log('ℹ️ No active, valid offers found for these eligible businesses')
-          }
-        }
-      } catch (error) {
-        console.error('❌ Error fetching wallet actions:', error)
-      }
-    }
-    
-    // 🎯 STEP 8: Fetch event cards if user is asking about events OR conversation contains events
+    // 🎯 STEP 9: Fetch event cards if user is asking about events OR conversation contains events
     let eventCards: ChatResponse['eventCards'] = []
     
     // Check current message - but EXCLUDE food/menu context
@@ -460,7 +539,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     
     if (shouldFetchEvents) {
       try {
-        const supabase = createServiceRoleClient()
+        const supabase = await createTenantAwareServerClient(city)
         
         console.log(`🎉 FETCHING EVENT CARDS - User wants event details for ${city}`)
         

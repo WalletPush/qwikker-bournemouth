@@ -2,7 +2,7 @@
 
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { syncEventToKnowledgeBase, removeEventFromKnowledgeBase } from '@/lib/ai/embeddings'
+import { syncEventToKnowledgeBase, archiveEventInKnowledgeBase } from '@/lib/ai/embeddings'
 
 export interface BusinessEvent {
   id: string
@@ -300,9 +300,9 @@ export async function deleteEvent(eventId: string): Promise<{
       return { success: false, error: 'Unauthorized' }
     }
 
-    // Remove from knowledge base if it was approved
+    // Archive in knowledge base if it was approved (prevent it from appearing in chat)
     if (event.status === 'approved') {
-      await removeEventFromKnowledgeBase(eventId)
+      await archiveEventInKnowledgeBase(eventId)
     }
 
     // Delete the event
@@ -366,8 +366,8 @@ export async function cancelEvent(
       return { success: false, error: 'Unauthorized' }
     }
 
-    // Remove from knowledge base if it was previously approved
-    await removeEventFromKnowledgeBase(eventId)
+    // Archive in knowledge base if it was previously approved (prevent it from appearing in chat)
+    await archiveEventInKnowledgeBase(eventId)
 
     // Delete the event from the database
     const { error } = await supabase
@@ -487,8 +487,8 @@ export async function rejectEvent(
 
     revalidatePath('/admin')
 
-    // Remove from knowledge base if it was previously approved
-    await removeEventFromKnowledgeBase(eventId)
+    // Archive in knowledge base if it was previously approved (prevent it from appearing in chat)
+    await archiveEventInKnowledgeBase(eventId)
 
     return { success: true }
   } catch (error) {

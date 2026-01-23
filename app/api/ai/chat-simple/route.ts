@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createTenantAwareServerClient } from '@/lib/utils/tenant-security'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
-    const supabase = createServiceRoleClient()
+    const supabase = await createTenantAwareServerClient(city)
     
     // Get user's city if wallet pass provided
     let userCity = city

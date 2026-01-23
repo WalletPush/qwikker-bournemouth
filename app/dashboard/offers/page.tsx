@@ -14,11 +14,12 @@ export default async function DashboardOffersPage() {
     redirect('/auth/login')
   }
 
+  // Fetch profile with ALL offers (including expired - business needs to see them to extend/re-list)
   const { data: profileData, error: profileError } = await supabase
     .from('business_profiles')
     .select(`
       *,
-      business_offers!business_id (
+      business_offers (
         id,
         offer_name,
         offer_type,

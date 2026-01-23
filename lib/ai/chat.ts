@@ -1117,33 +1117,34 @@ ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
         console.log(`🎫 Checking offers for businesses: ${businessIds?.join(', ') || 'none'}`)
         
         if (businessIds.length > 0) {
-          // ✅ Use chat_active_deals view to enforce business eligibility + offer validity
-          // This prevents expired offers and offers from ineligible businesses (trial expired, auto_imported, etc.)
+          // ✅ Use business_offers_chat_eligible view to enforce offer validity (date filtering)
+          // Then join with business_profiles to get tier info and ensure business is eligible
           const { data: offers, error } = await supabase
-            .from('chat_active_deals')
+            .from('business_offers_chat_eligible')
             .select(`
-              offer_id,
+              id,
               offer_name,
               offer_value,
               business_id,
-              business_name,
-              city,
-              effective_tier,
-              tier_priority,
-              valid_until
+              offer_end_date,
+              updated_at,
+              business_profiles!inner(
+                business_name,
+                city,
+                business_tier,
+                tier_priority
+              )
             `)
             .in('business_id', businessIds)
-            .eq('city', city)
-            .order('tier_priority', { ascending: true }) // Spotlight first, then featured/trial, then starter
-            .order('offer_updated_at', { ascending: false }) // Within tier, newest first
+            .order('updated_at', { ascending: false })
             .limit(5)
           
           if (!error && offers && offers.length > 0) {
             walletActions = offers.map(offer => ({
               type: 'add_to_wallet',
-              offerId: offer.offer_id,
+              offerId: offer.id,
               offerName: `${offer.offer_name} - ${offer.offer_value}`,
-              businessName: offer.business_name,
+              businessName: offer.business_profiles?.business_name || 'Unknown',
               businessId: offer.business_id
             }))
             
@@ -1153,8 +1154,8 @@ ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
             if (process.env.NODE_ENV === 'development') {
               console.log('📋 Current Deals (Jan 20 verification):')
               offers.forEach(o => {
-                const expiryDate = o.valid_until ? new Date(o.valid_until).toLocaleDateString() : 'No expiry'
-                console.log(`  - ${o.business_name} | ${o.offer_name} | ends ${expiryDate}`)
+                const expiryDate = o.offer_end_date ? new Date(o.offer_end_date).toLocaleDateString() : 'No expiry'
+                console.log(`  - ${o.business_profiles?.business_name} | ${o.offer_name} | ends ${expiryDate}`)
               })
             }
           }

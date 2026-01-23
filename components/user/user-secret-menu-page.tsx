@@ -2,7 +2,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { mockBusinesses, enhancedSecretMenus } from '@/lib/mock-data/user-mock-data'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { SecretUnlockModal } from '@/components/ui/secret-unlock-modal'
@@ -84,8 +83,33 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
     return () => clearTimeout(timer)
   }, [])
 
-  // Combine real and mock secret menus
-  const allSecretMenus = [...realSecretMenus, ...enhancedSecretMenus]
+  // Use only real secret menus (no mock data)
+  const allSecretMenus = realSecretMenus
+
+  // ✅ NEW: Clean up stale localStorage entries when real menus load
+  // This removes item IDs for items that no longer exist
+  useEffect(() => {
+    if (typeof window !== 'undefined' && realSecretMenus.length > 0 && unlockedItems.size > 0) {
+      const userId = walletPassId || 'anonymous-user'
+      
+      // Filter out stale item IDs
+      const validItemKeys = Array.from(unlockedItems).filter(itemKey => {
+        return allSecretMenus.some(menu => 
+          menu.items.some(item => {
+            const currentItemKey = `${menu.businessId}-${item.name}`
+            return currentItemKey === itemKey
+          })
+        )
+      })
+      
+      // If we removed any stale entries, update localStorage
+      if (validItemKeys.length !== unlockedItems.size) {
+        localStorage.setItem(`qwikker-unlocked-secrets-${userId}`, JSON.stringify(validItemKeys))
+        setUnlockedItems(new Set(validItemKeys))
+        console.log(`🧹 Cleaned up ${unlockedItems.size - validItemKeys.length} stale localStorage entries`)
+      }
+    }
+  }, [walletPassId, realSecretMenus, unlockedItems, allSecretMenus])
 
   // Handle QR deep linking auto-scroll and highlight for secret menus
   useEffect(() => {
@@ -114,19 +138,29 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
   }, [highlightBusiness, allSecretMenus])
   
   // Get unique categories from all businesses with secret menus
-  const businessesWithSecrets = mockBusinesses.filter(b => b.hasSecretMenu)
   const realCategories = realSecretMenus.map(menu => menu.businessCategory)
-  const allCategories = [...businessesWithSecrets.map(b => b.category), ...realCategories]
-  const categories = ['all', ...Array.from(new Set(allCategories))]
+  const categories = ['all', ...Array.from(new Set(realCategories))]
 
   // Calculate counts including real secret menu items
   const totalSecretItems = allSecretMenus.reduce((acc, menu) => acc + menu.items.length, 0)
   // For now, assume all users can see legendary items (can be updated later)
   const legendaryCount = allSecretMenus.reduce((acc, menu) => acc + menu.items.filter(item => (item.rarity || 0) >= 5).length, 0)
 
+  // ✅ FIX: Validate localStorage against real items (filter out stale/deleted items)
+  // localStorage format: ["businessId-itemName", ...]
+  // Only count items that actually exist in allSecretMenus
+  const validUnlockedItems = Array.from(unlockedItems).filter(itemKey => {
+    return allSecretMenus.some(menu => 
+      menu.items.some(item => {
+        const currentItemKey = `${menu.businessId}-${item.name}`
+        return currentItemKey === itemKey
+      })
+    )
+  })
+
   const filters = [
     { id: 'all', label: 'All Secrets', count: totalSecretItems },
-    { id: 'unlocked', label: 'My Unlocked', count: Array.from(unlockedItems).length },
+    { id: 'unlocked', label: 'My Unlocked', count: validUnlockedItems.length }, // ✅ Now uses validated count
     { id: 'legendary', label: 'Legendary Items', count: legendaryCount },
   ]
 
@@ -225,18 +259,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
 
     // Filter by category
     if (selectedCategory !== 'all') {
-      // For real menus, filter by businessCategory
-      // For mock menus, filter by business category
-      filtered = filtered.filter(menu => {
-        // Check if it's a real menu (has businessCategory) or mock menu
-        if ('businessCategory' in menu) {
-          return menu.businessCategory === selectedCategory
-        } else {
-          // For mock menus, find the business and check its category
-          const business = mockBusinesses.find(b => b.id === menu.businessId)
-          return business?.category === selectedCategory
-        }
-      })
+      filtered = filtered.filter(menu => menu.businessCategory === selectedCategory)
     }
 
     // Filter by type
@@ -548,18 +571,15 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
       {/* Secret Menu Items - Grouped by Business */}
       <div className="space-y-8">
         {getFilteredSecretMenus().map((menu) => {
-          // For real menus, create business object from menu data
-          // For mock menus, find in mockBusinesses
-          const business = 'businessCategory' in menu 
-            ? {
-                id: menu.businessId,
-                name: menu.businessName,
-                category: menu.businessCategory,
-                address: menu.businessAddress,
-                phone: menu.businessPhone,
-                image: menu.businessImage
-              }
-            : mockBusinesses.find(b => b.id === menu.businessId)
+          // Create business object from menu data
+          const business = {
+            id: menu.businessId,
+            name: menu.businessName,
+            category: menu.businessCategory,
+            address: menu.businessAddress,
+            phone: menu.businessPhone,
+            image: menu.businessImage
+          }
           
           const businessSlug = business?.name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || menu.businessId
           const isHighlighted = highlightedCard === businessSlug

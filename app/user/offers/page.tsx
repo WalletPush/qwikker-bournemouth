@@ -52,14 +52,6 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   // Priority: URL wallet_pass_id > URL user_id > cookie
   const walletPassId = urlWalletPassId || urlUserId || cookieWalletPassId || null
   
-  // 🐛 DEBUG: Log wallet pass ID resolution
-  console.log('🔍 Offers page wallet_pass_id resolution:', {
-    urlWalletPassId,
-    urlUserId,
-    cookieWalletPassId,
-    finalWalletPassId: walletPassId
-  })
-  
   // 🎯 TRACK: Update pass activity when user visits (indicates pass is still installed)
   if (walletPassId) {
     updatePassActivity(walletPassId).catch(console.error)
@@ -85,12 +77,9 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
           tier: user.tier,
           level: user.level
         }
-        console.log('✅ Offers page found user:', user.name, 'with wallet_pass_id:', walletPassId)
-      } else {
-        console.log('❌ Offers page: User query returned null for wallet_pass_id:', walletPassId)
       }
     } catch (error) {
-      console.log('❌ Offers page: Error fetching user for wallet_pass_id:', walletPassId, 'Error:', error)
+      // Silently handle user fetch errors
     }
   }
   
@@ -102,27 +91,19 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   const userCity = currentUser?.city || currentCity
   const franchiseCity = currentCity // Use validated city directly
   
-  console.log(`📊 Offers Page: User city: ${userCity}, Franchise city: ${franchiseCity}`)
-  
-  // First get approved businesses for this franchise
+  // First get eligible businesses for this franchise (subscription-aware)
+  // Uses business_profiles_chat_eligible view which enforces:
+  // ✅ status = 'approved'
+  // ✅ Active subscription (paid or trial)
+  // ✅ Excludes expired trials
   const { data: franchiseBusinesses, error: businessError } = await supabase
-    .from('business_profiles')
+    .from('business_profiles_chat_eligible')
     .select('id, business_name, city, status')
     .eq('city', franchiseCity)
-    .eq('status', 'approved')
-  
-  console.log(`📊 Offers Page: Business query result:`, {
-    franchiseBusinesses,
-    businessError,
-    franchiseCity,
-    count: franchiseBusinesses?.length || 0
-  })
   
   const businessIds = franchiseBusinesses?.map(b => b.id) || []
-  console.log(`📊 Offers Page: Business IDs for offers query:`, businessIds)
   
   // Then get offers for those businesses
-  console.log(`📊 Offers Page: Querying business_offers with businessIds:`, businessIds)
   
   const { data, error: fetchError } = await supabase
     .from('business_offers')
@@ -172,9 +153,6 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   
   if (error) {
     console.error('Error fetching business offers:', error)
-  } else {
-    console.log(`📊 Offers Page: Found ${businessOffers.length} approved offers`)
-    console.log('📊 Offers:', businessOffers.map(offer => `${offer.offer_name} at ${offer.business_profiles?.business_name || 'Unknown'} (${offer.business_profiles?.business_tier || 'N/A'})`))
   }
   
   // Filter out expired offers
@@ -189,11 +167,6 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     
     return endDate >= today
   })
-
-  console.log(`📊 Offers Page: After expiry filter: ${activeOffers.length} active offers`)
-  if (activeOffers.length !== businessOffers.length) {
-    console.log('📊 Filtered out expired offers:', businessOffers.filter(o => !activeOffers.includes(o)).map(o => `${o.offer_name} - Expired: ${o.offer_end_date}`))
-  }
 
   // Transform offers to match expected format
   const realOffers = activeOffers.map(offer => ({

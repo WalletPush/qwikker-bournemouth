@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { mockBusinesses, mockOffers } from '@/lib/mock-data/user-mock-data'
 import { SimpleBadgeCard } from '@/components/user/simple-badge-card'
 import { useState, useEffect } from 'react'
 
@@ -12,8 +11,6 @@ interface UserDashboardHomeProps {
     totalBusinesses: number
     totalOffers: number
     totalSecretMenus: number
-    realBusinesses: number
-    realOffers: number
   }
   currentUser?: any
   walletPassId?: string
@@ -29,10 +26,10 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
     }
     return `${href}?wallet_pass_id=${walletPassId}`
   }
-  // Use real stats or fallback to mock data
-  const businessCount = stats?.totalBusinesses ?? mockBusinesses.length
-  const offerCount = stats?.totalOffers ?? mockOffers.length
-  const secretMenuCount = stats?.totalSecretMenus ?? mockBusinesses.filter(b => b.hasSecretMenu).length
+  // Use real stats (no mock data fallback)
+  const businessCount = stats?.totalBusinesses ?? 0
+  const offerCount = stats?.totalOffers ?? 0
+  const secretMenuCount = stats?.totalSecretMenus ?? 0
   
   // Use real user data - currentUser should ALWAYS be provided by the dashboard page
   const userProfile = currentUser || {

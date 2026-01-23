@@ -41,7 +41,7 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
   try {
     cookieWalletPassId = await getWalletPassCookie()
   } catch (error) {
-    console.log('Cookie read error (safe to ignore):', error)
+    // Cookie read error (safe to ignore)
   }
   
   const walletPassId = urlWalletPassId || cookieWalletPassId || null
@@ -69,24 +69,28 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
         }
       }
     } catch (error) {
-      console.log('No user found for secret menu page')
+      // No user found for secret menu page
     }
   }
   
-  // Fetch approved businesses (we'll filter for secret menus after parsing)
+  // Fetch eligible businesses (subscription-aware, filters out expired trials)
+  // Uses business_profiles_chat_eligible view which enforces:
+  // ✅ status = 'approved'
+  // ✅ Active subscription (paid or trial)
+  // ✅ Excludes expired trials
+  // ✅ Excludes unclaimed/incomplete businesses
   const { data: approvedBusinesses, error } = await supabase
-    .from('business_profiles')
+    .from('business_profiles_chat_eligible')
     .select(`
       id,
       business_name,
-      business_category,
+      system_category,
       business_address,
       phone,
       business_images,
       additional_notes,
       status
     `)
-    .eq('status', 'approved')
     .eq('city', currentCity) // SECURITY: Filter by franchise city
     .not('business_name', 'is', null)
 
@@ -95,9 +99,6 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
     console.error('Error details:', JSON.stringify(error, null, 2))
   }
 
-  // Debug logging
-  console.log('📊 Approved businesses found:', approvedBusinesses?.length || 0)
-  
   // Parse real secret menu items from approved businesses
   const realSecretMenus = (approvedBusinesses || []).map(business => {
     let secretMenuItems = []
@@ -106,9 +107,6 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
       try {
         const notes = JSON.parse(business.additional_notes)
         secretMenuItems = notes.secret_menu_items || []
-        if (secretMenuItems.length > 0) {
-          console.log('🤫 Found secret menu items for:', business.business_name, secretMenuItems.length, 'items')
-        }
       } catch (e) {
         console.error('Error parsing additional_notes for business:', business.business_name, e)
       }
@@ -117,7 +115,7 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
     return {
       businessId: business.id,
       businessName: business.business_name,
-      businessCategory: business.business_category || 'Restaurant',
+      businessCategory: business.system_category || 'Restaurant',
       businessAddress: business.business_address,
       businessPhone: business.phone,
       businessImage: business.business_images?.[0] || null, // Get first image from array

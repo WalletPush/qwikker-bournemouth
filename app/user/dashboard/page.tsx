@@ -3,9 +3,7 @@ import { UserDashboardHome } from '@/components/user/user-dashboard-home'
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
 
 export const dynamic = 'force-dynamic'
-import { mockBusinesses, mockOffers } from '@/lib/mock-data/user-mock-data'
 import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
-// Removed unused import
 import { getValidatedUser } from '@/lib/utils/wallet-pass-security'
 import { filterActiveOffers } from '@/lib/utils/offer-helpers'
 import type { Metadata } from "next"
@@ -57,17 +55,11 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   try {
     cookieWalletPassId = await getWalletPassCookie()
   } catch (error) {
-    console.log('Cookie read error (safe to ignore):', error)
+    // Cookie read error (safe to ignore)
   }
   
   // URL parameter ALWAYS takes priority over cookie (for new signups)
   let walletPassId = urlWalletPassId || cookieWalletPassId || null
-  
-  console.log('🔍 Dashboard Debug:', {
-    urlWalletPassId,
-    cookieWalletPassId,
-    finalWalletPassId: walletPassId
-  })
   
   // Save to cookie if we got it from URL (for persistence across refreshes)
   if (urlWalletPassId && urlWalletPassId !== cookieWalletPassId) {
@@ -127,9 +119,9 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   
   // 🎯 FRANCHISE SYSTEM: Get franchise city for filtering
   // Use consistent city detection like other pages
-  console.log(`📊 Dashboard: Filtering businesses for franchise city: ${currentCity}`)
   
-  // Fetch approved businesses from database (franchise-filtered) with tier info
+  // Fetch approved businesses from database (franchise-filtered) with subscription data
+  // ✅ CRITICAL: Include subscription data to filter out expired trials
   const { data: approvedBusinesses, error } = await supabase
     .from('business_profiles')
     .select(`
@@ -148,10 +140,16 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
         offer_type,
         offer_value,
         offer_end_date,
+        offer_start_date,
+        status
+      ),
+      business_subscriptions!business_subscriptions_business_id_fkey(
+        is_in_free_trial,
+        free_trial_end_date,
         status
       )
     `)
-    .eq('status', 'approved')
+    .in('status', ['approved', 'unclaimed', 'claimed_free']) // Include all discoverable businesses
     .eq('city', currentCity) // SECURITY: Filter by franchise city
     .not('business_name', 'is', null)
   
@@ -159,19 +157,41 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
     console.error('❌ Error fetching businesses:', error, JSON.stringify(error))
   }
   
-  // Calculate real stats
-  const realBusinesses = approvedBusinesses || []
-  const totalBusinesses = realBusinesses.length + mockBusinesses.length
+  // ✅ CRITICAL: Filter out expired trials (same logic as discover page)
+  const activeBusinesses = (approvedBusinesses || []).filter(business => {
+    // If no subscription data, assume active (legacy/unclaimed businesses)
+    if (!business.business_subscriptions || !Array.isArray(business.business_subscriptions) || business.business_subscriptions.length === 0) {
+      return true
+    }
+    
+    const sub = business.business_subscriptions[0]
+    
+    // If not in trial, they're active (paid customers)
+    if (!sub.is_in_free_trial) {
+      return true
+    }
+    
+    // If in trial, check if expired
+    if (sub.free_trial_end_date) {
+      const endDate = new Date(sub.free_trial_end_date)
+      const now = new Date()
+      return endDate >= now // Only show if trial NOT expired
+    }
+    
+    return true // Default to showing if we can't determine
+  })
   
-  // Count real offers + mock offers (only active, non-expired offers)
-  const realOffers = realBusinesses.reduce((total, b) => {
+  // Calculate stats (NO MOCK DATA - 100% database-driven)
+  const totalBusinesses = activeBusinesses.length
+  
+  // Count active offers (filter by date)
+  const totalOffers = activeBusinesses.reduce((total, b) => {
     const activeOffers = filterActiveOffers(b.business_offers || [])
     return total + activeOffers.length
   }, 0)
-  const totalOffers = realOffers + mockOffers.length
   
-  // Count businesses with secret menus (both real and mock)
-  const realSecretMenus = realBusinesses.filter(b => {
+  // Count businesses with secret menus
+  const totalSecretMenus = activeBusinesses.filter(b => {
     if (!b.additional_notes) return false
     try {
       const notes = JSON.parse(b.additional_notes)
@@ -180,16 +200,11 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
       return false
     }
   }).length
-  const mockSecretMenus = mockBusinesses.filter(b => b.hasSecretMenu).length
-  const totalSecretMenus = realSecretMenus + mockSecretMenus
   
   const stats = {
     totalBusinesses,
     totalOffers,
-    totalSecretMenus,
-    realBusinesses: realBusinesses.length,
-    realOffers,
-    realSecretMenus
+    totalSecretMenus
   }
   
   return (

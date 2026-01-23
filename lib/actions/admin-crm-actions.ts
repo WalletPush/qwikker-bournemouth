@@ -114,13 +114,15 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       console.log('📅 EVENTS ERROR:', error)
     }
 
-    // Fetch offers separately
+    // Fetch ONLY CURRENT offers (not expired - admin only sees active)
     let offersByBusiness = new Map()
     try {
       const { data: allOffers, error: offersError } = await supabaseAdmin
         .from('business_offers')
         .select('*')
         .in('business_id', businessIds)
+        .eq('status', 'approved') // ✅ Only approved offers
+        .or(`offer_end_date.is.null,offer_end_date.gte.${new Date().toISOString().split('T')[0]}`) // ✅ Not expired
         .order('created_at', { ascending: false })
 
       if (allOffers && allOffers.length > 0) {

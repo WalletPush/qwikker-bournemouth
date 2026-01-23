@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ShareButton } from '@/components/ui/share-button'
-import { mockOffers, mockBusinesses, mockClaimedOffers } from '@/lib/mock-data/user-mock-data'
 import { AiCompanionCard } from '@/components/ui/ai-companion-card'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
@@ -42,8 +41,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     }, 100)
   }
   
-  // Combine real offers with mock offers
-  const allOffers = [...realOffers, ...mockOffers]
+  // Use only real offers (no mock data)
+  const allOffers = realOffers
 
   // Load from localStorage after component mounts
   useEffect(() => {
@@ -525,18 +524,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
 
     // Filter by category
     if (selectedCategory !== 'all') {
-      // For real offers, filter by businessCategory
-      // For mock offers, filter by business category from mockBusinesses
-      filtered = filtered.filter(o => {
-        if (o.businessCategory) {
-          // Real offer
-          return o.businessCategory === selectedCategory
-        } else {
-          // Mock offer - find business in mockBusinesses
-          const business = mockBusinesses.find(b => b.id === o.businessId)
-          return business?.category === selectedCategory
-        }
-      })
+      filtered = filtered.filter(o => o.businessCategory === selectedCategory)
     }
 
     return filtered
@@ -555,38 +543,14 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   const OfferCard = ({ offer }: { offer: any }) => {
     const [showModal, setShowModal] = useState(false)
     
-    // Distinguish real vs mock offers: real offers have 'image' property from transformation, mock offers don't
-    const isRealOffer = !!offer.image
-    const business = isRealOffer ? null : mockBusinesses.find(b => b.id === offer.businessId)
-    const businessName = offer.businessName || business?.name || 'Unknown Business'
-    
-    // Create business slug for ref and highlighting
+    // All offers are now real (no mock data)
+    const businessName = offer.businessName || 'Unknown Business'
     const businessSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-')
+    const businessImage = offer.image || '/placeholder-business.jpg'
+    const businessRating = offer.businessRating || 4.5
     
-    // Fix image selection: for real offers use offer.image (from transformation), for mock offers use business.images[0]
-    const businessImage = isRealOffer
-      ? (offer.image || '/placeholder-business.jpg') 
-      : (business?.images?.[0] || '/placeholder-business.jpg')
-    
-    // DEBUG: Log image selection for mock offers
-    if (!isRealOffer) {
-      console.log('🖼️ Mock offer image debug:', {
-        offerTitle: offer.title,
-        businessId: offer.businessId,
-        businessFound: !!business,
-        businessName: business?.name,
-        businessImages: business?.images,
-        finalImage: businessImage
-      })
-    }
-    
-    const businessRating = offer.businessRating || business?.rating || 4.5
-    
-    // Generate badge for real offers based on type, use existing badge for mock offers
+    // Generate badge based on offer type
     const getBadgeText = () => {
-      if (!isRealOffer && offer.badge) return offer.badge // Mock offers have badge
-      
-      // Generate badge for real offers based on type
       switch (offer.type) {
         case 'two_for_one': return '2-FOR-1'
         case 'percentage_off': return `${offer.value}`
@@ -599,7 +563,6 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     const isFavorite = favoriteOffers.has(offer.id)
     const isClaimed = claimedOffers.has(offer.id)
     const isInWallet = walletOffers.has(offer.id)
-    const claimedOfferData = mockClaimedOffers.find(co => co.offerId === offer.id)
     
     return (
       <>
@@ -668,7 +631,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           {/* Business name in bottom corner */}
           <div className="absolute bottom-2 left-2 sm:left-3 right-10 sm:right-12">
             <p className="text-white font-semibold text-xs sm:text-sm drop-shadow-lg truncate">{businessName}</p>
-            <p className="text-white/90 text-[10px] sm:text-xs drop-shadow-md truncate">{isRealOffer ? offer.businessCategory : business?.category}</p>
+            <p className="text-white/90 text-[10px] sm:text-xs drop-shadow-md truncate">{offer.businessCategory}</p>
           </div>
 
           {/* In Wallet Badge */}
@@ -709,8 +672,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
 
           {/* Clean Terms & Expiry - Hidden on mobile */}
           <div className="hidden sm:block mb-4 text-xs text-slate-400 space-y-1">
-            <p><span className="font-medium">Terms:</span> {isRealOffer ? (offer.termsAndConditions || 'Standard terms apply') : (offer.terms || 'Standard terms apply')}</p>
-            <p><span className="font-medium">Valid until:</span> {isRealOffer ? (offer.validUntil || 'No expiry date') : (offer.expiryDate || 'No expiry date')}</p>
+            <p><span className="font-medium">Terms:</span> {offer.termsAndConditions || 'Standard terms apply'}</p>
+            <p><span className="font-medium">Valid until:</span> {offer.validUntil || 'No expiry date'}</p>
             </div>
           </div>
 
@@ -774,16 +737,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             <div className="sticky top-0 bg-gradient-to-br from-slate-800 to-slate-900 border-b border-slate-700 p-6 flex items-start justify-between z-10">
               <div className="flex-1 pr-4">
                 <div className={`inline-block ${getBadgeColor(offer.type)} text-white text-xs px-3 py-1 rounded-full font-bold mb-3`}>
-                  {(() => {
-                    if (!isRealOffer && offer.badge) return offer.badge
-                    switch (offer.type) {
-                      case 'two_for_one': return '2-FOR-1'
-                      case 'percentage_off': return `${offer.value}`
-                      case 'freebie': return 'FREE ITEM'
-                      case 'discount': return 'DISCOUNT'
-                      default: return 'OFFER'
-                    }
-                  })()}
+                  {getBadgeText()}
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">{offer.title}</h2>
                 <p className="text-slate-400">at <span className="text-slate-300 font-medium">{businessName}</span></p>
@@ -838,7 +792,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
                   <h3 className="text-lg font-semibold text-white mb-3">Terms & Conditions</h3>
                   <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap">
-                    {isRealOffer ? offer.termsAndConditions : offer.terms}
+                    {offer.termsAndConditions}
                   </p>
                 </div>
               )}

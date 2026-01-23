@@ -672,6 +672,15 @@ export async function syncOfferToKnowledgeBase(offerId: string): Promise<{
   try {
     const supabase = createServiceRoleClient()
 
+    // ✅ CRITICAL GUARD: Only accept valid UUIDs (prevent "Current Offers" contamination)
+    if (!offerId || offerId.length !== 36 || !offerId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      return {
+        success: false,
+        message: 'Invalid offer ID - must be a valid UUID',
+        error: 'GUARD: Prevented non-UUID offer sync (contamination protection)'
+      }
+    }
+
     // Fetch the offer with business details
     const { data: offer, error: offerError } = await supabase
       .from('business_offers')
@@ -905,6 +914,7 @@ This is an exclusive item not shown on the regular menu. Ask staff about it!`
             item_name: data.itemName,
             item_price: data.itemPrice,
             item_category: data.itemCategory,
+            item_created_at: data.created_at, // ✅ Store created_at for deterministic archiving
           },
           tags: ['secret_menu', 'exclusive', 'hidden', business.city],
           status: 'active',
@@ -942,6 +952,7 @@ This is an exclusive item not shown on the regular menu. Ask staff about it!`
             item_name: data.itemName,
             item_price: data.itemPrice,
             item_category: data.itemCategory,
+            item_created_at: data.created_at, // ✅ Store created_at for deterministic archiving
           },
           tags: ['secret_menu', 'exclusive', 'hidden', business.city],
           status: 'active'
@@ -1003,6 +1014,205 @@ export async function removeEventFromKnowledgeBase(eventId: string): Promise<{
     }
   } catch (error: any) {
     console.error('❌ Error in removeEventFromKnowledgeBase:', error)
+    return {
+      success: false,
+      message: `Error: ${error.message}`
+    }
+  }
+}
+
+/**
+ * Archive an offer in the knowledge base (set status to 'archived')
+ * This prevents it from appearing in chat while maintaining historical data
+ */
+export async function archiveOfferInKnowledgeBase(offerId: string): Promise<{
+  success: boolean
+  message: string
+}> {
+  try {
+    const supabase = createServiceRoleClient()
+
+    // Get offer's business and city for multi-tenant safety
+    const { data: offer } = await supabase
+      .from('business_offers')
+      .select('business_id, business_profiles!inner(city)')
+      .eq('id', offerId)
+      .single()
+
+    if (!offer?.business_profiles?.city) {
+      return {
+        success: false,
+        message: 'Offer or business not found'
+      }
+    }
+
+    const city = Array.isArray(offer.business_profiles) 
+      ? offer.business_profiles[0].city 
+      : offer.business_profiles.city
+
+    // 🔒 MULTI-TENANT SAFE: Archive by offer_id + business_id + city
+    const { data: archived, error } = await supabase
+      .from('knowledge_base')
+      .update({ status: 'archived', updated_at: new Date().toISOString() })
+      .eq('knowledge_type', 'custom_knowledge')
+      .eq('metadata->>type', 'offer')
+      .eq('metadata->>offer_id', offerId)
+      .eq('business_id', offer.business_id)
+      .eq('city', city) // 🔒 CRITICAL: City scoping for service role
+      .select('id')
+
+    if (error) {
+      console.error('❌ Error archiving offer in knowledge base:', error)
+      return {
+        success: false,
+        message: `Failed to archive offer in knowledge base: ${error.message}`
+      }
+    }
+
+    console.log(`📚 Archived ${archived?.length || 0} offer KB row(s) (offer_id: ${offerId}, city: ${city})`)
+    return {
+      success: true,
+      message: `Offer archived in knowledge base (${archived?.length || 0} row(s))`
+    }
+  } catch (error: any) {
+    console.error('❌ Error in archiveOfferInKnowledgeBase:', error)
+    return {
+      success: false,
+      message: `Error: ${error.message}`
+    }
+  }
+}
+
+/**
+ * Archive an event in the knowledge base (set status to 'archived')
+ * This prevents it from appearing in chat while maintaining historical data
+ */
+export async function archiveEventInKnowledgeBase(eventId: string): Promise<{
+  success: boolean
+  message: string
+}> {
+  try {
+    const supabase = createServiceRoleClient()
+
+    // Get event's business and city for multi-tenant safety
+    const { data: event } = await supabase
+      .from('business_events')
+      .select('business_id, business_profiles!inner(city)')
+      .eq('id', eventId)
+      .single()
+
+    if (!event?.business_profiles?.city) {
+      return {
+        success: false,
+        message: 'Event or business not found'
+      }
+    }
+
+    const city = Array.isArray(event.business_profiles) 
+      ? event.business_profiles[0].city 
+      : event.business_profiles.city
+
+    // 🔒 MULTI-TENANT SAFE: Archive by event_id + business_id + city
+    const { data: archived, error } = await supabase
+      .from('knowledge_base')
+      .update({ status: 'archived', updated_at: new Date().toISOString() })
+      .eq('knowledge_type', 'event')
+      .eq('metadata->>event_id', eventId)
+      .eq('business_id', event.business_id)
+      .eq('city', city) // 🔒 CRITICAL: City scoping for service role
+      .select('id')
+
+    if (error) {
+      console.error('❌ Error archiving event in knowledge base:', error)
+      return {
+        success: false,
+        message: `Failed to archive event in knowledge base: ${error.message}`
+      }
+    }
+
+    console.log(`📚 Archived ${archived?.length || 0} event KB row(s) (event_id: ${eventId}, city: ${city})`)
+    return {
+      success: true,
+      message: `Event archived in knowledge base (${archived?.length || 0} row(s))`
+    }
+  } catch (error: any) {
+    console.error('❌ Error in archiveEventInKnowledgeBase:', error)
+    return {
+      success: false,
+      message: `Error: ${error.message}`
+    }
+  }
+}
+
+/**
+ * Archive a secret menu item in the knowledge base (set status to 'archived')
+ * This prevents it from appearing in chat while maintaining historical data
+ * 
+ * @param itemCreatedAt - The created_at timestamp of the secret menu item (stable ID)
+ * @param businessId - The business ID
+ */
+export async function archiveSecretMenuItemInKnowledgeBase(itemCreatedAt: string, businessId: string): Promise<{
+  success: boolean
+  message: string
+}> {
+  try {
+    const supabase = createServiceRoleClient()
+
+    // Get business city for multi-tenant safety (service role bypasses RLS)
+    const { data: business } = await supabase
+      .from('business_profiles')
+      .select('city')
+      .eq('id', businessId)
+      .single()
+
+    if (!business?.city) {
+      return {
+        success: false,
+        message: 'Business not found or missing city'
+      }
+    }
+
+    // 🔒 MULTI-TENANT SAFE: Archive by created_at + business_id + city
+    const { data: archived, error } = await supabase
+      .from('knowledge_base')
+      .update({ status: 'archived', updated_at: new Date().toISOString() })
+      .eq('knowledge_type', 'custom_knowledge')
+      .eq('metadata->>type', 'secret_menu')
+      .eq('metadata->>item_created_at', itemCreatedAt)
+      .eq('business_id', businessId)
+      .eq('city', business.city) // 🔒 CRITICAL: City scoping for service role
+      .select('id')
+
+    if (error) {
+      console.error('❌ Error archiving secret menu item in knowledge base:', error)
+      return {
+        success: false,
+        message: `Failed to archive secret menu item in knowledge base: ${error.message}`
+      }
+    }
+
+    // ✅ LEGACY FALLBACK: If zero rows updated, KB row may be old and missing item_created_at
+    if (!archived || archived.length === 0) {
+      console.warn(`⚠️ No KB rows found by created_at=${itemCreatedAt}`)
+      console.warn(`⚠️ This means either:`)
+      console.warn(`   1. KB row was already archived`)
+      console.warn(`   2. KB row never existed (item not synced)`)
+      console.warn(`   3. KB row is old and missing item_created_at field`)
+      console.warn(`⚠️ Run backfill migration: 20260124000002_backfill_secret_menu_created_at.sql`)
+      
+      return {
+        success: true,
+        message: 'Secret menu item not found in KB by created_at (may need backfill or already archived)'
+      }
+    }
+
+    console.log(`📚 Archived ${archived.length} secret menu item(s) in knowledge base (created_at: ${itemCreatedAt}, business_id: ${businessId}, city: ${business.city})`)
+    return {
+      success: true,
+      message: `Secret menu item archived in knowledge base (${archived.length} row(s))`
+    }
+  } catch (error: any) {
+    console.error('❌ Error in archiveSecretMenuItemInKnowledgeBase:', error)
     return {
       success: false,
       message: `Error: ${error.message}`

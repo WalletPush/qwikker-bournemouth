@@ -34,9 +34,6 @@ export default async function DashboardPage() {
     .eq('user_id', data.claims.sub)
     .single()
 
-  console.log('🔍 DEBUG: Profile ID:', profile?.id)
-  console.log('🔍 DEBUG: Business Name:', profile?.business_name)
-
   // Get subscription data (for accurate tier and trial info) - GET LATEST ONLY!
   const { data: subscription, error: subError } = await supabase
     .from('business_subscriptions')
@@ -53,11 +50,6 @@ export default async function DashboardPage() {
     .order('updated_at', { ascending: false }) // GET LATEST SUBSCRIPTION
     .limit(1)
     .maybeSingle() // Use maybeSingle to handle no subscriptions gracefully
-
-  console.log('🔍 DEBUG: Subscription Query Error:', subError)
-  console.log('🔍 DEBUG: Subscription Data:', subscription ? 'EXISTS' : 'NULL')
-  console.log('🔍 DEBUG: Trial End Date:', subscription?.free_trial_end_date)
-  console.log('🔍 DEBUG: Is In Free Trial:', subscription?.is_in_free_trial)
 
   // Get approved menus count for this business
   const { count: approvedMenusCount } = await supabase

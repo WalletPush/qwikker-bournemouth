@@ -132,14 +132,6 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
     // Anonymous visitors are those WITHOUT user_id or wallet_pass_id
     const anonymousVisitors = visits?.filter(v => !v.user_id && !v.wallet_pass_id).length || 0
     
-    console.log('📊 Analytics Debug:', {
-      totalVisits,
-      uniqueVisitors,
-      registeredVisitors,
-      anonymousVisitors,
-      sampleVisit: visits?.[0]
-    })
-    
     // 2. OFFER ANALYTICS
     const { data: claims } = await supabase
       .from('user_offer_claims')

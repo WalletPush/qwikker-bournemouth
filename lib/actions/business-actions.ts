@@ -527,6 +527,20 @@ export async function deleteBusinessOffer(userId: string, offerId: string) {
       return { success: false, error: 'Failed to delete offer' }
     }
 
+    // Archive the offer in knowledge base (prevent it from appearing in chat)
+    try {
+      const { archiveOfferInKnowledgeBase } = await import('@/lib/ai/embeddings')
+      const archiveResult = await archiveOfferInKnowledgeBase(offerId)
+      
+      if (archiveResult.success) {
+        console.log(`📚 ${archiveResult.message}`)
+      } else {
+        console.error(`⚠️ KB archive warning: ${archiveResult.message}`)
+      }
+    } catch (kbError) {
+      console.error('⚠️ Knowledge base archive error (non-critical):', kbError)
+    }
+
     // Send Slack notification about deletion
     try {
       await sendBusinessUpdateNotification(profile, 'offer_deleted', {
@@ -658,6 +672,21 @@ export async function deleteSecretMenuItem(userId: string, itemId: string) {
 
   if (updateError) {
     return { success: false, error: updateError.message }
+  }
+
+  // Archive the secret menu item in knowledge base (prevent it from appearing in chat)
+  // Use created_at timestamp as stable ID (deterministic archiving)
+  try {
+    const { archiveSecretMenuItemInKnowledgeBase } = await import('@/lib/ai/embeddings')
+    const archiveResult = await archiveSecretMenuItemInKnowledgeBase(deletedItem.created_at, profile.id)
+    
+    if (archiveResult.success) {
+      console.log(`📚 ${archiveResult.message}`)
+    } else {
+      console.error(`⚠️ KB archive warning: ${archiveResult.message}`)
+    }
+  } catch (kbError) {
+    console.error('⚠️ Knowledge base archive error (non-critical):', kbError)
   }
 
   // Send Slack notification about deletion

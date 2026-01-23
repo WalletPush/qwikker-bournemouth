@@ -20,6 +20,7 @@ export function OffersPage({ profile }: OffersPageProps) {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
+  const [activeTab, setActiveTab] = useState<'active' | 'expired'>('active') // ✅ Add tabs like events
   
   const { showConfirm, ModalComponent } = useElegantModal()
 
@@ -276,12 +277,29 @@ export function OffersPage({ profile }: OffersPageProps) {
     }
   }
 
-  // Get approved offers from the new business_offers table
-  const approvedOffers = profile.business_offers?.filter(offer => offer.status === 'approved') || []
-  const currentOfferCount = approvedOffers.length
+  // ✅ Separate active vs expired offers (like events)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
   
-  // Check if user has any existing offers (for backward compatibility)
-  const hasLegacyOffer = profile.offer_name && profile.offer_name.trim() !== ''
+  const activeOffers = profile.business_offers?.filter(offer => 
+    offer.status === 'approved' && 
+    (!offer.offer_end_date || new Date(offer.offer_end_date) >= today)
+  ) || []
+  
+  const expiredOffers = profile.business_offers?.filter(offer => 
+    offer.status === 'approved' && 
+    offer.offer_end_date && 
+    new Date(offer.offer_end_date) < today
+  ) || []
+  
+  // ✅ Only count ACTIVE offers toward tier limit (expired don't count)
+  const currentOfferCount = activeOffers.length
+  
+  // Legacy support
+  const approvedOffers = activeOffers // For backward compatibility with existing code
+  
+  // Legacy offer system removed - now using business_offers table only
+  // const hasLegacyOffer = profile.offer_name && profile.offer_name.trim() !== ''
 
   // Plan limits based on business tier (updated to match database)
   const getOfferLimit = (plan: string) => {
@@ -369,17 +387,72 @@ export function OffersPage({ profile }: OffersPageProps) {
         </div>
       )}
 
-      {/* Current Offers */}
-      {approvedOffers.length > 0 && (
+      {/* Offers Tabs (like events) */}
+      {(activeOffers.length > 0 || expiredOffers.length > 0) && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-            </svg>
-            Your Active Offers ({approvedOffers.length})
-          </h2>
-          
-          {approvedOffers.map((offer, index) => (
+          {/* Tab Navigation */}
+          <div className="flex gap-2 border-b border-slate-700">
+            <button
+              onClick={() => setActiveTab('active')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === 'active'
+                  ? 'text-[#00d083] border-b-2 border-[#00d083]'
+                  : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              Active Offers ({activeOffers.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('expired')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === 'expired'
+                  ? 'text-[#00d083] border-b-2 border-[#00d083]'
+                  : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              Expired Offers ({expiredOffers.length})
+            </button>
+          </div>
+
+          {/* Active Offers Tab */}
+          {activeTab === 'active' && (
+            <div className="space-y-4">
+              {activeOffers.length === 0 ? (
+                <Card className="bg-slate-800/50 border-slate-700">
+                  <CardContent className="text-center py-12">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-white mb-2">No Active Offers</h3>
+                    <p className="text-gray-400 mb-6">
+                      {currentOfferCount < offerLimit 
+                        ? 'Create your first offer to attract customers and drive engagement'
+                        : `You've reached your limit of ${offerLimit} active offers. Check expired offers to extend or delete an active offer to create a new one.`
+                      }
+                    </p>
+                    {currentOfferCount < offerLimit && (
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
+                        onClick={startCreateOffer}
+                      >
+                        Create Your First Offer
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    Active Offers
+                  </h2>
+                  
+                  {activeOffers.map((offer, index) => (
             <Card 
               key={offer.id} 
               className={`bg-slate-800/50 border-slate-700 transition-all duration-300 ${
@@ -504,141 +577,97 @@ export function OffersPage({ profile }: OffersPageProps) {
               </CardContent>
             </Card>
           ))}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Expired Offers Tab */}
+          {activeTab === 'expired' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                  <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Expired Offers
+                </h2>
+                <p className="text-xs text-gray-400">These don't count toward your limit</p>
+              </div>
+
+              {expiredOffers.length === 0 ? (
+                <Card className="bg-slate-800/50 border-slate-700">
+                  <CardContent className="text-center py-8">
+                    <p className="text-gray-400">No expired offers</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                expiredOffers.map((offer) => (
+                  <Card key={offer.id} className="bg-slate-800/50 border-orange-500/30">
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <CardTitle className="text-white">{offer.offer_name}</CardTitle>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs px-2 py-1 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                              Expired {new Date(offer.offer_end_date!).toLocaleDateString('en-GB')}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10"
+                            onClick={() => {
+                              setEditingOfferId(offer.id)
+                              setFormData({
+                                offerName: offer.offer_name,
+                                offerType: offer.offer_type,
+                                offerValue: offer.offer_value,
+                                offerClaimAmount: offer.offer_claim_amount,
+                                offerDescription: offer.offer_description || '',
+                                offerTerms: offer.offer_terms || '',
+                                startDate: offer.offer_start_date || '',
+                                endDate: '', // Clear end date for re-activation
+                              })
+                              setShowCreateForm(true)
+                            }}
+                          >
+                            Extend / Re-list
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-gray-400">Type:</span>
+                            <span className="text-white ml-2">{offer.offer_type || 'Not specified'}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400">Value:</span>
+                            <span className="text-white ml-2">{offer.offer_value || 'Not specified'}</span>
+                          </div>
+                        </div>
+                        {offer.offer_description && (
+                          <p className="text-gray-300 mt-2">{offer.offer_description}</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Legacy Offer (for backward compatibility) */}
-      {hasLegacyOffer && approvedOffers.length === 0 && (
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-              </svg>
-              Current Offer
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-slate-700/30 rounded-lg p-4 sm:p-6">
-              <div className="space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <h3 className="text-lg font-semibold text-white flex-1 min-w-0">{profile.offer_name}</h3>
-                  {/* Action buttons - only show on larger screens */}
-                  <div className="hidden sm:flex gap-2 flex-shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-slate-600 text-gray-300 hover:bg-slate-700 text-xs"
-                      onClick={startEditOffer}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-red-600 text-red-400 hover:bg-red-600/10 text-xs"
-                      onClick={() => setShowDeleteConfirmation(true)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-400">Type:</span>
-                    <span className="text-white ml-2">{profile.offer_type || 'Not specified'}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">Value:</span>
-                    <span className="text-white ml-2">{profile.offer_value || 'Not specified'}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">Claim Amount:</span>
-                    <span className="text-white ml-2">
-                      {profile.offer_claim_amount === 'single' ? 'Single Use' : 
-                       profile.offer_claim_amount === 'multiple' ? 'Multiple Use' : 
-                       'Not specified'}
-                    </span>
-                  </div>
-                  {profile.offer_image && (
-                    <div>
-                      <span className="text-gray-400">Offer Image:</span>
-                      <a href={profile.offer_image} target="_blank" rel="noopener noreferrer" className="text-[#00d083] hover:text-[#00b86f] ml-2 underline">
-                        View Image
-                      </a>
-                    </div>
-                  )}
-                  {profile.offer_start_date && (
-                    <div>
-                      <span className="text-gray-400">Start Date:</span>
-                      <span className="text-white ml-2">{new Date(profile.offer_start_date).toLocaleDateString('en-GB')}</span>
-                    </div>
-                  )}
-                  {profile.offer_end_date && (
-                    <div>
-                      <span className="text-gray-400">End Date:</span>
-                      <span className="text-white ml-2">{new Date(profile.offer_end_date).toLocaleDateString('en-GB')}</span>
-                    </div>
-                  )}
-                </div>
-                
-                {profile.offer_terms && (
-                  <div className="mt-4 pt-4 border-t border-slate-600">
-                    <span className="text-gray-400 text-sm">Terms & Conditions:</span>
-                    <p className="text-white text-sm mt-1 leading-relaxed">{profile.offer_terms}</p>
-                  </div>
-                )}
-                
-                {/* Mobile action buttons */}
-                <div className="sm:hidden flex flex-wrap gap-2 pt-4 border-t border-slate-600">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-600 text-gray-300 hover:bg-slate-700 flex-1 touch-manipulation min-h-[44px]"
-                    onClick={startEditOffer}
-                  >
-                    Edit Offer
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-red-600 text-red-400 hover:bg-red-600/10 flex-1 touch-manipulation min-h-[44px]"
-                    onClick={() => setShowDeleteConfirmation(true)}
-                  >
-                    Delete
-                  </Button>
-                  {currentOfferCount < offerLimit && (
-                    <Button
-                      size="sm"
-                      className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white w-full touch-manipulation min-h-[44px]"
-                      onClick={startCreateOffer}
-                    >
-                      Create Another Offer
-                    </Button>
-                  )}
-                </div>
-                
-                {/* Desktop "Create Another" button */}
-                {currentOfferCount < offerLimit && (
-                  <div className="hidden sm:block pt-4 border-t border-slate-600">
-                    <Button
-                      size="sm"
-                      className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white"
-                    onClick={startCreateOffer}
-                    >
-                      Create Another Offer
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Legacy Offer Display REMOVED - Use business_offers table only */}
 
-      {/* Create New Offer Button */}
-      {approvedOffers.length === 0 && !showCreateForm && currentOfferCount < offerLimit && (
+      {/* Create New Offer Button - ONLY show if NO tabs (no active AND no expired offers) */}
+      {activeOffers.length === 0 && expiredOffers.length === 0 && !showCreateForm && currentOfferCount < offerLimit && (
         <Card className="bg-slate-800/50 border-slate-700">
           <CardContent className="text-center py-12">
             <div className="w-16 h-16 mx-auto mb-4 bg-slate-700 rounded-full flex items-center justify-center">
@@ -660,8 +689,8 @@ export function OffersPage({ profile }: OffersPageProps) {
         </Card>
       )}
 
-      {/* Create Another Offer Button */}
-      {approvedOffers.length > 0 && !showCreateForm && currentOfferCount < offerLimit && (
+      {/* Create Another Offer Button - show when there are active offers and under limit */}
+      {activeOffers.length > 0 && !showCreateForm && currentOfferCount < offerLimit && (
         <Card className="bg-slate-800/50 border-slate-700">
           <CardContent className="text-center py-8">
             <h3 className="text-lg font-medium text-white mb-2">Add Another Offer</h3>
@@ -703,7 +732,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                   )}
                 </div>
               </div>
-              {showCreateForm && hasLegacyOffer && (
+              {showCreateForm && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1009,7 +1038,7 @@ Examples:
 
               {/* Submit Section */}
               <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-slate-700">
-                {showCreateForm && hasLegacyOffer && (
+                {showCreateForm && (
                   <Button
                     type="button"
                     variant="outline"
