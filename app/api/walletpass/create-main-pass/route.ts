@@ -30,6 +30,17 @@ export async function POST(request: NextRequest) {
     // Create main user wallet pass
     const createUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/passes`
     
+    // Get the request host to build dynamic URLs
+    const host = request.headers.get('host') || 'qwikker.com'
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const baseUrl = `${protocol}://${host}`
+    
+    // Get city-specific subdomain for URLs
+    const citySubdomain = city?.toLowerCase() || 'bournemouth'
+    const cityBaseUrl = host.includes('localhost') 
+      ? baseUrl // localhost:3000 for dev
+      : `https://${citySubdomain}.qwikker.com` // Production subdomains
+    
     // Generate unique serial number for this pass
     const serialNumber = `QWIK-${city?.toUpperCase() || 'BOURNE'}-${firstName.toUpperCase()}-${Date.now()}`
     
@@ -48,13 +59,13 @@ export async function POST(request: NextRequest) {
       'Organization_Name': 'Qwikker',
       'Pass_Type': 'Loyalty Card',
       
-      // CRITICAL: Bulletproof shortlinks (never break, always work)
-      'Offers_Url': `https://qwikkerdashboard-theta.vercel.app/user/offers?wallet_pass_id=${serialNumber}`,
-      'AI_Url': `https://qwikkerdashboard-theta.vercel.app/s/${serialNumber.slice(-8)}/chat`,
-      'Dashboard_Url': `https://qwikkerdashboard-theta.vercel.app/s/${serialNumber.slice(-8)}`,
+      // ✅ DYNAMIC: City-specific subdomain URLs
+      'Offers_Url': `${cityBaseUrl}/user/offers?wallet_pass_id=${serialNumber}`,
+      'AI_Url': `${cityBaseUrl}/s/${serialNumber.slice(-8)}/chat`,
+      'Dashboard_Url': `${cityBaseUrl}/s/${serialNumber.slice(-8)}`,
       
-      // Barcode for user identification (Bulletproof shortlink)
-      'barcode_value': `https://qwikkerdashboard-theta.vercel.app/s/${serialNumber.slice(-8)}`,
+      // Barcode for user identification (Dynamic subdomain)
+      'barcode_value': `${cityBaseUrl}/s/${serialNumber.slice(-8)}`,
       'barcode_format': 'PKBarcodeFormatQR',
       'barcode_message': 'Scan to access your personalized Qwikker dashboard'
     }
@@ -92,7 +103,7 @@ export async function POST(request: NextRequest) {
       try {
         // Create shortlinks for all three link types
         const shortlinkPromises = ['dashboard', 'offers', 'chat'].map(async (linkType) => {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://qwikkerdashboard-theta.vercel.app'}/api/shortlinks/ghl-create`, {
+          const response = await fetch(`${baseUrl}/api/shortlinks/ghl-create`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

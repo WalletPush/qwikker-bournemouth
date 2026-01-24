@@ -39,6 +39,20 @@ interface UserDiscoverPageProps {
 }
 
 export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: UserDiscoverPageProps) {
+  // 🐛 DEBUG: Log businesses on mount
+  useEffect(() => {
+    console.log('🏪 UserDiscoverPage mounted with businesses:', {
+      total: businesses.length,
+      sample: businesses[0],
+      allBusinesses: businesses.map(b => ({
+        name: b.name,
+        offersCount: b.offers?.length || 0,
+        activeOffers: (b as any).activeOffers,
+        hasOffers: (b.offers?.length || 0) > 0
+      }))
+    })
+  }, [businesses])
+  
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all') // NEW: Category filter
   const [showAllCategories, setShowAllCategories] = useState(false) // NEW: Show More toggle

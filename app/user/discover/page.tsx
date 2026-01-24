@@ -130,6 +130,18 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
     .order('review_count', { ascending: false, nullsFirst: false }) // More reviews = more trustworthy
     .order('created_at', { ascending: false }) // Recency as tiebreaker
   
+  // 🐛 DEBUG: Log query results
+  console.log('📊 Discover Page: business_profiles query result:', {
+    totalBusinesses: approvedBusinesses?.length || 0,
+    error: error ? JSON.stringify(error) : null,
+    sampleBusiness: approvedBusinesses?.[0] ? {
+      name: approvedBusinesses[0].business_name,
+      status: approvedBusinesses[0].status,
+      plan: approvedBusinesses[0].plan,
+      offersCount: approvedBusinesses[0].business_offers?.length || 0
+    } : 'NO_BUSINESSES'
+  })
+  
   if (error) {
     console.error('❌ Error fetching businesses for discover page:', error, JSON.stringify(error))
   }
@@ -210,7 +222,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
         business.business_town
       ].filter(Boolean),
       distance: (Math.random() * 2 + 0.1).toFixed(1), // Random distance for demo
-      activeOffers: business.business_offers?.filter(offer => offer.status === 'approved')?.length || 0,
+      activeOffers: filterActiveOffers(business.business_offers || []).length, // Count only active (approved + non-expired)
       menuPreview: business.menu_preview || [], // Add menu preview for popular items
       hasSecretMenu, // Now properly checks for real secret menu data
       // 🎯 TIER LOGIC: Free listings (unclaimed/claimed_free) have NO tier badge

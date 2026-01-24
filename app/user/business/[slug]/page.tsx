@@ -178,7 +178,18 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       images: business.business_images || ['/placeholder-business.jpg'],
       logo: business.logo || '/placeholder-logo.jpg',
       slug: business.business_name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || business.id,
-      offers: business.business_offers?.filter(offer => offer.status === 'approved').map(offer => ({
+      offers: business.business_offers?.filter(offer => {
+        // Must be approved
+        if (offer.status !== 'approved') return false
+        // Check if expired
+        if (offer.offer_end_date) {
+          const endDate = new Date(offer.offer_end_date)
+          const today = new Date()
+          today.setHours(0, 0, 0, 0) // Compare at day level
+          return endDate >= today // Only show if not expired
+        }
+        return true // No end date = always active
+      }).map(offer => ({
         id: offer.id,
         businessId: business.id,
         title: offer.offer_name,
@@ -202,7 +213,16 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
         business.business_town
       ].filter(Boolean),
       distance: (Math.random() * 2 + 0.1).toFixed(1),
-      activeOffers: business.business_offers?.filter(offer => offer.status === 'approved')?.length || 0,
+      activeOffers: business.business_offers?.filter(offer => {
+        if (offer.status !== 'approved') return false
+        if (offer.offer_end_date) {
+          const endDate = new Date(offer.offer_end_date)
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          return endDate >= today
+        }
+        return true
+      })?.length || 0,
       menuPreview: business.menu_preview || [], // Add menu preview for popular items
       hasSecretMenu, // Now properly checks for real secret menu data
       // 🎯 TIER LOGIC: Free listings (unclaimed/claimed_free) have NO tier badge

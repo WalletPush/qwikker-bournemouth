@@ -309,6 +309,11 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [claimsView, setClaimsView] = useState<'pending' | 'approved' | 'denied'>('pending')
   const [businessList, setBusinessList] = useState<Business[]>(businesses)
   const [isLoading, setIsLoading] = useState<string | null>(null)
+
+  // ✅ FIX: Sync businessList state when businesses prop changes
+  useEffect(() => {
+    setBusinessList(businesses)
+  }, [businesses])
   const [inspectionModal, setInspectionModal] = useState<{ open: boolean; business: Business | null }>({ open: false, business: null })
   const [inspectedBusinesses, setInspectedBusinesses] = useState<Set<string>>(new Set())
   const [processingChangeId, setProcessingChangeId] = useState<string | null>(null)

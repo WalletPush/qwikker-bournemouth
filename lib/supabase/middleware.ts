@@ -5,32 +5,7 @@ import { getCityFromHostname } from '@/lib/utils/city-detection'
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
   
-  // 🎯 PUBLIC ROUTES: Allow access without Supabase auth session OR city detection
-  const publicPaths = [
-    '/',           // Root landing page (marketing)
-    '/user',       // User dashboard (uses wallet_pass_id, not auth)
-    '/admin',      // Admin routes handle their own authentication
-    '/api',        // API routes handle their own authentication
-    '/s/',         // Shortlinks
-    '/c/',         // Chat shortlinks
-    '/claim',      // Business claim flow (creates account after verification)
-    '/welcome',    // Welcome page
-    '/onboarding', // Onboarding flow
-    '/wallet-pass' // Wallet pass pages
-  ]
-  
-  // Check if current path matches any public path
-  const isPublicPath = publicPaths.some(path => 
-    path === '/' 
-      ? request.nextUrl.pathname === '/'  // Root must match exactly
-      : request.nextUrl.pathname.startsWith(path)
-  )
-  
-  if (isPublicPath) {
-    return supabaseResponse
-  }
-  
-  // 🌍 MULTI-CITY: Only detect city for non-public paths
+  // 🌍 MULTI-CITY: Detect city for ALL requests (needed for RLS)
   const hostname = request.headers.get('host') || ''
   const currentCity = await getCityFromHostname(hostname)
 
@@ -53,13 +28,39 @@ export async function updateSession(request: NextRequest) {
     }
   )
   
-  // 🔒 SECURITY: Set city context for RLS policies
-  // This ensures public queries are scoped to the current subdomain's city
+  // 🔒 SECURITY: Set city context for RLS policies (for ALL requests)
+  // This ensures queries are scoped to the current subdomain's city
   try {
     await supabase.rpc('set_current_city', { city_name: currentCity })
   } catch (error) {
     // Function may not exist yet - that's okay during migration
     console.warn(`Could not set city context: ${error}`)
+  }
+
+  // 🎯 PUBLIC ROUTES: Allow access without Supabase auth session
+  const publicPaths = [
+    '/',           // Root landing page (marketing)
+    '/user',       // User dashboard (uses wallet_pass_id, not auth)
+    '/admin',      // Admin routes handle their own authentication
+    '/api',        // API routes handle their own authentication
+    '/s/',         // Shortlinks
+    '/c/',         // Chat shortlinks
+    '/claim',      // Business claim flow (creates account after verification)
+    '/welcome',    // Welcome page
+    '/onboarding', // Onboarding flow
+    '/wallet-pass' // Wallet pass pages
+  ]
+  
+  // Check if current path matches any public path
+  const isPublicPath = publicPaths.some(path => 
+    path === '/' 
+      ? request.nextUrl.pathname === '/'  // Root must match exactly
+      : request.nextUrl.pathname.startsWith(path)
+  )
+  
+  // Skip auth checks for public paths, but city context is already set above
+  if (isPublicPath) {
+    return supabaseResponse
   }
 
   const { data } = await supabase.auth.getClaims()
@@ -71,6 +72,7 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth') &&
     !request.nextUrl.pathname.startsWith('/hq-login') &&
+    !request.nextUrl.pathname.startsWith('/hqadmin') && // HQ admin handles its own auth in layout
     !request.nextUrl.pathname.startsWith('/onboarding') &&
     !request.nextUrl.pathname.startsWith('/welcome')
   ) {
