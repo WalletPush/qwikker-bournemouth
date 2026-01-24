@@ -32,15 +32,23 @@ const supabase = supabaseUrl && supabaseServiceKey
 
 // Validate city against database
 async function isValidFranchiseCity(city: string): Promise<boolean> {
-  if (!supabase) return false
+  if (!supabase) {
+    console.warn('⚠️ Supabase service client not configured - allowing city:', city)
+    return true // Allow all cities when service key is missing (prevents middleware crashes)
+  }
 
-  const { data, error } = await supabase
-    .from('franchise_crm_configs')
-    .select('city')
-    .eq('city', city)
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from('franchise_crm_configs')
+      .select('city')
+      .eq('city', city)
+      .single()
 
-  return !error && !!data
+    return !error && !!data
+  } catch (error) {
+    console.error('Error validating franchise city:', error)
+    return true // Fail open to prevent middleware crashes
+  }
 }
 
 export interface GetCityOptions {
@@ -79,6 +87,11 @@ export async function getCityFromHostname(
   // ✅ Vercel preview domains (your-project.vercel.app)
   // TEMPORARY: Always allow .vercel.app for testing
   if (cleanHost.endsWith('.vercel.app')) {
+    return defaultCity
+  }
+
+  // ✅ Root domain (qwikker.com) - show global homepage
+  if (cleanHost === 'qwikker.com' || cleanHost === 'www.qwikker.com') {
     return defaultCity
   }
 
