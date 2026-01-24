@@ -5,11 +5,10 @@ import { searchBusinessKnowledge, searchCityKnowledge } from './embeddings'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
 import { categoryDisplayLabel } from '@/lib/utils/category-helpers'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getFranchiseApiKeys } from '@/lib/utils/franchise-api-keys'
 
-// Initialize OpenAI client
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-}) : null
+// DO NOT instantiate OpenAI globally - must be per-franchise to use their API key
+// Each franchise pays for their own AI usage via franchise_crm_configs.openai_api_key
 
 /**
  * Extract specific options mentioned by the AI for contextual quick replies
@@ -358,15 +357,24 @@ export async function generateAIResponse(
     businessId: string
   }>
 }> {
-  if (!openai) {
-    return {
-      success: false,
-      error: 'AI service temporarily unavailable'
-    }
-  }
-
   try {
     const { city, userName = 'there', conversationHistory = [] } = context
+    
+    // 🔑 Get franchise-specific OpenAI API key
+    const franchiseKeys = await getFranchiseApiKeys(city)
+    
+    if (!franchiseKeys.openai_api_key) {
+      console.error(`❌ No OpenAI API key configured for ${city}`)
+      return {
+        success: false,
+        error: 'AI service not configured for this city. Please contact support.'
+      }
+    }
+    
+    // Create OpenAI client with franchise's API key (they pay for usage)
+    const openai = new OpenAI({
+      apiKey: franchiseKeys.openai_api_key,
+    })
 
   // 🎯 ENHANCED CONTEXT AWARENESS: Detect mentioned businesses from conversation history
   console.log(`\n🔍 ============================================`)

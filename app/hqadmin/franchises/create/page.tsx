@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function CreateFranchisePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
@@ -28,6 +29,22 @@ export default function CreateFranchisePage() {
     city_lat: null as number | null,
     city_lng: null as number | null
   })
+
+  const isLaunching = searchParams?.get('launch') === 'true'
+
+  // Pre-fill form if launching a coming_soon city
+  useEffect(() => {
+    const city = searchParams?.get('city')
+    const subdomain = searchParams?.get('subdomain')
+    
+    if (city && subdomain && isLaunching) {
+      setFormData(prev => ({
+        ...prev,
+        city_name: city,
+        subdomain: subdomain
+      }))
+    }
+  }, [searchParams, isLaunching])
 
   // Country to default timezone mapping
   const countryToTimezone: Record<string, string> = {
@@ -161,9 +178,13 @@ export default function CreateFranchisePage() {
           Back
         </button>
         
-        <h1 className="text-3xl font-bold text-white">Create Franchise</h1>
+        <h1 className="text-3xl font-bold text-white">
+          {isLaunching ? 'Launch City' : 'Create Franchise'}
+        </h1>
         <p className="text-slate-400 mt-1">
-          Atomically create a new city franchise with admin credentials
+          {isLaunching 
+            ? 'Enter franchise owner details to launch this coming soon city' 
+            : 'Atomically create a new city franchise with admin credentials'}
         </p>
       </div>
 
@@ -191,7 +212,8 @@ export default function CreateFranchisePage() {
                 value={formData.city_name}
                 onChange={(e) => handleCityNameChange(e.target.value)}
                 placeholder="e.g., Bournemouth"
-                className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00D083]"
+                disabled={isLaunching}
+                className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00D083] disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
             
@@ -206,7 +228,8 @@ export default function CreateFranchisePage() {
                   value={formData.subdomain}
                   onChange={(e) => setFormData({ ...formData, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
                   placeholder="bournemouth"
-                  className="flex-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00D083]"
+                  disabled={isLaunching}
+                  className="flex-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00D083] disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="text-slate-400 text-sm">.qwikker.com</span>
               </div>
@@ -665,9 +688,11 @@ export default function CreateFranchisePage() {
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2 bg-[#00D083] hover:bg-[#00b86f] text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2 bg-[#00D083]/10 hover:bg-[#00D083]/20 text-[#00D083] border border-[#00D083]/20 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating...' : 'Create Franchise'}
+            {loading 
+              ? (isLaunching ? 'Launching...' : 'Creating...') 
+              : (isLaunching ? 'Launch City' : 'Create Franchise')}
           </button>
         </div>
       </form>

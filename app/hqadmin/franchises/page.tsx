@@ -19,6 +19,7 @@ export default function FranchisesPage() {
   const [franchises, setFranchises] = useState<Franchise[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [launchingCity, setLaunchingCity] = useState<string | null>(null)
 
   useEffect(() => {
     fetchFranchises()
@@ -45,6 +46,12 @@ export default function FranchisesPage() {
     }
   }
 
+  function handleLaunchCity(cityName: string, subdomain: string) {
+    setLaunchingCity(cityName)
+    // Redirect to create page with pre-filled city info
+    window.location.href = `/hqadmin/franchises/create?city=${encodeURIComponent(cityName)}&subdomain=${subdomain}&launch=true`
+  }
+
   return (
     <div className="p-8">
       {/* Header */}
@@ -56,7 +63,7 @@ export default function FranchisesPage() {
         
         <Link
           href="/hqadmin/franchises/create"
-          className="px-4 py-2 bg-[#00D083] hover:bg-[#00b86f] text-white rounded-lg font-medium transition-colors"
+          className="px-4 py-2 bg-[#00D083]/10 hover:bg-[#00D083]/20 text-[#00D083] border border-[#00D083]/20 rounded-lg font-medium transition-colors"
         >
           + Create Franchise
         </Link>
@@ -87,7 +94,7 @@ export default function FranchisesPage() {
           <p className="text-slate-400 mb-6">Create your first franchise to get started</p>
           <Link
             href="/hqadmin/franchises/create"
-            className="inline-block px-4 py-2 bg-[#00D083] hover:bg-[#00b86f] text-white rounded-lg font-medium transition-colors"
+            className="inline-block px-4 py-2 bg-[#00D083]/10 hover:bg-[#00D083]/20 text-[#00D083] border border-[#00D083]/20 rounded-lg font-medium transition-colors"
           >
             + Create First Franchise
           </Link>
@@ -142,12 +149,23 @@ export default function FranchisesPage() {
                     {new Date(franchise.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link
-                      href={`/hqadmin/franchises/${franchise.id}`}
-                      className="text-[#00D083] hover:text-[#00b86f]"
-                    >
-                      View
-                    </Link>
+                    <div className="flex items-center justify-end gap-3">
+                      {franchise.status === 'coming_soon' && (
+                        <button
+                          onClick={() => handleLaunchCity(franchise.city, franchise.subdomain)}
+                          disabled={launchingCity === franchise.city}
+                          className="px-3 py-1.5 bg-[#00D083]/10 hover:bg-[#00D083]/20 text-[#00D083] border border-[#00D083]/20 text-xs rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {launchingCity === franchise.city ? 'Loading...' : 'Launch'}
+                        </button>
+                      )}
+                      <Link
+                        href={`/hqadmin/franchises/${franchise.id}`}
+                        className="text-[#00D083] hover:text-[#00b86f]"
+                      >
+                        View
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -163,6 +181,7 @@ function StatusBadge({ status }: { status: string }) {
   const colors = {
     active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     pending_setup: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    coming_soon: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
     suspended: 'bg-red-500/10 text-red-400 border-red-500/20',
   }
   

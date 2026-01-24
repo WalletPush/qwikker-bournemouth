@@ -7,17 +7,18 @@ export const metadata = {
 }
 
 export default async function HomePage() {
-  // Fetch live cities from safe public view
+  // Fetch all cities (active + coming_soon) from safe public view
   const supabase = await createClient()
   
   const { data: cities, error } = await supabase
     .from('franchise_public_info')
-    .select('city, display_name, subdomain, country_name')
-    .eq('status', 'active')
+    .select('city, display_name, subdomain, country_name, status')
+    .in('status', ['active', 'coming_soon'])
+    .order('country_name')
     .order('display_name')
 
   if (error) {
-    console.error('Error fetching live cities:', error)
+    console.error('Error fetching cities:', error)
   }
 
   return <GlobalHomepagePremium cities={cities || []} />

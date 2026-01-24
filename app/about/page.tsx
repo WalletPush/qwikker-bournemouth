@@ -58,8 +58,7 @@ export default function AboutPage() {
           </p>
           
           <p>
-            Every city is curated separately. No generic recommendations. No algorithm pushing what's popular.
-            Just what actually matches what you want.
+            Every city is curated separately. No generic recommendations. No algorithm pushing what's popular. Only what actually fits — nothing else.
           </p>
 
           <p>
@@ -67,7 +66,66 @@ export default function AboutPage() {
           </p>
         </div>
 
-        <div className="mt-12">
+        {/* Why we built QWIKKER */}
+        <div className="mt-24 pt-16 border-t border-white/[0.06]">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-wide uppercase text-white/[0.92] mb-8">
+            Why we built QWIKKER
+          </h2>
+          
+          <div className="space-y-6 text-white/[0.68] leading-relaxed">
+            <p>
+              Local discovery stopped feeling local.
+            </p>
+            
+            <p>
+              Search became noisy. Recommendations became generic.
+              And the best places — the ones locals actually love — got buried under ads, chains, and keyword games.
+            </p>
+            
+            <p>
+              QWIKKER was built to reverse that.
+            </p>
+            
+            {/* Manifesto statement */}
+            <p className="mt-8 text-[1.05rem] leading-[1.8] text-white/[0.75]">
+              No pay-to-win. No popularity contests. No scraped reviews.
+              <br />
+              Just real places, real menus, and real intent — city by city.
+            </p>
+          </div>
+        </div>
+
+        {/* Curated by design */}
+        <div className="mt-20">
+          <h3 className="text-xl md:text-2xl font-bold tracking-wide uppercase text-white/[0.92] mb-6">
+            Curated by design
+          </h3>
+          
+          <div className="space-y-4 text-white/[0.68] leading-relaxed">
+            <p>
+              QWIKKER isn't a free-for-all. Cities are built carefully, with a focus on quality, consistency, and places locals actually trust.
+            </p>
+            
+            <p>
+              We prioritise highly rated, well-run local businesses — not chains, not spam, not "who pays most".
+            </p>
+          </div>
+        </div>
+
+        {/* What we believe */}
+        <div className="mt-20">
+          <h3 className="text-xl md:text-2xl font-bold tracking-wide uppercase text-white/[0.92] mb-6">
+            What we believe
+          </h3>
+          
+          <ul className="space-y-4 text-white/[0.72] font-medium text-[1.05rem]">
+            <li>Relevance beats reach</li>
+            <li>Local beats loud</li>
+            <li>Discovery should feel human again</li>
+          </ul>
+        </div>
+
+        <div className="mt-20">
           <Link 
             href="/#live-cities"
             className="text-[#00d083] hover:text-white transition-colors text-sm flex items-center gap-1"

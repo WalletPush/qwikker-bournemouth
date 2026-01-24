@@ -14,10 +14,10 @@ import {
 } from './conversation-state'
 import { createTenantAwareServerClient } from '@/lib/utils/tenant-security'
 import { isFreeTier, isAiEligibleTier, getTierPriority } from '@/lib/atlas/eligibility'
+import { getFranchiseApiKeys } from '@/lib/utils/franchise-api-keys'
 
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-}) : null
+// DO NOT instantiate OpenAI globally - must be per-franchise to use their API key
+// Each franchise pays for their own AI usage via franchise_crm_configs.openai_api_key
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
@@ -95,15 +95,24 @@ export async function generateHybridAIResponse(
   conversationState?: ConversationState
 ): Promise<ChatResponse> {
   
-  if (!openai) {
-    return {
-      success: false,
-      error: 'AI service temporarily unavailable'
-    }
-  }
-
   try {
     const { city, userName = 'there' } = context
+    
+    // 🔑 Get franchise-specific OpenAI API key
+    const franchiseKeys = await getFranchiseApiKeys(city)
+    
+    if (!franchiseKeys.openai_api_key) {
+      console.error(`❌ No OpenAI API key configured for ${city}`)
+      return {
+        success: false,
+        error: 'AI service not configured for this city. Please contact support.'
+      }
+    }
+    
+    // Create OpenAI client with franchise's API key (they pay for usage)
+    const openai = new OpenAI({
+      apiKey: franchiseKeys.openai_api_key,
+    })
     
     // Initialize or use existing conversation state
     let state = conversationState || createInitialState()

@@ -3,20 +3,27 @@
 import OpenAI from 'openai'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { categoryDisplayLabel, categorySystemEnum } from '@/lib/utils/category-helpers'
+import { getFranchiseApiKeys } from '@/lib/utils/franchise-api-keys'
 
-// Initialize OpenAI client
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-}) : null
+// DO NOT instantiate OpenAI globally - must be per-franchise to use their API key
+// Each franchise pays for their own AI usage via franchise_crm_configs.openai_api_key
 
 /**
  * Generate embeddings for text content using OpenAI's text-embedding-ada-002
  */
-export async function generateEmbedding(text: string): Promise<number[] | null> {
-  if (!openai) {
-    console.error('❌ OpenAI API key not configured')
+export async function generateEmbedding(text: string, city: string): Promise<number[] | null> {
+  // Get franchise-specific OpenAI API key
+  const franchiseKeys = await getFranchiseApiKeys(city)
+  
+  if (!franchiseKeys.openai_api_key) {
+    console.error(`❌ No OpenAI API key configured for ${city}`)
     return null
   }
+  
+  // Create OpenAI client with franchise's API key (they pay for usage)
+  const openai = new OpenAI({
+    apiKey: franchiseKeys.openai_api_key,
+  })
 
   try {
     const response = await Promise.race([
@@ -98,7 +105,7 @@ This business is ${business.status} and ${business.status === 'approved' ? 'live
     
     // Generate new embedding
     const fullText = `${title}\n\n${content}`
-    const embedding = await generateEmbedding(fullText)
+    const embedding = await generateEmbedding(fullText, business.city)
     
     if (!embedding) {
       return {
@@ -232,7 +239,7 @@ export async function storeKnowledgeWithEmbedding({
   try {
     // Generate embedding for the content
     const fullText = `${title}\n\n${content}`
-    const embedding = await generateEmbedding(fullText)
+    const embedding = await generateEmbedding(fullText, city)
     
     if (!embedding) {
       throw new Error('Failed to generate embedding')
@@ -289,7 +296,7 @@ export async function searchKnowledgeBase(
 
   try {
     // Generate query embedding
-    const queryEmbedding = await generateEmbedding(query)
+    const queryEmbedding = await generateEmbedding(query, city)
     if (!queryEmbedding) {
       throw new Error('Failed to generate query embedding')
     }
@@ -395,7 +402,7 @@ export async function generateMissingEmbeddings(city: string) {
     for (const entry of entries) {
       try {
         const fullText = `${entry.title}\n\n${entry.content}`
-        const embedding = await generateEmbedding(fullText)
+        const embedding = await generateEmbedding(fullText, city)
         
         if (embedding) {
           const { error: updateError } = await supabase
@@ -437,7 +444,7 @@ export async function updateKnowledgeEmbedding(knowledgeId: string) {
     // Get the knowledge entry
     const { data: entry, error } = await supabase
       .from('knowledge_base')
-      .select('id, title, content')
+      .select('id, title, content, city')
       .eq('id', knowledgeId)
       .single()
 
@@ -448,7 +455,7 @@ export async function updateKnowledgeEmbedding(knowledgeId: string) {
 
     // Generate new embedding
     const fullText = `${entry.title}\n\n${entry.content}`
-    const embedding = await generateEmbedding(fullText)
+    const embedding = await generateEmbedding(fullText, entry.city)
     
     if (!embedding) {
       throw new Error('Failed to generate embedding')
@@ -554,7 +561,7 @@ Status: Approved and happening soon in ${business.city}`
 
     // Generate embedding
     const fullText = `${title}\n\n${content}`
-    const embedding = await generateEmbedding(fullText)
+    const embedding = await generateEmbedding(fullText, business.city)
 
     if (!embedding) {
       return {
@@ -726,7 +733,7 @@ export async function syncOfferToKnowledgeBase(offerId: string): Promise<{
 
     // Generate embedding
     const fullText = `${title}\n\n${content}`
-    const embedding = await generateEmbedding(fullText)
+    const embedding = await generateEmbedding(fullText, business.city)
 
     if (!embedding) {
       return {
@@ -881,7 +888,7 @@ This is an exclusive item not shown on the regular menu. Ask staff about it!`
 
     // Generate embedding
     const fullText = `${title}\n\n${content}`
-    const embedding = await generateEmbedding(fullText)
+    const embedding = await generateEmbedding(fullText, business.city)
 
     if (!embedding) {
       return {

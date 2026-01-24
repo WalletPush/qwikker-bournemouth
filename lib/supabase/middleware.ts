@@ -39,16 +39,19 @@ export async function updateSession(request: NextRequest) {
 
   // 🎯 PUBLIC ROUTES: Allow access without Supabase auth session
   const publicPaths = [
-    '/',           // Root landing page (marketing)
-    '/user',       // User dashboard (uses wallet_pass_id, not auth)
-    '/admin',      // Admin routes handle their own authentication
-    '/api',        // API routes handle their own authentication
-    '/s/',         // Shortlinks
-    '/c/',         // Chat shortlinks
-    '/claim',      // Business claim flow (creates account after verification)
-    '/welcome',    // Welcome page
-    '/onboarding', // Onboarding flow
-    '/wallet-pass' // Wallet pass pages
+    '/',            // Root landing page (marketing)
+    '/for-business',// Business marketing page
+    '/about',       // About page
+    '/join',        // Pass installer page
+    '/user',        // User dashboard (uses wallet_pass_id, not auth)
+    '/admin',       // Admin routes handle their own authentication
+    '/api',         // API routes handle their own authentication
+    '/s/',          // Shortlinks
+    '/c/',          // Chat shortlinks
+    '/claim',       // Business claim flow (creates account after verification)
+    '/welcome',     // Welcome page
+    '/onboarding',  // Onboarding flow
+    '/wallet-pass'  // Wallet pass pages
   ]
   
   // Check if current path matches any public path
