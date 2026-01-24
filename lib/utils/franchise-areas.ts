@@ -38,7 +38,7 @@ export async function getFranchiseCities(): Promise<string[]> {
     const { data: configs } = await supabase
       .from('franchise_crm_configs')
       .select('city')
-      .eq('status', 'active')
+      .in('status', ['active', 'pending_setup'])
       .order('city')
     
     const cities = configs?.map(c => c.city) || ['bournemouth'] // Fallback
@@ -50,7 +50,7 @@ export async function getFranchiseCities(): Promise<string[]> {
     return cities
   } catch (error) {
     console.warn('Failed to load franchise cities from DB, using fallback:', error)
-    return ['bournemouth', 'calgary', 'london', 'paris'] // Static fallback
+    return ['bournemouth'] // Minimal fallback - most cities should be in DB
   }
 }
 
