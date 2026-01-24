@@ -7,7 +7,15 @@ export async function updateSession(request: NextRequest) {
   
   // 🌍 MULTI-CITY: Detect city for ALL requests (needed for RLS)
   const hostname = request.headers.get('host') || ''
-  const currentCity = await getCityFromHostname(hostname)
+  let currentCity: string
+  
+  try {
+    currentCity = await getCityFromHostname(hostname)
+  } catch (error) {
+    console.error('❌ Middleware: Failed to detect city from hostname:', hostname, error)
+    // Allow request to continue without city context (emergency fallback)
+    return supabaseResponse
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

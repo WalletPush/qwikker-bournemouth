@@ -5,6 +5,7 @@ import { generateSecurePassword } from '@/lib/utils/password-generator'
 import { getHQEmailConfigWithFallback } from '@/lib/email/hq-email-config'
 import { FranchiseInvitationEmail, FranchiseInvitationEmailText } from '@/lib/email/franchise-invitation'
 import { Resend } from 'resend'
+import bcrypt from 'bcryptjs'
 
 export async function GET(request: NextRequest) {
   try {
@@ -98,6 +99,10 @@ export async function POST(request: NextRequest) {
     // Generate secure temporary password
     const temporaryPassword = generateSecurePassword()
     console.log('🔐 [HQ] Generated secure password (length:', temporaryPassword.length, ')')
+    
+    // Hash password for city_admins table (legacy bcrypt authentication)
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10)
+    console.log('🔐 [HQ] Password hashed for city_admins table')
 
     // Use service role for writes (bypasses RLS)
     const adminClient = createServiceRoleClient()
@@ -397,7 +402,7 @@ export async function POST(request: NextRequest) {
       .insert({
         city: cleanCity,
         username: cleanCity, // Username = city name (per requirement)
-        password_hash: 'SUPABASE_AUTH', // Placeholder - actual auth happens via Supabase Auth
+        password_hash: passwordHash, // Hashed password for bcrypt authentication
         email: owner_email,
         full_name: fullName,
         is_active: true
