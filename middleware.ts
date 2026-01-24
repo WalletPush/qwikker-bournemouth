@@ -8,7 +8,10 @@ export async function middleware(request: NextRequest) {
   // Set MAINTENANCE_MODE=true in Vercel env vars to lock the site instantly
   // Optional: Add ?bypass=YOUR_TOKEN to access (set MAINTENANCE_BYPASS_TOKEN)
   
-  if (process.env.MAINTENANCE_MODE === 'true') {
+  // Explicit boolean parsing - only true if env var is exactly string 'true'
+  const maintenanceOn = process.env.MAINTENANCE_MODE === 'true'
+  
+  if (maintenanceOn) {
     const url = request.nextUrl
     
     // Allow static assets (Next.js needs these to render the maintenance page)
