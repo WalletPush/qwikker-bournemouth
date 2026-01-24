@@ -5,12 +5,9 @@ import { getCityFromHostname } from '@/lib/utils/city-detection'
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
   
-  // 🌍 MULTI-CITY: Detect city from subdomain and set for RLS
-  const hostname = request.headers.get('host') || ''
-  const currentCity = await getCityFromHostname(hostname)
-
-  // 🎯 PUBLIC ROUTES: Allow access without Supabase auth session
+  // 🎯 PUBLIC ROUTES: Allow access without Supabase auth session OR city detection
   const publicPaths = [
+    '/',           // Root landing page (marketing)
     '/user',       // User dashboard (uses wallet_pass_id, not auth)
     '/admin',      // Admin routes handle their own authentication
     '/api',        // API routes handle their own authentication
@@ -23,9 +20,19 @@ export async function updateSession(request: NextRequest) {
   ]
   
   // Check if current path matches any public path
-  if (publicPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
+  const isPublicPath = publicPaths.some(path => 
+    path === '/' 
+      ? request.nextUrl.pathname === '/'  // Root must match exactly
+      : request.nextUrl.pathname.startsWith(path)
+  )
+  
+  if (isPublicPath) {
     return supabaseResponse
   }
+  
+  // 🌍 MULTI-CITY: Only detect city for non-public paths
+  const hostname = request.headers.get('host') || ''
+  const currentCity = await getCityFromHostname(hostname)
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
