@@ -39,43 +39,34 @@ const FRANCHISE_LOCATIONS: Record<string, LocationInfo> = {
 /**
  * Detect location from subdomain
  */
-export function detectLocationFromSubdomain(hostname: string): LocationInfo {
-  // Handle localhost development
-  if (hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('192.168')) {
-    console.log('🏠 Development environment detected - defaulting to Bournemouth')
-    return FRANCHISE_LOCATIONS.bournemouth
-  }
+export async function detectLocationFromSubdomain(hostname: string): Promise<LocationInfo> {
+  // Use the dynamic city detection system
+  const { getFranchiseFromHostname } = await import('./franchise-areas')
   
-  // Handle Vercel URLs (e.g., qwikkerdashboard-theta.vercel.app, qwikker-london-git-main.vercel.app)
-  if (hostname.includes('vercel.app')) {
-    // Try to extract location from Vercel URL pattern
-    const parts = hostname.split('-')
-    for (const part of parts) {
-      if (FRANCHISE_LOCATIONS[part.toLowerCase()]) {
-        console.log(`🌐 Vercel deployment detected - using ${part} location`)
-        return FRANCHISE_LOCATIONS[part.toLowerCase()]
-      }
-    }
-    console.log('🌐 Vercel deployment detected - defaulting to Bournemouth')
-    return FRANCHISE_LOCATIONS.bournemouth
-  }
-  
-  // Extract subdomain (e.g., 'bournemouth' from 'bournemouth.qwikker.com')
-  const parts = hostname.split('.')
-  
-  if (parts.length >= 3) {
-    const subdomain = parts[0].toLowerCase()
-    const locationInfo = FRANCHISE_LOCATIONS[subdomain]
+  try {
+    const city = await getFranchiseFromHostname(hostname)
     
-    if (locationInfo) {
-      console.log(`🌍 Subdomain detected: ${subdomain}`)
-      return locationInfo
+    // Return location info for the detected city
+    // Use hardcoded info if available, otherwise generate generic info
+    if (FRANCHISE_LOCATIONS[city]) {
+      console.log(`🌍 Subdomain detected: ${city} (using stored config)`)
+      return FRANCHISE_LOCATIONS[city]
     }
+    
+    // Generate generic location info for cities not in hardcoded list
+    console.log(`🌍 Subdomain detected: ${city} (using generic config)`)
+    return {
+      city,
+      displayName: city.charAt(0).toUpperCase() + city.slice(1),
+      availableTowns: [city],
+      defaultTown: city,
+      subdomain: city
+    }
+  } catch (error) {
+    console.error('City detection failed:', error)
+    // Fallback to Bournemouth
+    return FRANCHISE_LOCATIONS.bournemouth
   }
-  
-  // Default to Bournemouth if no subdomain or unknown subdomain
-  console.log('🌍 No subdomain detected - defaulting to Bournemouth')
-  return FRANCHISE_LOCATIONS.bournemouth
 }
 
 /**
@@ -134,7 +125,7 @@ export async function getCurrentLocation(hostname?: string, devLocationOverride?
   }
   
   if (hostname) {
-    const subdomainLocation = detectLocationFromSubdomain(hostname)
+    const subdomainLocation = await detectLocationFromSubdomain(hostname)
     
     // Always use subdomain detection result (includes localhost handling)
     return subdomainLocation
