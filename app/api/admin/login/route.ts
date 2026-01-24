@@ -40,19 +40,19 @@ export async function POST(request: NextRequest) {
         
         const { data: franchise } = await supabase
           .from('franchise_crm_configs')
-          .select('city')
+          .select('city, status')
           .eq('city', city)
-          .eq('status', 'active')
+          .in('status', ['active', 'pending_setup'])
           .single()
         
         if (!franchise) {
-          console.log('City not found in database:', city)
+          console.log('City not found or not ready in database:', city)
           return NextResponse.json(
-            { success: false, error: 'Invalid city' },
+            { success: false, error: 'Invalid city or city not yet active' },
             { status: 400 }
           )
         }
-        console.log('City validated successfully:', city)
+        console.log('City validated successfully:', city, 'status:', franchise.status)
       } catch (error) {
         console.error('Database validation failed:', error)
         // Fallback to known cities
