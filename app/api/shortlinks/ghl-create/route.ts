@@ -27,26 +27,23 @@ export async function POST(request: NextRequest) {
     // Generate shortlink code from wallet pass ID
     const shortCode = wallet_pass_id.slice(-8)
     
+    // ✅ MULTI-TENANT: Use city-specific subdomain for shortlinks
+    const citySubdomain = city.toLowerCase()
+    const shortlinkDomain = `${citySubdomain}.qwikker.com`
+    
     // Generate shortlink URL based on link type (bulletproof prefixes)
     let shortUrl
     if (link_type === 'chat') {
-      shortUrl = `https://qwikkerdashboard-theta.vercel.app/c/${shortCode}`
+      shortUrl = `https://${shortlinkDomain}/c/${shortCode}`
+    } else if (link_type === 'offers') {
+      shortUrl = `https://${shortlinkDomain}/s/${shortCode}/offers`
     } else {
       // Default to dashboard
-      shortUrl = `https://qwikkerdashboard-theta.vercel.app/s/${shortCode}`
+      shortUrl = `https://${shortlinkDomain}/s/${shortCode}`
     }
     
-    // Generate destination URL based on environment and city
-    const isProduction = process.env.NODE_ENV === 'production'
-    let originalURL
-    
-    if (isProduction) {
-      // Production: Use city-specific domain (calgary.qwikker.com, london.qwikker.com, etc.)
-      originalURL = `https://${city}.qwikker.com/user/${link_type}?wallet_pass_id=${wallet_pass_id}`
-    } else {
-      // Testing: Use Vercel deployment for testing
-      originalURL = `https://qwikkerdashboard-theta.vercel.app/user/${link_type}?wallet_pass_id=${wallet_pass_id}`
-    }
+    // Generate destination URL (city-specific)
+    const originalURL = `https://${shortlinkDomain}/user/${link_type}?wallet_pass_id=${wallet_pass_id}`
     
     console.log(`✅ Created temporary shortlink: ${shortUrl} → ${originalURL}`)
     
@@ -55,7 +52,7 @@ export async function POST(request: NextRequest) {
       message: shortUrl,
       idstring: shortCode,
       path: shortCode,
-      domain: "qwikkerdashboard-theta.vercel.app",
+      domain: shortlinkDomain, // City-specific domain
       originalURL: originalURL,
       allowDuplicates: true,
       cloaking: true,
@@ -68,6 +65,7 @@ export async function POST(request: NextRequest) {
         wallet_pass_id,
         city,
         link_type,
+        citySubdomain,
         timestamp: new Date().toISOString()
       }
     })

@@ -21,7 +21,9 @@ export async function GET(
     
     if (!code) {
       console.log(`❌ No code provided, redirecting to home`)
-      return NextResponse.redirect('https://qwikkerdashboard-theta.vercel.app', 302)
+      const host = request.headers.get('host') || 'qwikker.com'
+      const protocol = request.headers.get('x-forwarded-proto') || 'https'
+      return NextResponse.redirect(`${protocol}://${host}`, 302)
     }
     
     // Look up the wallet_pass_id from the code (last 8 characters)
@@ -78,6 +80,8 @@ export async function GET(
     
   } catch (error) {
     console.error('❌ Shortlink redirect error:', error)
-    return NextResponse.redirect('https://qwikkerdashboard-theta.vercel.app', 302)
+    const host = request.headers.get('host') || 'qwikker.com'
+    const protocol = request.headers.get('x-forwarded-proto') || 'https'
+    return NextResponse.redirect(`${protocol}://${host}`, 302)
   }
 }
