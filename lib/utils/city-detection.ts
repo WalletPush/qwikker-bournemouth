@@ -155,7 +155,7 @@ function getCleanHostnameFromHeaders(headers: Headers): string {
 }
 
 /**
- * City display names for UI
+ * City display names for UI (legacy cities with specific formatting)
  */
 export const cityDisplayNames: Record<FranchiseCity, string> = {
   bournemouth: 'Bournemouth',
@@ -165,9 +165,19 @@ export const cityDisplayNames: Record<FranchiseCity, string> = {
 
 /**
  * Get display name for a city
+ * Capitalizes first letter of each word for any city not in the legacy list
  */
-export function getCityDisplayName(city: FranchiseCity): string {
-  return cityDisplayNames[city] || city
+export function getCityDisplayName(city: string): string {
+  // Check if city is in our predefined list
+  if (city in cityDisplayNames) {
+    return cityDisplayNames[city as FranchiseCity]
+  }
+  
+  // For new cities (london, bali, etc.), capitalize first letter of each word
+  return city
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
 }
 
 /**
