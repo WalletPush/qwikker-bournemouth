@@ -34,10 +34,12 @@ interface FranchiseConfig {
   has_google_places_api_key?: boolean
   
   // CRM Integration (GHL)
-  ghl_webhook_url: string | null // Masked
-  ghl_update_webhook_url: string | null // Masked
+  ghl_webhook_url: string | null // Masked - Business CRM sync
+  ghl_pass_creation_webhook_url: string | null // Masked - User pass creation
+  ghl_update_webhook_url: string | null // Masked - Business updates (optional)
   ghl_api_key: string | null // Masked
   has_ghl_webhook_url?: boolean
+  has_ghl_pass_creation_webhook_url?: boolean
   has_ghl_update_webhook_url?: boolean
   has_ghl_api_key?: boolean
   
@@ -179,7 +181,8 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
             anthropic_api_key: '',
             
             // CRM
-            ghl_webhook_url: `https://services.leadconnectorhq.com/hooks/${city.toLowerCase()}/qwikker`,
+            ghl_webhook_url: `https://services.leadconnectorhq.com/hooks/${city.toLowerCase()}/qwikker-business`,
+            ghl_pass_creation_webhook_url: `https://services.leadconnectorhq.com/hooks/${city.toLowerCase()}/qwikker-pass`,
             ghl_update_webhook_url: `https://services.leadconnectorhq.com/hooks/${city.toLowerCase()}/qwikker-updates`,
             ghl_api_key: '',
             
@@ -302,6 +305,58 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
       setPasswordStatus('error')
       setMessage('❌ Error changing password')
     }
+  }
+
+  // ============================================================================
+  // STEP VALIDATION - Prevents advancing without required fields
+  // ============================================================================
+  
+  const isStep1Valid = () => {
+    // Admin Account: Name and email required
+    return !!(config?.owner_name && config?.owner_email)
+  }
+
+  const isStep2Valid = () => {
+    // Franchise Details: Display name, timezone, and phone required
+    return !!(config?.display_name && config?.timezone && config?.owner_phone)
+  }
+
+  const isStep3Valid = () => {
+    // API Services: At minimum, Resend (email) and WalletPush (passes) are REQUIRED
+    const hasResend = config?.has_resend_api_key || !!(config?.resend_api_key && config?.resend_from_email)
+    const hasWalletPush = (config?.has_walletpush_api_key || !!config?.walletpush_api_key) && !!config?.walletpush_template_id
+    return hasResend && hasWalletPush
+  }
+
+  const isStep4Valid = () => {
+    // Integrations: Pass creation webhook is REQUIRED (users must be able to install passes!)
+    return !!(config?.has_ghl_pass_creation_webhook_url || config?.ghl_pass_creation_webhook_url)
+  }
+
+  const canGoToNextStep = () => {
+    switch (activeStep) {
+      case 1: return isStep1Valid()
+      case 2: return isStep2Valid()
+      case 3: return isStep3Valid()
+      case 4: return isStep4Valid()
+      default: return true
+    }
+  }
+
+  const getValidationMessage = () => {
+    if (activeStep === 1 && !isStep1Valid()) {
+      return '⚠️  Please provide owner name and email before continuing'
+    }
+    if (activeStep === 2 && !isStep2Valid()) {
+      return '⚠️  Please complete franchise details (name, timezone, phone) before continuing'
+    }
+    if (activeStep === 3 && !isStep3Valid()) {
+      return '⚠️  Please configure Resend (email) and WalletPush (passes) before continuing - these are required for basic functionality'
+    }
+    if (activeStep === 4 && !isStep4Valid()) {
+      return '⚠️  Please configure the Pass Creation Webhook - this is required for users to install wallet passes'
+    }
+    return ''
   }
 
   const steps = [
@@ -502,8 +557,20 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
 
               <div className="flex justify-end pt-4">
                 <button
-                  onClick={() => setActiveStep(2)}
-                  className="bg-[#00D083] hover:bg-[#00b86f] text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors"
+                  onClick={() => {
+                    if (isStep1Valid()) {
+                      setActiveStep(2)
+                    } else {
+                      setMessage(getValidationMessage())
+                      setTimeout(() => setMessage(''), 3000)
+                    }
+                  }}
+                  disabled={!isStep1Valid()}
+                  className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+                    isStep1Valid()
+                      ? 'bg-[#00D083] hover:bg-[#00b86f] text-white cursor-pointer'
+                      : 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                  }`}
                 >
                   Continue
                 </button>
@@ -611,8 +678,20 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   ← Back
                 </Button>
                 <button
-                  onClick={() => setActiveStep(3)}
-                  className="bg-[#00D083] hover:bg-[#00b86f] text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors"
+                  onClick={() => {
+                    if (isStep2Valid()) {
+                      setActiveStep(3)
+                    } else {
+                      setMessage(getValidationMessage())
+                      setTimeout(() => setMessage(''), 3000)
+                    }
+                  }}
+                  disabled={!isStep2Valid()}
+                  className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+                    isStep2Valid()
+                      ? 'bg-[#00D083] hover:bg-[#00b86f] text-white cursor-pointer'
+                      : 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                  }`}
                 >
                   Continue
                 </button>
@@ -933,8 +1012,20 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 ← Back
               </Button>
               <button
-                onClick={() => setActiveStep(4)}
-                className="bg-[#00D083] hover:bg-[#00b86f] text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors"
+                onClick={() => {
+                  if (isStep3Valid()) {
+                    setActiveStep(4)
+                  } else {
+                    setMessage(getValidationMessage())
+                    setTimeout(() => setMessage(''), 3000)
+                  }
+                }}
+                disabled={!isStep3Valid()}
+                className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+                  isStep3Valid()
+                    ? 'bg-[#00D083] hover:bg-[#00b86f] text-white cursor-pointer'
+                    : 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                }`}
               >
                 Continue
               </button>
@@ -994,25 +1085,69 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   </div>
 
                   <div className="space-y-4">
+                    {/* PASS CREATION WEBHOOK - NEW & REQUIRED */}
+                    <div className="border-2 border-[#00d083]/30 bg-[#00d083]/5 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                          !
+                        </div>
+                        <Label className="text-white text-sm font-semibold mb-0">
+                          Pass Creation Webhook URL
+                        </Label>
+                        <span className="px-2 py-0.5 text-xs bg-[#00d083]/30 text-[#00d083] rounded-full font-medium border border-[#00d083]/40">
+                          REQUIRED
+                        </span>
+                      </div>
+                      <Input
+                        value={config.ghl_pass_creation_webhook_url || ''}
+                        onChange={(e) => setConfig({...config, ghl_pass_creation_webhook_url: e.target.value})}
+                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm mb-2"
+                        placeholder="https://services.leadconnectorhq.com/hooks/.../webhook-trigger/..."
+                        required
+                      />
+                      <p className="text-xs text-slate-300">
+                        <strong>User Flow:</strong> Triggered when users install wallet passes via /join form
+                      </p>
+                      <p className="text-xs text-[#00d083] mt-1">
+                        ✓ This is critical - users cannot install passes without this configured
+                      </p>
+                    </div>
+                    
+                    <div className="border-t border-slate-700 pt-4">
+                      <p className="text-xs text-slate-400 mb-4 italic">
+                        The webhooks below are optional and used for business CRM sync:
+                      </p>
+                    </div>
+                    
                     <div>
-                      <Label className="text-slate-300 text-sm mb-2 block">Main Webhook URL *</Label>
+                      <Label className="text-slate-300 text-sm mb-2 block flex items-center gap-2">
+                        Business CRM Webhook URL
+                        <span className="text-xs text-slate-500 font-normal">(Optional)</span>
+                      </Label>
                       <Input
                         value={config.ghl_webhook_url || ''}
                         onChange={(e) => setConfig({...config, ghl_webhook_url: e.target.value})}
                         className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
                         placeholder="https://services.leadconnectorhq.com/hooks/..."
                       />
-                      <p className="text-xs text-slate-400 mt-1">Used for new business signups</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        <strong>Business Flow:</strong> For business signups and profile updates
+                      </p>
                     </div>
                     <div>
-                      <Label className="text-slate-300 text-sm mb-2 block">Update Webhook URL</Label>
+                      <Label className="text-slate-300 text-sm mb-2 block flex items-center gap-2">
+                        Business Update Webhook URL
+                        <span className="text-xs text-slate-500 font-normal">(Optional)</span>
+                      </Label>
                       <Input
                         value={config.ghl_update_webhook_url || ''}
                         onChange={(e) => setConfig({...config, ghl_update_webhook_url: e.target.value})}
                         className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
                         placeholder="https://services.leadconnectorhq.com/hooks/..."
                       />
-                      <p className="text-xs text-slate-400 mt-1">Used for business profile updates (optional)</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        <strong>Business Flow:</strong> For business profile updates (falls back to main if not set)
+                      </p>
                     </div>
                     <div>
                       <Label className="text-slate-300 text-sm mb-2 block">GHL API Key</Label>
@@ -1553,8 +1688,20 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 ← Back
               </Button>
               <button
-                onClick={() => setActiveStep(5)}
-                className="bg-[#00D083] hover:bg-[#00b86f] text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors"
+                onClick={() => {
+                  if (isStep4Valid()) {
+                    setActiveStep(5)
+                  } else {
+                    setMessage(getValidationMessage())
+                    setTimeout(() => setMessage(''), 3000)
+                  }
+                }}
+                disabled={!isStep4Valid()}
+                className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+                  isStep4Valid()
+                    ? 'bg-[#00D083] hover:bg-[#00b86f] text-white cursor-pointer'
+                    : 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                }`}
               >
                 Continue
               </button>

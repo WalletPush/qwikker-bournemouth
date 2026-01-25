@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceRoleClient()
     const { data: config, error } = await supabase
       .from('franchise_crm_configs')
-      .select('ghl_webhook_url, ghl_update_webhook_url, owner_name, timezone, display_name')
+      .select('ghl_webhook_url, ghl_pass_creation_webhook_url, ghl_update_webhook_url, owner_name, timezone, display_name')
       .eq('city', targetCity)
       .single()
     
@@ -51,10 +51,25 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    if (!config.ghl_webhook_url) {
-      console.error(`❌ No GHL webhook URL configured for ${targetCity}`)
+    // 🎯 WEBHOOK ROUTING: Determine which webhook to use based on event type
+    const eventType = formData.eventType || 'business_crm_sync'
+    let webhookUrl: string | null = null
+    let webhookPurpose = ''
+
+    if (eventType === 'pass_creation') {
+      webhookUrl = config.ghl_pass_creation_webhook_url
+      webhookPurpose = 'Pass Creation'
+      console.log(`📱 Using pass creation webhook for ${config.display_name}`)
+    } else {
+      webhookUrl = config.ghl_webhook_url
+      webhookPurpose = 'Business CRM'
+      console.log(`🏢 Using business CRM webhook for ${config.display_name}`)
+    }
+    
+    if (!webhookUrl) {
+      console.error(`❌ No ${webhookPurpose} webhook URL configured for ${targetCity}`)
       return NextResponse.json(
-        { error: `No GHL webhook configured for ${targetCity}` },
+        { error: `No ${webhookPurpose} webhook configured for ${targetCity}` },
         { status: 400 }
       )
     }
@@ -67,10 +82,10 @@ export async function POST(request: NextRequest) {
       timezone: config.timezone
     }
     
-    console.log(`📞 Sending to ${config.display_name} GHL:`, config.ghl_webhook_url)
+    console.log(`📞 Sending to ${config.display_name} GHL (${webhookPurpose}):`, webhookUrl)
     
     // Send to GHL webhook
-    const response = await fetch(config.ghl_webhook_url, {
+    const response = await fetch(webhookUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

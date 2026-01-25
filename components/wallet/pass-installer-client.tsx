@@ -121,6 +121,46 @@ export function PassInstallerClient({
       setPassUrl(finalPassUrl)
       setSerialNumber(data.serialNumber)
       setSuccess(true)
+      
+      // ✅ CRITICAL: Send to GHL for pass creation tracking
+      // This is non-blocking - don't prevent pass installation if GHL fails
+      try {
+        console.log('📡 Syncing pass creation to GHL...')
+        const ghlResponse = await fetch('/api/internal/ghl-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            formData: {
+              eventType: 'pass_creation', // Routes to ghl_pass_creation_webhook_url
+              First_Name: formData.firstName,
+              Last_Name: formData.lastName,
+              email: formData.email,
+              serialNumber: data.serialNumber,
+              passTypeIdentifier: 'pass.com.WalletPush',
+              url: data.passUrl,
+              device: deviceType,
+              franchise_city: city,
+              // GHL expects these headers for webhook context
+              headers: {
+                host: 'services.leadconnectorhq.com',
+                'cf-ray': '940a0fc3c99aecfd-LHR' // Static placeholder for consistency
+              }
+            },
+            city: city
+          })
+        })
+        
+        if (ghlResponse.ok) {
+          console.log('✅ Pass creation synced to GHL')
+        } else {
+          const ghlError = await ghlResponse.text()
+          console.warn('⚠️  GHL sync failed (non-critical):', ghlError)
+        }
+      } catch (ghlError) {
+        console.warn('⚠️  GHL sync failed (non-critical):', ghlError)
+        // Don't block user flow if GHL fails - pass installation is more important
+      }
+      
       setLoading(false)
       
       // Redirect to pass URL (opens wallet app on mobile)

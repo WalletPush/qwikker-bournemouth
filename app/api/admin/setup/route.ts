@@ -54,6 +54,9 @@ function sanitizeConfigForClient(data: any) {
     ghl_webhook_url: maskSecret(data.ghl_webhook_url),
     has_ghl_webhook_url: !!data.ghl_webhook_url,
     
+    ghl_pass_creation_webhook_url: maskSecret(data.ghl_pass_creation_webhook_url),
+    has_ghl_pass_creation_webhook_url: !!data.ghl_pass_creation_webhook_url,
+    
     ghl_update_webhook_url: maskSecret(data.ghl_update_webhook_url),
     has_ghl_update_webhook_url: !!data.ghl_update_webhook_url,
     
@@ -206,6 +209,7 @@ export async function POST(request: NextRequest) {
 
     // 🔒 SECRET fields: only update if value is real (not masked, not empty)
     addIfPresent('ghl_webhook_url', config.ghl_webhook_url)
+    addIfPresent('ghl_pass_creation_webhook_url', config.ghl_pass_creation_webhook_url)
     addIfPresent('ghl_update_webhook_url', config.ghl_update_webhook_url)
     addIfPresent('ghl_api_key', config.ghl_api_key)
     addIfPresent('walletpush_api_key', config.walletpush_api_key)
@@ -263,10 +267,12 @@ export async function POST(request: NextRequest) {
     // automatically transition to 'active' status
     if (updatedConfig.status === 'pending_setup') {
       const hasMinimumRequirements = (
-        updatedConfig.ghl_webhook_url && 
-        !updatedConfig.ghl_webhook_url.includes('PLACEHOLDER') &&
-        updatedConfig.resend_api_key &&
-        updatedConfig.resend_from_email
+        updatedConfig.ghl_pass_creation_webhook_url && // CRITICAL: Users must be able to install passes
+        !updatedConfig.ghl_pass_creation_webhook_url.includes('PLACEHOLDER') &&
+        updatedConfig.resend_api_key && // Required for emails
+        updatedConfig.resend_from_email &&
+        updatedConfig.walletpush_api_key && // Required for pass creation
+        updatedConfig.walletpush_template_id
       )
 
       if (hasMinimumRequirements) {
