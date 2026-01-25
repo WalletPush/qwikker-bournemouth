@@ -12,9 +12,13 @@ interface UserSettingsPageProps {
   }
   currentCity?: string
   cityDisplayName?: string
+  stats?: {
+    totalBusinesses: number
+    totalOffers: number
+  }
 }
 
-export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserSettingsPageProps) {
+export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth', stats }: UserSettingsPageProps) {
   const [notifications, setNotifications] = useState({
     geoOffers: true,
     newBusinesses: true,
@@ -291,10 +295,12 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
             <div>
               <p className="text-white font-medium">Current City</p>
               <p className="text-blue-400 text-lg font-semibold">{cityDisplayName}</p>
-              <p className="text-slate-400 text-sm">4 businesses • 12 active offers</p>
+              <p className="text-slate-400 text-sm">
+                {stats ? `${stats.totalBusinesses} businesses • ${stats.totalOffers} active offers` : 'Loading...'}
+              </p>
             </div>
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
-              B
+              {cityDisplayName[0].toUpperCase()}
             </div>
           </div>
 

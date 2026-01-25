@@ -85,6 +85,22 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     }
   }
   
+  // Get stats for city badge
+  const { data: businesses } = await supabase
+    .from('business_profiles')
+    .select('id, business_offers!left(id, status, offer_end_date)')
+    .eq('city', currentCity)
+    .in('status', ['approved', 'unclaimed', 'claimed_free'])
+  
+  const totalBusinesses = businesses?.length || 0
+  const totalOffers = businesses?.reduce((total, b) => {
+    const activeOffers = (b.business_offers || []).filter(offer => 
+      offer.status === 'active' && 
+      (!offer.offer_end_date || new Date(offer.offer_end_date) >= new Date())
+    )
+    return total + activeOffers.length
+  }, 0) || 0
+  
   return (
     <UserDashboardLayout 
       currentSection="settings"
@@ -97,6 +113,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         currentUser={currentUser}
         currentCity={currentCity}
         cityDisplayName={cityDisplayName}
+        stats={{ totalBusinesses, totalOffers }}
       />
     </UserDashboardLayout>
   )
