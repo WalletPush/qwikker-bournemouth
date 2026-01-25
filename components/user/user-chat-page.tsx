@@ -287,6 +287,7 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
         body: JSON.stringify({
           message,
           walletPassId: currentUser?.wallet_pass_id,
+          city: currentCity, // Send city for proper filtering
           conversationHistory: fullConversationHistory,
           userLocation: locationStatus === 'granted' && userLocation ? userLocation : null
         })
@@ -377,6 +378,7 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
         body: JSON.stringify({
           message: `Show me all current offers and deals from ${businessName}. Include details like discount amount, terms, and expiry dates. Ask if I want to add any to my wallet.`,
           walletPassId: currentUser?.wallet_pass_id,
+          city: currentCity, // Send city for proper filtering
           conversationHistory: messages.slice(-4).map(msg => ({
             role: msg.type === 'user' ? 'user' : 'assistant',
             content: msg.content

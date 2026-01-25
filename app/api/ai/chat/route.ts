@@ -139,8 +139,14 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       console.error('❌ AI response generation failed:', result.error)
+      
+      // If the error is about missing API key, show a more specific message
+      const isConfigurationError = result.error?.includes('not configured')
+      
       return NextResponse.json({
-        response: "I'm having trouble accessing my knowledge base right now. Please try again in a moment, or explore the Discover page to find great local businesses!",
+        response: isConfigurationError 
+          ? "I'm sorry, but the AI companion is temporarily unavailable for this city. Our team is working on getting it set up! In the meantime, explore the Discover page to find amazing local businesses."
+          : "I'm having trouble accessing my knowledge base right now. Please try again in a moment, or explore the Discover page to find great local businesses!",
         intent: 'unknown',
         needsLocation: false,
         showAtlasCta: false,

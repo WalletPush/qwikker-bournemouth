@@ -1,14 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY
-})
+import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
+import { getFranchiseApiKeys } from '@/lib/utils/franchise-api-keys'
 
 export async function POST(request: NextRequest) {
   console.log('🎨 Image Analysis API called')
   
   try {
+    // Get franchise city and their Anthropic API key
+    const city = await getFranchiseCityFromRequest()
+    const franchiseKeys = await getFranchiseApiKeys(city)
+    
+    if (!franchiseKeys.anthropic_api_key) {
+      console.error(`❌ No Anthropic API key configured for ${city}`)
+      return NextResponse.json(
+        { error: 'Social Wizard is not configured for this city. Please add your Anthropic API key in the Setup page.' },
+        { status: 503 }
+      )
+    }
+    
+    // Create Anthropic client with franchise's API key
+    const anthropic = new Anthropic({
+      apiKey: franchiseKeys.anthropic_api_key
+    })
+    
     const { imageUrl, businessName, offerText } = await request.json()
     
     console.log('📥 Analyzing:', { imageUrl, businessName, offerText })

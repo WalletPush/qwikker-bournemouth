@@ -69,13 +69,13 @@ export async function getFranchiseApiKeys(city: string): Promise<FranchiseApiKey
       return getFallbackApiKeys(city)
     }
     
-    // If database values are empty, use environment variable fallback
+    // If database values are empty, use environment variable fallback ONLY for email/slack
     const keys: FranchiseApiKeys = {
       resend_api_key: data.resend_api_key || process.env.RESEND_API_KEY || null,
       resend_from_email: data.resend_from_email || process.env.EMAIL_FROM || null,
       resend_from_name: data.resend_from_name || `${city.charAt(0).toUpperCase() + city.slice(1)} Qwikker`,
-      openai_api_key: data.openai_api_key || process.env.OPENAI_API_KEY || null,
-      anthropic_api_key: data.anthropic_api_key || process.env.ANTHROPIC_API_KEY || null,
+      openai_api_key: data.openai_api_key || null, // NO FALLBACK - franchise must configure their own
+      anthropic_api_key: data.anthropic_api_key || null, // NO FALLBACK - franchise must configure their own
       slack_webhook_url: data.slack_webhook_url || process.env[`SLACK_WEBHOOK_URL_${city.toUpperCase()}`] || process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL || null,
       walletpush_api_key: data.walletpush_api_key || process.env.MOBILE_WALLET_APP_KEY || null,
       walletpush_template_id: data.walletpush_template_id || process.env.MOBILE_WALLET_TEMPLATE_ID || null,
@@ -93,7 +93,8 @@ export async function getFranchiseApiKeys(city: string): Promise<FranchiseApiKey
 /**
  * Fallback to environment variables (temporary during migration)
  * 
- * IMPORTANT: Remove this once all franchises have filled in their database values!
+ * IMPORTANT: AI keys have NO fallback - franchises must configure their own!
+ * This prevents Bournemouth from paying for everyone's AI usage.
  */
 function getFallbackApiKeys(city: string): FranchiseApiKeys {
   console.warn(`⚠️ Using environment variable fallback for ${city} - fill in Setup page!`)
@@ -102,8 +103,8 @@ function getFallbackApiKeys(city: string): FranchiseApiKeys {
     resend_api_key: process.env.RESEND_API_KEY || null,
     resend_from_email: process.env.EMAIL_FROM || null,
     resend_from_name: process.env.EMAIL_FROM?.split('<')[0].trim() || `${city.charAt(0).toUpperCase() + city.slice(1)} Qwikker`,
-    openai_api_key: process.env.OPENAI_API_KEY || null,
-    anthropic_api_key: process.env.ANTHROPIC_API_KEY || null,
+    openai_api_key: null, // NO FALLBACK - franchise must configure
+    anthropic_api_key: null, // NO FALLBACK - franchise must configure
     slack_webhook_url: process.env[`SLACK_WEBHOOK_URL_${city.toUpperCase()}`] || process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL || null,
     walletpush_api_key: process.env.MOBILE_WALLET_APP_KEY || null,
     walletpush_template_id: process.env.MOBILE_WALLET_TEMPLATE_ID || null,
