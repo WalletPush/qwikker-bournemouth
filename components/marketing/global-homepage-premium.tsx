@@ -252,9 +252,11 @@ export function GlobalHomepagePremium({ cities }: { cities: LiveCity[] }) {
         <div className="absolute inset-0 z-0">
           {/* Image layer with opacity and blur */}
           <div 
-            className="absolute inset-0 bg-cover bg-center"
+            className="absolute inset-0"
             style={{
               backgroundImage: 'url(/qwikkerhero.png)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
               opacity: 0.2,
               filter: 'blur(1.5px)'
             }}
