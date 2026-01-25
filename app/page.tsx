@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { GlobalHomepagePremium } from '@/components/marketing/global-homepage-premium'
+import { CityLandingPage } from '@/components/marketing/city-landing-page'
+import { getCityFromHostname } from '@/lib/utils/city-detection'
+import { headers } from 'next/headers'
 
 export const metadata = {
   title: 'QWIKKER — Your city, curated',
@@ -7,7 +10,44 @@ export const metadata = {
 }
 
 export default async function HomePage() {
-  // Fetch all cities (active + coming_soon) from safe public view
+  // Detect if we're on root domain or city subdomain
+  const headersList = await headers()
+  const hostname = headersList.get('host') || ''
+  
+  // Check if this is the root domain (qwikker.com or www.qwikker.com)
+  const isRootDomain = hostname === 'qwikker.com' || 
+                       hostname === 'www.qwikker.com' || 
+                       hostname === 'localhost:3000' // For local dev
+  
+  // If it's a city subdomain, show city landing page
+  if (!isRootDomain) {
+    try {
+      const city = await getCityFromHostname(hostname)
+      
+      // Fetch city info from database
+      const supabase = await createClient()
+      const { data: cityInfo } = await supabase
+        .from('franchise_public_info')
+        .select('city, display_name, subdomain, status')
+        .eq('city', city)
+        .single()
+      
+      if (cityInfo && cityInfo.status === 'active') {
+        return (
+          <CityLandingPage
+            city={cityInfo.city}
+            displayName={cityInfo.display_name}
+            subdomain={cityInfo.subdomain}
+          />
+        )
+      }
+    } catch (error) {
+      console.error('Error loading city landing page:', error)
+      // Fall through to global homepage
+    }
+  }
+  
+  // Root domain or error → show global homepage
   const supabase = await createClient()
   
   const { data: cities, error } = await supabase

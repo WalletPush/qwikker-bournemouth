@@ -246,46 +246,70 @@ export function GlobalHomepagePremium({ cities }: { cities: LiveCity[] }) {
         )}
       </nav>
 
-      {/* Hero - Intent → Response */}
-      <section className="max-w-[1200px] mx-auto px-6 pt-32 pb-48">
-        <div className="max-w-2xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <h1 className="text-5xl lg:text-6xl font-semibold tracking-tight text-white mb-10 leading-[1.05]">
-              Your city, curated.<br />
-              Not searched.
-            </h1>
-            
-            <p className="text-base text-neutral-400 mb-12 leading-relaxed max-w-md mx-auto">
-              Your city, in your wallet.<br />
-              Local offers, secret menus, and dish-level recommendations. No app required.
-            </p>
+      {/* Hero - Cinematic with bokeh background */}
+      <section className="relative overflow-hidden">
+        {/* Background: Cinematic city bokeh with layered treatment */}
+        <div className="absolute inset-0 z-0">
+          {/* Image layer with opacity and blur */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: 'url(/qwikkerhero.png)',
+              opacity: 0.2,
+              filter: 'blur(1.5px)'
+            }}
+          />
+          
+          {/* Strong vertical gradient overlay */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0.95) 100%)'
+            }}
+          />
+        </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-5 mb-8">
-              <button 
-                onClick={scrollToCity}
-                className="px-8 py-4 bg-[#00d083]/10 hover:bg-[#00d083]/15 border border-[#00d083]/30 text-[#00d083] text-base font-medium rounded-xl transition-all"
-              >
-                Choose your city
-              </button>
-              <Link 
-                href="/for-business"
-                className="text-neutral-400 hover:text-neutral-300 transition-colors flex items-center gap-2 text-base font-medium"
-              >
-                For business
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
-            </div>
+        {/* Content - elevated above background */}
+        <div className="relative z-10 max-w-[1200px] mx-auto px-6 pt-32 pb-48">
+          <div className="max-w-2xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <h1 className="text-5xl lg:text-6xl font-semibold tracking-tight text-white mb-10 leading-[1.05]">
+                Your city, curated.<br />
+                Not searched.
+              </h1>
+              
+              <p className="text-base text-neutral-400 mb-12 leading-relaxed max-w-md mx-auto">
+                Your city, in your wallet.<br />
+                Local offers, secret menus, and dish-level recommendations. No app required.
+              </p>
 
-            <p className="text-sm text-neutral-600">
-              100% free. No ads. No spam. Works on iPhone & Android. No app required.
-            </p>
-          </motion.div>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-5 mb-8">
+                <button 
+                  onClick={scrollToCity}
+                  className="px-8 py-4 bg-[#00d083]/10 hover:bg-[#00d083]/15 border border-[#00d083]/30 text-[#00d083] text-base font-medium rounded-xl transition-all"
+                >
+                  Choose your city
+                </button>
+                <Link 
+                  href="/for-business"
+                  className="text-neutral-400 hover:text-neutral-300 transition-colors flex items-center gap-2 text-base font-medium"
+                >
+                  For business
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
+
+              <p className="text-sm text-neutral-600">
+                100% free. No ads. No spam. Works on iPhone & Android. No app required.
+              </p>
+            </motion.div>
+          </div>
         </div>
       </section>
 
