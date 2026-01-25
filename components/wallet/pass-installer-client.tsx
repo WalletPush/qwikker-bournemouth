@@ -118,11 +118,7 @@ export function PassInstallerClient({
         ? data.passUrl.replace('?t=', '.pkpass?t=')
         : data.passUrl
 
-      setPassUrl(finalPassUrl)
-      setSerialNumber(data.serialNumber)
-      setSuccess(true)
-      
-      // ✅ CRITICAL: Send to GHL for pass creation tracking
+      // ✅ CRITICAL: Send to GHL for pass creation tracking FIRST (before any redirects)
       // This is non-blocking - don't prevent pass installation if GHL fails
       try {
         console.log('📡 Syncing pass creation to GHL...')
@@ -136,15 +132,9 @@ export function PassInstallerClient({
               Last_Name: formData.lastName,
               email: formData.email,
               serialNumber: data.serialNumber,
-              passTypeIdentifier: 'pass.com.WalletPush',
+              passTypeIdentifier: data.passTypeIdentifier || 'pass.com.WalletPush',
               url: data.passUrl,
-              device: deviceType,
-              franchise_city: city,
-              // GHL expects these headers for webhook context
-              headers: {
-                host: 'services.leadconnectorhq.com',
-                'cf-ray': '940a0fc3c99aecfd-LHR' // Static placeholder for consistency
-              }
+              device: deviceType
             },
             city: city
           })
@@ -160,10 +150,14 @@ export function PassInstallerClient({
         console.warn('⚠️  GHL sync failed (non-critical):', ghlError)
         // Don't block user flow if GHL fails - pass installation is more important
       }
-      
+
+      setPassUrl(finalPassUrl)
+      setSerialNumber(data.serialNumber)
+      setSuccess(true)
       setLoading(false)
       
-      // Redirect to pass URL (opens wallet app on mobile)
+      // Redirect to pass URL (opens wallet app on mobile, downloads on desktop)
+      // The countdown timer will then redirect to /welcome after 10 seconds
       window.location.href = finalPassUrl
 
     } catch (err: any) {
