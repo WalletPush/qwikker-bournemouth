@@ -40,10 +40,12 @@ export default async function HomePage() {
       
       console.log('🔍 [app/page.tsx] cityInfo from DB:', cityInfo)
       
-      // Show city landing page for active OR pending_setup cities
-      // Reasoning: Franchise admins need to see the public page while setting up,
-      // and users can install passes + businesses can onboard in pending_setup status
-      if (cityInfo && (cityInfo.status === 'active' || cityInfo.status === 'pending_setup')) {
+      // Show city landing page for BOTH pending_setup AND active
+      // Reasoning: City is "live" to users as soon as HQ launches it
+      // - pending_setup = City is public, admin still configuring backend
+      // - active = Admin completed setup wizard (internal database marker)
+      // - Users can try to install pass in both states (graceful errors if services incomplete)
+      if (cityInfo && (cityInfo.status === 'pending_setup' || cityInfo.status === 'active')) {
         return (
           <CityLandingPage
             city={cityInfo.city}

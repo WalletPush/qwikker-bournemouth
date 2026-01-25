@@ -242,11 +242,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Perform upsert with only the fields we want to update
-    const { error } = await supabase
+    const { data: updatedConfig, error } = await supabase
       .from('franchise_crm_configs')
       .upsert(updates, {
         onConflict: 'city' // Update if city exists, insert if new
       })
+      .select()
+      .single()
 
     if (error) {
       console.error('❌ Error updating franchise config:', error)
@@ -254,6 +256,42 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to update franchise configuration' },
         { status: 500 }
       )
+    }
+
+    // 🚀 AUTO-ACTIVATION LOGIC
+    // If franchise is 'pending_setup' and has minimum required fields configured,
+    // automatically transition to 'active' status
+    if (updatedConfig.status === 'pending_setup') {
+      const hasMinimumRequirements = (
+        updatedConfig.ghl_webhook_url && 
+        !updatedConfig.ghl_webhook_url.includes('PLACEHOLDER') &&
+        updatedConfig.resend_api_key &&
+        updatedConfig.resend_from_email
+      )
+
+      if (hasMinimumRequirements) {
+        console.log(`✅ [AUTO-ACTIVATE] ${city} has minimum requirements, transitioning to 'active'`)
+        
+        const { error: activateError } = await supabase
+          .from('franchise_crm_configs')
+          .update({ 
+            status: 'active',
+            activated_at: new Date().toISOString()
+          })
+          .eq('city', city)
+
+        if (activateError) {
+          console.error('❌ Error auto-activating franchise:', activateError)
+          // Don't fail the request, just log the error
+        } else {
+          console.log(`🎉 [AUTO-ACTIVATE] ${city} is now ACTIVE!`)
+          return NextResponse.json({
+            success: true,
+            message: 'Franchise configuration saved and city activated! Your city is now live.',
+            activated: true
+          })
+        }
+      }
     }
 
     return NextResponse.json({

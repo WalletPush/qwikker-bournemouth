@@ -22,8 +22,12 @@ export async function POST(request: NextRequest) {
     if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID) {
       console.error(`❌ Missing WalletPush credentials for ${city}`)
       return NextResponse.json(
-        { error: `Missing WalletPush credentials for ${city}` },
-        { status: 500 }
+        { 
+          error: 'Unable to create your pass right now. Our team is setting things up. Please try again soon!',
+          technicalDetails: `Missing WalletPush credentials for ${city}`,
+          userFriendly: true
+        },
+        { status: 503 } // 503 Service Unavailable (temporary condition)
       )
     }
     
@@ -86,8 +90,10 @@ export async function POST(request: NextRequest) {
       console.error('WalletPush pass creation error:', errorText)
       return NextResponse.json({ 
         success: false, 
-        error: `Failed to create wallet pass: ${response.status}` 
-      }, { status: 500 })
+        error: 'Unable to create your pass right now. Our team is setting things up. Please try again soon!',
+        technicalDetails: `WalletPush API error: ${response.status}`,
+        userFriendly: true
+      }, { status: 503 }) // 503 Service Unavailable
     }
     
     const result = await response.json()

@@ -13,7 +13,8 @@ interface BusinessCitiesSectionProps {
 }
 
 export function BusinessCitiesSection({ cities }: BusinessCitiesSectionProps) {
-  const liveCities = cities.filter(c => c.status === 'active')
+  // BOTH pending_setup AND active are "LIVE" to users
+  const liveCities = cities.filter(c => c.status === 'active' || c.status === 'pending_setup')
   const comingSoonCities = cities.filter(c => c.status === 'coming_soon')
 
   return (

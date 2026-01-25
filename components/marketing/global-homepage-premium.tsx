@@ -785,7 +785,8 @@ export function GlobalHomepagePremium({ cities }: { cities: LiveCity[] }) {
             <>
               {/* PRIMARY: Live Cities - Compact grid */}
               {(() => {
-                const liveCities = cities.filter(c => c.status === 'active')
+                // BOTH pending_setup AND active are "LIVE" to users
+                const liveCities = cities.filter(c => c.status === 'active' || c.status === 'pending_setup')
                 const comingSoonCities = cities.filter(c => c.status === 'coming_soon')
                 
                 return (
