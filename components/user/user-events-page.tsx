@@ -582,14 +582,35 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">No events found</h3>
-                  <p className="text-slate-400">
-                    {selectedFilter === 'saved' 
-                      ? "You haven't saved any events yet" 
-                      : selectedFilter === 'interested'
-                      ? "You haven't marked any events as interested yet"
-                      : `No ${selectedFilter} events at the moment`}
-                  </p>
+                  {selectedFilter === 'saved' ? (
+                    <>
+                      <h3 className="text-xl font-semibold text-white mb-2">You haven't saved any events yet</h3>
+                      <p className="text-slate-400">
+                        Bookmark events you're interested in to see them here
+                      </p>
+                    </>
+                  ) : selectedFilter === 'interested' ? (
+                    <>
+                      <h3 className="text-xl font-semibold text-white mb-2">You haven't marked any events as interested yet</h3>
+                      <p className="text-slate-400">
+                        Tap "I'm Interested" on events to see them here
+                      </p>
+                    </>
+                  ) : events.length === 0 && selectedFilter === 'upcoming' ? (
+                    <>
+                      <h3 className="text-xl font-semibold text-white mb-2">Events will appear here</h3>
+                      <p className="text-slate-400">
+                        Live events and exclusives show up as partners activate them
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-xl font-semibold text-white mb-2">No {selectedFilter} events at the moment</h3>
+                      <p className="text-slate-400">
+                        Check back soon for new events!
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>

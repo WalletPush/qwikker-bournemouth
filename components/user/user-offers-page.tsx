@@ -1044,6 +1044,11 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                 Browse Offers
               </Button>
             </>
+          ) : realOffers.length === 0 ? (
+            <>
+              <h3 className="text-xl font-bold text-slate-100 mb-2">Offers are unlocking in {cityDisplayName}</h3>
+              <p className="text-slate-400">Local perks appear as venues join {cityDisplayName}, and your pass updates automatically.</p>
+            </>
           ) : (
             <>
           <h3 className="text-xl font-bold text-slate-100 mb-2">No offers match your filters</h3>

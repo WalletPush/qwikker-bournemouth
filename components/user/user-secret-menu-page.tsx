@@ -571,8 +571,24 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
       </div>
 
       {/* Secret Menu Items - Grouped by Business */}
-      <div className="space-y-8">
-        {getFilteredSecretMenus().map((menu) => {
+      {getFilteredSecretMenus().length === 0 ? (
+        <Card className="bg-slate-800/50 border-slate-700 text-center p-12">
+          <div className="text-6xl mb-4">🔒</div>
+          {realSecretMenus.length === 0 ? (
+            <>
+              <h3 className="text-xl font-bold text-slate-100 mb-2">Secret menus are coming online</h3>
+              <p className="text-slate-400">Off-menu dishes appear once venues confirm what's available.</p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-xl font-bold text-slate-100 mb-2">No secret menus match your filters</h3>
+              <p className="text-slate-400">Try adjusting your filters or check back later!</p>
+            </>
+          )}
+        </Card>
+      ) : (
+        <div className="space-y-8">
+          {getFilteredSecretMenus().map((menu) => {
           // Create business object from menu data
           const business = {
             id: menu.businessId,
@@ -634,6 +650,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
           )
         })}
       </div>
+      )}
 
       {/* Free Discovery Encouragement */}
       <Card className="bg-gradient-to-br from-emerald-900/20 to-teal-900/20 border-emerald-700/30 text-center p-8 relative overflow-hidden">

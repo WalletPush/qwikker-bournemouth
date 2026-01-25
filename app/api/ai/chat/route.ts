@@ -140,13 +140,16 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       console.error('❌ AI response generation failed:', result.error)
       
-      // If the error is about missing API key, show a more specific message
-      const isConfigurationError = result.error?.includes('not configured')
+      // If the error is about missing API key or empty knowledge base, show growth message
+      const isConfigurationError = result.error?.includes('not configured') || result.error?.includes('knowledge base')
+      
+      // Get city display name for personalized message
+      const cityDisplayName = city.charAt(0).toUpperCase() + city.slice(1)
       
       return NextResponse.json({
         response: isConfigurationError 
-          ? "I'm sorry, but the AI companion is temporarily unavailable for this city. Our team is working on getting it set up! In the meantime, explore the Discover page to find amazing local businesses."
-          : "I'm having trouble accessing my knowledge base right now. Please try again in a moment, or explore the Discover page to find great local businesses!",
+          ? `I'm still getting to know ${cityDisplayName}. As local businesses verify details, I'll be able to recommend specific dishes, offers and hidden spots. For now, explore what's already live in the Discover section and your pass will update automatically.`
+          : `I'm still getting to know ${cityDisplayName}. As local businesses verify details, I'll be able to recommend specific dishes, offers and hidden spots. For now, explore what's already live in the Discover section and your pass will update automatically.`,
         intent: 'unknown',
         needsLocation: false,
         showAtlasCta: false,
@@ -208,8 +211,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ AI Chat API error:', error)
     
+    // Get city for personalized fallback message
+    const city = getFranchiseCityFromRequest() || 'this city'
+    const cityDisplayName = city.charAt(0).toUpperCase() + city.slice(1)
+    
     return NextResponse.json({
-      response: "I'm experiencing some technical difficulties right now. Please try again in a moment! In the meantime, you can explore the Discover page to find amazing local businesses and offers.",
+      response: `I'm still getting to know ${cityDisplayName}. As local businesses verify details, I'll be able to recommend specific dishes, offers and hidden spots. For now, explore what's already live in the Discover section and your pass will update automatically.`,
       intent: 'unknown',
       needsLocation: false,
       showAtlasCta: false,
