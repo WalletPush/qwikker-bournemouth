@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
@@ -313,13 +314,15 @@ export function GlobalHomepagePremium({ cities }: { cities: LiveCity[] }) {
       <section className="relative overflow-hidden">
         {/* Background: Cinematic city bokeh with layered treatment */}
         <div className="absolute inset-0 z-0">
-          {/* Image layer with opacity and blur */}
-          <div 
-            className="absolute inset-0"
+          {/* Next.js Image with priority loading for instant display */}
+          <Image
+            src="/qwikkerhero.png"
+            alt="City bokeh background"
+            fill
+            priority
+            quality={85}
+            className="object-cover"
             style={{
-              backgroundImage: 'url(/qwikkerhero.png)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
               opacity: 0.35,
               filter: 'blur(0.8px)'
             }}
@@ -327,7 +330,7 @@ export function GlobalHomepagePremium({ cities }: { cities: LiveCity[] }) {
           
           {/* Subtle vertical gradient overlay - bokeh is the star */}
           <div 
-            className="absolute inset-0"
+            className="absolute inset-0 z-10"
             style={{
               background: 'linear-gradient(to bottom, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.30) 45%, rgba(0,0,0,0.65) 100%)'
             }}
