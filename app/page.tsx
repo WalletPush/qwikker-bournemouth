@@ -40,7 +40,10 @@ export default async function HomePage() {
       
       console.log('🔍 [app/page.tsx] cityInfo from DB:', cityInfo)
       
-      if (cityInfo && cityInfo.status === 'active') {
+      // Show city landing page for active OR pending_setup cities
+      // Reasoning: Franchise admins need to see the public page while setting up,
+      // and users can install passes + businesses can onboard in pending_setup status
+      if (cityInfo && (cityInfo.status === 'active' || cityInfo.status === 'pending_setup')) {
         return (
           <CityLandingPage
             city={cityInfo.city}
