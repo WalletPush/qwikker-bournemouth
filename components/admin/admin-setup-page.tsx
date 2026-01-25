@@ -323,14 +323,15 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
 
   const isStep3Valid = () => {
     // API Services: At minimum, Resend (email) and WalletPush (passes) are REQUIRED
-    const hasResend = config?.has_resend_api_key || !!(config?.resend_api_key && config?.resend_from_email)
-    const hasWalletPush = (config?.has_walletpush_api_key || !!config?.walletpush_api_key) && !!config?.walletpush_template_id
+    const hasResend = config?.has_resend_api_key || (config?.resend_api_key && !config.resend_api_key.includes('••••') && config?.resend_from_email)
+    const hasWalletPush = (config?.has_walletpush_api_key || (config?.walletpush_api_key && !config.walletpush_api_key.includes('••••'))) && !!config?.walletpush_template_id
     return hasResend && hasWalletPush
   }
 
   const isStep4Valid = () => {
     // Integrations: Pass creation webhook is REQUIRED (users must be able to install passes!)
-    return !!(config?.has_ghl_pass_creation_webhook_url || config?.ghl_pass_creation_webhook_url)
+    const hasPassWebhook = config?.has_ghl_pass_creation_webhook_url || (config?.ghl_pass_creation_webhook_url && !config.ghl_pass_creation_webhook_url.includes('••••'))
+    return !!hasPassWebhook
   }
 
   const canGoToNextStep = () => {
