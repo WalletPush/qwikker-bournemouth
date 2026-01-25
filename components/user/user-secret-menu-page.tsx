@@ -36,9 +36,11 @@ interface RealSecretMenu {
 interface UserSecretMenuPageProps {
   realSecretMenus?: RealSecretMenu[]
   walletPassId?: string
+  currentCity?: string
+  cityDisplayName?: string
 }
 
-export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserSecretMenuPageProps) {
+export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserSecretMenuPageProps) {
   
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
@@ -457,7 +459,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
           Secret Menu Club
         </h1>
         <p className="text-xl text-slate-300 mb-2">
-          Unlock Bournemouth's most guarded culinary secrets
+          Unlock {cityDisplayName}'s most guarded culinary secrets
         </p>
         <p className="text-slate-400 max-w-2xl mx-auto">
           These exclusive off-menu items are known only to insiders. Each secret tells a story, 
@@ -646,7 +648,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId }: UserS
             <h3 className="text-2xl font-bold text-emerald-400">Keep Exploring!</h3>
           </div>
           <p className="text-slate-300 mb-6 max-w-2xl mx-auto">
-            Every secret you unlock brings you closer to becoming a true Bournemouth foodie insider. 
+            Every secret you unlock brings you closer to becoming a true {cityDisplayName} foodie insider. 
             Chat with our AI to discover more hidden gems and get personalized recommendations!
           </p>
           <div className="flex gap-4 justify-center">

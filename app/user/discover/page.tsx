@@ -2,6 +2,7 @@ import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-
 import { UserDiscoverPage } from '@/components/user/user-discover-page'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { categoryLabel } from '@/lib/utils/category-helpers'
+import { getCityDisplayName } from '@/lib/utils/city-detection'
 
 export const dynamic = 'force-dynamic'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
@@ -17,8 +18,10 @@ interface DiscoverPageProps {
 export default async function DiscoverPage({ searchParams }: DiscoverPageProps) {
   // SECURITY: Validate franchise first
   let currentCity: string
+  let cityDisplayName: string
   try {
     currentCity = await getSafeCurrentCity()
+    cityDisplayName = getCityDisplayName(currentCity as any)
   } catch (error) {
     console.error('❌ Invalid franchise access:', error)
     return (
@@ -247,8 +250,15 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       currentSection="discover"
       walletPassId={walletPassId}
       currentUser={currentUser}
+      currentCity={currentCity}
+      cityDisplayName={cityDisplayName}
     >
-      <UserDiscoverPage businesses={allBusinesses} walletPassId={walletPassId} />
+      <UserDiscoverPage 
+        businesses={allBusinesses} 
+        walletPassId={walletPassId}
+        currentCity={currentCity}
+        cityDisplayName={cityDisplayName}
+      />
     </UserDashboardLayout>
   )
 }

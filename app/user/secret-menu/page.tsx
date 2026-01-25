@@ -1,6 +1,7 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserSecretMenuPage } from '@/components/user/user-secret-menu-page'
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+import { getCityDisplayName } from '@/lib/utils/city-detection'
 
 export const dynamic = 'force-dynamic'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
@@ -15,8 +16,10 @@ interface SecretMenuPageProps {
 export default async function SecretMenuPage({ searchParams }: SecretMenuPageProps) {
   // SECURITY: Validate franchise first
   let currentCity: string
+  let cityDisplayName: string
   try {
     currentCity = await getSafeCurrentCity()
+    cityDisplayName = getCityDisplayName(currentCity as any)
   } catch (error) {
     console.error('❌ Invalid franchise access:', error)
     return (
@@ -140,13 +143,20 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
       currentSection="secret-menu"
       walletPassId={walletPassId}
       currentUser={currentUser}
+      currentCity={currentCity}
+      cityDisplayName={cityDisplayName}
     >
       <Suspense fallback={
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-slate-400">Loading secret menu...</div>
         </div>
       }>
-        <UserSecretMenuPage realSecretMenus={realSecretMenus} walletPassId={walletPassId} />
+        <UserSecretMenuPage 
+          realSecretMenus={realSecretMenus} 
+          walletPassId={walletPassId}
+          currentCity={currentCity}
+          cityDisplayName={cityDisplayName}
+        />
       </Suspense>
     </UserDashboardLayout>
   )

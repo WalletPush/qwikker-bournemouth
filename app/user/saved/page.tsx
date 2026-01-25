@@ -2,6 +2,8 @@ import { getUserSavedItems } from '@/lib/actions/user-saved-actions'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserSavedPage } from '@/components/user/user-saved-page'
 import { getValidatedUser } from '@/lib/utils/wallet-pass-security'
+import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
+import { getCityDisplayName } from '@/lib/utils/city-detection'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +12,24 @@ export default async function SavedPage({
 }: {
   searchParams: Promise<{ wallet_pass_id?: string }>
 }) {
+  // SECURITY: Validate franchise first
+  let currentCity: string
+  let cityDisplayName: string
+  try {
+    currentCity = await getSafeCurrentCity()
+    cityDisplayName = getCityDisplayName(currentCity as any)
+  } catch (error) {
+    console.error('❌ Invalid franchise access:', error)
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+          <p className="text-slate-400">Invalid franchise location detected.</p>
+        </div>
+      </div>
+    )
+  }
+
   const resolvedSearchParams = await searchParams
   const walletPassId = resolvedSearchParams.wallet_pass_id
 
@@ -40,7 +60,7 @@ export default async function SavedPage({
       wallet_pass_id: walletPassId,
       name: 'Qwikker User',
       email: 'user@qwikker.com',
-      city: 'bournemouth',
+      city: currentCity,
       tier: 'explorer',
       level: 1,
       points_balance: 0,
@@ -60,6 +80,8 @@ export default async function SavedPage({
       currentSection="saved"
       currentUser={currentUser}
       walletPassId={walletPassId}
+      currentCity={currentCity}
+      cityDisplayName={cityDisplayName}
     >
       <UserSavedPage
         savedItems={savedResult.items || []}

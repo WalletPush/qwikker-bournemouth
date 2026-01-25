@@ -15,9 +15,11 @@ interface UserDashboardHomeProps {
   currentUser?: any
   walletPassId?: string
   franchiseCity?: string
+  currentCity?: string
+  cityDisplayName?: string
 }
 
-export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseCity }: UserDashboardHomeProps) {
+export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseCity, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserDashboardHomeProps) {
   
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
@@ -169,7 +171,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
     {
       number: "01",
       title: "Discover Amazing Places",
-      description: "Explore Bournemouth's best restaurants, cafes, bars, and hidden gems — all carefully curated by locals",
+      description: `Explore ${cityDisplayName}'s best restaurants, cafes, bars, and hidden gems — all carefully curated by locals`,
       icon: (
         <svg className="w-16 h-16 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

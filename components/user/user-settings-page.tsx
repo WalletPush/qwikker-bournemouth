@@ -10,9 +10,11 @@ interface UserSettingsPageProps {
     email: string
     city?: string
   }
+  currentCity?: string
+  cityDisplayName?: string
 }
 
-export function UserSettingsPage({ currentUser }: UserSettingsPageProps) {
+export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserSettingsPageProps) {
   const [notifications, setNotifications] = useState({
     geoOffers: true,
     newBusinesses: true,
@@ -33,13 +35,13 @@ export function UserSettingsPage({ currentUser }: UserSettingsPageProps) {
   }
 
   const shareQwikker = () => {
-    const text = `Hey! I've been discovering amazing local businesses with Qwikker in Bournemouth. Check it out!`
+    const text = `Hey! I've been discovering amazing local businesses with Qwikker in ${cityDisplayName}. Check it out!`
     
     if (navigator.share) {
       navigator.share({
         title: 'Check out Qwikker!',
         text: text,
-        url: 'https://bournemouth.qwikker.com'
+        url: `https://${currentCity}.qwikker.com`
       })
     } else {
       // Fallback - copy to clipboard
@@ -77,7 +79,7 @@ export function UserSettingsPage({ currentUser }: UserSettingsPageProps) {
             Share Qwikker
           </CardTitle>
             <p className="text-slate-300">
-              Help your friends discover amazing local businesses in Bournemouth!
+              Help your friends discover amazing local businesses in {cityDisplayName}!
             </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -288,7 +290,7 @@ export function UserSettingsPage({ currentUser }: UserSettingsPageProps) {
           <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg">
             <div>
               <p className="text-white font-medium">Current City</p>
-              <p className="text-blue-400 text-lg font-semibold">Bournemouth</p>
+              <p className="text-blue-400 text-lg font-semibold">{cityDisplayName}</p>
               <p className="text-slate-400 text-sm">4 businesses • 12 active offers</p>
             </div>
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xl">

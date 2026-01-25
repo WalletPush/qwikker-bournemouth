@@ -67,7 +67,7 @@ interface ChatMessage {
   }>
 }
 
-export function UserChatPage({ currentUser }: { currentUser?: any }) {
+export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: { currentUser?: any, currentCity?: string, cityDisplayName?: string }) {
   const searchParams = useSearchParams()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -188,15 +188,15 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
     
     // 🎯 DYNAMIC GREETINGS: Rotate through different welcome messages  
     const greetings = userName ? [
-      `Hey ${userName}! 👋 Looking for something tasty in Bournemouth? I've got the inside scoop on great restaurants, exclusive offers, and secret menus!`,
-      `${userName}! Ready to discover Bournemouth's best spots? I can show you top-rated restaurants, unbeatable deals, and hidden gems!`,
-      `Alright ${userName}, what's the vibe? Looking for food, drinks, or just somewhere new to explore in Bournemouth?`,
+      `Hey ${userName}! 👋 Looking for something tasty in ${cityDisplayName}? I've got the inside scoop on great restaurants, exclusive offers, and secret menus!`,
+      `${userName}! Ready to discover ${cityDisplayName}'s best spots? I can show you top-rated restaurants, unbeatable deals, and hidden gems!`,
+      `Alright ${userName}, what's the vibe? Looking for food, drinks, or just somewhere new to explore in ${cityDisplayName}?`,
       `Hey ${userName}! Whether you're after a quick bite, a proper meal, or the best deals in town—I've got you covered!`,
       `${userName}! Let's find you something brilliant. Restaurants, offers, secret menus—what are you in the mood for?`
     ] : [
-      `Hey! 👋 Looking for something tasty in Bournemouth? I've got the inside scoop on great restaurants, exclusive offers, and secret menus!`,
-      `Ready to discover Bournemouth's best spots? I can show you top-rated restaurants, unbeatable deals, and hidden gems!`,
-      `Alright, what's the vibe? Looking for food, drinks, or just somewhere new to explore in Bournemouth?`,
+      `Hey! 👋 Looking for something tasty in ${cityDisplayName}? I've got the inside scoop on great restaurants, exclusive offers, and secret menus!`,
+      `Ready to discover ${cityDisplayName}'s best spots? I can show you top-rated restaurants, unbeatable deals, and hidden gems!`,
+      `Alright, what's the vibe? Looking for food, drinks, or just somewhere new to explore in ${cityDisplayName}?`,
       `Whether you're after a quick bite, a proper meal, or the best deals in town—I've got you covered!`,
       `Let's find you something brilliant. Restaurants, offers, secret menus—what are you in the mood for?`
     ]
@@ -559,7 +559,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
       const welcomeMessage: ChatMessage = {
         id: Date.now().toString(),
         type: 'ai',
-        content: `Hi ${userName}! I'm here to help you discover the best of Bournemouth. I can show you great restaurants, exclusive offers, and even add deals straight to your wallet! What are you looking for?`,
+        content: `Hi ${userName}! I'm here to help you discover the best of ${cityDisplayName}. I can show you great restaurants, exclusive offers, and even add deals straight to your wallet! What are you looking for?`,
         timestamp: new Date().toISOString(),
         quickReplies: [
           "Show me Qwikker Picks",
@@ -631,7 +631,7 @@ export function UserChatPage({ currentUser }: { currentUser?: any }) {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-[#00d083] via-blue-400 to-purple-400 bg-clip-text text-transparent">
               AI Companion
             </h1>
-            <p className="text-slate-400 text-sm">Your local Bournemouth guide</p>
+            <p className="text-slate-400 text-sm">Your local {cityDisplayName} guide</p>
           </div>
         </div>
         

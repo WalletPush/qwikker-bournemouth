@@ -2,6 +2,7 @@ import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserSettingsPage } from '@/components/user/user-settings-page'
 // Removed service role import for security
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+import { getCityDisplayName } from '@/lib/utils/city-detection'
 
 export const dynamic = 'force-dynamic'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
@@ -15,8 +16,10 @@ interface SettingsPageProps {
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   // SECURITY: Validate franchise first
   let currentCity: string
+  let cityDisplayName: string
   try {
     currentCity = await getSafeCurrentCity()
+    cityDisplayName = getCityDisplayName(currentCity as any)
   } catch (error) {
     console.error('❌ Invalid franchise access:', error)
     return (
@@ -87,8 +90,14 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       currentSection="settings"
       walletPassId={walletPassId}
       currentUser={currentUser}
+      currentCity={currentCity}
+      cityDisplayName={cityDisplayName}
     >
-      <UserSettingsPage currentUser={currentUser} />
+      <UserSettingsPage 
+        currentUser={currentUser}
+        currentCity={currentCity}
+        cityDisplayName={cityDisplayName}
+      />
     </UserDashboardLayout>
   )
 }

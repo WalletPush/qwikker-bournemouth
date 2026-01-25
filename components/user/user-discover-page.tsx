@@ -36,9 +36,11 @@ interface Business {
 interface UserDiscoverPageProps {
   businesses?: Business[]
   walletPassId?: string
+  currentCity?: string
+  cityDisplayName?: string
 }
 
-export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: UserDiscoverPageProps) {
+export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserDiscoverPageProps) {
   // 🐛 DEBUG: Log businesses on mount
   useEffect(() => {
     console.log('🏪 UserDiscoverPage mounted with businesses:', {
@@ -202,7 +204,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId }: 
       {/* Page Header with Icon */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-semibold tracking-tight text-white mb-2">
-          Discover Bournemouth
+          Discover {cityDisplayName}
         </h1>
         <p className="text-slate-400 text-lg max-w-2xl mx-auto">
           Find amazing local businesses, exclusive deals, and hidden gems

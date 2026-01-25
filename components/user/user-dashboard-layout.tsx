@@ -8,6 +8,8 @@ interface UserDashboardLayoutProps {
   currentSection: string
   currentUser?: any
   walletPassId?: string
+  currentCity?: string
+  cityDisplayName?: string
 }
 
 interface NavItem {
@@ -68,7 +70,7 @@ const navItems: NavItem[] = [
   },
 ]
 
-export function UserDashboardLayout({ children, currentSection, currentUser, walletPassId }: UserDashboardLayoutProps) {
+export function UserDashboardLayout({ children, currentSection, currentUser, walletPassId, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserDashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   
   // Save wallet_pass_id to localStorage for persistence across navigation
@@ -215,13 +217,13 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
             {/* Right side - Location and city switcher */}
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="font-semibold text-slate-100">Bournemouth</p>
+                <p className="font-semibold text-slate-100">{cityDisplayName}</p>
                 <p className="text-sm text-slate-400">Current City</p>
               </div>
               
               {/* City indicator */}
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center font-semibold text-slate-100">
-                B
+                {cityDisplayName.charAt(0).toUpperCase()}
               </div>
             </div>
           </div>

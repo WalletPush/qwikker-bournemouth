@@ -1,6 +1,7 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserDashboardHome } from '@/components/user/user-dashboard-home'
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+import { getCityDisplayName } from '@/lib/utils/city-detection'
 
 export const dynamic = 'force-dynamic'
 import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
@@ -22,8 +23,10 @@ interface UserDashboardPageProps {
 export default async function UserDashboardPage({ searchParams }: UserDashboardPageProps) {
   // SECURITY: Validate franchise first
   let currentCity: string
+  let cityDisplayName: string
   try {
     currentCity = await getSafeCurrentCity()
+    cityDisplayName = getCityDisplayName(currentCity as any)
   } catch (error) {
     console.error('❌ Invalid franchise access:', error)
     return (
@@ -212,8 +215,17 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
       currentSection="dashboard" 
       currentUser={currentUser}
       walletPassId={walletPassId}
+      currentCity={currentCity}
+      cityDisplayName={cityDisplayName}
     >
-      <UserDashboardHome stats={stats} currentUser={currentUser} walletPassId={walletPassId} franchiseCity={currentCity} />
+      <UserDashboardHome 
+        stats={stats} 
+        currentUser={currentUser} 
+        walletPassId={walletPassId} 
+        franchiseCity={currentCity}
+        currentCity={currentCity}
+        cityDisplayName={cityDisplayName}
+      />
     </UserDashboardLayout>
   )
 }

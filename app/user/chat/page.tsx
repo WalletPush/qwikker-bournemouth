@@ -1,5 +1,6 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserChatPage } from '@/components/user/user-chat-page'
+import { getCityDisplayName } from '@/lib/utils/city-detection'
 
 export const dynamic = 'force-dynamic'
 // Removed service role import for security
@@ -13,8 +14,10 @@ export default async function ChatPage({
 }) {
   // SECURITY: Validate franchise first
   let currentCity: string
+  let cityDisplayName: string
   try {
     currentCity = await getSafeCurrentCity()
+    cityDisplayName = getCityDisplayName(currentCity as any)
   } catch (error) {
     console.error('❌ Invalid franchise access:', error)
     return (
@@ -72,8 +75,14 @@ export default async function ChatPage({
       currentSection="chat" 
       currentUser={currentUser}
       walletPassId={userId}
+      currentCity={currentCity}
+      cityDisplayName={cityDisplayName}
     >
-      <UserChatPage currentUser={{ ...currentUser, wallet_pass_id: userId }} />
+      <UserChatPage 
+        currentUser={{ ...currentUser, wallet_pass_id: userId }}
+        currentCity={currentCity}
+        cityDisplayName={cityDisplayName}
+      />
     </UserDashboardLayout>
   )
 }

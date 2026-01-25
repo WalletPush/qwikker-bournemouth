@@ -1,6 +1,7 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserOffersPage } from '@/components/user/user-offers-page'
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+import { getCityDisplayName } from '@/lib/utils/city-detection'
 
 export const dynamic = 'force-dynamic'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
@@ -19,8 +20,10 @@ interface OffersPageProps {
 export default async function OffersPage({ searchParams }: OffersPageProps) {
   // SECURITY: Validate franchise first
   let currentCity: string
+  let cityDisplayName: string
   try {
     currentCity = await getSafeCurrentCity()
+    cityDisplayName = getCityDisplayName(currentCity as any)
   } catch (error) {
     console.error('❌ Invalid franchise access:', error)
     return (
@@ -206,13 +209,20 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       currentSection="offers"
       walletPassId={walletPassId}
       currentUser={currentUser}
+      currentCity={currentCity}
+      cityDisplayName={cityDisplayName}
     >
       <Suspense fallback={
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-slate-400">Loading offers...</div>
         </div>
       }>
-        <UserOffersPage realOffers={realOffers} walletPassId={walletPassId} />
+        <UserOffersPage 
+          realOffers={realOffers} 
+          walletPassId={walletPassId}
+          currentCity={currentCity}
+          cityDisplayName={cityDisplayName}
+        />
       </Suspense>
     </UserDashboardLayout>
   )

@@ -13,9 +13,11 @@ import { SYSTEM_CATEGORY_LABEL } from '@/lib/constants/system-categories'
 interface UserOffersPageProps {
   realOffers?: any[]
   walletPassId?: string
+  currentCity?: string
+  cityDisplayName?: string
 }
 
-export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId }: UserOffersPageProps) {
+export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserOffersPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showAllCategories, setShowAllCategories] = useState(false) // NEW: Show More toggle
@@ -714,7 +716,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             <ShareButton
               title={`Amazing Deal: ${offer.title}`}
               text={`Check out this exclusive offer at ${businessName}: ${offer.title}! Save ${offer.discount} - but you need Qwikker to claim it.`}
-              url={`https://bournemouth.qwikker.com/join?ref=offer-${offer.id}`} // TODO: Make dynamic
+              url={`https://${currentCity}.qwikker.com/join?ref=offer-${offer.id}`}
               onShare={() => handleShare(offer.id, offer.title, businessName)}
               className="w-full"
               size="sm"

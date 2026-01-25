@@ -8,6 +8,8 @@ interface UserDashboardLayoutProps {
   currentSection: string
   currentUser?: any
   walletPassId?: string
+  currentCity?: string
+  cityDisplayName?: string
 }
 
 interface NavItem {
@@ -62,7 +64,7 @@ const navItems: NavItem[] = [
   }
 ]
 
-export function UserDashboardLayoutMobile({ children, currentSection, currentUser, walletPassId }: UserDashboardLayoutProps) {
+export function UserDashboardLayoutMobile({ children, currentSection, currentUser, walletPassId, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserDashboardLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
   // Helper function to append wallet_pass_id to navigation URLs
@@ -196,7 +198,7 @@ export function UserDashboardLayoutMobile({ children, currentSection, currentUse
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-full">
                 <div className="w-2 h-2 bg-[#00d083] rounded-full"></div>
-                <span className="text-sm text-slate-300">Bournemouth</span>
+                <span className="text-sm text-slate-300">{cityDisplayName}</span>
               </div>
             </div>
           </div>
