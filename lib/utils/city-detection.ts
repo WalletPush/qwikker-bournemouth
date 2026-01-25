@@ -61,7 +61,8 @@ export async function getCityFromHostname(
 ): Promise<FranchiseCity> {
   const vercelEnv = process.env.VERCEL_ENV
   const isProd = vercelEnv === 'production'
-  const cleanHost = hostname.toLowerCase().trim()
+  // Strip port from hostname before processing
+  const cleanHost = hostname.split(':')[0].toLowerCase().trim()
   const allowUnsafeFallbacks =
     opts?.allowUnsafeFallbacks ??
     (!isProd) // ✅ preview/dev: allow fallback; production: strict

@@ -14,15 +14,21 @@ export default async function HomePage() {
   const headersList = await headers()
   const hostname = headersList.get('host') || ''
   
-  // Check if this is the root domain (qwikker.com or www.qwikker.com)
+  console.log('🔍 [app/page.tsx] hostname:', hostname)
+  
+  // Check if this is the root domain (qwikker.com or www.qwikker.com or localhost:3000)
   const isRootDomain = hostname === 'qwikker.com' || 
                        hostname === 'www.qwikker.com' || 
-                       hostname === 'localhost:3000' // For local dev
+                       hostname === 'localhost:3000' ||
+                       hostname === 'localhost' // Plain localhost without port
+  
+  console.log('🔍 [app/page.tsx] isRootDomain:', isRootDomain)
   
   // If it's a city subdomain, show city landing page
   if (!isRootDomain) {
     try {
       const city = await getCityFromHostname(hostname)
+      console.log('🔍 [app/page.tsx] detected city:', city)
       
       // Fetch city info from database
       const supabase = await createClient()
@@ -31,6 +37,8 @@ export default async function HomePage() {
         .select('city, display_name, subdomain, status')
         .eq('city', city)
         .single()
+      
+      console.log('🔍 [app/page.tsx] cityInfo from DB:', cityInfo)
       
       if (cityInfo && cityInfo.status === 'active') {
         return (

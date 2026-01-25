@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { BusinessCitiesSection } from '@/components/marketing/business-cities-section'
 
 export const metadata = {
   title: 'For Business | QWIKKER',
@@ -51,33 +52,59 @@ export default async function ForBusinessPage() {
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="max-w-5xl mx-auto px-6 pt-32 pb-48">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-5xl lg:text-6xl font-semibold tracking-tight text-white mb-8 leading-[1.05]">
-            Turn local discovery into real customers.
-          </h1>
+      {/* Hero - Cinematic with business bokeh background */}
+      <section className="relative overflow-hidden">
+        {/* Background: Cinematic business bokeh with layered treatment */}
+        <div className="absolute inset-0 z-0">
+          {/* Image layer with opacity and blur */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              backgroundImage: 'url(/qwikkerbusiness.png)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.35,
+              filter: 'blur(0.8px)'
+            }}
+          />
           
-          <p className="text-xl text-neutral-400 mb-10 leading-relaxed max-w-2xl mx-auto">
-            QWIKKER connects your business to people who are already looking — by craving, not keywords.
-          </p>
+          {/* Subtle vertical gradient overlay */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.30) 45%, rgba(0,0,0,0.65) 100%)'
+            }}
+          />
+        </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
-            <a
-              href="#check-city"
-              className="px-8 py-4 bg-[#00d083]/10 hover:bg-[#00d083]/15 border border-[#00d083]/30 text-[#00d083] text-base font-medium rounded-xl transition-all"
-            >
-              Check your city
-            </a>
-            <a
-              href="#how-it-works"
-              className="text-neutral-400 hover:text-neutral-300 transition-colors flex items-center gap-2 text-base font-medium"
-            >
-              How it works
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </a>
+        {/* Content - elevated above background with text shadow for readability */}
+        <div className="relative z-10 max-w-5xl mx-auto px-6 pt-32 pb-48">
+          <div className="max-w-3xl mx-auto text-center">
+            <h1 className="text-5xl lg:text-6xl font-semibold tracking-tight text-white mb-8 leading-[1.05]" style={{ textShadow: '0 2px 20px rgba(0,0,0,0.5)' }}>
+              Turn local discovery into real customers.
+            </h1>
+            
+            <p className="text-xl text-neutral-300 mb-10 leading-relaxed max-w-2xl mx-auto" style={{ textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
+              QWIKKER connects your business to people who are already looking — by craving, not keywords.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
+              <a
+                href="#check-city"
+                className="px-8 py-4 bg-[#00d083]/10 hover:bg-[#00d083]/15 border border-[#00d083]/30 text-[#00d083] text-base font-medium rounded-xl transition-all"
+              >
+                Check your city
+              </a>
+              <a
+                href="#how-it-works"
+                className="text-neutral-300 hover:text-white transition-colors flex items-center gap-2 text-base font-medium"
+              >
+                How it works
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -336,44 +363,7 @@ export default async function ForBusinessPage() {
           </p>
 
           {cities && cities.length > 0 ? (
-            <div className="space-y-16">
-              {Object.keys(groupedCities).map((country) => (
-                <div key={country}>
-                  <h3 className="text-2xl font-semibold text-white mb-6">{country}</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {groupedCities[country].map((city) => (
-                      city.status === 'active' ? (
-                        <a
-                          key={city.city}
-                          href={`https://${city.subdomain}.qwikker.com/business-signup`}
-                          className="bg-white/5 backdrop-blur-sm border border-white/10 hover:border-[#00d083]/40 rounded-xl p-6 transition-all group flex items-center justify-between shadow-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 rounded-full bg-[#00d083]" />
-                            <span className="text-white font-medium text-lg">{city.display_name}</span>
-                            <span className="text-xs text-[#00d083] bg-[#00d083]/10 px-2 py-1 rounded">LIVE</span>
-                          </div>
-                          <svg className="w-5 h-5 text-neutral-500 group-hover:text-[#00d083] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </a>
-                      ) : (
-                        <div
-                          key={city.city}
-                          className="bg-white/[0.02] border border-white/5 rounded-xl p-6 opacity-50 flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 rounded-full bg-neutral-600" />
-                            <span className="text-neutral-500 font-medium text-lg">{city.display_name}</span>
-                            <span className="text-xs text-neutral-600 bg-neutral-800/50 px-2 py-1 rounded">Coming soon</span>
-                          </div>
-                        </div>
-                      )
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <BusinessCitiesSection cities={cities} />
           ) : (
             <div className="text-center py-12 text-neutral-600">
               <p>No cities available yet. Check back soon!</p>
@@ -383,7 +373,7 @@ export default async function ForBusinessPage() {
           {/* Join waitlist CTA */}
           <div className="text-center mt-16 pt-12 border-t border-white/10">
             <p className="text-sm text-neutral-500 mb-6">
-              Businesses can join the waitlist now.
+              Don&apos;t see your city? Join the waitlist.
             </p>
             <a
               href="mailto:hello@qwikker.com?subject=Business Waitlist"
