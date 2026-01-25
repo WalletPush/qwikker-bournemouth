@@ -15,10 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Qwikker",
   description: "Discover local businesses and exclusive offers",
-  icons: {
-    icon: '/qwikker-icon.svg',
-    apple: '/qwikker-icon.svg',
-  },
+  // Icons are auto-generated from app/icon.tsx and app/apple-icon.tsx
 };
 
 export const viewport = {
