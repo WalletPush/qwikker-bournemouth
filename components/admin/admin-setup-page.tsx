@@ -252,6 +252,9 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
         }
       })
 
+      console.log('💾 Saving config for city:', city)
+      console.log('📦 Filtered config:', filteredConfig)
+
       const response = await fetch('/api/admin/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -267,12 +270,15 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
           setMessage('')
         }, 3000)
       } else {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('❌ Save failed:', response.status, errorData)
         setSaveStatus('error')
-        setMessage('❌ Failed to save configuration')
+        setMessage(`❌ Failed to save configuration: ${errorData.error || response.statusText}`)
       }
     } catch (error) {
+      console.error('❌ Save error:', error)
       setSaveStatus('error')
-      setMessage('❌ Error saving configuration')
+      setMessage(`❌ Error saving configuration: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
