@@ -390,8 +390,30 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
   }
 
   const isStep4Valid = () => {
-    // Integrations: All optional - can configure incrementally
-    return true
+    // REQUIRED: GHL webhooks + WalletPush credentials
+    if (!config) return false
+    
+    // GHL Webhooks (both required)
+    const hasPassWebhook = config.ghl_pass_creation_webhook_url && 
+                          config.ghl_pass_creation_webhook_url.trim() !== '' && 
+                          !config.ghl_pass_creation_webhook_url.includes('••••')
+    
+    const hasBusinessWebhook = config.ghl_webhook_url && 
+                               config.ghl_webhook_url.trim() !== '' && 
+                               !config.ghl_webhook_url.includes('••••')
+    
+    // WalletPush (all 3 fields required)
+    const hasWalletPushApiKey = config.walletpush_api_key && 
+                                config.walletpush_api_key.trim() !== '' && 
+                                !config.walletpush_api_key.includes('••••')
+    
+    const hasWalletPushTemplateId = config.walletpush_template_id && 
+                                    config.walletpush_template_id.trim() !== ''
+    
+    const hasWalletPushEndpoint = config.walletpush_endpoint_url && 
+                                  config.walletpush_endpoint_url.trim() !== ''
+    
+    return hasPassWebhook && hasBusinessWebhook && hasWalletPushApiKey && hasWalletPushTemplateId && hasWalletPushEndpoint
   }
 
   const canGoToNextStep = () => {
@@ -411,7 +433,10 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
     if (activeStep === 2 && !isStep2Valid()) {
       return '⚠️  Please complete franchise details (name, timezone, phone) before continuing'
     }
-    // Steps 3 and 4 are now optional - can configure incrementally
+    if (activeStep === 4 && !isStep4Valid()) {
+      return '⚠️  All integrations required: GHL webhooks (2) + WalletPush credentials (3)'
+    }
+    // Step 3 is optional - can configure incrementally
     return ''
   }
 
@@ -1179,7 +1204,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   
                   <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-3 mb-4">
                     <p className="text-purple-200 text-xs">
-                      <span className="font-semibold">What gets synced:</span> Business signups, profile updates, offers, status changes - all automatically
+                      <span className="font-semibold">What gets synced:</span> Business signups, profile updates - all automatically
                     </p>
                   </div>
 
@@ -1212,70 +1237,31 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       </p>
                     </div>
                     
-                    <div className="border-t border-slate-700 pt-4">
-                      <p className="text-xs text-slate-400 mb-4 italic">
-                        The webhooks below are optional and used for business CRM sync:
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-slate-300 text-sm mb-2 block flex items-center gap-2">
-                        Business CRM Webhook URL
-                        <span className="text-xs text-slate-500 font-normal">(Optional)</span>
-                      </Label>
+                    <div className="border-2 border-[#00d083]/30 bg-[#00d083]/5 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                          !
+                        </div>
+                        <Label className="text-white text-sm font-semibold mb-0">
+                          GHL Webhook URL
+                        </Label>
+                        <span className="px-2 py-0.5 text-xs bg-[#00d083]/30 text-[#00d083] rounded-full font-medium border border-[#00d083]/40">
+                          REQUIRED
+                        </span>
+                      </div>
                       <Input
                         value={config.ghl_webhook_url || ''}
                         onChange={(e) => setConfig({...config, ghl_webhook_url: e.target.value})}
-                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
+                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm mb-2"
                         placeholder="https://services.leadconnectorhq.com/hooks/..."
+                        required
                       />
-                      <p className="text-xs text-slate-400 mt-1">
-                        <strong>Business Flow:</strong> For business signups and profile updates
+                      <p className="text-xs text-slate-300">
+                        <strong>What gets synced:</strong> New business signups and profile updates
                       </p>
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-sm mb-2 block flex items-center gap-2">
-                        Business Update Webhook URL
-                        <span className="text-xs text-slate-500 font-normal">(Optional)</span>
-                      </Label>
-                      <Input
-                        value={config.ghl_update_webhook_url || ''}
-                        onChange={(e) => setConfig({...config, ghl_update_webhook_url: e.target.value})}
-                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
-                        placeholder="https://services.leadconnectorhq.com/hooks/..."
-                      />
-                      <p className="text-xs text-slate-400 mt-1">
-                        <strong>Business Flow:</strong> For business profile updates (falls back to main if not set)
+                      <p className="text-xs text-[#00d083] mt-1">
+                        ✓ Create a Workflow in GHL → Set trigger to "Webhook" → Copy the URL here
                       </p>
-                    </div>
-                    <div>
-                      <Label className="text-slate-300 text-sm mb-2 block">GHL API Key</Label>
-                      <div className="relative">
-                        <Input
-                          type={showKeys.ghl ? "text" : "password"}
-                          value={config.ghl_api_key || ''}
-                          onChange={(e) => setConfig({...config, ghl_api_key: e.target.value})}
-                          className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
-                          placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowKeys({...showKeys, ghl: !showKeys.ghl})}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
-                        >
-                          {showKeys.ghl ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-                      <p className="text-xs text-slate-400 mt-1">For advanced CRM authentication and two-way sync</p>
                     </div>
                   </div>
                 </div>
@@ -1302,52 +1288,85 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-slate-300 text-sm mb-2 block">WalletPush API Key</Label>
-                        <div className="relative">
-                          <Input
-                            type={showKeys.walletpush ? "text" : "password"}
-                            value={config.walletpush_api_key || ''}
-                            onChange={(e) => setConfig({...config, walletpush_api_key: e.target.value})}
-                            className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
-                            placeholder="wp_live_..."
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowKeys({...showKeys, walletpush: !showKeys.walletpush})}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
-                          >
-                            {showKeys.walletpush ? (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                              </svg>
-                            ) : (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                            )}
-                          </button>
+                    <div className="border-2 border-[#00d083]/30 bg-[#00d083]/5 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                          !
                         </div>
+                        <Label className="text-white text-sm font-semibold mb-0">
+                          WalletPush API Key
+                        </Label>
+                        <span className="px-2 py-0.5 text-xs bg-[#00d083]/30 text-[#00d083] rounded-full font-medium border border-[#00d083]/40">
+                          REQUIRED
+                        </span>
                       </div>
-                      <div>
-                        <Label className="text-slate-300 text-sm mb-2 block">Template ID</Label>
+                      <div className="relative">
                         <Input
-                          value={config.walletpush_template_id || ''}
-                          onChange={(e) => setConfig({...config, walletpush_template_id: e.target.value})}
-                          className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg"
-                          placeholder="template_12345"
+                          type={showKeys.walletpush ? "text" : "password"}
+                          value={config.walletpush_api_key || ''}
+                          onChange={(e) => setConfig({...config, walletpush_api_key: e.target.value})}
+                          className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
+                          placeholder="wp_live_..."
+                          required
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowKeys({...showKeys, walletpush: !showKeys.walletpush})}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                        >
+                          {showKeys.walletpush ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
                       </div>
                     </div>
-                    <div>
-                      <Label className="text-slate-300 text-sm mb-2 block">Endpoint URL</Label>
+
+                    <div className="border-2 border-[#00d083]/30 bg-[#00d083]/5 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                          !
+                        </div>
+                        <Label className="text-white text-sm font-semibold mb-0">
+                          Template ID
+                        </Label>
+                        <span className="px-2 py-0.5 text-xs bg-[#00d083]/30 text-[#00d083] rounded-full font-medium border border-[#00d083]/40">
+                          REQUIRED
+                        </span>
+                      </div>
+                      <Input
+                        value={config.walletpush_template_id || ''}
+                        onChange={(e) => setConfig({...config, walletpush_template_id: e.target.value})}
+                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg"
+                        placeholder="4844561051942912"
+                        required
+                      />
+                    </div>
+
+                    <div className="border-2 border-[#00d083]/30 bg-[#00d083]/5 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                          !
+                        </div>
+                        <Label className="text-white text-sm font-semibold mb-0">
+                          Endpoint URL
+                        </Label>
+                        <span className="px-2 py-0.5 text-xs bg-[#00d083]/30 text-[#00d083] rounded-full font-medium border border-[#00d083]/40">
+                          REQUIRED
+                        </span>
+                      </div>
                       <Input
                         value={config.walletpush_endpoint_url || ''}
                         onChange={(e) => setConfig({...config, walletpush_endpoint_url: e.target.value})}
-                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg"
-                        placeholder="https://app.walletpush.io/api/hl-yourfranchise"
+                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
+                        placeholder="https://app.walletpush.io/api/hl-endpoint/..."
+                        required
                       />
                     </div>
                   </div>
@@ -1363,7 +1382,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-white font-bold text-lg">Slack (Team Notifications)</h3>
-                      <p className="text-slate-400 text-sm">Get instant alerts when businesses sign up or need attention</p>
+                      <p className="text-slate-400 text-sm">Essential for admin approvals and franchise operations</p>
                     </div>
                     <a 
                       href="https://api.slack.com/messaging/webhooks" 
@@ -1373,6 +1392,26 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     >
                       Setup Guide →
                     </a>
+                  </div>
+
+                  <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-yellow-200 text-sm font-semibold mb-1">⚡ You'll get instant notifications for:</p>
+                        <ul className="text-yellow-100 text-xs space-y-1 ml-4 list-disc">
+                          <li><strong>Business signups</strong> - New businesses joining your franchise</li>
+                          <li><strong>Admin approval needed</strong> - Offers, menus, listings awaiting review</li>
+                          <li><strong>Claim requests</strong> - Business owners claiming their listings</li>
+                          <li><strong>System alerts</strong> - Errors, payment issues, or important events</li>
+                        </ul>
+                        <p className="text-yellow-200 text-xs mt-2 italic">
+                          💡 Without Slack, you'll miss critical approvals and have no way to monitor your franchise!
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

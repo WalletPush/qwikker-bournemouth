@@ -240,18 +240,18 @@ export async function POST(request: NextRequest) {
 
     // ✅ Non-secret fields (safe to update, but skip empty strings to avoid overwriting)
     // Note: Boolean and number fields are always updated if present
-    // CRITICAL: Some fields have NOT NULL constraints, provide defaults if empty
-    if (config.display_name !== undefined) {
-      updates.display_name = config.display_name || `${city.charAt(0).toUpperCase() + city.slice(1)} Qwikker`
+    // CRITICAL: Some fields have NOT NULL constraints - only update if non-empty
+    if (config.display_name !== undefined && config.display_name !== '' && config.display_name !== null) {
+      updates.display_name = config.display_name
     }
-    if (config.subdomain !== undefined) {
-      updates.subdomain = config.subdomain || city
+    if (config.subdomain !== undefined && config.subdomain !== '' && config.subdomain !== null) {
+      updates.subdomain = config.subdomain
     }
-    if (config.owner_name !== undefined) {
-      updates.owner_name = config.owner_name || `${city.charAt(0).toUpperCase() + city.slice(1)} Franchise Owner`
+    if (config.owner_name !== undefined && config.owner_name !== '' && config.owner_name !== null) {
+      updates.owner_name = config.owner_name
     }
-    if (config.owner_email !== undefined) {
-      updates.owner_email = config.owner_email || `owner@${city}.qwikker.com`
+    if (config.owner_email !== undefined && config.owner_email !== '' && config.owner_email !== null) {
+      updates.owner_email = config.owner_email
     }
     if (config.owner_phone !== undefined && config.owner_phone !== '') updates.owner_phone = config.owner_phone
     if (config.contact_address !== undefined && config.contact_address !== '') updates.contact_address = config.contact_address
@@ -270,14 +270,20 @@ export async function POST(request: NextRequest) {
     if (config.slack_channel !== undefined && config.slack_channel !== '') updates.slack_channel = config.slack_channel
 
     // 🔒 SECRET fields: only update if value is real (not masked, not empty)
-    // CRITICAL: ghl_webhook_url is NOT NULL in DB, must provide placeholder if empty
+    // CRITICAL: ghl_webhook_url is NOT NULL in DB, must handle carefully
     if (config.ghl_webhook_url !== undefined) {
-      if (config.ghl_webhook_url && !config.ghl_webhook_url.includes('••••') && config.ghl_webhook_url.trim() !== '') {
-        updates.ghl_webhook_url = config.ghl_webhook_url
-      } else if (!config.ghl_webhook_url || config.ghl_webhook_url.trim() === '') {
-        // Provide placeholder for NOT NULL constraint
-        updates.ghl_webhook_url = `https://services.leadconnectorhq.com/hooks/${city}/qwikker-business-PLACEHOLDER`
+      const webhookValue = config.ghl_webhook_url
+      
+      // If it's a real new URL (not masked, not empty, not placeholder)
+      if (webhookValue && 
+          webhookValue.trim() !== '' && 
+          !webhookValue.includes('••••') &&
+          !webhookValue.includes('PLACEHOLDER')) {
+        updates.ghl_webhook_url = webhookValue
       }
+      // If it's masked or placeholder, DON'T include in updates (keep existing value)
+      // If it's explicitly null or empty, DON'T include in updates (keep existing value)
+      // This prevents violating NOT NULL constraint
     }
     
     addIfPresent('ghl_pass_creation_webhook_url', config.ghl_pass_creation_webhook_url)
