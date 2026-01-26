@@ -186,26 +186,27 @@ export async function POST(request: NextRequest) {
       updates[key] = value
     }
 
-    // ✅ Non-secret fields (always safe to update)
-    if (config.display_name !== undefined) updates.display_name = config.display_name
-    if (config.subdomain !== undefined) updates.subdomain = config.subdomain || city
-    if (config.owner_name !== undefined) updates.owner_name = config.owner_name
-    if (config.owner_email !== undefined) updates.owner_email = config.owner_email
-    if (config.owner_phone !== undefined) updates.owner_phone = config.owner_phone
-    if (config.contact_address !== undefined) updates.contact_address = config.contact_address
-    if (config.timezone !== undefined) updates.timezone = config.timezone
-    if (config.status !== undefined) updates.status = config.status
-    if (config.business_registration !== undefined) updates.business_registration = config.business_registration
-    if (config.business_address !== undefined) updates.business_address = config.business_address
-    if (config.billing_email !== undefined) updates.billing_email = config.billing_email
-    if (config.stripe_account_id !== undefined) updates.stripe_account_id = config.stripe_account_id
-    if (config.stripe_publishable_key !== undefined) updates.stripe_publishable_key = config.stripe_publishable_key
+    // ✅ Non-secret fields (safe to update, but skip empty strings to avoid overwriting)
+    // Note: Boolean and number fields are always updated if present
+    if (config.display_name !== undefined && config.display_name !== '') updates.display_name = config.display_name
+    if (config.subdomain !== undefined && config.subdomain !== '') updates.subdomain = config.subdomain || city
+    if (config.owner_name !== undefined && config.owner_name !== '') updates.owner_name = config.owner_name
+    if (config.owner_email !== undefined && config.owner_email !== '') updates.owner_email = config.owner_email
+    if (config.owner_phone !== undefined && config.owner_phone !== '') updates.owner_phone = config.owner_phone
+    if (config.contact_address !== undefined && config.contact_address !== '') updates.contact_address = config.contact_address
+    if (config.timezone !== undefined && config.timezone !== '') updates.timezone = config.timezone
+    if (config.status !== undefined && config.status !== '') updates.status = config.status
+    if (config.business_registration !== undefined && config.business_registration !== '') updates.business_registration = config.business_registration
+    if (config.business_address !== undefined && config.business_address !== '') updates.business_address = config.business_address
+    if (config.billing_email !== undefined && config.billing_email !== '') updates.billing_email = config.billing_email
+    if (config.stripe_account_id !== undefined && config.stripe_account_id !== '') updates.stripe_account_id = config.stripe_account_id
+    if (config.stripe_publishable_key !== undefined && config.stripe_publishable_key !== '') updates.stripe_publishable_key = config.stripe_publishable_key
     if (config.stripe_onboarding_completed !== undefined) updates.stripe_onboarding_completed = config.stripe_onboarding_completed
-    if (config.resend_from_email !== undefined) updates.resend_from_email = config.resend_from_email
-    if (config.resend_from_name !== undefined) updates.resend_from_name = config.resend_from_name
-    if (config.walletpush_template_id !== undefined) updates.walletpush_template_id = config.walletpush_template_id
-    if (config.walletpush_endpoint_url !== undefined) updates.walletpush_endpoint_url = config.walletpush_endpoint_url
-    if (config.slack_channel !== undefined) updates.slack_channel = config.slack_channel
+    if (config.resend_from_email !== undefined && config.resend_from_email !== '') updates.resend_from_email = config.resend_from_email
+    if (config.resend_from_name !== undefined && config.resend_from_name !== '') updates.resend_from_name = config.resend_from_name
+    if (config.walletpush_template_id !== undefined && config.walletpush_template_id !== '') updates.walletpush_template_id = config.walletpush_template_id
+    if (config.walletpush_endpoint_url !== undefined && config.walletpush_endpoint_url !== '') updates.walletpush_endpoint_url = config.walletpush_endpoint_url
+    if (config.slack_channel !== undefined && config.slack_channel !== '') updates.slack_channel = config.slack_channel
 
     // 🔒 SECRET fields: only update if value is real (not masked, not empty)
     addIfPresent('ghl_webhook_url', config.ghl_webhook_url)
@@ -222,11 +223,11 @@ export async function POST(request: NextRequest) {
 
     // 📱 SMS Configuration (non-secret fields)
     if (config.sms_enabled !== undefined) updates.sms_enabled = config.sms_enabled
-    if (config.sms_provider !== undefined) updates.sms_provider = config.sms_provider
+    if (config.sms_provider !== undefined && config.sms_provider !== '') updates.sms_provider = config.sms_provider
     if (config.sms_test_mode !== undefined) updates.sms_test_mode = config.sms_test_mode
-    if (config.sms_country_code !== undefined) updates.sms_country_code = config.sms_country_code
-    if (config.sms_default_calling_code !== undefined) updates.sms_default_calling_code = config.sms_default_calling_code
-    if (config.twilio_from_number !== undefined) updates.twilio_from_number = config.twilio_from_number
+    if (config.sms_country_code !== undefined && config.sms_country_code !== '') updates.sms_country_code = config.sms_country_code
+    if (config.sms_default_calling_code !== undefined && config.sms_default_calling_code !== '') updates.sms_default_calling_code = config.sms_default_calling_code
+    if (config.twilio_from_number !== undefined && config.twilio_from_number !== '') updates.twilio_from_number = config.twilio_from_number
     
     // 🔒 SMS Secrets (only update if not masked)
     addIfPresent('twilio_account_sid', config.twilio_account_sid)
@@ -263,42 +264,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 🚀 AUTO-ACTIVATION LOGIC
-    // If franchise is 'pending_setup' and has minimum required fields configured,
-    // automatically transition to 'active' status
-    if (updatedConfig.status === 'pending_setup') {
-      const hasMinimumRequirements = (
-        updatedConfig.ghl_pass_creation_webhook_url && // CRITICAL: Users must be able to install passes
-        !updatedConfig.ghl_pass_creation_webhook_url.includes('PLACEHOLDER') &&
-        updatedConfig.resend_api_key && // Required for emails
-        updatedConfig.resend_from_email &&
-        updatedConfig.walletpush_api_key && // Required for pass creation
-        updatedConfig.walletpush_template_id
-      )
-
-      if (hasMinimumRequirements) {
-        console.log(`✅ [AUTO-ACTIVATE] ${city} has minimum requirements, transitioning to 'active'`)
-        
-        const { error: activateError } = await supabase
-          .from('franchise_crm_configs')
-          .update({ 
-            status: 'active',
-            activated_at: new Date().toISOString()
-          })
-          .eq('city', city)
-
-        if (activateError) {
-          console.error('❌ Error auto-activating franchise:', activateError)
-          // Don't fail the request, just log the error
-        } else {
-          console.log(`🎉 [AUTO-ACTIVATE] ${city} is now ACTIVE!`)
-          return NextResponse.json({
-            success: true,
-            message: 'Franchise configuration saved and city activated! Your city is now live.',
-            activated: true
-          })
-        }
-      }
-    }
+    // Auto-activation is disabled - admins can manually set status to 'active' when ready
+    // This allows for incremental configuration without premature activation
 
     return NextResponse.json({
       success: true,

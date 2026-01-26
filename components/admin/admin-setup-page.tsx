@@ -238,10 +238,24 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
     setMessage('')
 
     try {
+      // Filter out empty/blank values to avoid overwriting existing DB values
+      const filteredConfig: any = {}
+      
+      Object.keys(config).forEach(key => {
+        const value = config[key as keyof FranchiseConfig]
+        
+        // Only include non-empty values
+        // Empty strings, null, undefined will be excluded
+        // Booleans, numbers (including 0), and non-empty strings will be included
+        if (value !== '' && value !== null && value !== undefined) {
+          filteredConfig[key] = value
+        }
+      })
+
       const response = await fetch('/api/admin/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ city, config })
+        body: JSON.stringify({ city, config: filteredConfig })
       })
       
       if (response.ok) {
@@ -322,16 +336,13 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
   }
 
   const isStep3Valid = () => {
-    // API Services: At minimum, Resend (email) and WalletPush (passes) are REQUIRED
-    const hasResend = config?.has_resend_api_key || (config?.resend_api_key && !config.resend_api_key.includes('••••') && config?.resend_from_email)
-    const hasWalletPush = (config?.has_walletpush_api_key || (config?.walletpush_api_key && !config.walletpush_api_key.includes('••••'))) && !!config?.walletpush_template_id
-    return hasResend && hasWalletPush
+    // API Services: All optional - can configure incrementally
+    return true
   }
 
   const isStep4Valid = () => {
-    // Integrations: Pass creation webhook is REQUIRED (users must be able to install passes!)
-    const hasPassWebhook = config?.has_ghl_pass_creation_webhook_url || (config?.ghl_pass_creation_webhook_url && !config.ghl_pass_creation_webhook_url.includes('••••'))
-    return !!hasPassWebhook
+    // Integrations: All optional - can configure incrementally
+    return true
   }
 
   const canGoToNextStep = () => {
@@ -351,12 +362,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
     if (activeStep === 2 && !isStep2Valid()) {
       return '⚠️  Please complete franchise details (name, timezone, phone) before continuing'
     }
-    if (activeStep === 3 && !isStep3Valid()) {
-      return '⚠️  Please configure Resend (email) and WalletPush (passes) before continuing - these are required for basic functionality'
-    }
-    if (activeStep === 4 && !isStep4Valid()) {
-      return '⚠️  Please configure the Pass Creation Webhook - this is required for users to install wallet passes'
-    }
+    // Steps 3 and 4 are now optional - can configure incrementally
     return ''
   }
 
