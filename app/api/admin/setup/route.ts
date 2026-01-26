@@ -84,6 +84,51 @@ function sanitizeConfigForClient(data: any) {
     google_places_api_key: maskSecret(data.google_places_api_key),
     has_google_places_api_key: !!data.google_places_api_key,
     
+    // 🗺️ Google Places Configuration
+    google_places_public_key: maskSecret(data.google_places_public_key),
+    has_google_places_public_key: !!data.google_places_public_key,
+    
+    google_places_server_key: maskSecret(data.google_places_server_key),
+    has_google_places_server_key: !!data.google_places_server_key,
+    
+    google_places_country: data.google_places_country,
+    city_center_lat: data.city_center_lat,
+    city_center_lng: data.city_center_lng,
+    onboarding_search_radius_m: data.onboarding_search_radius_m,
+    import_search_radius_m: data.import_search_radius_m,
+    import_max_radius_m: data.import_max_radius_m,
+    
+    // 🎖️ Founding Member Program
+    founding_member_enabled: data.founding_member_enabled,
+    founding_member_total_spots: data.founding_member_total_spots,
+    founding_member_trial_days: data.founding_member_trial_days,
+    founding_member_discount_percent: data.founding_member_discount_percent,
+    
+    // 💰 Billing/Pricing
+    currency: data.currency,
+    currency_symbol: data.currency_symbol,
+    tax_rate: data.tax_rate,
+    tax_name: data.tax_name,
+    pricing_cards: data.pricing_cards,
+    
+    // 🗺️ Legacy City Location
+    lat: data.lat,
+    lng: data.lng,
+    country_code: data.country_code,
+    country_name: data.country_name,
+    
+    // 🗺️ Atlas Map Configuration
+    atlas_enabled: data.atlas_enabled,
+    atlas_provider: data.atlas_provider,
+    mapbox_public_token: data.mapbox_public_token, // Public token (safe)
+    mapbox_style_url: data.mapbox_style_url,
+    atlas_default_zoom: data.atlas_default_zoom,
+    atlas_pitch: data.atlas_pitch,
+    atlas_bearing: data.atlas_bearing,
+    atlas_max_results: data.atlas_max_results,
+    atlas_min_rating: data.atlas_min_rating,
+    atlas_mode: data.atlas_mode,
+    
     // 📱 SMS Configuration
     sms_enabled: data.sms_enabled,
     sms_provider: data.sms_provider,
@@ -252,6 +297,47 @@ export async function POST(request: NextRequest) {
       updates.sms_verified = false // Require re-verification
       updates.sms_last_error = null // Clear old errors
     }
+
+    // 🗺️ Google Places Configuration (secrets + metadata)
+    addIfPresent('google_places_public_key', config.google_places_public_key)
+    addIfPresent('google_places_server_key', config.google_places_server_key)
+    if (config.google_places_country !== undefined && config.google_places_country !== '') updates.google_places_country = config.google_places_country
+    if (config.city_center_lat !== undefined) updates.city_center_lat = config.city_center_lat
+    if (config.city_center_lng !== undefined) updates.city_center_lng = config.city_center_lng
+    if (config.onboarding_search_radius_m !== undefined) updates.onboarding_search_radius_m = config.onboarding_search_radius_m
+    if (config.import_search_radius_m !== undefined) updates.import_search_radius_m = config.import_search_radius_m
+    if (config.import_max_radius_m !== undefined) updates.import_max_radius_m = config.import_max_radius_m
+
+    // 🎖️ Founding Member Program
+    if (config.founding_member_enabled !== undefined) updates.founding_member_enabled = config.founding_member_enabled
+    if (config.founding_member_total_spots !== undefined) updates.founding_member_total_spots = config.founding_member_total_spots
+    if (config.founding_member_trial_days !== undefined) updates.founding_member_trial_days = config.founding_member_trial_days
+    if (config.founding_member_discount_percent !== undefined) updates.founding_member_discount_percent = config.founding_member_discount_percent
+
+    // 💰 Billing/Pricing
+    if (config.currency !== undefined && config.currency !== '') updates.currency = config.currency
+    if (config.currency_symbol !== undefined && config.currency_symbol !== '') updates.currency_symbol = config.currency_symbol
+    if (config.tax_rate !== undefined) updates.tax_rate = config.tax_rate
+    if (config.tax_name !== undefined && config.tax_name !== '') updates.tax_name = config.tax_name
+    if (config.pricing_cards !== undefined) updates.pricing_cards = config.pricing_cards
+
+    // 🗺️ Legacy City Location
+    if (config.lat !== undefined) updates.lat = config.lat
+    if (config.lng !== undefined) updates.lng = config.lng
+    if (config.country_code !== undefined && config.country_code !== '') updates.country_code = config.country_code
+    if (config.country_name !== undefined && config.country_name !== '') updates.country_name = config.country_name
+
+    // 🗺️ Atlas Map Configuration
+    if (config.atlas_enabled !== undefined) updates.atlas_enabled = config.atlas_enabled
+    if (config.atlas_provider !== undefined && config.atlas_provider !== '') updates.atlas_provider = config.atlas_provider
+    if (config.mapbox_public_token !== undefined && config.mapbox_public_token !== '') updates.mapbox_public_token = config.mapbox_public_token
+    if (config.mapbox_style_url !== undefined && config.mapbox_style_url !== '') updates.mapbox_style_url = config.mapbox_style_url
+    if (config.atlas_default_zoom !== undefined) updates.atlas_default_zoom = config.atlas_default_zoom
+    if (config.atlas_pitch !== undefined) updates.atlas_pitch = config.atlas_pitch
+    if (config.atlas_bearing !== undefined) updates.atlas_bearing = config.atlas_bearing
+    if (config.atlas_max_results !== undefined) updates.atlas_max_results = config.atlas_max_results
+    if (config.atlas_min_rating !== undefined) updates.atlas_min_rating = config.atlas_min_rating
+    if (config.atlas_mode !== undefined && config.atlas_mode !== '') updates.atlas_mode = config.atlas_mode
 
     // Perform upsert with only the fields we want to update
     const { data: updatedConfig, error } = await supabase
