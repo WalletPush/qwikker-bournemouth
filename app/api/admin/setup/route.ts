@@ -113,6 +113,7 @@ export async function GET(request: NextRequest) {
   try {
     // 🔒 SECURITY: Derive city from hostname (can't be spoofed by client)
     const city = await getCityFromRequest(request.headers)
+    console.log('📍 [GET /api/admin/setup] Detected city:', city)
 
     const supabase = createAdminClient()
 
@@ -124,11 +125,17 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
-      console.error('❌ Error fetching franchise config:', error)
+      console.error('❌ Error fetching franchise config for', city, ':', error)
       return NextResponse.json(
-        { error: 'Failed to fetch franchise configuration' },
+        { error: `Failed to fetch franchise configuration: ${error.message}` },
         { status: 500 }
       )
+    }
+
+    if (!data) {
+      console.warn('⚠️ No config found for', city, '- returning null')
+    } else {
+      console.log('✅ Config found for', city, '- columns:', Object.keys(data).length)
     }
 
     // 🔒 CRITICAL: Sanitize secrets before returning to client
@@ -140,9 +147,9 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Setup API error:', error)
+    console.error('❌ Setup API GET error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` },
       { status: 500 }
     )
   }
