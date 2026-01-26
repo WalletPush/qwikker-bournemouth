@@ -83,6 +83,49 @@ interface FranchiseConfig {
   has_twilio_auth_token?: boolean
   has_twilio_messaging_service_sid?: boolean
   has_twilio_from_number?: boolean
+  
+  // Google Places Configuration
+  google_places_public_key?: string | null
+  google_places_server_key?: string | null
+  google_places_country?: string
+  city_center_lat?: number | null
+  city_center_lng?: number | null
+  onboarding_search_radius_m?: number | null
+  import_search_radius_m?: number | null
+  import_max_radius_m?: number | null
+  has_google_places_public_key?: boolean
+  has_google_places_server_key?: boolean
+  
+  // Founding Member Program
+  founding_member_enabled?: boolean
+  founding_member_total_spots?: number
+  founding_member_trial_days?: number
+  founding_member_discount_percent?: number
+  
+  // Currency & Billing
+  currency?: string
+  currency_symbol?: string
+  tax_rate?: number
+  tax_name?: string
+  pricing_cards?: any // JSONB
+  
+  // Legacy City Location
+  lat?: number | null
+  lng?: number | null
+  country_code?: string | null
+  country_name?: string | null
+  
+  // Atlas Map Configuration
+  atlas_enabled?: boolean
+  atlas_provider?: string
+  mapbox_public_token?: string | null
+  mapbox_style_url?: string | null
+  atlas_default_zoom?: number
+  atlas_pitch?: number
+  atlas_bearing?: number
+  atlas_max_results?: number
+  atlas_min_rating?: number
+  atlas_mode?: string
 }
 
 interface AdminSetupPageProps {
