@@ -240,10 +240,19 @@ export async function POST(request: NextRequest) {
 
     // ✅ Non-secret fields (safe to update, but skip empty strings to avoid overwriting)
     // Note: Boolean and number fields are always updated if present
-    if (config.display_name !== undefined && config.display_name !== '') updates.display_name = config.display_name
-    if (config.subdomain !== undefined && config.subdomain !== '') updates.subdomain = config.subdomain || city
-    if (config.owner_name !== undefined && config.owner_name !== '') updates.owner_name = config.owner_name
-    if (config.owner_email !== undefined && config.owner_email !== '') updates.owner_email = config.owner_email
+    // CRITICAL: Some fields have NOT NULL constraints, provide defaults if empty
+    if (config.display_name !== undefined) {
+      updates.display_name = config.display_name || `${city.charAt(0).toUpperCase() + city.slice(1)} Qwikker`
+    }
+    if (config.subdomain !== undefined) {
+      updates.subdomain = config.subdomain || city
+    }
+    if (config.owner_name !== undefined) {
+      updates.owner_name = config.owner_name || `${city.charAt(0).toUpperCase() + city.slice(1)} Franchise Owner`
+    }
+    if (config.owner_email !== undefined) {
+      updates.owner_email = config.owner_email || `owner@${city}.qwikker.com`
+    }
     if (config.owner_phone !== undefined && config.owner_phone !== '') updates.owner_phone = config.owner_phone
     if (config.contact_address !== undefined && config.contact_address !== '') updates.contact_address = config.contact_address
     if (config.timezone !== undefined && config.timezone !== '') updates.timezone = config.timezone
@@ -261,7 +270,16 @@ export async function POST(request: NextRequest) {
     if (config.slack_channel !== undefined && config.slack_channel !== '') updates.slack_channel = config.slack_channel
 
     // 🔒 SECRET fields: only update if value is real (not masked, not empty)
-    addIfPresent('ghl_webhook_url', config.ghl_webhook_url)
+    // CRITICAL: ghl_webhook_url is NOT NULL in DB, must provide placeholder if empty
+    if (config.ghl_webhook_url !== undefined) {
+      if (config.ghl_webhook_url && !config.ghl_webhook_url.includes('••••') && config.ghl_webhook_url.trim() !== '') {
+        updates.ghl_webhook_url = config.ghl_webhook_url
+      } else if (!config.ghl_webhook_url || config.ghl_webhook_url.trim() === '') {
+        // Provide placeholder for NOT NULL constraint
+        updates.ghl_webhook_url = `https://services.leadconnectorhq.com/hooks/${city}/qwikker-business-PLACEHOLDER`
+      }
+    }
+    
     addIfPresent('ghl_pass_creation_webhook_url', config.ghl_pass_creation_webhook_url)
     addIfPresent('ghl_update_webhook_url', config.ghl_update_webhook_url)
     addIfPresent('ghl_api_key', config.ghl_api_key)
@@ -340,6 +358,8 @@ export async function POST(request: NextRequest) {
     if (config.atlas_mode !== undefined && config.atlas_mode !== '') updates.atlas_mode = config.atlas_mode
 
     // Perform upsert with only the fields we want to update
+    console.log('🔄 Attempting upsert with updates:', Object.keys(updates))
+    
     const { data: updatedConfig, error } = await supabase
       .from('franchise_crm_configs')
       .upsert(updates, {
@@ -349,9 +369,17 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('❌ Error updating franchise config:', error)
+      console.error('❌ Database error updating franchise config for', city)
+      console.error('Error code:', error.code)
+      console.error('Error message:', error.message)
+      console.error('Error details:', error.details)
+      console.error('Error hint:', error.hint)
       return NextResponse.json(
-        { error: 'Failed to update franchise configuration' },
+        { 
+          error: 'Failed to update franchise configuration',
+          details: error.message,
+          hint: error.hint
+        },
         { status: 500 }
       )
     }
