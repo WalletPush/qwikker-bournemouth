@@ -117,132 +117,177 @@ export function BusinessCard({
         </div>
       )}
       
-      <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden ${className}`}>
+      <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden sm:py-6 p-0 ${className}`}>
         
-        {/* MOBILE LAYOUT: Thumbnail-left (default, hidden on sm:) */}
-        <div className="sm:hidden p-2.5">
-          <div className="flex gap-2.5">
-          {/* Left: Thumbnail */}
-          <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden">
-            {(() => {
-              if (business.status === 'unclaimed') {
-                return (
-                  <BusinessCardImage
-                    businessName={business.name}
-                    businessId={business.id}
-                    systemCategory={systemCategory}
-                    showUnclaimedBadge={false}
-                    className="h-full w-full"
-                  />
-                )
-              } else if (business.images && business.images.length > 0) {
-                return (
-                  <img 
-                    src={business.images[0]} 
-                    alt={business.name}
-                    className="w-full h-full object-cover"
-                  />
-                )
-              } else {
-                return (
-                  <BusinessCardImage
-                    businessName={business.name}
-                    businessId={business.id}
-                    systemCategory={systemCategory}
-                    showUnclaimedBadge={false}
-                    className="h-full w-full"
-                  />
-                )
-              }
-            })()}
-          </div>
-          
-          {/* Right: Info stack */}
-          <div className="flex-1 min-w-0 flex flex-col">
-            <h3 className="text-slate-100 text-sm font-semibold mb-0.5 truncate group-hover:text-[#00d083] transition-colors">
-              {business.name}
-            </h3>
+        {/* MOBILE LAYOUT: Thumbnail-left (horizontal layout) */}
+        <div className="sm:hidden">
+          <div className="flex flex-row items-stretch gap-4 p-3 relative min-h-[156px]">
+            {/* Left: Image Thumbnail - REASONABLE SIZE (80px square) */}
+            <div className="relative flex-shrink-0 rounded-xl overflow-hidden" style={{ width: '140px', height: '140px', minWidth: '140px', minHeight: '140px', maxWidth: '140px', maxHeight: '140px', padding: 0, margin: 0, lineHeight: 0, fontSize: 0 }}>
+              <img 
+                src={business.images && business.images.length > 0 && business.images[0] !== '/placeholder-business.jpg' 
+                  ? business.images[0] 
+                  : `/placeholders/${systemCategory}/00.webp`}
+                alt={business.name}
+                style={{ 
+                  display: 'block',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  margin: 0,
+                  padding: 0,
+                  border: 'none'
+                }}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/placeholders/default/00.webp';
+                }}
+              />
+              {business.status === 'unclaimed' && (
+                <div className="absolute bottom-2 left-2 z-10 bg-slate-900/95 backdrop-blur-md px-2 py-1 rounded-md text-[11px] text-slate-200 font-medium flex items-center gap-1 border border-slate-700/50">
+                  <span>ⓘ</span>
+                  <span>Unclaimed</span>
+                </div>
+              )}
+            </div>
             
-            <p className="text-slate-400 text-xs mb-0.5 truncate">
+            {/* Right: Content Stack */}
+            <div className="flex-1 min-w-0 flex flex-col justify-between">
               {(() => {
-                const label = getPrimaryLabel({
-                  google_types: business.google_types,
-                  google_primary_type: business.google_primary_type,
-                  display_category: business.display_category,
-                  system_category: business.system_category
-                })
-                return (label === 'Other' || label === 'Local business') ? '' : label
-              })()}
-            </p>
-            
-            {/* Compact meta row: rating + hours/location */}
-            <div className="text-xs text-slate-400 mb-1 truncate">
-              {(() => {
+                // Get business hours status
+                const raw = business.hours || business.business_hours
+                const structured = business.hours_structured || business.business_hours_structured
+                const statusProps = raw || structured ? getBusinessStatusProps(raw, structured) : null
+                const isOpen = statusProps?.isOpen
+                
+                // Get category - prioritize google_primary_type first, then display_category
+                const displayCategory = (() => {
+                  // 1. Priority: google_primary_type (format nicely)
+                  if (business.google_primary_type) {
+                    return business.google_primary_type
+                      .split('_')
+                      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(' ')
+                  }
+                  
+                  // 2. Fall back to display_category
+                  if (business.display_category) {
+                    return business.display_category
+                  }
+                  
+                  // 3. Try getPrimaryLabel (derives from google_types)
+                  const label = getPrimaryLabel({
+                    google_types: business.google_types,
+                    google_primary_type: business.google_primary_type,
+                    display_category: business.display_category,
+                    system_category: business.system_category
+                  })
+                  
+                  if (label && label !== 'Other' && label !== 'Local business') {
+                    return label
+                  }
+                  
+                  // 4. Last resort: business_category or "Business"
+                  return business.business_category || 'Business'
+                })()
+                
+                // Get rating
                 const rating = typeof business.rating === 'number' ? business.rating : null
                 const reviewCount = business.review_count ?? business.reviewCount ?? 0
+                
+                // Get hours text for distance line
                 const utilityText = getUtilityLine()
                 
-                if (rating) {
-                  return (
-                    <span>
-                      <span className="text-yellow-400">★</span>{' '}
-                      <span className="text-slate-100 font-semibold">{rating.toFixed(1)}</span>
-                      <span className="text-slate-400"> ({reviewCount})</span>
-                      <span className="text-slate-500"> • </span>
-                      <span>{utilityText}</span>
-                    </span>
-                  )
-                } else {
-                  return <span>{utilityText}</span>
-                }
+                return (
+                  <>
+                    {/* Open/Closed Pill - FIRST, above name (transparent colors with border) */}
+                    {isOpen !== null && isOpen !== undefined && (
+                      <div className={`inline-flex self-start px-2.5 py-0.5 rounded-full text-[10px] font-medium border mb-1 ${
+                        isOpen 
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                          : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      }`}>
+                        {isOpen ? '● Open' : '● Closed'}
+                      </div>
+                    )}
+                    
+                    {/* Business Name */}
+                    <h3 className="text-white text-base font-semibold leading-tight line-clamp-1 mb-1.5">
+                      {business.name}
+                    </h3>
+                    
+                    {/* Category */}
+                    <p className="text-slate-400 text-xs line-clamp-1 mb-1.5">
+                      {displayCategory}
+                    </p>
+                    
+                    {/* Rating */}
+                    {rating && rating > 0 && (
+                      <div className="flex items-center gap-1 text-xs mb-2">
+                        <span className="text-yellow-400">⭐</span>
+                        <span className="text-white font-semibold">{rating.toFixed(1)}</span>
+                        <span className="text-slate-400">({reviewCount})</span>
+                      </div>
+                    )}
+                    
+                    {/* Distance + Hours - wrapped in subtle pill */}
+                    <div className="inline-flex self-start items-center gap-1 text-[10px] text-slate-400 bg-slate-800/40 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                      <span>ⓘ</span>
+                      {business.distance !== null && business.distance !== undefined ? (
+                        <>
+                          <span>{business.distance < 0.1 ? '< 0.1 miles' : `${business.distance.toFixed(1)} miles`}</span>
+                          {statusProps?.nextChange && (
+                            <>
+                              <span>•</span>
+                              <span>{statusProps.nextChange}</span>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {/* No distance - just show next opening/closing time */}
+                          {statusProps?.nextChange ? (
+                            <span>{statusProps.nextChange}</span>
+                          ) : (
+                            <span>{business.business_town || business.location || business.city || 'Location'}</span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Signal badges for offers/secret menu */}
+                    {(getOffersCount() > 0 || hasSecretMenu()) && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {getOffersCount() > 0 && (
+                          <span className="bg-[#00d083]/15 border border-[#00d083]/25 text-[#00d083] text-[10px] leading-none px-2 py-0.5 rounded-full font-semibold">
+                            {getOffersCount()} {getOffersCount() === 1 ? 'Offer' : 'Offers'}
+                          </span>
+                        )}
+                        {hasSecretMenu() && (
+                          <span className="bg-purple-500/15 border border-purple-500/25 text-purple-200 text-[10px] leading-none px-2 py-0.5 rounded-full font-semibold">
+                            Secret Menu
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )
               })()}
             </div>
             
-            {/* Signal badges (clean pills, no emojis) */}
-            <div className="mt-auto">
-              {/* Reserve consistent space so cards don't look randomly empty */}
-              <div className="flex flex-wrap gap-1.5 min-h-[26px] items-center">
-                {/* OFFERS */}
-                {getOffersCount() > 0 && (
-                  <span className="bg-[#00d083]/15 border border-[#00d083]/25 text-[#00d083] text-[10px] leading-none px-2 py-1 rounded-full font-semibold">
-                    {getOffersCount()} {getOffersCount() === 1 ? 'Offer' : 'Offers'}
-                  </span>
-                )}
-
-                {/* SECRET MENU */}
-                {hasSecretMenu() && (
-                  <span className="bg-purple-500/15 border border-purple-500/25 text-purple-200 text-[10px] leading-none px-2 py-1 rounded-full font-semibold">
-                    Secret Menu
-                  </span>
-                )}
-
-                {/* Listing not claimed (only for status === unclaimed) */}
-                {business.status === 'unclaimed' && (
-                  <span className="bg-slate-700/40 border border-slate-600/40 text-slate-200 text-[10px] leading-none px-2 py-1 rounded-full">
-                    Listing not claimed
-                  </span>
-                )}
-
-                {/* Claimed but no photos */}
-                {business.status !== 'unclaimed' && !hasRealPhotos() && (
-                  <span className="bg-slate-700/40 border border-slate-600/40 text-slate-200 text-[10px] leading-none px-2 py-1 rounded-full">
-                    No photos yet
-                  </span>
-                )}
-              </div>
-            </div>
+            {/* Heart Icon - Absolute positioned top-right */}
+            <button className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center bg-slate-800/80 backdrop-blur-sm rounded-full hover:bg-slate-700/80 transition-colors">
+              <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
           </div>
-          
-          {/* Heart button */}
-          <button className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-400 transition-colors">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-          </button>
         </div>
-      </div>
       
-      {/* DESKTOP LAYOUT: Image-top (hidden by default, visible on sm:) */}
+      {/* DESKTOP LAYOUT: Image-top (hidden on mobile, visible on desktop) */}
       <div className="hidden sm:block">
       {/* Business Image - Conditional logic based on status + images */}
       <div className="relative h-48 overflow-hidden">
@@ -470,38 +515,31 @@ export function BusinessCard({
         )}
 
         {/* Hours - Hidden on mobile */}
-        {business.hours && (
-          <div className="hidden sm:flex items-center gap-2 text-slate-400">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-sm">{business.hours}</span>
-            {(() => {
-              const raw = business.hours
-              const structured = business.hours_structured || business.business_hours_structured
-              
-              // If we have any hours data, try to show status
-              if (!raw && !structured) return null
-              
-              const status = getBusinessStatusProps(raw, structured)
-              if (!status) return null
-              
-              // Show status if we know it (true or false)
-              if (status.isOpen === true || status.isOpen === false) {
-                const line = getUtilityLine()
-                // Don't show if it's just the town fallback
-                if (!line || line === (business.town || business.location || business.city || 'Bournemouth')) return null
-                return (
-                  <span className="text-sm font-medium text-slate-300">
-                    • {line}
-                  </span>
-                )
-              }
-              
-              return null
-            })()}
-          </div>
-        )}
+        {(() => {
+          const raw = business.hours || business.business_hours
+          const structured = business.hours_structured || business.business_hours_structured
+          
+          if (!raw && !structured) return null
+          
+          const status = getBusinessStatusProps(raw, structured)
+          if (!status) return null
+          
+          return (
+            <div className="hidden sm:flex items-center gap-2 text-slate-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className={`text-sm font-medium ${status.isOpen ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {status.isOpen ? 'Open' : 'Closed'}
+              </span>
+              {status.nextChange && (
+                <span className="text-sm text-slate-400">
+                  • {status.nextChange}
+                </span>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Compact Menu Preview */}
         {business.menuPreview && business.menuPreview.length > 0 && (

@@ -90,6 +90,8 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       system_category,
       display_category,
       business_category,
+      google_primary_type,
+      google_types,
       business_town,
       business_address,
       business_tagline,
@@ -106,6 +108,8 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       menu_preview,
       rating,
       review_count,
+      latitude,
+      longitude,
       additional_notes,
       created_at,
       plan,
@@ -193,14 +197,20 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       category: categoryLabel(business), // Consistent fallback: display_category → business_category → business_type → 'Other'
       systemCategory: business.system_category, // For filtering logic
       displayCategory: business.display_category, // For display
+      google_primary_type: business.google_primary_type, // Google's primary type (e.g., 'greek_restaurant')
+      google_types: business.google_types, // All Google types
+      business_category: business.business_category, // Legacy category field
       location: business.business_town, // Keep for display
       address: business.business_address,
       town: business.business_town, // Use actual business town for display
+      latitude: business.latitude, // For distance calculation
+      longitude: business.longitude, // For distance calculation
       tagline: business.business_tagline || '',
       description: business.business_description || '',
       phone: business.phone || '',
       hours: formatBusinessHours(business.business_hours, business.business_hours_structured), // For cards
       fullSchedule: formatBusinessHours(business.business_hours, business.business_hours_structured, true), // For hero view
+      business_hours_structured: business.business_hours_structured, // For open/closed status calculation
       images: business.business_images && business.business_images.length > 0 
         ? business.business_images 
         : [business.logo || '/placeholder-business.jpg'],

@@ -41,6 +41,47 @@ interface UserDiscoverPageProps {
 }
 
 export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserDiscoverPageProps) {
+  // Geolocation state
+  const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null)
+  const [locationStatus, setLocationStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt')
+  
+  // Request user location on mount
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          })
+          setLocationStatus('granted')
+          console.log('📍 Location granted:', position.coords.latitude, position.coords.longitude)
+        },
+        (error) => {
+          console.warn('📍 Location denied:', error)
+          setLocationStatus('denied')
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 300000 }
+      )
+    }
+  }, [])
+  
+  // Haversine distance calculation (in miles)
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 3958.8 // Earth radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLon = (lon2 - lon1) * Math.PI / 180
+    
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * 
+      Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2)
+    
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+    return R * c
+  }
+  
   // 🐛 DEBUG: Log businesses on mount
   useEffect(() => {
     console.log('🏪 UserDiscoverPage mounted with businesses:', {
@@ -413,14 +454,24 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
       {/* Business Grid */}
       {getFilteredBusinesses().length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-discover-results>
-          {getFilteredBusinesses().map((business) => (
-            <BusinessCard 
-              key={business.id} 
-              business={business} 
-              href={getNavUrl(`/user/business/${business.slug}`)}
-              showDistance={true}
-            />
-          ))}
+          {getFilteredBusinesses().map((business) => {
+            // Calculate distance if we have user location and business coordinates
+            const distance = userLocation && (business as any).latitude && (business as any).longitude
+              ? calculateDistance(userLocation.lat, userLocation.lng, (business as any).latitude, (business as any).longitude)
+              : null
+            
+            return (
+              <BusinessCard 
+                key={business.id} 
+                business={{
+                  ...business,
+                  distance
+                }} 
+                href={getNavUrl(`/user/business/${business.slug}`)}
+                showDistance={true}
+              />
+            )
+          })}
         </div>
       ) : (
         <div className="text-center py-12">

@@ -34,24 +34,19 @@ export async function POST(req: Request) {
     }
 
     const supabase = createServiceRoleClient()
-    const franchise = getFranchiseCityFromRequest(req)
+    const city = await getFranchiseCityFromRequest()
 
     // 1) Load business (ensure franchise scope)
     const { data: business, error: bErr } = await supabase
       .from('business_profiles')
-      .select('id, franchise_id, status, business_name')
+      .select('id, city, status, business_name')
       .eq('id', businessId)
+      .eq('city', city) // 🔒 CRITICAL: Franchise scope - only businesses in admin's city
       .single()
 
     if (bErr || !business) {
-      console.error('Business not found:', bErr)
+      console.error('Business not found or not in this franchise:', bErr)
       return NextResponse.json({ error: 'Business not found' }, { status: 404 })
-    }
-
-    // Franchise scope check
-    if (business.franchise_id !== franchise.id) {
-      console.warn(`Forbidden: Admin tried to update business ${businessId} outside their franchise`)
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Only allow overrides for unclaimed businesses

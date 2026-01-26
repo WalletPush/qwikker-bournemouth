@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ImageTransform } from '@/types/profiles'
 
@@ -23,6 +23,19 @@ export function ImageCarousel({
   const [currentIndex, setCurrentIndex] = useState(0)
   const [imageError, setImageError] = useState(false)
   const [imageLoading, setImageLoading] = useState(true)
+
+  // Reset loading state when image changes
+  useEffect(() => {
+    setImageLoading(true)
+    setImageError(false)
+    
+    // Fallback: hide spinner after 3 seconds even if onLoad doesn't fire
+    const timeout = setTimeout(() => {
+      setImageLoading(false)
+    }, 3000)
+    
+    return () => clearTimeout(timeout)
+  }, [currentIndex, images])
 
   // If no images or only one image, show simple image
   if (!images || images.length === 0) {

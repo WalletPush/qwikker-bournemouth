@@ -224,7 +224,7 @@ export function parseStructuredBusinessHours(structured: BusinessHoursStructured
     }
     
     const nextChange = nextOpenDay && nextOpenTime 
-      ? `Opens ${nextOpenDay === DAYS_OF_WEEK[(DAYS_OF_WEEK.indexOf(currentDay) + 1) % 7] ? 'tomorrow' : nextOpenDay} at ${formatTime(nextOpenTime)}`
+      ? `Opens ${nextOpenDay === DAYS_OF_WEEK[(DAYS_OF_WEEK.indexOf(currentDay) + 1) % 7] ? 'tomorrow' : nextOpenDay} at ${formatTime(nextOpenTime, 'open')}`
       : null
     
     return {
@@ -240,14 +240,14 @@ export function parseStructuredBusinessHours(structured: BusinessHoursStructured
   if (isCurrentlyOpen) {
     return {
       isOpen: true,
-      nextChange: `Closes at ${formatTime(todayHours.close)}`,
+      nextChange: `Closes at ${formatTime(todayHours.close, 'close')}`,
       displayText: 'Open now'
     }
   } else if (currentTime < todayHours.open) {
     // Before opening today
     return {
       isOpen: false,
-      nextChange: `Opens at ${formatTime(todayHours.open)}`,
+      nextChange: `Opens at ${formatTime(todayHours.open, 'open')}`,
       displayText: 'Closed now'
     }
   } else {
@@ -269,7 +269,7 @@ export function parseStructuredBusinessHours(structured: BusinessHoursStructured
     }
     
     const nextChange = nextOpenDay && nextOpenTime 
-      ? `Opens ${nextOpenDay === DAYS_OF_WEEK[(DAYS_OF_WEEK.indexOf(currentDay) + 1) % 7] ? 'tomorrow' : nextOpenDay} at ${formatTime(nextOpenTime)}`
+      ? `Opens ${nextOpenDay === DAYS_OF_WEEK[(DAYS_OF_WEEK.indexOf(currentDay) + 1) % 7] ? 'tomorrow' : nextOpenDay} at ${formatTime(nextOpenTime, 'open')}`
       : null
     
     return {
@@ -282,9 +282,17 @@ export function parseStructuredBusinessHours(structured: BusinessHoursStructured
 
 /**
  * Format 24-hour time to 12-hour format for display
+ * Includes smart heuristic: if opening time is 1-6 AM for a restaurant, assume it's actually PM
  */
-function formatTime(time24: string): string {
-  const [hours, minutes] = time24.split(':').map(Number)
+function formatTime(time24: string, context?: 'open' | 'close'): string {
+  let [hours, minutes] = time24.split(':').map(Number)
+  
+  // 🎯 SMART FIX: Many restaurants have bad data (e.g., "05:00" instead of "17:00")
+  // If it's an opening time between 1 AM - 6 AM, assume it's actually PM (add 12 hours)
+  if (context === 'open' && hours >= 1 && hours <= 6) {
+    hours += 12
+  }
+  
   const period = hours >= 12 ? 'PM' : 'AM'
   const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
   return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`

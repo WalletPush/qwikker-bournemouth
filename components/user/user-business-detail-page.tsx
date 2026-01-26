@@ -449,28 +449,24 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                       </svg>
                       <div>
                         <p className="text-slate-100 font-medium">Hours</p>
-                        <div className="text-slate-400">
-                          {business.fullSchedule ? (
-                            <div className="space-y-1">
-                              {business.fullSchedule.split('\n').map((line: string, index: number) => (
-                                <div key={index} className="text-sm">
-                                  {line}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p>{business.hours}</p>
-                          )}
-                        </div>
                         {(() => {
-                          const status = getBusinessStatusProps(business.hours)
+                          const raw = business.hours || business.business_hours
+                          const structured = business.hours_structured || business.business_hours_structured
+                          const status = getBusinessStatusProps(raw, structured)
+                          
+                          if (!status) {
+                            return <p className="text-slate-400 text-sm">Hours not available</p>
+                          }
+                          
                           return (
-                            <span className={`${status.statusColor} text-sm font-medium`}>
-                              {status.statusText}
+                            <div className="text-slate-400">
+                              <span className={`${status.isOpen ? 'text-emerald-400' : 'text-rose-400'} text-sm font-medium`}>
+                                {status.isOpen ? '● Open' : '● Closed'}
+                              </span>
                               {status.nextChange && (
-                                <span className="text-slate-500 ml-2">• {status.nextChange}</span>
+                                <span className="text-slate-400 ml-2 text-sm">• {status.nextChange}</span>
                               )}
-                            </span>
+                            </div>
                           )
                         })()}
                       </div>

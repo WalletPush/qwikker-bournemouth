@@ -11,6 +11,31 @@ interface StructuredHours {
 }
 
 /**
+ * Smart time formatter with restaurant heuristic
+ * Converts 24-hour time to 12-hour format with AM/PM
+ * If opening time is 1-6 AM, assumes it's actually PM (restaurants don't open at 5 AM!)
+ */
+function formatTimeWithSmartFix(time24: string | null | undefined, context: 'open' | 'close'): string {
+  // Safety check: return fallback if time is missing
+  if (!time24 || typeof time24 !== 'string') {
+    return context === 'open' ? 'Opening time TBD' : 'Closing time TBD'
+  }
+  
+  let [hours, minutes] = time24.split(':').map(Number)
+  
+  // 🎯 SMART FIX: Many restaurants have bad data (e.g., "05:00" instead of "17:00")
+  // If it's an opening time between 1 AM - 6 AM, assume it's actually PM (add 12 hours)
+  if (context === 'open' && hours >= 1 && hours <= 6) {
+    hours += 12
+  }
+  
+  const period = hours >= 12 ? 'PM' : 'AM'
+  const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+  const minutesStr = minutes === 0 ? '' : `:${minutes.toString().padStart(2, '0')}`
+  return `${hours12}${minutesStr} ${period}`
+}
+
+/**
  * Format business hours for user-facing display
  * Handles both old text format and new structured format
  * @param business_hours - Old text format hours
@@ -52,14 +77,19 @@ function formatFullWeeklySchedule(structuredHours: StructuredHours): string {
     const hours = structuredHours[day]
     const dayName = dayNames[index]
     
-    if (!hours) {
+    if (!hours || typeof hours !== 'object') {
       return `${dayName}: Hours not available`
     }
     
     if (hours.closed) {
       return `${dayName}: Closed`
+    } else if (hours.open && hours.close) {
+      // Apply smart formatting: "05:00" → "5:00 PM", "21:30" → "9:30 PM"
+      const openFormatted = formatTimeWithSmartFix(hours.open, 'open')
+      const closeFormatted = formatTimeWithSmartFix(hours.close, 'close')
+      return `${dayName}: ${openFormatted} - ${closeFormatted}`
     } else {
-      return `${dayName}: ${hours.open} - ${hours.close}`
+      return `${dayName}: Hours not available`
     }
   })
   
@@ -80,21 +110,25 @@ function formatStructuredHours(structuredHours: StructuredHours): string {
   
   // Check if today's hours exist
   const todayHours = structuredHours[todayKey]
-  if (todayHours) {
+  if (todayHours && typeof todayHours === 'object') {
     if (todayHours.closed) {
       return 'Closed today'
-    } else {
-      return `${todayHours.open} - ${todayHours.close}`
+    } else if (todayHours.open && todayHours.close) {
+      const openFormatted = formatTimeWithSmartFix(todayHours.open, 'open')
+      const closeFormatted = formatTimeWithSmartFix(todayHours.close, 'close')
+      return `${openFormatted} - ${closeFormatted}`
     }
   }
 
   // Fallback: show first available day's hours
   for (const day of days) {
     const hours = structuredHours[day]
-    if (hours && !hours.closed) {
+    if (hours && typeof hours === 'object' && !hours.closed && hours.open && hours.close) {
       const dayIndex = days.indexOf(day)
       const dayName = dayNames[dayIndex]
-      return `${dayName}: ${hours.open} - ${hours.close}`
+      const openFormatted = formatTimeWithSmartFix(hours.open, 'open')
+      const closeFormatted = formatTimeWithSmartFix(hours.close, 'close')
+      return `${dayName}: ${openFormatted} - ${closeFormatted}`
     }
   }
 
