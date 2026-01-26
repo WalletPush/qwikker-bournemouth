@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,6 +19,8 @@ interface BusinessCardProps {
   onClick?: () => void
   showDistance?: boolean
   className?: string
+  isSaved?: boolean
+  onToggleSave?: () => void
 }
 
 export function BusinessCard({ 
@@ -23,9 +28,18 @@ export function BusinessCard({
   href, 
   onClick, 
   showDistance = true,
-  className = '' 
+  className = '',
+  isSaved = false,
+  onToggleSave
 }: BusinessCardProps) {
+  const [showTooltip, setShowTooltip] = useState(false)
   const systemCategory = resolveSystemCategory(business)
+  
+  console.log('🐛 BusinessCard state:', { 
+    businessName: business.name, 
+    status: business.status, 
+    showTooltip 
+  })
   
   // Helper to get utility line for mobile
   const getUtilityLine = () => {
@@ -103,7 +117,7 @@ export function BusinessCard({
     <div className="relative">
       {/* Tier badge - half on/half off card (MOBILE ONLY) - OUTSIDE card to avoid clipping */}
       {(business.plan === 'spotlight' || business.plan === 'featured') && (
-        <div className="absolute -top-2 right-3 z-30 sm:hidden">
+        <div className="absolute -top-2 right-3 z-[1] sm:hidden">
           {business.plan === 'spotlight' && (
             <span className="inline-block px-3 py-1 rounded-full shadow-lg border border-white/10 backdrop-blur bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-[11px] font-extrabold tracking-wide uppercase">
               QWIKKER PICK
@@ -117,7 +131,7 @@ export function BusinessCard({
         </div>
       )}
       
-      <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer overflow-hidden sm:py-6 p-0 ${className}`}>
+      <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer sm:py-6 p-0 ${className}`}>
         
         {/* MOBILE LAYOUT: Thumbnail-left (horizontal layout) */}
         <div className="sm:hidden">
@@ -147,7 +161,7 @@ export function BusinessCard({
                 }}
               />
               {business.status === 'unclaimed' && (
-                <div className="absolute bottom-2 left-2 z-10 bg-slate-900/95 backdrop-blur-md px-2 py-1 rounded-md text-[11px] text-slate-200 font-medium flex items-center gap-1 border border-slate-700/50">
+                <div className="absolute bottom-2 left-2 z-[1] bg-slate-900/95 backdrop-blur-md px-2 py-1 rounded-md text-[11px] text-slate-200 font-medium flex items-center gap-1 border border-slate-700/50">
                   <span>ⓘ</span>
                   <span>Unclaimed</span>
                 </div>
@@ -238,7 +252,15 @@ export function BusinessCard({
                       <span>ⓘ</span>
                       {business.distance !== null && business.distance !== undefined ? (
                         <>
-                          <span>{business.distance < 0.1 ? '< 0.1 miles' : `${business.distance.toFixed(1)} miles`}</span>
+                          <span>{business.distance < 0.1 ? '< 0.1 mi' : (() => {
+                            const dist = parseFloat(business.distance)
+                            // If close to whole number (within 0.1), show whole number
+                            if (Math.abs(dist - Math.round(dist)) < 0.1) {
+                              return `${Math.round(dist)} mi`
+                            }
+                            // Otherwise show 1 decimal place
+                            return `${dist.toFixed(1)} mi`
+                          })()}</span>
                           {statusProps?.nextChange && (
                             <>
                               <span>•</span>
@@ -279,8 +301,26 @@ export function BusinessCard({
             </div>
             
             {/* Heart Icon - Absolute positioned top-right */}
-            <button className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center bg-slate-800/80 backdrop-blur-sm rounded-full hover:bg-slate-700/80 transition-colors">
-              <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button 
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                if (onToggleSave) {
+                  onToggleSave()
+                }
+              }}
+              className={`absolute top-3 right-3 w-7 h-7 flex items-center justify-center backdrop-blur-sm rounded-full transition-all ${
+                isSaved 
+                  ? 'bg-pink-500/90 hover:bg-pink-600/90' 
+                  : 'bg-slate-800/80 hover:bg-slate-700/80'
+              }`}
+            >
+              <svg 
+                className={`w-3.5 h-3.5 transition-colors ${isSaved ? 'text-white' : 'text-white'}`} 
+                fill={isSaved ? 'currentColor' : 'none'} 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
             </button>
@@ -290,7 +330,7 @@ export function BusinessCard({
       {/* DESKTOP LAYOUT: Image-top (hidden on mobile, visible on desktop) */}
       <div className="hidden sm:block">
       {/* Business Image - Conditional logic based on status + images */}
-      <div className="relative h-48 overflow-hidden">
+      <div className="relative h-48 overflow-hidden rounded-t-lg">
         {(() => {
           const systemCategory = resolveSystemCategory(business)
 
@@ -303,6 +343,8 @@ export function BusinessCard({
                 systemCategory={systemCategory}
                 showUnclaimedBadge={true}
                 className="h-full w-full"
+                onBadgeHover={(isHovering) => setShowTooltip(isHovering)}
+                onBadgeClick={() => setShowTooltip(!showTooltip)}
               />
             )
           } else if (business.images && business.images.length > 0) {
@@ -335,7 +377,7 @@ export function BusinessCard({
         
         {/* Hero Badge - Show for ALL claimed businesses (regardless of images) */}
         {business.status !== 'unclaimed' && (
-          <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20">
+          <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-[1]">
             {business.plan === 'spotlight' && (
               <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 rounded-full font-bold shadow-lg animate-pulse">
                 ⭐ QWIKKER PICK
@@ -351,7 +393,7 @@ export function BusinessCard({
 
         {/* Case 3 Override: Add "No Photos Yet" badge for claimed businesses without images */}
         {business.status !== 'unclaimed' && (!business.images || business.images.length === 0) && (
-          <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20">
+          <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-[1]">
             <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-slate-700/90 backdrop-blur-sm border border-slate-600/30">
               <span className="text-[10px] sm:text-xs font-semibold text-white uppercase tracking-wide">
                 No Photos Yet
@@ -362,13 +404,40 @@ export function BusinessCard({
 
         {/* Distance Badge - Show for ALL businesses */}
         {showDistance && business.distance && (
-          <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 z-20">
+          <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 z-[1]">
             <span className="bg-black/70 text-slate-100 text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 rounded-full backdrop-blur-sm flex items-center gap-1">
-              🚶 {Math.round(parseFloat(business.distance) * 20)} min • {business.distance} mi
+              {(() => {
+                const walkMinutes = Math.round(parseFloat(business.distance) * 20)
+                if (walkMinutes >= 60) {
+                  const hours = walkMinutes / 60
+                  return `${hours.toFixed(1)} hr walk`
+                }
+                return `${walkMinutes} min walk`
+              })()} • {(() => {
+                const dist = parseFloat(business.distance)
+                // If close to whole number (within 0.1), show whole number
+                if (Math.abs(dist - Math.round(dist)) < 0.1) {
+                  return Math.round(dist)
+                }
+                // Otherwise show 1 decimal place
+                return dist.toFixed(1)
+              })()} mi
             </span>
           </div>
         )}
+
       </div>
+
+      {/* Unclaimed Tooltip - Rendered OUTSIDE overflow container */}
+      {business.status === 'unclaimed' && showTooltip && (
+        <div className="absolute top-52 right-3 w-64 px-4 py-3 rounded-lg bg-slate-900/95 border-2 border-[#00d083] shadow-2xl z-[5] backdrop-blur-sm">
+          <p className="text-sm text-slate-200 leading-relaxed">
+            This business hasn't claimed their Qwikker listing yet.
+          </p>
+          {/* Arrow */}
+          <div className="absolute -top-1.5 right-4 w-3 h-3 bg-slate-900 border-l-2 border-t-2 border-[#00d083] transform rotate-45" />
+        </div>
+      )}
 
       <CardHeader className="pb-2 sm:pb-3 pt-2 sm:pt-4 px-3 sm:px-6">
         <div className="flex items-start justify-between">
@@ -578,8 +647,28 @@ export function BusinessCard({
           </div>
           
           {/* Save Button */}
-          <Button variant="outline" size="sm" className="border-slate-600 text-slate-300 hover:bg-slate-700 p-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              if (onToggleSave) {
+                onToggleSave()
+              }
+            }}
+            className={`p-2 transition-all ${
+              isSaved 
+                ? 'bg-pink-500/20 border-pink-500 text-pink-300 hover:bg-pink-500/30' 
+                : 'border-slate-600 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            <svg 
+              className="w-4 h-4" 
+              fill={isSaved ? 'currentColor' : 'none'} 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
           </Button>

@@ -1235,7 +1235,6 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-white font-bold text-lg">WalletPush (Mobile Passes)</h3>
-                      <p className="text-slate-400 text-sm">Create Apple Wallet & Google Pay passes for customers</p>
                     </div>
                     <a 
                       href="https://walletpush.io" 

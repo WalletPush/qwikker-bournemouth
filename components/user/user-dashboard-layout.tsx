@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, createContext, useContext } from 'react'
 import Link from 'next/link'
 
 interface UserDashboardLayoutProps {
@@ -11,6 +11,11 @@ interface UserDashboardLayoutProps {
   currentCity?: string
   cityDisplayName?: string
 }
+
+// Context to share sidebar state with child components
+const SidebarContext = createContext<{ sidebarOpen: boolean }>({ sidebarOpen: false })
+
+export const useSidebar = () => useContext(SidebarContext)
 
 interface NavItem {
   id: string
@@ -112,17 +117,18 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
   }
 
   return (
+    <SidebarContext.Provider value={{ sidebarOpen }}>
     <div className="min-h-screen bg-slate-950 text-slate-100">
         {/* Mobile sidebar overlay */}
         {sidebarOpen && (
           <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ${
+      <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transform transition-transform duration-300 z-[110] flex flex-col ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 lg:max-w-none`}
       style={{
@@ -238,5 +244,6 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
         </main>
       </div>
     </div>
+    </SidebarContext.Provider>
   )
 }

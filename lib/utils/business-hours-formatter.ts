@@ -136,6 +136,37 @@ function formatStructuredHours(structuredHours: StructuredHours): string {
 }
 
 /**
+ * Get full weekly schedule as array for displaying in UI
+ */
+export function getFullWeeklyScheduleArray(structuredHours: StructuredHours | null | undefined): Array<{day: string, hours: string}> {
+  if (!structuredHours || typeof structuredHours !== 'object') {
+    return []
+  }
+  
+  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  
+  return days.map((day, index) => {
+    const hours = structuredHours[day]
+    const dayName = dayNames[index]
+    
+    if (!hours || typeof hours !== 'object') {
+      return { day: dayName, hours: 'Not available' }
+    }
+    
+    if (hours.closed) {
+      return { day: dayName, hours: 'Closed' }
+    } else if (hours.open && hours.close) {
+      const openFormatted = formatTimeWithSmartFix(hours.open, 'open')
+      const closeFormatted = formatTimeWithSmartFix(hours.close, 'close')
+      return { day: dayName, hours: `${openFormatted} - ${closeFormatted}` }
+    } else {
+      return { day: dayName, hours: 'Not available' }
+    }
+  })
+}
+
+/**
  * Get current business status (Open/Closed) based on hours
  */
 export function getBusinessStatus(

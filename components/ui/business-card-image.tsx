@@ -10,6 +10,8 @@ interface BusinessCardImageProps {
   heroImage?: string | null
   showUnclaimedBadge?: boolean
   className?: string
+  onBadgeHover?: (isHovering: boolean) => void
+  onBadgeClick?: () => void
 }
 
 export function BusinessCardImage({
@@ -18,7 +20,9 @@ export function BusinessCardImage({
   systemCategory,
   heroImage,
   showUnclaimedBadge = true,
-  className = ''
+  className = '',
+  onBadgeHover,
+  onBadgeClick
 }: BusinessCardImageProps) {
   // Claimed businesses with uploaded photos: Use Cloudinary (Next.js Image for optimization)
   if (heroImage) {
@@ -62,12 +66,27 @@ export function BusinessCardImage({
       {/* Dark overlay gradient to ensure text is readable */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/40 to-transparent" />
 
-      {/* Bottom-right: Clear messaging about photos - subtle and calm */}
+      {/* Top-right: Unclaimed badge (simple, no tooltip here) */}
       {showUnclaimedBadge && (
-        <div className="absolute bottom-3 right-3 z-10">
-          <div className="px-2.5 py-1.5 rounded-lg bg-slate-800/70 backdrop-blur-md border border-slate-700/50">
-            <p className="text-xs text-slate-300 font-medium">
-              Photos added when claimed
+        <div className="absolute top-3 right-3 z-10">
+          <div 
+            className="px-2 py-1 rounded-md bg-slate-900/90 backdrop-blur-md border border-slate-700/50 cursor-pointer hover:bg-slate-800/90 transition-colors"
+            onMouseEnter={() => {
+              console.log('🐛 Badge hover ENTER')
+              onBadgeHover?.(true)
+            }}
+            onMouseLeave={() => {
+              console.log('🐛 Badge hover LEAVE')
+              onBadgeHover?.(false)
+            }}
+            onClick={() => {
+              console.log('🐛 Badge CLICKED')
+              onBadgeClick?.()
+            }}
+          >
+            <p className="text-[11px] text-slate-300 font-medium flex items-center gap-1">
+              <span>ⓘ</span>
+              <span>Unclaimed</span>
             </p>
           </div>
         </div>

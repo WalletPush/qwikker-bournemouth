@@ -216,20 +216,15 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                 className="h-full w-full"
               />
               {business.status === 'unclaimed' && !business.owner_user_id && (
-              <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 items-end max-w-[180px]">
-                <span className="px-2.5 py-1.5 rounded-lg bg-slate-800/90 backdrop-blur-md border border-slate-700/50 text-[11px] font-medium text-slate-300 text-right">
-                  ℹ️ Listing not yet claimed by business owner
+              <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 items-end">
+                <span className="inline-block px-1.5 py-0.5 rounded text-[9px] bg-slate-800/60 backdrop-blur-sm border border-slate-700/30 text-slate-400">
+                  Listing not yet claimed
                 </span>
                 <a
                   href={`/claim?business_id=${business.id}`}
-                  className="px-2.5 py-1.5 rounded-lg bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-md border border-[#00d083]/40 hover:border-[#00d083]/60 transition-colors"
+                  className="self-start inline-block px-1.5 py-0.5 rounded text-[9px] bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
                 >
-                  <p className="text-[11px] text-[#00d083] font-medium text-right">
-                    Is this your business? Claim this listing
-                  </p>
-                  <p className="text-[9px] text-slate-400 mt-0.5 text-right">
-                    Claims are reviewed. We may ask for proof.
-                  </p>
+                  Your business? Claim here
                 </a>
               </div>
             )}
@@ -246,26 +241,21 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
             />
             {business.status === 'unclaimed' && !business.owner_user_id && (
               <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 items-end max-w-[180px]">
-                <span className="px-2.5 py-1.5 rounded-lg bg-slate-800/90 backdrop-blur-md border border-slate-700/50 text-[11px] font-medium text-slate-300 text-right">
-                  ℹ️ Listing not yet claimed by business owner
+                <span className="px-1.5 py-0.5 rounded text-[9px] bg-slate-800/60 backdrop-blur-sm border border-slate-700/30 text-slate-400">
+                  Listing not yet claimed
                 </span>
                 <a
                   href={`/claim?business_id=${business.id}`}
-                  className="px-2.5 py-1.5 rounded-lg bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-md border border-[#00d083]/40 hover:border-[#00d083]/60 transition-colors"
+                  className="self-start inline-block px-1.5 py-0.5 rounded text-[9px] bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
                 >
-                  <p className="text-[11px] text-[#00d083] font-medium text-right">
-                    Is this your business? Claim this listing
-                  </p>
-                  <p className="text-[9px] text-slate-400 mt-0.5 text-right">
-                    Claims are reviewed. We may ask for proof.
-                  </p>
+                  Your business? Claim here
                 </a>
               </div>
             )}
           </>
         )
         })()}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/40 to-transparent"></div>
         
         {/* Tier Badges - Top Left (MOBILE: keep on left side to avoid claim badges on right) */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 sm:top-4 sm:left-4 sm:gap-2">
@@ -287,9 +277,9 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
         </div>
 
         {/* Business Info Overlay */}
-        <div className="absolute bottom-4 left-4 right-4">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-2">{business.name}</h1>
-          <p className="text-xl text-[#00d083] mb-3">
+        <div className="absolute bottom-3 left-4 right-4">
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-1">{business.name}</h1>
+          <p className="text-xl text-[#00d083] mb-2">
             {getHeroLine({
               business_tagline: business.tagline || business.business_tagline,
               business_town: business.town || business.business_town,
@@ -301,7 +291,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
             })}
           </p>
           
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-4 mb-0">
             <div className="flex items-center gap-1">
               <div className="flex">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -333,7 +323,33 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
           Book Now
         </Button>
         
-        <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
+        <Button 
+          variant="outline" 
+          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+          onClick={() => {
+            // Detect if user is on iOS/macOS
+            const isAppleDevice = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)
+            
+            // Use coordinates if available, otherwise use address
+            if (business.latitude && business.longitude) {
+              if (isAppleDevice) {
+                // Apple Maps with coordinates
+                window.open(`http://maps.apple.com/?daddr=${business.latitude},${business.longitude}`, '_blank')
+              } else {
+                // Google Maps with coordinates
+                window.open(`https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`, '_blank')
+              }
+            } else {
+              // Fallback to address
+              const address = encodeURIComponent(`${business.address}, ${business.town}`)
+              if (isAppleDevice) {
+                window.open(`http://maps.apple.com/?daddr=${address}`, '_blank')
+              } else {
+                window.open(`https://www.google.com/maps/dir/?api=1&destination=${address}`, '_blank')
+              }
+            }
+          }}
+        >
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -449,26 +465,19 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                       </svg>
                       <div>
                         <p className="text-slate-100 font-medium">Hours</p>
-                        {(() => {
-                          const raw = business.hours || business.business_hours
-                          const structured = business.hours_structured || business.business_hours_structured
-                          const status = getBusinessStatusProps(raw, structured)
-                          
-                          if (!status) {
-                            return <p className="text-slate-400 text-sm">Hours not available</p>
-                          }
-                          
-                          return (
-                            <div className="text-slate-400">
-                              <span className={`${status.isOpen ? 'text-emerald-400' : 'text-rose-400'} text-sm font-medium`}>
-                                {status.isOpen ? '● Open' : '● Closed'}
-                              </span>
-                              {status.nextChange && (
-                                <span className="text-slate-400 ml-2 text-sm">• {status.nextChange}</span>
-                              )}
+                        <div className="text-slate-400">
+                          {business.fullSchedule ? (
+                            <div className="space-y-1">
+                              {business.fullSchedule.split('\n').map((line: string, index: number) => (
+                                <div key={index} className="text-sm">
+                                  {line}
+                                </div>
+                              ))}
                             </div>
-                          )
-                        })()}
+                          ) : (
+                            <p className="text-sm">Hours not available</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

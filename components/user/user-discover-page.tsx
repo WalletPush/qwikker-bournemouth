@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
-import { AiCompanionCard } from '@/components/ui/ai-companion-card'
 import { BusinessCard } from '@/components/user/business-card'
 import { SYSTEM_CATEGORY_LABEL, SystemCategory, SYSTEM_CATEGORIES } from '@/lib/constants/system-categories'
+import { useSidebar } from '@/components/user/user-dashboard-layout'
 
 interface Business {
   id: string
@@ -96,16 +96,33 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
     })
   }, [businesses])
   
+  const { sidebarOpen } = useSidebar()
+  
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all') // NEW: Category filter
-  const [showAllCategories, setShowAllCategories] = useState(false) // NEW: Show More toggle
   
   // Quick filters state
   const [quickFilters, setQuickFilters] = useState({
     openNow: false,
     hasOffers: false,
-    hasSecretMenu: false
+    hasSecretMenu: false,
+    closest: false,
+    mySaved: false
   })
+  
+  const [savedBusinesses, setSavedBusinesses] = useState<Set<string>>(new Set())
+  
+  const toggleSavedBusiness = (businessId: string) => {
+    setSavedBusinesses(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(businessId)) {
+        newSet.delete(businessId)
+      } else {
+        newSet.add(businessId)
+      }
+      return newSet
+    })
+  }
   
   // Helper function to scroll to results after filter change
   const scrollToResults = () => {
@@ -136,6 +153,27 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
     }
   }, [])
   
+  // Load saved businesses from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('qwikker_saved_businesses')
+      if (saved) {
+        try {
+          setSavedBusinesses(new Set(JSON.parse(saved)))
+        } catch (e) {
+          console.error('Failed to load saved businesses:', e)
+        }
+      }
+    }
+  }, [])
+  
+  // Persist saved businesses to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('qwikker_saved_businesses', JSON.stringify(Array.from(savedBusinesses)))
+    }
+  }, [savedBusinesses])
+  
   // Group businesses by subscription plan (determines badges)
   // 🎯 Free listings (plan = null) are included in "All Places" but not in specific tiers
   const qwikkerPicks = businesses.filter(b => b.plan === 'spotlight')
@@ -149,20 +187,40 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
     { id: 'recommended', label: 'Recommended', count: recommended.length },
   ]
 
-  // NEW: Get unique categories from businesses (for filter pills)
-  const availableCategories = Array.from(
+  // Get unique categories from both systemCategory AND google_primary_type
+  const availableSystemCategories = Array.from(
     new Set(
       businesses
         .map(b => b.systemCategory)
         .filter(Boolean)
     )
-  ).sort()
+  )
+  
+  const availableGoogleCategories = Array.from(
+    new Set(
+      businesses
+        .map(b => b.google_primary_type)
+        .filter(Boolean)
+    )
+  )
+  
+  // Combine both for dropdown
+  const allFilterOptions = [
+    ...availableSystemCategories.map(cat => ({
+      value: `system:${cat}`,
+      label: SYSTEM_CATEGORY_LABEL[cat as SystemCategory] || cat,
+      count: businesses.filter(b => b.systemCategory === cat).length,
+      type: 'system' as const
+    })),
+    ...availableGoogleCategories.map(cat => ({
+      value: `google:${cat}`,
+      label: cat.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+      count: businesses.filter(b => b.google_primary_type === cat).length,
+      type: 'google' as const
+    }))
+  ].sort((a, b) => b.count - a.count) // Sort by count descending.sort()
 
   // NEW: Count businesses per category
-  const getCategoryCount = (cat: string) => {
-    return businesses.filter(b => b.systemCategory === cat).length
-  }
-
   const getFilteredBusinesses = () => {
     // First filter by selected tier (All/Qwikker Picks/Featured/Recommended)
     let filtered = businesses
@@ -180,9 +238,15 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
         filtered = businesses
     }
 
-    // NEW: Then filter by category if selected
+    // Filter by category if selected (handles both system and google categories)
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(b => b.systemCategory === selectedCategory)
+      if (selectedCategory.startsWith('system:')) {
+        const category = selectedCategory.replace('system:', '')
+        filtered = filtered.filter(b => b.systemCategory === category)
+      } else if (selectedCategory.startsWith('google:')) {
+        const category = selectedCategory.replace('google:', '')
+        filtered = filtered.filter(b => b.google_primary_type === category)
+      }
     }
     
     // Quick filters
@@ -214,6 +278,23 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
         || ((b as any).secretMenuCount && (b as any).secretMenuCount > 0)
         || ((b as any).secret_menu_count && (b as any).secret_menu_count > 0)
       )
+    }
+    
+    if (quickFilters.mySaved) {
+      filtered = filtered.filter(b => savedBusinesses.has(b.id))
+    }
+    
+    if (quickFilters.closest && userLocation) {
+      // Sort by distance (closest first)
+      filtered = filtered.sort((a, b) => {
+        const distA = (a as any).latitude && (a as any).longitude
+          ? calculateDistance(userLocation.lat, userLocation.lng, (a as any).latitude, (a as any).longitude)
+          : Infinity
+        const distB = (b as any).latitude && (b as any).longitude
+          ? calculateDistance(userLocation.lat, userLocation.lng, (b as any).latitude, (b as any).longitude)
+          : Infinity
+        return distA - distB
+      })
     }
 
     // Then filter by search query if present
@@ -316,7 +397,9 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
       </div>
 
       {/* Sticky Filters Container - Both quick and category filters */}
-      <div className="sticky top-0 z-50 -mx-4 bg-[#0b1020]/95 backdrop-blur-md border-b border-white/5 sm:static sm:mx-0 sm:bg-transparent sm:backdrop-blur-0 sm:border-0">
+      <div className={`sticky top-0 z-10 -mx-4 bg-[#0b1020]/95 backdrop-blur-md border-b border-white/5 sm:static sm:mx-0 sm:bg-transparent sm:backdrop-blur-0 sm:border-0 ${
+        sidebarOpen ? 'hidden lg:block' : ''
+      }`}>
         {/* Quick Filters */}
         <div className="px-4 py-2.5 border-b border-white/10 sm:px-0 sm:py-0 sm:mb-4 sm:border-0">
           <h3 className="hidden sm:block text-sm font-medium text-slate-400 mb-2">Quick Filters</h3>
@@ -356,71 +439,61 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
               {quickFilters.hasSecretMenu && <span className="text-xs">✓</span>}
               <span>Secret menu</span>
             </button>
-          </div>
-        </div>
-
-        {/* Category Filter Pills */}
-        {availableCategories.length > 0 && (
-          <div className="px-4 py-2 mb-6 sm:px-0 sm:py-0 sm:mb-6">
-          <h3 className="hidden sm:block text-sm font-medium text-slate-400 mb-3">Filter by Category</h3>
-          <div className="flex gap-2 overflow-x-auto whitespace-nowrap [-webkit-overflow-scrolling:touch] pb-1 sm:flex-wrap sm:overflow-x-visible scrollbar-hidden">
+            
             <button
-              onClick={() => {
-                setSelectedCategory('all')
-                scrollToResults()
-              }}
-              className={`flex-shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-                selectedCategory === 'all'
-                  ? 'bg-[#00d083] text-black font-semibold'
-                  : 'bg-slate-800/60 border border-slate-700 text-slate-200'
+              onClick={() => toggleQuickFilter('closest')}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                quickFilters.closest
+                  ? 'bg-[#00d083] text-black font-semibold shadow-lg'
+                  : 'bg-slate-800/60 border border-slate-700 text-slate-200 hover:bg-slate-700'
               }`}
             >
-              All <span className="hidden sm:inline">({businesses.length})</span>
+              {quickFilters.closest && <span className="text-xs">✓</span>}
+              <span>Closest</span>
             </button>
-            {(showAllCategories ? availableCategories : availableCategories.slice(0, 5)).map(cat => (
-              <button
-                key={cat}
-                onClick={() => {
-                  setSelectedCategory(cat)
-                  scrollToResults()
-                }}
-                className={`flex-shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-                  selectedCategory === cat
-                    ? 'bg-[#00d083] text-black font-semibold'
-                    : 'bg-slate-800/60 border border-slate-700 text-slate-200'
-                }`}
-              >
-                {SYSTEM_CATEGORY_LABEL[cat as SystemCategory] || cat} <span className="hidden sm:inline">({getCategoryCount(cat)})</span>
-              </button>
-            ))}
-            {availableCategories.length > 5 && (
-              <button
-                onClick={() => setShowAllCategories(!showAllCategories)}
-                className="flex-shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors bg-slate-800/50 text-slate-400 hover:bg-slate-700 border border-slate-700/50 hover:border-slate-600"
-              >
-                <span className="sm:hidden">More</span>
-                <span className="hidden sm:inline">{showAllCategories ? '← Show Less' : `More (${availableCategories.length - 5}) →`}</span>
-              </button>
-            )}
+            
+            <button
+              onClick={() => toggleQuickFilter('mySaved')}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                quickFilters.mySaved
+                  ? 'bg-[#00d083] text-black font-semibold shadow-lg'
+                  : 'bg-slate-800/60 border border-slate-700 text-slate-200 hover:bg-slate-700'
+              }`}
+            >
+              {quickFilters.mySaved && <span className="text-xs">✓</span>}
+              <span>My saved ({savedBusinesses.size})</span>
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Category Filter Dropdown */}
+        {allFilterOptions.length > 0 && (
+          <div className="px-4 mb-6 sm:px-0">
+            <label htmlFor="category-filter" className="block text-sm font-medium text-slate-400 mb-2">
+              Filter by Category
+            </label>
+            <select
+              id="category-filter"
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value)
+                scrollToResults()
+              }}
+              className="w-full sm:w-64 px-4 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-[#00d083] transition-all"
+            >
+              <option value="all">All Categories ({businesses.length})</option>
+              {allFilterOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label} ({option.count})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
-      {/* AI Companion Card - After Filter Cards */}
-      <div className="mb-4">
-        <AiCompanionCard 
-          title="Discover Your Next Favorite Spot"
-          description="Skip the scrolling. Tell our AI what you're in the mood for and get instant recommendations."
-          prompts={[
-            "Best bars with live music tonight",
-            "Find romantic restaurant for anniversary", 
-            "Show me cafes with outdoor seating"
-          ]}
-          walletPassId={walletPassId}
-        />
-      </div>
-
+      {/* Results Section - Hide on mobile when sidebar is open */}
+      <div className={sidebarOpen ? 'hidden lg:block' : ''}>
       {/* Results Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-slate-100">
@@ -469,6 +542,8 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
                 }} 
                 href={getNavUrl(`/user/business/${business.slug}`)}
                 showDistance={true}
+                isSaved={savedBusinesses.has(business.id)}
+                onToggleSave={() => toggleSavedBusiness(business.id)}
               />
             )
           })}
@@ -519,6 +594,8 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
           </Button>
         </div>
       )}
+      </div>
+      {/* End Results Section */}
     </div>
   )
 }
