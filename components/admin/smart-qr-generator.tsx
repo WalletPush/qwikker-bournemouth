@@ -432,7 +432,7 @@ export function SmartQRGenerator({ city }: SmartQRGeneratorProps) {
                 </Button>
               </div>
               
-              <p className="text-[#00d083] text-xs">Ready to print! Click download for 2000px high-resolution PNG 🎉</p>
+              <p className="text-[#00d083] text-xs">Ready to print - 2000px high-resolution PNG</p>
             </div>
           )}
         </CardContent>

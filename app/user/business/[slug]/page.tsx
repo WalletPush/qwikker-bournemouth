@@ -102,6 +102,12 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       created_at,
       status,
       owner_user_id,
+      latitude,
+      longitude,
+      google_primary_type,
+      google_place_id,
+      google_reviews_highlights,
+      auto_imported,
       business_offers!left(
         id,
         offer_name,
@@ -207,12 +213,18 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
         : (business.plan || 'starter'),
       rating: business.rating || 4.5,
       reviewCount: business.review_count || Math.floor(Math.random() * 50) + 10,
+      reviews: business.google_reviews_highlights || [],
+      google_primary_type: business.google_primary_type,
+      google_place_id: business.google_place_id,
+      auto_imported: business.auto_imported,
       tags: [
         business.display_category || business.business_category, // Use new field with fallback
         business.business_type,
         business.business_town
       ].filter(Boolean),
-      distance: (Math.random() * 2 + 0.1).toFixed(1),
+      distance: null, // Will be calculated client-side from latitude/longitude
+      latitude: business.latitude,
+      longitude: business.longitude,
       activeOffers: business.business_offers?.filter(offer => {
         if (offer.status !== 'approved') return false
         if (offer.offer_end_date) {

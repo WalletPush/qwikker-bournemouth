@@ -140,7 +140,7 @@ export function ImportProgressModal({
               {progress.imported > 0 ? (
                 <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
                   <p className="text-sm text-green-800 dark:text-green-200 text-center font-medium">
-                    🎉 Successfully imported {progress.imported} business{progress.imported !== 1 ? 'es' : ''}!
+                    Successfully imported {progress.imported} business{progress.imported !== 1 ? 'es' : ''}
                   </p>
                   {progress.skipped > 0 && (
                     <p className="text-xs text-green-700 dark:text-green-300 text-center mt-1">

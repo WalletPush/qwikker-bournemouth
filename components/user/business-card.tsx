@@ -217,14 +217,18 @@ export function BusinessCard({
                 
                 return (
                   <>
-                    {/* Open/Closed Pill - FIRST, above name (transparent colors with border) */}
-                    {isOpen !== null && isOpen !== undefined && (
+                    {/* Open/Closed/Hours Pill - FIRST, above name (transparent colors with border) */}
+                    {isOpen !== null && isOpen !== undefined ? (
                       <div className={`inline-flex self-start px-2.5 py-0.5 rounded-full text-[10px] font-medium border mb-1 ${
                         isOpen 
                           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
                           : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                       }`}>
                         {isOpen ? '● Open' : '● Closed'}
+                      </div>
+                    ) : (
+                      <div className="inline-flex self-start px-2.5 py-0.5 rounded-full text-[10px] font-medium border mb-1 bg-slate-700/10 text-slate-400 border-slate-600/20">
+                        Hours not available
                       </div>
                     )}
                     

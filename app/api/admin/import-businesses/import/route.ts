@@ -10,7 +10,6 @@ import {
   type SystemCategory,
 } from '@/lib/constants/system-categories'
 import { validateCategoryMatch } from '@/lib/import/category-filters'
-import { generateTagline } from '@/lib/import/tagline-generator'
 
 interface ImportRequest {
   city?: string // DEPRECATED: Now derived from hostname server-side (ignored if provided)
@@ -395,7 +394,7 @@ export async function POST(request: NextRequest) {
                 'X-Goog-Api-Key': apiKey,
                 // IMPORTANT: Include regularOpeningHours.weekdayDescriptions to get hours data
                 // ENRICHMENT: Include primaryType and addressComponents for richer categorization
-                'X-Goog-FieldMask': 'id,displayName,formattedAddress,addressComponents,nationalPhoneNumber,websiteUri,rating,userRatingCount,types,primaryType,location,businessStatus,regularOpeningHours.weekdayDescriptions,photos'
+                'X-Goog-FieldMask': 'id,displayName,formattedAddress,addressComponents,nationalPhoneNumber,websiteUri,rating,userRatingCount,types,primaryType,location,businessStatus,regularOpeningHours.weekdayDescriptions,photos,reviews'
               }
             })
             
@@ -527,20 +526,40 @@ export async function POST(request: NextRequest) {
               continue
             }
 
-            // Extract richer Google data for better labeling
+            // Extract richer Google data
             const googlePrimaryType = place.primaryType || null
             const businessPostcode = extractPostcode(place.addressComponents)
 
-            // Generate deterministic tagline for Discover card
-            // For restaurants, this creates cuisine-specific taglines like:
-            // "Italian dining in Bournemouth" instead of generic "Comfort food, done right"
-            const generatedTagline = generateTagline(
-              placeId,                     // businessId (stable, deterministic)
-              place.displayName?.text || '', // businessName (for specialty detection)
-              systemCategory,              // category (e.g., "restaurant")
-              city,                        // city (e.g., "bournemouth")
-              displayCategory              // displayCategory (e.g., "Italian Restaurant")
-            )
+            // Extract town/area from address for tagline
+            // Use addressComponents to get locality/sublocality, fallback to city
+            const townName = (() => {
+              if (place.addressComponents) {
+                const locality = place.addressComponents.find((c: any) => 
+                  c.types.includes('locality') || c.types.includes('sublocality')
+                )
+                if (locality?.longText) {
+                  return locality.longText
+                }
+              }
+              // Fallback to city
+              return city.charAt(0).toUpperCase() + city.slice(1)
+            })()
+
+            // Generate simple tagline: "Category • Location" using google_primary_type
+            // Examples: "Night club • Bournemouth", "Greek restaurant • Town Centre"
+            // Format: "night_club" -> "Night club"
+            const formattedCategory = googlePrimaryType 
+              ? googlePrimaryType
+                  .split('_')
+                  .map((word: string, index: number) => 
+                    index === 0 
+                      ? word.charAt(0).toUpperCase() + word.slice(1)
+                      : word
+                  )
+                  .join(' ')
+              : displayCategory
+
+            const simpleTagline = `${formattedCategory} • ${townName}`
 
             // Create business profile (use systemCategory from admin form)
             const { error: insertError } = await supabase
@@ -548,11 +567,11 @@ export async function POST(request: NextRequest) {
               .insert({
                 business_name: place.displayName?.text || 'Unknown',
                 system_category: systemCategory, // Use category selected in import form
-                display_category: displayCategory, // Use display label from import form
+                display_category: formattedCategory, // Use formatted google_primary_type (e.g., "Night club", not "Bar / Wine Bar")
                 google_types: googleTypes, // Store raw Google types for reference (includes cuisine types like 'nepalese_restaurant')
                 google_primary_type: googlePrimaryType, // Primary type from Google (e.g., 'nepalese_restaurant', 'coffee_shop')
                 business_type: systemCategory, // Map system_category to business_type (legacy field)
-                business_town: city.charAt(0).toUpperCase() + city.slice(1),
+                business_town: townName, // Use extracted town name
                 city: city.toLowerCase(),
                 business_address: place.formattedAddress || '', // ✅ FIXED: Use correct column name
                 business_postcode: businessPostcode, // Extract postcode from address components
@@ -560,13 +579,20 @@ export async function POST(request: NextRequest) {
                 website_url: place.websiteUri || null, // ✅ FIXED: Use correct column name (website_url, not website)
                 rating: place.rating || null,
                 review_count: place.userRatingCount || null,
+                google_reviews_highlights: place.reviews ? place.reviews.slice(0, 10).map((review: any) => ({
+                  author: review.authorAttribution?.displayName || 'Anonymous',
+                  rating: review.rating || 5,
+                  text: review.text?.text || review.originalText?.text || '',
+                  time: review.publishTime || review.relativePublishTimeDescription || 'Recently',
+                  profile_photo: review.authorAttribution?.photoUri || null
+                })) : null,
                 business_hours: businessHoursText, // Human-readable text
                 business_hours_structured: businessHoursStructured, // Structured JSON (all days or null)
                 latitude: place.location?.latitude || null, // For distance calculations and maps
                 longitude: place.location?.longitude || null,
                 google_place_id: placeId,
                 google_photo_name: place.photos?.[0]?.name || null,
-                business_tagline: generatedTagline, // Auto-generated tagline (owner can overwrite when claiming)
+                business_tagline: simpleTagline, // Simple format: "Category • Location"
                 tagline_source: 'generated', // Mark as auto-generated
                 placeholder_variant: 0, // 🔒 CRITICAL: Always use neutral default (variant 0) on import
                 status: 'unclaimed',

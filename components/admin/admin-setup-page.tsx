@@ -306,7 +306,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
       
       if (response.ok) {
         setSaveStatus('saved')
-        setMessage('🎉 Configuration saved successfully!')
+        setMessage('✓ Configuration saved successfully')
         
         setTimeout(() => {
           setSaveStatus('idle')
@@ -441,19 +441,19 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
   }
 
   const steps = [
-    { id: 1, name: 'Admin Account', icon: '1', color: 'from-blue-500 to-blue-600' },
-    { id: 2, name: 'Franchise Details', icon: '2', color: 'from-purple-500 to-purple-600' },
-    { id: 3, name: 'Your API Services', icon: '3', color: 'from-orange-500 to-orange-600' },
-    { id: 4, name: 'Integrations', icon: '4', color: 'from-green-500 to-green-600' },
-    { id: 5, name: 'Save & Launch', icon: '5', color: 'from-[#00d083] to-[#00b86f]' },
+    { id: 1, name: 'Admin Account', icon: '1' },
+    { id: 2, name: 'Franchise Details', icon: '2' },
+    { id: 3, name: 'Your API Services', icon: '3' },
+    { id: 4, name: 'Integrations', icon: '4' },
+    { id: 5, name: 'Save & Launch', icon: '5' },
   ]
 
   if (isLoading || !config) {
     return (
       <div className="flex items-center justify-center min-h-[600px]">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#00d083] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-white text-lg">Loading franchise setup...</div>
+          <div className="w-12 h-12 border-2 border-slate-600 border-t-slate-400 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-slate-400 text-sm">Loading configuration...</div>
         </div>
       </div>
     )
@@ -527,7 +527,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
       {/* Status Message */}
       {message && (
         <div className={`mb-6 p-4 rounded-xl border-2 backdrop-blur-sm ${
-          message.includes('successfully') || message.includes('✅') || message.includes('🎉')
+          message.includes('successfully') || message.includes('✅') || message.includes('✓')
             ? 'bg-green-900/30 border-green-500/50 text-green-300' 
             : 'bg-red-900/30 border-red-500/50 text-red-300'
         }`}>
@@ -647,10 +647,10 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     }
                   }}
                   disabled={!isStep1Valid()}
-                  className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+                  className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-all ${
                     isStep1Valid()
-                      ? 'bg-[#00D083] hover:bg-[#00b86f] text-white cursor-pointer'
-                      : 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                      ? 'bg-white text-slate-900 hover:bg-slate-100 cursor-pointer'
+                      : 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50 border border-slate-700'
                   }`}
                 >
                   Continue
@@ -665,28 +665,14 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
           <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-purple-500/50 shadow-2xl backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 bg-slate-800 border border-slate-700 rounded-lg flex items-center justify-center shadow-sm">
+                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                 </div>
                 <div>
                   <CardTitle className="text-white text-2xl">Franchise Details</CardTitle>
                   <p className="text-slate-400 text-sm mt-1">Tell us about your local Qwikker franchise</p>
-                </div>
-              </div>
-              
-              <div className="bg-purple-900/30 border-2 border-purple-500/30 rounded-xl p-4 mt-4">
-                <div className="flex items-start gap-3">
-                  <svg className="w-6 h-6 text-purple-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div>
-                    <p className="text-purple-300 text-sm font-semibold mb-1">Why This Matters</p>
-                    <p className="text-purple-200 text-sm">
-                      This information appears on your franchise website, in customer communications, and helps businesses find you. Make it accurate and professional!
-                    </p>
-                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -713,13 +699,14 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   <p className="text-xs text-slate-500 mt-1">🔒 Your URL: <span className="text-slate-400">{config.subdomain}.qwikker.com</span></p>
                 </div>
                 <div>
-                  <Label className="text-slate-300 font-semibold mb-2 block">Owner Phone</Label>
+                  <Label className="text-slate-300 font-medium mb-2 block">Owner Phone</Label>
                   <Input
                     value={config.owner_phone || ''}
                     onChange={(e) => setConfig({...config, owner_phone: e.target.value})}
                     className="bg-slate-700/80 border-slate-600 text-white h-12 rounded-xl"
                     placeholder="+44 1234 567890"
                   />
+                  <p className="text-xs text-slate-500 mt-1">🔒 For Qwikker HQ only - not displayed publicly</p>
                 </div>
                 <div>
                   <Label className="text-slate-300 font-semibold mb-2 block">Timezone *</Label>
@@ -740,7 +727,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 </div>
               </div>
               <div>
-                <Label className="text-slate-300 font-semibold mb-2 block">Contact Address</Label>
+                <Label className="text-slate-300 font-medium mb-2 block">Contact Address <span className="text-slate-500 text-xs font-normal">(Optional)</span></Label>
                 <Textarea
                   value={config.contact_address || ''}
                   onChange={(e) => setConfig({...config, contact_address: e.target.value})}
@@ -748,6 +735,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   placeholder="123 High Street, Bournemouth, BH1 2AB"
                   rows={3}
                 />
+                <p className="text-xs text-slate-500 mt-1">🔒 For Qwikker HQ only - not displayed publicly</p>
               </div>
 
               <div className="flex justify-between pt-4">
@@ -770,8 +758,8 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   disabled={!isStep2Valid()}
                   className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-colors ${
                     isStep2Valid()
-                      ? 'bg-[#00D083] hover:bg-[#00b86f] text-white cursor-pointer'
-                      : 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                      ? 'bg-white text-slate-900 hover:bg-slate-100 cursor-pointer'
+                      : 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50 border border-slate-700'
                   }`}
                 >
                   Continue
@@ -787,8 +775,8 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
             <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-orange-500/50 shadow-2xl backdrop-blur-sm">
               <CardHeader>
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 bg-slate-800 border border-slate-700 rounded-lg flex items-center justify-center shadow-sm">
+                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                   </svg>
                 </div>
@@ -1147,8 +1135,8 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 disabled={!isStep3Valid()}
                 className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-colors ${
                   isStep3Valid()
-                    ? 'bg-[#00D083] hover:bg-[#00b86f] text-white cursor-pointer'
-                    : 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                    ? 'bg-white text-slate-900 hover:bg-slate-100 cursor-pointer'
+                    : 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50 border border-slate-700'
                 }`}
               >
                 Continue
@@ -1163,8 +1151,8 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
             <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-green-500/50 shadow-2xl backdrop-blur-sm">
               <CardHeader>
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/30">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 bg-slate-800 border border-slate-700 rounded-lg flex items-center justify-center shadow-sm">
+                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
                 </div>
@@ -1202,23 +1190,23 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     </div>
                   </div>
                   
-                  <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-3 mb-4">
-                    <p className="text-purple-200 text-xs">
-                      <span className="font-semibold">What gets synced:</span> Business signups, profile updates - all automatically
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 mb-4">
+                    <p className="text-slate-300 text-xs">
+                      <span className="font-medium">What gets synced:</span> Business signups, profile updates - all automatically
                     </p>
                   </div>
 
                   <div className="space-y-4">
                     {/* PASS CREATION WEBHOOK - NEW & REQUIRED */}
-                    <div className="border-2 border-[#00d083]/30 bg-[#00d083]/5 rounded-xl p-4">
+                    <div className="border border-slate-700 bg-slate-800/50 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center text-white text-xs font-bold">
-                          !
+                        <div className="w-5 h-5 bg-slate-700 rounded flex items-center justify-center">
+                          <span className="text-slate-400 text-[10px] font-semibold">*</span>
                         </div>
-                        <Label className="text-white text-sm font-semibold mb-0">
+                        <Label className="text-white text-sm font-medium mb-0">
                           Pass Creation Webhook URL
                         </Label>
-                        <span className="px-2 py-0.5 text-xs bg-[#00d083]/30 text-[#00d083] rounded-full font-medium border border-[#00d083]/40">
+                        <span className="px-2 py-0.5 text-[10px] bg-slate-700/50 text-slate-400 rounded font-medium border border-slate-600">
                           REQUIRED
                         </span>
                       </div>
@@ -1237,15 +1225,15 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       </p>
                     </div>
                     
-                    <div className="border-2 border-[#00d083]/30 bg-[#00d083]/5 rounded-xl p-4">
+                    <div className="border border-slate-700 bg-slate-800/50 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center text-white text-xs font-bold">
-                          !
+                        <div className="w-5 h-5 bg-slate-700 rounded flex items-center justify-center">
+                          <span className="text-slate-400 text-[10px] font-semibold">*</span>
                         </div>
-                        <Label className="text-white text-sm font-semibold mb-0">
+                        <Label className="text-white text-sm font-medium mb-0">
                           GHL Webhook URL
                         </Label>
-                        <span className="px-2 py-0.5 text-xs bg-[#00d083]/30 text-[#00d083] rounded-full font-medium border border-[#00d083]/40">
+                        <span className="px-2 py-0.5 text-[10px] bg-slate-700/50 text-slate-400 rounded font-medium border border-slate-600">
                           REQUIRED
                         </span>
                       </div>
@@ -1288,15 +1276,15 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="border-2 border-[#00d083]/30 bg-[#00d083]/5 rounded-xl p-4">
+                    <div className="border border-slate-700 bg-slate-800/50 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center text-white text-xs font-bold">
-                          !
+                        <div className="w-5 h-5 bg-slate-700 rounded flex items-center justify-center">
+                          <span className="text-slate-400 text-[10px] font-semibold">*</span>
                         </div>
-                        <Label className="text-white text-sm font-semibold mb-0">
+                        <Label className="text-white text-sm font-medium mb-0">
                           WalletPush API Key
                         </Label>
-                        <span className="px-2 py-0.5 text-xs bg-[#00d083]/30 text-[#00d083] rounded-full font-medium border border-[#00d083]/40">
+                        <span className="px-2 py-0.5 text-[10px] bg-slate-700/50 text-slate-400 rounded font-medium border border-slate-600">
                           REQUIRED
                         </span>
                       </div>
@@ -1328,15 +1316,15 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       </div>
                     </div>
 
-                    <div className="border-2 border-[#00d083]/30 bg-[#00d083]/5 rounded-xl p-4">
+                    <div className="border border-slate-700 bg-slate-800/50 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center text-white text-xs font-bold">
-                          !
+                        <div className="w-5 h-5 bg-slate-700 rounded flex items-center justify-center">
+                          <span className="text-slate-400 text-[10px] font-semibold">*</span>
                         </div>
-                        <Label className="text-white text-sm font-semibold mb-0">
+                        <Label className="text-white text-sm font-medium mb-0">
                           Template ID
                         </Label>
-                        <span className="px-2 py-0.5 text-xs bg-[#00d083]/30 text-[#00d083] rounded-full font-medium border border-[#00d083]/40">
+                        <span className="px-2 py-0.5 text-[10px] bg-slate-700/50 text-slate-400 rounded font-medium border border-slate-600">
                           REQUIRED
                         </span>
                       </div>
@@ -1349,15 +1337,15 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       />
                     </div>
 
-                    <div className="border-2 border-[#00d083]/30 bg-[#00d083]/5 rounded-xl p-4">
+                    <div className="border border-slate-700 bg-slate-800/50 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center text-white text-xs font-bold">
-                          !
+                        <div className="w-5 h-5 bg-slate-700 rounded flex items-center justify-center">
+                          <span className="text-slate-400 text-[10px] font-semibold">*</span>
                         </div>
-                        <Label className="text-white text-sm font-semibold mb-0">
+                        <Label className="text-white text-sm font-medium mb-0">
                           Endpoint URL
                         </Label>
-                        <span className="px-2 py-0.5 text-xs bg-[#00d083]/30 text-[#00d083] rounded-full font-medium border border-[#00d083]/40">
+                        <span className="px-2 py-0.5 text-[10px] bg-slate-700/50 text-slate-400 rounded font-medium border border-slate-600">
                           REQUIRED
                         </span>
                       </div>
@@ -1394,21 +1382,21 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     </a>
                   </div>
 
-                  <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-4">
                     <div className="flex items-start gap-3">
-                      <svg className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                       </svg>
                       <div className="flex-1">
-                        <p className="text-yellow-200 text-sm font-semibold mb-1">⚡ You'll get instant notifications for:</p>
-                        <ul className="text-yellow-100 text-xs space-y-1 ml-4 list-disc">
-                          <li><strong>Business signups</strong> - New businesses joining your franchise</li>
-                          <li><strong>Admin approval needed</strong> - Offers, menus, listings awaiting review</li>
-                          <li><strong>Claim requests</strong> - Business owners claiming their listings</li>
-                          <li><strong>System alerts</strong> - Errors, payment issues, or important events</li>
+                        <p className="text-slate-300 text-sm font-medium mb-2">You'll get instant notifications for:</p>
+                        <ul className="text-slate-400 text-xs space-y-1 ml-4 list-disc">
+                          <li><strong className="text-slate-300">Business signups</strong> - New businesses joining your franchise</li>
+                          <li><strong className="text-slate-300">Admin approval needed</strong> - Offers, menus, listings awaiting review</li>
+                          <li><strong className="text-slate-300">Claim requests</strong> - Business owners claiming their listings</li>
+                          <li><strong className="text-slate-300">System alerts</strong> - Errors, payment issues, or important events</li>
                         </ul>
-                        <p className="text-yellow-200 text-xs mt-2 italic">
-                          💡 Without Slack, you'll miss critical approvals and have no way to monitor your franchise!
+                        <p className="text-slate-400 text-xs mt-2">
+                          Without Slack, you'll miss critical approvals and have no way to monitor your franchise.
                         </p>
                       </div>
                     </div>
@@ -1836,8 +1824,8 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 disabled={!isStep4Valid()}
                 className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-colors ${
                   isStep4Valid()
-                    ? 'bg-[#00D083] hover:bg-[#00b86f] text-white cursor-pointer'
-                    : 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                    ? 'bg-white text-slate-900 hover:bg-slate-100 cursor-pointer'
+                    : 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50 border border-slate-700'
                 }`}
               >
                 Continue

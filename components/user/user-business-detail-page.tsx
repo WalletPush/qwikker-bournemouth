@@ -34,7 +34,48 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
   }
   const [activeTab, setActiveTab] = useState<'overview' | 'menu' | 'offers' | 'reviews'>('overview')
   const [claimedOffers, setClaimedOffers] = useState<Set<string>>(new Set())
+  const [userDistance, setUserDistance] = useState<number | null>(null)
+  const [walkingTime, setWalkingTime] = useState<number | null>(null)
   const hasTrackedVisit = useRef(false)
+  
+  // Find business by slug in the combined businesses list FIRST
+  const business = businesses.find(b => b.slug === slug)
+  
+  // Calculate real distance using geolocation
+  useEffect(() => {
+    if (business && typeof window !== 'undefined' && navigator.geolocation && business.latitude && business.longitude) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLat = position.coords.latitude
+          const userLon = position.coords.longitude
+          const businessLat = business.latitude
+          const businessLon = business.longitude
+
+          // Haversine formula to calculate distance
+          const R = 3959 // Earth's radius in miles
+          const dLat = (businessLat - userLat) * (Math.PI / 180)
+          const dLon = (businessLon - userLon) * (Math.PI / 180)
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(userLat * (Math.PI / 180)) *
+              Math.cos(businessLat * (Math.PI / 180)) *
+              Math.sin(dLon / 2) *
+              Math.sin(dLon / 2)
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+          const distance = R * c
+
+          setUserDistance(distance)
+          
+          // Calculate walking time (assuming 3 mph average walking speed)
+          const walkingMinutes = (distance / 3) * 60
+          setWalkingTime(walkingMinutes)
+        },
+        (error) => {
+          console.log('Geolocation not available:', error)
+        }
+      )
+    }
+  }, [business?.latitude, business?.longitude])
   
   // Track business visit after component mounts (only once!)
   useEffect(() => {
@@ -62,9 +103,6 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
       }
     }
   }, [walletPassId])
-  
-  // Find business by slug in the combined businesses list
-  const business = businesses.find(b => b.slug === slug)
   
   // Handle case where business is not found
   if (!business) {
@@ -308,8 +346,27 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
               <span className="text-slate-100 font-semibold text-lg">{business.rating}</span>
               <span className="text-slate-300">({business.reviewCount} reviews)</span>
             </div>
-            <span className="text-slate-300">•</span>
-            <span className="text-slate-300">{business.distance} miles away</span>
+            {userDistance !== null && (
+              <>
+                <span className="text-slate-300">•</span>
+                <span className="text-slate-300">
+                  {userDistance < 0.1 ? '< 0.1' : 
+                   Math.abs(userDistance - Math.round(userDistance)) < 0.1 
+                     ? Math.round(userDistance) 
+                     : userDistance.toFixed(1)} mi
+                </span>
+                {walkingTime !== null && walkingTime > 5 && (
+                  <>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-slate-300">
+                      {walkingTime >= 60 
+                        ? `${(walkingTime / 60).toFixed(1)} hr walk`
+                        : `${Math.round(walkingTime)} min walk`}
+                    </span>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -417,7 +474,13 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
               </CardHeader>
               <CardContent>
             <p className="text-slate-300 leading-relaxed mb-4">
-              {business.description}
+              {(business.status === 'unclaimed' || business.auto_imported) && !business.description ? (
+                <span className="text-slate-400 italic">
+                  This business hasn't added their story yet. Once claimed, owners can share their atmosphere, specialties, and what makes them unique.
+                </span>
+              ) : (
+                business.description
+              )}
             </p>
             
             {/* Gamification Info */}
@@ -489,7 +552,25 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                       </svg>
                       <div>
                         <p className="text-slate-100 font-medium">Category</p>
-                        <p className="text-slate-400">{business.category}</p>
+                        <p className="text-slate-400">
+                          {(() => {
+                            // Prioritize google_primary_type for imported businesses
+                            if (business.google_primary_type) {
+                              return business.google_primary_type
+                                .split('_')
+                                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                                .join(' ')
+                            }
+                            
+                            // Fall back to display_category
+                            if (business.display_category) {
+                              return business.display_category
+                            }
+                            
+                            // Last resort: business_category or system_category
+                            return business.category || business.business_category || 'Business'
+                          })()}
+                        </p>
                       </div>
                     </div>
                     
@@ -609,33 +690,56 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
 
         {activeTab === 'menu' && (
           <div className="space-y-6">
-            {/* AI Chat Prompt - Primary CTA */}
-            <Card className="bg-gradient-to-br from-[#00d083]/10 to-[#00b86f]/10 border-[#00d083]/30 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#00d083]/20 to-transparent rounded-bl-full"></div>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-full">
-                    <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
+            {/* Show placeholder for unclaimed/imported businesses */}
+            {(business.status === 'unclaimed' || business.auto_imported) ? (
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardContent className="p-8 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="p-4 bg-slate-700/30 rounded-full">
+                      <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-slate-100 mb-2">Menu Coming Soon</h3>
+                      <p className="text-slate-400 text-sm">
+                        Menus can be added by businesses after they claim their listing.
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-slate-100 mb-2">Discover the Full Menu with AI</h3>
-                    <p className="text-slate-300 mb-4">
-                      Chat with your local guide to explore the complete menu, get personalized recommendations, and discover hidden gems!
-                    </p>
-                    <Button asChild className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold">
-                      <Link href={getNavUrl(`/user/chat?business=${business.name}`)}>
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* AI Chat Prompt - Primary CTA (only for claimed businesses) */}
+                <Card className="bg-gradient-to-br from-[#00d083]/10 to-[#00b86f]/10 border-[#00d083]/30 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#00d083]/20 to-transparent rounded-bl-full"></div>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-full">
+                        <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
-                        Ask About {business.name}'s Menu
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-slate-100 mb-2">Discover the Full Menu with AI</h3>
+                        <p className="text-slate-300 mb-4">
+                          Chat with your local guide to explore the complete menu, get personalized recommendations, and discover hidden gems!
+                        </p>
+                        <Button asChild className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold">
+                          <Link href={getNavUrl(`/user/chat?business=${business.name}`)}>
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            Ask About {business.name}'s Menu
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
 
             {/* Featured Menu Items - Secondary */}
             {business.menuPreview && business.menuPreview.length > 0 && (
@@ -785,36 +889,107 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
 
         {activeTab === 'reviews' && (
           <div className="space-y-4">
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardContent className="p-8 text-center">
-                <div className="mb-4">
-                  <svg className="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                  </svg>
-                  <h3 className="text-xl font-semibold text-slate-100 mb-2">
-                    {business.reviewCount ? `${business.reviewCount} Reviews` : 'Customer Reviews'}
-                  </h3>
-                  <p className="text-slate-400 mb-6">
-                    See what customers are saying on Google Maps
-                  </p>
-                  {business.google_place_id && (
-                    <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
-                      <a 
-                        href={`https://www.google.com/maps/search/?api=1&query_place_id=${business.google_place_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2"
-                      >
-                        View Reviews on Google
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {business.reviews && business.reviews.length > 0 ? (
+              <>
+                {/* Display real Google reviews */}
+                {business.reviews.map((review: any, index: number) => (
+                  <Card key={index} className="bg-slate-800/50 border-slate-700">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        {review.profile_photo ? (
+                          <img 
+                            src={review.profile_photo} 
+                            alt={review.author}
+                            className="w-12 h-12 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-slate-400">
+                            {review.author.charAt(0)}
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <p className="text-slate-100 font-semibold">{review.author}</p>
+                              <p className="text-slate-400 text-sm">{review.time}</p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <svg
+                                  key={i}
+                                  className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-slate-600'}`}
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-slate-300 leading-relaxed">{review.text}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                
+                {/* Link to see all reviews on Google */}
+                {business.google_place_id && (
+                  <Card className="bg-slate-800/50 border-slate-700">
+                    <CardContent className="p-6 text-center">
+                      <p className="text-slate-400 mb-4">
+                        See what customers are saying on Google
+                      </p>
+                      <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <a 
+                          href={`https://www.google.com/maps/place/?q=place_id:${business.google_place_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2"
+                        >
+                          View {business.name} on Google
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            ) : (
+              /* No reviews available - show placeholder */
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardContent className="p-8 text-center">
+                  <div className="mb-4">
+                    <svg className="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                    <h3 className="text-xl font-semibold text-slate-100 mb-2">
+                      {business.reviewCount ? `${business.reviewCount} Reviews` : 'Customer Reviews'}
+                    </h3>
+                    <p className="text-slate-400 mb-6">
+                      See what customers are saying on Google
+                    </p>
+                    {business.google_place_id && (
+                      <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <a 
+                          href={`https://www.google.com/maps/place/?q=place_id:${business.google_place_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2"
+                        >
+                          View {business.name} on Google
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </div>
