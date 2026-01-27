@@ -92,5 +92,44 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // 🔒 FRANCHISE ISOLATION: Validate business owner city matches subdomain
+  // CRITICAL: Prevents London business from accessing bournemouth.qwikker.com dashboard
+  if (user && request.nextUrl.pathname.startsWith('/dashboard')) {
+    try {
+      // Get business profile to check city
+      const { data: business, error } = await supabase
+        .from('business_profiles')
+        .select('city')
+        .eq('owner_user_id', user.sub) // user.sub is the auth user ID
+        .single()
+      
+      if (error) {
+        console.error('❌ Franchise isolation check failed:', error)
+        // Allow request to continue (fail-open for emergency access)
+      } else if (business) {
+        const businessCity = business.city.toLowerCase()
+        const urlCity = currentCity.toLowerCase()
+        
+        if (businessCity !== urlCity) {
+          // SECURITY VIOLATION: Business belongs to different city
+          console.error(`🚨 FRANCHISE ISOLATION VIOLATION:`)
+          console.error(`   User tried to access: ${urlCity}.qwikker.com`)
+          console.error(`   Business belongs to: ${businessCity}`)
+          console.error(`   User ID: ${user.sub}`)
+          
+          // Sign out user (clear their session)
+          await supabase.auth.signOut()
+          
+          // Redirect to correct city with error message
+          const correctUrl = `https://${businessCity}.qwikker.com/auth/login?error=wrong_city&correct_city=${businessCity}`
+          return NextResponse.redirect(correctUrl)
+        }
+      }
+    } catch (error) {
+      console.error('❌ Franchise isolation check error:', error)
+      // Allow request to continue (fail-open for emergency access)
+    }
+  }
+
   return supabaseResponse
 }
