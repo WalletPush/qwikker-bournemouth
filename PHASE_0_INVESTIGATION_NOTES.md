@@ -68,7 +68,7 @@
 ## Task 0.3: business_offers Table Fields ✅
 
 ### Expiry/End Date Field
-**✅ CONFIRMED COLUMN:** `valid_until` (TIMESTAMPTZ, nullable)
+**✅ CONFIRMED COLUMN:** `offer_end_date` (TIMESTAMPTZ, nullable)
 
 **Evidence:**
 - Migration: `supabase/migrations/20260120000003_chat_active_deals_view.sql`
@@ -79,7 +79,7 @@
 - `id` - UUID primary key
 - `business_id` - UUID foreign key to business_profiles
 - `status` - offer status ('approved', 'pending', 'expired', etc.)
-- `valid_until` - expiry timestamp (nullable)
+- `offer_end_date` - expiry timestamp (nullable)
 - `offer_name`, `offer_value`, `offer_description`, `offer_type`
 
 **RULE FOR TIER 2 OFFER COUNT:**
@@ -241,7 +241,7 @@ export function LogoutButton() {
 
 ### ✅ Confirmed for Implementation
 1. **Featured Items Field:** `menu_preview` (JSONB, snake_case)
-2. **Offer Expiry Field:** `valid_until` (TIMESTAMPTZ)
+2. **Offer Expiry Field:** `offer_end_date` (TIMESTAMPTZ)
 3. **Chat Pipeline:** `lib/ai/hybrid-chat.ts` line 784 is insertion point
 4. **Paid Query View:** `business_profiles_chat_eligible`
 5. **Menu Upload Routes:** `app/api/menus/upload/route.ts` (primary)
@@ -311,7 +311,7 @@ export function LogoutButton() {
 | Purpose | Actual DB Column | Type | Nullable |
 |---------|-----------------|------|----------|
 | Featured Items | `menu_preview` | JSONB | YES |
-| Offer Expiry | `valid_until` | TIMESTAMPTZ | YES |
+| Offer Expiry | `offer_end_date` | TIMESTAMPTZ | YES |
 | Business Status | `status` | TEXT | NO |
 | Auto Imported | `auto_imported` | BOOLEAN | YES |
 | Business Tier | `business_tier` | TEXT | YES |

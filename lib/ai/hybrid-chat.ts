@@ -834,6 +834,10 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             if (b.menu_preview && Array.isArray(b.menu_preview) && b.menu_preview.length > 0) {
               liteText += ` - ${b.menu_preview.length} featured items`
             }
+            // Show offers count if they have any
+            if (b.approved_offers_count && b.approved_offers_count > 0) {
+              liteText += ` • ${b.approved_offers_count} offer${b.approved_offers_count === 1 ? '' : 's'}`
+            }
             liteText += `\n`
           })
           
