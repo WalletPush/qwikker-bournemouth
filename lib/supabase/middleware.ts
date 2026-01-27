@@ -94,6 +94,7 @@ export async function updateSession(request: NextRequest) {
 
   // 🔒 FRANCHISE ISOLATION: Validate business owner city matches subdomain
   // CRITICAL: Prevents London business from accessing bournemouth.qwikker.com dashboard
+  // FAIL-CLOSED: If we can't verify, deny access (never fail-open)
   if (user && request.nextUrl.pathname.startsWith('/dashboard')) {
     try {
       // Get business profile to check city
@@ -103,31 +104,47 @@ export async function updateSession(request: NextRequest) {
         .eq('owner_user_id', user.sub) // user.sub is the auth user ID
         .single()
       
-      if (error) {
-        console.error('❌ Franchise isolation check failed:', error)
-        // Allow request to continue (fail-open for emergency access)
-      } else if (business) {
-        const businessCity = business.city.toLowerCase()
-        const urlCity = currentCity.toLowerCase()
+      // FAIL-CLOSED: If fetch failed OR no business found, deny access
+      if (error || !business) {
+        console.error(`🚨 FRANCHISE ISOLATION - FAIL-CLOSED:`)
+        console.error(`   Could not verify business for user: ${user.sub}`)
+        console.error(`   Error: ${error?.message || 'No business found'}`)
+        console.error(`   Denying access and forcing logout`)
         
-        if (businessCity !== urlCity) {
-          // SECURITY VIOLATION: Business belongs to different city
-          console.error(`🚨 FRANCHISE ISOLATION VIOLATION:`)
-          console.error(`   User tried to access: ${urlCity}.qwikker.com`)
-          console.error(`   Business belongs to: ${businessCity}`)
-          console.error(`   User ID: ${user.sub}`)
-          
-          // Sign out user (clear their session)
-          await supabase.auth.signOut()
-          
-          // Redirect to correct city with error message
-          const correctUrl = `https://${businessCity}.qwikker.com/auth/login?error=wrong_city&correct_city=${businessCity}`
-          return NextResponse.redirect(correctUrl)
-        }
+        // Redirect to logout route (which will clear cookies server-side)
+        const logoutUrl = new URL('/api/auth/logout', request.url)
+        logoutUrl.searchParams.set('redirect', '/auth/login?error=verification_failed')
+        return NextResponse.redirect(logoutUrl)
       }
+      
+      const businessCity = business.city.toLowerCase()
+      const urlCity = currentCity.toLowerCase()
+      
+      if (businessCity !== urlCity) {
+        // SECURITY VIOLATION: Business belongs to different city
+        console.error(`🚨 FRANCHISE ISOLATION VIOLATION:`)
+        console.error(`   User tried to access: ${urlCity}.qwikker.com`)
+        console.error(`   Business belongs to: ${businessCity}`)
+        console.error(`   User ID: ${user.sub}`)
+        
+        // Redirect to logout + correct city
+        const logoutUrl = new URL('/api/auth/logout', request.url)
+        logoutUrl.searchParams.set('redirect', `https://${businessCity}.qwikker.com/auth/login?error=wrong_city&correct_city=${businessCity}`)
+        return NextResponse.redirect(logoutUrl)
+      }
+      
+      // Verification passed - allow access
+      
     } catch (error) {
-      console.error('❌ Franchise isolation check error:', error)
-      // Allow request to continue (fail-open for emergency access)
+      // FAIL-CLOSED: Any unexpected error = deny access
+      console.error(`🚨 FRANCHISE ISOLATION - UNEXPECTED ERROR:`)
+      console.error(`   User: ${user.sub}`)
+      console.error(`   Error: ${error}`)
+      console.error(`   Denying access and forcing logout`)
+      
+      const logoutUrl = new URL('/api/auth/logout', request.url)
+      logoutUrl.searchParams.set('redirect', '/auth/login?error=system_error')
+      return NextResponse.redirect(logoutUrl)
     }
   }
 

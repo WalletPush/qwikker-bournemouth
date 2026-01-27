@@ -23,8 +23,9 @@ export function LogoutButton() {
         console.error('Logout request failed:', response.status)
       }
       
-      // Redirect to login page
-      router.push('/auth/login')
+      // Use router.replace (not push) to prevent back-button issues
+      // This removes the current page from history
+      router.replace('/auth/login')
       
       // Force a hard refresh to clear any cached state
       router.refresh()
@@ -33,10 +34,11 @@ export function LogoutButton() {
       console.error('❌ Logout failed:', error)
       
       // Even if logout fails, redirect to login (fail-safe)
-      router.push('/auth/login')
+      router.replace('/auth/login')
       router.refresh()
     } finally {
-      setLoading(false)
+      // Don't set loading to false - we're navigating away
+      // setLoading(false) would cause UI flash
     }
   }
 

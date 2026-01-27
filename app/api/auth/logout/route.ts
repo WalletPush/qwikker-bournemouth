@@ -7,42 +7,55 @@ import { cookies } from 'next/headers'
  * 
  * CRITICAL: Client-side supabase.auth.signOut() does NOT clear httpOnly cookies.
  * This route clears ALL session cookies including:
- * - Supabase auth cookies
- * - Custom session cookies (qwikker_session, qwikker_admin_session)
+ * - ALL Supabase auth cookies (sb-*)
+ * - Custom session cookies (qwikker_*)
+ * - Handles chunked cookies (large JWT split across multiple cookies)
  */
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const supabase = createClient()
     
     // Sign out from Supabase (clears Supabase session)
     await supabase.auth.signOut()
     
-    // Clear any custom httpOnly session cookies
+    // Get ALL cookies
     const cookieStore = cookies()
+    const allCookies = cookieStore.getAll()
     
-    // List of all possible session cookies to clear
-    const sessionCookies = [
-      'qwikker_session',
-      'qwikker_admin_session',
-      'sb-access-token',
-      'sb-refresh-token',
-    ]
+    // Delete ALL Supabase cookies (sb-*) AND custom cookies (qwikker_*)
+    // This is future-proof across different Supabase setups and handles chunked cookies
+    let deletedCount = 0
     
-    // Delete each cookie
-    sessionCookies.forEach(cookieName => {
-      try {
-        cookieStore.delete(cookieName)
-      } catch (error) {
-        // Cookie might not exist - that's okay
-        console.log(`Cookie ${cookieName} not found (already cleared)`)
+    allCookies.forEach(cookie => {
+      const name = cookie.name
+      
+      // Delete if it's a Supabase cookie OR a custom Qwikker cookie
+      if (name.startsWith('sb-') || name.startsWith('qwikker_')) {
+        try {
+          cookieStore.delete(name)
+          deletedCount++
+          console.log(`🗑️  Deleted cookie: ${name}`)
+        } catch (error) {
+          console.warn(`⚠️  Failed to delete cookie ${name}:`, error)
+        }
       }
     })
     
-    console.log('✅ Logout successful - all session cookies cleared')
+    console.log(`✅ Logout successful - ${deletedCount} session cookies cleared`)
+    
+    // Check for redirect parameter from middleware
+    const url = new URL(request.url)
+    const redirectUrl = url.searchParams.get('redirect')
+    
+    if (redirectUrl) {
+      // Redirect to specified URL (e.g., correct city subdomain)
+      return NextResponse.redirect(redirectUrl)
+    }
     
     return NextResponse.json({ 
       success: true,
-      message: 'Logged out successfully'
+      message: 'Logged out successfully',
+      cookiesCleared: deletedCount
     })
     
   } catch (error) {
