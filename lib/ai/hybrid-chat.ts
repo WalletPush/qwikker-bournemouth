@@ -719,6 +719,41 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       
       const businessById = new Map((businesses || []).map(b => [b.id, b]))
       
+      // 🎯 THREE-TIER CHAT SYSTEM: Query Tier 2 & Tier 3
+      // TIER 1: Paid/Trial (already queried above via business_profiles_chat_eligible)
+      // TIER 2: Claimed-Free "Lite" (query always, append below paid)
+      // TIER 3: Unclaimed Fallback (query ONLY if Tier 1 AND Tier 2 are empty)
+      
+      // Query Tier 2: Claimed-Free businesses with featured items
+      console.log('💼 Querying Tier 2: Claimed-Free Lite businesses')
+      const { data: liteBusinesses } = await supabase
+        .from('business_profiles_lite_eligible')
+        .select('*')
+        .eq('city', city)
+        .limit(3) // Max 3 Lite cards
+      
+      console.log(`💼 Found ${liteBusinesses?.length || 0} Lite businesses`)
+      
+      // Query Tier 3: Unclaimed fallback directory (ONLY if Tier 1 AND Tier 2 are empty)
+      let fallbackBusinesses: any[] = []
+      const hasPaidResults = (businesses && businesses.length > 0)
+      const hasLiteResults = (liteBusinesses && liteBusinesses.length > 0)
+      
+      if (!hasPaidResults && !hasLiteResults && hasBusinessResults) {
+        console.log('💡 No paid or lite results - querying Tier 3: Fallback directory')
+        
+        const { data: fallbackData } = await supabase
+          .from('business_profiles_ai_fallback_pool')
+          .select('*')
+          .eq('city', city)
+          .limit(6)
+        
+        if (fallbackData && fallbackData.length > 0) {
+          fallbackBusinesses = fallbackData
+          console.log(`💡 Found ${fallbackBusinesses.length} fallback contacts`)
+        }
+      }
+      
       // STEP 3: Tier priority and exclusions
       // ✅ NO LONGER NEEDED: The view business_profiles_chat_eligible already filters out ineligible businesses
       // effective_tier is computed from subscriptions and is NEVER null for eligible businesses
@@ -742,9 +777,12 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       
       console.log(`🎨 UI Mode: ${uiMode}, shouldAttachCarousel: ${shouldAttachCarousel}`)
       
-      // STEP 5: Build final carousel (deduped, tier-ordered, enriched)
+      // STEP 5: Build final carousel (PAID-ONLY)
+      // 🎯 MONETIZATION: Carousel cards are EXCLUSIVE to paid/trial tiers
+      // Free tier (Tier 2 & 3) = text-only mentions (clear upsell incentive)
       if (shouldAttachCarousel && uniqueBusinessIds.length > 0) {
-        const candidates = uniqueBusinessIds
+        // Build Tier 1 carousel (Paid/Trial ONLY)
+        const paidCarousel = uniqueBusinessIds
           .map(id => businessById.get(id))
           .filter(Boolean) // Remove nulls
           .map(b => ({
@@ -753,8 +791,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             business_tagline: b!.business_tagline || undefined,
             system_category: b!.system_category || undefined,
             display_category: b!.display_category || b!.system_category || undefined,
-            business_tier: b!.effective_tier || 'starter', // ✅ Use effective_tier from subscription-based view
-            tier_priority: b!.tier_priority || 999, // ✅ Use computed tier_priority from view
+            business_tier: b!.effective_tier || 'starter',
+            tier_priority: b!.tier_priority || 999,
             business_address: b!.business_address || undefined,
             business_town: b!.business_town || city,
             logo: b!.logo || undefined,
@@ -764,11 +802,9 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             rating: (b!.rating && b!.rating > 0) ? b!.rating : undefined,
             offers_count: businessOfferCounts[b!.id] || 0
           }))
-        // ✅ NO FILTER NEEDED: business_profiles_chat_eligible view already excludes free tier/unclaimed/expired!
         
-        // Sort by tier_priority from view (spotlight=1, featured/trial=2, starter=3)
-        // Then by rating, then by offers_count
-        candidates.sort((a, b) => {
+        // Sort Tier 1 by tier_priority, then rating, then offers
+        paidCarousel.sort((a, b) => {
           if (a.tier_priority !== b.tier_priority) return a.tier_priority - b.tier_priority
           const ar = a.rating ?? 0
           const br = b.rating ?? 0
@@ -776,9 +812,64 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           return (b.offers_count ?? 0) - (a.offers_count ?? 0)
         })
         
-        businessCarousel = candidates.slice(0, 6)
+        // Carousel = PAID ONLY (Tier 1)
+        businessCarousel = paidCarousel.slice(0, 6)
         
-        console.log(`🗺️ Built business carousel with ${businessCarousel.length} UNIQUE businesses`)
+        // Tier 2 & 3: TEXT-ONLY mentions (no carousel cards)
+        // This creates clear upsell incentive: want carousel? upgrade!
+        
+        if (liteBusinesses && liteBusinesses.length > 0) {
+          // Add Lite businesses as text-only mentions
+          let liteText = "\n\n**Also nearby (basic listings):**\n"
+          
+          liteBusinesses.slice(0, 3).forEach(b => {
+            liteText += `• **${b.business_name}**`
+            if (b.display_category) {
+              liteText += ` - ${b.display_category}`
+            }
+            if (b.rating && b.rating > 0) {
+              liteText += ` (${b.rating}★)`
+            }
+            // Show featured items count if they have them
+            if (b.menu_preview && Array.isArray(b.menu_preview) && b.menu_preview.length > 0) {
+              liteText += ` - ${b.menu_preview.length} featured items`
+            }
+            liteText += `\n`
+          })
+          
+          liteText += "\n_These businesses have basic listings. Contact them for more details._"
+          
+          aiResponse = aiResponse + liteText
+          
+        } else if (fallbackBusinesses && fallbackBusinesses.length > 0) {
+          // Add Fallback businesses as text-only mentions (ONLY if no paid and no lite)
+          let fallbackText = "\n\n**Other businesses in the area:**\n"
+          fallbackText += "_I don't have confirmed menu information for these venues yet — they're imported listings and may be incomplete._\n\n"
+          
+          fallbackBusinesses.slice(0, 5).forEach(b => {
+            fallbackText += `• **${b.business_name}**`
+            if (b.display_category) {
+              fallbackText += ` - ${b.display_category}`
+            }
+            if (b.rating && b.review_count) {
+              fallbackText += ` (${b.rating}★ from ${b.review_count} Google reviews)`
+            }
+            if (b.phone) {
+              fallbackText += `\n  📞 ${b.phone}`
+            }
+            fallbackText += `\n`
+          })
+          
+          fallbackText += "\n_Ratings and reviews data provided by Google_"
+          
+          aiResponse = aiResponse + fallbackText
+        }
+        
+        console.log(`🗺️ Built three-tier response:`)
+        console.log(`   - Tier 1 (Paid) Carousel: ${paidCarousel.length} cards`)
+        console.log(`   - Tier 2 (Lite) Text: ${liteBusinesses?.length || 0} mentions`)
+        console.log(`   - Tier 3 (Fallback) Text: ${fallbackBusinesses.length} mentions`)
+        
       } else {
         console.log(`🗺️ Business results available but carousel gated (no list query)`)
       }
