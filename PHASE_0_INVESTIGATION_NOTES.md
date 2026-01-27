@@ -133,7 +133,7 @@
 
 **SECURITY GAP IDENTIFIED:**
 - No validation that logged-in business belongs to current subdomain
-- London business CAN access bournemouth.qwikker.io dashboard
+- London business CAN access bournemouth.qwikker.com dashboard
 - **NEEDS:** City derivation from hostname + business.city validation
 
 ### Auth Session Management
@@ -212,7 +212,7 @@ export function LogoutButton() {
 ### Login Link Issue
 - **Line 167 (in different approval route):** Uses `process.env.NEXT_PUBLIC_BASE_URL || 'https://qwikkerdashboard-theta.vercel.app'`
 - **❌ HARDCODED Vercel URL** instead of city-specific domain
-- **NEEDS:** Derive city from business record and generate `https://${city}.qwikker.io/dashboard`
+- **NEEDS:** Derive city from business record and generate `https://${city}.qwikker.com/dashboard`
 
 ### Email System
 - Uses Resend API
