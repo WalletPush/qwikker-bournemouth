@@ -34,7 +34,7 @@ The AI chat now operates on a **three-tier hierarchy** that protects monetizatio
 
 [Carousel Card 1: Primo Wood Fired Pizza]
 - Photo: Hero image
-- Rating: ⭐ 4.8 (124 reviews)
+- Rating: ⭐ 4.8 (124 reviews) - Highly rated
 - Distance: 0.3 miles away
 - Status: Open until 11pm
 - Offers: "2-for-1 pizzas after 9pm"
@@ -42,12 +42,17 @@ The AI chat now operates on a **three-tier hierarchy** that protects monetizatio
 - CTA: "View Menu" | "Get Directions"
 
 [Carousel Card 2: Luigi's Italian Kitchen]
+- Rating: ⭐ 4.6 (89 reviews)
 ...
 
 [Carousel Card 3: Napoli Express]
+- Rating: ⭐ 4.7 (156 reviews) - Very popular
 ...
 
 💡 Swipe to see all options. Tap a card to view their full menu, offers, and secret items.
+
+---
+_Ratings and reviews data provided by Google_
 ```
 
 ### Data Included:
@@ -82,19 +87,19 @@ This applies even for paid businesses if the rating/review count is from Google 
 ### AI Response Example:
 
 ```
-☕ I don't have their full menus yet, but here are some coffee shops with confirmed featured items:
+☕ I don't have their full menus yet, but here are some highly-rated coffee shops with featured items:
 
 📍 **live on cafe & bakery**
    • Category: Coffee Shop
    • Location: 0.4 miles away • Open now
-   • ⭐ 4.7 (92 reviews)
+   • ⭐ 4.7 (92 reviews) - Highly rated
    • Featured items: Artisan sourdough, specialty lattes, house-made pastries
    • Contact: 01202 123456 | [View on map]
    
 📍 **The Grind Coffee House**
    • Category: Coffee & Brunch
    • Location: 0.8 miles away • Open until 5pm
-   • ⭐ 4.5 (67 reviews)
+   • ⭐ 4.5 (67 reviews) - Well-reviewed
    • Offer: 10% off all drinks before 10am (expires Feb 15)
    • Featured items: Single-origin espresso, vegan breakfast wrap
    • Contact: 01202 789012 | [View on map]
@@ -605,33 +610,51 @@ return {
    If displaying Google-derived data (rating, review count, hours) for ANY business in the response, MUST include attribution footer.  
    **Source matters, not claim status or tier.**
 
-4. **Never Show Review Text**  
-   No review snippets. No single-review summaries. Rating + count only.  
-   Optional: Generic theme tags from multiple reviews ("People mention: atmosphere").
+4. **Google Review TEXT = Off Limits for AI**  
+   - ✅ USE: Rating + count as NUMERICAL data (math-based social proof)
+   - ✅ SAFE: "Highly rated" (if rating >= 4.5), "Popular" (if count > 100)
+   - ❌ NEVER: Derive themes/insights from `google_reviews_highlights.text`
+   - ❌ NEVER: "Customers mention...", "Known for..." (IF from Google review text)
+   - ❌ NEVER: AI transformation of Google review content
 
-5. **Waterfall MUST Be Sequential**  
+5. **Themes Must Come From Non-Google Sources**  
+   - ✅ `business_highlights` (owner-selected during onboarding)
+   - ✅ Menu-derived themes (IF menu data confirms: "Known for wood-fired pizzas")
+   - ✅ Offer-derived themes (IF offers confirm: "Great for brunch")
+   - ✅ Future: Qwikker-native reviews
+   - ❌ Google review text
+
+6. **Waterfall MUST Be Sequential**  
    Always try Tier 1 first. Only move to Tier 2 if Tier 1 = empty. Only move to Tier 3 if Tier 1+2 = empty.
 
-6. **Upsell Is Mandatory**  
+7. **Upsell Is Mandatory**  
    Every Tier 2/3 response MUST include upgrade messaging.
 
-7. **Track Data Sources**  
-   Store `hours_source`, `rating_source`, `review_count_source` to determine attribution requirements.  
-   Never guess - always know the source of truth.
+8. **Use Safe Social Proof Utility**  
+   Use `lib/utils/social-proof.ts` functions for compliant rating/count usage.  
+   Never implement custom review text parsing.
+
+9. **Reviews Tab = Rating Summary Only**  
+   Business detail page reviews tab shows:
+   - Rating + count display
+   - Optional: Business-provided highlights (NOT from Google reviews)
+   - "Read all reviews on Google" CTA
+   - Google attribution footer
+   - NO full review text display
 
 ---
 
-## 📊 Current Review Data Import Status
+## 📊 Google Review Data: Safe Usage Rules
 
 ### What We Currently Import from Google Places:
 ```typescript
 google_reviews_highlights: [
   {
-    author: string,          // Display name
-    rating: number,          // 1-5
-    text: string,           // ⚠️ FULL REVIEW TEXT
-    time: string,           // Publish time
-    profile_photo: string   // Author photo URL
+    author: string,
+    rating: number,
+    text: string,           // ⚠️ STORED BUT NOT FOR AI USE
+    time: string,
+    profile_photo: string
   }
 ]
 ```
@@ -639,49 +662,104 @@ google_reviews_highlights: [
 **Max imported:** 10 reviews per business  
 **Storage:** `business_profiles.google_reviews_highlights` (JSONB)
 
-### ⚠️ Current Risk:
-We ARE storing full review text from Google Places. This creates legal/compliance risk if displayed incorrectly.
+### ⚠️ Critical Distinction:
 
-### ✅ Recommended Display Rules:
+**Google review TEXT = Content owned by Google**  
+Using it for AI transformation/themes = ToS violation
 
-**For ALL Tiers (1, 2, 3):**
+**Google rating + count = Numerical data = Safe for math-based social proof**
 
-**Always Safe:**
-- ⭐ Rating number (e.g., "4.8")
-- Review count (e.g., "(124 reviews)")
-- Google attribution footer
+---
 
-**Optional (Low Risk):**
-- Theme tags from multiple reviews: "People mention: atmosphere, cocktails, service"
-- Generic aggregations: "Customers praise the ambiance"
+### ✅ What Chat/AI CAN Use:
 
-**Never Display:**
-- Full review text
-- Review excerpts/snippets
-- Single-review summaries
-- Author names/photos from reviews
+**From Google (with attribution):**
+- ✅ Rating number: `4.8`
+- ✅ Review count: `124`
+- ✅ Math-based social proof: "Highly rated" (if rating >= 4.5)
+- ✅ Math-based social proof: "Popular" (if review_count > 100)
+- ✅ Comparative: "One of the top-rated [category] nearby" (computed from ratings)
 
-**If You Want to Show Reviews:**
-- Link to Google Maps page for that specific business
-- Let users read reviews on Google, not on Qwikker
-- Example: "⭐ 4.8 (124 reviews) - [See what customers are saying on Google →]"
+**From Non-Google Sources:**
+- ✅ `business_highlights` (business owner chooses tags during onboarding)
+- ✅ Menu-derived themes: "Known for wood-fired pizzas" (IF menu data confirms)
+- ✅ Offer-derived themes: "Great for brunch" (IF offers/menu/hours confirm)
+- ✅ Future: Qwikker-native reviews
 
-### Database Cleanup (Optional):
-If you want to remove stored review text entirely:
-```sql
--- Keep only rating + count, remove text/author data
-UPDATE business_profiles
-SET google_reviews_highlights = (
-  SELECT jsonb_agg(
-    jsonb_build_object(
-      'rating', (review->>'rating')::int,
-      'time', review->>'time'
-    )
-  )
-  FROM jsonb_array_elements(google_reviews_highlights) AS review
-)
-WHERE google_reviews_highlights IS NOT NULL;
+---
+
+### ❌ What Chat/AI CANNOT Use:
+
+**Never derive from Google review text:**
+- ❌ "Customers mention..." (implies review text analysis)
+- ❌ "Known for..." (IF derived from Google review text)
+- ❌ "Reviewers praise..." (implies review text analysis)
+- ❌ AI-generated themes from `google_reviews_highlights.text`
+- ❌ Any transformation of Google review content
+
+---
+
+### 🎯 Safe Social Proof Examples:
+
+**Rating-Based (Safe):**
+```typescript
+if (rating >= 4.5 && reviewCount > 200) {
+  return "Highly rated and very popular (⭐ 4.8, 200+ reviews)"
+}
+if (rating >= 4.5 && reviewCount > 100) {
+  return "Highly rated with strong review volume (⭐ 4.7, 150+ reviews)"
+}
+if (rating >= 4.5) {
+  return "Highly rated (⭐ 4.6)"
+}
+if (rating >= 4.0) {
+  return "Solid ratings (⭐ 4.2)"
+}
 ```
+
+**Business-Provided Highlights (Safe):**
+```typescript
+// From business_highlights field (owner-selected during onboarding)
+if (business.business_highlights?.length > 0) {
+  return `Highlights: ${business.business_highlights.slice(0, 3).join(', ')}`
+  // e.g., "Highlights: Live music, Craft cocktails, Dog-friendly"
+}
+```
+
+**Menu-Derived Themes (Safe):**
+```typescript
+// Only if you have actual menu data proving it
+if (business.menu_items.includes('wood-fired pizza')) {
+  return "Known for wood-fired Neapolitan pizzas"
+}
+```
+
+---
+
+### 🏗️ Recommended Database Schema Addition:
+
+Add business-provided highlights during onboarding/dashboard:
+
+```sql
+ALTER TABLE business_profiles
+ADD COLUMN business_highlights TEXT[];
+
+-- Example values:
+-- ['Live music', 'Craft cocktails', 'Dog-friendly', 'Vegan options', 'Quick service']
+```
+
+**UI during onboarding:**
+"What makes your business special? (Select up to 5)"
+- [ ] Live music
+- [ ] Craft cocktails
+- [ ] Family-friendly
+- [ ] Vegan options
+- [ ] Late night
+- [ ] Dog-friendly
+- [ ] Outdoor seating
+- [ ] etc.
+
+This gives you clean, monetizable "Known for" data with ZERO Google ToS risk.
 
 ---
 
