@@ -83,6 +83,16 @@ interface ChatResponse {
     business_name: string
     business_id: string
   }>
+  googleReviewSnippets?: {
+    businessName: string
+    businessId: string
+    google_place_id?: string
+    snippets: Array<{
+      text: string
+      author: string
+      rating: number
+    }>
+  }
 }
 
 /**
@@ -712,6 +722,9 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           logo,
           business_images,
           rating,
+          review_count,
+          google_reviews_highlights,
+          google_place_id,
           owner_user_id,
           claimed_at
         `)
@@ -879,6 +892,43 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       }
     }
     
+    // 📝 Extract verbatim Google review snippets (max 3, only for Tier 2 & 3)
+    // CRITICAL: These are verbatim quotes, not AI summaries
+    let googleReviewSnippets: ChatResponse['googleReviewSnippets'] = undefined
+    
+    // Only add review snippets for Tier 2 or Tier 3 responses (not Tier 1)
+    // Tier 1 has carousel cards - snippets are for text-only tiers
+    if ((liteBusinesses && liteBusinesses.length > 0) || (fallbackBusinesses && fallbackBusinesses.length > 0)) {
+      // Pick first business with reviews from either Lite or Fallback
+      const businessWithReviews = liteBusinesses?.find(b => 
+        b.google_reviews_highlights && Array.isArray(b.google_reviews_highlights) && b.google_reviews_highlights.length > 0
+      ) || fallbackBusinesses?.find(b => 
+        b.google_reviews_highlights && Array.isArray(b.google_reviews_highlights) && b.google_reviews_highlights.length > 0
+      )
+      
+      if (businessWithReviews && businessWithReviews.google_reviews_highlights) {
+        const reviews = businessWithReviews.google_reviews_highlights
+        
+        // Take max 3 verbatim snippets
+        const snippets = reviews.slice(0, 3).map((review: any) => ({
+          text: review.text || '',
+          author: review.author || 'Anonymous',
+          rating: review.rating || 5
+        })).filter((s: any) => s.text.length > 0) // Only include non-empty reviews
+        
+        if (snippets.length > 0) {
+          googleReviewSnippets = {
+            businessName: businessWithReviews.business_name,
+            businessId: businessWithReviews.id,
+            google_place_id: businessWithReviews.google_place_id,
+            snippets
+          }
+          
+          console.log(`📝 Including ${snippets.length} verbatim Google review snippets for ${businessWithReviews.business_name}`)
+        }
+      }
+    }
+    
     return {
       success: true,
       response: aiResponse,
@@ -888,6 +938,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       businessCarousel, // Only populated when user asks for list/map
       walletActions,
       eventCards,
+      googleReviewSnippets, // Verbatim snippets with attribution
       modelUsed: modelToUse,
       classification
     }

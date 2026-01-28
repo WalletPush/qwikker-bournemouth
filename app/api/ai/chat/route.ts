@@ -197,6 +197,7 @@ export async function POST(request: NextRequest) {
       businessCarousel: result.businessCarousel,
       walletActions: result.walletActions,
       eventCards: result.eventCards,
+      googleReviewSnippets: result.googleReviewSnippets,
       metadata: {
         city,
         userName,
