@@ -219,7 +219,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
     { id: 'overview', label: 'Overview', count: null },
     { id: 'menu', label: 'Menu', count: business.menuPreview?.length || 0 },
     { id: 'offers', label: 'Offers', count: businessOffers.length },
-    { id: 'reviews', label: 'Reviews', count: business.reviewCount || 0 },
+    { id: 'reviews', label: 'What People Think', count: null }, // Changed from "Reviews" to "What People Think"
   ]
 
   // Reviews are from Google Places - link to Google Maps to view them
@@ -889,103 +889,139 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
 
         {activeTab === 'reviews' && (
           <div className="space-y-4">
-            {business.reviews && business.reviews.length > 0 ? (
-              <>
-                {/* Display real Google reviews */}
-                {business.reviews.map((review: any, index: number) => (
-                  <Card key={index} className="bg-slate-800/50 border-slate-700">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        {review.profile_photo ? (
-                          <img 
-                            src={review.profile_photo} 
-                            alt={review.author}
-                            className="w-12 h-12 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-slate-400">
-                            {review.author.charAt(0)}
+            {/* 💚 What People Think - New 3-block structure */}
+            
+            {/* Block A: Google Trust Signal (rating + count + link, NO review text for claimed) */}
+            {(business.rating || business.reviewCount) && (
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-100 mb-2">Google Rating</h3>
+                      <div className="flex items-center gap-3">
+                        {business.rating && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl font-bold text-yellow-400">⭐ {business.rating.toFixed(1)}</span>
+                            <span className="text-slate-400">
+                              {business.reviewCount ? `(${business.reviewCount} reviews)` : ''}
+                            </span>
                           </div>
                         )}
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <p className="text-slate-100 font-semibold">{review.author}</p>
-                              <p className="text-slate-400 text-sm">{review.time}</p>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              {[...Array(5)].map((_, i) => (
-                                <svg
-                                  key={i}
-                                  className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-slate-600'}`}
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                              ))}
-                            </div>
-                          </div>
-                          <p className="text-slate-300 leading-relaxed">{review.text}</p>
-                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                
-                {/* Link to see all reviews on Google */}
-                {business.google_place_id && (
-                  <Card className="bg-slate-800/50 border-slate-700">
-                    <CardContent className="p-6 text-center">
-                      <p className="text-slate-400 mb-4">
-                        See what customers are saying on Google
-                      </p>
-                      <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
-                        <a 
-                          href={`https://www.google.com/maps/place/?q=place_id:${business.google_place_id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2"
-                        >
-                          View {business.name} on Google
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
-            ) : (
-              /* No reviews available - show placeholder */
-              <Card className="bg-slate-800/50 border-slate-700">
-                <CardContent className="p-8 text-center">
-                  <div className="mb-4">
-                    <svg className="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                    </svg>
-                    <h3 className="text-xl font-semibold text-slate-100 mb-2">
-                      {business.reviewCount ? `${business.reviewCount} Reviews` : 'Customer Reviews'}
-                    </h3>
-                    <p className="text-slate-400 mb-6">
-                      See what customers are saying on Google
-                    </p>
+                    </div>
                     {business.google_place_id && (
-                      <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+                      <Button asChild size="sm" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
                         <a 
                           href={`https://www.google.com/maps/place/?q=place_id:${business.google_place_id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2"
                         >
-                          View {business.name} on Google
+                          View on Google
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
                         </a>
                       </Button>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Block B: Qwikker Vibes (💚 Experience Signals) */}
+            {business.vibes ? (
+              <Card className="bg-slate-800/50 border-slate-700 border-l-4 border-l-[#00d083]">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                    <span>💚</span>
+                    <span>Qwikker Vibes</span>
+                  </h3>
+                  {business.vibes.total_vibes === 0 ? (
+                    <p className="text-slate-400 text-sm">
+                      Be the first to share your vibe for this place
+                    </p>
+                  ) : business.vibes.total_vibes >= 1 && business.vibes.total_vibes <= 4 ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-300 text-sm">
+                        {business.vibes.total_vibes} {business.vibes.total_vibes === 1 ? 'vibe' : 'vibes'} from Qwikker users
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <div className="text-3xl font-bold text-[#00d083]">
+                          {business.vibes.positive_percentage}%
+                        </div>
+                        <div className="text-slate-400 text-sm mt-1">
+                          positive ({business.vibes.total_vibes} {business.vibes.total_vibes === 1 ? 'vibe' : 'vibes'})
+                        </div>
+                      </div>
+                      <div className="flex-1 space-y-1.5">
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-slate-400 w-24">♥ Loved it</span>
+                          <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-[#00d083]" 
+                              style={{ width: `${(business.vibes.loved_it_count / business.vibes.total_vibes) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-slate-400 w-8 text-right">{business.vibes.loved_it_count}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-slate-400 w-24">✓ It was good</span>
+                          <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-emerald-600" 
+                              style={{ width: `${(business.vibes.it_was_good_count / business.vibes.total_vibes) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-slate-400 w-8 text-right">{business.vibes.it_was_good_count}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-slate-400 w-24">— Not for me</span>
+                          <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-slate-500" 
+                              style={{ width: `${(business.vibes.not_for_me_count / business.vibes.total_vibes) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-slate-400 w-8 text-right">{business.vibes.not_for_me_count}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {/* Block C: About (business description/tagline from claim form) */}
+            {(business.business_description || business.business_tagline) && (
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold text-slate-100 mb-3">About {business.name}</h3>
+                  {business.business_description && (
+                    <p className="text-slate-300 leading-relaxed mb-3">{business.business_description}</p>
+                  )}
+                  {business.business_tagline && !business.business_description && (
+                    <p className="text-slate-400 italic">{business.business_tagline}</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Empty state if no content at all */}
+            {!business.rating && !business.reviewCount && !business.vibes && !business.business_description && !business.business_tagline && (
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardContent className="p-8 text-center">
+                  <div className="mb-4">
+                    <svg className="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                    <h3 className="text-xl font-semibold text-slate-100 mb-2">What People Think</h3>
+                    <p className="text-slate-400">
+                      Be the first to share your experience with this business
+                    </p>
                   </div>
                 </CardContent>
               </Card>

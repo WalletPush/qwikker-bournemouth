@@ -9,6 +9,7 @@ import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { trackBusinessVisit } from '@/lib/actions/business-visit-actions'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
+import { getBusinessVibeStats } from '@/lib/utils/vibes'
 
 
 interface BusinessDetailPageProps {
@@ -153,6 +154,17 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
     return true // Default to showing if we can't determine
   })
   
+  // 💚 Fetch vibes for all active businesses
+  const vibesMap = new Map()
+  await Promise.all(
+    (activeBusinesses || []).map(async (business) => {
+      const vibes = await getBusinessVibeStats(business.id)
+      if (vibes) {
+        vibesMap.set(business.id, vibes)
+      }
+    })
+  )
+  
   // Transform real businesses to match expected format
   const realBusinesses = (activeBusinesses || []).map(business => {
     // Check if business has secret menu items
@@ -214,6 +226,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       rating: business.rating || 4.5,
       reviewCount: business.review_count || Math.floor(Math.random() * 50) + 10,
       reviews: business.google_reviews_highlights || [],
+      vibes: vibesMap.get(business.id) || null, // 💚 Qwikker Vibes stats
       google_primary_type: business.google_primary_type,
       google_place_id: business.google_place_id,
       auto_imported: business.auto_imported,

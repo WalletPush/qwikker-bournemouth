@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-01-28  
 **Branch:** `ai-eligible-toggle`  
-**Status:** Ready for testing / Phase 0 (Qwikker Vibes)  
+**Status:** ⚠️ **VIBES MVP IS PRE-LAUNCH CRITICAL** (not post-launch)  
 
 ---
 
@@ -161,36 +161,64 @@ After SQL migration + TypeScript updates:
 
 ---
 
-## 🚀 **POST-LAUNCH (Phase 1: Qwikker Vibes)**
+## 🔴 **PRE-LAUNCH CRITICAL: Qwikker Vibes MVP**
 
-**Timeline:** 4-6 weeks after launch
+**⚠️ STRATEGIC SHIFT:** Vibes is NOT a "phase 2 feature" - **it's core product positioning.**
 
-### **Phase 1: Basic Vibe Collection (Week 1)**
-- [ ] Create `qwikker_vibes` table
-- [ ] Create `vibe_tags` table
-- [ ] Add wallet-pass vibe prompt (after directions tap)
-- [ ] Implement 3-level rating (🔥/🙂/😕)
-- [ ] Basic aggregation logic
+**Timeline:** 2-3 days (BEFORE launch)
 
-### **Phase 2: Tag Selection (Week 2)**
-- [ ] Add tag selection UI
-- [ ] Tag library (atmosphere, service, value, etc.)
-- [ ] Store tag associations
-- [ ] Calculate top tags per business
+### **Why This Is Pre-Launch Critical:**
 
-### **Phase 3: Display & Chat Integration (Week 3)**
-- [ ] Show vibes on business detail page
-- [ ] Add vibe % to chat responses
-- [ ] Include top tags in AI prompts
-- [ ] Update "What People Think" tab UI
+**Without Vibes:**
+> "AI directory with Google ratings"
 
-### **Phase 4: Business Analytics (Week 4)**
-- [ ] Dashboard vibe metrics
-- [ ] Trend analysis
-- [ ] Comparative insights
-- [ ] Tag breakdown
+**With Vibes:**
+> "AI that understands the type of experience places give"
 
-**Full roadmap:** `/QWIKKER_VIBES_ROADMAP.md`
+**That's a category difference.**
+
+---
+
+### **Vibes MVP Checklist (2-3 Days):**
+
+#### **Day 1: Database + Capture**
+- [ ] Create `qwikker_vibes` table (simple: business_id, user_id, vibe_rating)
+- [ ] Create `POST /api/vibes/submit` route
+- [ ] Add vibe prompt UI (bottom sheet: 🔥/🙂/😕)
+- [ ] Wire up triggers (directions, call, offer saved)
+- [ ] Test submission flow
+
+#### **Day 2: Display + Aggregation**
+- [ ] Create `getBusinessVibes()` utility
+- [ ] Add vibes display to business detail page
+- [ ] Implement "0 vibes" invitation copy ("✨ Be the first")
+- [ ] Implement "1-4 vibes" early feedback copy
+- [ ] Implement "5+ vibes" percentage display
+- [ ] Test all three states
+
+#### **Day 3: AI Integration**
+- [ ] Add vibes to business context in `lib/ai/hybrid-chat.ts`
+- [ ] Update AI prompts to include vibe data (when >= 5)
+- [ ] Test chat responses with/without vibes
+- [ ] Verify no awkward "no data" language
+- [ ] Test all three tiers (Paid/Lite/Fallback)
+
+---
+
+### **What We're NOT Building (Can Be Post-Launch):**
+- ❌ Tag selection (phase 2)
+- ❌ Advanced analytics (phase 2)
+- ❌ Trend analysis (phase 2)
+- ❌ Comparative insights (phase 2)
+
+### **What We ARE Building (MVP):**
+- ✅ 3-level vibe capture (🔥/🙂/😕)
+- ✅ Basic storage (business_id, user_id, vibe_rating)
+- ✅ Simple display (percentage + count)
+- ✅ AI integration (mention in chat responses)
+
+**Full implementation guide:** `/VIBES_MVP_PRE_LAUNCH.md`  
+**Full roadmap (post-launch enhancements):** `/QWIKKER_VIBES_ROADMAP.md`
 
 ---
 
@@ -223,14 +251,47 @@ After SQL migration + TypeScript updates:
 
 ---
 
-## 🎯 **Immediate Next Steps**
+## 🎯 **Immediate Next Steps (REVISED PRIORITY)**
+
+### **🔴 PRIORITY 1: Vibes MVP (2-3 Days - PRE-LAUNCH)**
+
+**This is now pre-launch critical, not post-launch.**
+
+1. **Day 1:** Database + Capture
+   - Create `qwikker_vibes` table
+   - Build `POST /api/vibes/submit` route
+   - Add vibe prompt UI (🔥/🙂/😕 bottom sheet)
+   
+2. **Day 2:** Display + Aggregation
+   - Create `getBusinessVibes()` utility
+   - Add vibes display to business pages
+   - Implement "0 vibes" invitation UX
+   
+3. **Day 3:** AI Integration
+   - Add vibes to chat context
+   - Update AI prompts
+   - Test all tiers
+
+**See:** `/VIBES_MVP_PRE_LAUNCH.md` (complete implementation guide)
+
+---
+
+### **🟡 PRIORITY 2: Three-Tier Chat System (Parallel Track)**
 
 1. **Review SQL script** (`three-tier-chat-system.sql`)
 2. **Run SQL migration** in Supabase (Darryl)
 3. **Verify DB changes** (check verification queries)
 4. **Update TypeScript** (follow plan: Phase 1)
 5. **Test all three tiers** (see testing checklist above)
-6. **Deploy to main** (after testing on `ai-eligible-toggle` branch)
+
+---
+
+### **🟢 PRIORITY 3: Deploy to Main**
+
+After both tracks complete:
+- Test on `ai-eligible-toggle` branch
+- Merge to `main`
+- Deploy
 
 ---
 
