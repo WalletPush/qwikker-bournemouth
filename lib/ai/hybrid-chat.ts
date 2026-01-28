@@ -892,22 +892,24 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       }
     }
     
-    // 📝 Extract verbatim Google review snippets (max 3, only for Tier 2 & 3)
+    // 📝 Extract verbatim Google review snippets (ONLY for UNCLAIMED businesses)
     // CRITICAL: These are verbatim quotes, not AI summaries
+    // STRATEGIC: Claimed businesses use their own descriptions/menus (premium positioning)
     let googleReviewSnippets: ChatResponse['googleReviewSnippets'] = undefined
     
-    // Only add review snippets for Tier 2 or Tier 3 responses (not Tier 1)
-    // Tier 1 has carousel cards - snippets are for text-only tiers
-    if ((liteBusinesses && liteBusinesses.length > 0) || (fallbackBusinesses && fallbackBusinesses.length > 0)) {
-      // Pick first business with reviews from either Lite or Fallback
-      const businessWithReviews = liteBusinesses?.find(b => 
-        b.google_reviews_highlights && Array.isArray(b.google_reviews_highlights) && b.google_reviews_highlights.length > 0
-      ) || fallbackBusinesses?.find(b => 
-        b.google_reviews_highlights && Array.isArray(b.google_reviews_highlights) && b.google_reviews_highlights.length > 0
+    // ONLY show review text for UNCLAIMED businesses (Tier 3 fallback)
+    // Tier 1 (Paid) & Tier 2 (Claimed-Free) use business-provided content instead
+    if (fallbackBusinesses && fallbackBusinesses.length > 0) {
+      // Pick first UNCLAIMED business with reviews
+      const unclaimedBusinessWithReviews = fallbackBusinesses.find(b => 
+        b.status === 'unclaimed' &&
+        b.google_reviews_highlights && 
+        Array.isArray(b.google_reviews_highlights) && 
+        b.google_reviews_highlights.length > 0
       )
       
-      if (businessWithReviews && businessWithReviews.google_reviews_highlights) {
-        const reviews = businessWithReviews.google_reviews_highlights
+      if (unclaimedBusinessWithReviews && unclaimedBusinessWithReviews.google_reviews_highlights) {
+        const reviews = unclaimedBusinessWithReviews.google_reviews_highlights
         
         // Take max 3 verbatim snippets
         const snippets = reviews.slice(0, 3).map((review: any) => ({
@@ -918,13 +920,13 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         if (snippets.length > 0) {
           googleReviewSnippets = {
-            businessName: businessWithReviews.business_name,
-            businessId: businessWithReviews.id,
-            google_place_id: businessWithReviews.google_place_id,
+            businessName: unclaimedBusinessWithReviews.business_name,
+            businessId: unclaimedBusinessWithReviews.id,
+            google_place_id: unclaimedBusinessWithReviews.google_place_id,
             snippets
           }
           
-          console.log(`📝 Including ${snippets.length} verbatim Google review snippets for ${businessWithReviews.business_name}`)
+          console.log(`📝 Including ${snippets.length} verbatim Google review snippets for UNCLAIMED business: ${unclaimedBusinessWithReviews.business_name}`)
         }
       }
     }

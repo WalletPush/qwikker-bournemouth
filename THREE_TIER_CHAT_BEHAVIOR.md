@@ -644,7 +644,51 @@ return {
 
 ---
 
-## 📊 Google Review Data: Safe Usage Rules
+## 🎯 **Strategic Positioning: Discovery Engine, Not Review Platform**
+
+**Qwikker is:**
+- ✅ AI-guided venue discovery powered by business intelligence
+- ✅ Menu-first recommendations (not crowd noise)
+- ✅ Structured data over generic reviews
+
+**Qwikker is NOT:**
+- ❌ A review aggregator
+- ❌ A review curation platform  
+- ❌ Competing with Google/Yelp on reviews
+
+---
+
+## 📊 **Final Model: When To Show Google Reviews**
+
+| Business State | Chat Uses | UI Shows |
+|----------------|-----------|----------|
+| **Unclaimed** (Tier 3) | Rating + generic themes | ✅ Google reviews (verbatim + attribution) |
+| **Claimed Free** (Tier 2) | Description + menu_preview | ❌ NO Google review text |
+| **Paid** (Tier 1) | Description + menu + offers + secret | ❌ NO Google review text |
+
+### Why This Works:
+
+**Unclaimed Businesses:**
+- Only have third-party info (Google data)
+- Reviews = social proof that the place exists and is credible
+- Clear framing: "Customer reviews (via Google)"
+
+**Claimed Businesses (Free & Paid):**
+- Have direct, verified information from the business
+- Win through structured intelligence, not crowd noise
+- Framing: "About this venue (provided by the business)"
+
+### Strategic Benefits:
+
+✅ **Legal:** Nothing illegal about only showing reviews for some listings  
+✅ **Premium Positioning:** Claimed = more official, not less reviewed  
+✅ **No Refresh Hell:** No 30-day rule, no 5-review limits, no moderation  
+✅ **Monetization:** Paid businesses win through AI intelligence, not reviews  
+✅ **Differentiation:** "Your value is structured intelligence" (not commodity reviews)  
+
+---
+
+## 📊 Google Review Data: Technical Details
 
 ### What We Currently Import from Google Places:
 ```typescript
@@ -763,6 +807,112 @@ This gives you clean, monetizable "Known for" data with ZERO Google ToS risk.
 
 ---
 
-**Document Version:** 1.1  
-**Last Updated:** 2026-01-27  
-**Implementation Status:** Database complete, awaiting TypeScript changes
+## 💬 **UX Copy Guidance: Explaining The Difference**
+
+### **For UNCLAIMED Businesses (Business Detail Page):**
+
+```
+┌─────────────────────────────────────────┐
+│  Customer Reviews (via Google)          │
+│                                          │
+│  ⭐ 4.6 (89 reviews)                    │
+│                                          │
+│  "The atmosphere in the bar is lovely…"  │
+│  "Cocktail choices are fun…"             │
+│  "Very expensive, but expected…"         │
+│                                          │
+│  [Read all reviews on Google →]         │
+│                                          │
+│  _Ratings and reviews provided by Google_│
+└─────────────────────────────────────────┘
+```
+
+**This communicates:** "We only have third-party info here."
+
+---
+
+### **For CLAIMED Businesses (Business Detail Page):**
+
+```
+┌─────────────────────────────────────────┐
+│  About This Venue                        │
+│  ✓ Verified by business owner            │
+│                                          │
+│  Tagline:                                │
+│  "Authentic wood-fired Neapolitan pizza" │
+│                                          │
+│  Description:                            │
+│  We specialize in house-made pasta and   │
+│  wood-fired pizza, using only the        │
+│  finest imported Italian ingredients...  │
+│                                          │
+│  Highlights:                             │
+│  • Wood-fired oven                       │
+│  • Cosy candle-lit atmosphere            │
+│  • Family-owned since 2018               │
+│                                          │
+│  💡 This venue has provided verified     │
+│     information directly to Qwikker      │
+└─────────────────────────────────────────┘
+```
+
+**This communicates:** They feel MORE official, not less reviewed.
+
+---
+
+### **Chat Response Examples:**
+
+**Unclaimed (Tier 3):**
+```
+⭐ 4.6 rated Mediterranean restaurant (0.6 miles away)
+
+Based on Google reviews, customers mention:
+• Lovely atmosphere
+• Classic cocktails  
+• West End pricing
+
+📞 Call ahead to confirm menu options
+```
+
+**Claimed (Tier 1 & 2):**
+```
+They specialize in house-made pasta and wood-fired pizza, 
+known for their cosy candle-lit atmosphere.
+
+Menu highlights:
+• Truffle arancini (secret menu)
+• Margherita pizza - £12
+• Tiramisu - £6.50
+
+Offer: 2-for-1 pizzas after 9pm
+```
+
+**The Difference:**
+- Unclaimed = Social proof (ratings + generic themes)
+- Claimed = Intelligent venue knowledge (structured data)
+
+---
+
+### **When Businesses Claim (Onboarding Copy):**
+
+```
+┌─────────────────────────────────────────┐
+│  📝 Your Description Powers Qwikker AI  │
+│                                          │
+│  Qwikker's AI uses your description and  │
+│  highlights to recommend your venue.     │
+│                                          │
+│  The better this section is, the more    │
+│  accurately we match you to customers.   │
+│                                          │
+│  ✨ This isn't fluff - it feeds the AI   │
+└─────────────────────────────────────────┘
+```
+
+**This makes businesses understand:** Their content = AI intelligence, not just marketing copy.
+
+---
+
+**Document Version:** 1.2  
+**Last Updated:** 2026-01-28  
+**Implementation Status:** Option A (verbatim snippets) implemented, Option B (Qwikker Vibes) roadmap ready
