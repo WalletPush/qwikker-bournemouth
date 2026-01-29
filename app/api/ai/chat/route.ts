@@ -154,20 +154,17 @@ export async function POST(request: NextRequest) {
         needsLocation: false,
         showAtlasCta: false,
         sources: [],
-        quickReplies: ['Show me offers', 'Find restaurants', 'What\'s new?']
+        quickReplies: [] // REMOVED: Let users type what they want
       })
     }
     
-    // Determine if we should show Atlas CTA
-    const showAtlasCta = !!(result.hasBusinessResults || isNearMeQuery)
+    // CRITICAL FIX: Only show Atlas CTA when we have ACTUAL carousel results
+    // hasBusinessResults = KB hits (can be non-zero even if carousel is empty after filters)
+    const hasActualBusinessResults = !!(result.businessCarousel && result.businessCarousel.length > 0)
+    const showAtlasCta = hasActualBusinessResults
     
-    // Generate deterministic quick replies (NOT from model)
-    const quickReplies = generateDeterministicQuickReplies(
-      intent,
-      false, // needsLocation is already handled above
-      !!result.hasBusinessResults,
-      !!(result.eventCards && result.eventCards.length > 0)
-    )
+    // REMOVED: Quick replies are irrelevant and annoying - users can just type what they want
+    const quickReplies: string[] = []
     
     if (process.env.NODE_ENV === 'development') {
       console.log('✨ Quick replies (server-generated, NOT from model):', quickReplies)
@@ -222,7 +219,7 @@ export async function POST(request: NextRequest) {
       needsLocation: false,
       showAtlasCta: false,
       sources: [],
-      quickReplies: ['Show me offers', 'Find restaurants', 'Try again'],
+      quickReplies: [], // REMOVED: Let users type what they want
       error: 'Internal server error'
     }, { status: 500 })
   }

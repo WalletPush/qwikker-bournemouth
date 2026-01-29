@@ -784,39 +784,152 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         console.log(`💚 Found vibes for ${vibesMap.size} businesses (5+ vibes each)`)
       }
       
-      // 🎯 THREE-TIER CHAT SYSTEM: Query Tier 2 & Tier 3
+      // 🎯 THREE-TIER CHAT SYSTEM: Browse Fill + Intent Relevance Gating
       // TIER 1: Paid/Trial (already queried above via business_profiles_chat_eligible)
-      // TIER 2: Claimed-Free "Lite" (query always, append below paid)
-      // TIER 3: Unclaimed Fallback (query ONLY if Tier 1 AND Tier 2 are empty)
+      // TIER 2: Claimed-Free "Lite" (query always, append below paid, max 2)
+      // TIER 3: Unclaimed Fallback (query based on browse mode OR intent relevance)
       
-      // Query Tier 2: Claimed-Free businesses with featured items
+      // Import intent detection and scoring
+      const { detectBrowse, detectIntent } = await import('./intent-detector')
+      const { scoreBusinessRelevance } = await import('./relevance-scorer')
+      
+      // Detect user intent
+      const browseMode = detectBrowse(userMessage, conversationHistory[conversationHistory.length - 2]?.mode)
+      const intent = detectIntent(userMessage)
+      
+      console.log(`🎯 Browse mode: ${browseMode.mode}, Intent: ${intent.hasIntent ? intent.categories.join(', ') : 'none'}`)
+      
+      // Query Tier 2: Claimed-Free businesses with featured items (max 2 to preserve premium perception)
       console.log('💼 Querying Tier 2: Claimed-Free Lite businesses')
+      const MAX_TIER2_IN_TOP = 2
       const { data: liteBusinesses } = await supabase
         .from('business_profiles_lite_eligible')
         .select('*')
         .eq('city', city)
-        .limit(3) // Max 3 Lite cards
+        .limit(MAX_TIER2_IN_TOP)
       
       console.log(`💼 Found ${liteBusinesses?.length || 0} Lite businesses`)
       
-      // Query Tier 3: Unclaimed fallback directory (ONLY if Tier 1 AND Tier 2 are empty)
+      // THREE-TIER LOGIC: Browse Fill + Intent Relevance Gating
       // (fallbackBusinesses declared in outer scope)
-      const hasPaidResults = (businesses && businesses.length > 0)
-      const hasLiteResults = (liteBusinesses && liteBusinesses.length > 0)
+      let topMatchesText: any[] = [] // Tier 3 that beats irrelevant Tier 1
       
-      if (!hasPaidResults && !hasLiteResults && hasBusinessResults) {
-        console.log('💡 No paid or lite results - querying Tier 3: Fallback directory')
+      const TARGET_RESULTS = 8
+      const MIN_RELEVANT_FOR_INTENT = 2
+      const MIN_TIER1_TOP_SCORE = 3
+      const MAX_TIER3_WHEN_PAID_RELEVANT = 2
+      const MAX_TIER3_IN_MORE = 3
+      
+      if (browseMode.mode === 'browse' || browseMode.mode === 'browse_more') {
+        // BROWSE MODE: Always fill with Tier 3
+        console.log('📚 BROWSE MODE: Fetching Tier 3 to fill inventory')
         
-        const { data: fallbackData } = await supabase
-          .from('business_profiles_ai_fallback_pool')
-          .select('*')
-          .eq('city', city)
-          .limit(6)
+        // Reset offset on new browse
+        const browseOffset = browseMode.mode === 'browse' ? 0 : (conversationHistory[conversationHistory.length - 1]?.browseOffset || 0)
         
-        if (fallbackData && fallbackData.length > 0) {
-          fallbackBusinesses = fallbackData
-          console.log(`💡 Found ${fallbackBusinesses.length} fallback contacts`)
+        const tier1Count = businesses?.length || 0
+        const tier2Count = Math.min(liteBusinesses?.length || 0, MAX_TIER2_IN_TOP)
+        const combinedCount = tier1Count + tier2Count
+        
+        if (combinedCount < TARGET_RESULTS) {
+          const tier3Limit = TARGET_RESULTS - combinedCount
+          const { data: tier3 } = await supabase
+            .from('business_profiles_ai_fallback_pool')
+            .select('*')
+            .eq('city', city)
+            .order('rating', { ascending: false, nullsLast: true })
+            .order('review_count', { ascending: false, nullsLast: true })
+            .order('business_name', { ascending: true })
+            .range(browseOffset, browseOffset + tier3Limit - 1)
+          
+          fallbackBusinesses = tier3 || []
+          
+          // Track offset for next "more" query
+          conversationHistory.push({
+            mode: 'browse',
+            browseOffset: browseOffset + fallbackBusinesses.length
+          })
+          
+          console.log(`📚 Filled with ${fallbackBusinesses.length} Tier 3 businesses (offset: ${browseOffset})`)
         }
+        
+      } else if (intent.hasIntent) {
+        // INTENT MODE: Score relevance, fetch Tier 3 if needed
+        console.log(`🎯 INTENT MODE: Checking relevance for "${intent.categories.join(', ')}"`)
+        
+        const tier1WithScores = businesses.map(b => ({
+          ...b,
+          relevanceScore: scoreBusinessRelevance(b, intent)
+        }))
+        
+        const tier1RelevantCount = tier1WithScores.filter(b => b.relevanceScore >= 2).length
+        const maxTier1Score = Math.max(...tier1WithScores.map(b => b.relevanceScore), 0)
+        
+        const tier1HasEnoughRelevant = tier1RelevantCount >= MIN_RELEVANT_FOR_INTENT
+        const tier1HasStrongTop = maxTier1Score >= MIN_TIER1_TOP_SCORE
+        
+        console.log(`🎯 Tier 1: ${tier1RelevantCount} relevant, max score: ${maxTier1Score}`)
+        console.log(`🎯 hasEnoughRelevant: ${tier1HasEnoughRelevant}, hasStrongTop: ${tier1HasStrongTop}`)
+        
+        // Only skip Tier 3 if BOTH conditions met
+        const shouldFetchTier3 = !tier1HasEnoughRelevant || !tier1HasStrongTop
+        
+        if (shouldFetchTier3) {
+          console.log(`🎯 Tier 1 weak - fetching Tier 3`)
+          
+          const { data: tier3 } = await supabase
+            .from('business_profiles_ai_fallback_pool')
+            .select('*')
+            .eq('city', city)
+            .order('rating', { ascending: false, nullsLast: true })
+            .order('review_count', { ascending: false, nullsLast: true })
+            .order('business_name', { ascending: true })
+            .limit(10)
+          
+          const tier3WithScores = (tier3 || [])
+            .map(b => ({
+              ...b,
+              relevanceScore: scoreBusinessRelevance(b, intent),
+              tierSource: 'tier3'
+            }))
+            .filter(b => b.relevanceScore > 0) // GUARDRAIL: Filter out zero-score results
+          
+          if (tier1HasEnoughRelevant) {
+            // Tier 1 has enough relevant matches (2+) - Tier 3 is just an assist
+            fallbackBusinesses = tier3WithScores
+              .sort((a, b) => b.relevanceScore - a.relevanceScore)
+              .slice(0, MAX_TIER3_WHEN_PAID_RELEVANT)
+            
+            console.log(`🎯 Tier 1 has ${tier1RelevantCount} relevant - showing ${fallbackBusinesses.length} Tier 3 assist`)
+            
+          } else {
+            // Tier 1 is genuinely irrelevant (< 2 relevant) - Tier 3 dominates
+            const tier3Top = tier3WithScores
+              .sort((a, b) => b.relevanceScore - a.relevanceScore)
+              .slice(0, 6)
+            
+            // CRITICAL: Put best Tier 3 in topMatchesText (shown first as text)
+            topMatchesText = tier3Top
+            
+            // Remaining Tier 3 goes to "more options" - use ID tracking to avoid .includes() bug
+            const topIds = new Set(tier3Top.map(b => b.id))
+            fallbackBusinesses = tier3WithScores
+              .filter(b => !topIds.has(b.id))
+              .slice(0, MAX_TIER3_IN_MORE)
+            
+            console.log(`🎯 Tier 1 irrelevant - showing ${topMatchesText.length} Tier 3 as top matches`)
+          }
+        } else {
+          console.log(`✅ Tier 1 sufficient (${tier1RelevantCount} relevant, max score ${maxTier1Score})`)
+        }
+        
+        // Track mode for next query
+        conversationHistory.push({ mode: 'intent' })
+        
+      } else {
+        // CONVERSATIONAL: Tier 1 only, no fill
+        console.log('💬 CONVERSATIONAL MODE: Tier 1 only')
+        conversationHistory.push({ mode: 'chat' })
       }
       
       // STEP 3: Tier priority and exclusions
@@ -825,27 +938,67 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       // If a business appears in this view, it's safe to show in chat
       
       // STEP 4: UI Mode classifier (deterministic carousel gating)
+      // CRITICAL FIX: Carousel should NOT show on browse queries or when Tier 1 is irrelevant
       const msg = userMessage.toLowerCase()
       const wantsMap = /\b(map|atlas|on the map|pins|show.*location|where.*located)\b/.test(msg)
-      const wantsList = /\b(show|list|options|recommend|suggest|places|where should|near me|results|give me)\b/.test(msg)
       
-      // ✅ FIX: Don't redeclare uiMode (use assignment only)
+      // ✅ FIXED: Browse queries should NOT trigger carousel
+      // Carousel only for:
+      // - Map queries (explicit "show on atlas")
+      // - Intent queries where Tier 1 is relevant
       if (wantsMap) {
         uiMode = 'map'
-      } else if (wantsList) {
+        shouldAttachCarousel = true
+      } else if (browseMode.mode !== 'not_browse') {
+        // Browse mode = NO carousel, just text list
         uiMode = 'suggestions'
-      } else {
+        shouldAttachCarousel = false
+        console.log('🚫 Browse mode - carousel DISABLED')
+      } else if (intent.hasIntent && topMatchesText.length > 0) {
+        // Intent mode with Tier 1 irrelevant = NO carousel, Tier 3 shows first
         uiMode = 'conversational'
+        shouldAttachCarousel = false
+        console.log('🚫 Intent mode with weak Tier 1 - carousel DISABLED, Tier 3 shows first')
+      } else {
+        // Default: conversational with carousel if results exist
+        uiMode = 'conversational'
+        shouldAttachCarousel = uniqueBusinessIds.length > 0
       }
-      
-      // ✅ FIX: Don't redeclare shouldAttachCarousel (use assignment only)
-      shouldAttachCarousel = uiMode !== 'conversational'
       
       console.log(`🎨 UI Mode: ${uiMode}, shouldAttachCarousel: ${shouldAttachCarousel}`)
       
       // STEP 5: Build final carousel (PAID-ONLY)
       // 🎯 MONETIZATION: Carousel cards are EXCLUSIVE to paid/trial tiers
       // Free tier (Tier 2 & 3) = text-only mentions (clear upsell incentive)
+      // CRITICAL: If topMatchesText exists (Tier 1 was irrelevant), add it FIRST before carousel
+      if (topMatchesText && topMatchesText.length > 0) {
+        let topMatchesSection = "\n\n**Top matches:**\n"
+        topMatchesSection += "_These venues match your request best:_\n\n"
+        
+        topMatchesText.slice(0, 6).forEach(b => {
+          // Generate slug from business name
+          const slug = b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+          topMatchesSection += `• [**${b.business_name}**](/user/business/${slug})`
+          if (b.display_category) {
+            topMatchesSection += ` - ${b.display_category}`
+          }
+          if (b.rating && b.review_count) {
+            topMatchesSection += ` (${b.rating}★ from ${b.review_count} Google reviews)`
+          }
+          if (b.phone) {
+            topMatchesSection += `\n  📞 ${b.phone}`
+          }
+          topMatchesSection += `\n`
+        })
+        
+        topMatchesSection += "\n_Some places haven't claimed their listing yet — details may be limited._\n"
+        topMatchesSection += "_Ratings and reviews data provided by Google_"
+        
+        aiResponse = aiResponse + topMatchesSection
+        
+        console.log(`🎯 Added ${topMatchesText.length} Tier 3 top matches FIRST (Tier 1 was irrelevant)`)
+      }
+      
       if (shouldAttachCarousel && uniqueBusinessIds.length > 0) {
         // Build Tier 1 carousel (Paid/Trial ONLY)
         const paidCarousel = uniqueBusinessIds
@@ -906,7 +1059,9 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           let liteText = "\n\n**Also nearby (basic listings):**\n"
           
           liteBusinesses.slice(0, 3).forEach(b => {
-            liteText += `• **${b.business_name}**`
+            // Generate slug from business name
+            const slug = b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+            liteText += `• [**${b.business_name}**](/user/business/${slug})`
             if (b.display_category) {
               liteText += ` - ${b.display_category}`
             }
@@ -928,13 +1083,18 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           
           aiResponse = aiResponse + liteText
           
-        } else if (fallbackBusinesses && fallbackBusinesses.length > 0) {
-          // Add Fallback businesses as text-only mentions (ONLY if no paid and no lite)
-          let fallbackText = "\n\n**Other businesses in the area:**\n"
-          fallbackText += "_I don't have confirmed menu information for these venues yet — they're imported listings and may be incomplete._\n\n"
+        }
+        
+        // ALWAYS show fallbackBusinesses if they exist (browse fill or intent assist)
+        // These appear AFTER carousel/lite as "More places"
+        if (fallbackBusinesses && fallbackBusinesses.length > 0) {
+          let fallbackText = "\n\n**More places:**\n"
+          fallbackText += "_Some of these venues haven't claimed their listing yet — details may be limited._\n\n"
           
           fallbackBusinesses.slice(0, 5).forEach(b => {
-            fallbackText += `• **${b.business_name}**`
+            // Generate slug from business name
+            const slug = b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+            fallbackText += `• [**${b.business_name}**](/user/business/${slug})`
             if (b.display_category) {
               fallbackText += ` - ${b.display_category}`
             }
