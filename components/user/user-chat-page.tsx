@@ -498,6 +498,13 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
   const processAIResponse = (content: string, sources: any[] = []) => {
     let processedContent = content
 
+    // CRITICAL FIX: Parse markdown links FIRST (before bold text)
+    // Pattern: [**text**](/url) or [text](/url)
+    processedContent = processedContent.replace(/\[(\*\*)?([^\]]+)(\*\*)?\]\(([^)]+)\)/g, (match, bold1, text, bold2, url) => {
+      // Return as clickable link with proper styling
+      return `<a href="${url}" class="text-[#00d083] hover:text-[#00b86f] underline font-semibold cursor-pointer">${text}</a>`
+    })
+
     // Extract business names from sources
     const businessNames = sources
       .filter(source => source.type === 'business' && source.businessName)
@@ -507,13 +514,14 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
     const knownBusinessNames = [
       "David's Grill Shack", "Julie's Sports Pub", "Orchid & Ivy", 
       "Mike's Pool Bar", "Venezy Burgers", "David's grill shack", 
-      "Julie's sports pub", "davids grill shack", "julies sports pub"
+      "Julie's sports pub", "davids grill shack", "julies sports pub",
+      "Triangle GYROSS", "Kalimera Bournemouth" // Add Tier 3 businesses
     ]
     
     // Merge sources with known business names (remove duplicates)
     const allBusinessNames = [...new Set([...businessNames, ...knownBusinessNames])]
 
-    // Convert **text** to bold and make business names clickable
+    // Convert **text** to bold and make business names clickable (only if NOT already a link)
     processedContent = processedContent.replace(/\*\*(.*?)\*\*/g, (match, text) => {
       // Check if this bold text is a business name
       const isBusinessName = allBusinessNames.some(name => 

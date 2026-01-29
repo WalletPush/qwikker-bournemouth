@@ -719,6 +719,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     let uiMode: 'conversational' | 'suggestions' | 'map' = 'conversational'
     let shouldAttachCarousel = false // ✅ HOIST: Declare at top level so review fetch block can access
     let fallbackBusinesses: any[] = [] // Declare in outer scope so it's always accessible
+    let topMatchesText: any[] = [] // ✅ HOIST: Tier 3 that beats irrelevant Tier 1 (needed for review snippets)
     
     if (businessResults.success && businessResults.results.length > 0) {
       // STEP 1: Dedupe by business_id (KB returns multiple rows per business)
@@ -811,8 +812,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       console.log(`💼 Found ${liteBusinesses?.length || 0} Lite businesses`)
       
       // THREE-TIER LOGIC: Browse Fill + Intent Relevance Gating
-      // (fallbackBusinesses declared in outer scope)
-      let topMatchesText: any[] = [] // Tier 3 that beats irrelevant Tier 1
+      // (fallbackBusinesses and topMatchesText declared in outer scope)
       
       const TARGET_RESULTS = 8
       const MIN_RELEVANT_FOR_INTENT = 2
@@ -972,27 +972,46 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       // Free tier (Tier 2 & 3) = text-only mentions (clear upsell incentive)
       // CRITICAL: If topMatchesText exists (Tier 1 was irrelevant), add it FIRST before carousel
       if (topMatchesText && topMatchesText.length > 0) {
-        let topMatchesSection = "\n\n**Top matches:**\n"
-        topMatchesSection += "_These venues match your request best:_\n\n"
+        // CRITICAL FIX: Override AI response if it said "no results" but we're showing Tier 3
+        // This prevents the embarrassing "I don't have info" followed by showing results
+        const noResultsPatterns = [
+          /don'?t have any/i,
+          /don'?t have (specific )?info/i,
+          /don'?t have.*listed/i,
+          /no (specific )?(info|information|data)/i,
+          /can'?t find/i,
+          /not sure/i,
+          /don'?t see/i,
+          /not listed/i,
+          /currently don'?t have/i
+        ]
+        
+        const aiSaidNoResults = noResultsPatterns.some(pattern => pattern.test(aiResponse))
+        
+        if (aiSaidNoResults) {
+          // Replace with conversational, friend-like response
+          const categoryText = intent.categories.length > 0 ? intent.categories[0] : 'places'
+          aiResponse = `Oh yes! Check these ${categoryText} spots out:\n\n`
+          console.log(`🔄 OVERRIDE: AI said 'no results' but we have Tier 3 - replacing with friendly response`)
+        } else {
+          // Add friendly intro if AI response exists
+          aiResponse = aiResponse + `\n\n`
+        }
+        
+        let topMatchesSection = ''
         
         topMatchesText.slice(0, 6).forEach(b => {
           // Generate slug from business name
           const slug = b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-          topMatchesSection += `• [**${b.business_name}**](/user/business/${slug})`
-          if (b.display_category) {
-            topMatchesSection += ` - ${b.display_category}`
-          }
+          topMatchesSection += `🍴 [**${b.business_name}**](/user/business/${slug})`
           if (b.rating && b.review_count) {
-            topMatchesSection += ` (${b.rating}★ from ${b.review_count} Google reviews)`
+            topMatchesSection += ` - people love this one! ${b.rating}★ from ${b.review_count} reviews`
           }
           if (b.phone) {
-            topMatchesSection += `\n  📞 ${b.phone}`
+            topMatchesSection += `\n   📞 ${b.phone}`
           }
-          topMatchesSection += `\n`
+          topMatchesSection += `\n\n`
         })
-        
-        topMatchesSection += "\n_Some places haven't claimed their listing yet — details may be limited._\n"
-        topMatchesSection += "_Ratings and reviews data provided by Google_"
         
         aiResponse = aiResponse + topMatchesSection
         
@@ -1056,7 +1075,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         if (liteBusinesses && liteBusinesses.length > 0) {
           // Add Lite businesses as text-only mentions
-          let liteText = "\n\n**Also nearby (basic listings):**\n"
+          let liteText = "A few more you might like:\n\n"
           
           liteBusinesses.slice(0, 3).forEach(b => {
             // Generate slug from business name
@@ -1079,8 +1098,6 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             liteText += `\n`
           })
           
-          liteText += "\n_These businesses have basic listings. Contact them for more details._"
-          
           aiResponse = aiResponse + liteText
           
         }
@@ -1088,8 +1105,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         // ALWAYS show fallbackBusinesses if they exist (browse fill or intent assist)
         // These appear AFTER carousel/lite as "More places"
         if (fallbackBusinesses && fallbackBusinesses.length > 0) {
-          let fallbackText = "\n\n**More places:**\n"
-          fallbackText += "_Some of these venues haven't claimed their listing yet — details may be limited._\n\n"
+          let fallbackText = "Also worth checking:\n\n"
           
           fallbackBusinesses.slice(0, 5).forEach(b => {
             // Generate slug from business name
@@ -1099,15 +1115,13 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
               fallbackText += ` - ${b.display_category}`
             }
             if (b.rating && b.review_count) {
-              fallbackText += ` (${b.rating}★ from ${b.review_count} Google reviews)`
+              fallbackText += ` (${b.rating}★)`
             }
             if (b.phone) {
               fallbackText += `\n  📞 ${b.phone}`
             }
             fallbackText += `\n`
           })
-          
-          fallbackText += "\n_Ratings and reviews data provided by Google_"
           
           aiResponse = aiResponse + fallbackText
         }
@@ -1127,14 +1141,17 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     // STRATEGIC: Claimed businesses use their own descriptions/menus (premium positioning)
     let googleReviewSnippets: ChatResponse['googleReviewSnippets'] = undefined
     
-    // ONLY show review text for UNCLAIMED businesses (Tier 3 fallback)
+    // ONLY show review text for UNCLAIMED businesses (Tier 3 fallback or top matches)
     // Tier 1 (Paid) & Tier 2 (Claimed-Free) use business-provided content instead
-    if (fallbackBusinesses && fallbackBusinesses.length > 0) {
+    // CRITICAL FIX: Check BOTH topMatchesText AND fallbackBusinesses
+    const allTier3Businesses = [...(topMatchesText || []), ...(fallbackBusinesses || [])]
+    
+    if (allTier3Businesses && allTier3Businesses.length > 0) {
       // 🎯 PROTECTION #1: Max 1 review fetch per chat (first unclaimed business only)
       let alreadyFetchedReviews = false
       
       // Pick first UNCLAIMED business (with or without cached reviews)
-      const firstUnclaimedBusiness = fallbackBusinesses.find(b => b.status === 'unclaimed')
+      const firstUnclaimedBusiness = allTier3Businesses.find(b => b.status === 'unclaimed')
       
       if (firstUnclaimedBusiness) {
         let reviews = null
@@ -1146,11 +1163,10 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           reviews = firstUnclaimedBusiness.google_reviews_highlights
           console.log(`✅ Using cached reviews for ${firstUnclaimedBusiness.business_name}`)
         }
-        // 🎯 PROTECTION #2: Only fetch on-demand if we're actually going to display snippets
-        // (Not just because Tier 3 exists)
+        // 🎯 PROTECTION #2: Fetch reviews when showing Tier 3 businesses
+        // FIXED: Don't check shouldAttachCarousel - we want reviews even when carousel is disabled
         else if (!alreadyFetchedReviews && 
-                 firstUnclaimedBusiness.google_place_id && 
-                 shouldAttachCarousel) { // Only fetch if we're building a rich response (snippets will be included in payload)
+                 firstUnclaimedBusiness.google_place_id) { // Fetch whenever we're showing Tier 3
           console.log(`💰 Attempting on-demand review fetch for ${firstUnclaimedBusiness.business_name} (est. cost: ~$0.014-$0.025 depending on Google SKU)`)
           
           // 🎯 PROTECTION #3: Rate limiting (enforce before fetch)
