@@ -256,9 +256,10 @@ export function AtlasMode({
     performanceMode.enabled,
     performanceMode.pitch,
     performanceMode.fog,
-    playSound,
-    center.lat,
-    center.lng
+    playSound
+    // ✅ CRITICAL FIX: Remove center.lat/center.lng dependencies
+    // Map should ONLY initialize ONCE on mount, never recreate
+    // Center changes should use flyTo, not recreate the map
   ])
   
   // Pending flyTo request (queue if map not loaded yet)
