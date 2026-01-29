@@ -125,6 +125,7 @@ export interface BusinessCRMData {
   // Verification fields
   verification_method?: 'google' | 'manual' | null
   google_place_id?: string | null
+  google_primary_type?: string | null
   google_verified_at?: string | null
   manual_override?: boolean | null
   manual_override_at?: string | null
@@ -132,9 +133,12 @@ export interface BusinessCRMData {
   rating?: number | null
   review_count?: number | null
   google_primary_type?: string | null
+  latitude?: number | null
+  longitude?: number | null
   
   // Import tracking
   auto_imported?: boolean | null
+  admin_chat_fallback_approved?: boolean | null // AI eligibility for unclaimed businesses
   website_url?: string | null
   created_at?: string | null
   updated_at?: string | null

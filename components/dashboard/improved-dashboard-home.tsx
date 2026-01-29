@@ -13,6 +13,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { ElegantModal } from '@/components/ui/elegant-modal'
 import { VerificationStatusWidget } from './VerificationStatusWidget'
 import { AtlasUpsellWidget } from './AtlasUpsellWidget'
+import { ClaimWelcomeModal } from './claim-welcome-modal'
 import { isFreeTier } from '@/lib/atlas/eligibility'
 
 interface ImprovedDashboardHomeProps {
@@ -85,6 +86,19 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Claim welcome modal state (only show once on first login for claimed_free)
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+
+  // Show welcome modal on mount if needed
+  useEffect(() => {
+    if (
+      profile?.status === 'claimed_free' &&
+      profile?.claim_welcome_modal_shown === false
+    ) {
+      setShowWelcomeModal(true)
+    }
+  }, [profile?.status, profile?.claim_welcome_modal_shown])
 
   // Fetch real analytics data
   useEffect(() => {
@@ -405,7 +419,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
     if (profile?.status === 'claimed_free') {
       return {
         text: 'Free Listing',
-        subtext: 'Your listing is live - upgrade to unlock premium features',
+        subtext: 'Basic AI visibility • Upgrade for premium carousel cards',
         color: 'text-emerald-400',
         bgColor: 'bg-slate-700/30 border-slate-600/50',
         icon: (
@@ -618,65 +632,70 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
       {profile?.status === 'claimed_free' && (
         <div className="rounded-2xl border border-slate-600 bg-slate-800/50 p-6 sm:p-8">
           <div className="space-y-6">
+            {/* What's Included for Free */}
+            <div className="space-y-3">
+              <h3 className="text-xl font-semibold text-white text-center">Your Free Listing Includes</h3>
+              <div className="grid sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
+                <div className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">Visible in Discover section</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">Basic AI chat visibility (text mentions)</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">Up to 5 featured menu items</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-slate-300">Create basic offers</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Divider */}
+            <div className="border-t border-slate-600"></div>
+            
+            {/* Upgrade Section */}
             <div className="space-y-3 text-center">
-              <h3 className="text-2xl font-semibold text-white">Unlock Premium Features</h3>
+              <h3 className="text-2xl font-semibold text-white">Upgrade to Unlock More</h3>
               <p className="text-slate-300 text-base leading-relaxed max-w-4xl mx-auto">
-                <span className="text-emerald-400 font-medium">Let customers find you based on what they're craving.</span> Upload your full menu and our AI will recommend your specific dishes and items based on exactly what customers are looking for.
+                <span className="text-emerald-400 font-medium">Stand out with premium carousel cards.</span> Get full menu indexing with unlimited items + PDF upload so AI can recommend your specific dishes.
               </p>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 max-w-3xl mx-auto">
+              <div className="grid sm:grid-cols-2 gap-3 pt-2 max-w-2xl mx-auto">
                 <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-sm text-slate-300">AI Chat Visibility</span>
+                  <span className="text-sm text-slate-300">Premium Carousel Cards</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-sm text-slate-300">Full Menu Indexing</span>
+                  <span className="text-sm text-slate-300">Full Menu Indexing (Unlimited + PDF)</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-sm text-slate-300">Exclusive Offers</span>
+                  <span className="text-sm text-slate-300">Advanced Analytics</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-sm text-slate-300">Secret Menu Club</span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-slate-300">Events & Analytics</span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-slate-300">Social Wizard</span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-slate-300">Loyalty Portal</span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-slate-300">Push Notifications</span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-slate-300">Full POS System</span>
+                  <span className="text-sm text-slate-300">Priority Support</span>
                 </div>
               </div>
             </div>
@@ -691,7 +710,34 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   View Plans
                 </Link>
               </Button>
-              <p className="text-xs text-slate-400">90-day free trial available</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🚀 MENU PROMPT FOR CLAIMED_FREE - Only show if menu_preview is empty */}
+      {profile?.status === 'claimed_free' && (!profile?.menu_preview || (Array.isArray(profile?.menu_preview) && profile.menu_preview.length === 0)) && (
+        <div className="rounded-2xl border border-slate-600 bg-slate-800/30 p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex-1 space-y-2">
+              <h3 className="text-xl font-semibold text-white">Boost your chat visibility</h3>
+              <p className="text-slate-300 leading-relaxed">
+                Users can discover you with dish-level recommendations. Add up to 5 featured items so you appear when someone asks for specific dishes or cuisines.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <Button asChild variant="outline" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
+                <Link href="/dashboard/menu">
+                  Add featured items
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -1593,6 +1639,16 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           </p>
         </div>
       </ElegantModal>
+
+      {/* 🎉 Claim Welcome Modal - Show once on first login for claimed_free users */}
+      {profile?.status === 'claimed_free' && profile?.business_name && (
+        <ClaimWelcomeModal
+          businessName={profile.business_name}
+          businessId={profile.id}
+          isOpen={showWelcomeModal}
+          onClose={() => setShowWelcomeModal(false)}
+        />
+      )}
     </div>
   )
 }

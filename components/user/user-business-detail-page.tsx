@@ -12,6 +12,8 @@ import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 import { formatPrice } from '@/lib/utils/price-formatter'
 import { getHeroLine } from '@/lib/utils/business-labels'
+import { VibePromptSheet } from '@/components/user/vibe-prompt-sheet'
+import { saveItem, unsaveItem } from '@/lib/actions/user-saved-actions'
 
 interface UserBusinessDetailPageProps {
   slug: string
@@ -37,6 +39,93 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
   const [userDistance, setUserDistance] = useState<number | null>(null)
   const [walkingTime, setWalkingTime] = useState<number | null>(null)
   const hasTrackedVisit = useRef(false)
+  
+  // 💚 Vibe Prompt State
+  const [showVibePrompt, setShowVibePrompt] = useState(false)
+  const [vibePromptDelay, setVibePromptDelay] = useState<NodeJS.Timeout | null>(null)
+  
+  // 💾 Saved Businesses State
+  const [isSaved, setIsSaved] = useState(false)
+  
+  // 💚 Trigger vibe prompt after engagement (with delay)
+  const triggerVibePrompt = () => {
+    if (!walletPassId) {
+      console.log('⚠️ Cannot show vibe prompt - no wallet pass ID')
+    } else {
+      console.log('💚 Vibe prompt triggered! Will show in 1 second...')
+    }
+    
+    // Clear any existing delay
+    if (vibePromptDelay) {
+      clearTimeout(vibePromptDelay)
+    }
+    
+    // Show prompt after 1 second (reduced for better UX)
+    const timeout = setTimeout(() => {
+      console.log('💚 Showing vibe prompt now!', { hasWalletPass: !!walletPassId })
+      setShowVibePrompt(true)
+    }, 1000)
+    
+    setVibePromptDelay(timeout)
+  }
+  
+  // 💾 Save/Unsave Business (Does NOT trigger vibe - saving ≠ visiting)
+  const handleSaveToggle = async () => {
+    // First update UI optimistically
+    setIsSaved(!isSaved)
+    
+    if (walletPassId) {
+      // If user has wallet pass, save to database (persistent, trackable)
+      if (isSaved) {
+        const result = await unsaveItem(walletPassId, 'business', business.id)
+        if (result.success) {
+          console.log('💔 Unsaved business (DB):', business.name)
+        } else {
+          console.error('Failed to unsave business:', result.error)
+          // Rollback UI on error
+          setIsSaved(true)
+        }
+      } else {
+        const result = await saveItem(walletPassId, 'business', business.id, business.name)
+        if (result.success) {
+          console.log('💚 Saved business (DB):', business.name)
+        } else {
+          console.error('Failed to save business:', result.error)
+          // Rollback UI on error
+          setIsSaved(false)
+        }
+      }
+    } else {
+      // Fallback to localStorage for users without wallet pass
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('qwikker-saved-businesses')
+        const savedBusinesses = saved ? JSON.parse(saved) as string[] : []
+        
+        if (isSaved) {
+          const updated = savedBusinesses.filter(id => id !== business.id)
+          localStorage.setItem('qwikker-saved-businesses', JSON.stringify(updated))
+          console.log('💔 Unsaved business (localStorage):', business.name)
+        } else {
+          const updated = [...savedBusinesses, business.id]
+          localStorage.setItem('qwikker-saved-businesses', JSON.stringify(updated))
+          console.log('💚 Saved business (localStorage):', business.name)
+        }
+      }
+    }
+    
+    // NOTE: We do NOT trigger vibe prompt here
+    // Saving is just bookmarking for later, not actual engagement
+    // Vibes should only be triggered after real actions: directions, call, offer claim
+  }
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (vibePromptDelay) {
+        clearTimeout(vibePromptDelay)
+      }
+    }
+  }, [vibePromptDelay])
   
   // Find business by slug in the combined businesses list FIRST
   const business = businesses.find(b => b.slug === slug)
@@ -119,6 +208,31 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
     )
   }
   
+  // 💾 Load saved status from DB (if wallet pass) or localStorage (fallback)
+  useEffect(() => {
+    const loadSavedStatus = async () => {
+      if (!business?.id) return
+      
+      if (walletPassId) {
+        // Check database for persistent saves
+        const { isItemSaved } = await import('@/lib/actions/user-saved-actions')
+        const saved = await isItemSaved(walletPassId, 'business', business.id)
+        setIsSaved(saved)
+        console.log('💾 Loaded saved status from DB:', saved)
+      } else if (typeof window !== 'undefined') {
+        // Fallback to localStorage for users without wallet pass
+        const saved = localStorage.getItem('qwikker-saved-businesses')
+        if (saved) {
+          const savedBusinesses = JSON.parse(saved) as string[]
+          setIsSaved(savedBusinesses.includes(business.id))
+          console.log('💾 Loaded saved status from localStorage:', savedBusinesses.includes(business.id))
+        }
+      }
+    }
+    
+    loadSavedStatus()
+  }, [business?.id, walletPassId])
+  
   const claimOffer = async (offerId: string, offerTitle: string, businessName: string) => {
     const userId = walletPassId || 'anonymous-user'
     
@@ -188,8 +302,12 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
       modal.style.transform = 'scale(0.95)'
       setTimeout(() => {
         document.body.removeChild(modalOverlay)
-        // Refresh the page to show updated offer state
-        window.location.reload()
+        
+        // 💚 Trigger vibe prompt after claiming offer
+        triggerVibePrompt()
+        
+        // Note: Not reloading page to allow vibe prompt to show
+        // The UI is already updated via state
       }, 300)
     }
     
@@ -405,6 +523,9 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                 window.open(`https://www.google.com/maps/dir/?api=1&destination=${address}`, '_blank')
               }
             }
+            
+            // 💚 Trigger vibe prompt after directions
+            triggerVibePrompt()
           }}
         >
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -420,6 +541,9 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
           onClick={() => {
             if (business.phone) {
               window.location.href = `tel:${business.phone}`
+              
+              // 💚 Trigger vibe prompt after call
+              triggerVibePrompt()
             } else {
               alert('Phone number not available for this business')
             }
@@ -431,11 +555,24 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
           Call Now
         </Button>
         
-        <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <Button 
+          variant="outline" 
+          className={`transition-all ${
+            isSaved 
+              ? 'border-[#00d083] bg-[#00d083]/10 text-[#00d083] hover:bg-[#00d083]/20' 
+              : 'border-slate-600 text-slate-300 hover:bg-slate-700'
+          }`}
+          onClick={handleSaveToggle}
+        >
+          <svg 
+            className="w-5 h-5 mr-2" 
+            fill={isSaved ? "currentColor" : "none"} 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
-          Save
+          {isSaved ? 'Saved' : 'Save'}
         </Button>
       </div>
 
@@ -1029,6 +1166,38 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
           </div>
         )}
       </div>
+      
+      {/* 💚 Vibe Prompt Bottom Sheet - Only show if user has wallet pass */}
+      {showVibePrompt && walletPassId && (
+        <VibePromptSheet
+          businessId={business.id}
+          businessName={business.name}
+          vibeUserKey={walletPassId}
+          walletPassId={walletPassId}
+          onClose={() => setShowVibePrompt(false)}
+          onVibeSubmitted={(vibeRating) => {
+            console.log(`💚 Vibe submitted: ${vibeRating} for ${business.name}`)
+            // TODO: Refetch vibes data to update display
+          }}
+        />
+      )}
+      
+      {/* 💚 Debug: Show message if no wallet pass */}
+      {showVibePrompt && !walletPassId && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] max-w-sm">
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 shadow-xl">
+            <p className="text-slate-300 text-sm text-center">
+              Add a wallet pass to leave vibes for businesses
+            </p>
+            <button
+              onClick={() => setShowVibePrompt(false)}
+              className="mt-2 w-full py-2 text-xs text-slate-400 hover:text-slate-300"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -95,6 +95,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const router = useRouter()
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isEditingCategory, setIsEditingCategory] = useState(false)
+  const [categoryValue, setCategoryValue] = useState(business.business_category || business.display_category || '')
+  const [isSavingCategory, setIsSavingCategory] = useState(false)
   
   // ✅ CRITICAL: Extract subscription from array format ONCE at the top!
   const sub = getSubscription(business)
@@ -481,6 +484,40 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     }
   }
 
+  const handleSaveCategory = async () => {
+    setIsSavingCategory(true)
+    try {
+      console.log('Updating category for business:', business.id, 'to:', categoryValue)
+      const response = await fetch('/api/admin/update-category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId: business.id,
+          category: categoryValue
+        })
+      })
+      
+      const data = await response.json()
+      console.log('Update category response:', data)
+      
+      if (response.ok) {
+        setIsEditingCategory(false)
+        // Update local state
+        business.business_category = categoryValue
+        business.display_category = categoryValue
+        router.refresh() // Refresh to show updated data
+      } else {
+        console.error('Failed to update category:', data)
+        alert(`Failed to update category: ${data.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Error updating category:', error)
+      alert(`Failed to update category: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsSavingCategory(false)
+    }
+  }
+
   const handleAddTask = () => {
     if (!newTask.trim()) return
     setIsAddingTask(true)
@@ -663,9 +700,33 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 businessName={business.business_name} 
                 className="w-12 h-12 rounded-xl border-2 border-slate-600/50 shadow-lg text-base font-bold flex-shrink-0"
               />
-              <h3 className="text-2xl font-bold text-white truncate">
-                {business.business_name}
-              </h3>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-2xl font-bold text-white truncate">
+                  {business.business_name}
+                </h3>
+                {/* Google Primary Type */}
+                {business.google_primary_type && (
+                  <p className="text-sm text-white/70 mt-0.5">
+                    {business.google_primary_type.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                  </p>
+                )}
+                {/* Google Rating & Review Count */}
+                {(business.rating || business.review_count) && (
+                  <div className="flex items-center gap-2 mt-1">
+                    {business.rating && (
+                      <div className="flex items-center gap-1">
+                        <svg className="w-4 h-4 fill-yellow-400 text-yellow-400" viewBox="0 0 24 24">
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                        <span className="text-sm font-semibold text-white">{business.rating.toFixed(1)}</span>
+                      </div>
+                    )}
+                    {business.review_count && (
+                      <span className="text-sm text-slate-400">({business.review_count} reviews)</span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Right: Quick Actions */}
@@ -715,14 +776,14 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           <div className={`h-1 w-full bg-gradient-to-r ${getTierAccentGradient(business)} rounded-full mb-6 opacity-80`} />
 
           {/* Stats Grid - Centered Icons & Text */}
-          <div className="grid grid-cols-4 gap-5">
+          <div className="grid grid-cols-5 gap-4">
             {/* Tier */}
-            <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-purple-500/20 flex flex-col items-center justify-center text-center">
+            <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-4 py-5 rounded-xl border border-purple-500/20 flex flex-col items-center justify-center text-center">
               <svg className="w-4 h-4 text-purple-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
               <span className="text-slate-400 text-xs font-medium mb-2">Tier</span>
-              <span className={`font-bold text-lg leading-none ${entitlement.displayColor}`}>
+              <span className={`font-bold ${entitlement.state === 'UNCLAIMED' ? 'text-base' : 'text-lg'} leading-none ${entitlement.displayColor}`}>
                 {/* ✅ LOCKDOWN: Use entitlement state ONLY (no business.plan!) */}
                 {entitlement.state === 'PAID_ACTIVE'
                   ? (entitlement.tierNameOrNull || 'Paid')
@@ -739,7 +800,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Billing */}
-            <div className="bg-gradient-to-br from-blue-950/40 to-blue-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-blue-500/20 text-center">
+            <div className="bg-gradient-to-br from-blue-950/40 to-blue-900/20 backdrop-blur-sm px-4 py-5 rounded-xl border border-blue-500/20 text-center">
               <svg className="w-4 h-4 text-blue-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -757,7 +818,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Status */}
-            <div className={`backdrop-blur-sm px-5 py-5 rounded-xl border text-center ${
+            <div className={`backdrop-blur-sm px-4 py-5 rounded-xl border text-center ${
               // ✅ FIXED: Check trial_status directly (cleaner logic)
               business.trial_status === 'expired'
                 ? 'bg-gradient-to-br from-red-950/40 to-red-900/20 border-red-500/20'
@@ -804,7 +865,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Joined */}
-            <div className="bg-gradient-to-br from-amber-950/40 to-amber-900/20 backdrop-blur-sm px-5 py-5 rounded-xl border border-amber-500/20 text-center">
+            <div className="bg-gradient-to-br from-amber-950/40 to-amber-900/20 backdrop-blur-sm px-4 py-5 rounded-xl border border-amber-500/20 text-center">
               <svg className="w-4 h-4 text-amber-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -813,6 +874,41 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 {formatDateConsistent(business.created_at)}
               </span>
             </div>
+
+            {/* AI Eligible */}
+            {(() => {
+              // ✅ CORRECT LOGIC: Paid/Trial businesses are ALWAYS AI eligible
+              // Only free tier businesses need the admin_chat_fallback_approved flag
+              const isAiEligible = 
+                entitlement.state === 'PAID_ACTIVE' || 
+                entitlement.state === 'TRIAL_ACTIVE' ||
+                (entitlement.state === 'NO_SUB' && business.admin_chat_fallback_approved) ||
+                (entitlement.state === 'UNCLAIMED' && business.admin_chat_fallback_approved)
+              
+              return (
+                <div className={`backdrop-blur-sm px-4 py-5 rounded-xl border text-center ${
+                  isAiEligible
+                    ? 'bg-gradient-to-br from-emerald-950/40 to-emerald-900/20 border-emerald-500/20'
+                    : 'bg-gradient-to-br from-red-950/40 to-red-900/20 border-red-500/20'
+                }`}>
+                  <svg className={`w-4 h-4 mx-auto mb-2 ${
+                    isAiEligible
+                      ? 'text-emerald-400'
+                      : 'text-red-400'
+                  }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  <span className="text-slate-400 text-xs font-medium block mb-2">AI Eligible</span>
+                  <span className={`font-semibold text-xl leading-tight block ${
+                    isAiEligible
+                      ? 'text-emerald-400'
+                      : 'text-red-400'
+                  }`}>
+                    {isAiEligible ? 'Yes' : 'No'}
+                  </span>
+                </div>
+              )
+            })()}
           </div>
         </div>
       </div>
@@ -840,8 +936,34 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     className="w-14 h-14 rounded-xl border-2 border-slate-600/50 shadow-lg text-lg font-bold"
                   />
                   <div>
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                    <h2 className="text-2xl font-bold text-white">
                       {business.business_name}
+                    </h2>
+                    {/* Google Primary Type */}
+                    {business.google_primary_type && (
+                      <p className="text-sm text-white/70 mt-1">
+                        {business.google_primary_type.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-3 flex-wrap mt-1">
+                      {/* Google Rating & Review Count */}
+                      {(business.rating || business.review_count) && (
+                        <div className="flex items-center gap-1 text-base">
+                          {business.rating && (
+                            <>
+                              <svg className="w-4 h-4 fill-yellow-400 text-yellow-400" viewBox="0 0 24 24">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
+                              <span className="text-sm font-semibold text-white">{business.rating.toFixed(1)}</span>
+                            </>
+                          )}
+                          {business.review_count && (
+                            <span className="text-sm text-slate-400">({business.review_count})</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 flex-wrap mt-2">
                       <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${
                         // ✅ LOCKDOWN: Use entitlement state colors
                         entitlement.state === 'TRIAL_EXPIRED' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
@@ -856,7 +978,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                         {/* ✅ LOCKDOWN: Display from entitlement state ONLY */}
                         {entitlement.displayLabel}
                       </span>
-                    </h2>
+                    </div>
                     <p className="text-slate-400 text-sm mt-1">
                       Business Control Panel
                     </p>
@@ -1185,7 +1307,43 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 text-sm">Category:</span>
-                        <span className="text-white text-sm">{business.business_category || 'Not set'}</span>
+                        {isEditingCategory ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={categoryValue}
+                              onChange={(e) => setCategoryValue(e.target.value)}
+                              className="px-2 py-1 text-sm bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:border-emerald-500"
+                              placeholder="e.g. Italian Restaurant"
+                            />
+                            <button
+                              onClick={handleSaveCategory}
+                              disabled={isSavingCategory}
+                              className="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              {isSavingCategory ? '...' : '✓'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsEditingCategory(false)
+                                setCategoryValue(business.business_category || business.display_category || '')
+                              }}
+                              className="px-2 py-1 bg-slate-600 text-slate-300 text-xs rounded hover:bg-slate-500"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setIsEditingCategory(true)}
+                            className="text-white text-sm hover:text-emerald-400 transition-colors flex items-center gap-1"
+                          >
+                            {business.business_category || business.display_category || 'Not set'}
+                            <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 text-sm">Last Sync:</span>
@@ -1280,8 +1438,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
                 {/* Placeholder Image Selector (Unclaimed Only) */}
                 {(() => {
-                  // Resolve category from either camelCase or snake_case
-                  const resolvedCategory = business.system_category ?? (business as any).systemCategory ?? null
+                  // Resolve category: try system_category first, fallback to business_type (which is set during import)
+                  const resolvedCategory = business.system_category ?? (business as any).systemCategory ?? business.business_type ?? null
                   
                   // ✅ PlaceholderSelector: Show for ANY unclaimed business (imported or manual)
                   // This lets admins choose placeholder variants for all unclaimed listings
@@ -1315,12 +1473,24 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                             <span className="text-white ml-2">{(business as any).systemCategory || 'null'}</span>
                           </div>
                           <div>
+                            <span className="text-slate-400">business_type:</span>
+                            <span className="text-white ml-2">{business.business_type || 'null'}</span>
+                          </div>
+                          <div>
                             <span className="text-slate-400">resolvedCategory:</span>
                             <span className="text-white ml-2">{resolvedCategory || 'null'}</span>
                           </div>
                           <div>
                             <span className="text-slate-400">placeholder_variant:</span>
                             <span className="text-white ml-2">{business.placeholder_variant ?? 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">latitude:</span>
+                            <span className="text-white ml-2">{business.latitude ?? 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">longitude:</span>
+                            <span className="text-white ml-2">{business.longitude ?? 'null'}</span>
                           </div>
                           <div className="col-span-2 mt-2 pt-2 border-t border-yellow-600/30">
                             <span className="text-slate-400">isUnclaimed:</span>

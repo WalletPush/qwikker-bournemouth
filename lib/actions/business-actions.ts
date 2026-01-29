@@ -220,6 +220,15 @@ export async function updateOffer(userId: string, offerId: string, offerData: {
       return { success: false, error: 'Offer not found or access denied' }
     }
 
+    // ✅ CLAIMED_FREE EDIT LIMIT: Enforce 1 edit maximum for claimed_free businesses
+    if (profile.status === 'claimed_free' && existingOffer.edit_count >= 1) {
+      return { 
+        success: false, 
+        error: 'Edit limit reached. Free tier offers can only be edited once. Upgrade for unlimited edits.',
+        requiresUpgrade: true
+      }
+    }
+
     // Create pending change record for the update
     const { data: changeRecord, error: changeError } = await supabaseAdmin
       .from('business_changes')

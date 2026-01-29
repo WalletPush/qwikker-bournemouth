@@ -118,6 +118,7 @@ export async function POST(request: NextRequest) {
         owner_user_id: claim.user_id,
         claimed_at: new Date().toISOString(),
         visibility: 'discover_only', // Free tier only visible in discover
+        admin_chat_fallback_approved: true, // Auto-enable AI visibility for claimed businesses
         updated_at: new Date().toISOString()
       }
       
@@ -256,10 +257,11 @@ export async function POST(request: NextRequest) {
 
           const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
           const cityDisplayName = franchiseConfig.display_name || claim.business.city
-          // Use deployment URL (Vercel preview) until custom domains are live
-          const deploymentUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://qwikkerdashboard-theta.vercel.app'
-          const loginUrl = `${deploymentUrl}/auth/login`
-          const baseUrl = deploymentUrl
+          
+          // 🔒 SECURITY: Use city-specific subdomain (franchise isolation)
+          const citySubdomain = claim.business.city.toLowerCase()
+          const baseUrl = `https://${citySubdomain}.qwikker.com`
+          const loginUrl = `${baseUrl}/auth/login`
           
           // Use Cloudinary URL for logo (publicly accessible in emails)
           const logoUrl = process.env.CLOUDINARY_LOGO_URL || 
@@ -316,11 +318,14 @@ export async function POST(request: NextRequest) {
                     <!-- Free Tier Info -->
                     <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 0 0 32px 0;">
                       <p style="color: #525252; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">
-                        Your free listing includes
+                        ✓ Your free listing includes
                       </p>
                       <ul style="margin: 0; padding-left: 20px; color: #525252; font-size: 14px;">
                         <li style="margin: 6px 0;">Visible in the ${escapeHtml(cityDisplayName)} Discover section</li>
-                        <li style="margin: 6px 0;">Basic business profile with contact details</li>
+                        <li style="margin: 6px 0;">Basic AI chat visibility (text mentions when relevant)</li>
+                        <li style="margin: 6px 0;">Basic business profile with contact details and photos</li>
+                        <li style="margin: 6px 0;">Up to 5 featured menu items (manually added)</li>
+                        <li style="margin: 6px 0;">Create basic offers</li>
                         <li style="margin: 6px 0;">Dashboard access to manage your listing</li>
                       </ul>
                     </div>
@@ -328,15 +333,16 @@ export async function POST(request: NextRequest) {
                     <!-- Upgrade Info -->
                     <div style="border-top: 1px solid #e5e7eb; padding-top: 24px;">
                       <p style="color: #525252; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">
-                        Upgrade to unlock
+                        🚀 Upgrade to unlock premium features
                       </p>
                       <ul style="margin: 0; padding-left: 20px; color: #525252; font-size: 14px;">
-                        <li style="margin: 6px 0;"><strong style="color: #0a0a0a;">AI Chat Visibility:</strong> Get discovered by users asking our AI assistant</li>
-                        <li style="margin: 6px 0;"><strong style="color: #0a0a0a;">Exclusive Offers:</strong> Create and manage special deals</li>
-                        <li style="margin: 6px 0;"><strong style="color: #0a0a0a;">Analytics:</strong> Track views and engagement</li>
+                        <li style="margin: 6px 0;"><strong style="color: #0a0a0a;">Premium AI Chat Display:</strong> Rich carousel cards with photos (not just text mentions)</li>
+                        <li style="margin: 6px 0;"><strong style="color: #0a0a0a;">Full Menu Indexing:</strong> Upload unlimited items via PDF + AI recommends your specific dishes</li>
+                        <li style="margin: 6px 0;"><strong style="color: #0a0a0a;">Advanced Analytics:</strong> Track views, engagement, and customer insights</li>
+                        <li style="margin: 6px 0;"><strong style="color: #0a0a0a;">Priority Support:</strong> Get faster help when you need it</li>
                       </ul>
                       <p style="color: #737373; margin: 12px 0 0 0; font-size: 13px;">
-                        You can upgrade anytime from your dashboard.
+                        Upgrade anytime from your dashboard.
                       </p>
                     </div>
                     

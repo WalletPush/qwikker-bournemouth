@@ -221,6 +221,68 @@ export async function POST(request: NextRequest) {
           // Don't update business_profiles for additional offers
           updateData = {}
         }
+      } else if (change.change_type === 'offer_update') {
+        // ✅ OFFER UPDATE: Update existing offer in business_offers table
+        const offerId = change.change_data.offer_id
+        
+        if (!offerId) {
+          return NextResponse.json(
+            { error: 'Offer ID missing in change data' },
+            { status: 400 }
+          )
+        }
+        
+        // Get the existing offer and business info
+        const { data: existingOffer, error: offerFetchError } = await supabaseAdmin
+          .from('business_offers')
+          .select('*, business:business_id!inner(status)')
+          .eq('id', offerId)
+          .eq('business_id', change.business_id)
+          .single()
+        
+        if (offerFetchError || !existingOffer) {
+          return NextResponse.json(
+            { error: 'Offer not found' },
+            { status: 404 }
+          )
+        }
+        
+        // Prepare update data
+        const offerUpdateData: any = {
+          offer_name: change.change_data.offer_name || existingOffer.offer_name,
+          offer_type: change.change_data.offer_type || existingOffer.offer_type,
+          offer_value: change.change_data.offer_value || existingOffer.offer_value,
+          offer_claim_amount: change.change_data.offer_claim_amount || existingOffer.offer_claim_amount,
+          offer_terms: change.change_data.offer_terms !== undefined ? change.change_data.offer_terms : existingOffer.offer_terms,
+          offer_start_date: change.change_data.offer_start_date !== undefined ? (change.change_data.offer_start_date && change.change_data.offer_start_date.trim() !== '' ? change.change_data.offer_start_date : null) : existingOffer.offer_start_date,
+          offer_end_date: change.change_data.offer_end_date !== undefined ? (change.change_data.offer_end_date && change.change_data.offer_end_date.trim() !== '' ? change.change_data.offer_end_date : null) : existingOffer.offer_end_date,
+          offer_image: change.change_data.offer_image !== undefined ? change.change_data.offer_image : existingOffer.offer_image,
+          updated_at: new Date().toISOString()
+        }
+        
+        // ✅ CLAIMED_FREE EDIT COUNT: Increment edit_count for claimed_free businesses
+        if (existingOffer.business?.status === 'claimed_free') {
+          offerUpdateData.edit_count = (existingOffer.edit_count || 0) + 1
+        }
+        
+        // Update the offer
+        const { error: offerUpdateError } = await supabaseAdmin
+          .from('business_offers')
+          .update(offerUpdateData)
+          .eq('id', offerId)
+        
+        if (offerUpdateError) {
+          console.error('Error updating offer:', offerUpdateError)
+          return NextResponse.json(
+            { error: 'Failed to update offer' },
+            { status: 500 }
+          )
+        }
+        
+        console.log(`✅ OFFER UPDATED: ${change.change_data.offer_name || existingOffer.offer_name} for ${change.business?.business_name}${existingOffer.business?.status === 'claimed_free' ? ` (edit_count: ${offerUpdateData.edit_count})` : ''}`)
+        
+        // Don't update business_profiles for offer updates
+        updateData = {}
       } else if (change.change_type === 'secret_menu') {
         // For secret menu, we need to append to existing additional_notes
         const { data: currentProfile } = await supabaseAdmin

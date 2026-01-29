@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -483,39 +484,75 @@ export function OffersPage({ profile }: OffersPageProps) {
                               🔥 Featured
                             </span>
                           )}
+                          {/* ✅ EDIT STATUS BADGE for claimed_free businesses */}
+                          {profile.status === 'claimed_free' && (
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              offer.edit_count >= 1 
+                                ? 'bg-slate-600/30 text-slate-400 border border-slate-600/50' 
+                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            }`}>
+                              {offer.edit_count >= 1 ? 'No edits remaining' : 'Edits remaining: 1'}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="hidden sm:flex gap-2 flex-shrink-0">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-slate-600 text-gray-300 hover:bg-slate-700 text-xs"
-                          onClick={() => {
-                            // Edit this specific offer
-                            setFormData({
-                              offerName: offer.offer_name,
-                              offerType: offer.offer_type,
-                              offerValue: offer.offer_value,
-                              offerClaimAmount: offer.offer_claim_amount || 'multiple',
-                              offerTerms: offer.offer_terms || '',
-                              startDate: offer.offer_start_date || '',
-                              endDate: offer.offer_end_date || '',
-                            })
-                            setEditingOfferId(offer.id)
-                            setIsEditMode(true)
-                            setShowCreateForm(true)
-                            
-                            // Auto-scroll to form with delay for state update
-                            setTimeout(() => {
-                              formRef.current?.scrollIntoView({ 
-                                behavior: 'smooth', 
-                                block: 'start' 
+                        {/* ✅ CONDITIONAL EDIT BUTTON for claimed_free */}
+                        {profile.status === 'claimed_free' && offer.edit_count >= 1 ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            className="border-slate-600 text-slate-500 text-xs opacity-50 cursor-not-allowed"
+                          >
+                            Edit
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-slate-600 text-gray-300 hover:bg-slate-700 text-xs"
+                            onClick={() => {
+                              // Edit this specific offer
+                              setFormData({
+                                offerName: offer.offer_name,
+                                offerType: offer.offer_type,
+                                offerValue: offer.offer_value,
+                                offerClaimAmount: offer.offer_claim_amount || 'multiple',
+                                offerTerms: offer.offer_terms || '',
+                                startDate: offer.offer_start_date || '',
+                                endDate: offer.offer_end_date || '',
                               })
-                            }, 100)
-                          }}
-                        >
-                          Edit
-                        </Button>
+                              setEditingOfferId(offer.id)
+                              setIsEditMode(true)
+                              setShowCreateForm(true)
+                              
+                              // Auto-scroll to form with delay for state update
+                              setTimeout(() => {
+                                formRef.current?.scrollIntoView({ 
+                                  behavior: 'smooth', 
+                                  block: 'start' 
+                                })
+                              }, 100)
+                            }}
+                          >
+                            Edit
+                          </Button>
+                        )}
+                        
+                        {/* ✅ UPGRADE CTA when edit limit reached */}
+                        {profile.status === 'claimed_free' && offer.edit_count >= 1 && (
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 hover:border-emerald-500/60 text-xs"
+                          >
+                            <Link href="/pricing">
+                              Upgrade to Edit
+                            </Link>
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"

@@ -13,6 +13,8 @@ import { ComprehensiveAdminAnalytics } from './comprehensive-admin-analytics'
 import { ContactsTab } from './contacts-tab'
 import { SyncHealthOverview } from './sync-health-overview'
 import { InitialAvatar } from '@/components/admin/initial-avatar'
+import { AiEligibleConfirmationModal } from '@/components/admin/ai-eligible-confirmation-modal'
+import { Button } from '@/components/ui/button'
 import { SmartQRGenerator } from './smart-qr-generator'
 import { ComprehensiveQRDashboard } from './comprehensive-qr-dashboard'
 import { AITestPage } from './ai-test-page'
@@ -88,6 +90,76 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [kbEligibleBusinesses, setKbEligibleBusinesses] = useState<Business[]>([])
   const [loadingKbEligible, setLoadingKbEligible] = useState(true)
 
+  // AI Eligible bulk selection state
+  const [selectedBusinessIds, setSelectedBusinessIds] = useState<Set<string>>(new Set())
+  const [isAiEligibleModalOpen, setIsAiEligibleModalOpen] = useState(false)
+  const [isUpdatingAiEligible, setIsUpdatingAiEligible] = useState(false)
+  const [bulkUpdateSuccess, setBulkUpdateSuccess] = useState<{count: number, skipped: number} | null>(null)
+  
+  // Filter state for AI eligible
+  const [showOnlyAiEligible, setShowOnlyAiEligible] = useState(false)
+
+  // AI Eligible selection handlers
+  const toggleBusinessSelection = (businessId: string) => {
+    setSelectedBusinessIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(businessId)) {
+        newSet.delete(businessId)
+      } else {
+        newSet.add(businessId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleSelectAll = (businesses: any[]) => {
+    // Only select businesses that are NOT already AI eligible
+    const eligibleForSelection = businesses.filter(b => !b.admin_chat_fallback_approved)
+    
+    if (selectedBusinessIds.size === eligibleForSelection.length && eligibleForSelection.length > 0) {
+      setSelectedBusinessIds(new Set())
+    } else {
+      setSelectedBusinessIds(new Set(eligibleForSelection.map(b => b.id)))
+    }
+  }
+
+  const handleBulkAiEligible = async () => {
+    if (selectedBusinessIds.size === 0) return
+
+    setIsUpdatingAiEligible(true)
+    setBulkUpdateSuccess(null)
+    
+    try {
+      const response = await fetch('/api/admin/bulk-ai-eligible', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessIds: Array.from(selectedBusinessIds)
+        })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        setBulkUpdateSuccess({ count: result.updated, skipped: result.skipped })
+        setSelectedBusinessIds(new Set())
+        setIsAiEligibleModalOpen(false)
+        
+        // ✅ Use Next.js router refresh for better cache handling
+        setTimeout(() => {
+          router.refresh()
+        }, 1500)
+      } else {
+        alert(`Update failed: ${result.error || 'Failed to update AI eligibility'}`)
+      }
+    } catch (error) {
+      console.error('Error updating AI eligibility:', error)
+      alert('An unexpected error occurred')
+    } finally {
+      setIsUpdatingAiEligible(false)
+    }
+  }
+
   // Load KB eligible businesses from business_profiles_kb_eligible view
   useEffect(() => {
     const loadKbEligible = async () => {
@@ -160,7 +232,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
         setMockClaims(mockClaims.map(c => 
           c.id === claimId ? { ...c, status: 'approved' as const } : c
         ))
-        showSuccess('Claim Approved!', 'Business now has free tier access and is visible in Discover')
+        alert('Claim Approved! Business now has free tier access and is visible in Discover')
         // Auto-switch to approved view
         setTimeout(() => {
           setClaimsView('approved')
@@ -464,9 +536,10 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
   
   // ✅ FIXED: Exclude expired trials from Live Listings
   // ✅ INCLUDE claimed_free businesses (they're live with free tier)
-  // ✅ EXCLUDE unclaimed businesses (they have their own tab)
+  // ✅ INCLUDE unclaimed businesses (they're live, show in "Free" card)
   const allLiveBusinesses = businessList.filter(b => {
-    if (b.status !== 'approved' && b.status !== 'claimed_free') return false
+    // Include: approved, claimed_free, unclaimed (all are "live")
+    if (b.status !== 'approved' && b.status !== 'claimed_free' && b.status !== 'unclaimed') return false
     
     // Check if trial is expired (only for approved businesses with trials)
     if (b.status === 'approved' && b.subscription && Array.isArray(b.subscription) && b.subscription.length > 0) {
@@ -480,7 +553,7 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
       }
     }
     
-    return true // ✅ Include approved AND claimed_free
+    return true // ✅ Include approved, claimed_free, AND unclaimed
   })
   
   // ✅ NEW: Unclaimed businesses (separate tab)
@@ -507,7 +580,11 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
   // FILTERED businesses for display content only
   const pendingBusinesses = filterBusinesses(allPendingBusinesses)
   const liveBusinesses = filterBusinesses(allLiveBusinesses)
-  const unclaimedBusinesses = filterBusinesses(allUnclaimedBusinesses)
+  const unclaimedBusinesses = filterBusinesses(
+    showOnlyAiEligible 
+      ? allUnclaimedBusinesses.filter(b => b.admin_chat_fallback_approved === true) 
+      : allUnclaimedBusinesses
+  )
   const incompleteBusinesses = filterBusinesses(allIncompleteBusinesses)
   const rejectedBusinesses = filterBusinesses(allRejectedBusinesses)
   const expiredTrialBusinesses = filterBusinesses(allExpiredTrialBusinesses)
@@ -1907,6 +1984,9 @@ Qwikker Admin Team`
                         last_crm_sync: null,
                         crm_sync_status: 'pending',
                         admin_notes: business.admin_notes,
+                        google_primary_type: business.google_primary_type || null,
+                        latitude: business.latitude || null,
+                        longitude: business.longitude || null,
                         subscription: null,
                         tier: null,
                         recent_payments: [],
@@ -1979,9 +2059,9 @@ Qwikker Admin Team`
               )}
 
               {activeTab === 'unclaimed' && (
-                <div className="grid lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
                   {allUnclaimedBusinesses.length === 0 ? (
-                    <div className="text-center py-12 col-span-full">
+                    <div className="text-center py-12">
                       <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
@@ -1991,7 +2071,69 @@ Qwikker Admin Team`
                       <p className="text-slate-400">There are no unclaimed business listings at the moment.</p>
                     </div>
                   ) : (
-                    unclaimedBusinesses.map((business) => {
+                    <>
+                      {/* Success Message */}
+                      {bulkUpdateSuccess && (
+                        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                          <p className="text-emerald-300 text-sm">
+                            ✓ {bulkUpdateSuccess.count} businesses are now AI eligible
+                            {bulkUpdateSuccess.skipped > 0 && ` (${bulkUpdateSuccess.skipped} skipped)`}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Bulk Action Header */}
+                      <div className="flex items-center justify-between gap-4 p-4 bg-slate-800/30 border border-slate-700 rounded-lg flex-wrap">
+                        <div className="flex items-center gap-3">
+                          {(() => {
+                            const eligibleForSelection = allUnclaimedBusinesses.filter(b => !b.admin_chat_fallback_approved)
+                            const alreadyAiEligible = allUnclaimedBusinesses.filter(b => b.admin_chat_fallback_approved).length
+                            
+                            return (
+                              <>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedBusinessIds.size === eligibleForSelection.length && eligibleForSelection.length > 0}
+                                    onChange={() => toggleSelectAll(allUnclaimedBusinesses)}
+                                    className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-slate-500 focus:ring-slate-500 focus:ring-offset-slate-900"
+                                  />
+                                  <span className="text-sm text-slate-300">Select all</span>
+                                </label>
+                                <span className="text-sm text-slate-400">
+                                  {selectedBusinessIds.size > 0 
+                                    ? `${selectedBusinessIds.size} selected` 
+                                    : `${allUnclaimedBusinesses.length} businesses${alreadyAiEligible > 0 ? ` (${alreadyAiEligible} already AI eligible)` : ''}`
+                                  }
+                                </span>
+                              </>
+                            )
+                          })()}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowOnlyAiEligible(!showOnlyAiEligible)}
+                            className={`bg-transparent border-slate-600 hover:bg-slate-800/40 text-sm ${
+                              showOnlyAiEligible ? 'border-purple-500/50 text-purple-300' : 'text-slate-300'
+                            }`}
+                          >
+                            {showOnlyAiEligible ? '✓ AI Eligible' : 'Show AI Eligible'}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsAiEligibleModalOpen(true)}
+                            disabled={selectedBusinessIds.size === 0}
+                            className="bg-transparent border-slate-600 text-slate-200 hover:bg-slate-800/40 disabled:opacity-50"
+                          >
+                            Make AI eligible {selectedBusinessIds.size > 0 && `(${selectedBusinessIds.size})`}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Business Grid */}
+                      <div className="grid lg:grid-cols-2 gap-6">
+                        {unclaimedBusinesses.map((business) => {
                       // Build CRM-compatible business object for unclaimed listings
                       const crmBusiness = {
                         id: business.id,
@@ -2021,7 +2163,13 @@ Qwikker Admin Team`
                         facebook_page: business.facebook_page || '',
                         status: 'unclaimed',
                         auto_imported: business.auto_imported || false, // ✅ CRITICAL: Required for isImportedUnclaimed gate
+                        admin_chat_fallback_approved: business.admin_chat_fallback_approved || false, // ✅ CRITICAL: AI eligibility flag
+                        rating: business.rating || null, // Google rating
+                        review_count: business.review_count || null, // Google review count
+                        google_primary_type: business.google_primary_type || null, // Google's primary business type
                         google_place_id: business.google_place_id || null,
+                        latitude: business.latitude || null, // ✅ CRITICAL: For distance calculations
+                        longitude: business.longitude || null, // ✅ CRITICAL: For distance calculations
                         created_at: business.created_at,
                         updated_at: business.updated_at,
                         subscription: null, // No subscription for unclaimed
@@ -2045,21 +2193,39 @@ Qwikker Admin Team`
                         features: { social_wizard: false, loyalty_cards: false, analytics: false, push_notifications: false }
                       }
                       
+                      const isSelected = selectedBusinessIds.has(business.id)
+                      
                       return (
-                        <ComprehensiveBusinessCRMCard
-                          key={business.id}
-                          business={crmBusiness}
-                          onApprove={handleApproval}
-                          onInspect={(business) => {
-                            const fullBusinessData = allBusinesses.find(b => b.id === business.id)
-                            if (fullBusinessData) {
-                              setSelectedBusiness(fullBusinessData)
-                              setInspectionModalOpen(true)
-                            }
-                          }}
-                        />
+                        <div key={business.id} className="relative">
+                          {/* Selection Checkbox - Only show if NOT already AI eligible */}
+                          {!business.admin_chat_fallback_approved && (
+                            <div className="absolute top-3 left-3 z-10">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleBusinessSelection(business.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-5 h-5 rounded border-slate-600 bg-slate-700 text-slate-500 focus:ring-slate-500 focus:ring-offset-slate-900 cursor-pointer"
+                              />
+                            </div>
+                          )}
+                          
+                          <ComprehensiveBusinessCRMCard
+                            business={crmBusiness}
+                            onApprove={handleApproval}
+                            onInspect={(business) => {
+                              const fullBusinessData = allBusinesses.find(b => b.id === business.id)
+                              if (fullBusinessData) {
+                                setSelectedBusiness(fullBusinessData)
+                                setInspectionModalOpen(true)
+                              }
+                            }}
+                          />
+                        </div>
                       )
-                    })
+                    })}
+                      </div>
+                    </>
                   )}
                 </div>
               )}
@@ -2884,6 +3050,9 @@ Qwikker Admin Team`
                         status: business.status as 'incomplete' | 'pending_review' | 'approved' | 'rejected' | 'trial_expired' | 'inactive',
                         approved_at: business.approved_at,
                         admin_notes: business.admin_notes,
+                        google_primary_type: business.google_primary_type || null,
+                        latitude: business.latitude || null,
+                        longitude: business.longitude || null,
                         subscription: null,
                         tier: null,
                         recent_payments: [],
@@ -3712,6 +3881,15 @@ Qwikker Admin Team`
           </div>
         </div>
       )}
+
+      {/* AI Eligible Confirmation Modal */}
+      <AiEligibleConfirmationModal
+        isOpen={isAiEligibleModalOpen}
+        onClose={() => setIsAiEligibleModalOpen(false)}
+        onConfirm={handleBulkAiEligible}
+        selectedCount={selectedBusinessIds.size}
+        isLoading={isUpdatingAiEligible}
+      />
     </div>
   )
 }

@@ -37,6 +37,7 @@ interface PlaceResult {
     longitude: number
   }
   types?: string[]
+  primaryType?: string
   businessStatus?: string
   formattedAddress?: string
   photos?: Array<{
@@ -419,6 +420,8 @@ export async function POST(request: NextRequest) {
         address: place.formattedAddress || 'Address not available',
         category: categoryConfig.displayName, // Display label (consistent for all results in this search)
         systemCategory: category, // The stable enum value for reference
+        googleTypes: place.types || [], // Raw Google types array (for cuisine tags, etc.)
+        googlePrimaryType: place.primaryType || place.types?.[0] || null, // Google's primary type classification
         distance: Math.round(distance),
         status: place.businessStatus || 'OPERATIONAL',
         hasPhoto: !!place.photos?.[0]?.name,

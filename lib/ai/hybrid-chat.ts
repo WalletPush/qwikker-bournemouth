@@ -15,6 +15,7 @@ import {
 import { createTenantAwareServerClient } from '@/lib/utils/tenant-security'
 import { isFreeTier, isAiEligibleTier, getTierPriority } from '@/lib/atlas/eligibility'
 import { getFranchiseApiKeys } from '@/lib/utils/franchise-api-keys'
+import { getBusinessVibeStats } from '@/lib/utils/vibes'
 
 // DO NOT instantiate OpenAI globally - must be per-franchise to use their API key
 // Each franchise pays for their own AI usage via franchise_crm_configs.openai_api_key
@@ -47,6 +48,8 @@ interface ChatResponse {
     display_category?: string // User-friendly label
     business_tier: string // ✅ effective_tier from subscription-based view (spotlight, featured, starter)
     tier_priority?: number // ✅ Sort priority from view (1=spotlight, 2=featured/trial, 3=starter)
+    vibes_positive_percentage?: number // 💚 Qwikker Vibes (only if 5+ vibes)
+    vibes_total?: number // 💚 Total vibes count
     business_address?: string
     business_town?: string
     logo?: string
@@ -197,7 +200,10 @@ export async function generateHybridAIResponse(
         }
       }
       
-      businessResults = await searchBusinessKnowledge(enhancedQuery, city, { matchCount: searchLimit })
+      businessResults = await searchBusinessKnowledge(enhancedQuery, city, { 
+        matchCount: searchLimit,
+        matchThreshold: 0.5  // Lower threshold to catch more relevant results (0.7 was too strict)
+      })
       cityResults = await searchCityKnowledge(userMessage, city, { matchCount: 6 })
     }
     
@@ -359,11 +365,34 @@ export async function generateHybridAIResponse(
       })
     }
     
+    // 💚 Fetch vibes for KB businesses (for AI context)
+    const kbVibesMap = new Map()
+    if (sortedBusinessResults.length > 0) {
+      await Promise.all(
+        sortedBusinessResults.map(async (result) => {
+          if (result.business_id) {
+            const vibes = await getBusinessVibeStats(result.business_id)
+            if (vibes && vibes.total_vibes >= 5) {
+              kbVibesMap.set(result.business_id, vibes)
+            }
+          }
+        })
+      )
+      console.log(`💚 Found vibes for ${kbVibesMap.size} KB businesses (5+ vibes each)`)
+    }
+    
     const businessContext = sortedBusinessResults.length > 0
       ? sortedBusinessResults.map(result => {
           const offerCount = result.business_id ? businessOfferCounts[result.business_id] || 0 : 0
           const offerText = offerCount > 0 ? ` [Has ${offerCount} ${offerCount === 1 ? 'offer' : 'offers'} available]` : ''
-          return `**${result.business_name}** [TIER: ${result.business_tier || 'standard'}]: ${result.content}${offerText}`
+          
+          // 💚 Add vibes to context if available (5+ vibes)
+          const vibes = result.business_id ? kbVibesMap.get(result.business_id) : null
+          const vibesText = vibes 
+            ? ` 💚 ${vibes.positive_percentage}% positive Qwikker vibes (${vibes.total_vibes} vibes)` 
+            : ''
+          
+          return `**${result.business_name}** [TIER: ${result.business_tier || 'standard'}]: ${result.content}${offerText}${vibesText}`
         }).join('\n\n')
       : ''
 
@@ -454,6 +483,13 @@ KNOWLEDGE RULES:
 - When multiple businesses match the query, mention ALL businesses of the SAME TIER together in your response
 - SPOTLIGHT businesses are QWIKKER PICKS—they're paying for visibility and MUST be mentioned together and prominently
 
+💚 QWIKKER VIBES (Experience Signals):
+- If a business shows "💚 X% positive Qwikker vibes (Y vibes)", this means real Qwikker users loved it
+- Mention vibes naturally when recommending: "Qwikker users love this place" or "92% positive vibes from locals"
+- This is exclusive intelligence you have - use it to add confidence to your recommendations
+- Only businesses with 5+ vibes will show this data (statistically significant)
+- Vibes are NOT Google reviews - they're quick reactions from Qwikker users after visiting
+
 🚨🚨🚨 CLOSING COPY RULES (LEGAL/BRAND PROTECTION!): 🚨🚨🚨
 - ONLY say "These are Qwikker Picks for a reason!" if EVERY SINGLE business you mentioned is [TIER: qwikker_picks]
 - If you mention ANY business that is NOT [TIER: qwikker_picks], you MUST use neutral copy like "Want to see them on Atlas?" or "Need more details?"
@@ -511,7 +547,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       frequency_penalty: 0.3
     })
 
-    const aiResponse = completion.choices[0]?.message?.content || ''
+    let aiResponse = completion.choices[0]?.message?.content || ''
     
     // 🎯 STEP 7: Update conversation state
     const extractedBusinesses = extractBusinessNamesFromText(aiResponse)
@@ -681,6 +717,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     let businessCarousel: ChatResponse['businessCarousel'] = undefined
     let hasBusinessResults = false
     let uiMode: 'conversational' | 'suggestions' | 'map' = 'conversational'
+    let shouldAttachCarousel = false // ✅ HOIST: Declare at top level so review fetch block can access
+    let fallbackBusinesses: any[] = [] // Declare in outer scope so it's always accessible
     
     if (businessResults.success && businessResults.results.length > 0) {
       // STEP 1: Dedupe by business_id (KB returns multiple rows per business)
@@ -723,7 +761,6 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           business_images,
           rating,
           review_count,
-          google_reviews_highlights,
           google_place_id,
           owner_user_id,
           claimed_at
@@ -731,6 +768,21 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         .in('id', uniqueBusinessIds)
       
       const businessById = new Map((businesses || []).map(b => [b.id, b]))
+      
+      // 💚 Fetch Qwikker Vibes for all businesses (for chat context + within-tier ranking)
+      const vibesMap = new Map()
+      if (businesses && businesses.length > 0) {
+        await Promise.all(
+          businesses.map(async (business) => {
+            const vibes = await getBusinessVibeStats(business.id)
+            if (vibes && vibes.total_vibes >= 5) {
+              // Only include businesses with 5+ vibes (statistically significant)
+              vibesMap.set(business.id, vibes)
+            }
+          })
+        )
+        console.log(`💚 Found vibes for ${vibesMap.size} businesses (5+ vibes each)`)
+      }
       
       // 🎯 THREE-TIER CHAT SYSTEM: Query Tier 2 & Tier 3
       // TIER 1: Paid/Trial (already queried above via business_profiles_chat_eligible)
@@ -748,7 +800,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       console.log(`💼 Found ${liteBusinesses?.length || 0} Lite businesses`)
       
       // Query Tier 3: Unclaimed fallback directory (ONLY if Tier 1 AND Tier 2 are empty)
-      let fallbackBusinesses: any[] = []
+      // (fallbackBusinesses declared in outer scope)
       const hasPaidResults = (businesses && businesses.length > 0)
       const hasLiteResults = (liteBusinesses && liteBusinesses.length > 0)
       
@@ -777,7 +829,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       const wantsMap = /\b(map|atlas|on the map|pins|show.*location|where.*located)\b/.test(msg)
       const wantsList = /\b(show|list|options|recommend|suggest|places|where should|near me|results|give me)\b/.test(msg)
       
-      let uiMode: 'conversational' | 'suggestions' | 'map'
+      // ✅ FIX: Don't redeclare uiMode (use assignment only)
       if (wantsMap) {
         uiMode = 'map'
       } else if (wantsList) {
@@ -786,7 +838,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         uiMode = 'conversational'
       }
       
-      const shouldAttachCarousel = uiMode !== 'conversational'
+      // ✅ FIX: Don't redeclare shouldAttachCarousel (use assignment only)
+      shouldAttachCarousel = uiMode !== 'conversational'
       
       console.log(`🎨 UI Mode: ${uiMode}, shouldAttachCarousel: ${shouldAttachCarousel}`)
       
@@ -796,9 +849,13 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       if (shouldAttachCarousel && uniqueBusinessIds.length > 0) {
         // Build Tier 1 carousel (Paid/Trial ONLY)
         const paidCarousel = uniqueBusinessIds
-          .map(id => businessById.get(id))
-          .filter(Boolean) // Remove nulls
-          .map(b => ({
+          .map(id => {
+            const b = businessById.get(id)
+            const vibes = vibesMap.get(id)
+            return { business: b, vibes }
+          })
+          .filter(({ business }) => Boolean(business)) // Remove nulls
+          .map(({ business: b, vibes }) => ({
             id: b!.id,
             business_name: b!.business_name,
             business_tagline: b!.business_tagline || undefined,
@@ -806,6 +863,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             display_category: b!.display_category || b!.system_category || undefined,
             business_tier: b!.effective_tier || 'starter',
             tier_priority: b!.tier_priority || 999,
+            vibes_positive_percentage: vibes?.positive_percentage,
+            vibes_total: vibes?.total_vibes,
             business_address: b!.business_address || undefined,
             business_town: b!.business_town || city,
             logo: b!.logo || undefined,
@@ -816,12 +875,23 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             offers_count: businessOfferCounts[b!.id] || 0
           }))
         
-        // Sort Tier 1 by tier_priority, then rating, then offers
+        // Sort Tier 1 by tier_priority, then vibes (within-tier), then rating, then offers
+        // 💚 Vibes influence ranking WITHIN tiers (Pick, Featured, Starter), not across tiers
         paidCarousel.sort((a, b) => {
+          // 1. Tier priority (spotlight > featured > starter)
           if (a.tier_priority !== b.tier_priority) return a.tier_priority - b.tier_priority
+          
+          // 2. Vibes (within same tier) - only if both have 5+ vibes
+          const aVibes = (a.vibes_total && a.vibes_total >= 5) ? (a.vibes_positive_percentage ?? 0) : 0
+          const bVibes = (b.vibes_total && b.vibes_total >= 5) ? (b.vibes_positive_percentage ?? 0) : 0
+          if (bVibes !== aVibes) return bVibes - aVibes
+          
+          // 3. Google rating
           const ar = a.rating ?? 0
           const br = b.rating ?? 0
           if (br !== ar) return br - ar
+          
+          // 4. Offers count
           return (b.offers_count ?? 0) - (a.offers_count ?? 0)
         })
         
@@ -900,33 +970,83 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     // ONLY show review text for UNCLAIMED businesses (Tier 3 fallback)
     // Tier 1 (Paid) & Tier 2 (Claimed-Free) use business-provided content instead
     if (fallbackBusinesses && fallbackBusinesses.length > 0) {
-      // Pick first UNCLAIMED business with reviews
-      const unclaimedBusinessWithReviews = fallbackBusinesses.find(b => 
-        b.status === 'unclaimed' &&
-        b.google_reviews_highlights && 
-        Array.isArray(b.google_reviews_highlights) && 
-        b.google_reviews_highlights.length > 0
-      )
+      // 🎯 PROTECTION #1: Max 1 review fetch per chat (first unclaimed business only)
+      let alreadyFetchedReviews = false
       
-      if (unclaimedBusinessWithReviews && unclaimedBusinessWithReviews.google_reviews_highlights) {
-        const reviews = unclaimedBusinessWithReviews.google_reviews_highlights
+      // Pick first UNCLAIMED business (with or without cached reviews)
+      const firstUnclaimedBusiness = fallbackBusinesses.find(b => b.status === 'unclaimed')
+      
+      if (firstUnclaimedBusiness) {
+        let reviews = null
         
-        // Take max 3 verbatim snippets
-        const snippets = reviews.slice(0, 3).map((review: any) => ({
-          text: review.text || '',
-          author: review.author || 'Anonymous',
-          rating: review.rating || 5
-        })).filter((s: any) => s.text.length > 0) // Only include non-empty reviews
-        
-        if (snippets.length > 0) {
-          googleReviewSnippets = {
-            businessName: unclaimedBusinessWithReviews.business_name,
-            businessId: unclaimedBusinessWithReviews.id,
-            google_place_id: unclaimedBusinessWithReviews.google_place_id,
-            snippets
-          }
+        // Try cached reviews first (< 30 days old)
+        if (firstUnclaimedBusiness.google_reviews_highlights && 
+            Array.isArray(firstUnclaimedBusiness.google_reviews_highlights) && 
+            firstUnclaimedBusiness.google_reviews_highlights.length > 0) {
+          reviews = firstUnclaimedBusiness.google_reviews_highlights
+          console.log(`✅ Using cached reviews for ${firstUnclaimedBusiness.business_name}`)
+        }
+        // 🎯 PROTECTION #2: Only fetch on-demand if we're actually going to display snippets
+        // (Not just because Tier 3 exists)
+        else if (!alreadyFetchedReviews && 
+                 firstUnclaimedBusiness.google_place_id && 
+                 shouldAttachCarousel) { // Only fetch if we're building a rich response (snippets will be included in payload)
+          console.log(`💰 Attempting on-demand review fetch for ${firstUnclaimedBusiness.business_name} (est. cost: ~$0.014-$0.025 depending on Google SKU)`)
           
-          console.log(`📝 Including ${snippets.length} verbatim Google review snippets for UNCLAIMED business: ${unclaimedBusinessWithReviews.business_name}`)
+          // 🎯 PROTECTION #3: Rate limiting (enforce before fetch)
+          // Import the on-demand fetch utility
+          const { fetchGoogleReviewsOnDemand, checkReviewFetchRateLimit } = await import('@/lib/utils/google-reviews-on-demand')
+          
+          // ✅ FIX: Actually use rate limiting
+          const userKey = context.walletPassId || 'anonymous'
+          const rateLimitCheck = await checkReviewFetchRateLimit(userKey, firstUnclaimedBusiness.id)
+          
+          if (!rateLimitCheck.allowed) {
+            console.log(`⏱️ Skipping on-demand reviews (rate limited until ${rateLimitCheck.resetAt?.toISOString()})`)
+          } else {
+            try {
+              const freshReviews = await fetchGoogleReviewsOnDemand(
+                firstUnclaimedBusiness.google_place_id,
+                city
+              )
+              
+              if (freshReviews && freshReviews.length > 0) {
+                reviews = freshReviews
+                alreadyFetchedReviews = true // Prevent multiple fetches in same chat
+                console.log(`✅ Fetched ${freshReviews.length} fresh reviews on-demand`)
+              } else {
+                console.log(`ℹ️ No reviews returned from on-demand fetch`)
+              }
+            } catch (error) {
+              console.error(`❌ On-demand review fetch failed:`, error)
+              // Graceful degradation: continue without snippets
+            }
+          }
+        }
+        
+        // Build snippets if we have reviews (cached or fresh)
+        if (reviews && Array.isArray(reviews)) {
+          // ✅ FIX: Filter to only good reviews (>= 4 stars), clamp text, then take first 3
+          const snippets = reviews
+            .filter((review: any) => (review.rating ?? 0) >= 4) // Only show 4★ and 5★ reviews
+            .map((review: any) => ({
+              text: String(review.text || '').slice(0, 280).trim(), // Clamp to 280 chars
+              author: review.author || 'Anonymous',
+              rating: review.rating || 5
+            }))
+            .filter((s: any) => s.text.length > 0) // Only include non-empty reviews
+            .slice(0, 3) // Take max 3 AFTER filtering/mapping
+          
+          if (snippets.length > 0) {
+            googleReviewSnippets = {
+              businessName: firstUnclaimedBusiness.business_name,
+              businessId: firstUnclaimedBusiness.id,
+              google_place_id: firstUnclaimedBusiness.google_place_id,
+              snippets
+            }
+            
+            console.log(`📝 Including ${snippets.length} verbatim Google review snippets for UNCLAIMED business: ${firstUnclaimedBusiness.business_name}`)
+          }
         }
       }
     }

@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 /**
  * GET /api/admin/kb-eligible
  * 
- * Fetch KB-eligible businesses from business_profiles_kb_eligible view
+ * Fetch AI-eligible businesses from business_profiles_ai_eligible view
  * 
  * This ensures the "Select Target for Knowledge Base" dropdown ONLY shows
  * businesses eligible for paid AI exposure:
@@ -19,7 +19,7 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role for admin access
@@ -36,14 +36,13 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const city = searchParams.get('city')
 
-    console.log('📋 Fetching KB-eligible businesses', { city })
+    console.log('📋 Fetching AI-eligible businesses', { city })
 
-    // Fetch from business_profiles_kb_eligible view
+    // Fetch from business_profiles_ai_eligible view (Tier 1: Paid/Trial only)
     let query = supabase
-      .from('business_profiles_kb_eligible')
+      .from('business_profiles_ai_eligible')
       .select('*')
-      .order('tier_priority', { ascending: true }) // Spotlight first, then featured/trial, then starter
-      .order('business_name', { ascending: true }) // Within tier, alphabetical
+      .order('business_name', { ascending: true })
 
     if (city) {
       query = query.eq('city', city)
@@ -52,28 +51,18 @@ export async function GET(request: NextRequest) {
     const { data: businesses, error } = await query
 
     if (error) {
-      console.error('❌ Error fetching KB-eligible businesses:', error)
+      console.error('❌ Error fetching AI-eligible businesses:', error)
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Failed to fetch KB-eligible businesses',
+          error: 'Failed to fetch AI-eligible businesses',
           details: error.message 
         },
         { status: 500 }
       )
     }
 
-    console.log(`✅ Found ${businesses?.length || 0} KB-eligible businesses`)
-    
-    // Log tier distribution for debugging
-    if (businesses && businesses.length > 0) {
-      const tierCounts = businesses.reduce((acc: any, b: any) => {
-        const tier = b.effective_tier || 'unknown'
-        acc[tier] = (acc[tier] || 0) + 1
-        return acc
-      }, {})
-      console.log('📊 KB-eligible tier distribution:', tierCounts)
-    }
+    console.log(`✅ Found ${businesses?.length || 0} AI-eligible businesses (Tier 1: Paid/Trial)`)
 
     return NextResponse.json({
       success: true,
@@ -81,7 +70,7 @@ export async function GET(request: NextRequest) {
       count: businesses?.length || 0
     })
   } catch (error: any) {
-    console.error('❌ Unexpected error in kb-eligible API:', error)
+    console.error('❌ Unexpected error in ai-eligible API:', error)
     return NextResponse.json(
       { 
         success: false, 

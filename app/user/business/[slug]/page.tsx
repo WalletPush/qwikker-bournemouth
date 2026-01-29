@@ -107,7 +107,6 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       longitude,
       google_primary_type,
       google_place_id,
-      google_reviews_highlights,
       auto_imported,
       business_offers!left(
         id,
@@ -225,7 +224,8 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
         : (business.plan || 'starter'),
       rating: business.rating || 4.5,
       reviewCount: business.review_count || Math.floor(Math.random() * 50) + 10,
-      reviews: business.google_reviews_highlights || [],
+      // ✅ Google review snippets NOT fetched for business detail page
+      // Chat handles verbatim snippets for Tier 3 fallback (unclaimed) only
       vibes: vibesMap.get(business.id) || null, // 💚 Qwikker Vibes stats
       google_primary_type: business.google_primary_type,
       google_place_id: business.google_place_id,

@@ -44,26 +44,41 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
   // Geolocation state
   const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null)
   const [locationStatus, setLocationStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt')
+  const [showManualLocation, setShowManualLocation] = useState(false)
   
-  // Request user location on mount
-  useEffect(() => {
+  // Function to request location
+  const requestLocation = () => {
     if ('geolocation' in navigator) {
+      console.log('📍 Requesting location...')
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          console.log('📍 SUCCESS! Got position:', position.coords)
           setUserLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude
           })
           setLocationStatus('granted')
-          console.log('📍 Location granted:', position.coords.latitude, position.coords.longitude)
         },
         (error) => {
-          console.warn('📍 Location denied:', error)
+          console.error('📍 FAILED! Error:', error, 'Code:', error.code, 'Message:', error.message)
           setLocationStatus('denied')
+          setShowManualLocation(true)
         },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 300000 }
+        { 
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
       )
+    } else {
+      console.error('📍 Geolocation not supported in this browser')
+      setLocationStatus('denied')
     }
+  }
+
+  // Request user location on mount
+  useEffect(() => {
+    requestLocation()
   }, [])
   
   // Haversine distance calculation (in miles)
@@ -153,24 +168,57 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
     }
   }, [])
   
-  // Load saved businesses from localStorage on mount
+  // Load saved businesses from DB (if wallet pass) or localStorage (fallback)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('qwikker_saved_businesses')
-      if (saved) {
-        try {
-          setSavedBusinesses(new Set(JSON.parse(saved)))
-        } catch (e) {
-          console.error('Failed to load saved businesses:', e)
+    const loadSavedBusinesses = async () => {
+      if (walletPassId) {
+        // Load from database for persistent, trackable saves
+        const { getUserSavedItems } = await import('@/lib/actions/user-saved-actions')
+        const result = await getUserSavedItems(walletPassId)
+        if (result.success && result.items) {
+          const businessIds = result.items
+            .filter(item => item.item_type === 'business')
+            .map(item => item.item_id)
+          setSavedBusinesses(new Set(businessIds))
+          console.log('💾 Loaded saved businesses from DB:', businessIds.length)
+        }
+      } else if (typeof window !== 'undefined') {
+        // Fallback to localStorage for users without wallet pass
+        const saved = localStorage.getItem('qwikker-saved-businesses')
+        if (saved) {
+          try {
+            const savedArray = JSON.parse(saved) as string[]
+            setSavedBusinesses(new Set(savedArray))
+            console.log('💾 Loaded saved businesses from localStorage:', savedArray.length)
+          } catch (e) {
+            console.error('Failed to load saved businesses:', e)
+          }
         }
       }
     }
-  }, [])
+    
+    // Load on mount
+    loadSavedBusinesses()
+    
+    // Reload when page becomes visible (user navigates back)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('👀 Page visible - reloading saved businesses')
+        loadSavedBusinesses()
+      }
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [walletPassId])
   
   // Persist saved businesses to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('qwikker_saved_businesses', JSON.stringify(Array.from(savedBusinesses)))
+      localStorage.setItem('qwikker-saved-businesses', JSON.stringify(Array.from(savedBusinesses))) // Fixed: use dash not underscore
     }
   }, [savedBusinesses])
   
@@ -523,6 +571,22 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
           </button>
         </div>
       </div>
+
+      {/* Location Permission Banner */}
+      {locationStatus === 'denied' && (
+        <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-600/30 rounded-lg flex items-center justify-between">
+          <div>
+            <p className="text-yellow-400 font-medium">Location access unavailable</p>
+            <p className="text-slate-400 text-sm">Distance info won't be shown. Click to try again.</p>
+          </div>
+          <button
+            onClick={requestLocation}
+            className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
+          >
+            Enable Location
+          </button>
+        </div>
+      )}
 
       {/* Business Grid */}
       {getFilteredBusinesses().length > 0 ? (

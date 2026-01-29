@@ -31,7 +31,8 @@ export default async function DashboardOffersPage() {
         offer_image,
         status,
         display_order,
-        created_at
+        created_at,
+        edit_count
       )
     `)
     .eq('user_id', data.claims.sub)
@@ -56,24 +57,7 @@ export default async function DashboardOffersPage() {
   }
   const actionItemsCount = calculateActionItemsCount(profile)
 
-  // 🔒 CRITICAL: Check if claimed_free status - show locked page
-  if (profileData.status === 'claimed_free') {
-    return (
-      <DashboardLayout currentSection="offers" profile={profile} actionItemsCount={actionItemsCount}>
-        <LockedFeaturePage 
-          featureName="Exclusive Offers" 
-          description="Create and manage limited-time offers to attract new customers. Track redemptions, set expiry dates, and boost engagement with exclusive deals."
-          benefits={[
-            'Create unlimited offers with custom expiry dates',
-            'Track redemptions and engagement in real-time',
-            'Appear in AI-powered recommendations',
-            'Boost visibility with exclusive deals'
-          ]}
-        />
-      </DashboardLayout>
-    )
-  }
-
+  // ✅ claimed_free users can now access offers (1 offer with 1 edit allowed)
   return (
     <DashboardLayout currentSection="offers" profile={profile} actionItemsCount={actionItemsCount}>
       <OffersPage profile={profile} />

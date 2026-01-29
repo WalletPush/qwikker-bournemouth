@@ -46,6 +46,7 @@ interface BusinessResult {
   category: string // Display label (e.g. "Restaurant", "Cafe / Coffee Shop")
   systemCategory?: string // Optional: stable enum for reference
   googleTypes?: string[] // Raw Google types for cuisine tags
+  googlePrimaryType?: string // Google's primary type (e.g. "cafe", "restaurant", "night_club")
   distance: number
   status: string
   hasPhoto: boolean
@@ -677,9 +678,14 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
                         <span className="font-medium">{(result.distance / 1609.34).toFixed(1)} mi</span>
                       </div>
 
-                      {/* Third line: Category + Cuisine chips */}
+                      {/* Third line: Category + Google Primary Type + Cuisine chips */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="secondary">{result.category}</Badge>
+                        {result.googlePrimaryType && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
+                            Google: {result.googlePrimaryType.replace(/_/g, ' ')}
+                          </Badge>
+                        )}
                         {getCuisineTags(result.googleTypes).map(tag => (
                           <Badge key={tag} variant="outline" className="text-xs">
                             {tag}

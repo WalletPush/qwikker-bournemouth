@@ -366,11 +366,22 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         website: business.website_url || '', // CRM card looks for 'website' field
         instagram_handle: business.instagram_handle || '',
         facebook_url: business.facebook_url || '',
-        status: business.status as 'incomplete' | 'pending_review' | 'approved' | 'rejected',
+        status: business.status as 'incomplete' | 'pending_review' | 'approved' | 'rejected' | 'unclaimed' | 'claimed' | 'claimed_free',
         approved_at: business.approved_at,
         created_at: business.created_at,
         updated_at: business.updated_at,
         admin_notes: business.admin_notes,
+        
+        // Google rating & reviews
+        rating: business.rating || null,
+        review_count: business.review_count || null,
+        google_primary_type: business.google_primary_type || null,
+        latitude: business.latitude || null,
+        longitude: business.longitude || null,
+        
+        // AI eligibility (for Tier 3 fallback pool)
+        admin_chat_fallback_approved: business.admin_chat_fallback_approved || null,
+        auto_imported: business.auto_imported || null,
         
         // GHL sync tracking (from database)
         last_ghl_sync: syncData?.last_ghl_sync || null,
