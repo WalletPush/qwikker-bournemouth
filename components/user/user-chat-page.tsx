@@ -890,7 +890,14 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
                   <div className="mt-4 p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                        What People Are Saying on Google
+                        What People Are Saying About{' '}
+                        <a
+                          href={`/user/business/${message.googleReviewSnippets.businessId}`}
+                          className="text-blue-400 hover:text-blue-300 underline"
+                        >
+                          {message.googleReviewSnippets.businessName}
+                        </a>
+                        {' '}on Google
                       </p>
                       {message.googleReviewSnippets.google_place_id && (
                         <a

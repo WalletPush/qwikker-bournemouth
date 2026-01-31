@@ -936,16 +936,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           
           console.log(`🎯 Tier 2: ${tier2WithScores.length} relevant claimed-free businesses`)
           
-          // Use pre-loaded Tier 3 businesses (sorted by rating)
-          const tier3 = tier3Businesses
-            .sort((a, b) => {
-              if (b.rating !== a.rating) return (b.rating || 0) - (a.rating || 0)
-              if (b.review_count !== a.review_count) return (b.review_count || 0) - (a.review_count || 0)
-              return (a.business_name || '').localeCompare(b.business_name || '')
-            })
-            .slice(0, 10)
-          
-          const tier3WithScores = (tier3 || [])
+          // ✅ FIX: Score ALL Tier 3 businesses first, THEN filter by relevance
+          const tier3WithScores = (tier3Businesses || [])
             .map(b => ({
               ...b,
               relevanceScore: scoreBusinessRelevance(b, intent),
@@ -954,13 +946,24 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           
           // ✅ DEBUG: Log all Tier 3 scores for "indian" query
           if (intent.categories.includes('indian')) {
-            console.log(`🔍 DEBUG: Scoring ${tier3.length} Tier 3 businesses for "indian"`)
-            tier3WithScores.slice(0, 5).forEach(b => {
-              console.log(`  - ${b.business_name}: score=${b.relevanceScore}, category="${b.display_category}"`)
+            console.log(`🔍 DEBUG: Scoring ${tier3Businesses.length} Tier 3 businesses for "indian"`)
+            const indianMatches = tier3WithScores.filter(b => b.relevanceScore > 0)
+            console.log(`  Found ${indianMatches.length} relevant matches:`)
+            indianMatches.slice(0, 5).forEach(b => {
+              console.log(`    - ${b.business_name}: score=${b.relevanceScore}, category="${b.display_category}"`)
             })
           }
           
-          const tier3Relevant = tier3WithScores.filter(b => b.relevanceScore > 0)
+          // Filter for relevant businesses (score > 0)
+          const tier3Relevant = tier3WithScores
+            .filter(b => b.relevanceScore > 0)
+            .sort((a, b) => {
+              // Sort by relevance first, then rating
+              if (b.relevanceScore !== a.relevanceScore) return b.relevanceScore - a.relevanceScore
+              if (b.rating !== a.rating) return (b.rating || 0) - (a.rating || 0)
+              if (b.review_count !== a.review_count) return (b.review_count || 0) - (a.review_count || 0)
+              return (a.business_name || '').localeCompare(b.business_name || '')
+            })
           
           console.log(`🎯 Tier 3: ${tier3Relevant.length} relevant unclaimed businesses`)
           
@@ -970,13 +973,19 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           
           if (tier1HasEnoughRelevant) {
             // Tier 1 has enough relevant matches (2+) - lower tiers are just an assist
-            fallbackBusinesses = allLowerTiers.slice(0, MAX_TIER3_WHEN_PAID_RELEVANT)
+            // ✅ FIX: Also filter by relevanceScore > 0 here
+            fallbackBusinesses = allLowerTiers
+              .filter(b => b.relevanceScore > 0)
+              .slice(0, MAX_TIER3_WHEN_PAID_RELEVANT)
             
             console.log(`🎯 Tier 1 has ${tier1RelevantCount} relevant - showing ${fallbackBusinesses.length} Tier 2/3 assist`)
             
           } else {
             // Tier 1 is genuinely irrelevant (< 2 relevant) - lower tiers dominate
-            const lowerTiersTop = allLowerTiers.slice(0, 6)
+            // ✅ FIX: Filter by relevanceScore > 0 BEFORE showing
+            const lowerTiersTop = allLowerTiers
+              .filter(b => b.relevanceScore > 0)
+              .slice(0, 6)
             
             // CRITICAL: Put best Tier 2/3 in topMatchesText (shown first as text)
             topMatchesText = lowerTiersTop
@@ -984,7 +993,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             // Remaining goes to "more options" - use ID tracking to avoid .includes() bug
             const topIds = new Set(lowerTiersTop.map(b => b.id))
             fallbackBusinesses = allLowerTiers
-              .filter(b => !topIds.has(b.id))
+              .filter(b => !topIds.has(b.id) && b.relevanceScore > 0) // ✅ FIX: Also filter by score
               .slice(0, MAX_TIER3_IN_MORE)
             
             console.log(`🎯 Tier 1 irrelevant - showing ${topMatchesText.length} Tier 2/3 as top matches`)
@@ -1424,20 +1433,18 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     // STRATEGIC: Claimed businesses use their own descriptions/menus (premium positioning)
     let googleReviewSnippets: ChatResponse['googleReviewSnippets'] = undefined
     
-    // ONLY show review text for UNCLAIMED businesses (Tier 3 fallback or top matches)
-    // Tier 1 (Paid) & Tier 2 (Claimed-Free) use business-provided content instead
-    // CRITICAL FIX: Check BOTH topMatchesText AND fallbackBusinesses
+    // ✅ LOGIC FIX: Only show reviews when showing a SINGLE business
+    // Showing reviews for 1 business out of 6 is confusing
+    // Either show for the ONLY match, or don't show at all
     const allTier3Businesses = [...(topMatchesText || []), ...(fallbackBusinesses || [])]
     
-    if (allTier3Businesses && allTier3Businesses.length > 0) {
-      // 🎯 PROTECTION #1: Max 1 review fetch per chat (first unclaimed business only)
-      let alreadyFetchedReviews = false
-      
-      // Pick first business from Tier 3 (all are unclaimed by definition)
+    if (allTier3Businesses && allTier3Businesses.length === 1) {
+      // ONLY 1 business being shown → safe to show its reviews
       const firstUnclaimedBusiness = allTier3Businesses[0]
       
       if (firstUnclaimedBusiness) {
         let reviews = null
+        let alreadyFetchedReviews = false
         
         // Try cached reviews first (< 30 days old)
         if (firstUnclaimedBusiness.google_reviews_highlights && 
