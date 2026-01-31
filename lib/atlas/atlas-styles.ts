@@ -94,11 +94,21 @@ export const getBusinessPinLayers = () => {
     type: 'circle',
     source: 'businesses',
     paint: {
-      // ✅ TEMP: FORCE HUGE FIXED RADIUS (testing)
-      'circle-radius': 80,
-      // ✅ TEMP: FORCE WHITE CIRCLES FOR ALL PINS (testing)
-      'circle-color': '#ffffff',
-      'circle-opacity': 1.0,
+      'circle-radius': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        10, 15,
+        14, 25,
+        18, 40
+      ],
+      'circle-color': [
+        'case',
+        ['get', 'isPaid'], NEON_CYAN,     // Cyan glow for paid businesses
+        ['get', 'isUnclaimed'], '#6b7280', // Dull grey for unclaimed
+        NEON_CYAN                           // Default cyan
+      ],
+      'circle-opacity': 0.3,
       'circle-blur': 1
     }
   }
@@ -109,14 +119,24 @@ export const getBusinessPinLayers = () => {
     type: 'circle',
     source: 'businesses',
     paint: {
-      // ✅ TEMP: FORCE HUGE FIXED RADIUS (testing)
-      'circle-radius': 50,
-      // ✅ TEMP: FORCE WHITE CIRCLES FOR ALL PINS (testing)
-      'circle-color': '#ffffff',
-      'circle-opacity': 1.0,
-      'circle-stroke-width': 3,
+      'circle-radius': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        10, 8,
+        14, 12,
+        18, 18
+      ],
+      'circle-color': [
+        'case',
+        ['get', 'isPaid'], NEON_CYAN,     // Cyan for paid businesses
+        ['get', 'isUnclaimed'], '#9ca3af', // Light grey for unclaimed
+        NEON_CYAN                           // Default cyan
+      ],
+      'circle-opacity': 1,
+      'circle-stroke-width': 2,
       'circle-stroke-color': '#ffffff',
-      'circle-stroke-opacity': 1.0
+      'circle-stroke-opacity': 0.8
     }
   }
 

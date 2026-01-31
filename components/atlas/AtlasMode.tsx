@@ -1281,10 +1281,7 @@ export function AtlasMode({
       {mapLoaded && userLocation && (
         <div className="absolute bottom-32 right-6 z-[9999]">
           <button
-            onClick={() => {
-              alert('Button clicked!')
-              handleRecenterToUser()
-            }}
+            onClick={handleRecenterToUser}
             className="w-12 h-12 rounded-full bg-[#00d083] hover:bg-[#00ff9d] transition-colors shadow-lg border-2 border-white flex items-center justify-center group pointer-events-auto"
             title="Recenter to my location"
             style={{ cursor: 'pointer' }}
