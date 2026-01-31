@@ -438,7 +438,8 @@ export async function generateHybridAIResponse(
                          userMessage.toLowerCase().includes('best place')) &&
                         !userMessage.toLowerCase().match(/(deal|offer|discount|italian|pizza|burger|chinese|indian|thai|mexican|japanese|cocktail|cheap|expensive|fancy|upscale|qwikker pick)/i)
     
-    const systemPrompt = `You're a local friend helping someone explore Bournemouth—not a chatbot. You're knowledgeable, enthusiastic, and genuinely helpful.
+    const cityDisplayName = city.charAt(0).toUpperCase() + city.slice(1)
+    const systemPrompt = `You're a local friend helping someone explore ${cityDisplayName}—not a chatbot. You're knowledgeable, enthusiastic, and genuinely helpful.
 
 YOUR PERSONALITY:
 - Talk like a best friend who knows the city inside out
