@@ -618,48 +618,50 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
 
   return (
     <>
-      {/* ATLAS MODE: Full-screen map */}
+      {/* ATLAS MODE: Full-screen map (BREAKS OUT of parent container) */}
       {view === 'atlas' && atlasEnabled && tenantConfig?.atlas && atlasCenter && (
-        <AtlasMode
-          config={tenantConfig.atlas}
-          center={atlasCenter}
-          userLocation={userLocation}
-          locationStatus={locationStatus}
-          onClose={() => setView('chat')}
-          soundEnabled={soundEnabled}
-          onToggleSound={() => setSoundEnabled(!soundEnabled)}
-          city={tenantConfig.city || 'unknown'}
-          userId={currentUser?.wallet_pass_id}
-          lastUserQuery={messages.length > 0 ? messages.filter(m => m.type === 'user').slice(-1)[0]?.content : undefined}
-          lastAIResponse={messages.length > 0 ? messages.filter(m => m.type === 'ai').slice(-1)[0]?.content : undefined}
-          onRequestLocation={requestPermission}
-          initialQuery={atlasInitialQuery}
-          onInitialQueryConsumed={() => setAtlasInitialQuery(null)}
-          businesses={(() => {
-            // ✅ Pass last AI message's mapPins to Atlas (includes paid + unclaimed)
-            const lastAIMessage = messages.filter(m => m.type === 'ai').slice(-1)[0]
-            if (!lastAIMessage?.mapPins) return undefined
-            
-            // Map to Atlas Business format (ensure required fields are present)
-            return lastAIMessage.mapPins.map(pin => ({
-              id: pin.id,
-              business_name: pin.business_name,
-              latitude: pin.latitude,
-              longitude: pin.longitude,
-              rating: pin.rating || 0, // ✅ Required by Atlas Business interface
-              review_count: pin.review_count || 0, // ✅ Required by Atlas Business interface
-              business_tagline: undefined,
-              display_category: pin.display_category,
-              business_address: undefined,
-              google_place_id: pin.google_place_id,
-              website_url: pin.website_url,
-              phone: pin.phone,
-              // Add metadata for Atlas to color pins differently
-              isPaid: pin.business_tier === 'paid',
-              isUnclaimed: pin.business_tier === 'unclaimed'
-            }))
-          })()}
-        />
+        <div className="fixed inset-0 z-[9999]">
+          <AtlasMode
+            config={tenantConfig.atlas}
+            center={atlasCenter}
+            userLocation={userLocation}
+            locationStatus={locationStatus}
+            onClose={() => setView('chat')}
+            soundEnabled={soundEnabled}
+            onToggleSound={() => setSoundEnabled(!soundEnabled)}
+            city={tenantConfig.city || 'unknown'}
+            userId={currentUser?.wallet_pass_id}
+            lastUserQuery={messages.length > 0 ? messages.filter(m => m.type === 'user').slice(-1)[0]?.content : undefined}
+            lastAIResponse={messages.length > 0 ? messages.filter(m => m.type === 'ai').slice(-1)[0]?.content : undefined}
+            onRequestLocation={requestPermission}
+            initialQuery={atlasInitialQuery}
+            onInitialQueryConsumed={() => setAtlasInitialQuery(null)}
+            businesses={(() => {
+              // ✅ Pass last AI message's mapPins to Atlas (includes paid + unclaimed)
+              const lastAIMessage = messages.filter(m => m.type === 'ai').slice(-1)[0]
+              if (!lastAIMessage?.mapPins) return undefined
+              
+              // Map to Atlas Business format (ensure required fields are present)
+              return lastAIMessage.mapPins.map(pin => ({
+                id: pin.id,
+                business_name: pin.business_name,
+                latitude: pin.latitude,
+                longitude: pin.longitude,
+                rating: pin.rating || 0, // ✅ Required by Atlas Business interface
+                review_count: pin.review_count || 0, // ✅ Required by Atlas Business interface
+                business_tagline: undefined,
+                display_category: pin.display_category,
+                business_address: undefined,
+                google_place_id: pin.google_place_id,
+                website_url: pin.website_url,
+                phone: pin.phone,
+                // Add metadata for Atlas to color pins differently
+                isPaid: pin.business_tier === 'paid',
+                isUnclaimed: pin.business_tier === 'unclaimed'
+              }))
+            })()}
+          />
+        </div>
       )}
       
       {/* CHAT MODE: Regular chat interface */}

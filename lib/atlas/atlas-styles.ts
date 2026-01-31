@@ -104,9 +104,9 @@ export const getBusinessPinLayers = () => {
       ],
       'circle-color': [
         'case',
-        ['get', 'isPaid'], NEON_CYAN,     // Cyan glow for paid businesses
-        ['get', 'isUnclaimed'], '#6b7280', // Dull grey for unclaimed
-        NEON_CYAN                           // Default cyan
+        ['==', ['get', 'isPaid'], true], NEON_CYAN,     // Cyan glow for paid businesses
+        ['==', ['get', 'isUnclaimed'], true], '#6b7280', // Dull grey for unclaimed
+        NEON_CYAN                                         // Default cyan
       ],
       'circle-opacity': 0.3,
       'circle-blur': 1
@@ -129,9 +129,9 @@ export const getBusinessPinLayers = () => {
       ],
       'circle-color': [
         'case',
-        ['get', 'isPaid'], NEON_CYAN,     // Cyan for paid businesses
-        ['get', 'isUnclaimed'], '#9ca3af', // Light grey for unclaimed
-        NEON_CYAN                           // Default cyan
+        ['==', ['get', 'isPaid'], true], NEON_CYAN,     // Cyan for paid businesses
+        ['==', ['get', 'isUnclaimed'], true], '#9ca3af', // Light grey for unclaimed
+        NEON_CYAN                                         // Default cyan
       ],
       'circle-opacity': 1,
       'circle-stroke-width': 2,
