@@ -42,6 +42,7 @@ export function scoreBusinessRelevance(
   const kb = (kbContent || '').toLowerCase()
   
   // +3 for category match (strongest signal)
+  // Check both the mapped category AND the original keywords
   for (const category of intent.categories) {
     const cat = category.toLowerCase()
     
@@ -53,6 +54,24 @@ export function scoreBusinessRelevance(
       score += 3
       reasons.push(`category:${category}`)
       break // Only count once
+    }
+  }
+  
+  // Also check if category contains any of the ORIGINAL keywords (e.g., "pizza")
+  // This ensures "Pizza restaurant" matches when user asks for "pizza"
+  if (score === 0) { // Only if we didn't already get a category match
+    for (const keyword of intent.keywords) {
+      const kw = keyword.toLowerCase()
+      
+      if (
+        displayCategory.includes(kw) ||
+        systemCategory.includes(kw) ||
+        googlePrimaryType.includes(kw)
+      ) {
+        score += 3
+        reasons.push(`category:${keyword}`)
+        break // Only count once
+      }
     }
   }
   
