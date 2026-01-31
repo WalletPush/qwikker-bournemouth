@@ -242,43 +242,22 @@ export async function generateHybridAIResponse(
       console.log('🔒 [TENANT DEBUG] current city =', currentCity, error ? error.message : '')
     }
     
-    // 🔧 CRITICAL FIX: Query ALL businesses (Tier 1 + 2 + 3) from base table
-    // business_profiles_chat_eligible = Tier 1 only (paid/trial)
-    // We need ALL tiers: paid, claimed-free, AND unclaimed
-    const { data: allChatEligibleBusinesses } = await supabase
-      .from('business_profiles')
-      .select(`
-        id,
-        business_name,
-        business_tagline,
-        system_category,
-        display_category,
-        business_tier,
-        effective_tier,
-        tier_priority,
-        business_address,
-        business_town,
-        logo,
-        business_images,
-        rating,
-        review_count,
-        google_place_id,
-        latitude,
-        longitude,
-        phone,
-        website_url,
-        owner_user_id,
-        claimed_at,
-        status
-      `)
-      .eq('city', city)
-      .in('status', ['approved', 'claimed_free', 'unclaimed', 'incomplete']) // All visible statuses
-      .not('latitude', 'is', null)
-      .not('longitude', 'is', null)
-      .order('tier_priority', { ascending: true, nullsLast: true }) // spotlight→featured→starter (lower = higher priority)
-      .order('rating', { ascending: false, nullsLast: true })
+    // 🔧 CRITICAL FIX: Query ALL THREE TIERS from their respective views
+    // Tier 1: business_profiles_chat_eligible (paid/trial)
+    // Tier 2: business_profiles_lite_eligible (claimed-free)
+    // Tier 3: business_profiles_ai_fallback_pool (unclaimed)
     
-    console.log(`💼 Queried ${allChatEligibleBusinesses?.length || 0} businesses from DB (all tiers)`)
+    const [tier1Response, tier2Response, tier3Response] = await Promise.all([
+      supabase.from('business_profiles_chat_eligible').select('*').eq('city', city),
+      supabase.from('business_profiles_lite_eligible').select('*').eq('city', city),
+      supabase.from('business_profiles_ai_fallback_pool').select('*').eq('city', city)
+    ])
+    
+    const tier1Businesses = tier1Response.data || []
+    const tier2Businesses = tier2Response.data || []
+    const tier3Businesses = tier3Response.data || []
+    
+    console.log(`💼 Queried from views: T1=${tier1Businesses.length}, T2=${tier2Businesses.length}, T3=${tier3Businesses.length}`)
     
     const businessOfferCounts: Record<string, number> = {}
     
@@ -818,26 +797,22 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         }
       }
       
-      // Add ALL eligible businesses from direct query
-      if (allChatEligibleBusinesses) {
-        for (const b of allChatEligibleBusinesses) {
-          businessById.set(b.id, b)
+      // Add ALL businesses from the three tiers
+      for (const b of tier1Businesses) {
+        if (!businessById.has(b.id)) {
+          businessById.set(b.id, { ...b, tierSource: 'tier1' })
         }
       }
-      
-      // 🚀 CRITICAL: Separate businesses by tier for three-tier logic
-      // Tier 1: Paid/Trial (business_tier = spotlight/featured/starter)
-      // Tier 2: Claimed-Free (status = claimed_free)
-      // Tier 3: Unclaimed (status = unclaimed)
-      const tier1Businesses = Array.from(businessById.values()).filter(b => 
-        b.business_tier && ['qwikker_picks', 'featured', 'free_trial', 'recommended'].includes(b.business_tier)
-      )
-      const tier2Businesses = Array.from(businessById.values()).filter(b => 
-        b.status === 'claimed_free' && !['qwikker_picks', 'featured', 'free_trial', 'recommended'].includes(b.business_tier || '')
-      )
-      const tier3Businesses = Array.from(businessById.values()).filter(b => 
-        b.status === 'unclaimed'
-      )
+      for (const b of tier2Businesses) {
+        if (!businessById.has(b.id)) {
+          businessById.set(b.id, { ...b, tierSource: 'tier2' })
+        }
+      }
+      for (const b of tier3Businesses) {
+        if (!businessById.has(b.id)) {
+          businessById.set(b.id, { ...b, tierSource: 'tier3' })
+        }
+      }
       
       console.log(`💼 Tier separation: T1=${tier1Businesses.length}, T2=${tier2Businesses.length}, T3=${tier3Businesses.length}`)
       
@@ -1449,8 +1424,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       // 🎯 PROTECTION #1: Max 1 review fetch per chat (first unclaimed business only)
       let alreadyFetchedReviews = false
       
-      // Pick first UNCLAIMED business (with or without cached reviews)
-      const firstUnclaimedBusiness = allTier3Businesses.find(b => b.status === 'unclaimed')
+      // Pick first business from Tier 3 (all are unclaimed by definition)
+      const firstUnclaimedBusiness = allTier3Businesses[0]
       
       if (firstUnclaimedBusiness) {
         let reviews = null
