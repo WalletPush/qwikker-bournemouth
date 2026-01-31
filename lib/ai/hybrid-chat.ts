@@ -233,9 +233,17 @@ export async function generateHybridAIResponse(
       cityResults = await searchCityKnowledge(userMessage, city, { matchCount: 6 })
     }
     
-    // 🔧 CRITICAL FIX: Also query ALL businesses directly (not just KB matches)
+    // 🎯 Fetch offer counts for businesses to enrich context (DEDUPED)
+    const supabase = await createTenantAwareServerClient(city)
+    
+    // ✅ VERIFY: Tenant context is actually set (dev-only)
+    if (process.env.NODE_ENV !== 'production') {
+      const { data: currentCity, error } = await supabase.rpc('get_current_city')
+      console.log('🔒 [TENANT DEBUG] current city =', currentCity, error ? error.message : '')
+    }
+    
+    // 🔧 CRITICAL FIX: Query ALL businesses directly (not just KB matches)
     // This ensures businesses without KB content (no menus/offers) still appear
-    // We'll merge these with KB results and dedupe by ID
     const { data: allChatEligibleBusinesses } = await supabase
       .from('business_profiles_chat_eligible')
       .select(`
@@ -265,15 +273,6 @@ export async function generateHybridAIResponse(
       .order('rating', { ascending: false, nullsLast: true })
     
     console.log(`💼 Queried ${allChatEligibleBusinesses?.length || 0} chat-eligible businesses from DB`)
-    
-    // 🎯 Fetch offer counts for businesses to enrich context (DEDUPED)
-    const supabase = await createTenantAwareServerClient(city)
-    
-    // ✅ VERIFY: Tenant context is actually set (dev-only)
-    if (process.env.NODE_ENV !== 'production') {
-      const { data: currentCity, error } = await supabase.rpc('get_current_city')
-      console.log('🔒 [TENANT DEBUG] current city =', currentCity, error ? error.message : '')
-    }
     
     const businessOfferCounts: Record<string, number> = {}
     
