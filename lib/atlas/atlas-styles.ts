@@ -14,10 +14,10 @@ export const NEON_PINK = '#ff006e'
 export const NEON_CYAN = '#00f0ff'
 
 /**
- * User "YOU" marker layers (clear, visible, not massive)
+ * User "YOU" marker layers (glowing, visible, attention-grabbing)
  */
 export const getUserLocationLayers = () => {
-  // Outer glow (subtle)
+  // Outer glow (bigger, more visible)
   const outerGlow: CircleLayerSpecification = {
     id: 'user-location-outer-glow',
     type: 'circle',
@@ -27,17 +27,17 @@ export const getUserLocationLayers = () => {
         'interpolate',
         ['linear'],
         ['zoom'],
-        10, 20,
-        14, 35,
-        18, 55
+        10, 30,
+        14, 50,
+        18, 80
       ],
       'circle-color': QWIKKER_GREEN,
-      'circle-opacity': 0.15,
-      'circle-blur': 1
+      'circle-opacity': 0.25,
+      'circle-blur': 1.5
     }
   }
 
-  // Pulse ring (animated feel)
+  // Pulse ring (animated feel, brighter)
   const pulseRing: CircleLayerSpecification = {
     id: 'user-location-pulse',
     type: 'circle',
@@ -47,17 +47,17 @@ export const getUserLocationLayers = () => {
         'interpolate',
         ['linear'],
         ['zoom'],
-        10, 12,
-        14, 20,
-        18, 32
+        10, 18,
+        14, 30,
+        18, 45
       ],
       'circle-color': QWIKKER_GREEN_BRIGHT,
-      'circle-opacity': 0.3,
-      'circle-blur': 0.5
+      'circle-opacity': 0.5,
+      'circle-blur': 0.8
     }
   }
 
-  // Inner bright dot
+  // Inner bright dot (bigger and more prominent)
   const innerDot: CircleLayerSpecification = {
     id: 'user-location-dot',
     type: 'circle',
@@ -67,13 +67,13 @@ export const getUserLocationLayers = () => {
         'interpolate',
         ['linear'],
         ['zoom'],
-        10, 6,
-        14, 10,
-        18, 16
+        10, 10,
+        14, 16,
+        18, 24
       ],
-      'circle-color': QWIKKER_GREEN,
+      'circle-color': QWIKKER_GREEN_BRIGHT,
       'circle-opacity': 1,
-      'circle-stroke-width': 3,
+      'circle-stroke-width': 4,
       'circle-stroke-color': '#ffffff',
       'circle-stroke-opacity': 1
     }
