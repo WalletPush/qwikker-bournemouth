@@ -1074,10 +1074,11 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           `Perfect timing — I know just the places:`,
           `Oh brilliant! These ${categoryText} spots are great:`
         ] : [
-          `I've found some ${categoryText} places for you:`,
-          `Here's what's around:`,
-          `Check these out:`,
-          `These are worth a look:`
+          `Alright, I've found some really solid ${categoryText} places for you:`,
+          `So here's what I'm thinking – these spots are all excellent:`,
+          `Okay, listen – I've got some great options:`,
+          `Let me hook you up with some top-rated spots:`,
+          `Right, so I've been digging and found some gems:`
         ]
         
         // COMPLETELY REPLACE AI response (don't trust it when Tier 1 was irrelevant)
@@ -1125,62 +1126,65 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             }
           }
           
-          // ===== CONVERSATIONAL, FLOWING FORMAT =====
-          if (b.tierSource === 'tier2') {
-            // TIER 2: Rich, friend-like recommendation
-            const contextParts = []
-            if (openStatus) contextParts.push(openStatus)
-            if (distanceText) contextParts.push(distanceText)
-            
-            // Build natural sentence
-            if (b.business_tagline || b.business_description) {
-              const description = b.business_tagline || b.business_description
-              topMatchesSection += `[${b.business_name}](/user/business/${slug}) – ${description}`
+          // ===== NEW FORMAT: Consistent with Tier 3 fallback section =====
+          topMatchesSection += `• **[${b.business_name}](/user/business/${slug})**`
+          
+          if (b.display_category) {
+            topMatchesSection += ` — ${b.display_category}`
+          }
+          
+          // Rating with personality
+          if (b.rating && b.review_count) {
+            if (b.rating >= 4.7) {
+              topMatchesSection += ` (${b.rating}★ from ${b.review_count} Google reviews – people are **obsessed** with this place 🔥)`
+            } else if (b.rating >= 4.5) {
+              topMatchesSection += ` (${b.rating}★ from ${b.review_count} Google reviews – consistently excellent)`
+            } else if (b.rating >= 4.0) {
+              topMatchesSection += ` (${b.rating}★ from ${b.review_count} Google reviews – solid choice)`
             } else {
-              topMatchesSection += `[${b.business_name}](/user/business/${slug})`
-            }
-            
-            if (contextParts.length > 0) {
-              topMatchesSection += ` (${contextParts.join(', ')})`
-            }
-            
-            topMatchesSection += `. `
-            
-            // Add rating naturally
-            if (b.rating && b.review_count) {
-              topMatchesSection += `People love it – ${b.rating}★ from ${b.review_count} reviews. `
-            }
-            
-            // Menu items as natural follow-up
-            if (b.featured_items_count && b.featured_items_count > 0) {
-              topMatchesSection += `They've got ${b.featured_items_count} featured dishes worth checking out. `
-            }
-            
-            // Phone as natural ending
-            if (b.phone) {
-              topMatchesSection += `<a href="tel:${b.phone}">Give them a call</a> or tap to see more.\n\n`
-            } else {
-              topMatchesSection += `\n\n`
-            }
-            
-          } else {
-            // TIER 3: Simpler but still conversational
-            const contextParts = []
-            if (distanceText) contextParts.push(distanceText)
-            if (b.rating && b.review_count) contextParts.push(`${b.rating}★ from ${b.review_count} reviews`)
-            
-            topMatchesSection += `[${b.business_name}](/user/business/${slug})`
-            
-            if (contextParts.length > 0) {
-              topMatchesSection += ` – ${contextParts.join(', ')}`
-            }
-            
-            if (b.phone) {
-              topMatchesSection += `. <a href="tel:${b.phone}">Call them</a>\n\n`
-            } else {
-              topMatchesSection += `\n\n`
+              topMatchesSection += ` (${b.rating}★ from ${b.review_count} Google reviews)`
             }
           }
+          
+          // Business description/tagline if available (Tier 2 premium content)
+          if (b.tierSource === 'tier2' && (b.business_tagline || b.business_description)) {
+            const description = b.business_tagline || b.business_description
+            topMatchesSection += `\n   _${description}_`
+          }
+          
+          // Menu items
+          if (b.featured_items_count && b.featured_items_count > 0) {
+            topMatchesSection += `\n   _${b.featured_items_count} featured dishes on the menu – definitely worth a look_`
+          }
+          
+          // Open status
+          if (openStatus) {
+            topMatchesSection += `\n   🕒 ${openStatus.charAt(0).toUpperCase() + openStatus.slice(1)}`
+          }
+          
+          // Distance with personality
+          if (distanceText) {
+            const distanceMatch = distanceText.match(/(\d+\.?\d*)\s*(km|m)/)
+            if (distanceMatch) {
+              const distance = parseFloat(distanceMatch[1])
+              const unit = distanceMatch[2]
+              
+              if (unit === 'm' || (unit === 'km' && distance < 0.5)) {
+                topMatchesSection += `\n   📍 Super close – ${distanceText} away (basically right there)`
+              } else if (unit === 'km' && distance < 2) {
+                topMatchesSection += `\n   📍 ${distanceText} away – easy walk or quick ride`
+              } else {
+                topMatchesSection += `\n   📍 ${distanceText} away`
+              }
+            }
+          }
+          
+          // Phone number
+          if (b.phone) {
+            topMatchesSection += `\n   📞 [Give them a call: ${b.phone}](tel:${b.phone})`
+          }
+          
+          topMatchesSection += `\n\n`
         })
         
         aiResponse = aiResponse + topMatchesSection
