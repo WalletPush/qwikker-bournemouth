@@ -242,16 +242,18 @@ export async function generateHybridAIResponse(
       console.log('🔒 [TENANT DEBUG] current city =', currentCity, error ? error.message : '')
     }
     
-    // 🔧 CRITICAL FIX: Query ALL businesses directly (not just KB matches)
-    // This ensures businesses without KB content (no menus/offers) still appear
+    // 🔧 CRITICAL FIX: Query ALL businesses (Tier 1 + 2 + 3) from base table
+    // business_profiles_chat_eligible = Tier 1 only (paid/trial)
+    // We need ALL tiers: paid, claimed-free, AND unclaimed
     const { data: allChatEligibleBusinesses } = await supabase
-      .from('business_profiles_chat_eligible')
+      .from('business_profiles')
       .select(`
         id,
         business_name,
         business_tagline,
         system_category,
         display_category,
+        business_tier,
         effective_tier,
         tier_priority,
         business_address,
@@ -266,13 +268,17 @@ export async function generateHybridAIResponse(
         phone,
         website_url,
         owner_user_id,
-        claimed_at
+        claimed_at,
+        status
       `)
       .eq('city', city)
-      .order('tier_priority', { ascending: true }) // spotlight→featured→starter (lower = higher priority)
+      .in('status', ['approved', 'claimed_free', 'unclaimed', 'incomplete']) // All visible statuses
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
+      .order('tier_priority', { ascending: true, nullsLast: true }) // spotlight→featured→starter (lower = higher priority)
       .order('rating', { ascending: false, nullsLast: true })
     
-    console.log(`💼 Queried ${allChatEligibleBusinesses?.length || 0} chat-eligible businesses from DB`)
+    console.log(`💼 Queried ${allChatEligibleBusinesses?.length || 0} businesses from DB (all tiers)`)
     
     const businessOfferCounts: Record<string, number> = {}
     
@@ -819,10 +825,26 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         }
       }
       
-      const businesses = Array.from(businessById.values())
+      // 🚀 CRITICAL: Separate businesses by tier for three-tier logic
+      // Tier 1: Paid/Trial (business_tier = spotlight/featured/starter)
+      // Tier 2: Claimed-Free (status = claimed_free)
+      // Tier 3: Unclaimed (status = unclaimed)
+      const tier1Businesses = Array.from(businessById.values()).filter(b => 
+        b.business_tier && ['qwikker_picks', 'featured', 'free_trial', 'recommended'].includes(b.business_tier)
+      )
+      const tier2Businesses = Array.from(businessById.values()).filter(b => 
+        b.status === 'claimed_free' && !['qwikker_picks', 'featured', 'free_trial', 'recommended'].includes(b.business_tier || '')
+      )
+      const tier3Businesses = Array.from(businessById.values()).filter(b => 
+        b.status === 'unclaimed'
+      )
+      
+      console.log(`💼 Tier separation: T1=${tier1Businesses.length}, T2=${tier2Businesses.length}, T3=${tier3Businesses.length}`)
+      
+      const businesses = tier1Businesses // ✅ For backward compat, "businesses" = Tier 1
       hasBusinessResults = businesses.length > 0
       
-      console.log(`💼 Total businesses after merge: ${businesses.length} (${kbScoreById.size} had KB content)`)
+      console.log(`💼 Total businesses after merge: ${Array.from(businessById.values()).length} (${kbScoreById.size} had KB content)`)
       
       // STEP 2: Fetch offers/vibes for all businesses
       
@@ -856,14 +878,10 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       
       console.log(`🎯 Browse mode: ${browseMode.mode}, Intent: ${intent.hasIntent ? intent.categories.join(', ') : 'none'}`)
       
-      // Query Tier 2: Claimed-Free businesses with featured items (max 2 to preserve premium perception)
-      console.log('💼 Querying Tier 2: Claimed-Free Lite businesses')
+      // Query Tier 2: Claimed-Free businesses (already loaded from allChatEligibleBusinesses)
+      console.log('💼 Using Tier 2: Claimed-Free businesses (pre-loaded)')
       const MAX_TIER2_IN_TOP = 2
-      const { data: liteBusinesses } = await supabase
-        .from('business_profiles_lite_eligible')
-        .select('*')
-        .eq('city', city)
-        .limit(MAX_TIER2_IN_TOP)
+      const liteBusinesses = tier2Businesses.slice(0, MAX_TIER2_IN_TOP)
       
       console.log(`💼 Found ${liteBusinesses?.length || 0} Lite businesses`)
       
@@ -889,16 +907,15 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         if (combinedCount < TARGET_RESULTS) {
           const tier3Limit = TARGET_RESULTS - combinedCount
-          const { data: tier3 } = await supabase
-            .from('business_profiles_ai_fallback_pool')
-            .select('*')
-            .eq('city', city)
-            .order('rating', { ascending: false, nullsLast: true })
-            .order('review_count', { ascending: false, nullsLast: true })
-            .order('business_name', { ascending: true })
-            .range(browseOffset, browseOffset + tier3Limit - 1)
           
-          fallbackBusinesses = tier3 || []
+          // Use pre-loaded Tier 3 businesses (sorted by rating)
+          fallbackBusinesses = tier3Businesses
+            .sort((a, b) => {
+              if (b.rating !== a.rating) return (b.rating || 0) - (a.rating || 0)
+              if (b.review_count !== a.review_count) return (b.review_count || 0) - (a.review_count || 0)
+              return (a.business_name || '').localeCompare(b.business_name || '')
+            })
+            .slice(browseOffset, browseOffset + tier3Limit)
           
           // Track offset for next "more" query
           conversationHistory.push({
@@ -944,15 +961,14 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           
           console.log(`🎯 Tier 2: ${tier2WithScores.length} relevant claimed-free businesses`)
           
-          // Fetch Tier 3 (unclaimed fallback)
-          const { data: tier3 } = await supabase
-            .from('business_profiles_ai_fallback_pool')
-            .select('*')
-            .eq('city', city)
-            .order('rating', { ascending: false, nullsLast: true })
-            .order('review_count', { ascending: false, nullsLast: true })
-            .order('business_name', { ascending: true })
-            .limit(10)
+          // Use pre-loaded Tier 3 businesses (sorted by rating)
+          const tier3 = tier3Businesses
+            .sort((a, b) => {
+              if (b.rating !== a.rating) return (b.rating || 0) - (a.rating || 0)
+              if (b.review_count !== a.review_count) return (b.review_count || 0) - (a.review_count || 0)
+              return (a.business_name || '').localeCompare(b.business_name || '')
+            })
+            .slice(0, 10)
           
           const tier3WithScores = (tier3 || [])
             .map(b => ({
@@ -1011,6 +1027,9 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       // CRITICAL FIX: Carousel should NOT show on browse queries or when Tier 1 is irrelevant
       const msg = userMessage.toLowerCase()
       const wantsMap = /\b(map|atlas|on the map|pins|show.*location|where.*located)\b/.test(msg)
+      
+      // Extract unique business IDs (Tier 1 only) for carousel
+      const uniqueBusinessIds = Array.from(new Set(businesses.map(b => b.id)))
       
       // ✅ FIXED: Browse queries should NOT trigger carousel
       // Carousel only for:
