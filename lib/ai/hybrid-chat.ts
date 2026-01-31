@@ -761,7 +761,9 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     let fallbackBusinesses: any[] = [] // Declare in outer scope so it's always accessible
     let topMatchesText: any[] = [] // ✅ HOIST: Tier 3 that beats irrelevant Tier 1 (needed for review snippets)
     
-    if (businessResults.success && businessResults.results.length > 0) {
+    // 🎯 ARCHITECTURAL FIX: Always run three-tier logic, even if KB returns 0 results
+    // This allows cities with only unclaimed/imported businesses to work
+    if (businessResults.success) {
       // STEP 1: Dedupe by business_id (KB returns multiple rows per business)
       type KBRow = (typeof businessResults.results)[number]
       const bestHitByBusiness = new Map<string, KBRow>()
