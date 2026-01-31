@@ -1087,7 +1087,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         let topMatchesSection = ''
         
         topMatchesText.slice(0, 6).forEach((b, index) => {
-          const slug = b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+          // Use actual slug from DB, fallback to generated slug, fallback to ID
+          const slug = b.slug || b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || b.id
           
           // Build context pieces first
           const distanceText = (b.latitude && b.longitude && context.userLocation) 
@@ -1250,33 +1251,45 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         // This creates clear upsell incentive: want carousel? upgrade!
         
         if (liteBusinesses && liteBusinesses.length > 0) {
-          // Add Lite businesses as text-only mentions
-          let liteText = "A few more you might like:\n\n"
+          // Add Lite businesses as text-only mentions with personality
+          const liteIntros = [
+            "Also worth checking out – these places are really solid:",
+            "Oh, and a few more options that caught my eye:",
+            "Plus, here are some other spots people are raving about:",
+            "And don't sleep on these – they're really good too:"
+          ]
+          let liteText = liteIntros[Math.floor(Math.random() * liteIntros.length)] + `\n\n`
           
           liteBusinesses.slice(0, 3).forEach(b => {
-            // Generate slug from business name
-            const slug = b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-            liteText += `[${b.business_name}](/user/business/${slug})`
+            // Use actual slug from DB, fallback to generated slug, fallback to ID
+            const businessSlug = b.slug || b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || b.id
+            liteText += `• **[${b.business_name}](/user/business/${businessSlug})**`
             if (b.display_category) {
               liteText += ` — ${b.display_category}`
             }
-            if (b.rating && b.rating > 0) {
+            
+            // Add personality to ratings
+            if (b.rating && b.rating >= 4.5) {
+              liteText += ` (${b.rating}★ – really well-loved)`
+            } else if (b.rating && b.rating > 0) {
               liteText += ` (${b.rating}★)`
             }
+            
             // Show featured items count if they have them
             if (b.menu_preview && Array.isArray(b.menu_preview) && b.menu_preview.length > 0) {
-              liteText += ` — ${b.menu_preview.length} featured items`
-            }
-            // Show offers count if they have any
-            if (b.approved_offers_count && b.approved_offers_count > 0) {
-              liteText += ` • ${b.approved_offers_count} offer${b.approved_offers_count === 1 ? '' : 's'}`
+              liteText += `\n   _${b.menu_preview.length} featured items on their menu – check it out!_`
             }
             
-            // Add distance info
+            // Show offers count if they have any - with excitement!
+            if (b.approved_offers_count && b.approved_offers_count > 0) {
+              liteText += `\n   🎉 **${b.approved_offers_count} exclusive offer${b.approved_offers_count === 1 ? '' : 's'} available!**`
+            }
+            
+            // Add distance info with personality
             if (b.latitude && b.longitude && context.userLocation) {
               const distanceText = getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
               if (distanceText) {
-                liteText += ` — ${distanceText}`
+                liteText += `\n   📍 ${distanceText}`
               }
             }
             
@@ -1290,44 +1303,91 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         // ALWAYS show fallbackBusinesses if they exist (browse fill or intent assist)
         // These appear AFTER carousel/lite as "More places"
         if (fallbackBusinesses && fallbackBusinesses.length > 0) {
+          // More conversational, personalized intros
           const moreIntros = [
-            "Also worth checking out:",
-            "A few more options:",
-            "You might also like:",
-            "These are solid too:"
+            "Alright, I've got some solid picks for you! Here's what's catching my eye:",
+            "So I've been digging around and found some real gems:",
+            "Okay, listen – these places are definitely worth checking out:",
+            "Right, so I've got a few spots that people are absolutely loving right now:",
+            "Here's the deal – these are some of the top-rated places around here:",
+            "I've rounded up some seriously good options for you:"
           ]
           let fallbackText = moreIntros[Math.floor(Math.random() * moreIntros.length)] + `\n\n`
           
-          fallbackBusinesses.slice(0, 5).forEach(b => {
-            // Generate slug from business name
-            const slug = b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-            fallbackText += `[${b.business_name}](/user/business/${slug})`
+          // Add a bit more context based on what we found
+          const totalCount = fallbackBusinesses.length
+          const avgRating = fallbackBusinesses.reduce((sum, b) => sum + (b.rating || 0), 0) / totalCount
+          
+          if (avgRating >= 4.5) {
+            fallbackText += `_All of these are seriously highly rated – like, people **really** love them._\n\n`
+          } else if (avgRating >= 4.0) {
+            fallbackText += `_These are all solid spots with great reviews from locals and visitors._\n\n`
+          }
+          
+          fallbackBusinesses.slice(0, 10).forEach((b, index) => {
+            // Use actual slug from DB, fallback to generated slug, fallback to ID
+            const businessSlug = b.slug || b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || b.id
+            
+            fallbackText += `• **[${b.business_name}](/user/business/${businessSlug})**`
+            
             if (b.display_category) {
               fallbackText += ` — ${b.display_category}`
             }
             
+            // Add personality based on rating
+            if (b.rating && b.review_count) {
+              if (b.rating >= 4.7) {
+                fallbackText += ` (${b.rating}★ from ${b.review_count} Google reviews – people are **obsessed** with this place 🔥)`
+              } else if (b.rating >= 4.5) {
+                fallbackText += ` (${b.rating}★ from ${b.review_count} Google reviews – consistently excellent)`
+              } else if (b.rating >= 4.0) {
+                fallbackText += ` (${b.rating}★ from ${b.review_count} Google reviews – solid choice)`
+              } else {
+                fallbackText += ` (${b.rating}★ from ${b.review_count} Google reviews)`
+              }
+            }
+            
             // Show featured items for Tier 2 (claimed-free)
             if (b.tierSource === 'tier2' && b.featured_items_count && b.featured_items_count > 0) {
-              fallbackText += ` (${b.featured_items_count} featured items)`
+              fallbackText += `\n   _They've got ${b.featured_items_count} featured items on their menu – definitely worth a look_`
             }
             
-            if (b.rating && b.review_count) {
-              fallbackText += ` (${b.rating}★)`
-            }
-            
-            // Add distance info
+            // Add distance info with personality
             if (b.latitude && b.longitude && context.userLocation) {
               const distanceText = getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
               if (distanceText) {
-                fallbackText += ` — ${distanceText}`
+                // Parse distance to add commentary
+                const distanceMatch = distanceText.match(/(\d+\.?\d*)\s*(km|m)/)
+                if (distanceMatch) {
+                  const distance = parseFloat(distanceMatch[1])
+                  const unit = distanceMatch[2]
+                  
+                  if (unit === 'm' || (unit === 'km' && distance < 0.5)) {
+                    fallbackText += `\n   📍 Super close – ${distanceText} away (basically right there)`
+                  } else if (unit === 'km' && distance < 2) {
+                    fallbackText += `\n   📍 ${distanceText} away – easy walk or quick ride`
+                  } else {
+                    fallbackText += `\n   📍 ${distanceText} away`
+                  }
+                }
               }
             }
             
             if (b.phone) {
-              fallbackText += `\n<a href="tel:${b.phone}">${b.phone}</a>`
+              fallbackText += `\n   📞 [Give them a call: ${b.phone}](tel:${b.phone})`
             }
+            
             fallbackText += `\n\n`
           })
+          
+          // Add engaging footer
+          if (fallbackBusinesses.length > 10) {
+            fallbackText += `_...and I've got ${fallbackBusinesses.length - 10} more spots if none of these hit the mark. Just let me know what you're after!_\n\n`
+          } else {
+            fallbackText += `_Want more options or looking for something specific? Just ask – I've got tons more recommendations!_\n\n`
+          }
+          
+          fallbackText += `_Ratings and reviews provided by Google_`
           
           aiResponse = aiResponse + fallbackText
         }
