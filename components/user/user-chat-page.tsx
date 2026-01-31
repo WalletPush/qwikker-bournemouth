@@ -883,12 +883,12 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
                   </div>
                 )}
 
-                {/* Verbatim Google Review Snippets */}
+                {/* Google Review Snippets */}
                 {message.googleReviewSnippets && message.googleReviewSnippets.snippets.length > 0 && (
                   <div className="mt-4 p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                        From Google Reviews (Verbatim)
+                        What People Are Saying on Google
                       </p>
                       {message.googleReviewSnippets.google_place_id && (
                         <a
