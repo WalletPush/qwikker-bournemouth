@@ -168,7 +168,9 @@ export async function generateHybridAIResponse(
     // Detect if offers/events are mentioned
     const isOfferQuery = /\b(offers?|deals?|discounts?|promos?|specials?)\b/i.test(lowerMessage) ||
                          /\b(show|list|all|any|get|find|see|tell me).*(deals?|offers?)\b/i.test(lowerMessage)
-    const isEventQuery = /\b(events?|shows?|concerts?|gigs?|happening|what'?s on|things to do)\b/i.test(lowerMessage)
+    // Match "shows" (noun) but NOT "show" (verb) to avoid false positives like "show me restaurants"
+    const isEventQuery = /\b(events?|shows|concerts?|gigs?|happening|what'?s on|things to do)\b/i.test(lowerMessage) && 
+                         !/\b(show me|show all|showing)\b/i.test(lowerMessage)
     
     // 🎯 CRITICAL FIX: Distinguish HARD queries (DB-only) from MIXED queries (KB + DB)
     // HARD = pure offer/event query (e.g., "show me offers", "current deals")
