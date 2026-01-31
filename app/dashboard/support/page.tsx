@@ -144,6 +144,102 @@ export default async function SupportPage() {
             Follow this checklist to get the most out of your QWIKKER experience:
           </p>
           <div className="space-y-3">
+            {/* CLAIMED_FREE: Show limited checklist */}
+            {profile?.status === 'claimed_free' ? (
+              <>
+                {/* Profile Complete */}
+                <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
+                  {profile?.business_name && profile?.business_type && profile?.business_description ? (
+                    <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+                  )}
+                  <span className={profile?.business_name && profile?.business_type && profile?.business_description ? "text-white" : "text-gray-300"}>
+                    Complete your business profile information
+                  </span>
+                </div>
+
+                {/* Logo */}
+                <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
+                  {profile?.logo ? (
+                    <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+                  )}
+                  <span className={profile?.logo ? "text-white" : "text-gray-300"}>Upload your business logo</span>
+                </div>
+
+                {/* Featured Items (not full menu for claimed_free) */}
+                <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
+                  {(() => {
+                    try {
+                      const menuPreview = profile?.menu_preview ? JSON.parse(profile.menu_preview) : []
+                      return menuPreview.length > 0 ? (
+                        <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+                      )
+                    } catch {
+                      return <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+                    }
+                  })()}
+                  <span className={(() => {
+                    try {
+                      const menuPreview = profile?.menu_preview ? JSON.parse(profile.menu_preview) : []
+                      return menuPreview.length > 0 ? "text-white" : "text-gray-300"
+                    } catch {
+                      return "text-gray-300"
+                    }
+                  })()}>
+                    Add featured menu items (up to 5)
+                  </span>
+                </div>
+
+                {/* Offer */}
+                <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
+                  {profile?.offer_name ? (
+                    <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+                  )}
+                  <span className={profile?.offer_name ? "text-white" : "text-gray-300"}>Create your monthly offer</span>
+                </div>
+
+                {/* Social Media */}
+                <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
+                  {(profile?.instagram_url || profile?.facebook_url || profile?.twitter_url) ? (
+                    <div className="w-6 h-6 bg-[#00d083] rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex-shrink-0"></div>
+                  )}
+                  <span className={(profile?.instagram_url || profile?.facebook_url || profile?.twitter_url) ? "text-white" : "text-gray-300"}>
+                    Complete your social media links
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+            {/* PAID/TRIAL: Show full checklist */}
             {/* Profile Complete */}
             <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
               {profile?.business_name && profile?.business_type && profile?.business_description ? (
@@ -248,8 +344,10 @@ export default async function SupportPage() {
                 Complete your social media links
               </span>
             </div>
+              </>
+            )}
           </div>
-          <Button asChild className="w-full mt-4 bg-[#00d083] hover:bg-[#00b86f] text-black">
+          <Button asChild variant="outline" className="w-full mt-4 border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
             <Link href="/dashboard/action-items">View Action Items →</Link>
           </Button>
         </CardContent>

@@ -40,7 +40,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 🔒 SECURITY: Derive city server-side from hostname
-    const city = await resolveRequestCity(request)
+    const cityResult = await resolveRequestCity(request)
+    if (!cityResult.ok) {
+      return NextResponse.json(
+        createFallbackAtlasResponse('City could not be determined'),
+        { status: cityResult.status }
+      )
+    }
+    const city = cityResult.city
     console.log(`🗺️ Atlas query for city: ${city}`)
 
     // Get tenant Atlas config

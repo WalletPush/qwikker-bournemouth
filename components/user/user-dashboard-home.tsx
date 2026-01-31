@@ -17,9 +17,10 @@ interface UserDashboardHomeProps {
   franchiseCity?: string
   currentCity?: string
   cityDisplayName?: string
+  atlasEnabled?: boolean
 }
 
-export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseCity, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserDashboardHomeProps) {
+export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseCity, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth', atlasEnabled = false }: UserDashboardHomeProps) {
   
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
@@ -216,9 +217,9 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
       ),
-      color: "from-purple-500 to-pink-500",
-      bgColor: "from-purple-500/20 to-pink-500/20",
-      borderColor: "border-purple-500/30"
+      color: "from-purple-500/30 to-pink-500/30",
+      bgColor: "from-purple-500/10 to-pink-500/10",
+      borderColor: "border-purple-500/20"
     }
   ]
   
@@ -405,62 +406,60 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         </CardContent>
       </Card>
 
-      {/* Atlas Intro Card */}
-      <Card className="bg-gradient-to-br from-blue-900/30 via-purple-900/20 to-blue-900/30 border border-blue-500/30 relative overflow-hidden group hover:border-blue-400/50 transition-all duration-300">
-        {/* Animated gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/10 to-blue-500/5"></div>
-        
-        <CardContent className="relative p-6">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            {/* Icon */}
-            <div className="relative flex-shrink-0">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl blur-lg opacity-40"></div>
-              <div className="relative p-4 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl border-2 border-blue-400/40 backdrop-blur-sm">
-                <svg className="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
+      {/* Atlas Intro Card - Only show if enabled for this city */}
+      {atlasEnabled && (
+        <Card className="bg-slate-800/50 border border-slate-700 relative overflow-hidden group hover:border-slate-600 transition-all duration-300">
+          <CardContent className="relative p-6">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              {/* Icon */}
+              <div className="relative flex-shrink-0">
+                <div className="p-4 bg-slate-700/50 rounded-2xl border border-slate-600">
+                  <svg className="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                </div>
               </div>
-            </div>
-            
-            <div className="flex-1 text-center md:text-left">
-              {/* Title */}
-              <h2 className="text-2xl font-bold text-white mb-2">
-                Explore {franchiseCity ? franchiseCity.charAt(0).toUpperCase() + franchiseCity.slice(1) : 'Your City'} with Atlas
-              </h2>
               
-              {/* Description */}
-              <p className="text-slate-300 text-sm mb-4">
-                A live, AI-guided map that shows you exactly where to go — based on what you want, right now.
-              </p>
-              
-              {/* CTAs */}
-              <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
-                <Button asChild className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400 text-white font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all duration-200">
-                  <Link href={getNavUrl("/user/chat")}>
-                    <span className="flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                      </svg>
-                      Open Atlas
-                    </span>
-                  </Link>
-                </Button>
+              <div className="flex-1 text-center md:text-left">
+                {/* Title */}
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Explore {franchiseCity ? franchiseCity.charAt(0).toUpperCase() + franchiseCity.slice(1) : 'Your City'} with Atlas
+                </h2>
                 
-                <Button asChild variant="outline" className="border-slate-600 hover:border-blue-400/50 text-slate-300 hover:text-blue-300 bg-slate-800/50 hover:bg-slate-700/50">
-                  <Link href={`${getNavUrl("/user/chat")}${walletPassId ? '&' : '?'}message=${encodeURIComponent("Show me the best coffee shops on the map")}`}>
-                    <span className="flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                      Ask Atlas something
-                    </span>
-                  </Link>
-                </Button>
+                {/* Description */}
+                <p className="text-slate-300 text-sm mb-4">
+                  A live, AI-guided map that shows you exactly where to go — based on what you want, right now.
+                </p>
+                
+                {/* CTAs */}
+                <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+                  <Button asChild variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
+                    <Link href={getNavUrl("/user/chat")}>
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                        Open Atlas
+                      </span>
+                    </Link>
+                  </Button>
+                  
+                  <Button asChild variant="outline" className="border-slate-600 hover:border-slate-500 text-slate-300 hover:text-slate-200 bg-slate-800/50 hover:bg-slate-700/50">
+                    <Link href={`${getNavUrl("/user/chat")}${walletPassId ? '&' : '?'}message=${encodeURIComponent("Show me the best coffee shops on the map")}`}>
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        Ask Atlas something
+                      </span>
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Navigation Cards - Bigger */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -468,8 +467,8 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         <Link href={getNavUrl("/user/discover")} className="group">
           <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/40 transition-colors duration-200 cursor-pointer">
             <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
-                <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500/30 to-teal-500/30 rounded-xl mx-auto mb-4 flex items-center justify-center border border-emerald-500/30">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
               </div>
@@ -484,8 +483,8 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         <Link href={getNavUrl("/user/offers")} className="group">
           <Card className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 hover:border-orange-500/40 transition-colors duration-200 cursor-pointer">
             <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
-                <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-500/30 to-amber-500/30 rounded-xl mx-auto mb-4 flex items-center justify-center border border-orange-500/30">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                   </svg>
               </div>
@@ -500,7 +499,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         <Link href={getNavUrl("/user/secret-menu")} className="group">
           <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 hover:border-purple-500/40 transition-colors duration-200 cursor-pointer">
             <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500/30 to-pink-500/30 rounded-xl mx-auto mb-4 flex items-center justify-center border border-purple-500/30">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
@@ -516,7 +515,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         <Link href={getNavUrl("/user/events")} className="group">
           <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 hover:border-blue-500/40 transition-colors duration-200 cursor-pointer">
             <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-xl mx-auto mb-4 flex items-center justify-center border border-blue-500/30">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -532,7 +531,7 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         <Link href={getNavUrl("/user/saved")} className="group">
           <Card className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 border border-pink-500/20 hover:border-pink-500/40 transition-colors duration-200 cursor-pointer">
             <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-pink-500/30 to-rose-500/30 rounded-xl mx-auto mb-4 flex items-center justify-center border border-pink-500/30">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
@@ -548,8 +547,8 @@ export function UserDashboardHome({ stats, currentUser, walletPassId, franchiseC
         <Link href={getNavUrl("/user/badges")} className="group">
           <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20 hover:border-yellow-500/40 transition-colors duration-200 cursor-pointer">
             <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
-                <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-gradient-to-br from-yellow-500/30 to-amber-500/30 rounded-xl mx-auto mb-4 flex items-center justify-center border border-yellow-500/30">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                   </svg>
               </div>

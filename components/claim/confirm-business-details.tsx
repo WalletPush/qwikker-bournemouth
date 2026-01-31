@@ -57,6 +57,10 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
   const [tagline, setTagline] = useState(business.tagline || '')
   const [hours, setHours] = useState(business.hours || '')
   
+  // Hours confirmation state
+  const [googleHoursCorrect, setGoogleHoursCorrect] = useState<boolean | null>(null)
+  const [customHours, setCustomHours] = useState('')
+  
   // SMS opt-in state (only relevant if smsOptInAvailable)
   const [smsOptIn, setSmsOptIn] = useState(false)
   const [phoneE164, setPhoneE164] = useState('')
@@ -191,7 +195,8 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
       type: type.trim(),
       description: description.trim(),
       tagline: tagline.trim(),
-      hours: hours.trim(),
+      // Use custom hours if user said Google hours are incorrect, otherwise use Google hours
+      hours: googleHoursCorrect === false ? customHours.trim() : hours.trim(),
       logo: logoFile || undefined,
       heroImage: heroImageFile || undefined,
       // Include SMS opt-in data only if available and opted in
@@ -281,17 +286,17 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
               </Label>
               <div className="flex items-start gap-4">
                 {heroImagePreview ? (
-                  <div className="relative w-full h-48 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden">
+                  <div className="relative w-full h-48 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden bg-slate-50 dark:bg-slate-900">
                     <Image 
                       src={heroImagePreview} 
                       alt="Hero image preview" 
                       fill
-                      className="object-cover"
+                      className="object-contain"
                     />
                     <button
                       type="button"
                       onClick={removeHeroImage}
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 z-10"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -469,20 +474,72 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
               </div>
             </div>
 
-            {/* Opening Hours */}
-            <div className="space-y-2">
-              <Label htmlFor="hours">Opening Hours</Label>
-              <Textarea
-                id="hours"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-                placeholder="Mon-Fri: 9am-5pm&#10;Sat: 10am-4pm&#10;Sun: Closed"
-                rows={3}
-                className="resize-none"
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter your opening hours (one line per day, or a summary)
-              </p>
+            {/* Opening Hours Confirmation */}
+            <div className="space-y-4">
+              <Label className="text-base font-semibold">Are these your opening hours?</Label>
+              
+              {/* Show Google hours if available */}
+              {hours ? (
+                <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                  <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Check className="w-4 h-4 text-blue-600" />
+                    From Google Places
+                  </p>
+                  <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans">
+                    {hours}
+                  </pre>
+                </div>
+              ) : (
+                <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    No hours found from Google Places
+                  </p>
+                </div>
+              )}
+              
+              {/* Y/N Radio buttons */}
+              <div className="space-y-2">
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="hoursCorrect"
+                      checked={googleHoursCorrect === true}
+                      onChange={() => setGoogleHoursCorrect(true)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm font-medium">Yes, these are correct</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="hoursCorrect"
+                      checked={googleHoursCorrect === false}
+                      onChange={() => setGoogleHoursCorrect(false)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm font-medium">No, I'll enter my own</span>
+                  </label>
+                </div>
+              </div>
+              
+              {/* Show custom hours input if user selects No */}
+              {googleHoursCorrect === false && (
+                <div className="space-y-2">
+                  <Label htmlFor="customHours">Enter your opening hours</Label>
+                  <Textarea
+                    id="customHours"
+                    value={customHours}
+                    onChange={(e) => setCustomHours(e.target.value)}
+                    placeholder="Mon-Fri: 9am-5pm&#10;Sat: 10am-4pm&#10;Sun: Closed"
+                    rows={4}
+                    className="resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter your opening hours (one line per day, or a summary)
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Description */}

@@ -84,6 +84,8 @@ export const getUserLocationLayers = () => {
 
 /**
  * Business pin layers (neon glow effect)
+ * ✅ Cyan pins for paid/trial businesses
+ * ✅ Dull grey pins for unclaimed businesses
  */
 export const getBusinessPinLayers = () => {
   // Outer glow
@@ -92,16 +94,11 @@ export const getBusinessPinLayers = () => {
     type: 'circle',
     source: 'businesses',
     paint: {
-      'circle-radius': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        10, 20,
-        14, 35,
-        18, 50
-      ],
-      'circle-color': NEON_CYAN,
-      'circle-opacity': 0.4,
+      // ✅ TEMP: FORCE HUGE FIXED RADIUS (testing)
+      'circle-radius': 80,
+      // ✅ TEMP: FORCE WHITE CIRCLES FOR ALL PINS (testing)
+      'circle-color': '#ffffff',
+      'circle-opacity': 1.0,
       'circle-blur': 1
     }
   }
@@ -112,19 +109,14 @@ export const getBusinessPinLayers = () => {
     type: 'circle',
     source: 'businesses',
     paint: {
-      'circle-radius': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        10, 8,
-        14, 14,
-        18, 22
-      ],
-      'circle-color': NEON_CYAN,
-      'circle-opacity': 0.95,
-      'circle-stroke-width': 2,
+      // ✅ TEMP: FORCE HUGE FIXED RADIUS (testing)
+      'circle-radius': 50,
+      // ✅ TEMP: FORCE WHITE CIRCLES FOR ALL PINS (testing)
+      'circle-color': '#ffffff',
+      'circle-opacity': 1.0,
+      'circle-stroke-width': 3,
       'circle-stroke-color': '#ffffff',
-      'circle-stroke-opacity': 0.8
+      'circle-stroke-opacity': 1.0
     }
   }
 

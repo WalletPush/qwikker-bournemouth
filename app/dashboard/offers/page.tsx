@@ -31,8 +31,7 @@ export default async function DashboardOffersPage() {
         offer_image,
         status,
         display_order,
-        created_at,
-        edit_count
+        created_at
       )
     `)
     .eq('user_id', data.claims.sub)

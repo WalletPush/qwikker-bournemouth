@@ -827,8 +827,8 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
 
         {activeTab === 'menu' && (
           <div className="space-y-6">
-            {/* Show placeholder for unclaimed/imported businesses */}
-            {(business.status === 'unclaimed' || business.auto_imported) ? (
+            {/* Show placeholder ONLY if unclaimed/imported AND no featured menu items */}
+            {(business.status === 'unclaimed' || business.auto_imported) && (!business.menuPreview || business.menuPreview.length === 0) ? (
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardContent className="p-8 text-center">
                   <div className="flex flex-col items-center gap-4">
@@ -846,7 +846,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                   </div>
                 </CardContent>
               </Card>
-            ) : (
+            ) : business.status !== 'unclaimed' && !business.auto_imported ? (
               <>
                 {/* AI Chat Prompt - Primary CTA (only for claimed businesses) */}
                 <Card className="bg-gradient-to-br from-[#00d083]/10 to-[#00b86f]/10 border-[#00d083]/30 relative overflow-hidden">
@@ -876,7 +876,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                   </CardContent>
                 </Card>
               </>
-            )}
+            ) : null}
 
             {/* Featured Menu Items - Secondary */}
             {business.menuPreview && business.menuPreview.length > 0 && (

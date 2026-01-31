@@ -312,8 +312,10 @@ export function OffersPage({ profile }: OffersPageProps) {
     }
   }
   
-  const offerLimit = getOfferLimit(profile.plan || 'starter')
+  // ✅ CRITICAL: claimed_free businesses get 1 offer limit
+  const offerLimit = profile.status === 'claimed_free' ? 1 : getOfferLimit(profile.plan || 'starter')
   const isStarterTier = profile.plan === 'starter'
+  const isClaimedFree = profile.status === 'claimed_free'
 
   return (
     <div className="space-y-6">
@@ -358,9 +360,14 @@ export function OffersPage({ profile }: OffersPageProps) {
         </div>
         <div className="text-right">
           <p className="text-sm text-gray-400">
-            {currentOfferCount} of {offerLimit} offers used
+            {currentOfferCount} of {offerLimit} {offerLimit === 1 ? 'offer' : 'offers'} used
           </p>
-          {isStarterTier && (
+          {isClaimedFree && (
+            <p className="text-xs text-slate-400">
+              Free Tier: 1 offer per month (1 edit allowed)
+            </p>
+          )}
+          {isStarterTier && !isClaimedFree && (
             <p className="text-xs text-yellow-400">
               Starter Tier: {offerLimit} offer maximum
             </p>
@@ -1122,7 +1129,7 @@ Examples:
                 <h3 className="font-semibold text-white mb-1">Offer Limit Reached</h3>
                 <p className="text-sm text-gray-400">
                   {profile.plan === 'starter' && (
-                    <>You've reached the maximum of {offerLimit} offer for the Starter plan. Upgrade to Featured for 3 offers or Spotlight for unlimited offers.</>
+                    <>You've reached the maximum of {offerLimit} offers for the Starter plan. Upgrade to Featured for 5 offers or Spotlight for unlimited offers.</>
                   )}
                   {profile.plan === 'featured' && (
                     <>You've reached the maximum of {offerLimit} offers for the Featured plan. Upgrade to Spotlight for unlimited offers.</>

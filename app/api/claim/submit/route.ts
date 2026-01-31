@@ -493,9 +493,13 @@ export async function POST(request: NextRequest) {
     try {
       const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
       
+      // 🔒 SECURITY: Use city-specific subdomain for admin link
+      const citySubdomain = (business.city || 'bournemouth').toLowerCase()
+      const adminUrl = `https://${citySubdomain}.qwikker.com/admin?tab=claims`
+      
       await sendCitySlackNotification({
         title: `✅ New Claim Request: ${business.business_name}`,
-        message: `${firstName} ${lastName} has claimed ${business.business_name}!\n\n**Claimer Details:**\n• Name: ${firstName} ${lastName}\n• Email: ${email}\n• Website: ${website || 'Not provided'}\n• Verification: Email verified\n\n🔗 Review claim: ${process.env.NEXT_PUBLIC_BASE_URL || 'https://app.qwikker.com'}/admin?tab=claims`,
+        message: `${firstName} ${lastName} has claimed ${business.business_name}!\n\n**Claimer Details:**\n• Name: ${firstName} ${lastName}\n• Email: ${email}\n• Website: ${website || 'Not provided'}\n• Verification: Email verified\n\n🔗 Review claim: ${adminUrl}`,
         city: business.city || 'bournemouth',
         type: 'business_signup',
         data: { businessName: business.business_name, claimerName: `${firstName} ${lastName}` }

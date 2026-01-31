@@ -43,7 +43,7 @@ export function ClaimWelcomeModal({ businessName, businessId, isOpen, onClose }:
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="bg-slate-900 border-slate-700 text-slate-100 max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-slate-900 border-slate-700 text-slate-100 max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-center mb-4">
             <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center border-2 border-emerald-500/30">
@@ -61,105 +61,191 @@ export function ClaimWelcomeModal({ businessName, businessId, isOpen, onClose }:
         </DialogHeader>
 
         <div className="space-y-6 mt-6">
-          {/* What's Included for Free */}
+          {/* Your Free Listing Includes */}
           <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <h3 className="text-lg font-semibold text-white mb-4">
               Your Free Listing Includes
             </h3>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm py-2">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <div>
-                  <p className="text-slate-200 font-medium">Visible in Discover Section</p>
-                  <p className="text-slate-400 text-sm">Customers can find you when browsing locally</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="text-slate-300">Visible in Discover section</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <div>
-                  <p className="text-slate-200 font-medium">Basic AI Chat Visibility</p>
-                  <p className="text-slate-400 text-sm">Text mentions when relevant to customer queries</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="text-slate-300">Basic AI chat visibility</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <div>
-                  <p className="text-slate-200 font-medium">Up to 5 Featured Menu Items</p>
-                  <p className="text-slate-400 text-sm">Manually add your best dishes or drinks</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="text-slate-300">Up to 5 menu items</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <div>
-                  <p className="text-slate-200 font-medium">Create Basic Offers</p>
-                  <p className="text-slate-400 text-sm">Engage customers with deals and promotions</p>
-                </div>
-              </li>
-            </ul>
+                <span className="text-slate-300">1 offer per month</span>
+              </div>
+            </div>
           </div>
 
-          {/* Upgrade Section */}
-          <div className="bg-gradient-to-r from-[#00d083]/10 to-emerald-500/5 border border-[#00d083]/30 rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              Upgrade to Unlock More
+          {/* Upgrade to Start Getting Recommended */}
+          <div className="bg-gradient-to-br from-[#00d083]/10 to-emerald-500/5 border border-[#00d083]/30 rounded-xl p-6">
+            <h3 className="text-xl font-bold text-white mb-2">
+              🚀 Upgrade to Start Getting Recommended
             </h3>
-            <p className="text-slate-300 text-sm mb-4">
-              Stand out with <span className="text-[#00d083] font-medium">premium carousel cards</span> and unlimited menu indexing
+            <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+              Free listings are visible. <span className="text-white font-medium">Upgraded listings are actively suggested by AI</span> and shown more prominently to customers looking right now.
             </p>
-            <ul className="space-y-3 mb-4">
-              <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-[#00d083] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <div>
-                  <p className="text-slate-200 font-medium">Premium Carousel Cards</p>
-                  <p className="text-slate-400 text-sm">Rich photo cards in AI chat (not just text)</p>
+
+            <div className="space-y-5">
+              {/* Get Recommended by AI */}
+              <div>
+                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <span className="text-lg">🧠</span>
+                  Get Recommended by AI
+                </h4>
+                <p className="text-slate-400 text-sm mb-2">
+                  When users ask "Best food near me" or "Where should we eat tonight?" — <span className="text-slate-200">your business and specific dishes can be suggested directly.</span>
+                </p>
+                <div className="space-y-1 text-xs text-slate-400 ml-6">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Full menu indexing (AI can recommend your dishes)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Priority visibility in AI results</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Dish-level discovery</span>
+                  </div>
                 </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-[#00d083] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <div>
-                  <p className="text-slate-200 font-medium">Full Menu Indexing (Unlimited + PDF)</p>
-                  <p className="text-slate-400 text-sm">AI recommends your specific dishes and items</p>
+              </div>
+
+              {/* Show Up When People Search Nearby */}
+              <div>
+                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <span className="text-lg">📍</span>
+                  Show Up When People Search Nearby
+                </h4>
+                <p className="text-slate-400 text-sm mb-2">
+                  Qwikker is used in-the-moment.
+                </p>
+                <div className="space-y-1 text-xs text-slate-400 ml-6">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Featured placement in discovery</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Visibility inside Atlas (interactive AI map)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Higher exposure for "near me" searches</span>
+                  </div>
                 </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-[#00d083] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <div>
-                  <p className="text-slate-200 font-medium">Advanced Analytics</p>
-                  <p className="text-slate-400 text-sm">Track views, engagement, and customer insights</p>
+              </div>
+
+              {/* Turn Offers Into Traffic */}
+              <div>
+                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <span className="text-lg">🎯</span>
+                  Turn Offers Into Traffic
+                </h4>
+                <p className="text-slate-400 text-sm mb-2">
+                  Users often ask for deals.
+                </p>
+                <div className="space-y-1 text-xs text-slate-400 ml-6">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Time-based offers</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Offers surfaced inside AI chat</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Featured in "Current Deals" flows</span>
+                  </div>
                 </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-[#00d083] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+              </div>
+
+              {/* Stand Out + Secret Menu */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-slate-200 font-medium">Priority Support</p>
-                  <p className="text-slate-400 text-sm">Get faster help when you need it</p>
+                  <h4 className="text-white font-semibold mb-2 flex items-center gap-2 text-sm">
+                    <span>🌟</span>
+                    Stand Out Visually
+                  </h4>
+                  <div className="space-y-1 text-xs text-slate-400 ml-5">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Premium carousel cards</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Priority positioning</span>
+                    </div>
+                  </div>
                 </div>
-              </li>
-            </ul>
-            <div className="text-center bg-slate-800/50 border border-slate-700 rounded-lg p-4">
-              <p className="text-slate-300 text-sm mb-3">Ready to upgrade?</p>
+                <div>
+                  <h4 className="text-white font-semibold mb-2 flex items-center gap-2 text-sm">
+                    <span>🔐</span>
+                    Secret Menu Club
+                  </h4>
+                  <div className="space-y-1 text-xs text-slate-400 ml-5">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Exclusive hidden items</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Build loyal customers</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-slate-700/50 text-center">
+              <p className="text-slate-200 font-medium text-sm mb-4">
+                Qwikker helps customers <span className="text-[#00d083]">choose you</span> — not just scroll past you.
+              </p>
               <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold">
                 <Link href="/dashboard/settings#pricing">
                   View Plans
@@ -168,20 +254,15 @@ export function ClaimWelcomeModal({ businessName, businessId, isOpen, onClose }:
             </div>
           </div>
 
-          {/* CTA Button */}
-          <div className="flex flex-col gap-3">
-            <Button
-              onClick={handleClose}
-              disabled={isClosing}
-              size="lg"
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
-            >
-              {isClosing ? 'Loading...' : 'Get Started'}
-            </Button>
-            <p className="text-center text-slate-400 text-xs">
-              Explore upgrade options anytime in your dashboard settings
-            </p>
-          </div>
+          {/* Get Started Button */}
+          <Button
+            onClick={handleClose}
+            disabled={isClosing}
+            size="lg"
+            className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold"
+          >
+            {isClosing ? 'Loading...' : 'Get Started'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

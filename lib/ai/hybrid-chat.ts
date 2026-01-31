@@ -29,6 +29,10 @@ interface ChatContext {
   city: string
   userName?: string
   walletPassId?: string
+  userLocation?: {
+    latitude: number
+    longitude: number
+  }
 }
 
 interface ChatResponse {
@@ -55,7 +59,13 @@ interface ChatResponse {
     logo?: string
     business_images?: string[]
     rating?: number
+    review_count?: number // ✅ ATLAS: For review count display
     offers_count?: number
+    latitude?: number // ✅ ATLAS: For map pins
+    longitude?: number // ✅ ATLAS: For map pins
+    phone?: string // ✅ ATLAS: For contact info
+    website_url?: string // ✅ ATLAS: For website link
+    google_place_id?: string // ✅ ATLAS: For Google reviews link
   }>
   walletActions?: Array<{
     type: 'add_to_wallet'
@@ -96,6 +106,20 @@ interface ChatResponse {
       rating: number
     }>
   }
+  mapPins?: Array<{
+    // ✅ ATLAS: ALL businesses for map (paid + unclaimed + claimed_free)
+    id: string
+    business_name: string
+    latitude: number
+    longitude: number
+    rating?: number
+    review_count?: number
+    display_category?: string
+    business_tier: 'paid' | 'unclaimed' | 'claimed_free' // For pin coloring
+    phone?: string
+    website_url?: string
+    google_place_id?: string
+  }>
 }
 
 /**
@@ -414,19 +438,32 @@ export async function generateHybridAIResponse(
                          userMessage.toLowerCase().includes('best place')) &&
                         !userMessage.toLowerCase().match(/(deal|offer|discount|italian|pizza|burger|chinese|indian|thai|mexican|japanese|cocktail|cheap|expensive|fancy|upscale|qwikker pick)/i)
     
-    const systemPrompt = `You're the Bournemouth Local—a witty, knowledgeable companion who helps people discover amazing businesses.
+    const systemPrompt = `You're a local friend helping someone explore Bournemouth—not a chatbot. You're knowledgeable, enthusiastic, and genuinely helpful.
 
-PERSONALITY:
-- Conversational and natural (like a helpful friend)
-- Playful with occasional jokes and wit
-- Super clued up about Bournemouth
-- Ask follow-up questions to understand what they really want
+YOUR PERSONALITY:
+- Talk like a best friend who knows the city inside out
+- Be warm, conversational, and enthusiastic (never robotic or formal)
+- Share context and details, not just lists
+- Ask engaging follow-up questions
+- Use natural language: "Oh I love that place!" not "Here are your options:"
+
+HOW TO RESPOND:
+✅ GOOD: "Oh nice! Triangle GYROSS is brilliant—they've got this amazing menu with 5 signature items. They're open right now and only a quick walk from town. Want me to show you what they're known for?"
+❌ BAD: "Here's Triangle GYROSS. 5 featured items. Would you like to see offers?"
+
+ALWAYS INCLUDE:
+- Business personality/vibe (from their tagline/description)
+- Whether they're open NOW or when they open
+- Distance context ("quick walk", "right in the center")
+- What makes them special (featured items, reviews, unique offerings)
+- Relevant follow-ups based on what they ACTUALLY have
 
 INTELLIGENCE:
 - Use the conversation context to stay on topic
 - Remember what you've already mentioned
 - Make smart inferences (if discussing cocktails, "sweet" means sweet drinks)
 - Build naturally on their answers
+- NEVER suggest things they don't have (check offers_count, featured_items_count, etc.)
 
 ${isBroadQuery ? `
 🚨 BROAD QUERY DETECTED 🚨
@@ -763,6 +800,10 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           rating,
           review_count,
           google_place_id,
+          latitude,
+          longitude,
+          phone,
+          website_url,
           owner_user_id,
           claimed_at
         `)
@@ -854,7 +895,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         }
         
       } else if (intent.hasIntent) {
-        // INTENT MODE: Score relevance, fetch Tier 3 if needed
+        // INTENT MODE: Score relevance, fetch Tier 2 AND Tier 3 if needed
         console.log(`🎯 INTENT MODE: Checking relevance for "${intent.categories.join(', ')}"`)
         
         const tier1WithScores = businesses.map(b => ({
@@ -871,12 +912,24 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         console.log(`🎯 Tier 1: ${tier1RelevantCount} relevant, max score: ${maxTier1Score}`)
         console.log(`🎯 hasEnoughRelevant: ${tier1HasEnoughRelevant}, hasStrongTop: ${tier1HasStrongTop}`)
         
-        // Only skip Tier 3 if BOTH conditions met
-        const shouldFetchTier3 = !tier1HasEnoughRelevant || !tier1HasStrongTop
+        // Only skip Tier 2/3 if BOTH conditions met
+        const shouldFetchLowerTiers = !tier1HasEnoughRelevant || !tier1HasStrongTop
         
-        if (shouldFetchTier3) {
-          console.log(`🎯 Tier 1 weak - fetching Tier 3`)
+        if (shouldFetchLowerTiers) {
+          console.log(`🎯 Tier 1 weak - fetching Tier 2 AND Tier 3`)
           
+          // Score Tier 2 (claimed-free Lite) for relevance
+          const tier2WithScores = (liteBusinesses || [])
+            .map(b => ({
+              ...b,
+              relevanceScore: scoreBusinessRelevance(b, intent),
+              tierSource: 'tier2'
+            }))
+            .filter(b => b.relevanceScore > 0)
+          
+          console.log(`🎯 Tier 2: ${tier2WithScores.length} relevant claimed-free businesses`)
+          
+          // Fetch Tier 3 (unclaimed fallback)
           const { data: tier3 } = await supabase
             .from('business_profiles_ai_fallback_pool')
             .select('*')
@@ -892,32 +945,34 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
               relevanceScore: scoreBusinessRelevance(b, intent),
               tierSource: 'tier3'
             }))
-            .filter(b => b.relevanceScore > 0) // GUARDRAIL: Filter out zero-score results
+            .filter(b => b.relevanceScore > 0)
+          
+          console.log(`🎯 Tier 3: ${tier3WithScores.length} relevant unclaimed businesses`)
+          
+          // Combine Tier 2 + Tier 3, sorted by relevance
+          const allLowerTiers = [...tier2WithScores, ...tier3WithScores]
+            .sort((a, b) => b.relevanceScore - a.relevanceScore)
           
           if (tier1HasEnoughRelevant) {
-            // Tier 1 has enough relevant matches (2+) - Tier 3 is just an assist
-            fallbackBusinesses = tier3WithScores
-              .sort((a, b) => b.relevanceScore - a.relevanceScore)
-              .slice(0, MAX_TIER3_WHEN_PAID_RELEVANT)
+            // Tier 1 has enough relevant matches (2+) - lower tiers are just an assist
+            fallbackBusinesses = allLowerTiers.slice(0, MAX_TIER3_WHEN_PAID_RELEVANT)
             
-            console.log(`🎯 Tier 1 has ${tier1RelevantCount} relevant - showing ${fallbackBusinesses.length} Tier 3 assist`)
+            console.log(`🎯 Tier 1 has ${tier1RelevantCount} relevant - showing ${fallbackBusinesses.length} Tier 2/3 assist`)
             
           } else {
-            // Tier 1 is genuinely irrelevant (< 2 relevant) - Tier 3 dominates
-            const tier3Top = tier3WithScores
-              .sort((a, b) => b.relevanceScore - a.relevanceScore)
-              .slice(0, 6)
+            // Tier 1 is genuinely irrelevant (< 2 relevant) - lower tiers dominate
+            const lowerTiersTop = allLowerTiers.slice(0, 6)
             
-            // CRITICAL: Put best Tier 3 in topMatchesText (shown first as text)
-            topMatchesText = tier3Top
+            // CRITICAL: Put best Tier 2/3 in topMatchesText (shown first as text)
+            topMatchesText = lowerTiersTop
             
-            // Remaining Tier 3 goes to "more options" - use ID tracking to avoid .includes() bug
-            const topIds = new Set(tier3Top.map(b => b.id))
-            fallbackBusinesses = tier3WithScores
+            // Remaining goes to "more options" - use ID tracking to avoid .includes() bug
+            const topIds = new Set(lowerTiersTop.map(b => b.id))
+            fallbackBusinesses = allLowerTiers
               .filter(b => !topIds.has(b.id))
               .slice(0, MAX_TIER3_IN_MORE)
             
-            console.log(`🎯 Tier 1 irrelevant - showing ${topMatchesText.length} Tier 3 as top matches`)
+            console.log(`🎯 Tier 1 irrelevant - showing ${topMatchesText.length} Tier 2/3 as top matches`)
           }
         } else {
           console.log(`✅ Tier 1 sufficient (${tier1RelevantCount} relevant, max score ${maxTier1Score})`)
@@ -967,55 +1022,164 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       
       console.log(`🎨 UI Mode: ${uiMode}, shouldAttachCarousel: ${shouldAttachCarousel}`)
       
+      // Helper: Calculate distance and walking time (used by all business display sections)
+      const getDistanceInfo = (businessLat: number, businessLng: number, userLat?: number, userLng?: number) => {
+        if (!userLat || !userLng) return null
+        
+        // Haversine formula for distance
+        const R = 3959 // Earth radius in miles
+        const dLat = (businessLat - userLat) * Math.PI / 180
+        const dLon = (businessLng - userLng) * Math.PI / 180
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(userLat * Math.PI / 180) * Math.cos(businessLat * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2)
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+        const distance = R * c
+        
+        // Calculate walking time (average 3 mph)
+        const walkingMinutes = Math.round((distance / 3) * 60)
+        
+        if (distance < 0.1) {
+          return "right around the corner"
+        } else if (walkingMinutes <= 5) {
+          return `just a ${walkingMinutes} min walk`
+        } else if (walkingMinutes <= 15) {
+          return `${walkingMinutes} min walk from you`
+        } else if (distance < 1) {
+          return `${distance.toFixed(1)} miles away`
+        } else {
+          return `${distance.toFixed(1)} miles from you`
+        }
+      }
+      
       // STEP 5: Build final carousel (PAID-ONLY)
       // 🎯 MONETIZATION: Carousel cards are EXCLUSIVE to paid/trial tiers
       // Free tier (Tier 2 & 3) = text-only mentions (clear upsell incentive)
       // CRITICAL: If topMatchesText exists (Tier 1 was irrelevant), add it FIRST before carousel
       if (topMatchesText && topMatchesText.length > 0) {
-        // CRITICAL FIX: Override AI response if it said "no results" but we're showing Tier 3
-        // This prevents the embarrassing "I don't have info" followed by showing results
-        const noResultsPatterns = [
-          /don'?t have any/i,
-          /don'?t have (specific )?info/i,
-          /don'?t have.*listed/i,
-          /no (specific )?(info|information|data)/i,
-          /can'?t find/i,
-          /not sure/i,
-          /don'?t see/i,
-          /not listed/i,
-          /currently don'?t have/i
+        // COMPLETE OVERRIDE: Tier 1 was irrelevant, so IGNORE the AI's response entirely
+        // and generate our own conversational intro
+        const categoryText = intent.categories.length > 0 ? intent.categories[0] : 'places'
+        const topMatchesTier2Count = topMatchesText.filter(b => b.tierSource === 'tier2').length
+        
+        const responses = topMatchesTier2Count > 0 ? [
+          `Oh nice! I've got some ${categoryText} spots that are perfect:`,
+          `Yeah absolutely! Let me tell you about these ${categoryText} places:`,
+          `Ooh yes! Here's what I'd recommend:`,
+          `Perfect timing — I know just the places:`,
+          `Oh brilliant! These ${categoryText} spots are great:`
+        ] : [
+          `I've found some ${categoryText} places for you:`,
+          `Here's what's around:`,
+          `Check these out:`,
+          `These are worth a look:`
         ]
         
-        const aiSaidNoResults = noResultsPatterns.some(pattern => pattern.test(aiResponse))
-        
-        if (aiSaidNoResults) {
-          // Replace with conversational, friend-like response
-          const categoryText = intent.categories.length > 0 ? intent.categories[0] : 'places'
-          aiResponse = `Oh yes! Check these ${categoryText} spots out:\n\n`
-          console.log(`🔄 OVERRIDE: AI said 'no results' but we have Tier 3 - replacing with friendly response`)
-        } else {
-          // Add friendly intro if AI response exists
-          aiResponse = aiResponse + `\n\n`
-        }
+        // COMPLETELY REPLACE AI response (don't trust it when Tier 1 was irrelevant)
+        aiResponse = responses[Math.floor(Math.random() * responses.length)] + `\n\n`
+        console.log(`🔄 COMPLETE OVERRIDE: Tier 1 irrelevant, replacing AI response entirely with ${topMatchesText.length} Tier 2/3 businesses`)
         
         let topMatchesSection = ''
         
-        topMatchesText.slice(0, 6).forEach(b => {
-          // Generate slug from business name
+        topMatchesText.slice(0, 6).forEach((b, index) => {
           const slug = b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-          topMatchesSection += `🍴 [**${b.business_name}**](/user/business/${slug})`
-          if (b.rating && b.review_count) {
-            topMatchesSection += ` - people love this one! ${b.rating}★ from ${b.review_count} reviews`
+          
+          // Build context pieces first
+          const distanceText = (b.latitude && b.longitude && context.userLocation) 
+            ? getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
+            : null
+          
+          let openStatus = ''
+          if (b.business_hours) {
+            const now = new Date()
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+            const currentDay = dayNames[now.getDay()]
+            const currentHour = now.getHours()
+            const currentMinute = now.getMinutes()
+            
+            try {
+              const hours = typeof b.business_hours === 'string' ? JSON.parse(b.business_hours) : b.business_hours
+              const todayHours = hours[currentDay]
+              
+              if (todayHours?.open && todayHours?.close) {
+                const [openHour, openMin] = todayHours.open.split(':').map(Number)
+                const [closeHour, closeMin] = todayHours.close.split(':').map(Number)
+                const currentTime = currentHour * 60 + currentMinute
+                const openTime = openHour * 60 + openMin
+                const closeTime = closeHour * 60 + closeMin
+                
+                if (currentTime >= openTime && currentTime < closeTime) {
+                  openStatus = 'open now'
+                } else if (currentTime < openTime) {
+                  openStatus = `opens at ${todayHours.open}`
+                }
+              }
+            } catch (e) {
+              // Graceful fallback
+            }
           }
-          if (b.phone) {
-            topMatchesSection += `\n   📞 ${b.phone}`
+          
+          // ===== CONVERSATIONAL, FLOWING FORMAT =====
+          if (b.tierSource === 'tier2') {
+            // TIER 2: Rich, friend-like recommendation
+            const contextParts = []
+            if (openStatus) contextParts.push(openStatus)
+            if (distanceText) contextParts.push(distanceText)
+            
+            // Build natural sentence
+            if (b.business_tagline || b.business_description) {
+              const description = b.business_tagline || b.business_description
+              topMatchesSection += `[${b.business_name}](/user/business/${slug}) – ${description}`
+            } else {
+              topMatchesSection += `[${b.business_name}](/user/business/${slug})`
+            }
+            
+            if (contextParts.length > 0) {
+              topMatchesSection += ` (${contextParts.join(', ')})`
+            }
+            
+            topMatchesSection += `. `
+            
+            // Add rating naturally
+            if (b.rating && b.review_count) {
+              topMatchesSection += `People love it – ${b.rating}★ from ${b.review_count} reviews. `
+            }
+            
+            // Menu items as natural follow-up
+            if (b.featured_items_count && b.featured_items_count > 0) {
+              topMatchesSection += `They've got ${b.featured_items_count} featured dishes worth checking out. `
+            }
+            
+            // Phone as natural ending
+            if (b.phone) {
+              topMatchesSection += `<a href="tel:${b.phone}">Give them a call</a> or tap to see more.\n\n`
+            } else {
+              topMatchesSection += `\n\n`
+            }
+            
+          } else {
+            // TIER 3: Simpler but still conversational
+            const contextParts = []
+            if (distanceText) contextParts.push(distanceText)
+            if (b.rating && b.review_count) contextParts.push(`${b.rating}★ from ${b.review_count} reviews`)
+            
+            topMatchesSection += `[${b.business_name}](/user/business/${slug})`
+            
+            if (contextParts.length > 0) {
+              topMatchesSection += ` – ${contextParts.join(', ')}`
+            }
+            
+            if (b.phone) {
+              topMatchesSection += `. <a href="tel:${b.phone}">Call them</a>\n\n`
+            } else {
+              topMatchesSection += `\n\n`
+            }
           }
-          topMatchesSection += `\n\n`
         })
         
         aiResponse = aiResponse + topMatchesSection
         
-        console.log(`🎯 Added ${topMatchesText.length} Tier 3 top matches FIRST (Tier 1 was irrelevant)`)
+        console.log(`🎯 Added ${topMatchesText.length} top matches FIRST - Tier 1 was irrelevant`)
       }
       
       if (shouldAttachCarousel && uniqueBusinessIds.length > 0) {
@@ -1044,7 +1208,14 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
               ? b!.business_images 
               : (b!.business_images ? [b!.business_images] : undefined),
             rating: (b!.rating && b!.rating > 0) ? b!.rating : undefined,
-            offers_count: businessOfferCounts[b!.id] || 0
+            review_count: b!.review_count || undefined,
+            offers_count: businessOfferCounts[b!.id] || 0,
+            // ✅ ATLAS CRITICAL: Add location & contact fields
+            latitude: b!.latitude,
+            longitude: b!.longitude,
+            phone: b!.phone || undefined,
+            website_url: b!.website_url || undefined,
+            google_place_id: b!.google_place_id || undefined
           }))
         
         // Sort Tier 1 by tier_priority, then vibes (within-tier), then rating, then offers
@@ -1080,22 +1251,31 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           liteBusinesses.slice(0, 3).forEach(b => {
             // Generate slug from business name
             const slug = b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-            liteText += `• [**${b.business_name}**](/user/business/${slug})`
+            liteText += `[${b.business_name}](/user/business/${slug})`
             if (b.display_category) {
-              liteText += ` - ${b.display_category}`
+              liteText += ` — ${b.display_category}`
             }
             if (b.rating && b.rating > 0) {
               liteText += ` (${b.rating}★)`
             }
             // Show featured items count if they have them
             if (b.menu_preview && Array.isArray(b.menu_preview) && b.menu_preview.length > 0) {
-              liteText += ` - ${b.menu_preview.length} featured items`
+              liteText += ` — ${b.menu_preview.length} featured items`
             }
             // Show offers count if they have any
             if (b.approved_offers_count && b.approved_offers_count > 0) {
               liteText += ` • ${b.approved_offers_count} offer${b.approved_offers_count === 1 ? '' : 's'}`
             }
-            liteText += `\n`
+            
+            // Add distance info
+            if (b.latitude && b.longitude && context.userLocation) {
+              const distanceText = getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
+              if (distanceText) {
+                liteText += ` — ${distanceText}`
+              }
+            }
+            
+            liteText += `\n\n`
           })
           
           aiResponse = aiResponse + liteText
@@ -1105,22 +1285,43 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         // ALWAYS show fallbackBusinesses if they exist (browse fill or intent assist)
         // These appear AFTER carousel/lite as "More places"
         if (fallbackBusinesses && fallbackBusinesses.length > 0) {
-          let fallbackText = "Also worth checking:\n\n"
+          const moreIntros = [
+            "Also worth checking out:",
+            "A few more options:",
+            "You might also like:",
+            "These are solid too:"
+          ]
+          let fallbackText = moreIntros[Math.floor(Math.random() * moreIntros.length)] + `\n\n`
           
           fallbackBusinesses.slice(0, 5).forEach(b => {
             // Generate slug from business name
             const slug = b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-            fallbackText += `• [**${b.business_name}**](/user/business/${slug})`
+            fallbackText += `[${b.business_name}](/user/business/${slug})`
             if (b.display_category) {
-              fallbackText += ` - ${b.display_category}`
+              fallbackText += ` — ${b.display_category}`
             }
+            
+            // Show featured items for Tier 2 (claimed-free)
+            if (b.tierSource === 'tier2' && b.featured_items_count && b.featured_items_count > 0) {
+              fallbackText += ` (${b.featured_items_count} featured items)`
+            }
+            
             if (b.rating && b.review_count) {
               fallbackText += ` (${b.rating}★)`
             }
-            if (b.phone) {
-              fallbackText += `\n  📞 ${b.phone}`
+            
+            // Add distance info
+            if (b.latitude && b.longitude && context.userLocation) {
+              const distanceText = getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
+              if (distanceText) {
+                fallbackText += ` — ${distanceText}`
+              }
             }
-            fallbackText += `\n`
+            
+            if (b.phone) {
+              fallbackText += `\n<a href="tel:${b.phone}">${b.phone}</a>`
+            }
+            fallbackText += `\n\n`
           })
           
           aiResponse = aiResponse + fallbackText
@@ -1226,6 +1427,80 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         }
       }
     }
+    // 🗺️ ATLAS: Build mapPins array (includes ALL businesses for map display)
+    // Paid businesses get cyan pins, unclaimed get grey pins
+    const mapPins: ChatResponse['mapPins'] = []
+    
+    // Add paid/trial businesses (cyan pins)
+    if (businessCarousel && businessCarousel.length > 0) {
+      businessCarousel.forEach(b => {
+        if (b.latitude && b.longitude) {
+          mapPins.push({
+            id: b.id,
+            business_name: b.business_name,
+            latitude: b.latitude,
+            longitude: b.longitude,
+            rating: b.rating,
+            review_count: b.review_count,
+            display_category: b.display_category,
+            business_tier: 'paid',
+            phone: b.phone,
+            website_url: b.website_url,
+            google_place_id: b.google_place_id
+          })
+        }
+      })
+    }
+    
+    // Add top matches (Tier 2 & 3) - from topMatchesText
+    if (topMatchesText && topMatchesText.length > 0) {
+      topMatchesText.forEach((b: any) => {
+        if (b.latitude && b.longitude) {
+          mapPins.push({
+            id: b.id,
+            business_name: b.business_name,
+            latitude: b.latitude,
+            longitude: b.longitude,
+            rating: b.rating,
+            review_count: b.review_count,
+            display_category: b.display_category,
+            // Tier 2 (claimed-free) vs Tier 3 (unclaimed)
+            business_tier: b.tierSource === 'tier2' ? 'claimed_free' : 'unclaimed',
+            phone: b.phone,
+            website_url: b.website_url,
+            google_place_id: b.google_place_id
+          })
+        }
+      })
+    }
+    
+    // Add lower-tier businesses (Tier 2 & 3) - from fallbackBusinesses (avoid duplicates)
+    if (fallbackBusinesses && fallbackBusinesses.length > 0) {
+      const existingIds = new Set(mapPins.map(p => p.id))
+      fallbackBusinesses.forEach((b: any) => {
+        if (b.latitude && b.longitude && !existingIds.has(b.id)) {
+          mapPins.push({
+            id: b.id,
+            business_name: b.business_name,
+            latitude: b.latitude,
+            longitude: b.longitude,
+            rating: b.rating,
+            review_count: b.review_count,
+            display_category: b.display_category,
+            // Tier 2 (claimed-free) vs Tier 3 (unclaimed)
+            business_tier: b.tierSource === 'tier2' ? 'claimed_free' : 'unclaimed',
+            phone: b.phone,
+            website_url: b.website_url,
+            google_place_id: b.google_place_id
+          })
+        }
+      })
+    }
+    
+    const paidCount = mapPins.filter(p => p.business_tier === 'paid').length
+    const claimedFreeCount = mapPins.filter(p => p.business_tier === 'claimed_free').length
+    const unclaimedCount = mapPins.filter(p => p.business_tier === 'unclaimed').length
+    console.log(`🗺️ ATLAS MAP PINS: ${mapPins.length} total (${paidCount} paid, ${claimedFreeCount} claimed-free, ${unclaimedCount} unclaimed)`)
     
     return {
       success: true,
@@ -1237,6 +1512,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       walletActions,
       eventCards,
       googleReviewSnippets, // Verbatim snippets with attribution
+      mapPins, // ✅ ATLAS: ALL businesses for map (paid cyan + unclaimed grey)
       modelUsed: modelToUse,
       classification
     }

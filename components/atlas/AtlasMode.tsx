@@ -47,6 +47,8 @@ export interface Business {
   google_place_id?: string
   website_url?: string
   phone?: string
+  isPaid?: boolean // ✅ For cyan pins (paid/trial businesses)
+  isUnclaimed?: boolean // ✅ For grey pins (unclaimed businesses)
 }
 
 export interface AtlasConfig {
@@ -74,6 +76,7 @@ interface AtlasModeProps {
   onRequestLocation?: () => void  // Manual location request trigger
   initialQuery?: string | null  // Query to run when Atlas opens (from chat CTA)
   onInitialQueryConsumed?: () => void  // Callback after initial query is consumed
+  businesses?: Business[]  // ✅ NEW: Businesses from chat (avoids re-querying)
 }
 
 export function AtlasMode({
@@ -90,7 +93,8 @@ export function AtlasMode({
   lastAIResponse,
   onRequestLocation,
   initialQuery,
-  onInitialQueryConsumed
+  onInitialQueryConsumed,
+  businesses: incomingBusinesses
 }: AtlasModeProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<MapboxMap | null>(null)
@@ -197,27 +201,41 @@ export function AtlasMode({
         
         // Add fog for atmosphere (only if performance mode OFF)
         mapInstance.on('load', () => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[Atlas] Map loaded successfully')
-            // Debug: Store map instance globally for Fast Refresh debugging
-            ;(window as any).__atlasMap = mapInstance
-            console.log('[Atlas] window.__atlasMap set for debugging')
+          console.log('[Atlas] 🔄 Map load event fired, checking style...')
+          
+          // ✅ CRITICAL FIX: Wait for BOTH loaded() AND isStyleLoaded()
+          // Fixes frozen map where jumpTo/flyTo commands are ignored
+          const checkFullyLoaded = () => {
+            if (mapInstance.isStyleLoaded() && mapInstance.loaded()) {
+              console.log('[Atlas] ✅ Map AND style fully loaded! Ready to accept commands.')
+              
+              if (process.env.NODE_ENV === 'development') {
+                // Debug: Store map instance globally for Fast Refresh debugging
+                ;(window as any).__atlasMap = mapInstance
+                console.log('[Atlas] window.__atlasMap set for debugging')
+              }
+              
+              if (!performanceMode.enabled && performanceMode.fog) {
+                mapInstance.setFog({
+                  color: 'rgb(5, 5, 15)',
+                  'high-color': 'rgb(10, 15, 30)',
+                  'horizon-blend': 0.3,
+                  'space-color': 'rgb(0, 0, 5)',
+                  'star-intensity': 0.5
+                })
+              }
+              
+              setMapLoaded(true)
+              
+              // Play wake sound
+              playSound(audioWakeRef.current)
+            } else {
+              console.log('[Atlas] ⏳ Not ready yet (isStyleLoaded:', mapInstance.isStyleLoaded(), ', loaded:', mapInstance.loaded(), '), retrying in 100ms...')
+              setTimeout(checkFullyLoaded, 100)
+            }
           }
           
-          if (!performanceMode.enabled && performanceMode.fog) {
-            mapInstance.setFog({
-              color: 'rgb(5, 5, 15)',
-              'high-color': 'rgb(10, 15, 30)',
-              'horizon-blend': 0.3,
-              'space-color': 'rgb(0, 0, 5)',
-              'star-intensity': 0.5
-            })
-          }
-          
-          setMapLoaded(true)
-          
-          // Play wake sound
-          playSound(audioWakeRef.current)
+          checkFullyLoaded()
         })
         
         // Add navigation controls
@@ -239,12 +257,18 @@ export function AtlasMode({
     initMap()
     
     return () => {
-      if (userMarkerRef.current) {
-        userMarkerRef.current.remove()
-      }
-      if (map.current) {
-        map.current.remove()
-        map.current = null
+      // ✅ CRITICAL: Don't destroy map on Fast Refresh (development only)
+      // In production, this cleanup will run on unmount as expected
+      if (process.env.NODE_ENV === 'production') {
+        if (userMarkerRef.current) {
+          userMarkerRef.current.remove()
+        }
+        if (map.current) {
+          map.current.remove()
+          map.current = null
+        }
+      } else {
+        console.log('[Atlas] Skipping cleanup (Fast Refresh detected)')
       }
     }
   }, [
@@ -346,25 +370,37 @@ export function AtlasMode({
   
   // FlyTo helper with queue support
   const flyToLocation = useCallback((coords: Coordinates, zoom: number) => {
-    if (!map.current) return
+    console.log('[Atlas] 🔧 flyToLocation called:', { coords, zoom, hasMap: !!map.current, mapLoaded })
+    
+    if (!map.current) {
+      console.error('[Atlas] ❌ No map instance!')
+      return
+    }
     
     if (!mapLoaded) {
+      console.log('[Atlas] ⏳ Map not loaded, queuing flyTo')
       // Queue the request until map loads
       pendingFlyToRef.current = { coords, zoom }
       return
     }
     
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Atlas] Flying to location:', coords)
-    }
+    console.log('[Atlas] ✈️ Executing flyTo:', coords)
+    console.log('[Atlas] 🗺️ Map loaded state:', map.current.loaded())
     
-    map.current.flyTo({
-      center: [coords.lng, coords.lat],
-      zoom,
-      duration: 1500,
-      essential: true,
-      curve: 1.2
-    })
+    try {
+      map.current.flyTo({
+        center: [coords.lng, coords.lat],
+        zoom,
+        duration: 1500,
+        essential: true,
+        curve: 1.2
+      })
+      // Force render loop to ensure animation starts
+      map.current.triggerRepaint()
+      console.log('[Atlas] ✅ flyTo command sent successfully with forced render')
+    } catch (error) {
+      console.error('[Atlas] ❌ flyTo FAILED:', error)
+    }
   }, [mapLoaded])
   
   // Execute pending flyTo when map loads
@@ -377,18 +413,28 @@ export function AtlasMode({
   }, [mapLoaded, flyToLocation])
   
   // Handle user location updates
+  // Track incoming businesses count for dependency
+  const incomingBusinessesCount = incomingBusinesses?.length || 0
+  
   useEffect(() => {
     console.log('[Atlas] 🔍 User location effect:', {
       mapLoaded,
       hasUserLocation: !!userLocation,
       userLocation,
-      locationStatus
+      locationStatus,
+      incomingBusinessesCount
     })
     
     if (!mapLoaded || !userLocation) return
     
     // Add user marker
     addUserLocationMarker(userLocation)
+    
+    // ✅ CRITICAL: Don't fly to user location if businesses exist - let business flyTo take priority
+    if (incomingBusinessesCount > 0) {
+      console.log('[Atlas] ⏭️ Skipping user location flyTo (businesses are displayed)')
+      return
+    }
     
     // Always fly to user location when granted (shows permission was acknowledged)
     // Calculate distance to determine animation style
@@ -413,9 +459,11 @@ export function AtlasMode({
           duration: 900,
           essential: true
         })
+        // Force render loop
+        map.current.triggerRepaint()
       }
     }
-  }, [mapLoaded, userLocation, center, addUserLocationMarker, flyToLocation, locationStatus])
+  }, [mapLoaded, userLocation, center, addUserLocationMarker, flyToLocation, locationStatus, incomingBusinessesCount])
   
   // Clear markers helper
   const clearMarkers = useCallback(() => {
@@ -600,6 +648,8 @@ export function AtlasMode({
       essential: true,
       curve: 1.42 // More curved trajectory
     })
+    // Force render loop to ensure animation starts
+    map.current.triggerRepaint()
     
     // Play arrive sound and trigger "arrival ping" animation at end
     setTimeout(() => {
@@ -612,23 +662,64 @@ export function AtlasMode({
   
   // Add markers for businesses (NEON CYAN PINS) - but keep user marker on top
   const addBusinessMarkers = useCallback(async (businesses: Business[]) => {
-    if (!map.current || !mapLoaded) return
+    console.log('[Atlas] 📍 addBusinessMarkers called with', businesses.length, 'businesses')
+    
+    if (!map.current) {
+      console.error('[Atlas] ❌ No map instance!')
+      return
+    }
+    
+    if (!mapLoaded) {
+      console.error('[Atlas] ❌ Map not loaded!')
+      return
+    }
+    
+    // ✅ CRITICAL: Map MUST be fully loaded before adding layers
+    if (!map.current.loaded()) {
+      console.warn('[Atlas] ⏳ Map not fully loaded, waiting for idle event...')
+      map.current.once('idle', () => {
+        console.log('[Atlas] ✅ Map idle, retrying addBusinessMarkers...')
+        addBusinessMarkers(businesses)
+      })
+      return
+    }
     
     try {
       const mapboxglModule = await import('mapbox-gl')
       const mapboxgl = mapboxglModule.default
       
+      // ⚠️ DOUBLE CHECK: Style must be loaded before accessing getStyle()
+      if (!map.current.getStyle()) {
+        console.warn('[Atlas] ⏳ Style not ready yet, waiting...')
+        setTimeout(() => addBusinessMarkers(businesses), 100)
+        return
+      }
+      
+      console.log('[Atlas] ✅ Mapbox GL loaded, adding', businesses.length, 'pins')
+      console.log('[Atlas] 🗺️ Existing sources:', Object.keys(map.current.getStyle().sources))
+      console.log('[Atlas] 🗺️ Existing layers:', map.current.getStyle().layers.map(l => l.id))
+      
       // Update ref for event handlers
       businessesRef.current = businesses
       
-      // Remove existing business layers only (preserve user location!)
+      // ✅ CRITICAL: Check if layers already exist with same data - if so, skip removal/re-add
+      // This prevents Fast Refresh from destroying working layers
+      const existingSource = map.current.getSource('businesses')
+      if (existingSource && map.current.getLayer('business-pins')) {
+        console.log('[Atlas] ✅ Layers already exist, skipping re-add')
+        return
+      }
+      
+      // Remove existing business layers only if they exist (preserve user location!)
       const layerIds = ['business-pins-glow', 'business-pins']
       layerIds.forEach(id => {
         if (map.current!.getLayer(id)) {
+          console.log('[Atlas] 🗑️ Removing old layer:', id)
           map.current!.removeLayer(id)
         }
       })
       if (map.current.getSource('businesses')) {
+        console.log('[Atlas] 🗑️ Removing old source: businesses')
         map.current.removeSource('businesses')
       }
       
@@ -639,7 +730,9 @@ export function AtlasMode({
           id: business.id,
           name: business.business_name,
           rating: business.rating,
-          category: business.display_category || 'Business'
+          category: business.display_category || 'Business',
+          isPaid: business.isPaid || false, // ✅ For pin coloring
+          isUnclaimed: business.isUnclaimed || false // ✅ For pin coloring
         },
         geometry: {
           type: 'Point' as const,
@@ -648,22 +741,47 @@ export function AtlasMode({
       }))
       
       // Add source
-      map.current.addSource('businesses', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features
-        }
-      })
+      console.log('[Atlas] 🔧 About to add source "businesses" with', features.length, 'features')
+      try {
+        map.current.addSource('businesses', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features
+          }
+        })
+        console.log('[Atlas] ✅ Source "businesses" added successfully')
+      } catch (sourceError) {
+        console.error('[Atlas] ❌ FAILED to add source:', sourceError)
+        throw sourceError
+      }
       
       // Add neon business pin layers (these go BELOW user location layers)
       const pinLayers = getBusinessPinLayers()
+      console.log('[Atlas] 🔧 About to add', pinLayers.length, 'layers')
       
-      // Insert before user-location layers to keep user on top
-      const beforeLayer = map.current.getLayer('user-location-outer-glow') ? 'user-location-outer-glow' : undefined
+      // ✅ CRITICAL FIX: Always add business pins ON TOP of all base layers
+      // Find the LAST base map layer (usually something like 'road-label' or 'poi-label')
+      // or just add without beforeLayer to force them to the top
+      const allLayers = map.current.getStyle().layers
+      const beforeLayer = allLayers.find(l => l.id === 'user-location-outer-glow')?.id // Only go below user location if it exists
       
-      pinLayers.forEach(layer => {
-        map.current!.addLayer(layer, beforeLayer)
+      console.log('[Atlas] 🔧 beforeLayer:', beforeLayer || 'NONE (will add to top)')
+      
+      pinLayers.forEach((layer, index) => {
+        try {
+          console.log(`[Atlas] 🔧 Adding layer ${index + 1}/${pinLayers.length}:`, layer.id)
+          // Don't pass beforeLayer if it's undefined - this forces layers to the TOP
+          if (beforeLayer) {
+            map.current!.addLayer(layer, beforeLayer)
+          } else {
+            map.current!.addLayer(layer) // Add to the very top of the stack
+          }
+          console.log(`[Atlas] ✅ Layer "${layer.id}" added at position:`, map.current!.getStyle().layers.findIndex(l => l.id === layer.id))
+        } catch (layerError) {
+          console.error(`[Atlas] ❌ FAILED to add layer "${layer.id}":`, layerError)
+          throw layerError
+        }
       })
       
       // Attach event handlers ONCE only (or re-attach if layer was recreated)
@@ -704,14 +822,109 @@ export function AtlasMode({
         businessHandlersAttachedRef.current = true
       }
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Atlas] Neon business pins added:', businesses.length, '(user marker stays on top)')
-      }
+      console.log('[Atlas] ✅ Neon business pins added:', businesses.length, '(user marker stays on top)')
+      console.log('[Atlas] 📊 Pin details:', businesses.map(b => ({ 
+        name: b.business_name, 
+        lat: b.latitude, 
+        lng: b.longitude,
+        isPaid: b.isPaid,
+        isUnclaimed: b.isUnclaimed
+      })))
+      
+      // ✅ FORCE a repaint after adding layers
+      map.current.triggerRepaint()
+      console.log('[Atlas] ✅ Forced map repaint')
       
     } catch (error) {
-      console.error('[Atlas] Failed to add markers:', error)
+      console.error('[Atlas] ❌ Failed to add markers:', error)
     }
   }, [mapLoaded, updateActiveBusinessMarker, flyToBusiness])
+  
+  // ✅ RULE #3: Handle incoming businesses from chat (separate effect, waits for mapReady)
+  useEffect(() => {
+    console.log('[Atlas] 🔍 Business effect triggered:', { 
+      mapLoaded, 
+      hasIncoming: !!incomingBusinesses, 
+      incomingCount: incomingBusinesses?.length || 0 
+    })
+    
+    if (!mapLoaded) {
+      console.log('[Atlas] ⏳ Map not loaded yet, waiting...')
+      return
+    }
+    
+    if (!incomingBusinesses || incomingBusinesses.length === 0) {
+      console.log('[Atlas] ⚠️ No incoming businesses')
+      return
+    }
+    
+    console.log('[Atlas] 🎯 Received businesses from chat:', incomingBusinesses.length, incomingBusinesses)
+    
+    // ✅ CRITICAL: Update ref FIRST before any effects run
+    businessesRef.current = incomingBusinesses
+    
+    // Update local state
+    setBusinesses(incomingBusinesses)
+    
+    // Add pins to map
+    console.log('[Atlas] 📍 Calling addBusinessMarkers...')
+    addBusinessMarkers(incomingBusinesses)
+    
+    // Fly to first business
+    if (incomingBusinesses.length > 0 && map.current) {
+      const first = incomingBusinesses[0]
+      console.log('[Atlas] 🚀 Flying to first business:', first.business_name, { lat: first.latitude, lng: first.longitude })
+      console.log('[Atlas] 🗺️ Map loaded state:', map.current.loaded())
+      console.log('[Atlas] 🗺️ Current center:', map.current.getCenter())
+      console.log('[Atlas] 🗺️ Current zoom:', map.current.getZoom())
+      
+      // ✅ CRITICAL: Wait for map to be truly loaded before moving
+      if (!map.current.loaded()) {
+        console.warn('[Atlas] ⏳ Map not fully loaded yet, waiting for idle...')
+        map.current.once('idle', () => {
+          console.log('[Atlas] ✅ Map idle, retrying jumpTo...')
+          if (map.current && map.current.loaded()) {
+            map.current.jumpTo({
+              center: [first.longitude, first.latitude],
+              zoom: 14
+            })
+            // Force render loop
+            map.current.resize()
+            map.current.triggerRepaint()
+            map.current.fire('move')
+            map.current.fire('moveend')
+            console.log('[Atlas] ✅ jumpTo executed after idle with forced render')
+          }
+        })
+        return
+      }
+      
+      try {
+        // ✅ NUCLEAR OPTION: Use jumpTo (instant) instead of flyTo (animated)
+        // This bypasses any animation issues
+        map.current.jumpTo({
+          center: [first.longitude, first.latitude],
+          zoom: 14
+        })
+        console.log('[Atlas] ✅ jumpTo command sent (instant teleport)')
+        
+        // ✅ CRITICAL FIX: Force render loop to update visual
+        // jumpTo updates internal state but doesn't always trigger repaint
+        map.current.resize()
+        map.current.triggerRepaint()
+        // Fire move events to wake up render loop
+        map.current.fire('move')
+        map.current.fire('moveend')
+        console.log('[Atlas] ✅ Forced render loop and events')
+      } catch (error) {
+        console.error('[Atlas] ❌ jumpTo FAILED:', error)
+      }
+      
+      // Select first business as active
+      setSelectedBusiness(first)
+      updateActiveBusinessMarker(first)
+    }
+  }, [mapLoaded, incomingBusinesses, addBusinessMarkers, updateActiveBusinessMarker])
   
   // Recenter to user location (BULLETPROOF - stop + resize + flyTo)
   const handleRecenterToUser = useCallback(() => {
@@ -763,11 +976,13 @@ export function AtlasMode({
       duration: 900,
       essential: true
     })
+    // Force render loop
+    map.current.triggerRepaint()
     
     playSound(audioMoveRef.current)
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('[Atlas] ✅ Recenter flyTo executed')
+      console.log('[Atlas] ✅ Recenter flyTo executed with forced render')
     }
   }, [userLocation, playSound, mapLoaded])
   
@@ -885,8 +1100,18 @@ export function AtlasMode({
   }, [userLocation, addBusinessMarkers, flyToBusiness, config.maxResults, performanceMode, trackEvent])
   
   // Auto-run initial query when Atlas opens with chat context (run once only)
+  // ✅ CRITICAL: SKIP this if businesses were passed from chat - we already have the data!
   useEffect(() => {
     if (!mapLoaded || !initialQuery || ranInitialQueryRef.current) return
+    
+    // If businesses were passed from chat, don't run a new search
+    if (incomingBusinessesCount > 0) {
+      console.log('[Atlas] ⏭️ Skipping initial query (businesses already provided from chat)')
+      ranInitialQueryRef.current = true
+      onInitialQueryConsumed?.()
+      return
+    }
+    
     ranInitialQueryRef.current = true
     
     if (process.env.NODE_ENV === 'development') {
@@ -895,7 +1120,7 @@ export function AtlasMode({
     
     handleSearch(initialQuery)
     onInitialQueryConsumed?.()
-  }, [mapLoaded, initialQuery, handleSearch, onInitialQueryConsumed])
+  }, [mapLoaded, initialQuery, handleSearch, onInitialQueryConsumed, incomingBusinessesCount])
   
   // Force resize on mount to handle container sizing edge cases
   useEffect(() => {

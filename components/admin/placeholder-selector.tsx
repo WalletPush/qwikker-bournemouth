@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import { getPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Info, CheckCircle2 } from 'lucide-react'
+import { Info, CheckCircle2, Upload } from 'lucide-react'
+import { uploadToCloudinary } from '@/lib/integrations'
 
 type Props = {
   businessId: string
@@ -16,12 +17,29 @@ type Props = {
   onSave: (variant: number) => Promise<void>
 }
 
-// Simple variants: 00, 01, 02
-const VARIANTS = [
-  { id: 0, label: 'Variant 00' },
-  { id: 1, label: 'Variant 01' },
-  { id: 2, label: 'Variant 02' },
-]
+// Dynamic variant count based on category
+const CATEGORY_VARIANTS: Record<string, number> = {
+  restaurant: 6,
+  cafe: 4,
+  bakery: 5,
+  bar: 6,
+  dessert: 5,
+  barber: 4,
+  salon: 3,
+  wellness: 4,
+  pub: 3,
+  tattoo: 6,
+  // Default for other categories
+  default: 3,
+}
+
+function getVariantsForCategory(category: SystemCategory): Array<{ id: number; label: string }> {
+  const count = CATEGORY_VARIANTS[category] || CATEGORY_VARIANTS.default
+  return Array.from({ length: count }, (_, i) => ({
+    id: i,
+    label: `Variant ${i.toString().padStart(2, '0')}`,
+  }))
+}
 
 export function PlaceholderSelector({
   businessId,
@@ -32,9 +50,13 @@ export function PlaceholderSelector({
   onSave,
 }: Props) {
   const [isSaving, setIsSaving] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [selectedVariant, setSelectedVariant] = useState(placeholderVariant ?? 0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isUnclaimed = status === 'unclaimed'
+  const variants = useMemo(() => getVariantsForCategory(systemCategory), [systemCategory])
 
   // Preview URL
   const previewUrl = useMemo(() => {
@@ -48,6 +70,51 @@ export function PlaceholderSelector({
       await onSave(selectedVariant)
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setUploadMessage({ type: 'error', text: 'Please select a valid image file' })
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadMessage({ type: 'error', text: 'Image must be less than 5MB' })
+      return
+    }
+
+    try {
+      setIsUploading(true)
+      setUploadMessage(null)
+
+      // Upload to Cloudinary
+      const uploadedUrl = await uploadToCloudinary(file, `placeholders/${systemCategory}`)
+
+      // TODO: Save this URL to the database as a custom placeholder
+      // For now, just show success message
+      setUploadMessage({
+        type: 'success',
+        text: 'Image uploaded! Custom placeholders coming soon.',
+      })
+
+      console.log('📸 Uploaded placeholder to:', uploadedUrl)
+    } catch (error) {
+      console.error('Upload error:', error)
+      setUploadMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Upload failed',
+      })
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
@@ -109,14 +176,14 @@ export function PlaceholderSelector({
           disabled={isSaving}
           onChange={(e) => setSelectedVariant(parseInt(e.target.value, 10))}
         >
-          {VARIANTS.map((v) => (
+          {variants.map((v) => (
             <option key={v.id} value={v.id}>
               {v.id === 0 ? '⭐ ' : ''}{v.label}
             </option>
           ))}
         </select>
         <p className="text-xs text-slate-400">
-          3 variants available (00, 01, 02)
+          {variants.length} variant{variants.length > 1 ? 's' : ''} available ({variants.map(v => v.id.toString().padStart(2, '0')).join(', ')})
         </p>
       </div>
 
@@ -131,6 +198,55 @@ export function PlaceholderSelector({
       </Button>
 
       {isSaving && <div className="text-xs text-slate-400 text-center">Updating placeholder...</div>}
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-slate-700"></div>
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-slate-900 px-2 text-slate-400">or</span>
+        </div>
+      </div>
+
+      {/* Upload custom image */}
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-slate-300">Upload Custom Placeholder</label>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleUpload}
+          disabled={isUploading}
+          className="hidden"
+        />
+        <Button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          size="sm"
+          variant="outline"
+          className="w-full"
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          {isUploading ? 'Uploading...' : 'Upload New Image'}
+        </Button>
+        <p className="text-xs text-slate-400">
+          Max 5MB, any image format (auto-converts to WebP)
+        </p>
+      </div>
+
+      {/* Upload status messages */}
+      {uploadMessage && (
+        <div
+          className={`text-xs p-2 rounded ${
+            uploadMessage.type === 'success'
+              ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+          }`}
+        >
+          {uploadMessage.text}
+        </div>
+      )}
     </div>
   )
 }

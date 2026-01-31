@@ -36,8 +36,11 @@ interface FranchiseDetail {
   }
   admins: Array<{
     id: string
-    user_id: string
-    role: string
+    username: string
+    email: string
+    full_name: string
+    is_active: boolean
+    last_login: string | null
     created_at: string
   }>
   stats: {
@@ -64,12 +67,21 @@ export default function FranchiseDetailPage() {
   const franchiseId = params.id as string
 
   useEffect(() => {
+    console.log('🔍 [HQ Frontend] Fetching franchise:', franchiseId)
     fetch(`/api/hq/franchises/${franchiseId}`)
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
       })
-      .then(setData)
+      .then(data => {
+        console.log('✅ [HQ Frontend] Data received:', {
+          franchiseCity: data.franchise?.city,
+          adminsCount: data.admins?.length || 0,
+          auditLogsCount: data.audit_logs?.length || 0,
+          admins: data.admins
+        })
+        setData(data)
+      })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }, [franchiseId])
@@ -296,15 +308,32 @@ export default function FranchiseDetailPage() {
         <h2 className="text-lg font-medium text-white mb-4">Franchise Admins</h2>
         
         {admins.length === 0 ? (
-          <div className="text-sm text-neutral-500 py-4">No admins assigned</div>
+          <div className="text-sm text-neutral-500 py-4">
+            No admins assigned yet. Use the Users section to create franchise admins.
+          </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {admins.map(admin => (
-              <div key={admin.id} className="flex items-center justify-between py-3 border-b border-neutral-800 last:border-0">
-                <div>
-                  <div className="text-sm text-white font-mono">{admin.user_id}</div>
+              <div key={admin.id} className="flex items-center justify-between py-3 px-4 bg-neutral-800/50 rounded-lg border border-neutral-700/50">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium text-white">
+                      {admin.full_name}
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      admin.is_active 
+                        ? 'bg-[#00D083]/10 text-[#00D083]' 
+                        : 'bg-neutral-700 text-neutral-400'
+                    }`}>
+                      {admin.is_active ? 'active' : 'inactive'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-neutral-400 mt-1">
+                    {admin.email} · @{admin.username}
+                  </div>
                   <div className="text-xs text-neutral-500 mt-0.5">
-                    {admin.role} · Added {new Date(admin.created_at).toLocaleDateString()}
+                    Added {new Date(admin.created_at).toLocaleDateString()}
+                    {admin.last_login && ` · Last login ${new Date(admin.last_login).toLocaleString()}`}
                   </div>
                 </div>
               </div>
@@ -318,20 +347,35 @@ export default function FranchiseDetailPage() {
         <h2 className="text-lg font-medium text-white mb-4">Recent Activity</h2>
         
         {audit_logs.length === 0 ? (
-          <div className="text-sm text-neutral-500 py-4">No recent activity</div>
+          <div className="text-sm text-neutral-500 py-4">
+            No recent activity. Actions like business imports, claim approvals, and config changes will appear here.
+          </div>
         ) : (
           <div className="space-y-2">
-            {audit_logs.map(log => (
-              <div key={log.id} className="flex items-start gap-3 py-2 border-b border-neutral-800 last:border-0">
-                <div className="w-2 h-2 rounded-full bg-[#00D083] mt-1.5"></div>
-                <div className="flex-1">
-                  <div className="text-sm text-white">{log.action.replace(/_/g, ' ')}</div>
-                  <div className="text-xs text-neutral-500 mt-0.5">
-                    {new Date(log.timestamp).toLocaleString()}
+            {audit_logs.map(log => {
+              // Format action message
+              let actionMessage = log.action.replace(/_/g, ' ')
+              
+              // Add metadata details for specific actions
+              if (log.action === 'businesses_imported' && log.metadata?.imported_count) {
+                actionMessage = `Imported ${log.metadata.imported_count} business${log.metadata.imported_count > 1 ? 'es' : ''}`
+                if (log.metadata.display_category) {
+                  actionMessage += ` (${log.metadata.display_category})`
+                }
+              }
+              
+              return (
+                <div key={log.id} className="flex items-start gap-3 py-3 px-4 bg-neutral-800/30 rounded-lg">
+                  <div className="w-2 h-2 rounded-full bg-[#00D083] mt-1.5 flex-shrink-0"></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-white capitalize">{actionMessage}</div>
+                    <div className="text-xs text-neutral-500 mt-0.5">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

@@ -28,15 +28,15 @@ export default async function DashboardFilesPage() {
   const profile: Profile = profileData
   const actionItemsCount = calculateActionItemsCount(profile)
 
-  // 🔒 CRITICAL: Check if claimed_free status - show locked page
+  // 🔒 CRITICAL: claimed_free users see locked page (use Featured Items on Profile tab instead)
   if (profileData.status === 'claimed_free') {
     return (
       <DashboardLayout currentSection="files" profile={profile} actionItemsCount={actionItemsCount}>
         <LockedFeaturePage 
           featureName="Files & Menus" 
-          description="Let customers find you based on what they're craving. Upload your full menu and our AI will recommend your specific dishes and items based on exactly what customers are looking for."
+          description="Upload your full menu and our AI will recommend your specific dishes. Featured items are available on the Profile tab (max 5 items for free tier)."
           benefits={[
-            'Upload unlimited menus and photos',
+            'Upload unlimited menus via PDF',
             'AI learns your entire menu catalog',
             'Smart recommendations for specific items',
             'Customers discover you through menu search',

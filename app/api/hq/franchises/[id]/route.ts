@@ -27,13 +27,22 @@ export async function GET(
     }
 
     // Fetch franchise admins
+    console.log('🔍 [HQ API] Fetching admins for city:', franchise.city)
     const { data: admins, error: adminsError } = await supabase
       .from('city_admins')
-      .select('id, user_id, role, created_at, created_by')
+      .select('*')
       .eq('city', franchise.city)
     
+    console.log('🔍 [HQ API] Admins query result:', { 
+      count: admins?.length || 0, 
+      error: adminsError?.message,
+      city: franchise.city 
+    })
+    
     if (adminsError) {
-      console.error('Error fetching admins:', adminsError)
+      console.error('❌ Error fetching admins:', adminsError)
+    } else {
+      console.log('✅ Admins fetched:', admins)
     }
 
     // Fetch business count

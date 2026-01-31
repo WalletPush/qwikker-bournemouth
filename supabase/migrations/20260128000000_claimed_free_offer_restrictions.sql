@@ -38,12 +38,12 @@ BEGIN
   IF business_status = 'claimed_free' THEN
     max_offers := 1;
   ELSE
-    -- Existing plan-based logic
+    -- Correct plan-based limits
     CASE business_plan
-      WHEN 'starter' THEN max_offers := 1;
-      WHEN 'featured' THEN max_offers := 3;
+      WHEN 'starter' THEN max_offers := 3;
+      WHEN 'featured' THEN max_offers := 5;
       WHEN 'spotlight' THEN max_offers := 999; -- Unlimited
-      ELSE max_offers := 1; -- Default to starter
+      ELSE max_offers := 3; -- Default to starter
     END CASE;
   END IF;
   

@@ -165,6 +165,10 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
 
   // Helper functions
   const addMenuItem = () => {
+    // ✅ Enforce 5-item limit for claimed_free tier
+    if (profile?.status === 'claimed_free' && menuItems.length >= 5) {
+      return // Prevent adding more than 5 items
+    }
     setMenuItems([...menuItems, { name: '', price: '', description: '' }])
   }
 
@@ -251,12 +255,13 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
     <Button
       onClick={onClick}
       disabled={saving}
+      variant="outline"
       className={`px-6 py-2.5 rounded-lg font-medium transition-colors duration-200 min-w-[140px] ${
         saved 
-          ? 'bg-green-600 hover:bg-green-700 text-white' 
+          ? 'border-green-500/30 bg-green-500/10 text-green-300 hover:bg-green-500/20 hover:border-green-500/40' 
           : saving
-            ? 'bg-slate-600 text-slate-300 cursor-not-allowed'
-            : 'bg-[#00d083] hover:bg-[#00b86f] text-white'
+            ? 'bg-slate-600 text-slate-300 cursor-not-allowed border-slate-600'
+            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40'
       }`}
     >
       {saved ? 'Saved!' : saving ? 'Saving...' : children}
@@ -334,11 +339,11 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
 
         {/* Personal Information Section */}
         <div id="personal-info" className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-[#00d083] to-[#00b86f] rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-500"></div>
+          <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
               <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500/30 to-emerald-600/30 rounded-xl flex items-center justify-center shadow-lg border border-emerald-500/30">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
@@ -402,11 +407,11 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
 
         {/* Business Information Section */}
         <div id="business-info" className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-[#00b86f] to-[#00a05c] rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-500"></div>
+          <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
               <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#00b86f] to-[#00a05c] rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500/30 to-emerald-600/30 rounded-xl flex items-center justify-center shadow-lg border border-emerald-500/30">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
@@ -550,7 +555,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
               <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500/30 to-pink-500/30 rounded-xl flex items-center justify-center shadow-lg border border-purple-500/30">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -576,21 +581,31 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
       </div>
 
         {/* Featured Items Section */}
-        {/* 🔒 HIDE for claimed_free businesses - premium feature only */}
-        {profile?.status !== 'claimed_free' && (
         <div id="featured-items" className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-500"></div>
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
               <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-500/30 to-orange-500/30 rounded-xl flex items-center justify-center shadow-lg border border-yellow-500/30">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                   </svg>
                 </div>
                 Featured Items
+                {profile?.status === 'claimed_free' && (
+                  <span className="ml-auto px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-xs font-medium text-blue-300">
+                    Max 5 items
+                  </span>
+                )}
               </CardTitle>
-              <p className="text-slate-400 mt-2">Showcase your best menu items</p>
+              <p className="text-slate-400 mt-2">
+                Showcase your best menu items
+                {profile?.status === 'claimed_free' && (
+                  <span className="block text-xs text-slate-500 mt-1">
+                    Upgrade for unlimited menu indexing via PDF
+                  </span>
+                )}
+              </p>
             </CardHeader>
         <CardContent className="space-y-4">
           {menuItems.map((item, index) => (
@@ -641,8 +656,12 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
               onClick={addMenuItem}
               variant="outline"
               className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              disabled={profile?.status === 'claimed_free' && menuItems.length >= 5}
             >
               Add Item
+              {profile?.status === 'claimed_free' && menuItems.length >= 5 && (
+                <span className="ml-2 text-xs">(Limit reached)</span>
+              )}
             </Button>
             <SaveButton saved={menuSaved} saving={menuSaving} onClick={saveMenuItems}>
               Save Featured Items
@@ -651,7 +670,6 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
           </CardContent>
         </Card>
       </div>
-        )}
 
         {/* Business Logo Section */}
         <div id="business-logo" className="group relative">
@@ -659,13 +677,12 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
               <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-xl flex items-center justify-center shadow-lg border border-blue-500/30">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
                 Business Logo
-                <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full font-bold">REQUIRED</span>
               </CardTitle>
               <p className="text-slate-400 mt-2">Upload your business logo (also used as profile picture)</p>
             </CardHeader>
@@ -749,7 +766,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
           <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
               <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-rose-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-rose-500/30 to-pink-500/30 rounded-xl flex items-center justify-center shadow-lg border border-rose-500/30">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>

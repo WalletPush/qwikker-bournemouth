@@ -41,7 +41,27 @@ interface ChatMessage {
     logo?: string
     business_images?: string[]
     rating?: number
+    review_count?: number
     offers_count?: number
+    latitude?: number // ✅ ATLAS: For map pins
+    longitude?: number // ✅ ATLAS: For map pins
+    phone?: string // ✅ ATLAS: For contact info
+    website_url?: string // ✅ ATLAS: For website link
+    google_place_id?: string // ✅ ATLAS: For Google reviews link
+  }>
+  mapPins?: Array<{
+    // ✅ ATLAS: ALL businesses for map (paid + unclaimed)
+    id: string
+    business_name: string
+    latitude: number
+    longitude: number
+    rating?: number
+    review_count?: number
+    display_category?: string
+    business_tier: 'paid' | 'unclaimed' // For pin coloring
+    phone?: string
+    website_url?: string
+    google_place_id?: string
   }>
   walletActions?: Array<{
     type: 'add_to_wallet'
@@ -334,12 +354,14 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
         quickReplies: data.quickReplies || [],
         hasBusinessResults: data.hasBusinessResults,
         businessCarousel: data.businessCarousel,
+        mapPins: data.mapPins, // ✅ ATLAS: All businesses for map (paid + unclaimed)
         walletActions: data.walletActions,
         eventCards: data.eventCards,
         intent: data.intent,
         needsLocation: data.needsLocation,
         showAtlasCta: data.showAtlasCta,
-        locationReason: data.locationReason
+        locationReason: data.locationReason,
+        googleReviewSnippets: data.googleReviewSnippets // ✅ Add review snippets
       }
 
       console.log('💬 AI Message created:', {
@@ -613,6 +635,30 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
           onRequestLocation={requestPermission}
           initialQuery={atlasInitialQuery}
           onInitialQueryConsumed={() => setAtlasInitialQuery(null)}
+          businesses={(() => {
+            // ✅ Pass last AI message's mapPins to Atlas (includes paid + unclaimed)
+            const lastAIMessage = messages.filter(m => m.type === 'ai').slice(-1)[0]
+            if (!lastAIMessage?.mapPins) return undefined
+            
+            // Map to Atlas Business format (ensure required fields are present)
+            return lastAIMessage.mapPins.map(pin => ({
+              id: pin.id,
+              business_name: pin.business_name,
+              latitude: pin.latitude,
+              longitude: pin.longitude,
+              rating: pin.rating || 0, // ✅ Required by Atlas Business interface
+              review_count: pin.review_count || 0, // ✅ Required by Atlas Business interface
+              business_tagline: undefined,
+              display_category: pin.display_category,
+              business_address: undefined,
+              google_place_id: pin.google_place_id,
+              website_url: pin.website_url,
+              phone: pin.phone,
+              // Add metadata for Atlas to color pins differently
+              isPaid: pin.business_tier === 'paid',
+              isUnclaimed: pin.business_tier === 'unclaimed'
+            }))
+          })()}
         />
       )}
       

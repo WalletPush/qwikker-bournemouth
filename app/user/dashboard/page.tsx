@@ -193,22 +193,34 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
     return total + activeOffers.length
   }, 0)
   
-  // Count businesses with secret menus
-  const totalSecretMenus = activeBusinesses.filter(b => {
-    if (!b.additional_notes) return false
+  // Count total secret menu items across all businesses
+  const totalSecretMenus = activeBusinesses.reduce((total, b) => {
+    if (!b.additional_notes) return total
     try {
       const notes = JSON.parse(b.additional_notes)
-      return notes.secret_menu_items && notes.secret_menu_items.length > 0
+      const secretItems = notes.secret_menu_items || []
+      return total + secretItems.length
     } catch (e) {
-      return false
+      return total
     }
-  }).length
+  }, 0)
   
   const stats = {
     totalBusinesses,
     totalOffers,
     totalSecretMenus
   }
+  
+  // 🗺️ Fetch Atlas enabled status from franchise config
+  const { data: franchiseConfig } = await supabase
+    .from('franchise_crm_configs')
+    .select('atlas_enabled')
+    .eq('city', currentCity)
+    .single()
+  
+  // Default to TRUE (show Atlas) unless explicitly disabled
+  // This ensures backward compatibility with existing franchises
+  const atlasEnabled = franchiseConfig?.atlas_enabled !== false
   
   return (
     <UserDashboardLayout 
@@ -225,6 +237,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
         franchiseCity={currentCity}
         currentCity={currentCity}
         cityDisplayName={cityDisplayName}
+        atlasEnabled={atlasEnabled}
       />
     </UserDashboardLayout>
   )

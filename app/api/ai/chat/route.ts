@@ -134,7 +134,11 @@ export async function POST(request: NextRequest) {
     const result = await generateHybridAIResponse(message, {
       city,
       userName,
-      walletPassId
+      walletPassId,
+      userLocation: hasUserLocation ? {
+        latitude: userLocation.lat,
+        longitude: userLocation.lng
+      } : undefined
     }, conversationHistory || [])
 
     if (!result.success) {
@@ -158,9 +162,14 @@ export async function POST(request: NextRequest) {
       })
     }
     
-    // CRITICAL FIX: Only show Atlas CTA when we have ACTUAL carousel results
+    // CRITICAL FIX: Show Atlas CTA when we have EITHER carousel OR map pins
     // hasBusinessResults = KB hits (can be non-zero even if carousel is empty after filters)
-    const hasActualBusinessResults = !!(result.businessCarousel && result.businessCarousel.length > 0)
+    // businessCarousel = paid businesses (appear in carousel + map)
+    // mapPins = ALL businesses for map (paid + unclaimed)
+    const hasActualBusinessResults = !!(
+      (result.businessCarousel && result.businessCarousel.length > 0) ||
+      (result.mapPins && result.mapPins.length > 0)
+    )
     const showAtlasCta = hasActualBusinessResults
     
     // REMOVED: Quick replies are irrelevant and annoying - users can just type what they want
@@ -192,6 +201,7 @@ export async function POST(request: NextRequest) {
       quickReplies,
       hasBusinessResults: result.hasBusinessResults,
       businessCarousel: result.businessCarousel,
+      mapPins: result.mapPins, // ✅ ATLAS: All businesses for map (paid + unclaimed)
       walletActions: result.walletActions,
       eventCards: result.eventCards,
       googleReviewSnippets: result.googleReviewSnippets,

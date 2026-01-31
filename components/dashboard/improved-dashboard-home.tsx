@@ -11,8 +11,8 @@ import { getBusinessVisits } from '@/lib/actions/business-visit-actions'
 import { SuccessModal, ErrorModal } from '@/components/ui/success-modal'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { ElegantModal } from '@/components/ui/elegant-modal'
+import { HowQwikkerWorksModal } from '@/components/dashboard/how-qwikker-works-modal'
 import { VerificationStatusWidget } from './VerificationStatusWidget'
-import { AtlasUpsellWidget } from './AtlasUpsellWidget'
 import { ClaimWelcomeModal } from './claim-welcome-modal'
 import { isFreeTier } from '@/lib/atlas/eligibility'
 
@@ -89,6 +89,9 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   
   // Claim welcome modal state (only show once on first login for claimed_free)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+  
+  // How Qwikker Works modal state
+  const [showHowQwikkerWorksModal, setShowHowQwikkerWorksModal] = useState(false)
 
   // Show welcome modal on mount if needed
   useEffect(() => {
@@ -628,37 +631,37 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         </p>
       </div>
 
-      {/* 🔒 FREE LISTING UPGRADE BANNER */}
+      {/* 🔒 FREE LISTING UPGRADE BANNER - CLEAN & PREMIUM */}
       {profile?.status === 'claimed_free' && (
-        <div className="rounded-2xl border border-slate-600 bg-slate-800/50 p-6 sm:p-8">
-          <div className="space-y-6">
-            {/* What's Included for Free */}
-            <div className="space-y-3">
-              <h3 className="text-xl font-semibold text-white text-center">Your Free Listing Includes</h3>
-              <div className="grid sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
-                <div className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="rounded-2xl border border-slate-600 bg-slate-800/50 p-8">
+          <div className="space-y-6 text-center">
+            {/* Your Free Listing Includes */}
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold text-white">Your Free Listing Includes</h3>
+              <div className="flex flex-wrap items-center justify-center gap-6 text-sm py-2">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-sm text-slate-300">Visible in Discover section</span>
+                  <span className="text-slate-300">Visible in Discover section</span>
                 </div>
-                <div className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-sm text-slate-300">Basic AI chat visibility (text mentions)</span>
+                  <span className="text-slate-300">Basic AI chat visibility</span>
                 </div>
-                <div className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-sm text-slate-300">Up to 5 featured menu items</span>
+                  <span className="text-slate-300">Up to 5 menu items</span>
                 </div>
-                <div className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-sm text-slate-300">Create basic offers</span>
+                  <span className="text-slate-300">1 offer per month</span>
                 </div>
               </div>
             </div>
@@ -667,49 +670,31 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             <div className="border-t border-slate-600"></div>
             
             {/* Upgrade Section */}
-            <div className="space-y-3 text-center">
-              <h3 className="text-2xl font-semibold text-white">Upgrade to Unlock More</h3>
-              <p className="text-slate-300 text-base leading-relaxed max-w-4xl mx-auto">
-                <span className="text-emerald-400 font-medium">Stand out with premium carousel cards.</span> Get full menu indexing with unlimited items + PDF upload so AI can recommend your specific dishes.
+            <div className="space-y-5">
+              <h3 className="text-2xl font-semibold text-white">Upgrade to Start Getting Recommended</h3>
+              <p className="text-slate-300 text-base leading-relaxed max-w-2xl mx-auto">
+                Free listings are visible. <span className="text-white font-medium">Upgraded listings are actively suggested by AI</span> and shown more prominently to customers looking right now.
               </p>
-              <div className="grid sm:grid-cols-2 gap-3 pt-2 max-w-2xl mx-auto">
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-slate-300">Premium Carousel Cards</span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-slate-300">Full Menu Indexing (Unlimited + PDF)</span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-slate-300">Advanced Analytics</span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm text-slate-300">Priority Support</span>
-                </div>
+              
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40 font-semibold px-8"
+                >
+                  <Link href="/dashboard/settings#pricing">
+                    View Plans
+                  </Link>
+                </Button>
+                <button
+                  onClick={() => setShowHowQwikkerWorksModal(true)}
+                  className="text-slate-300 hover:text-white text-sm transition-colors duration-200"
+                >
+                  How Qwikker brings you customers →
+                </button>
               </div>
-            </div>
-            
-            <div className="flex flex-col items-center gap-2 pt-4">
-              <Button
-                asChild
-                size="lg"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-12"
-              >
-                <Link href="/dashboard/settings#pricing">
-                  View Plans
-                </Link>
-              </Button>
             </div>
           </div>
         </div>
@@ -734,7 +719,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             </div>
             <div className="flex-shrink-0">
               <Button asChild variant="outline" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
-                <Link href="/dashboard/menu">
+                <Link href="/dashboard/profile#featured-items">
                   Add featured items
                 </Link>
               </Button>
@@ -764,7 +749,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             <Button
               onClick={handleSubmitForReview}
               disabled={isSubmitting}
-              className="bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold"
+              variant="outline"
+              className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40 font-semibold"
             >
               {isSubmitting ? 'Submitting…' : 'Submit for review'}
             </Button>
@@ -795,33 +781,17 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         </div>
       )}
 
-      {/* Atlas & Verification Widgets */}
-      {isFreeTier(profile?.business_tier) ? (
-        // FREE TIER: Show upsell first, then locked verification
-        <div className="space-y-6 mb-6">
-          <AtlasUpsellWidget businessId={profile?.id || ''} />
-          <VerificationStatusWidget business={{
-            id: profile?.id || '',
-            business_name: profile?.business_name || '',
-            google_place_id: profile?.google_place_id,
-            latitude: profile?.latitude,
-            longitude: profile?.longitude,
-            business_tier: profile?.business_tier
-          }} />
-        </div>
-      ) : (
-        // PAID/TRIAL TIERS: Show verification widget only
-        <div className="mb-6">
-          <VerificationStatusWidget business={{
-            id: profile?.id || '',
-            business_name: profile?.business_name || '',
-            google_place_id: profile?.google_place_id,
-            latitude: profile?.latitude,
-            longitude: profile?.longitude,
-            business_tier: profile?.business_tier
-          }} />
-        </div>
-      )}
+      {/* Atlas & Verification Widget - shown for all tiers */}
+      <div className="mb-6">
+        <VerificationStatusWidget business={{
+          id: profile?.id || '',
+          business_name: profile?.business_name || '',
+          google_place_id: profile?.google_place_id,
+          latitude: profile?.latitude,
+          longitude: profile?.longitude,
+          business_tier: profile?.business_tier
+        }} />
+      </div>
 
       {/* Quick Actions Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1043,7 +1013,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   <Button 
                     onClick={() => setShowAnalyticsModal(true)}
                     size="sm" 
-                    className="w-full bg-[#00d083]/20 hover:bg-[#00d083]/30 text-[#00d083] border border-[#00d083]/30 hover:border-[#00d083]/50"
+                    className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -1067,7 +1037,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   <Button 
                     onClick={() => setShowAnalyticsModal(true)}
                     size="sm" 
-                    className="bg-[#00d083]/20 hover:bg-[#00d083]/30 text-[#00d083] border border-[#00d083]/30 hover:border-[#00d083]/50"
+                    className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -1329,7 +1299,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   </svg>
                 </div>
                 <p className="font-semibold text-white mb-2">Unlock Analytics</p>
-                <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-white">
+                <Button asChild size="sm" variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
                   <Link href="/dashboard/settings">Upgrade Plan</Link>
                 </Button>
               </div>
@@ -1351,7 +1321,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             {isFeatureUnlocked('push_notifications') ? (
               // Unlocked: Show action button and recent notifications
               <div className="space-y-4">
-                <Button asChild className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white">
+                <Button asChild variant="outline" className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
                   <Link href="/dashboard/notifications">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1397,7 +1367,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   </svg>
                 </div>
                 <p className="font-semibold text-white mb-2">Unlock Push Notifications</p>
-                <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-white">
+                <Button asChild size="sm" variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
                   <Link href="/dashboard/settings">Upgrade Plan</Link>
                 </Button>
               </div>
@@ -1443,7 +1413,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   </svg>
                 </div>
                 <p className="font-semibold text-white mb-2">Unlock Loyalty Cards</p>
-                <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-white">
+                <Button asChild size="sm" variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
                   <Link href="/dashboard/settings">Upgrade Plan</Link>
                 </Button>
               </div>
@@ -1465,7 +1435,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             {isFeatureUnlocked('social_wizard') ? (
               // Unlocked: Show action button
               <div className="space-y-4">
-                <Button asChild className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white">
+                <Button asChild variant="outline" className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
                   <Link href="/dashboard/social-wizard">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1505,7 +1475,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   </svg>
                 </div>
                 <p className="font-semibold text-white mb-2">Unlock Social Wizard</p>
-                <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-white">
+                <Button asChild size="sm" variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
                   <Link href="/dashboard/settings">Upgrade Plan</Link>
                 </Button>
               </div>
@@ -1531,12 +1501,12 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   <p className="text-xs text-gray-400">Businesses Referred</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-[#00d083]">£0.00</p>
+                  <p className="text-2xl font-bold text-[#00d083]">0</p>
                   <p className="text-xs text-gray-400">Credits Earned</p>
                 </div>
               </div>
               
-              <Button asChild className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white">
+              <Button asChild variant="outline" className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
                 <Link href="/dashboard/referrals">Refer a Business</Link>
               </Button>
             </div>
@@ -1567,7 +1537,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                 </div>
               </div>
               
-              <Button asChild className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white">
+              <Button asChild variant="outline" className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
                 <Link href="/dashboard/support">Open Chat</Link>
               </Button>
             </div>
@@ -1607,8 +1577,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             onClick: () => {
               window.location.href = '/dashboard/settings'
             },
-            variant: 'default',
-            className: 'bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold'
+            variant: 'outline',
+            className: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40 font-semibold'
           }
         ]}
       >
@@ -1649,6 +1619,12 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           onClose={() => setShowWelcomeModal(false)}
         />
       )}
+
+      {/* 📚 How Qwikker Works Modal */}
+      <HowQwikkerWorksModal
+        isOpen={showHowQwikkerWorksModal}
+        onClose={() => setShowHowQwikkerWorksModal(false)}
+      />
     </div>
   )
 }

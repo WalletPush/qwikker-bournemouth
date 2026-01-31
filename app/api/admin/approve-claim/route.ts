@@ -375,7 +375,7 @@ export async function POST(request: NextRequest) {
         
         await sendCitySlackNotification({
           title: `Claim Approved: ${claim.business.business_name}`,
-          message: `Business claim has been approved!\n\n**Business:** ${claim.business.business_name}\n**Status:** Claimed Free (Discover only)\n**Owner:** User ID ${claim.user_id}\n\nThe business is now live in the Discover section.`,
+          message: `Business claim has been approved!\n\n**Business:** ${claim.business.business_name}\n**Status:** Claimed Free\n**Owner:** User ID ${claim.user_id}\n\nBusiness is now live on Qwikker as a free listing.`,
           city: claim.business.city,
           type: 'admin_action',
           data: { businessName: claim.business.business_name, action: 'claim_approved' }
@@ -388,7 +388,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Claim approved and free tier subscription created'
+        message: 'Claim approved! Business is now visible in AI chat and Discover'
       })
     } 
     

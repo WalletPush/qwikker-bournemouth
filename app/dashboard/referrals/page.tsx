@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
-import { ReferralsPage } from '@/components/dashboard/referrals-page'
+import { ReferralsComingSoon } from '@/components/dashboard/referrals-coming-soon'
 import { Profile } from '@/types/profiles'
 import { calculateActionItemsCount } from '@/lib/utils/action-items-count'
 
@@ -29,7 +29,7 @@ export default async function DashboardReferralsPage() {
 
   return (
     <DashboardLayout currentSection="referrals" profile={profile} actionItemsCount={actionItemsCount}>
-      <ReferralsPage profile={profile} />
+      <ReferralsComingSoon />
     </DashboardLayout>
   )
 }

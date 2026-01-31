@@ -673,6 +673,33 @@ export async function POST(request: NextRequest) {
 
         console.log(`✅ Import complete: ${imported} imported, ${skipped} skipped, ${failed} failed`)
 
+        // 📝 Create audit log for HQ dashboard
+        if (imported > 0) {
+          try {
+            await supabase.from('hq_audit_logs').insert({
+              actor_user_id: admin.id, // Use admin.id since this schema doesn't have user_id
+              actor_email: admin.email,
+              actor_type: 'city_admin',
+              action: 'businesses_imported',
+              resource_type: 'business',
+              resource_id: null,
+              city: requestCity,
+              metadata: {
+                imported_count: imported,
+                skipped_count: skipped,
+                failed_count: failed,
+                total_count: total,
+                system_category: body.systemCategory,
+                display_category: body.displayCategory
+              }
+            })
+            console.log('✅ Audit log created')
+          } catch (auditError) {
+            console.error('⚠️ Failed to create audit log:', auditError)
+            // Don't fail the import if audit log fails
+          }
+        }
+
         // Cleanup
         activeImports.delete(importId)
         controller.close()

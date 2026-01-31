@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LogoutButton } from '@/components/logout-button'
@@ -145,11 +145,23 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
     router.push('/dashboard/settings')
   }
 
+  // Client-side hydration fix
+  const [isMounted, setIsMounted] = useState(false)
+  
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   // Check if a feature is unlocked for this user
   const isFeatureUnlocked = (featureId: string): boolean => {
-    // 🔒 CRITICAL: claimed_free status = ALL features locked except profile editing
+    // Prevent hydration mismatch - always show locked on SSR
+    if (!isMounted) {
+      return false
+    }
+    
+    // ✅ claimed_free status = profile + offers unlocked, rest locked
     if (profile?.status === 'claimed_free') {
-      return false // Everything locked for free claimed listings
+      return featureId === 'offers' // Only offers (and profile, which isn't checked here) unlocked
     }
 
     // Map nav item IDs to feature keys

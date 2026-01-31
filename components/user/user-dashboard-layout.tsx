@@ -228,7 +228,7 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
               </div>
               
               {/* City indicator */}
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center font-semibold text-slate-100">
+              <div className="w-10 h-10 bg-slate-700 border border-slate-600 rounded-full flex items-center justify-center font-semibold text-slate-100">
                 {cityDisplayName.charAt(0).toUpperCase()}
               </div>
             </div>
