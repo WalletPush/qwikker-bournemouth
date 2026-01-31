@@ -75,6 +75,8 @@ export function detectIntent(query: string): IntentResult {
     spanish: ['spanish', 'tapas', 'paella', 'sangria'],
     turkish: ['turkish', 'doner', 'kebab', 'baklava'],
     seafood: ['seafood', 'fish', 'oyster', 'lobster', 'crab', 'shrimp'],
+    bakery: ['bakery', 'bakeries', 'bread', 'pastry', 'pastries', 'bake'],
+    cafe: ['cafe', 'coffee', 'espresso', 'cappuccino', 'latte'],
   }
   
   // Check cuisines

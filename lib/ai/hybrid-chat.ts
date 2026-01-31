@@ -233,6 +233,39 @@ export async function generateHybridAIResponse(
       cityResults = await searchCityKnowledge(userMessage, city, { matchCount: 6 })
     }
     
+    // 🔧 CRITICAL FIX: Also query ALL businesses directly (not just KB matches)
+    // This ensures businesses without KB content (no menus/offers) still appear
+    // We'll merge these with KB results and dedupe by ID
+    const { data: allChatEligibleBusinesses } = await supabase
+      .from('business_profiles_chat_eligible')
+      .select(`
+        id,
+        business_name,
+        business_tagline,
+        system_category,
+        display_category,
+        effective_tier,
+        tier_priority,
+        business_address,
+        business_town,
+        logo,
+        business_images,
+        rating,
+        review_count,
+        google_place_id,
+        latitude,
+        longitude,
+        phone,
+        website_url,
+        owner_user_id,
+        claimed_at
+      `)
+      .eq('city', city)
+      .order('tier_priority', { ascending: true }) // spotlight→featured→starter (lower = higher priority)
+      .order('rating', { ascending: false, nullsLast: true })
+    
+    console.log(`💼 Queried ${allChatEligibleBusinesses?.length || 0} chat-eligible businesses from DB`)
+    
     // 🎯 Fetch offer counts for businesses to enrich context (DEDUPED)
     const supabase = await createTenantAwareServerClient(city)
     
@@ -761,60 +794,38 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     let fallbackBusinesses: any[] = [] // Declare in outer scope so it's always accessible
     let topMatchesText: any[] = [] // ✅ HOIST: Tier 3 that beats irrelevant Tier 1 (needed for review snippets)
     
-    // 🎯 ARCHITECTURAL FIX: Always run three-tier logic, even if KB returns 0 results
-    // This allows cities with only unclaimed/imported businesses to work
-    if (businessResults.success) {
-      // STEP 1: Dedupe by business_id (KB returns multiple rows per business)
-      type KBRow = (typeof businessResults.results)[number]
-      const bestHitByBusiness = new Map<string, KBRow>()
+    // 🎯 ARCHITECTURAL FIX: Merge KB results with direct DB query
+    // This ensures businesses without KB content still appear
+    if (businessResults.success || allChatEligibleBusinesses) {
+      // STEP 1: Build map of all businesses (KB + direct query)
+      const businessById = new Map<string, any>()
+      const kbScoreById = new Map<string, number>()
       
-      for (const r of businessResults.results) {
-        if (!r.business_id || !r.business_name) continue
-        
-        const key = r.business_id
-        const existing = bestHitByBusiness.get(key)
-        
-        // Keep highest similarity row per business
-        const rScore = (r as any).similarity ?? 0
-        const eScore = existing ? ((existing as any).similarity ?? 0) : -Infinity
-        
-        if (!existing || rScore > eScore) bestHitByBusiness.set(key, r)
+      // Add KB results with similarity scores
+      if (businessResults.success && businessResults.results.length > 0) {
+        for (const r of businessResults.results) {
+          if (!r.business_id) continue
+          const score = (r as any).similarity ?? 0
+          const existing = kbScoreById.get(r.business_id) ?? 0
+          if (score > existing) {
+            kbScoreById.set(r.business_id, score)
+          }
+        }
       }
       
-      const uniqueBusinessIds = Array.from(bestHitByBusiness.keys())
-      hasBusinessResults = uniqueBusinessIds.length > 0
+      // Add ALL eligible businesses from direct query
+      if (allChatEligibleBusinesses) {
+        for (const b of allChatEligibleBusinesses) {
+          businessById.set(b.id, b)
+        }
+      }
       
-      // STEP 2: Fetch canonical business data from business_profiles_chat_eligible
-      // (Don't trust KB rows for tier/rating/categories/images)
-      // CRITICAL: Use subscription-based view to prevent free listing leakage
-      // This view computes effective_tier from subscriptions, NOT from stale business_tier column
-      const { data: businesses } = await supabase
-        .from('business_profiles_chat_eligible')
-        .select(`
-          id,
-          business_name,
-          business_tagline,
-          system_category,
-          display_category,
-          effective_tier,
-          tier_priority,
-          business_address,
-          business_town,
-          logo,
-          business_images,
-          rating,
-          review_count,
-          google_place_id,
-          latitude,
-          longitude,
-          phone,
-          website_url,
-          owner_user_id,
-          claimed_at
-        `)
-        .in('id', uniqueBusinessIds)
+      const businesses = Array.from(businessById.values())
+      hasBusinessResults = businesses.length > 0
       
-      const businessById = new Map((businesses || []).map(b => [b.id, b]))
+      console.log(`💼 Total businesses after merge: ${businesses.length} (${kbScoreById.size} had KB content)`)
+      
+      // STEP 2: Fetch offers/vibes for all businesses
       
       // 💚 Fetch Qwikker Vibes for all businesses (for chat context + within-tier ranking)
       const vibesMap = new Map()
