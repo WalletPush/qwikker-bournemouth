@@ -42,6 +42,8 @@ export function detectBrowse(query: string, lastMode?: string): BrowseMode {
     /\b(show|list|find|see|give me)\s+(me\s+)?(all|every)\b/i,
     /^(all|every)\s+(restaurants?|places?|businesses?|cafes?|bars?)/i,
     /\bwhat'?s\s+(here|available|around|nearby)\b/i,
+    // NEW: "show me restaurants" without "all"
+    /\b(show|list|find|see)\s+(me\s+)?(restaurants?|places?|businesses?|cafes?|bars?)\b/i,
   ]
   
   const isBrowse = browsePatterns.some(pattern => pattern.test(q))

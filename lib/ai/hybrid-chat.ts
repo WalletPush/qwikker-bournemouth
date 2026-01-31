@@ -951,9 +951,18 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
               relevanceScore: scoreBusinessRelevance(b, intent),
               tierSource: 'tier3'
             }))
-            .filter(b => b.relevanceScore > 0)
           
-          console.log(`🎯 Tier 3: ${tier3WithScores.length} relevant unclaimed businesses`)
+          // ✅ DEBUG: Log all Tier 3 scores for "indian" query
+          if (intent.categories.includes('indian')) {
+            console.log(`🔍 DEBUG: Scoring ${tier3.length} Tier 3 businesses for "indian"`)
+            tier3WithScores.slice(0, 5).forEach(b => {
+              console.log(`  - ${b.business_name}: score=${b.relevanceScore}, category="${b.display_category}"`)
+            })
+          }
+          
+          const tier3Relevant = tier3WithScores.filter(b => b.relevanceScore > 0)
+          
+          console.log(`🎯 Tier 3: ${tier3Relevant.length} relevant unclaimed businesses`)
           
           // Combine Tier 2 + Tier 3, sorted by relevance
           const allLowerTiers = [...tier2WithScores, ...tier3WithScores]
