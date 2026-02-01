@@ -70,9 +70,30 @@ export async function POST(request: NextRequest) {
     const apiKey = franchiseConfig.google_places_api_key
 
     console.log(`🔍 Text search for: "${textQuery}" in ${location}`)
+    console.log(`📍 Location bias: lat=${franchiseConfig.lat}, lng=${franchiseConfig.lng}`)
 
     // Google Places API - Text Search
     const searchUrl = 'https://places.googleapis.com/v1/places:searchText'
+    
+    const requestBody: any = {
+      textQuery: `${textQuery} in ${location}`
+    }
+    
+    // Only add locationBias if we have coordinates
+    if (franchiseConfig.lat && franchiseConfig.lng) {
+      requestBody.locationBias = {
+        circle: {
+          center: {
+            latitude: franchiseConfig.lat,
+            longitude: franchiseConfig.lng
+          },
+          radius: 50000 // 50km radius
+        }
+      }
+    }
+    
+    console.log('📤 Request body:', JSON.stringify(requestBody, null, 2))
+    
     const searchResponse = await fetch(searchUrl, {
       method: 'POST',
       headers: {
@@ -80,30 +101,21 @@ export async function POST(request: NextRequest) {
         'X-Goog-Api-Key': apiKey,
         'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.types,places.primaryType,places.location'
       },
-      body: JSON.stringify({
-        textQuery: `${textQuery} in ${location}`,
-        locationBias: {
-          circle: {
-            center: {
-              latitude: franchiseConfig.lat || 0,
-              longitude: franchiseConfig.lng || 0
-            },
-            radius: 50000 // 50km radius
-          }
-        }
-      })
+      body: JSON.stringify(requestBody)
     })
 
     if (!searchResponse.ok) {
       const errorText = await searchResponse.text()
-      console.error('Google Places Text Search error:', errorText)
+      console.error('❌ Google Places Text Search error:', errorText)
+      console.error('Status:', searchResponse.status, searchResponse.statusText)
       return NextResponse.json({
         success: false,
-        error: 'Google Places API error'
+        error: `Google Places API error: ${searchResponse.status} ${searchResponse.statusText}`
       }, { status: 500 })
     }
 
     const searchData = await searchResponse.json()
+    console.log('📦 Raw response:', JSON.stringify(searchData, null, 2))
     const places = searchData.places || []
 
     console.log(`✅ Found ${places.length} businesses matching "${textQuery}"`)
