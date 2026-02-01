@@ -766,7 +766,10 @@ export function AtlasMode({
   
   // 🎬 TOUR MODE: Advance to specific index
   const advanceTour = useCallback((targetIndex: number) => {
-    if (targetIndex >= businesses.length) {
+    // ✅ Use ref instead of state to avoid stale closure issues
+    const currentBusinesses = businessesRef.current
+    
+    if (targetIndex >= currentBusinesses.length) {
       // Tour complete
       console.log('🎬 Tour complete!')
       setTourActive(false)
@@ -774,9 +777,9 @@ export function AtlasMode({
       return
     }
     
-    console.log(`🎬 Tour advancing to business ${targetIndex + 1}/${businesses.length}`)
+    console.log(`🎬 Tour advancing to business ${targetIndex + 1}/${currentBusinesses.length}`)
     
-    const targetBusiness = businesses[targetIndex]
+    const targetBusiness = currentBusinesses[targetIndex]
     
     // Move to target business
     setSelectedBusinessIndex(targetIndex)
@@ -790,7 +793,7 @@ export function AtlasMode({
     setHudVisible(true)
     
     // Schedule next advance if not at end
-    if (targetIndex < businesses.length - 1) {
+    if (targetIndex < currentBusinesses.length - 1) {
       tourTimerRef.current = setTimeout(() => {
         advanceTour(targetIndex + 1)
       }, 3000)
@@ -802,7 +805,7 @@ export function AtlasMode({
         setHudVisible(false)
       }, 4000)
     }
-  }, [businesses, flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
+  }, [flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
   
   // 🎬 TOUR MODE: Stop tour
   const stopTour = useCallback(() => {

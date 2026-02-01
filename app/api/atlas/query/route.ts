@@ -66,10 +66,10 @@ export async function POST(request: NextRequest) {
     console.log(`🗺️ Atlas: Min rating: ${minRating}, Max results: ${maxResults}`)
     
     // ✅ FIX: PostgREST uses * as wildcard, not %
-    // ✅ Search across display_category, google_primary_type, business_name
-    // ✅ Tier 1 also searches system_category (only available in that view)
-    const searchTerm = `*${message}*`
-    console.log(`🗺️ Atlas: Search term: ${searchTerm}`)
+    // ✅ Clean the search term: remove punctuation, extra spaces
+    const cleanMessage = message.replace(/[?!.,;:'"()]/g, '').trim()
+    const searchTerm = `*${cleanMessage}*`
+    console.log(`🗺️ Atlas: Search term: ${searchTerm} (original: "${message}")`)
     
     // Query all three tier views (same as chat does)
     const [tier1Response, tier2Response, tier3Response] = await Promise.all([

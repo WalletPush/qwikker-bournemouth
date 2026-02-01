@@ -67,7 +67,9 @@ export async function GET(request: NextRequest) {
     
     // Parse query parameters
     const url = new URL(request.url)
-    const query = url.searchParams.get('q')?.trim() || ''
+    const rawQuery = url.searchParams.get('q')?.trim() || ''
+    // ✅ Clean search: remove punctuation that breaks ILIKE matching
+    const query = rawQuery.replace(/[?!.,;:'"()]/g, '').trim()
     const limitParam = url.searchParams.get('limit')
     const limit = limitParam ? parseInt(limitParam, 10) : (config.atlas_max_results ?? 12)
     
