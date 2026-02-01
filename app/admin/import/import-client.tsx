@@ -73,7 +73,11 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
   } | null>(null)
   const [skipDuplicates, setSkipDuplicates] = useState(true)
   const [sortBy, setSortBy] = useState<'rating' | 'distance' | 'reviews'>('rating')
-  const [searchFilter, setSearchFilter] = useState('') // ✅ NEW: Search filter state
+  const [searchFilter, setSearchFilter] = useState('') // Filter for preview results
+  
+  // ✅ NEW: Text search for specific businesses
+  const [searchMode, setSearchMode] = useState<'radius' | 'text'>('radius')
+  const [textQuery, setTextQuery] = useState('') // e.g., "Bollywood Indian Cuisine"
   
   // Progress modal state
   const [showProgressModal, setShowProgressModal] = useState(false)
@@ -144,6 +148,45 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
 
     } catch (error: any) {
       console.error('Search error:', error)
+      setSearchError(error.message || 'Failed to search businesses')
+      setResults([])
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  // ✅ NEW: Text search for specific business
+  const handleTextSearch = async () => {
+    setIsSearching(true)
+    setSearchError('')
+    
+    try {
+      const response = await fetch('/api/admin/import-businesses/text-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          textQuery,
+          location: `${displayName}, ${countryName}`
+        })
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        setSearchError(data.error || 'Search failed')
+        setResults([])
+        return
+      }
+
+      setResults(data.results || [])
+      setCostData(data.costs || null)
+      setSelectedResults([])
+      setShowPreview(true)
+
+      console.log(`✅ Found ${data.totalFound} businesses matching "${textQuery}"`)
+
+    } catch (error: any) {
+      console.error('Text search error:', error)
       setSearchError(error.message || 'Failed to search businesses')
       setResults([])
     } finally {
@@ -389,6 +432,76 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* ✅ NEW: Search Mode Toggle */}
+          <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border">
+            <Label className="text-sm font-medium whitespace-nowrap">Search Mode:</Label>
+            <div className="flex gap-2">
+              <Button
+                variant={searchMode === 'radius' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSearchMode('radius')}
+              >
+                <MapPin className="w-4 h-4 mr-1" />
+                Area Search
+              </Button>
+              <Button
+                variant={searchMode === 'text' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSearchMode('text')}
+              >
+                <Search className="w-4 h-4 mr-1" />
+                Find Specific Business
+              </Button>
+            </div>
+          </div>
+
+          {/* Text Search UI */}
+          {searchMode === 'text' && (
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-start gap-2 text-sm text-blue-800 dark:text-blue-200">
+                  <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold mb-1">Search for a specific business</p>
+                    <p>Enter the business name to find and import it directly (e.g., "Bollywood Indian Cuisine").</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="textQuery">Business Name</Label>
+                <Input
+                  id="textQuery"
+                  placeholder='e.g., "Bollywood Indian Cuisine"'
+                  value={textQuery}
+                  onChange={(e) => setTextQuery(e.target.value)}
+                />
+              </div>
+
+              <Button 
+                onClick={handleTextSearch} 
+                disabled={isSearching || !textQuery.trim()}
+                size="lg"
+                className="w-full"
+              >
+                {isSearching ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4 mr-2" />
+                    Search for "{textQuery || 'business'}"
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* Radius Search UI */}
+          {searchMode === 'radius' && (
+            <>
           <div className="grid md:grid-cols-2 gap-6">
             {/* Location */}
             <div className="space-y-2">
@@ -511,6 +624,8 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
               <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-800 dark:text-red-200">{searchError}</p>
             </div>
+          )}
+            </>
           )}
         </CardContent>
       </Card>
