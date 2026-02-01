@@ -4,7 +4,7 @@
  * Neon glow effects, premium colors, and layer configurations
  */
 
-import type { CircleLayerSpecification, LineLayerSpecification } from 'mapbox-gl'
+import type { CircleLayerSpecification, LineLayerSpecification, SymbolLayerSpecification } from 'mapbox-gl'
 
 // Brand colors
 export const QWIKKER_GREEN = '#00d083'
@@ -83,64 +83,30 @@ export const getUserLocationLayers = () => {
 }
 
 /**
- * Business pin layers (neon glow effect)
- * ✅ Cyan pins for paid/trial businesses
- * ✅ Dull grey pins for unclaimed businesses
+ * Business pin layers (animated pulsing dots)
+ * ✅ Cyan pulsing dots for paid/trial businesses
+ * ✅ Grey pulsing dots for unclaimed businesses
  */
 export const getBusinessPinLayers = () => {
-  // Outer glow
-  const outerGlow: CircleLayerSpecification = {
-    id: 'business-pins-glow',
-    type: 'circle',
-    source: 'businesses',
-    paint: {
-      'circle-radius': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        10, 15,
-        14, 25,
-        18, 40
-      ],
-      'circle-color': [
-        'case',
-        ['==', ['get', 'isPaid'], true], NEON_CYAN,     // Cyan glow for paid businesses
-        ['==', ['get', 'isUnclaimed'], true], '#6b7280', // Dull grey for unclaimed
-        NEON_CYAN                                         // Default cyan
-      ],
-      'circle-opacity': 0.3,
-      'circle-blur': 1
-    }
-  }
-
-  // Main pin
-  const mainPin: CircleLayerSpecification = {
+  // Use animated pulsing dot images instead of static circles
+  const pulsingPins: SymbolLayerSpecification = {
     id: 'business-pins',
-    type: 'circle',
+    type: 'symbol',
     source: 'businesses',
-    paint: {
-      'circle-radius': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        10, 8,
-        14, 12,
-        18, 18
-      ],
-      'circle-color': [
+    layout: {
+      'icon-image': [
         'case',
-        ['==', ['get', 'isPaid'], true], NEON_CYAN,     // Cyan for paid businesses
-        ['==', ['get', 'isUnclaimed'], true], '#9ca3af', // Light grey for unclaimed
-        NEON_CYAN                                         // Default cyan
+        ['==', ['get', 'isPaid'], true], 'pulsing-dot-cyan',   // Cyan pulsing for paid
+        ['==', ['get', 'isUnclaimed'], true], 'pulsing-dot-grey', // Grey pulsing for unclaimed
+        'pulsing-dot-cyan'                                        // Default cyan
       ],
-      'circle-opacity': 1,
-      'circle-stroke-width': 2,
-      'circle-stroke-color': '#ffffff',
-      'circle-stroke-opacity': 0.8
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true
     }
   }
 
-  return [outerGlow, mainPin]
+  // Note: We removed the separate glow layer because the pulsing effect includes glow
+  return [pulsingPins]
 }
 
 /**

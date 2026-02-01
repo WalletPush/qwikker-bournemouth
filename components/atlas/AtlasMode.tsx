@@ -710,6 +710,105 @@ export function AtlasMode({
       console.log('[Atlas] 🗺️ Existing sources:', Object.keys(map.current.getStyle().sources))
       console.log('[Atlas] 🗺️ Existing layers:', map.current.getStyle().layers.map(l => l.id))
       
+      // 🎨 CREATE PULSING DOT IMAGES (animated pins)
+      // Cyan pulsing dot for paid businesses
+      if (!map.current.hasImage('pulsing-dot-cyan')) {
+        const size = 60
+        const pulsingDotCyan = {
+          width: size,
+          height: size,
+          data: new Uint8Array(size * size * 4),
+          context: null as any,
+          
+          onAdd: function() {
+            const canvas = document.createElement('canvas')
+            canvas.width = this.width
+            canvas.height = this.height
+            this.context = canvas.getContext('2d')
+          },
+          
+          render: function() {
+            const duration = 2000 // 2 second pulse
+            const t = (performance.now() % duration) / duration
+            
+            const radius = (size / 2) * 0.4
+            const outerRadius = (size / 2) * 0.9 * t + radius
+            const context = this.context
+            
+            // Draw outer pulsing circle
+            context.clearRect(0, 0, this.width, this.height)
+            context.beginPath()
+            context.arc(this.width / 2, this.height / 2, outerRadius, 0, Math.PI * 2)
+            context.fillStyle = `rgba(0, 208, 131, ${0.4 * (1 - t)})` // Cyan glow
+            context.fill()
+            
+            // Draw inner circle
+            context.beginPath()
+            context.arc(this.width / 2, this.height / 2, radius, 0, Math.PI * 2)
+            context.fillStyle = 'rgba(0, 208, 131, 1)' // Solid cyan
+            context.strokeStyle = 'white'
+            context.lineWidth = 3 + 4 * (1 - t)
+            context.fill()
+            context.stroke()
+            
+            this.data = context.getImageData(0, 0, this.width, this.height).data
+            map.current!.triggerRepaint()
+            return true
+          }
+        }
+        map.current.addImage('pulsing-dot-cyan', pulsingDotCyan, { pixelRatio: 2 })
+        console.log('[Atlas] ✅ Added pulsing cyan dot image')
+      }
+      
+      // Grey pulsing dot for unclaimed businesses (slower, subtler)
+      if (!map.current.hasImage('pulsing-dot-grey')) {
+        const size = 50
+        const pulsingDotGrey = {
+          width: size,
+          height: size,
+          data: new Uint8Array(size * size * 4),
+          context: null as any,
+          
+          onAdd: function() {
+            const canvas = document.createElement('canvas')
+            canvas.width = this.width
+            canvas.height = this.height
+            this.context = canvas.getContext('2d')
+          },
+          
+          render: function() {
+            const duration = 3000 // 3 second pulse (slower)
+            const t = (performance.now() % duration) / duration
+            
+            const radius = (size / 2) * 0.35
+            const outerRadius = (size / 2) * 0.7 * t + radius
+            const context = this.context
+            
+            // Draw outer pulsing circle
+            context.clearRect(0, 0, this.width, this.height)
+            context.beginPath()
+            context.arc(this.width / 2, this.height / 2, outerRadius, 0, Math.PI * 2)
+            context.fillStyle = `rgba(156, 163, 175, ${0.2 * (1 - t)})` // Grey glow
+            context.fill()
+            
+            // Draw inner circle
+            context.beginPath()
+            context.arc(this.width / 2, this.height / 2, radius, 0, Math.PI * 2)
+            context.fillStyle = 'rgba(107, 114, 128, 1)' // Solid grey
+            context.strokeStyle = 'rgba(255, 255, 255, 0.5)'
+            context.lineWidth = 2 + 2 * (1 - t)
+            context.fill()
+            context.stroke()
+            
+            this.data = context.getImageData(0, 0, this.width, this.height).data
+            map.current!.triggerRepaint()
+            return true
+          }
+        }
+        map.current.addImage('pulsing-dot-grey', pulsingDotGrey, { pixelRatio: 2 })
+        console.log('[Atlas] ✅ Added pulsing grey dot image')
+      }
+      
       // Update ref for event handlers
       businessesRef.current = businesses
       
@@ -722,13 +821,17 @@ export function AtlasMode({
       }
       
       // Remove existing business layers only if they exist (preserve user location!)
-      const layerIds = ['business-pins-glow', 'business-pins']
+      const layerIds = ['business-pins'] // Only one layer now (pulsing symbol layer)
       layerIds.forEach(id => {
         if (map.current!.getLayer(id)) {
           console.log('[Atlas] 🗑️ Removing old layer:', id)
           map.current!.removeLayer(id)
         }
       })
+      // Also remove old glow layer if it exists from previous version
+      if (map.current.getLayer('business-pins-glow')) {
+        map.current.removeLayer('business-pins-glow')
+      }
       if (map.current.getSource('businesses')) {
         console.log('[Atlas] 🗑️ Removing old source: businesses')
         map.current.removeSource('businesses')
@@ -814,9 +917,25 @@ export function AtlasMode({
           const business = businessesRef.current.find(b => b.id === businessId)
           
           if (business) {
+            // Stop any active tour
+            if (tourActive) {
+              stopTour()
+            }
+            
+            // Update selected business
+            const businessIndex = businessesRef.current.findIndex(b => b.id === businessId)
             setSelectedBusiness(business)
+            setSelectedBusinessIndex(businessIndex)
             updateActiveBusinessMarker(business)
             flyToBusiness(business)
+            
+            // Update HUD with business info
+            setHudSummary(generateBusinessHudMessage(business))
+            setHudPrimaryBusinessName(null)
+            setHudVisible(true)
+            
+            // Track click
+            playSound('select')
           }
         }
         
@@ -857,7 +976,7 @@ export function AtlasMode({
     } catch (error) {
       console.error('[Atlas] ❌ Failed to add markers:', error)
     }
-  }, [mapLoaded, updateActiveBusinessMarker, flyToBusiness])
+  }, [mapLoaded, updateActiveBusinessMarker, flyToBusiness, tourActive, stopTour, generateBusinessHudMessage, playSound])
   
   // ✅ RULE #3: Handle incoming businesses from chat (separate effect, waits for mapReady)
   useEffect(() => {
@@ -941,9 +1060,18 @@ export function AtlasMode({
       
       // Select first business as active
       setSelectedBusiness(first)
+      setSelectedBusinessIndex(0)
       updateActiveBusinessMarker(first)
+      
+      // 🎬 AUTO-START TOUR: If multiple businesses from chat, start tour after a delay
+      if (incomingBusinesses.length > 1) {
+        console.log(`[Atlas] 🎬 Will auto-start tour in 2s (${incomingBusinesses.length} businesses from chat)`)
+        setTimeout(() => {
+          startTour()
+        }, 2000) // Start tour 2s after arriving from chat
+      }
     }
-  }, [mapLoaded, incomingBusinesses, addBusinessMarkers, updateActiveBusinessMarker])
+  }, [mapLoaded, incomingBusinesses, addBusinessMarkers, updateActiveBusinessMarker, startTour])
   
   // Recenter to user location (BULLETPROOF - stop + resize + flyTo)
   const handleRecenterToUser = useCallback(() => {
