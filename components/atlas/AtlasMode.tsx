@@ -788,11 +788,20 @@ export function AtlasMode({
     }
     
     const nextIndex = (selectedBusinessIndex + 1) % businesses.length
+    const nextBusiness = businesses[nextIndex]
+    
     setSelectedBusinessIndex(nextIndex)
-    setSelectedBusiness(businesses[nextIndex])
-    flyToBusiness(businesses[nextIndex])
-    updateActiveBusinessMarker(businesses[nextIndex])
-  }, [businesses, selectedBusinessIndex, tourActive, stopTour, flyToBusiness, updateActiveBusinessMarker])
+    setSelectedBusiness(nextBusiness)
+    flyToBusiness(nextBusiness)
+    updateActiveBusinessMarker(nextBusiness)
+    
+    // ✅ UPDATE HUD with new business info
+    setHudSummary(generateBusinessHudMessage(nextBusiness))
+    setHudPrimaryBusinessName(null)
+    setHudVisible(true)
+    
+    console.log(`⏭️ Next business: ${nextBusiness.business_name} (${nextIndex + 1}/${businesses.length})`)
+  }, [businesses, selectedBusinessIndex, tourActive, stopTour, flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
   
   const goToPreviousBusiness = useCallback(() => {
     if (businesses.length === 0) return
@@ -803,11 +812,20 @@ export function AtlasMode({
     }
     
     const prevIndex = selectedBusinessIndex === 0 ? businesses.length - 1 : selectedBusinessIndex - 1
+    const prevBusiness = businesses[prevIndex]
+    
     setSelectedBusinessIndex(prevIndex)
-    setSelectedBusiness(businesses[prevIndex])
-    flyToBusiness(businesses[prevIndex])
-    updateActiveBusinessMarker(businesses[prevIndex])
-  }, [businesses, selectedBusinessIndex, tourActive, stopTour, flyToBusiness, updateActiveBusinessMarker])
+    setSelectedBusiness(prevBusiness)
+    flyToBusiness(prevBusiness)
+    updateActiveBusinessMarker(prevBusiness)
+    
+    // ✅ UPDATE HUD with new business info
+    setHudSummary(generateBusinessHudMessage(prevBusiness))
+    setHudPrimaryBusinessName(null)
+    setHudVisible(true)
+    
+    console.log(`⏮️ Previous business: ${prevBusiness.business_name} (${prevIndex + 1}/${businesses.length})`)
+  }, [businesses, selectedBusinessIndex, tourActive, stopTour, flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
   
   // Cleanup tour timer on unmount
   useEffect(() => {
