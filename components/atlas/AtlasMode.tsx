@@ -671,6 +671,147 @@ export function AtlasMode({
     
   }, [playSound, updateActiveBusinessMarker, triggerArrivalPing])
   
+  // 🎬 TOUR MODE: Generate HUD message for a business
+  const generateBusinessHudMessage = useCallback((business: Business): string => {
+    const parts: string[] = []
+    
+    // Name and rating
+    parts.push(`${business.business_name} — ${business.rating}★`)
+    
+    // Category
+    if (business.display_category) {
+      parts.push(business.display_category)
+    }
+    
+    // Review snippet if available
+    if (business.google_reviews_highlights && business.google_reviews_highlights.length > 0) {
+      const review = business.google_reviews_highlights[0]
+      // Take first sentence or first 80 chars
+      const reviewText = review.text.split('.')[0] + '.'
+      const shortReview = reviewText.length > 80 ? reviewText.substring(0, 80) + '...' : reviewText
+      parts.push(`"${shortReview}"`)
+    }
+    
+    return parts.join(' • ')
+  }, [])
+  
+  // 🎬 TOUR MODE: Start automated tour through search results
+  const startTour = useCallback(() => {
+    if (businesses.length === 0) return
+    
+    console.log(`🎬 Starting tour of ${businesses.length} businesses`)
+    
+    setTourActive(true)
+    setSelectedBusinessIndex(0)
+    setSelectedBusiness(businesses[0])
+    
+    // Update HUD with first business info
+    setHudSummary(generateBusinessHudMessage(businesses[0]))
+    setHudPrimaryBusinessName(null)
+    setHudVisible(true)
+    
+    // Fly to first business
+    flyToBusiness(businesses[0])
+    updateActiveBusinessMarker(businesses[0])
+    
+    // Start timer for next business
+    if (businesses.length > 1) {
+      tourTimerRef.current = setTimeout(() => {
+        advanceTour(1) // Start at index 1 (second business)
+      }, 3000)
+    }
+  }, [businesses, flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
+  
+  // 🎬 TOUR MODE: Advance to specific index
+  const advanceTour = useCallback((targetIndex: number) => {
+    if (targetIndex >= businesses.length) {
+      // Tour complete
+      console.log('🎬 Tour complete!')
+      setTourActive(false)
+      setHudVisible(false) // Hide HUD when tour ends
+      return
+    }
+    
+    console.log(`🎬 Tour advancing to business ${targetIndex + 1}/${businesses.length}`)
+    
+    const targetBusiness = businesses[targetIndex]
+    
+    // Move to target business
+    setSelectedBusinessIndex(targetIndex)
+    setSelectedBusiness(targetBusiness)
+    flyToBusiness(targetBusiness)
+    updateActiveBusinessMarker(targetBusiness)
+    
+    // Update HUD with new business info
+    setHudSummary(generateBusinessHudMessage(targetBusiness))
+    setHudPrimaryBusinessName(null)
+    setHudVisible(true)
+    
+    // Schedule next advance if not at end
+    if (targetIndex < businesses.length - 1) {
+      tourTimerRef.current = setTimeout(() => {
+        advanceTour(targetIndex + 1)
+      }, 3000)
+    } else {
+      // End of tour
+      setTourActive(false)
+      // Keep HUD visible for a bit longer at the end
+      setTimeout(() => {
+        setHudVisible(false)
+      }, 4000)
+    }
+  }, [businesses, flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
+  
+  // 🎬 TOUR MODE: Stop tour
+  const stopTour = useCallback(() => {
+    if (tourTimerRef.current) {
+      clearTimeout(tourTimerRef.current)
+      tourTimerRef.current = null
+    }
+    setTourActive(false)
+    console.log('🎬 Tour stopped')
+  }, [])
+  
+  // ⬅️➡️ MANUAL NAVIGATION: Go to next/previous business
+  const goToNextBusiness = useCallback(() => {
+    if (businesses.length === 0) return
+    
+    // Stop tour if active
+    if (tourActive) {
+      stopTour()
+    }
+    
+    const nextIndex = (selectedBusinessIndex + 1) % businesses.length
+    setSelectedBusinessIndex(nextIndex)
+    setSelectedBusiness(businesses[nextIndex])
+    flyToBusiness(businesses[nextIndex])
+    updateActiveBusinessMarker(businesses[nextIndex])
+  }, [businesses, selectedBusinessIndex, tourActive, stopTour, flyToBusiness, updateActiveBusinessMarker])
+  
+  const goToPreviousBusiness = useCallback(() => {
+    if (businesses.length === 0) return
+    
+    // Stop tour if active
+    if (tourActive) {
+      stopTour()
+    }
+    
+    const prevIndex = selectedBusinessIndex === 0 ? businesses.length - 1 : selectedBusinessIndex - 1
+    setSelectedBusinessIndex(prevIndex)
+    setSelectedBusiness(businesses[prevIndex])
+    flyToBusiness(businesses[prevIndex])
+    updateActiveBusinessMarker(businesses[prevIndex])
+  }, [businesses, selectedBusinessIndex, tourActive, stopTour, flyToBusiness, updateActiveBusinessMarker])
+  
+  // Cleanup tour timer on unmount
+  useEffect(() => {
+    return () => {
+      if (tourTimerRef.current) {
+        clearTimeout(tourTimerRef.current)
+      }
+    }
+  }, [])
+  
   // Add markers for businesses (NEON CYAN PINS) - but keep user marker on top
   const addBusinessMarkers = useCallback(async (businesses: Business[]) => {
     console.log('[Atlas] 📍 addBusinessMarkers called with', businesses.length, 'businesses')
@@ -1132,147 +1273,6 @@ export function AtlasMode({
       console.log('[Atlas] ✅ Recenter flyTo executed with forced render')
     }
   }, [userLocation, playSound, mapLoaded])
-  
-  // 🎬 TOUR MODE: Generate HUD message for a business
-  const generateBusinessHudMessage = useCallback((business: Business): string => {
-    const parts: string[] = []
-    
-    // Name and rating
-    parts.push(`${business.business_name} — ${business.rating}★`)
-    
-    // Category
-    if (business.display_category) {
-      parts.push(business.display_category)
-    }
-    
-    // Review snippet if available
-    if (business.google_reviews_highlights && business.google_reviews_highlights.length > 0) {
-      const review = business.google_reviews_highlights[0]
-      // Take first sentence or first 80 chars
-      const reviewText = review.text.split('.')[0] + '.'
-      const shortReview = reviewText.length > 80 ? reviewText.substring(0, 80) + '...' : reviewText
-      parts.push(`"${shortReview}"`)
-    }
-    
-    return parts.join(' • ')
-  }, [])
-  
-  // 🎬 TOUR MODE: Start automated tour through search results
-  const startTour = useCallback(() => {
-    if (businesses.length === 0) return
-    
-    console.log(`🎬 Starting tour of ${businesses.length} businesses`)
-    
-    setTourActive(true)
-    setSelectedBusinessIndex(0)
-    setSelectedBusiness(businesses[0])
-    
-    // Update HUD with first business info
-    setHudSummary(generateBusinessHudMessage(businesses[0]))
-    setHudPrimaryBusinessName(null)
-    setHudVisible(true)
-    
-    // Fly to first business
-    flyToBusiness(businesses[0])
-    updateActiveBusinessMarker(businesses[0])
-    
-    // Start timer for next business
-    if (businesses.length > 1) {
-      tourTimerRef.current = setTimeout(() => {
-        advanceTour(1) // Start at index 1 (second business)
-      }, 3000)
-    }
-  }, [businesses, flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
-  
-  // 🎬 TOUR MODE: Advance to specific index
-  const advanceTour = useCallback((targetIndex: number) => {
-    if (targetIndex >= businesses.length) {
-      // Tour complete
-      console.log('🎬 Tour complete!')
-      setTourActive(false)
-      setHudVisible(false) // Hide HUD when tour ends
-      return
-    }
-    
-    console.log(`🎬 Tour advancing to business ${targetIndex + 1}/${businesses.length}`)
-    
-    const targetBusiness = businesses[targetIndex]
-    
-    // Move to target business
-    setSelectedBusinessIndex(targetIndex)
-    setSelectedBusiness(targetBusiness)
-    flyToBusiness(targetBusiness)
-    updateActiveBusinessMarker(targetBusiness)
-    
-    // Update HUD with new business info
-    setHudSummary(generateBusinessHudMessage(targetBusiness))
-    setHudPrimaryBusinessName(null)
-    setHudVisible(true)
-    
-    // Schedule next advance if not at end
-    if (targetIndex < businesses.length - 1) {
-      tourTimerRef.current = setTimeout(() => {
-        advanceTour(targetIndex + 1)
-      }, 3000)
-    } else {
-      // End of tour
-      setTourActive(false)
-      // Keep HUD visible for a bit longer at the end
-      setTimeout(() => {
-        setHudVisible(false)
-      }, 4000)
-    }
-  }, [businesses, flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
-  
-  // 🎬 TOUR MODE: Stop tour
-  const stopTour = useCallback(() => {
-    if (tourTimerRef.current) {
-      clearTimeout(tourTimerRef.current)
-      tourTimerRef.current = null
-    }
-    setTourActive(false)
-    console.log('🎬 Tour stopped')
-  }, [])
-  
-  // ⬅️➡️ MANUAL NAVIGATION: Go to next/previous business
-  const goToNextBusiness = useCallback(() => {
-    if (businesses.length === 0) return
-    
-    // Stop tour if active
-    if (tourActive) {
-      stopTour()
-    }
-    
-    const nextIndex = (selectedBusinessIndex + 1) % businesses.length
-    setSelectedBusinessIndex(nextIndex)
-    setSelectedBusiness(businesses[nextIndex])
-    flyToBusiness(businesses[nextIndex])
-    updateActiveBusinessMarker(businesses[nextIndex])
-  }, [businesses, selectedBusinessIndex, tourActive, stopTour, flyToBusiness, updateActiveBusinessMarker])
-  
-  const goToPreviousBusiness = useCallback(() => {
-    if (businesses.length === 0) return
-    
-    // Stop tour if active
-    if (tourActive) {
-      stopTour()
-    }
-    
-    const prevIndex = selectedBusinessIndex === 0 ? businesses.length - 1 : selectedBusinessIndex - 1
-    setSelectedBusinessIndex(prevIndex)
-    setSelectedBusiness(businesses[prevIndex])
-    flyToBusiness(businesses[prevIndex])
-    updateActiveBusinessMarker(businesses[prevIndex])
-  }, [businesses, selectedBusinessIndex, tourActive, stopTour, flyToBusiness, updateActiveBusinessMarker])
-  
-  // Cleanup tour timer on unmount
-  useEffect(() => {
-    return () => {
-      if (tourTimerRef.current) {
-        clearTimeout(tourTimerRef.current)
-      }
-    }
-  }, [])
   
   // Search handler (calls Atlas query endpoint for HUD bubble response)
   const handleSearch = useCallback(async (query: string) => {
