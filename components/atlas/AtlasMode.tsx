@@ -676,23 +676,59 @@ export function AtlasMode({
     const parts: string[] = []
     
     // Name and rating
-    parts.push(`${business.business_name} — ${business.rating}★`)
+    parts.push(`**${business.business_name}** — ${business.rating}★`)
     
     // Category
     if (business.display_category) {
       parts.push(business.display_category)
     }
     
-    // Review snippet if available
+    // Extract what people love from reviews
     if (business.google_reviews_highlights && business.google_reviews_highlights.length > 0) {
-      const review = business.google_reviews_highlights[0]
-      // Take first sentence or first 80 chars
-      const reviewText = review.text.split('.')[0] + '.'
-      const shortReview = reviewText.length > 80 ? reviewText.substring(0, 80) + '...' : reviewText
-      parts.push(`"${shortReview}"`)
+      // Look for positive keywords in reviews
+      const reviews = business.google_reviews_highlights
+      const loveKeywords = ['love', 'amazing', 'excellent', 'fantastic', 'delicious', 'best', 'perfect', 'wonderful', 'incredible', 'outstanding']
+      
+      // Try to find a sentence with positive keywords
+      let loveSnippet: string | null = null
+      for (const review of reviews) {
+        const lowerText = review.text.toLowerCase()
+        for (const keyword of loveKeywords) {
+          if (lowerText.includes(keyword)) {
+            // Extract the sentence containing the keyword
+            const sentences = review.text.split(/[.!?]+/)
+            const matchingSentence = sentences.find(s => s.toLowerCase().includes(keyword))
+            if (matchingSentence && matchingSentence.trim().length > 10) {
+              loveSnippet = matchingSentence.trim()
+              break
+            }
+          }
+        }
+        if (loveSnippet) break
+      }
+      
+      if (loveSnippet) {
+        // Clean up and shorten if needed
+        let cleanSnippet = loveSnippet
+        if (cleanSnippet.length > 100) {
+          cleanSnippet = cleanSnippet.substring(0, 97) + '...'
+        }
+        parts.push(`💬 "${cleanSnippet}"`)
+      } else {
+        // Fallback to first review snippet
+        const review = reviews[0]
+        const reviewText = review.text.split('.')[0] + '.'
+        const shortReview = reviewText.length > 80 ? reviewText.substring(0, 77) + '...' : reviewText
+        parts.push(`💬 "${shortReview}"`)
+      }
     }
     
-    return parts.join(' • ')
+    // Add phone if available
+    if (business.phone) {
+      parts.push(`📞 ${business.phone}`)
+    }
+    
+    return parts.join('\n\n')
   }, [])
   
   // 🎬 TOUR MODE: Start automated tour through search results
@@ -1300,6 +1336,7 @@ export function AtlasMode({
   
   // Search handler (calls Atlas query endpoint for HUD bubble response)
   const handleSearch = useCallback(async (query: string) => {
+    console.log('[Atlas Search] 🔍 Starting search for:', query)
     setSearching(true)
     setSelectedBusiness(null)
     setHudVisible(false) // Hide previous bubble
@@ -1312,6 +1349,7 @@ export function AtlasMode({
     
     try {
       // Call Atlas query endpoint (ephemeral HUD bubble response)
+      console.log('[Atlas Search] 📡 Calling /api/atlas/query...')
       const response = await fetch('/api/atlas/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1322,21 +1360,30 @@ export function AtlasMode({
       })
       
       const atlasResponse: AtlasResponse = await response.json()
+      console.log('[Atlas Search] 📦 /api/atlas/query response:', atlasResponse)
       
       // Store query and business IDs for state handoff
       setLastAtlasQuery(query)
       setLastAtlasBusinessIds(atlasResponse.businessIds)
       
       if (atlasResponse.businessIds.length > 0) {
+        console.log('[Atlas Search] ✅ Found', atlasResponse.businessIds.length, 'business IDs')
+        
         // Fetch full business data for map markers
         const limit = performanceMode.enabled ? performanceMode.maxMarkers : config.maxResults
+        console.log('[Atlas Search] 📡 Calling /api/atlas/search with limit:', limit)
         const detailsResponse = await fetch(`/api/atlas/search?q=${encodeURIComponent(query)}&limit=${limit}`)
         const detailsData = await detailsResponse.json()
+        console.log('[Atlas Search] 📦 /api/atlas/search response:', detailsData)
         
         if (detailsData.ok && detailsData.results) {
+          console.log('[Atlas Search] 📊 Total results from search:', detailsData.results.length)
+          
           const filteredResults = detailsData.results.filter((b: Business) => 
             atlasResponse.businessIds.includes(b.id)
           )
+          console.log('[Atlas Search] 📊 Filtered results (matching query IDs):', filteredResults.length)
+          console.log('[Atlas Search] 📊 Filtered business names:', filteredResults.map((b: Business) => b.business_name))
           
           setBusinesses(filteredResults)
           await addBusinessMarkers(filteredResults)
@@ -1351,6 +1398,7 @@ export function AtlasMode({
             
             // 🎬 AUTO-START TOUR: If multiple results, start tour after HUD dismisses
             if (filteredResults.length > 1) {
+              console.log('[Atlas Search] 🎬 Will start tour in', atlasResponse.ui.autoDismissMs + 500, 'ms')
               setTimeout(() => {
                 startTour(filteredResults) // Pass businesses explicitly
               }, atlasResponse.ui.autoDismissMs + 500) // Start tour 500ms after HUD dismisses
@@ -1387,8 +1435,11 @@ export function AtlasMode({
             resultsCount: filteredResults.length,
             performanceMode: performanceMode.enabled
           })
+        } else {
+          console.error('[Atlas Search] ❌ Search API returned no results or error:', detailsData)
         }
       } else {
+        console.log('[Atlas Search] ⚠️ No business IDs returned from query')
         // No results - show HUD bubble with message
         setHudSummary(atlasResponse.summary)
         setHudPrimaryBusinessName(null)
