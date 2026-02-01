@@ -167,7 +167,7 @@ export function AtlasOverlay({
                   {/* Tour status */}
                   {tourActive && (
                     <span className="px-2 py-0.5 bg-[#00d083]/20 text-[#00d083] text-xs rounded-lg">
-                      {tourPaused ? 'Paused' : 'Tour Active'}
+                      Tour Active
                     </span>
                   )}
                 </div>
@@ -182,17 +182,6 @@ export function AtlasOverlay({
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  
-                  {/* Pause/Resume tour */}
-                  {tourActive && onToggleTourPause && (
-                    <button
-                      onClick={onToggleTourPause}
-                      className="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
-                      title={tourPaused ? 'Resume tour' : 'Pause tour'}
-                    >
-                      {tourPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                    </button>
-                  )}
                   
                   {/* Stop tour */}
                   {tourActive && onStopTour && (
