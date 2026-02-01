@@ -19,18 +19,19 @@ type Props = {
 
 // Dynamic variant count based on category
 const CATEGORY_VARIANTS: Record<string, number> = {
-  restaurant: 6,
-  cafe: 4,
-  bakery: 5,
-  bar: 6,
-  dessert: 5,
-  barber: 4,
-  salon: 3,
-  wellness: 4,
-  pub: 3,
-  tattoo: 6,
+  restaurant: 10,
+  cafe: 10,
+  bakery: 10,
+  bar: 10,
+  dessert: 10,
+  barber: 10,
+  salon: 10,
+  wellness: 10,
+  pub: 10,
+  tattoo: 10,
+  entertainment: 10,
   // Default for other categories
-  default: 3,
+  default: 10,
 }
 
 function getVariantsForCategory(category: SystemCategory): Array<{ id: number; label: string }> {
