@@ -60,40 +60,43 @@ export async function POST(request: NextRequest) {
     const minRating = config?.atlas_min_rating || 4.4
     const maxResults = config?.atlas_max_results || 5
 
-    // 🔧 ATLAS FIX: Query ALL eligible businesses (paid + claimed-free + unclaimed)
-    // Use UNION of the three tier views to get business_tier correctly
+    // 🔧 ATLAS FIX: Use SAME logic as chat - query ALL columns from tier views
+    // This matches lib/ai/hybrid-chat.ts line 250-254
     console.log(`🗺️ Atlas: Querying database for "${message}"`)
     
     const searchTerm = `%${message}%`
     
-    // Query each tier view and combine results
-    const { data: tier1, error: t1Error } = await supabase
-      .from('business_profiles_chat_eligible')
-      .select('id, business_name, rating, latitude, longitude, business_tier, display_category')
-      .eq('city', city)
-      .gte('rating', minRating)
-      .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
+    // Query all three tier views (same as chat does)
+    const [tier1Response, tier2Response, tier3Response] = await Promise.all([
+      supabase
+        .from('business_profiles_chat_eligible')
+        .select('*')
+        .eq('city', city)
+        .gte('rating', minRating)
+        .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`),
+      
+      supabase
+        .from('business_profiles_lite_eligible')
+        .select('*')
+        .eq('city', city)
+        .gte('rating', minRating)
+        .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`),
+      
+      supabase
+        .from('business_profiles_ai_fallback_pool')
+        .select('*')
+        .eq('city', city)
+        .gte('rating', minRating)
+        .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
+    ])
     
-    const { data: tier2, error: t2Error } = await supabase
-      .from('business_profiles_lite_eligible')
-      .select('id, business_name, rating, latitude, longitude, business_tier, display_category')
-      .eq('city', city)
-      .gte('rating', minRating)
-      .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
+    // Tag each result with its simplified tier for pin coloring (match chat's mapPins format)
+    const tier1 = (tier1Response.data || []).map(b => ({ ...b, business_tier: 'paid' as const }))
+    const tier2 = (tier2Response.data || []).map(b => ({ ...b, business_tier: 'claimed_free' as const }))
+    const tier3 = (tier3Response.data || []).map(b => ({ ...b, business_tier: 'unclaimed' as const }))
     
-    const { data: tier3, error: t3Error } = await supabase
-      .from('business_profiles_ai_fallback_pool')
-      .select('id, business_name, rating, latitude, longitude, business_tier, display_category')
-      .eq('city', city)
-      .gte('rating', minRating)
-      .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
-    
-    // Combine and deduplicate by business ID
-    const allResults = [
-      ...(tier1 || []),
-      ...(tier2 || []),
-      ...(tier3 || [])
-    ]
+    // Combine and deduplicate by business ID (paid businesses win)
+    const allResults = [...tier1, ...tier2, ...tier3]
     
     const businessMap = new Map()
     allResults.forEach(b => {

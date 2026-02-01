@@ -107,7 +107,6 @@ export function AtlasMode({
   
   // Tour mode state
   const [tourActive, setTourActive] = useState(false)
-  const [tourPaused, setTourPaused] = useState(false)
   const tourTimerRef = useRef<NodeJS.Timeout | null>(null)
   
   // Track if event handlers are attached (prevent duplicates)
@@ -1005,6 +1004,8 @@ export function AtlasMode({
   const startTour = useCallback(() => {
     if (businesses.length === 0) return
     
+    console.log(`🎬 Starting tour of ${businesses.length} businesses`)
+    
     setTourActive(true)
     setTourPaused(false)
     setSelectedBusinessIndex(0)
@@ -1014,38 +1015,41 @@ export function AtlasMode({
     flyToBusiness(businesses[0])
     updateActiveBusinessMarker(businesses[0])
     
-    console.log(`🎬 Starting tour of ${businesses.length} businesses`)
-    
     // Start timer for next business
-    tourTimerRef.current = setTimeout(() => {
-      advanceTourToNext()
-    }, 3000) // 3 seconds per business
+    if (businesses.length > 1) {
+      tourTimerRef.current = setTimeout(() => {
+        advanceTour(1) // Start at index 1 (second business)
+      }, 3000)
+    }
   }, [businesses, flyToBusiness, updateActiveBusinessMarker])
   
-  // 🎬 TOUR MODE: Advance to next business
-  const advanceTourToNext = useCallback(() => {
-    if (!tourActive || tourPaused) return
-    
-    const nextIndex = selectedBusinessIndex + 1
-    
-    if (nextIndex >= businesses.length) {
+  // 🎬 TOUR MODE: Advance to specific index
+  const advanceTour = useCallback((targetIndex: number) => {
+    if (targetIndex >= businesses.length) {
       // Tour complete
       console.log('🎬 Tour complete!')
       setTourActive(false)
       return
     }
     
-    // Move to next business
-    setSelectedBusinessIndex(nextIndex)
-    setSelectedBusiness(businesses[nextIndex])
-    flyToBusiness(businesses[nextIndex])
-    updateActiveBusinessMarker(businesses[nextIndex])
+    console.log(`🎬 Tour advancing to business ${targetIndex + 1}/${businesses.length}`)
     
-    // Schedule next advance
-    tourTimerRef.current = setTimeout(() => {
-      advanceTourToNext()
-    }, 3000)
-  }, [tourActive, tourPaused, selectedBusinessIndex, businesses, flyToBusiness, updateActiveBusinessMarker])
+    // Move to target business
+    setSelectedBusinessIndex(targetIndex)
+    setSelectedBusiness(businesses[targetIndex])
+    flyToBusiness(businesses[targetIndex])
+    updateActiveBusinessMarker(businesses[targetIndex])
+    
+    // Schedule next advance if not at end
+    if (targetIndex < businesses.length - 1) {
+      tourTimerRef.current = setTimeout(() => {
+        advanceTour(targetIndex + 1)
+      }, 3000)
+    } else {
+      // End of tour
+      setTourActive(false)
+    }
+  }, [businesses, flyToBusiness, updateActiveBusinessMarker])
   
   // 🎬 TOUR MODE: Stop tour
   const stopTour = useCallback(() => {
@@ -1054,29 +1058,8 @@ export function AtlasMode({
       tourTimerRef.current = null
     }
     setTourActive(false)
-    setTourPaused(false)
     console.log('🎬 Tour stopped')
   }, [])
-  
-  // 🎬 TOUR MODE: Pause/resume tour
-  const toggleTourPause = useCallback(() => {
-    if (!tourActive) return
-    
-    if (tourPaused) {
-      // Resume
-      setTourPaused(false)
-      tourTimerRef.current = setTimeout(() => {
-        advanceTourToNext()
-      }, 3000)
-    } else {
-      // Pause
-      setTourPaused(true)
-      if (tourTimerRef.current) {
-        clearTimeout(tourTimerRef.current)
-        tourTimerRef.current = null
-      }
-    }
-  }, [tourActive, tourPaused, advanceTourToNext])
   
   // ⬅️➡️ MANUAL NAVIGATION: Go to next/previous business
   const goToNextBusiness = useCallback(() => {
@@ -1354,13 +1337,11 @@ export function AtlasMode({
         soundEnabled={soundEnabled}
         onToggleSound={onToggleSound}
         tourActive={tourActive}
-        tourPaused={tourPaused}
         totalBusinesses={businesses.length}
         currentBusinessIndex={selectedBusinessIndex}
         onNextBusiness={goToNextBusiness}
         onPreviousBusiness={goToPreviousBusiness}
         onStopTour={stopTour}
-        onToggleTourPause={toggleTourPause}
         onBusinessSelected={(businessId) => {
           trackEvent({
             eventType: 'atlas_business_selected',

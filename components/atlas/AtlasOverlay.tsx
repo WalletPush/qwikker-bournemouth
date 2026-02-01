@@ -28,13 +28,11 @@ interface AtlasOverlayProps {
   onDirectionsClicked?: (businessId: string) => void
   // Tour mode props
   tourActive?: boolean
-  tourPaused?: boolean
   totalBusinesses?: number
   currentBusinessIndex?: number
   onNextBusiness?: () => void
   onPreviousBusiness?: () => void
   onStopTour?: () => void
-  onToggleTourPause?: () => void
 }
 
 export function AtlasOverlay({
@@ -48,13 +46,11 @@ export function AtlasOverlay({
   onBusinessSelected,
   onDirectionsClicked,
   tourActive = false,
-  tourPaused = false,
   totalBusinesses = 0,
   currentBusinessIndex = 0,
   onNextBusiness,
   onPreviousBusiness,
-  onStopTour,
-  onToggleTourPause
+  onStopTour
 }: AtlasOverlayProps) {
   const [query, setQuery] = useState('')
   
