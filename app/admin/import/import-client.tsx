@@ -73,6 +73,7 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
   } | null>(null)
   const [skipDuplicates, setSkipDuplicates] = useState(true)
   const [sortBy, setSortBy] = useState<'rating' | 'distance' | 'reviews'>('rating')
+  const [searchFilter, setSearchFilter] = useState('') // ✅ NEW: Search filter state
   
   // Progress modal state
   const [showProgressModal, setShowProgressModal] = useState(false)
@@ -522,7 +523,20 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
               <div>
                 <CardTitle>Preview Results</CardTitle>
                 <CardDescription>
-                  Found {results.length} businesses matching your criteria
+                  {(() => {
+                    const filteredCount = results.filter(result => {
+                      if (!searchFilter.trim()) return true
+                      const query = searchFilter.toLowerCase()
+                      return (
+                        result.name.toLowerCase().includes(query) ||
+                        result.address.toLowerCase().includes(query) ||
+                        result.category.toLowerCase().includes(query)
+                      )
+                    }).length
+                    return searchFilter.trim()
+                      ? `Showing ${filteredCount} of ${results.length} businesses`
+                      : `Found ${results.length} businesses matching your criteria`
+                  })()}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -537,32 +551,47 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Sort and Filter Controls */}
-            <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border">
-              <div className="flex items-center gap-2 flex-1">
-                <Label htmlFor="sortBy" className="text-sm whitespace-nowrap">Sort by:</Label>
-                <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-                  <SelectTrigger className="w-[160px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="rating">Highest Rating</SelectItem>
-                    <SelectItem value="reviews">Most Reviews</SelectItem>
-                    <SelectItem value="distance">Nearest First</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input 
-                  type="checkbox" 
-                  id="skipDuplicates"
-                  checked={skipDuplicates}
-                  onChange={(e) => setSkipDuplicates(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300"
+            <div className="space-y-3">
+              {/* Search Filter */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Filter by business name, address, or category..."
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  className="pl-9"
                 />
-                <Label htmlFor="skipDuplicates" className="text-sm cursor-pointer">
-                  Skip duplicates
-                </Label>
+              </div>
+              
+              {/* Sort Controls */}
+              <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border">
+                <div className="flex items-center gap-2 flex-1">
+                  <Label htmlFor="sortBy" className="text-sm whitespace-nowrap">Sort by:</Label>
+                  <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rating">Highest Rating</SelectItem>
+                      <SelectItem value="reviews">Most Reviews</SelectItem>
+                      <SelectItem value="distance">Nearest First</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="checkbox" 
+                    id="skipDuplicates"
+                    checked={skipDuplicates}
+                    onChange={(e) => setSkipDuplicates(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <Label htmlFor="skipDuplicates" className="text-sm cursor-pointer">
+                    Skip duplicates
+                  </Label>
+                </div>
               </div>
             </div>
 
@@ -617,6 +646,16 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
             <div className="space-y-3">
               {results
                 .slice() // Create a copy to avoid mutating state
+                .filter(result => {
+                  // ✅ NEW: Filter by search query
+                  if (!searchFilter.trim()) return true
+                  const query = searchFilter.toLowerCase()
+                  return (
+                    result.name.toLowerCase().includes(query) ||
+                    result.address.toLowerCase().includes(query) ||
+                    result.category.toLowerCase().includes(query)
+                  )
+                })
                 .sort((a, b) => {
                   if (sortBy === 'rating') return b.rating - a.rating
                   if (sortBy === 'reviews') return b.reviewCount - a.reviewCount
