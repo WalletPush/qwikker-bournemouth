@@ -13,23 +13,34 @@ export async function POST(request: NextRequest) {
   try {
     // 🔒 SECURITY: Require admin authentication
     const cookieStore = await cookies()
-    const supabase = createServiceRoleClient(cookieStore)
-    
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    const adminSessionCookie = cookieStore.get('qwikker_admin_session')
+
+    if (!adminSessionCookie?.value) {
+      console.log('❌ No admin session cookie found')
+      return NextResponse.json({
+        success: false,
+        error: 'Admin authentication required'
+      }, { status: 401 })
     }
 
-    const admin = await getAdminById(user.id)
-    if (!admin) {
-      return NextResponse.json({ success: false, error: 'Not an admin' }, { status: 403 })
+    let adminSession
+    try {
+      adminSession = JSON.parse(adminSessionCookie.value)
+    } catch {
+      console.log('❌ Invalid admin session cookie')
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid admin session'
+      }, { status: 401 })
     }
 
     // 🌍 TENANT CONTEXT: Derive city from hostname
     const requestCity = await resolveRequestCity(request)
     
     // Verify admin has access to this city
-    if (!(await isAdminForCity(user.id, requestCity))) {
+    const admin = await getAdminById(adminSession.adminId)
+    if (!admin || !(await isAdminForCity(adminSession.adminId, requestCity))) {
+      console.log('❌ Admin lacks permission for city:', requestCity)
       return NextResponse.json({
         success: false,
         error: `You don't have admin access to ${requestCity}`
