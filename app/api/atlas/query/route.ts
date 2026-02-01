@@ -65,7 +65,10 @@ export async function POST(request: NextRequest) {
     console.log(`🗺️ Atlas: Querying database for "${message}" in city: ${city}`)
     console.log(`🗺️ Atlas: Min rating: ${minRating}, Max results: ${maxResults}`)
     
-    const searchTerm = `%${message}%`
+    // ✅ FIX: PostgREST uses * as wildcard, not %
+    // ✅ Search across display_category, system_category, google_primary_type, AND business_name
+    // This matches lib/ai/relevance-scorer.ts logic (lines 39-52)
+    const searchTerm = `*${message}*`
     console.log(`🗺️ Atlas: Search term: ${searchTerm}`)
     
     // Query all three tier views (same as chat does)
@@ -75,21 +78,21 @@ export async function POST(request: NextRequest) {
         .select('*')
         .eq('city', city)
         .gte('rating', minRating)
-        .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`),
+        .or(`display_category.ilike.${searchTerm},system_category.ilike.${searchTerm},google_primary_type.ilike.${searchTerm},business_name.ilike.${searchTerm}`),
       
       supabase
         .from('business_profiles_lite_eligible')
         .select('*')
         .eq('city', city)
         .gte('rating', minRating)
-        .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`),
+        .or(`display_category.ilike.${searchTerm},system_category.ilike.${searchTerm},google_primary_type.ilike.${searchTerm},business_name.ilike.${searchTerm}`),
       
       supabase
         .from('business_profiles_ai_fallback_pool')
         .select('*')
         .eq('city', city)
         .gte('rating', minRating)
-        .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
+        .or(`display_category.ilike.${searchTerm},system_category.ilike.${searchTerm},google_primary_type.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
     ])
     
     console.log(`🗺️ Atlas: Query results - T1: ${tier1Response.data?.length || 0}, T2: ${tier2Response.data?.length || 0}, T3: ${tier3Response.data?.length || 0}`)

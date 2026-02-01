@@ -1216,6 +1216,26 @@ export function AtlasMode({
       console.log('[Atlas] 🗺️ Current center:', map.current.getCenter())
       console.log('[Atlas] 🗺️ Current zoom:', map.current.getZoom())
       
+      // Helper function to start tour after flying to business
+      const startTourIfMultiple = () => {
+        // Select first business as active
+        setSelectedBusiness(first)
+        setSelectedBusinessIndex(0)
+        updateActiveBusinessMarker(first)
+        
+        // 🎬 AUTO-START TOUR: If multiple businesses from chat, start tour after a delay
+        if (incomingBusinesses.length > 1) {
+          console.log(`[Atlas] 🎬 Will auto-start tour in 2s (${incomingBusinesses.length} businesses from chat)`)
+          const tourTimeout = setTimeout(() => {
+            console.log('[Atlas] 🎬 Tour timeout fired! Calling startTour...')
+            startTour(incomingBusinesses) // Pass businesses explicitly
+          }, 2000) // Start tour 2s after arriving from chat
+          
+          // Store timeout for cleanup
+          tourTimerRef.current = tourTimeout
+        }
+      }
+      
       // ✅ CRITICAL: Wait for map to be truly loaded before moving
       if (!map.current.loaded()) {
         console.warn('[Atlas] ⏳ Map not fully loaded yet, waiting for idle...')
@@ -1232,6 +1252,9 @@ export function AtlasMode({
             map.current.fire('move')
             map.current.fire('moveend')
             console.log('[Atlas] ✅ jumpTo executed after idle with forced render')
+            
+            // ✅ START TOUR (idle branch)
+            startTourIfMultiple()
           }
         })
         return
@@ -1258,22 +1281,8 @@ export function AtlasMode({
         console.error('[Atlas] ❌ jumpTo FAILED:', error)
       }
       
-      // Select first business as active
-      setSelectedBusiness(first)
-      setSelectedBusinessIndex(0)
-      updateActiveBusinessMarker(first)
-      
-      // 🎬 AUTO-START TOUR: If multiple businesses from chat, start tour after a delay
-      if (incomingBusinesses.length > 1) {
-        console.log(`[Atlas] 🎬 Will auto-start tour in 2s (${incomingBusinesses.length} businesses from chat)`)
-        const tourTimeout = setTimeout(() => {
-          console.log('[Atlas] 🎬 Tour timeout fired! Calling startTour...')
-          startTour(incomingBusinesses) // Pass businesses explicitly
-        }, 2000) // Start tour 2s after arriving from chat
-        
-        // Store timeout for cleanup
-        tourTimerRef.current = tourTimeout
-      }
+      // ✅ START TOUR (main branch)
+      startTourIfMultiple()
     }
   }, [mapLoaded, incomingBusinesses, addBusinessMarkers, updateActiveBusinessMarker, startTour])
   
