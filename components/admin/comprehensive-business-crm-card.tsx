@@ -193,9 +193,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
         // Show success message
         alert(`✅ Success: ${result.message}`)
         
-        // Redirect to admin dashboard
-        router.push('/admin')
-        router.refresh()
+        // Use window.location to ensure proper redirect with subdomain
+        window.location.href = '/admin'
       } else {
         alert(`❌ Failed to delete business: ${result.error}`)
       }
