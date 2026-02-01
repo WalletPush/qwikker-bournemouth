@@ -47,6 +47,7 @@ export interface Business {
   google_place_id?: string
   website_url?: string
   phone?: string
+  business_tier?: string // ✅ For determining pin color
   isPaid?: boolean // ✅ For cyan pins (paid/trial businesses)
   isUnclaimed?: boolean // ✅ For grey pins (unclaimed businesses)
 }
@@ -102,6 +103,12 @@ export function AtlasMode({
   const [searching, setSearching] = useState(false)
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null)
+  const [selectedBusinessIndex, setSelectedBusinessIndex] = useState<number>(0)
+  
+  // Tour mode state
+  const [tourActive, setTourActive] = useState(false)
+  const [tourPaused, setTourPaused] = useState(false)
+  const tourTimerRef = useRef<NodeJS.Timeout | null>(null)
   
   // Track if event handlers are attached (prevent duplicates)
   const businessHandlersAttachedRef = useRef(false)
@@ -724,21 +731,29 @@ export function AtlasMode({
       }
       
       // Create GeoJSON features
-      const features = businesses.map(business => ({
-        type: 'Feature' as const,
-        properties: {
-          id: business.id,
-          name: business.business_name,
-          rating: business.rating,
-          category: business.display_category || 'Business',
-          isPaid: business.isPaid || false, // ✅ For pin coloring
-          isUnclaimed: business.isUnclaimed || false // ✅ For pin coloring
-        },
-        geometry: {
-          type: 'Point' as const,
-          coordinates: [business.longitude, business.latitude]
+      const features = businesses.map(business => {
+        // Determine pin styling based on simplified tier from chat
+        // mapPins use: 'paid' | 'unclaimed' | 'claimed_free'
+        const tier = business.business_tier || 'unclaimed'
+        const isPaid = tier === 'paid'
+        const isUnclaimed = tier === 'unclaimed'
+        
+        return {
+          type: 'Feature' as const,
+          properties: {
+            id: business.id,
+            name: business.business_name,
+            rating: business.rating,
+            category: business.display_category || 'Business',
+            isPaid: business.isPaid !== undefined ? business.isPaid : isPaid,
+            isUnclaimed: business.isUnclaimed !== undefined ? business.isUnclaimed : isUnclaimed
+          },
+          geometry: {
+            type: 'Point' as const,
+            coordinates: [business.longitude, business.latitude]
+          }
         }
-      }))
+      })
       
       // Add source
       console.log('[Atlas] 🔧 About to add source "businesses" with', features.length, 'features')
@@ -986,6 +1001,123 @@ export function AtlasMode({
     }
   }, [userLocation, playSound, mapLoaded])
   
+  // 🎬 TOUR MODE: Start automated tour through search results
+  const startTour = useCallback(() => {
+    if (businesses.length === 0) return
+    
+    setTourActive(true)
+    setTourPaused(false)
+    setSelectedBusinessIndex(0)
+    setSelectedBusiness(businesses[0])
+    
+    // Fly to first business
+    flyToBusiness(businesses[0])
+    updateActiveBusinessMarker(businesses[0])
+    
+    console.log(`🎬 Starting tour of ${businesses.length} businesses`)
+    
+    // Start timer for next business
+    tourTimerRef.current = setTimeout(() => {
+      advanceTourToNext()
+    }, 3000) // 3 seconds per business
+  }, [businesses, flyToBusiness, updateActiveBusinessMarker])
+  
+  // 🎬 TOUR MODE: Advance to next business
+  const advanceTourToNext = useCallback(() => {
+    if (!tourActive || tourPaused) return
+    
+    const nextIndex = selectedBusinessIndex + 1
+    
+    if (nextIndex >= businesses.length) {
+      // Tour complete
+      console.log('🎬 Tour complete!')
+      setTourActive(false)
+      return
+    }
+    
+    // Move to next business
+    setSelectedBusinessIndex(nextIndex)
+    setSelectedBusiness(businesses[nextIndex])
+    flyToBusiness(businesses[nextIndex])
+    updateActiveBusinessMarker(businesses[nextIndex])
+    
+    // Schedule next advance
+    tourTimerRef.current = setTimeout(() => {
+      advanceTourToNext()
+    }, 3000)
+  }, [tourActive, tourPaused, selectedBusinessIndex, businesses, flyToBusiness, updateActiveBusinessMarker])
+  
+  // 🎬 TOUR MODE: Stop tour
+  const stopTour = useCallback(() => {
+    if (tourTimerRef.current) {
+      clearTimeout(tourTimerRef.current)
+      tourTimerRef.current = null
+    }
+    setTourActive(false)
+    setTourPaused(false)
+    console.log('🎬 Tour stopped')
+  }, [])
+  
+  // 🎬 TOUR MODE: Pause/resume tour
+  const toggleTourPause = useCallback(() => {
+    if (!tourActive) return
+    
+    if (tourPaused) {
+      // Resume
+      setTourPaused(false)
+      tourTimerRef.current = setTimeout(() => {
+        advanceTourToNext()
+      }, 3000)
+    } else {
+      // Pause
+      setTourPaused(true)
+      if (tourTimerRef.current) {
+        clearTimeout(tourTimerRef.current)
+        tourTimerRef.current = null
+      }
+    }
+  }, [tourActive, tourPaused, advanceTourToNext])
+  
+  // ⬅️➡️ MANUAL NAVIGATION: Go to next/previous business
+  const goToNextBusiness = useCallback(() => {
+    if (businesses.length === 0) return
+    
+    // Stop tour if active
+    if (tourActive) {
+      stopTour()
+    }
+    
+    const nextIndex = (selectedBusinessIndex + 1) % businesses.length
+    setSelectedBusinessIndex(nextIndex)
+    setSelectedBusiness(businesses[nextIndex])
+    flyToBusiness(businesses[nextIndex])
+    updateActiveBusinessMarker(businesses[nextIndex])
+  }, [businesses, selectedBusinessIndex, tourActive, stopTour, flyToBusiness, updateActiveBusinessMarker])
+  
+  const goToPreviousBusiness = useCallback(() => {
+    if (businesses.length === 0) return
+    
+    // Stop tour if active
+    if (tourActive) {
+      stopTour()
+    }
+    
+    const prevIndex = selectedBusinessIndex === 0 ? businesses.length - 1 : selectedBusinessIndex - 1
+    setSelectedBusinessIndex(prevIndex)
+    setSelectedBusiness(businesses[prevIndex])
+    flyToBusiness(businesses[prevIndex])
+    updateActiveBusinessMarker(businesses[prevIndex])
+  }, [businesses, selectedBusinessIndex, tourActive, stopTour, flyToBusiness, updateActiveBusinessMarker])
+  
+  // Cleanup tour timer on unmount
+  useEffect(() => {
+    return () => {
+      if (tourTimerRef.current) {
+        clearTimeout(tourTimerRef.current)
+      }
+    }
+  }, [])
+  
   // Search handler (calls Atlas query endpoint for HUD bubble response)
   const handleSearch = useCallback(async (query: string) => {
     setSearching(true)
@@ -1029,12 +1161,20 @@ export function AtlasMode({
           setBusinesses(filteredResults)
           await addBusinessMarkers(filteredResults)
           
-          // Select first result as active and fly to it
+          // Select first result as active
           if (filteredResults.length > 0) {
+            setSelectedBusinessIndex(0)
             const firstBusiness = filteredResults[0]
             setSelectedBusiness(firstBusiness)
             await updateActiveBusinessMarker(firstBusiness)
             flyToBusiness(firstBusiness)
+            
+            // 🎬 AUTO-START TOUR: If multiple results, start tour after HUD dismisses
+            if (filteredResults.length > 1) {
+              setTimeout(() => {
+                startTour()
+              }, atlasResponse.ui.autoDismissMs + 500) // Start tour 500ms after HUD dismisses
+            }
           }
           
           // Find primary business name (if specified)
@@ -1213,6 +1353,14 @@ export function AtlasMode({
         userLocation={userLocation}
         soundEnabled={soundEnabled}
         onToggleSound={onToggleSound}
+        tourActive={tourActive}
+        tourPaused={tourPaused}
+        totalBusinesses={businesses.length}
+        currentBusinessIndex={selectedBusinessIndex}
+        onNextBusiness={goToNextBusiness}
+        onPreviousBusiness={goToPreviousBusiness}
+        onStopTour={stopTour}
+        onToggleTourPause={toggleTourPause}
         onBusinessSelected={(businessId) => {
           trackEvent({
             eventType: 'atlas_business_selected',

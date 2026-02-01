@@ -11,7 +11,7 @@
  */
 
 import { useState } from 'react'
-import { Search, X, Volume2, VolumeX, MapPin, Star, Phone, Globe, Navigation } from 'lucide-react'
+import { Search, X, Volume2, VolumeX, MapPin, Star, Phone, Globe, Navigation, ChevronLeft, ChevronRight, Pause, Play, XCircle } from 'lucide-react'
 import type { Business } from './AtlasMode'
 import type { Coordinates } from '@/lib/location/useUserLocation'
 import { calculateWalkingTime } from '@/lib/location/useUserLocation'
@@ -26,6 +26,15 @@ interface AtlasOverlayProps {
   onToggleSound: () => void
   onBusinessSelected?: (businessId: string) => void
   onDirectionsClicked?: (businessId: string) => void
+  // Tour mode props
+  tourActive?: boolean
+  tourPaused?: boolean
+  totalBusinesses?: number
+  currentBusinessIndex?: number
+  onNextBusiness?: () => void
+  onPreviousBusiness?: () => void
+  onStopTour?: () => void
+  onToggleTourPause?: () => void
 }
 
 export function AtlasOverlay({
@@ -37,7 +46,15 @@ export function AtlasOverlay({
   soundEnabled,
   onToggleSound,
   onBusinessSelected,
-  onDirectionsClicked
+  onDirectionsClicked,
+  tourActive = false,
+  tourPaused = false,
+  totalBusinesses = 0,
+  currentBusinessIndex = 0,
+  onNextBusiness,
+  onPreviousBusiness,
+  onStopTour,
+  onToggleTourPause
 }: AtlasOverlayProps) {
   const [query, setQuery] = useState('')
   
@@ -142,6 +159,69 @@ export function AtlasOverlay({
       {selectedBusiness && (
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 pointer-events-none">
           <div className="pointer-events-auto bg-black/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 shadow-2xl">
+            {/* Tour Controls (Top of card) */}
+            {totalBusinesses > 1 && (
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  {/* Progress indicator */}
+                  <span className="text-sm text-white/60">
+                    {currentBusinessIndex + 1} of {totalBusinesses}
+                  </span>
+                  
+                  {/* Tour status */}
+                  {tourActive && (
+                    <span className="px-2 py-0.5 bg-[#00d083]/20 text-[#00d083] text-xs rounded-lg">
+                      {tourPaused ? 'Paused' : 'Tour Active'}
+                    </span>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {/* Previous button */}
+                  <button
+                    onClick={onPreviousBusiness}
+                    className="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    disabled={totalBusinesses <= 1}
+                    title="Previous business"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  
+                  {/* Pause/Resume tour */}
+                  {tourActive && onToggleTourPause && (
+                    <button
+                      onClick={onToggleTourPause}
+                      className="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+                      title={tourPaused ? 'Resume tour' : 'Pause tour'}
+                    >
+                      {tourPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                    </button>
+                  )}
+                  
+                  {/* Stop tour */}
+                  {tourActive && onStopTour && (
+                    <button
+                      onClick={onStopTour}
+                      className="p-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-red-400 transition-colors"
+                      title="Stop tour"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  )}
+                  
+                  {/* Next button */}
+                  <button
+                    onClick={onNextBusiness}
+                    className="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    disabled={totalBusinesses <= 1}
+                    title="Next business"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+            
             <div className="flex items-start gap-4">
               {/* Business Info */}
               <div className="flex-1 min-w-0">

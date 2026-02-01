@@ -60,21 +60,51 @@ export async function POST(request: NextRequest) {
     const minRating = config?.atlas_min_rating || 4.4
     const maxResults = config?.atlas_max_results || 5
 
-    // 🔧 ATLAS FIX: Query database directly instead of KB search
-    // Reason: Triangle GYROSS and other businesses may have no KB content
-    // Solution: Search by display_category and business_name directly
+    // 🔧 ATLAS FIX: Query ALL eligible businesses (paid + claimed-free + unclaimed)
+    // Use UNION of the three tier views to get business_tier correctly
     console.log(`🗺️ Atlas: Querying database for "${message}"`)
     
     const searchTerm = `%${message}%`
-    const { data: businessesRaw, error: dbError } = await supabase
+    
+    // Query each tier view and combine results
+    const { data: tier1, error: t1Error } = await supabase
       .from('business_profiles_chat_eligible')
       .select('id, business_name, rating, latitude, longitude, business_tier, display_category')
       .eq('city', city)
       .gte('rating', minRating)
       .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
-      .limit(maxResults * 2)
     
-    if (dbError || !businessesRaw || businessesRaw.length === 0) {
+    const { data: tier2, error: t2Error } = await supabase
+      .from('business_profiles_lite_eligible')
+      .select('id, business_name, rating, latitude, longitude, business_tier, display_category')
+      .eq('city', city)
+      .gte('rating', minRating)
+      .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
+    
+    const { data: tier3, error: t3Error } = await supabase
+      .from('business_profiles_ai_fallback_pool')
+      .select('id, business_name, rating, latitude, longitude, business_tier, display_category')
+      .eq('city', city)
+      .gte('rating', minRating)
+      .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
+    
+    // Combine and deduplicate by business ID
+    const allResults = [
+      ...(tier1 || []),
+      ...(tier2 || []),
+      ...(tier3 || [])
+    ]
+    
+    const businessMap = new Map()
+    allResults.forEach(b => {
+      if (!businessMap.has(b.id)) {
+        businessMap.set(b.id, b)
+      }
+    })
+    
+    const businessesRaw = Array.from(businessMap.values()).slice(0, maxResults * 3)
+    
+    if (businessesRaw.length === 0) {
       console.log(`🗺️ Atlas: No businesses found for "${message}"`)
       return NextResponse.json({
         summary: 'No high-rated matches nearby. Try a broader search.',
