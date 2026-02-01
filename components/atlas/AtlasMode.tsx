@@ -696,31 +696,37 @@ export function AtlasMode({
   }, [])
   
   // 🎬 TOUR MODE: Start automated tour through search results
-  const startTour = useCallback(() => {
-    if (businesses.length === 0) return
+  const startTour = useCallback((businessesToTour?: Business[]) => {
+    // Use passed businesses or fallback to ref (never state, as it may not be updated yet)
+    const tourBusinesses = businessesToTour || businessesRef.current
     
-    console.log(`🎬 Starting tour of ${businesses.length} businesses`)
+    if (tourBusinesses.length === 0) {
+      console.log('🎬 Cannot start tour - no businesses')
+      return
+    }
+    
+    console.log(`🎬 Starting tour of ${tourBusinesses.length} businesses`)
     
     setTourActive(true)
     setSelectedBusinessIndex(0)
-    setSelectedBusiness(businesses[0])
+    setSelectedBusiness(tourBusinesses[0])
     
     // Update HUD with first business info
-    setHudSummary(generateBusinessHudMessage(businesses[0]))
+    setHudSummary(generateBusinessHudMessage(tourBusinesses[0]))
     setHudPrimaryBusinessName(null)
     setHudVisible(true)
     
     // Fly to first business
-    flyToBusiness(businesses[0])
-    updateActiveBusinessMarker(businesses[0])
+    flyToBusiness(tourBusinesses[0])
+    updateActiveBusinessMarker(tourBusinesses[0])
     
     // Start timer for next business
-    if (businesses.length > 1) {
+    if (tourBusinesses.length > 1) {
       tourTimerRef.current = setTimeout(() => {
         advanceTour(1) // Start at index 1 (second business)
       }, 3000)
     }
-  }, [businesses, flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
+  }, [flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
   
   // 🎬 TOUR MODE: Advance to specific index
   const advanceTour = useCallback((targetIndex: number) => {
@@ -1208,7 +1214,7 @@ export function AtlasMode({
       if (incomingBusinesses.length > 1) {
         console.log(`[Atlas] 🎬 Will auto-start tour in 2s (${incomingBusinesses.length} businesses from chat)`)
         setTimeout(() => {
-          startTour()
+          startTour(incomingBusinesses) // Pass businesses explicitly
         }, 2000) // Start tour 2s after arriving from chat
       }
     }
@@ -1328,7 +1334,7 @@ export function AtlasMode({
             // 🎬 AUTO-START TOUR: If multiple results, start tour after HUD dismisses
             if (filteredResults.length > 1) {
               setTimeout(() => {
-                startTour()
+                startTour(filteredResults) // Pass businesses explicitly
               }, atlasResponse.ui.autoDismissMs + 500) // Start tour 500ms after HUD dismisses
             }
           }
