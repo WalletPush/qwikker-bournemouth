@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -78,6 +78,44 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
   // ✅ NEW: Text search for specific businesses
   const [searchMode, setSearchMode] = useState<'radius' | 'text'>('radius')
   const [textQuery, setTextQuery] = useState('') // e.g., "Bollywood Indian Cuisine"
+  const [liveResults, setLiveResults] = useState<BusinessResult[]>([]) // Live search results
+  const [isLiveSearching, setIsLiveSearching] = useState(false)
+
+  // ✅ Debounced live search as user types
+  useEffect(() => {
+    if (searchMode !== 'text' || !textQuery.trim() || textQuery.length < 3) {
+      setLiveResults([])
+      return
+    }
+
+    setIsLiveSearching(true)
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await fetch('/api/admin/import-businesses/text-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            textQuery,
+            location: `${displayName}, ${countryName}`
+          })
+        })
+
+        const data = await response.json()
+        if (data.success) {
+          setLiveResults(data.results || [])
+        } else {
+          setLiveResults([])
+        }
+      } catch (error) {
+        console.error('Live search error:', error)
+        setLiveResults([])
+      } finally {
+        setIsLiveSearching(false)
+      }
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [textQuery, searchMode, displayName, countryName])
   
   // Progress modal state
   const [showProgressModal, setShowProgressModal] = useState(false)
@@ -463,39 +501,68 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
                   <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold mb-1">Search for a specific business</p>
-                    <p>Enter the business name to find and import it directly (e.g., "Bollywood Indian Cuisine").</p>
+                    <p>Start typing a business name to see live results (e.g., "Bollywood Indian Cuisine").</p>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Label htmlFor="textQuery">Business Name</Label>
-                <Input
-                  id="textQuery"
-                  placeholder='e.g., "Bollywood Indian Cuisine"'
-                  value={textQuery}
-                  onChange={(e) => setTextQuery(e.target.value)}
-                />
-              </div>
+                <div className="relative">
+                  <Input
+                    id="textQuery"
+                    placeholder='Type to search... (min 3 characters)'
+                    value={textQuery}
+                    onChange={(e) => setTextQuery(e.target.value)}
+                    className="pr-10"
+                  />
+                  {isLiveSearching && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <span className="animate-spin">⏳</span>
+                    </div>
+                  )}
+                </div>
 
-              <Button 
-                onClick={handleTextSearch} 
-                disabled={isSearching || !textQuery.trim()}
-                size="lg"
-                className="w-full"
-              >
-                {isSearching ? (
-                  <>
-                    <span className="animate-spin mr-2">⏳</span>
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4 mr-2" />
-                    Search for "{textQuery || 'business'}"
-                  </>
+                {/* Live Results Dropdown */}
+                {textQuery.length >= 3 && liveResults.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+                    <div className="p-2 space-y-1">
+                      {liveResults.map((result) => (
+                        <button
+                          key={result.placeId}
+                          onClick={() => {
+                            // Add to preview
+                            setResults([result])
+                            setSelectedResults([result.placeId])
+                            setShowPreview(true)
+                            setLiveResults([]) // Clear dropdown
+                          }}
+                          className="w-full text-left p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                        >
+                          <div className="font-semibold">{result.name}</div>
+                          <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                            <span className="flex items-center gap-1">
+                              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                              {result.rating.toFixed(1)}
+                            </span>
+                            <span>•</span>
+                            <span>{result.reviewCount} reviews</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {result.address}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </Button>
+
+                {textQuery.length >= 3 && !isLiveSearching && liveResults.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No businesses found matching "{textQuery}"
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
