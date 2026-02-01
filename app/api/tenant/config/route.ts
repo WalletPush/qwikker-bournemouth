@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveRequestCity } from '@/lib/utils/tenant-city'
 
+// Force dynamic rendering - never cache this endpoint
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 /**
  * GET /api/tenant/config
  * 
@@ -54,7 +58,7 @@ export async function GET(request: NextRequest) {
       .select(`
         city,
         status,
-        google_places_public_key,
+        google_places_api_key,
         google_places_country,
         city_center_lat,
         city_center_lng,
@@ -88,17 +92,11 @@ export async function GET(request: NextRequest) {
       }, { status: 404 })
     }
     
-    // Check if Places API is configured
-    if (!config.google_places_public_key) {
-      if (isDev) {
-        console.debug(`[Tenant Config] No Google Places API key configured for ${city}`)
-      }
-      
-      return NextResponse.json({
-        ok: false,
-        city: config.city,
-        message: 'Google Places not configured for this franchise'
-      }, { status: 200 }) // Not a server error, just not configured
+    // Google Places is optional - used for onboarding, but not required for Atlas
+    const hasGooglePlaces = !!config.google_places_api_key
+    
+    if (!hasGooglePlaces && isDev) {
+      console.debug(`[Tenant Config] No Google Places API key configured for ${city} (optional for Atlas)`)
     }
     
     // Use city_center_lat/lng if set, otherwise fallback to legacy lat/lng
@@ -108,7 +106,7 @@ export async function GET(request: NextRequest) {
     
     if (isDev) {
       console.debug(`[Tenant Config] Loaded config for ${city}:`, {
-        hasKey: !!config.google_places_public_key,
+        hasKey: !!config.google_places_api_key,
         hasCenter,
         center: hasCenter ? `${centerLat},${centerLng}` : null,
         usingLegacyCenter: !config.city_center_lat && !!config.lat,
@@ -124,11 +122,11 @@ export async function GET(request: NextRequest) {
     const atlasEnabled = isActive && (config.atlas_enabled ?? false)
     
     // Return safe config (never include server keys, only public tokens)
-    return NextResponse.json({
+    const response = NextResponse.json({
       ok: true,
       city: config.city,
       status: config.status,
-      googlePlacesPublicKey: config.google_places_public_key || null,
+      googlePlacesPublicKey: config.google_places_api_key || null,
       country: config.google_places_country || 'gb',
       center: hasCenter ? {
         lat: parseFloat(centerLat as any),
@@ -155,6 +153,14 @@ export async function GET(request: NextRequest) {
         usingLegacyCenter: !config.city_center_lat && !!config.lat
       }
     })
+    
+    // 🔥 CRITICAL: No caching - always fetch fresh config
+    // This ensures Atlas toggles in HQ Admin take effect immediately
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    
+    return response
     
   } catch (error) {
     console.error('[Tenant Config] Error:', error)
