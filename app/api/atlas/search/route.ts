@@ -71,51 +71,54 @@ export async function GET(request: NextRequest) {
     const limitParam = url.searchParams.get('limit')
     const limit = limitParam ? parseInt(limitParam, 10) : (config.atlas_max_results ?? 12)
     
-    // Build query using AI-safe view (excludes free_tier automatically)
-    let dbQuery = supabase
-      .from('business_profiles_ai_eligible')
-      .select(`
-        id,
-        business_name,
-        business_tier,
-        latitude,
-        longitude,
-        rating,
-        review_count,
-        business_tagline,
-        display_category,
-        business_address,
-        google_place_id,
-        website_url,
-        phone
-      `)
-      .eq('city', city)
-      .gte('rating', config.atlas_min_rating ?? 4.4)
-      .in('status', ['approved', 'unclaimed'])
+    // Build query using ALL THREE TIER VIEWS (same as /api/atlas/query)
+    // Query all three tiers: paid, claimed-free, unclaimed
+    const [tier1Response, tier2Response, tier3Response] = await Promise.all([
+      supabase
+        .from('business_profiles_chat_eligible')
+        .select('*')
+        .eq('city', city)
+        .gte('rating', config.atlas_min_rating ?? 4.4)
+        .or(query ? `business_name.ilike.%${query}%,display_category.ilike.%${query}%,business_tagline.ilike.%${query}%,business_address.ilike.%${query}%` : 'id.neq.null'),
+      
+      supabase
+        .from('business_profiles_lite_eligible')
+        .select('*')
+        .eq('city', city)
+        .gte('rating', config.atlas_min_rating ?? 4.4)
+        .or(query ? `business_name.ilike.%${query}%,display_category.ilike.%${query}%` : 'id.neq.null'),
+      
+      supabase
+        .from('business_profiles_ai_fallback_pool')
+        .select('*')
+        .eq('city', city)
+        .gte('rating', config.atlas_min_rating ?? 4.4)
+        .or(query ? `business_name.ilike.%${query}%,display_category.ilike.%${query}%` : 'id.neq.null')
+    ])
     
-    // If search query provided, filter by name/category/tagline/address
-    if (query) {
-      // Use text search across multiple fields
-      dbQuery = dbQuery.or(
-        `business_name.ilike.%${query}%,display_category.ilike.%${query}%,business_tagline.ilike.%${query}%,business_address.ilike.%${query}%`
-      )
-    }
+    console.log(`[Atlas Search] Query results - T1: ${tier1Response.data?.length || 0}, T2: ${tier2Response.data?.length || 0}, T3: ${tier3Response.data?.length || 0}`)
     
-    // Order by rating and review count (highest quality first)
-    dbQuery = dbQuery
-      .order('rating', { ascending: false })
-      .order('review_count', { ascending: false })
-      .limit(Math.min(limit, 50)) // Cap at 50 for performance
+    // Tag each with simplified tier
+    const tier1 = (tier1Response.data || []).map(b => ({ ...b, business_tier: 'paid' as const }))
+    const tier2 = (tier2Response.data || []).map(b => ({ ...b, business_tier: 'claimed_free' as const }))
+    const tier3 = (tier3Response.data || []).map(b => ({ ...b, business_tier: 'unclaimed' as const }))
     
-    const { data: businesses, error: searchError } = await dbQuery
+    // Combine and deduplicate
+    const allResults = [...tier1, ...tier2, ...tier3]
+    const businessMap = new Map()
+    allResults.forEach(b => {
+      if (!businessMap.has(b.id)) {
+        businessMap.set(b.id, b)
+      }
+    })
     
-    if (searchError) {
-      console.error('[Atlas Search] Database error:', searchError)
-      return NextResponse.json({
-        ok: false,
-        error: 'Search failed'
-      }, { status: 500 })
-    }
+    const businesses = Array.from(businessMap.values())
+      .sort((a, b) => {
+        // Sort by rating desc, then review_count desc
+        if (a.rating !== b.rating) return (b.rating || 0) - (a.rating || 0)
+        return (b.review_count || 0) - (a.review_count || 0)
+      })
+      .slice(0, Math.min(limit, 50))
     
     // 🔒 CRITICAL: Runtime check for tier leakage (should never happen via view)
     const leakedBusinesses = (businesses || []).filter(b => 
