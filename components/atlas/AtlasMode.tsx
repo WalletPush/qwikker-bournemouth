@@ -675,8 +675,8 @@ export function AtlasMode({
   const generateBusinessHudMessage = useCallback((business: Business): string => {
     const parts: string[] = []
     
-    // Name and rating
-    parts.push(`**${business.business_name}** — ${business.rating}★`)
+    // Name and rating (NO MARKDOWN - plain text only)
+    parts.push(`${business.business_name} — ${business.rating}★`)
     
     // Category
     if (business.display_category) {
@@ -685,9 +685,8 @@ export function AtlasMode({
     
     // Extract what people love from reviews
     if (business.google_reviews_highlights && business.google_reviews_highlights.length > 0) {
-      // Look for positive keywords in reviews
       const reviews = business.google_reviews_highlights
-      const loveKeywords = ['love', 'amazing', 'excellent', 'fantastic', 'delicious', 'best', 'perfect', 'wonderful', 'incredible', 'outstanding']
+      const loveKeywords = ['love', 'amazing', 'excellent', 'fantastic', 'delicious', 'best', 'perfect', 'wonderful', 'incredible', 'outstanding', 'great', 'awesome']
       
       // Try to find a sentence with positive keywords
       let loveSnippet: string | null = null
@@ -710,25 +709,25 @@ export function AtlasMode({
       if (loveSnippet) {
         // Clean up and shorten if needed
         let cleanSnippet = loveSnippet
-        if (cleanSnippet.length > 100) {
-          cleanSnippet = cleanSnippet.substring(0, 97) + '...'
+        if (cleanSnippet.length > 120) {
+          cleanSnippet = cleanSnippet.substring(0, 117) + '...'
         }
-        parts.push(`💬 "${cleanSnippet}"`)
+        parts.push(`"${cleanSnippet}"`)
       } else {
-        // Fallback to first review snippet
-        const review = reviews[0]
-        const reviewText = review.text.split('.')[0] + '.'
-        const shortReview = reviewText.length > 80 ? reviewText.substring(0, 77) + '...' : reviewText
-        parts.push(`💬 "${shortReview}"`)
+        // Fallback: try to get ANY positive review
+        const anyReview = reviews[0]
+        if (anyReview) {
+          const sentences = anyReview.text.split(/[.!?]+/)
+          const firstSentence = sentences[0]?.trim()
+          if (firstSentence && firstSentence.length > 10) {
+            const shortSentence = firstSentence.length > 120 ? firstSentence.substring(0, 117) + '...' : firstSentence
+            parts.push(`"${shortSentence}"`)
+          }
+        }
       }
     }
     
-    // Add phone if available
-    if (business.phone) {
-      parts.push(`📞 ${business.phone}`)
-    }
-    
-    return parts.join('\n\n')
+    return parts.join(' • ')
   }, [])
   
   // 🎬 TOUR MODE: Start automated tour through search results
@@ -1267,9 +1266,13 @@ export function AtlasMode({
       // 🎬 AUTO-START TOUR: If multiple businesses from chat, start tour after a delay
       if (incomingBusinesses.length > 1) {
         console.log(`[Atlas] 🎬 Will auto-start tour in 2s (${incomingBusinesses.length} businesses from chat)`)
-        setTimeout(() => {
+        const tourTimeout = setTimeout(() => {
+          console.log('[Atlas] 🎬 Tour timeout fired! Calling startTour...')
           startTour(incomingBusinesses) // Pass businesses explicitly
         }, 2000) // Start tour 2s after arriving from chat
+        
+        // Store timeout for cleanup
+        tourTimerRef.current = tourTimeout
       }
     }
   }, [mapLoaded, incomingBusinesses, addBusinessMarkers, updateActiveBusinessMarker, startTour])
