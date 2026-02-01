@@ -62,9 +62,11 @@ export async function POST(request: NextRequest) {
 
     // 🔧 ATLAS FIX: Use SAME logic as chat - query ALL columns from tier views
     // This matches lib/ai/hybrid-chat.ts line 250-254
-    console.log(`🗺️ Atlas: Querying database for "${message}"`)
+    console.log(`🗺️ Atlas: Querying database for "${message}" in city: ${city}`)
+    console.log(`🗺️ Atlas: Min rating: ${minRating}, Max results: ${maxResults}`)
     
     const searchTerm = `%${message}%`
+    console.log(`🗺️ Atlas: Search term: ${searchTerm}`)
     
     // Query all three tier views (same as chat does)
     const [tier1Response, tier2Response, tier3Response] = await Promise.all([
@@ -90,6 +92,11 @@ export async function POST(request: NextRequest) {
         .or(`display_category.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
     ])
     
+    console.log(`🗺️ Atlas: Query results - T1: ${tier1Response.data?.length || 0}, T2: ${tier2Response.data?.length || 0}, T3: ${tier3Response.data?.length || 0}`)
+    if (tier1Response.error) console.error('🗺️ Atlas: Tier 1 error:', tier1Response.error)
+    if (tier2Response.error) console.error('🗺️ Atlas: Tier 2 error:', tier2Response.error)
+    if (tier3Response.error) console.error('🗺️ Atlas: Tier 3 error:', tier3Response.error)
+    
     // Tag each result with its simplified tier for pin coloring (match chat's mapPins format)
     const tier1 = (tier1Response.data || []).map(b => ({ ...b, business_tier: 'paid' as const }))
     const tier2 = (tier2Response.data || []).map(b => ({ ...b, business_tier: 'claimed_free' as const }))
@@ -97,6 +104,7 @@ export async function POST(request: NextRequest) {
     
     // Combine and deduplicate by business ID (paid businesses win)
     const allResults = [...tier1, ...tier2, ...tier3]
+    console.log(`🗺️ Atlas: Combined ${allResults.length} total results before deduplication`)
     
     const businessMap = new Map()
     allResults.forEach(b => {

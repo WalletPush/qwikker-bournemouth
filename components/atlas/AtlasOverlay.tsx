@@ -250,6 +250,18 @@ export function AtlasOverlay({
                     {selectedBusiness.business_address}
                   </p>
                 )}
+                
+                {/* Review Snippet */}
+                {selectedBusiness.google_reviews_highlights && selectedBusiness.google_reviews_highlights.length > 0 && (
+                  <div className="mt-3 p-3 bg-white/5 rounded-lg border border-white/10">
+                    <p className="text-sm text-white/80 italic">
+                      "{selectedBusiness.google_reviews_highlights[0].text}"
+                    </p>
+                    <p className="text-xs text-white/40 mt-1">
+                      — {selectedBusiness.google_reviews_highlights[0].author}
+                    </p>
+                  </div>
+                )}
               </div>
               
               {/* Directions Button */}

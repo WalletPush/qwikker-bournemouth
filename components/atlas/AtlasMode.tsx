@@ -50,6 +50,11 @@ export interface Business {
   business_tier?: string // ✅ For determining pin color
   isPaid?: boolean // ✅ For cyan pins (paid/trial businesses)
   isUnclaimed?: boolean // ✅ For grey pins (unclaimed businesses)
+  google_reviews_highlights?: Array<{
+    text: string
+    author: string
+    rating: number
+  }>
 }
 
 export interface AtlasConfig {
@@ -1000,6 +1005,30 @@ export function AtlasMode({
     }
   }, [userLocation, playSound, mapLoaded])
   
+  // 🎬 TOUR MODE: Generate HUD message for a business
+  const generateBusinessHudMessage = useCallback((business: Business): string => {
+    const parts: string[] = []
+    
+    // Name and rating
+    parts.push(`${business.business_name} — ${business.rating}★`)
+    
+    // Category
+    if (business.display_category) {
+      parts.push(business.display_category)
+    }
+    
+    // Review snippet if available
+    if (business.google_reviews_highlights && business.google_reviews_highlights.length > 0) {
+      const review = business.google_reviews_highlights[0]
+      // Take first sentence or first 80 chars
+      const reviewText = review.text.split('.')[0] + '.'
+      const shortReview = reviewText.length > 80 ? reviewText.substring(0, 80) + '...' : reviewText
+      parts.push(`"${shortReview}"`)
+    }
+    
+    return parts.join(' • ')
+  }, [])
+  
   // 🎬 TOUR MODE: Start automated tour through search results
   const startTour = useCallback(() => {
     if (businesses.length === 0) return
@@ -1007,9 +1036,13 @@ export function AtlasMode({
     console.log(`🎬 Starting tour of ${businesses.length} businesses`)
     
     setTourActive(true)
-    setTourPaused(false)
     setSelectedBusinessIndex(0)
     setSelectedBusiness(businesses[0])
+    
+    // Update HUD with first business info
+    setHudSummary(generateBusinessHudMessage(businesses[0]))
+    setHudPrimaryBusinessName(null)
+    setHudVisible(true)
     
     // Fly to first business
     flyToBusiness(businesses[0])
@@ -1021,7 +1054,7 @@ export function AtlasMode({
         advanceTour(1) // Start at index 1 (second business)
       }, 3000)
     }
-  }, [businesses, flyToBusiness, updateActiveBusinessMarker])
+  }, [businesses, flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
   
   // 🎬 TOUR MODE: Advance to specific index
   const advanceTour = useCallback((targetIndex: number) => {
@@ -1029,16 +1062,24 @@ export function AtlasMode({
       // Tour complete
       console.log('🎬 Tour complete!')
       setTourActive(false)
+      setHudVisible(false) // Hide HUD when tour ends
       return
     }
     
     console.log(`🎬 Tour advancing to business ${targetIndex + 1}/${businesses.length}`)
     
+    const targetBusiness = businesses[targetIndex]
+    
     // Move to target business
     setSelectedBusinessIndex(targetIndex)
-    setSelectedBusiness(businesses[targetIndex])
-    flyToBusiness(businesses[targetIndex])
-    updateActiveBusinessMarker(businesses[targetIndex])
+    setSelectedBusiness(targetBusiness)
+    flyToBusiness(targetBusiness)
+    updateActiveBusinessMarker(targetBusiness)
+    
+    // Update HUD with new business info
+    setHudSummary(generateBusinessHudMessage(targetBusiness))
+    setHudPrimaryBusinessName(null)
+    setHudVisible(true)
     
     // Schedule next advance if not at end
     if (targetIndex < businesses.length - 1) {
@@ -1048,8 +1089,12 @@ export function AtlasMode({
     } else {
       // End of tour
       setTourActive(false)
+      // Keep HUD visible for a bit longer at the end
+      setTimeout(() => {
+        setHudVisible(false)
+      }, 4000)
     }
-  }, [businesses, flyToBusiness, updateActiveBusinessMarker])
+  }, [businesses, flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
   
   // 🎬 TOUR MODE: Stop tour
   const stopTour = useCallback(() => {
