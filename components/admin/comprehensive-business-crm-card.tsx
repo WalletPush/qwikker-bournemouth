@@ -190,15 +190,18 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
       const result = await response.json()
 
       if (result.success) {
-        // Redirect to businesses list after successful deletion
-        router.push('/admin/businesses')
+        // Show success message
+        alert(`✅ Success: ${result.message}`)
+        
+        // Redirect to admin dashboard
+        router.push('/admin')
         router.refresh()
       } else {
-        alert(`Failed to delete business: ${result.error}`)
+        alert(`❌ Failed to delete business: ${result.error}`)
       }
     } catch (error) {
       console.error('Error deleting business:', error)
-      alert('Failed to delete business. Please try again.')
+      alert('❌ Failed to delete business. Please try again.')
     }
   }
 

@@ -38,10 +38,10 @@ export function DeleteBusinessModal({
     setIsDeleting(true)
     try {
       await onConfirm()
-      onClose()
+      // Don't close modal - let parent handle redirect
+      // Modal will disappear when page changes
     } catch (error) {
       console.error('Delete failed:', error)
-    } finally {
       setIsDeleting(false)
       setConfirmText('')
     }
@@ -131,7 +131,7 @@ export function DeleteBusinessModal({
             {isDeleting ? (
               <>
                 <span className="animate-spin mr-2">⏳</span>
-                Deleting...
+                Deleting... Please wait
               </>
             ) : (
               <>
