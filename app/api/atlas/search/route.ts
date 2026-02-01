@@ -73,8 +73,8 @@ export async function GET(request: NextRequest) {
     
     // Build query using ALL THREE TIER VIEWS (same as /api/atlas/query)
     // ✅ FIX: PostgREST uses * as wildcard, not %
-    // ✅ Search across display_category, system_category, google_primary_type, business_name (matches relevance scorer)
-    // Query all three tiers: paid, claimed-free, unclaimed
+    // ✅ Tier 1 searches: name, display_category, system_category, google_primary_type, tagline, address
+    // ✅ Tier 2/3 search: name, display_category, google_primary_type (system_category not available)
     const [tier1Response, tier2Response, tier3Response] = await Promise.all([
       supabase
         .from('business_profiles_chat_eligible')
@@ -88,14 +88,14 @@ export async function GET(request: NextRequest) {
         .select('*')
         .eq('city', city)
         .gte('rating', config.atlas_min_rating ?? 4.4)
-        .or(query ? `business_name.ilike.*${query}*,display_category.ilike.*${query}*,system_category.ilike.*${query}*,google_primary_type.ilike.*${query}*` : 'id.neq.null'),
+        .or(query ? `business_name.ilike.*${query}*,display_category.ilike.*${query}*,google_primary_type.ilike.*${query}*` : 'id.neq.null'),
       
       supabase
         .from('business_profiles_ai_fallback_pool')
         .select('*')
         .eq('city', city)
         .gte('rating', config.atlas_min_rating ?? 4.4)
-        .or(query ? `business_name.ilike.*${query}*,display_category.ilike.*${query}*,system_category.ilike.*${query}*,google_primary_type.ilike.*${query}*` : 'id.neq.null')
+        .or(query ? `business_name.ilike.*${query}*,display_category.ilike.*${query}*,google_primary_type.ilike.*${query}*` : 'id.neq.null')
     ])
     
     console.log(`[Atlas Search] Query results - T1: ${tier1Response.data?.length || 0}, T2: ${tier2Response.data?.length || 0}, T3: ${tier3Response.data?.length || 0}`)

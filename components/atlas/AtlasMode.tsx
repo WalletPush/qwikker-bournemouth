@@ -117,6 +117,7 @@ export function AtlasMode({
   // Track if event handlers are attached (prevent duplicates)
   const businessHandlersAttachedRef = useRef(false)
   const businessesRef = useRef<Business[]>([])
+  const processedIncomingBusinessesRef = useRef<string | null>(null) // Track if we've processed this batch
   
   // HUD bubble state
   const [hudVisible, setHudVisible] = useState(false)
@@ -1196,6 +1197,14 @@ export function AtlasMode({
       return
     }
     
+    // ✅ PREVENT LOOP: Check if we've already processed this exact set of businesses
+    const businessKey = incomingBusinesses.map(b => b.id).sort().join(',')
+    if (processedIncomingBusinessesRef.current === businessKey) {
+      console.log('[Atlas] ⏭️ Already processed these businesses, skipping')
+      return
+    }
+    processedIncomingBusinessesRef.current = businessKey
+    
     console.log('[Atlas] 🎯 Received businesses from chat:', incomingBusinesses.length, incomingBusinesses)
     
     // ✅ CRITICAL: Update ref FIRST before any effects run
@@ -1224,7 +1233,8 @@ export function AtlasMode({
         updateActiveBusinessMarker(first)
         
         // 🎬 AUTO-START TOUR: If multiple businesses from chat, start tour after a delay
-        if (incomingBusinesses.length > 1) {
+        // ✅ PREVENT LOOP: Don't schedule if tour already active or timeout already set
+        if (incomingBusinesses.length > 1 && !tourActive && !tourTimerRef.current) {
           console.log(`[Atlas] 🎬 Will auto-start tour in 2s (${incomingBusinesses.length} businesses from chat)`)
           const tourTimeout = setTimeout(() => {
             console.log('[Atlas] 🎬 Tour timeout fired! Calling startTour...')
@@ -1233,6 +1243,8 @@ export function AtlasMode({
           
           // Store timeout for cleanup
           tourTimerRef.current = tourTimeout
+        } else if (tourActive || tourTimerRef.current) {
+          console.log('[Atlas] ⏭️ Skipping tour schedule - already active or scheduled')
         }
       }
       
