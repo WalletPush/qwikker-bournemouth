@@ -18,6 +18,7 @@ import { InitialAvatar } from '@/components/admin/initial-avatar'
 import { formatDate, formatLastSync, formatJoinedDate } from '@/lib/utils/date-formatter'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { OfferDeletionModal } from '@/components/admin/offer-deletion-modal'
+import { DeleteBusinessModal } from '@/components/admin/delete-business-modal'
 import { computeEntitlementState } from '@/lib/utils/entitlement-helpers'
 import { TierManagementCard } from './tier-management-card'
 import { ExtendTrialButton } from './extend-trial-button'
@@ -98,6 +99,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const [isEditingCategory, setIsEditingCategory] = useState(false)
   const [categoryValue, setCategoryValue] = useState(business.business_category || business.display_category || '')
   const [isSavingCategory, setIsSavingCategory] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   
   // ✅ CRITICAL: Extract subscription from array format ONCE at the top!
   const sub = getSubscription(business)
@@ -169,6 +171,34 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     } catch (error) {
       console.error('Error deleting offer:', error)
       alert('Failed to delete offer. Please try again.')
+    }
+  }
+
+  // Handle business deletion
+  const handleDeleteBusiness = async () => {
+    try {
+      const response = await fetch('/api/admin/delete-business', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          businessId: business.id
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Redirect to businesses list after successful deletion
+        router.push('/admin/businesses')
+        router.refresh()
+      } else {
+        alert(`Failed to delete business: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error deleting business:', error)
+      alert('Failed to delete business. Please try again.')
     }
   }
 
@@ -2504,6 +2534,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                         size="sm"
                         variant="outline"
                         className="border-red-600 text-red-400 hover:bg-red-600/20"
+                        onClick={() => setShowDeleteModal(true)}
                       >
                         Delete Business
                       </Button>
@@ -2644,6 +2675,15 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
         onClose={() => setDeletionModal({ isOpen: false, offer: null })}
         offer={deletionModal.offer}
         onDelete={handleDeleteOffer}
+      />
+
+      {/* Business Deletion Modal */}
+      <DeleteBusinessModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteBusiness}
+        businessName={business.business_name}
+        businessId={business.id}
       />
     </>
   )
