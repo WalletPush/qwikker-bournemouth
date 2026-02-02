@@ -138,8 +138,9 @@ export async function GET(request: NextRequest) {
       atlas: {
         enabled: atlasEnabled,
         provider: config.atlas_provider || 'mapbox',
-        mapboxPublicToken: config.mapbox_public_token || null,
-        styleUrl: config.mapbox_style_url || null,
+        // 🔧 DEV: Fallback to env vars if not in DB (makes local dev easier)
+        mapboxPublicToken: config.mapbox_public_token || process.env.NEXT_PUBLIC_MAPBOX_TOKEN || null,
+        styleUrl: config.mapbox_style_url || process.env.NEXT_PUBLIC_MAPBOX_STYLE_URL || null,
         defaultZoom: config.atlas_default_zoom ?? 13,
         pitch: config.atlas_pitch ?? 45,
         bearing: config.atlas_bearing ?? 0,
