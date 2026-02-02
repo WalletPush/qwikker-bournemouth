@@ -27,7 +27,7 @@ import type { AtlasResponse } from '@/lib/ai/prompts/atlas'
 import {
   getUserLocationLayers,
   getBusinessPinLayers,
-  getArrivalPulseLayer,
+  // getArrivalPulseLayer, // 🚨 REMOVED: Mapbox doesn't support feature-state in filters
   getClusterLayers,
   getActiveBusinessLayers,
   getRouteLayers,
@@ -479,17 +479,17 @@ export function AtlasMode({
   const clearMarkers = useCallback(() => {
     if (!map.current) return
     
-    // Cancel any active pulse animation
-    if (activePulseAnimation.current !== null) {
-      cancelAnimationFrame(activePulseAnimation.current)
-      activePulseAnimation.current = null
-    }
+    // 🚨 REMOVED: Pulse animation cleanup (no longer used)
+    // if (activePulseAnimation.current !== null) {
+    //   cancelAnimationFrame(activePulseAnimation.current)
+    //   activePulseAnimation.current = null
+    // }
     
     // Clear business layers (including clusters)
     const businessLayerIds = [
       'business-pins-glow', 
-      'business-pins', 
-      'business-pins-arrival-pulse',
+      'business-pins',
+      // 'business-pins-arrival-pulse', // 🚨 Removed - layer no longer added
       'business-clusters',
       'business-cluster-count'
     ]
@@ -655,83 +655,12 @@ export function AtlasMode({
     }
   }, [mapLoaded])
   
-  // Track active pulse animation (for cancellation)
-  const activePulseAnimation = useRef<number | null>(null)
+  // 🚨 REMOVED: Arrival pulse animation
+  // Mapbox doesn't support feature-state in layer filters, causing errors
+  // TODO: Re-implement with a separate GeoJSON source if needed
   
-  // Trigger pin pulse animation (subtle premium arrival effect)
-  const triggerPinPulse = useCallback((businessId: string) => {
-    if (!map.current || !mapLoaded) return
-    
-    // Cancel any previous pulse animation
-    if (activePulseAnimation.current !== null) {
-      cancelAnimationFrame(activePulseAnimation.current)
-      activePulseAnimation.current = null
-    }
-    
-    try {
-      // Set feature-state to show pulse layer for this business
-      map.current.setFeatureState(
-        { source: 'businesses', id: businessId },
-        { isPulsing: true }
-      )
-      
-      // Animation params
-      const duration = 800 // ms (premium, subtle)
-      const startRadius = 15
-      const endRadius = 50
-      const startOpacity = 0.8
-      const endOpacity = 0
-      const startTime = performance.now()
-      
-      const animate = (currentTime: number) => {
-        if (!map.current) return
-        
-        const elapsed = currentTime - startTime
-        const progress = Math.min(elapsed / duration, 1)
-        
-        // Ease-out cubic for smooth deceleration
-        const eased = 1 - Math.pow(1 - progress, 3)
-        
-        // Calculate current values
-        const currentRadius = startRadius + (endRadius - startRadius) * eased
-        const currentOpacity = startOpacity + (endOpacity - startOpacity) * eased
-        
-        // Update paint properties
-        map.current.setPaintProperty('business-pins-arrival-pulse', 'circle-radius', currentRadius)
-        map.current.setPaintProperty('business-pins-arrival-pulse', 'circle-opacity', currentOpacity)
-        
-        if (progress < 1) {
-          // Continue animation
-          activePulseAnimation.current = requestAnimationFrame(animate)
-        } else {
-          // Animation complete - clean up
-          map.current.setFeatureState(
-            { source: 'businesses', id: businessId },
-            { isPulsing: false }
-          )
-          // Reset properties for next pulse
-          map.current.setPaintProperty('business-pins-arrival-pulse', 'circle-radius', startRadius)
-          map.current.setPaintProperty('business-pins-arrival-pulse', 'circle-opacity', startOpacity)
-          activePulseAnimation.current = null
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[Atlas] ✨ Pin pulse completed for:', businessId)
-          }
-        }
-      }
-      
-      // Start animation
-      activePulseAnimation.current = requestAnimationFrame(animate)
-      
-    } catch (error) {
-      console.error('[Atlas] Failed to trigger pin pulse:', error)
-      // Clean up on error
-      if (activePulseAnimation.current !== null) {
-        cancelAnimationFrame(activePulseAnimation.current)
-        activePulseAnimation.current = null
-      }
-    }
-  }, [mapLoaded])
+  // const activePulseAnimation = useRef<number | null>(null)
+  // const triggerPinPulse = useCallback((businessId: string) => { ... }, [mapLoaded])
   
   // Fly to business with smooth animation + arrival ping
   const flyToBusiness = useCallback((business: Business) => {
@@ -747,12 +676,12 @@ export function AtlasMode({
     // Update active business marker immediately
     updateActiveBusinessMarker(business)
     
-    // Set up moveend listener to trigger pulse when camera arrives
-    const onMoveEnd = () => {
-      triggerPinPulse(business.id) // ✨ Trigger arrival pulse
-      map.current?.off('moveend', onMoveEnd) // Clean up listener
-    }
-    map.current.once('moveend', onMoveEnd)
+    // 🚨 REMOVED: Pulse animation (Mapbox limitation)
+    // const onMoveEnd = () => {
+    //   triggerPinPulse(business.id)
+    //   map.current?.off('moveend', onMoveEnd)
+    // }
+    // map.current.once('moveend', onMoveEnd)
     
     map.current.flyTo({
       center: [business.longitude, business.latitude],
@@ -773,7 +702,7 @@ export function AtlasMode({
       triggerArrivalPing(business)
     }, 2000)
     
-  }, [playSound, updateActiveBusinessMarker, triggerArrivalPing, triggerPinPulse])
+  }, [playSound, updateActiveBusinessMarker, triggerArrivalPing]) // 🚨 Removed triggerPinPulse
   
   // 🎬 TOUR MODE: Generate HUD message for a business
   const generateBusinessHudMessage = useCallback((business: Business): string => {
@@ -1196,18 +1125,14 @@ export function AtlasMode({
         }
       })
       
-      // Add arrival pulse layer (above business pins, controlled by feature-state)
-      try {
-        const pulseLayer = getArrivalPulseLayer()
-        if (beforeLayer) {
-          map.current.addLayer(pulseLayer, beforeLayer)
-        } else {
-          map.current.addLayer(pulseLayer)
-        }
-        console.log('[Atlas] ✅ Arrival pulse layer added')
-      } catch (pulseError) {
-        console.error('[Atlas] ❌ Failed to add pulse layer:', pulseError)
-      }
+      // 🚨 REMOVED: Arrival pulse layer (Mapbox doesn't support feature-state in filters)
+      // try {
+      //   const pulseLayer = getArrivalPulseLayer()
+      //   map.current.addLayer(pulseLayer, beforeLayer)
+      //   console.log('[Atlas] ✅ Arrival pulse layer added')
+      // } catch (pulseError) {
+      //   console.error('[Atlas] ❌ Failed to add pulse layer:', pulseError)
+      // }
       
       // ✨ Add cluster layers (for dense areas)
       try {

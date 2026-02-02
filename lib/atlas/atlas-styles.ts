@@ -111,26 +111,9 @@ export const getBusinessPinLayers = () => {
   return [pulsingPins]
 }
 
-/**
- * Arrival pulse layer (animated on pin focus)
- * Uses feature-state to control which pin pulses
- * Animates via setPaintProperty in triggerPinPulse()
- */
-export const getArrivalPulseLayer = (): CircleLayerSpecification => {
-  return {
-    id: 'business-pins-arrival-pulse',
-    type: 'circle',
-    source: 'businesses',
-    // Only show pulse ring for features with isPulsing=true in feature-state
-    filter: ['==', ['feature-state', 'isPulsing'], true],
-    paint: {
-      'circle-radius': 15, // Will be animated 15 → 50
-      'circle-color': NEON_CYAN,
-      'circle-opacity': 0.8, // Will be animated 0.8 → 0
-      'circle-blur': 1
-    }
-  }
-}
+// 🚨 REMOVED: Arrival pulse layer
+// Mapbox doesn't support feature-state in filters for circle layers (error: "feature-state expression is not supported in a filter")
+// TODO: Re-implement pulse using a separate GeoJSON source if needed
 
 /**
  * Business cluster layers (for dense areas)
