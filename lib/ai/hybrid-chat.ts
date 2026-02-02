@@ -388,93 +388,69 @@ export async function generateHybridAIResponse(
       }
     }
     
-    // Build knowledge context with offer availability
-    // 🚨 CRITICAL: Sort by tier FIRST so qwikker_picks appear at TOP
-    const sortedBusinessResults = businessResults.success && businessResults.results.length > 0
-      ? [...businessResults.results].sort((a, b) => {
-          const tierPriority = {
-            'qwikker_picks': 0,  // ⭐ QWIKKER PICK - ALWAYS FIRST
-            'featured': 1,       // Featured badge
-            'free_trial': 1,     // Free trial = Featured tier (same priority)
-            'starter': 2,        // No badge
-            'recommended': 3
-          }
-          const aTier = a.business_tier || 'recommended'
-          const bTier = b.business_tier || 'recommended'
-          const aPriority = tierPriority[aTier] ?? 999
-          const bPriority = tierPriority[bTier] ?? 999
-          return aPriority - bPriority
-        })
-      : []
+    // 🎯 BUILD AI CONTEXT FROM THREE-TIER BUSINESSES (NOT KB!)
+    // CRITICAL FIX: AI must see ALL businesses (paid, claimed, unclaimed) with proper tier ranking
     
-    // 🚨 DEBUG: Log sorted order with tiers
-    if (sortedBusinessResults.length > 0) {
-      console.log('🎯 SORTED BUSINESS ORDER:')
-      sortedBusinessResults.forEach((b, idx) => {
-        console.log(`  ${idx + 1}. ${b.business_name} [TIER: ${b.business_tier || 'unknown'}]`)
+    // Merge all three tiers with tier priority
+    const allBusinessesForContext = [
+      ...tier1Businesses.map(b => ({ ...b, tierSource: 'tier1', tierPriority: 1, tierLabel: b.effective_tier || 'paid' })),
+      ...tier2Businesses.map(b => ({ ...b, tierSource: 'tier2', tierPriority: 2, tierLabel: 'claimed_free' })),
+      ...tier3Businesses.map(b => ({ ...b, tierSource: 'tier3', tierPriority: 3, tierLabel: 'unclaimed' }))
+    ]
+    
+    // Sort by tier priority, then rating, then review count
+    const sortedForContext = allBusinessesForContext.sort((a, b) => {
+      if (a.tierPriority !== b.tierPriority) return a.tierPriority - b.tierPriority
+      if (b.rating !== a.rating) return (b.rating || 0) - (a.rating || 0)
+      return (b.review_count || 0) - (a.review_count || 0)
+    })
+    
+    console.log(`🎯 Building AI context from ${sortedForContext.length} businesses (T1=${tier1Businesses.length}, T2=${tier2Businesses.length}, T3=${tier3Businesses.length})`)
+    if (sortedForContext.length > 0) {
+      console.log(`📊 Top 5 for AI:`)
+      sortedForContext.slice(0, 5).forEach((b, i) => {
+        console.log(`  ${i + 1}. ${b.business_name} [${b.tierLabel}] ${b.rating}★`)
       })
     }
     
-    // 💚 Fetch vibes for KB businesses (for AI context)
-    const kbVibesMap = new Map()
-    if (sortedBusinessResults.length > 0) {
-      await Promise.all(
-        sortedBusinessResults.map(async (result) => {
-          if (result.business_id) {
-            const vibes = await getBusinessVibeStats(result.business_id)
-            if (vibes && vibes.total_vibes >= 5) {
-              kbVibesMap.set(result.business_id, vibes)
-            }
-          }
-        })
-      )
-      console.log(`💚 Found vibes for ${kbVibesMap.size} KB businesses (5+ vibes each)`)
-    }
-    
-    const businessContext = sortedBusinessResults.length > 0
-      ? sortedBusinessResults.map((result, index) => {
-          const offerCount = result.business_id ? businessOfferCounts[result.business_id] || 0 : 0
+    // Build context with reviews from DB data (limit to top 15 to keep prompt size reasonable)
+    const businessContext = sortedForContext.length > 0
+      ? sortedForContext.slice(0, 15).map((business, index) => {
+          const offerCount = business.id ? businessOfferCounts[business.id] || 0 : 0
           const offerText = offerCount > 0 ? ` [Has ${offerCount} ${offerCount === 1 ? 'offer' : 'offers'} available]` : ''
           
-          // 💚 Add vibes to context if available (5+ vibes)
-          const vibes = result.business_id ? kbVibesMap.get(result.business_id) : null
-          const vibesText = vibes 
-            ? ` 💚 ${vibes.positive_percentage}% positive Qwikker vibes (${vibes.total_vibes} vibes)` 
-            : ''
+          // Build description from available fields
+          const descParts = []
+          if (business.business_tagline) descParts.push(business.business_tagline)
+          if (business.display_category) descParts.push(business.display_category)
+          if (business.business_address) descParts.push(business.business_address)
+          const description = descParts.join(' | ') || 'No description available'
           
-          // 🎯 CRITICAL: Pull REAL review snippet from database (not KB content)
-          const dbBusiness = [...tier1Businesses, ...tier2Businesses, ...tier3Businesses].find(b => b.id === result.business_id)
+          // Extract review snippet WITH VARIETY
           let reviewSnippet = ''
-          
-          if (dbBusiness?.google_reviews_highlights && Array.isArray(dbBusiness.google_reviews_highlights) && dbBusiness.google_reviews_highlights.length > 0) {
-            // Rotate through reviews to ensure variety (use index to pick different review per business)
-            const review = dbBusiness.google_reviews_highlights[index % dbBusiness.google_reviews_highlights.length]
+          if (business.google_reviews_highlights && Array.isArray(business.google_reviews_highlights) && business.google_reviews_highlights.length > 0) {
+            const review = business.google_reviews_highlights[index % business.google_reviews_highlights.length]
             
             if (review?.text) {
-              // Extract a compelling snippet (30-80 chars)
               const reviewText = review.text.replace(/[\r\n]+/g, ' ').trim()
-              
-              // Try to find a sentence with positive keywords
               const sentences = reviewText.split(/[.!?]+/).filter(s => s.trim().length > 20)
               const positiveKeywords = ['love', 'amazing', 'best', 'great', 'perfect', 'delicious', 'fantastic', 'excellent', 'wonderful', 'awesome', 'incredible', 'favorite', 'favourite']
               
               let snippet = sentences.find(s => positiveKeywords.some(kw => s.toLowerCase().includes(kw))) || sentences[0] || reviewText.substring(0, 80)
-              
-              // Clean and truncate
               snippet = snippet.trim()
-              if (snippet.length > 80) {
-                snippet = snippet.substring(0, 77) + '...'
-              }
+              if (snippet.length > 80) snippet = snippet.substring(0, 77) + '...'
               
-              // Format: "Review: 'text here'" (rating optional)
               const rating = review.rating ? `${review.rating}★ — ` : ''
               reviewSnippet = `\n📝 ${rating}"${snippet}"`
+              console.log(`✅ Review for ${business.business_name}: "${snippet.substring(0, 40)}..."`)
             }
           }
           
-          return `**${result.business_name}** [TIER: ${result.business_tier || 'standard'}]: ${result.content}${offerText}${vibesText}${reviewSnippet}`
+          return `**${business.business_name}** [TIER: ${business.tierLabel}] ${business.rating}★ (${business.review_count || 0} reviews): ${description}${offerText}${reviewSnippet}`
         }).join('\n\n')
-      : ''
+      : 'No businesses available in this city yet.'
+    
+    console.log(`📊 AI Context: ${sortedForContext.length} total businesses, showing top 15, context length: ${businessContext.length} chars`)
 
     const cityContext = cityResults.success && cityResults.results.length > 0
       ? cityResults.results.map(result => 
@@ -497,6 +473,15 @@ export async function generateHybridAIResponse(
     const cityDisplayName = city.charAt(0).toUpperCase() + city.slice(1)
     const systemPrompt = `You're a local friend helping someone explore ${cityDisplayName}—not a chatbot. You're knowledgeable, enthusiastic, and genuinely helpful.
 
+🚨🚨🚨 CRITICAL RULE - READ THIS FIRST 🚨🚨🚨
+
+When user asks for restaurants/cafes/bars:
+1. Pick EXACTLY 2 standouts (not 1, not 3, not 5, not 6 - EXACTLY 2!)
+2. Use REAL review quotes from the 📝 sections below (NOT "people are obsessed")
+3. Each business gets DIFFERENT quote
+4. End with "Want me to show you them on Atlas?"
+5. DO NOT list more than 2 businesses in your first response!
+
 YOUR PERSONALITY:
 - Talk like a best friend who knows the city inside out
 - Be warm, conversational, and enthusiastic (never robotic or formal)
@@ -504,32 +489,23 @@ YOUR PERSONALITY:
 - Ask engaging follow-up questions
 - Use natural language: "Oh I love that place!" not "Here are your options:"
 
-🎬 HYBRID REVEAL PATTERN (CRITICAL - THIS IS YOUR FLOW):
-When user asks for restaurants/cafes/bars/etc:
+🎬 HYBRID REVEAL PATTERN (FOLLOW THIS EXACTLY):
 
 Step 1 — Human-style opener (emotion):
 "Ooo good choice." / "Nice, Thai is strong here." / "Perfect timing for that!"
 → Short. Confident. Human.
 
-Step 2 — Tease 2 STANDOUTS ONLY (not 6, not 1, exactly 2):
-"Annie's Thai is ridiculously loved (5★, locals rave about it)
-Bird's Nest Thai Kitchen is another gem — proper authentic vibes."
+Step 2 — Tease 2 STANDOUTS ONLY (EXACTLY 2, NO MORE!):
 → Curated picks with WHY they're good
-→ Include rating, vibe, what makes them special
-→ **Use the REAL review snippets provided in the business data** (marked with 📝)
-→ Each business has DIFFERENT review content - never repeat phrases like "people are obsessed" for multiple businesses!
-→ NO full list dump here!
+→ Include rating + REAL review quote from 📝
+→ Each business MUST have DIFFERENT quote
+→ NO "people are obsessed" - use the actual quotes!
+→ NO full list dump!
 
-Step 3 — Invite to Atlas (the magic moment):
+Step 3 — Invite to Atlas:
 "Want me to show you them on Atlas?"
-→ Makes Atlas feel like a reveal, not a feature
-→ When they tap it → cinematic map tour happens
 
-Step 4 — List becomes secondary:
-→ After Atlas tour, or if they ask "show list", THEN show more businesses
-→ List = reference, Atlas = experience
-
-✅ GOOD EXAMPLE:
+✅ CORRECT RESPONSE:
 User: "any thai restaurants?"
 You: "Ooo good call. Thai is strong around here.
 
@@ -538,25 +514,22 @@ Bird's Nest Thai Kitchen is another gem (4.9★, 'authentic flavors that transpo
 
 Want me to show you where they are on Atlas?"
 
-❌ BAD EXAMPLE (directory style + repetitive - DON'T DO THIS):
-"Here are 6 Thai restaurants in the area:
-1. Annie's Thai — 5★ — people are obsessed with this place
-2. Bird's Nest — 5★ — people are obsessed with this place
-3. Place 3 — 4.8★ — people are obsessed with this place
-[...more]"
+❌ WRONG - YOU'RE DOING THIS NOW (STOP IT!):
+"So here's what I'm thinking – these spots are all excellent:
+• Bird's Nest Thai Kitchen — 4.5★ — consistently excellent
+• Annie's Thai — 5★ — people are obsessed with this place 🔥
+• 2 BULAN — 4.8★ — people are obsessed with this place 🔥
+• Dining Corner — 4.8★ — people are obsessed with this place 🔥
+• Seeds Eatery — 4.6★ — consistently excellent"
 
-🚨 VARIETY RULE:
-- Each business in AVAILABLE BUSINESSES has a unique review snippet (📝)
-- NEVER use generic phrases like "people are obsessed" repeatedly
+🚨 VARIETY RULE - STOP REPEATING YOURSELF:
+- Each business in AVAILABLE BUSINESSES has a 📝 review snippet
+- USE THE ACTUAL QUOTES - they're right there in the data!
+- NEVER say "people are obsessed" multiple times
 - Pull from the actual review text provided
-- Make each business sound DIFFERENT based on their real reviews
-- If no review snippet is provided, use the business description/tagline instead
+- Make each business sound DIFFERENT
 
-🎯 KEY MINDSET:
-- Chat = storyteller
-- Atlas = the stage
-- List = the appendix
-- Story → Stage → Appendix (in that order!)
+🎯 KEY RULE: ONLY 2 BUSINESSES IN FIRST RESPONSE!
 
 HOW TO RESPOND:
 ✅ GOOD: "Oh nice! Triangle GYROSS is brilliant—they've got this amazing menu with 5 signature items. They're open right now and only a quick walk from town. Want me to show you what they're known for?"
