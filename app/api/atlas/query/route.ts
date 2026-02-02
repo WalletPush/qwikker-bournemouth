@@ -65,35 +65,58 @@ export async function POST(request: NextRequest) {
     console.log(`🗺️ Atlas: Querying database for "${message}" in city: ${city}`)
     console.log(`🗺️ Atlas: Min rating: ${minRating}, Max results: ${maxResults}`)
     
-    // ✅ FIX: PostgREST uses * as wildcard, not %
+    // ✅ FIX: PostgREST uses % as wildcard for ilike, not *
     // ✅ Clean the search term: remove punctuation, extra spaces
     const cleanMessage = message.replace(/[?!.,;:'"()]/g, '').trim()
-    const searchTerm = `*${cleanMessage}*`
+    const searchTerm = `%${cleanMessage}%`  // 🚨 FIX: Use % not * for PostgREST
     console.log(`🗺️ Atlas: Search term: ${searchTerm} (original: "${message}")`)
     
-    // Query all three tier views (same as chat does)
-    const [tier1Response, tier2Response, tier3Response] = await Promise.all([
-      supabase
-        .from('business_profiles_chat_eligible')
-        .select('*')
-        .eq('city', city)
-        .gte('rating', minRating)
-        .or(`display_category.ilike.${searchTerm},system_category.ilike.${searchTerm},google_primary_type.ilike.${searchTerm},business_name.ilike.${searchTerm}`),
-      
-      supabase
-        .from('business_profiles_lite_eligible')
-        .select('*')
-        .eq('city', city)
-        .gte('rating', minRating)
-        .or(`display_category.ilike.${searchTerm},google_primary_type.ilike.${searchTerm},business_name.ilike.${searchTerm}`),
-      
-      supabase
-        .from('business_profiles_ai_fallback_pool')
-        .select('*')
-        .eq('city', city)
-        .gte('rating', minRating)
-        .or(`display_category.ilike.${searchTerm},google_primary_type.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
-    ])
+    // 🗺️ ATLAS FIX: Query base table, not AI views
+    // Atlas (the map) should show ALL businesses, not just AI-eligible ones
+    // AI eligibility views are too restrictive for map visualization
+    const { data: allBusinesses, error: searchError } = await supabase
+      .from('business_profiles')
+      .select('*')
+      .eq('city', city)
+      .gte('rating', minRating)
+      .not('latitude', 'is', null)  // Must have coordinates for map
+      .not('longitude', 'is', null)
+      .or(`display_category.ilike.${searchTerm},system_category.ilike.${searchTerm},google_primary_type.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
+      .limit(maxResults * 3)  // Get extra for sorting
+    
+    if (searchError) {
+      console.error('🗺️ Atlas: Search error:', searchError)
+    }
+    
+    console.log(`🗺️ Atlas: Raw query returned ${allBusinesses?.length || 0} businesses from base table`)
+    if (allBusinesses && allBusinesses.length > 0) {
+      console.log(`🗺️ Atlas: Sample businesses:`, allBusinesses.slice(0, 3).map(b => ({
+        name: b.business_name,
+        category: b.display_category,
+        tier: b.business_tier,
+        status: b.status
+      })))
+    }
+    
+    // Tag each business with simplified tier for pin coloring
+    // Check actual tier columns to determine pin color
+    const businessesWithTier = (allBusinesses || []).map(b => {
+      // Paid tier (any paid subscription)
+      if (b.business_tier && ['spotlight', 'featured', 'starter'].includes(b.business_tier)) {
+        return { ...b, business_tier: 'paid' as const }
+      }
+      // Claimed free tier
+      if (b.status === 'claimed' && b.business_tier === 'free') {
+        return { ...b, business_tier: 'claimed_free' as const }
+      }
+      // Unclaimed/default
+      return { ...b, business_tier: 'unclaimed' as const }
+    })
+    
+    // Create tier-separated responses for compatibility
+    const tier1Response = { data: businessesWithTier.filter(b => b.business_tier === 'paid'), error: null }
+    const tier2Response = { data: businessesWithTier.filter(b => b.business_tier === 'claimed_free'), error: null }
+    const tier3Response = { data: businessesWithTier.filter(b => b.business_tier === 'unclaimed'), error: null }
     
     console.log(`🗺️ Atlas: Query results - T1: ${tier1Response.data?.length || 0}, T2: ${tier2Response.data?.length || 0}, T3: ${tier3Response.data?.length || 0}`)
     if (tier1Response.error) console.error('🗺️ Atlas: Tier 1 error:', tier1Response.error)

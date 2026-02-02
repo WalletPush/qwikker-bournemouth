@@ -11,6 +11,7 @@
  */
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Search, X, Volume2, VolumeX, MapPin, Star, Phone, Globe, Navigation, ChevronLeft, ChevronRight, Pause, Play, XCircle } from 'lucide-react'
 import type { Business } from './AtlasMode'
 import type { Coordinates } from '@/lib/location/useUserLocation'
@@ -210,8 +211,13 @@ export function AtlasOverlay({
             <div className="flex items-start gap-4">
               {/* Business Info */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-xl font-semibold text-white mb-1">
-                  {selectedBusiness.business_name}
+                <h3 className="text-xl font-semibold mb-1">
+                  <Link 
+                    href={`/user/business/${selectedBusiness.slug || selectedBusiness.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || selectedBusiness.id}`}
+                    className="text-white hover:text-[#00d083] transition-colors duration-200"
+                  >
+                    {selectedBusiness.business_name}
+                  </Link>
                 </h3>
                 
                 {selectedBusiness.business_tagline && (

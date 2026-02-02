@@ -811,8 +811,9 @@ export function AtlasMode({
     setSelectedBusinessIndex(0)
     setSelectedBusiness(tourBusinesses[0])
     
-    // Update HUD with first business info
-    setHudSummary(generateBusinessHudMessage(tourBusinesses[0]))
+    // ✨ Tour intro message (no business name - it's already in the bottom card)
+    const tourIntro = `Starting your tour of ${tourBusinesses.length} ${tourBusinesses.length === 1 ? 'place' : 'places'}...`
+    setHudSummary(tourIntro)
     setHudPrimaryBusinessName(null)
     setHudVisible(true)
     
@@ -826,7 +827,7 @@ export function AtlasMode({
         advanceTour(1) // Start at index 1 (second business)
       }, 3000)
     }
-  }, [flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
+  }, [flyToBusiness, updateActiveBusinessMarker])
   
   // 🎬 TOUR MODE: Advance to specific index
   const advanceTour = useCallback((targetIndex: number) => {
@@ -851,8 +852,13 @@ export function AtlasMode({
     flyToBusiness(targetBusiness)
     updateActiveBusinessMarker(targetBusiness)
     
-    // Update HUD with new business info
-    setHudSummary(generateBusinessHudMessage(targetBusiness))
+    // ✨ Update HUD with stop info (no business name - it's in the bottom card)
+    const stopNumber = targetIndex + 1
+    const totalStops = currentBusinesses.length
+    const reviewCount = targetBusiness.review_count || 0
+    const hudMessage = `Stop ${stopNumber} of ${totalStops} • Rated ${targetBusiness.rating}★ by ${reviewCount} ${reviewCount === 1 ? 'person' : 'people'} on Google`
+    
+    setHudSummary(hudMessage)
     setHudPrimaryBusinessName(null)
     setHudVisible(true)
     
