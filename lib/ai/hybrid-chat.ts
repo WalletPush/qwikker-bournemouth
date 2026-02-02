@@ -1167,111 +1167,59 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           `Right, so I've been digging and found some gems:`
         ]
         
-        // COMPLETELY REPLACE AI response (don't trust it when Tier 1 was irrelevant)
-        aiResponse = responses[Math.floor(Math.random() * responses.length)] + `\n\n`
-        console.log(`🔄 COMPLETE OVERRIDE: Tier 1 irrelevant, replacing AI response entirely with ${topMatchesText.length} Tier 2/3 businesses`)
+        // 🎬 HYBRID REVEAL PATTERN: Show EXACTLY 2 standouts with real review quotes
+        const humanOpeners = [
+          `Ooo nice choice!`,
+          `Good call!`,
+          `Perfect!`,
+          `Yes! Love this.`
+        ]
+        
+        aiResponse = humanOpeners[Math.floor(Math.random() * humanOpeners.length)] + ` Here's what I'd recommend:\n\n`
+        console.log(`🎬 HYBRID REVEAL: Showing EXACTLY 2 businesses with real review quotes`)
         
         let topMatchesSection = ''
         
-        topMatchesText.slice(0, 6).forEach((b, index) => {
+        // ⚠️ CRITICAL: ONLY 2 BUSINESSES (not 6!)
+        topMatchesText.slice(0, 2).forEach((b, index) => {
           // Use actual slug from DB, fallback to generated slug, fallback to ID
           const slug = b.slug || b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || b.id
           
-          // Build context pieces first
-          const distanceText = (b.latitude && b.longitude && context.userLocation) 
-            ? getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
-            : null
+          // 🎬 HYBRID REVEAL: Simple, clean format
+          topMatchesSection += `**[${b.business_name}](/user/business/${slug})**`
           
-          let openStatus = ''
-          if (b.business_hours) {
-            const now = new Date()
-            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-            const currentDay = dayNames[now.getDay()]
-            const currentHour = now.getHours()
-            const currentMinute = now.getMinutes()
+          // 📝 REAL REVIEW SNIPPET (not generic text!)
+          if (b.rating) {
+            topMatchesSection += ` (${b.rating}★`
             
-            try {
-              const hours = typeof b.business_hours === 'string' ? JSON.parse(b.business_hours) : b.business_hours
-              const todayHours = hours[currentDay]
-              
-              if (todayHours?.open && todayHours?.close) {
-                const [openHour, openMin] = todayHours.open.split(':').map(Number)
-                const [closeHour, closeMin] = todayHours.close.split(':').map(Number)
-                const currentTime = currentHour * 60 + currentMinute
-                const openTime = openHour * 60 + openMin
-                const closeTime = closeHour * 60 + closeMin
+            // Add REAL review snippet if available
+            if (b.google_reviews_highlights && Array.isArray(b.google_reviews_highlights) && b.google_reviews_highlights.length > 0) {
+              const review = b.google_reviews_highlights[index % b.google_reviews_highlights.length]
+              if (review?.text) {
+                const reviewText = review.text.replace(/[\r\n]+/g, ' ').trim()
+                const sentences = reviewText.split(/[.!?]+/).filter(s => s.trim().length > 20)
+                const positiveKeywords = ['love', 'amazing', 'best', 'great', 'perfect', 'delicious', 'fantastic', 'excellent', 'wonderful', 'awesome', 'incredible', 'favorite', 'favourite']
                 
-                if (currentTime >= openTime && currentTime < closeTime) {
-                  openStatus = 'open now'
-                } else if (currentTime < openTime) {
-                  openStatus = `opens at ${todayHours.open}`
-                }
-              }
-            } catch (e) {
-              // Graceful fallback
-            }
-          }
-          
-          // ===== NEW FORMAT: Consistent with Tier 3 fallback section =====
-          topMatchesSection += `• **[${b.business_name}](/user/business/${slug})**`
-          
-          if (b.display_category) {
-            topMatchesSection += ` — ${b.display_category}`
-          }
-          
-          // Rating with personality
-          if (b.rating && b.review_count) {
-            if (b.rating >= 4.7) {
-              topMatchesSection += ` (${b.rating}★ from ${b.review_count} Google reviews – people are **obsessed** with this place 🔥)`
-            } else if (b.rating >= 4.5) {
-              topMatchesSection += ` (${b.rating}★ from ${b.review_count} Google reviews – consistently excellent)`
-            } else if (b.rating >= 4.0) {
-              topMatchesSection += ` (${b.rating}★ from ${b.review_count} Google reviews – solid choice)`
-            } else {
-              topMatchesSection += ` (${b.rating}★ from ${b.review_count} Google reviews)`
-            }
-          }
-          
-          // Business description/tagline if available (Tier 2 premium content)
-          if (b.tierSource === 'tier2' && (b.business_tagline || b.business_description)) {
-            const description = b.business_tagline || b.business_description
-            topMatchesSection += `\n   _${description}_`
-          }
-          
-          // Menu items
-          if (b.featured_items_count && b.featured_items_count > 0) {
-            topMatchesSection += `\n   _${b.featured_items_count} featured dishes on the menu – definitely worth a look_`
-          }
-          
-          // Open status
-          if (openStatus) {
-            topMatchesSection += `\n   🕒 ${openStatus.charAt(0).toUpperCase() + openStatus.slice(1)}`
-          }
-          
-          // Distance with personality
-          if (distanceText) {
-            const distanceMatch = distanceText.match(/(\d+\.?\d*)\s*(km|m)/)
-            if (distanceMatch) {
-              const distance = parseFloat(distanceMatch[1])
-              const unit = distanceMatch[2]
-              
-              if (unit === 'm' || (unit === 'km' && distance < 0.5)) {
-                topMatchesSection += `\n   📍 Super close – ${distanceText} away (basically right there)`
-              } else if (unit === 'km' && distance < 2) {
-                topMatchesSection += `\n   📍 ${distanceText} away – easy walk or quick ride`
+                let snippet = sentences.find(s => positiveKeywords.some(kw => s.toLowerCase().includes(kw))) || sentences[0] || reviewText.substring(0, 60)
+                snippet = snippet.trim()
+                if (snippet.length > 70) snippet = snippet.substring(0, 67) + '...'
+                
+                topMatchesSection += ` – "${snippet}")`
               } else {
-                topMatchesSection += `\n   📍 ${distanceText} away`
+                topMatchesSection += ` from ${b.review_count || 0} reviews)`
               }
+            } else {
+              topMatchesSection += ` from ${b.review_count || 0} reviews)`
             }
           }
           
-          // Phone number
-          if (b.phone) {
-            topMatchesSection += `\n   📞 [Give them a call: ${b.phone}](tel:${b.phone})`
-          }
+          // 🎬 KEEP IT SIMPLE - No extra fluff in the hybrid reveal
           
           topMatchesSection += `\n\n`
         })
+        
+        // 🗺️ ATLAS INVITATION (the magic moment!)
+        topMatchesSection += `Want me to show you them on Atlas?`
         
         aiResponse = aiResponse + topMatchesSection
         
