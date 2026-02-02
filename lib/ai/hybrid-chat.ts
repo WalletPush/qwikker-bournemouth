@@ -119,13 +119,6 @@ interface ChatResponse {
     phone?: string
     website_url?: string
     google_place_id?: string
-    google_reviews_highlights?: Array<{
-      text: string
-      author: string // ✅ CORRECT: DB uses 'author' not 'author_name'
-      rating: number
-      time?: string
-      profile_photo?: string
-    }>
   }>
 }
 
@@ -452,23 +445,9 @@ export async function generateHybridAIResponse(
             }
           }
           
-          // 📝 FULL REVIEW SNIPPETS (2 per business, NOT TRUNCATED!)
-          let reviewsText = ''
-          if (business.google_reviews_highlights && Array.isArray(business.google_reviews_highlights) && business.google_reviews_highlights.length > 0) {
-            const reviews = business.google_reviews_highlights.slice(0, 2)
-            reviewsText = '\n📝 Google Reviews:'
-            reviews.forEach(review => {
-              if (review?.text) {
-                let reviewText = review.text.replace(/[\r\n]+/g, ' ').trim()
-                if (reviewText.length > 200) reviewText = reviewText.substring(0, 197) + '...'
-                reviewsText += `\n  - ${review.rating}★: "${reviewText}"`
-              }
-            })
-          }
-          
           return `**${business.business_name}** [TIER: ${business.tierLabel}]
 Rating: ${business.rating}★ from ${business.review_count || 0} Google reviews
-Category: ${business.display_category || 'Not specified'}${richContent}${offerText}${reviewsText}`
+Category: ${business.display_category || 'Not specified'}${richContent}${offerText}`
         }).join('\n\n')
       : 'No businesses available in this city yet.'
     
@@ -1463,78 +1442,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       // ONLY 1 business being shown → safe to show its reviews
       const firstUnclaimedBusiness = allTier3Businesses[0]
       
-      if (firstUnclaimedBusiness) {
-        let reviews = null
-        let alreadyFetchedReviews = false
-        
-        // Try cached reviews first (< 30 days old)
-        if (firstUnclaimedBusiness.google_reviews_highlights && 
-            Array.isArray(firstUnclaimedBusiness.google_reviews_highlights) && 
-            firstUnclaimedBusiness.google_reviews_highlights.length > 0) {
-          reviews = firstUnclaimedBusiness.google_reviews_highlights
-          console.log(`✅ Using cached reviews for ${firstUnclaimedBusiness.business_name}`)
-        }
-        // 🎯 PROTECTION #2: Fetch reviews when showing Tier 3 businesses
-        // FIXED: Don't check shouldAttachCarousel - we want reviews even when carousel is disabled
-        else if (!alreadyFetchedReviews && 
-                 firstUnclaimedBusiness.google_place_id) { // Fetch whenever we're showing Tier 3
-          console.log(`💰 Attempting on-demand review fetch for ${firstUnclaimedBusiness.business_name} (est. cost: ~$0.014-$0.025 depending on Google SKU)`)
-          
-          // 🎯 PROTECTION #3: Rate limiting (enforce before fetch)
-          // Import the on-demand fetch utility
-          const { fetchGoogleReviewsOnDemand, checkReviewFetchRateLimit } = await import('@/lib/utils/google-reviews-on-demand')
-          
-          // ✅ FIX: Actually use rate limiting
-          const userKey = context.walletPassId || 'anonymous'
-          const rateLimitCheck = await checkReviewFetchRateLimit(userKey, firstUnclaimedBusiness.id)
-          
-          if (!rateLimitCheck.allowed) {
-            console.log(`⏱️ Skipping on-demand reviews (rate limited until ${rateLimitCheck.resetAt?.toISOString()})`)
-          } else {
-            try {
-              const freshReviews = await fetchGoogleReviewsOnDemand(
-                firstUnclaimedBusiness.google_place_id,
-                city
-              )
-              
-              if (freshReviews && freshReviews.length > 0) {
-                reviews = freshReviews
-                alreadyFetchedReviews = true // Prevent multiple fetches in same chat
-                console.log(`✅ Fetched ${freshReviews.length} fresh reviews on-demand`)
-              } else {
-                console.log(`ℹ️ No reviews returned from on-demand fetch`)
-              }
-            } catch (error) {
-              console.error(`❌ On-demand review fetch failed:`, error)
-              // Graceful degradation: continue without snippets
-            }
-          }
-        }
-        
-        // Build snippets if we have reviews (cached or fresh)
-        if (reviews && Array.isArray(reviews)) {
-          // ✅ FIX: Filter to only good reviews (>= 4 stars), clamp text, then take first 3
-          const snippets = reviews
-            .filter((review: any) => (review.rating ?? 0) >= 4) // Only show 4★ and 5★ reviews
-            .map((review: any) => ({
-              text: String(review.text || '').slice(0, 280).trim(), // Clamp to 280 chars
-              author: review.author || 'Anonymous',
-              rating: review.rating || 5
-            }))
-            .filter((s: any) => s.text.length > 0) // Only include non-empty reviews
-            .slice(0, 3) // Take max 3 AFTER filtering/mapping
-          
-          if (snippets.length > 0) {
-            googleReviewSnippets = {
-              businessName: firstUnclaimedBusiness.business_name,
-              businessId: firstUnclaimedBusiness.id,
-              google_place_id: firstUnclaimedBusiness.google_place_id,
-              snippets
-            }
-            
-            console.log(`📝 Including ${snippets.length} verbatim Google review snippets for UNCLAIMED business: ${firstUnclaimedBusiness.business_name}`)
-          }
-        }
+      // ✅ LEGAL COMPLIANCE: Review text removed per Google ToS
+      // We still show rating + review_count + link to Google Maps in business cards
       }
     }
     // 🗺️ ATLAS: Build mapPins array (includes ALL businesses for map display)
@@ -1559,8 +1468,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             business_tier: 'paid',
             phone: b.phone,
             website_url: b.website_url,
-            google_place_id: b.google_place_id,
-            google_reviews_highlights: fullBusiness?.google_reviews_highlights || undefined
+            google_place_id: b.google_place_id
           })
         }
       })
@@ -1582,8 +1490,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             business_tier: b.tierSource === 'tier2' ? 'claimed_free' : 'unclaimed',
             phone: b.phone,
             website_url: b.website_url,
-            google_place_id: b.google_place_id,
-            google_reviews_highlights: b.google_reviews_highlights || undefined
+            google_place_id: b.google_place_id
           })
         }
       })
@@ -1606,8 +1513,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             business_tier: b.tierSource === 'tier2' ? 'claimed_free' : 'unclaimed',
             phone: b.phone,
             website_url: b.website_url,
-            google_place_id: b.google_place_id,
-            google_reviews_highlights: b.google_reviews_highlights || undefined
+            google_place_id: b.google_place_id
           })
         }
       })

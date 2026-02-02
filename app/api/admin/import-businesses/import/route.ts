@@ -579,13 +579,7 @@ export async function POST(request: NextRequest) {
                 website_url: place.websiteUri || null, // ✅ FIXED: Use correct column name (website_url, not website)
                 rating: place.rating || null,
                 review_count: place.userRatingCount || null,
-                google_reviews_highlights: place.reviews ? place.reviews.slice(0, 10).map((review: any) => ({
-                  author: review.authorAttribution?.displayName || 'Anonymous',
-                  rating: review.rating || 5,
-                  text: review.text?.text || review.originalText?.text || '',
-                  time: review.publishTime || review.relativePublishTimeDescription || 'Recently',
-                  profile_photo: review.authorAttribution?.photoUri || null
-                })) : null,
+                google_reviews_highlights: null, // ✅ LEGAL COMPLIANCE: Do not store review text per Google ToS
                 business_hours: businessHoursText, // Human-readable text
                 business_hours_structured: businessHoursStructured, // Structured JSON (all days or null)
                 latitude: place.location?.latitude || null, // For distance calculations and maps

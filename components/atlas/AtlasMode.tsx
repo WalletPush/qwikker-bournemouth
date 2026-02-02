@@ -50,13 +50,6 @@ export interface Business {
   business_tier?: string // ✅ For determining pin color
   isPaid?: boolean // ✅ For cyan pins (paid/trial businesses)
   isUnclaimed?: boolean // ✅ For grey pins (unclaimed businesses)
-  google_reviews_highlights?: Array<{
-    text: string
-    author: string // ✅ CORRECT: DB uses 'author' not 'author_name'
-    rating: number
-    time?: string
-    profile_photo?: string
-  }>
 }
 
 export interface AtlasConfig {
@@ -686,54 +679,9 @@ export function AtlasMode({
       parts.push(business.display_category)
     }
     
-    // Extract what people love from reviews WITH ATTRIBUTION
-    if (business.google_reviews_highlights && business.google_reviews_highlights.length > 0) {
-      const reviews = business.google_reviews_highlights
-      const loveKeywords = ['love', 'amazing', 'excellent', 'fantastic', 'delicious', 'best', 'perfect', 'wonderful', 'incredible', 'outstanding', 'great', 'awesome']
-      
-      // Try to find a sentence with positive keywords
-      let loveSnippet: string | null = null
-      let reviewAuthor: string | null = null
-      for (const review of reviews) {
-        const lowerText = review.text.toLowerCase()
-        for (const keyword of loveKeywords) {
-          if (lowerText.includes(keyword)) {
-            // Extract the sentence containing the keyword
-            const sentences = review.text.split(/[.!?]+/)
-            const matchingSentence = sentences.find(s => s.toLowerCase().includes(keyword))
-            if (matchingSentence && matchingSentence.trim().length > 10) {
-              loveSnippet = matchingSentence.trim()
-              reviewAuthor = review.author || null // ✅ FIXED: Use 'author' not 'author_name'
-              break
-            }
-          }
-        }
-        if (loveSnippet) break
-      }
-      
-      if (loveSnippet) {
-        // Clean up and shorten if needed
-        let cleanSnippet = loveSnippet
-        if (cleanSnippet.length > 100) {
-          cleanSnippet = cleanSnippet.substring(0, 97) + '...'
-        }
-        // ✅ PROPER ATTRIBUTION: Show review with author name (Google requires this)
-        const attribution = reviewAuthor ? ` — ${reviewAuthor}, Google` : ' — Google review'
-        parts.push(`"${cleanSnippet}"${attribution}`)
-      } else {
-        // Fallback: try to get ANY positive review WITH ATTRIBUTION
-        const anyReview = reviews[0]
-        if (anyReview) {
-          const sentences = anyReview.text.split(/[.!?]+/)
-          const firstSentence = sentences[0]?.trim()
-          if (firstSentence && firstSentence.length > 10) {
-            const shortSentence = firstSentence.length > 100 ? firstSentence.substring(0, 97) + '...' : firstSentence
-            const attribution = anyReview.author ? ` — ${anyReview.author}, Google` : ' — Google review' // ✅ FIXED: Use 'author'
-            parts.push(`"${shortSentence}"${attribution}`)
-
-          }
-        }
-      }
+    // ✅ LEGAL COMPLIANCE: Show only numeric rating, not review text
+    if (business.rating) {
+      parts.push(`${business.rating}★ on Google`)
     }
     
     return parts.join(' • ')

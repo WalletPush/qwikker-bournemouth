@@ -85,16 +85,6 @@ interface ChatMessage {
     business_name: string
     business_id: string
   }>
-  googleReviewSnippets?: {
-    businessName: string
-    businessId: string
-    google_place_id?: string
-    snippets: Array<{
-      text: string
-      author: string
-      rating: number
-    }>
-  }
 }
 
 export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: { currentUser?: any, currentCity?: string, cityDisplayName?: string }) {
@@ -360,8 +350,7 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
         intent: data.intent,
         needsLocation: data.needsLocation,
         showAtlasCta: data.showAtlasCta,
-        locationReason: data.locationReason,
-        googleReviewSnippets: data.googleReviewSnippets // ✅ Add review snippets
+        locationReason: data.locationReason
       }
 
       console.log('💬 AI Message created:', {
@@ -882,57 +871,6 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
                       currentUser={currentUser}
                       className="w-full"
                     />
-                  </div>
-                )}
-
-                {/* Google Review Snippets */}
-                {message.googleReviewSnippets && message.googleReviewSnippets.snippets.length > 0 && (
-                  <div className="mt-4 p-4 bg-slate-800/30 border border-slate-700/50 rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                        What People Are Saying About{' '}
-                        <a
-                          href={`/user/business/${message.googleReviewSnippets.businessId}`}
-                          className="text-blue-400 hover:text-blue-300 underline"
-                        >
-                          {message.googleReviewSnippets.businessName}
-                        </a>
-                        {' '}on Google
-                      </p>
-                      {message.googleReviewSnippets.google_place_id && (
-                        <a
-                          href={`https://www.google.com/maps/place/?q=place_id:${message.googleReviewSnippets.google_place_id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-400 hover:text-blue-300 underline"
-                        >
-                          Read all reviews →
-                        </a>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {message.googleReviewSnippets.snippets.map((snippet, idx) => (
-                        <div key={idx} className="pl-3 border-l-2 border-slate-600">
-                          <p className="text-sm text-slate-300 italic mb-1">"{snippet.text}"</p>
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <span>— {snippet.author}</span>
-                            <span className="flex items-center gap-0.5">
-                              <span className="text-yellow-400">★</span>
-                              <span>{snippet.rating}</span>
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Google Attribution */}
-                    <div className="mt-3 pt-3 border-t border-slate-700/50 flex items-center justify-center gap-2">
-                      <svg className="w-3.5 h-3.5 text-slate-500" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>
-                      </svg>
-                      <span className="text-xs text-slate-500">Powered by Google</span>
-                    </div>
                   </div>
                 )}
 
