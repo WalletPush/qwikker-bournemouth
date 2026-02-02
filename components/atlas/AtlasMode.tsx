@@ -27,8 +27,11 @@ import type { AtlasResponse } from '@/lib/ai/prompts/atlas'
 import {
   getUserLocationLayers,
   getBusinessPinLayers,
+  getArrivalPulseLayer,
+  getClusterLayers,
   getActiveBusinessLayers,
   getRouteLayers,
+  buildArcRoute,
   QWIKKER_GREEN,
   QWIKKER_GREEN_BRIGHT,
   NEON_CYAN
@@ -476,8 +479,20 @@ export function AtlasMode({
   const clearMarkers = useCallback(() => {
     if (!map.current) return
     
-    // Clear business layers
-    const businessLayerIds = ['business-pins-glow', 'business-pins']
+    // Cancel any active pulse animation
+    if (activePulseAnimation.current !== null) {
+      cancelAnimationFrame(activePulseAnimation.current)
+      activePulseAnimation.current = null
+    }
+    
+    // Clear business layers (including clusters)
+    const businessLayerIds = [
+      'business-pins-glow', 
+      'business-pins', 
+      'business-pins-arrival-pulse',
+      'business-clusters',
+      'business-cluster-count'
+    ]
     businessLayerIds.forEach(id => {
       if (map.current!.getLayer(id)) {
         map.current!.removeLayer(id)
@@ -526,7 +541,16 @@ export function AtlasMode({
         map.current.removeSource('route')
       }
       
-      // Add route source (straight line for now, can be bezier curve later)
+      // ✨ Generate smooth curved arc route (cinematic, not straight)
+      const curvedCoordinates = buildArcRoute(
+        userLocation.lng,
+        userLocation.lat,
+        activeBusiness.longitude,
+        activeBusiness.latitude,
+        40 // 40 points for smooth curve
+      )
+      
+      // Add route source with curved arc
       map.current.addSource('route', {
         type: 'geojson',
         data: {
@@ -536,13 +560,12 @@ export function AtlasMode({
             properties: {},
             geometry: {
               type: 'LineString',
-              coordinates: [
-                [userLocation.lng, userLocation.lat],
-                [activeBusiness.longitude, activeBusiness.latitude]
-              ]
+              coordinates: curvedCoordinates
             }
           }]
-        }
+        },
+        // ✨ Enable line metrics for animated gradient
+        lineMetrics: true
       })
       
       // Add route layers (glow + line) BELOW all markers
@@ -632,6 +655,84 @@ export function AtlasMode({
     }
   }, [mapLoaded])
   
+  // Track active pulse animation (for cancellation)
+  const activePulseAnimation = useRef<number | null>(null)
+  
+  // Trigger pin pulse animation (subtle premium arrival effect)
+  const triggerPinPulse = useCallback((businessId: string) => {
+    if (!map.current || !mapLoaded) return
+    
+    // Cancel any previous pulse animation
+    if (activePulseAnimation.current !== null) {
+      cancelAnimationFrame(activePulseAnimation.current)
+      activePulseAnimation.current = null
+    }
+    
+    try {
+      // Set feature-state to show pulse layer for this business
+      map.current.setFeatureState(
+        { source: 'businesses', id: businessId },
+        { isPulsing: true }
+      )
+      
+      // Animation params
+      const duration = 800 // ms (premium, subtle)
+      const startRadius = 15
+      const endRadius = 50
+      const startOpacity = 0.8
+      const endOpacity = 0
+      const startTime = performance.now()
+      
+      const animate = (currentTime: number) => {
+        if (!map.current) return
+        
+        const elapsed = currentTime - startTime
+        const progress = Math.min(elapsed / duration, 1)
+        
+        // Ease-out cubic for smooth deceleration
+        const eased = 1 - Math.pow(1 - progress, 3)
+        
+        // Calculate current values
+        const currentRadius = startRadius + (endRadius - startRadius) * eased
+        const currentOpacity = startOpacity + (endOpacity - startOpacity) * eased
+        
+        // Update paint properties
+        map.current.setPaintProperty('business-pins-arrival-pulse', 'circle-radius', currentRadius)
+        map.current.setPaintProperty('business-pins-arrival-pulse', 'circle-opacity', currentOpacity)
+        
+        if (progress < 1) {
+          // Continue animation
+          activePulseAnimation.current = requestAnimationFrame(animate)
+        } else {
+          // Animation complete - clean up
+          map.current.setFeatureState(
+            { source: 'businesses', id: businessId },
+            { isPulsing: false }
+          )
+          // Reset properties for next pulse
+          map.current.setPaintProperty('business-pins-arrival-pulse', 'circle-radius', startRadius)
+          map.current.setPaintProperty('business-pins-arrival-pulse', 'circle-opacity', startOpacity)
+          activePulseAnimation.current = null
+          
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Atlas] ✨ Pin pulse completed for:', businessId)
+          }
+        }
+      }
+      
+      // Start animation
+      activePulseAnimation.current = requestAnimationFrame(animate)
+      
+    } catch (error) {
+      console.error('[Atlas] Failed to trigger pin pulse:', error)
+      // Clean up on error
+      if (activePulseAnimation.current !== null) {
+        cancelAnimationFrame(activePulseAnimation.current)
+        activePulseAnimation.current = null
+      }
+    }
+  }, [mapLoaded])
+  
   // Fly to business with smooth animation + arrival ping
   const flyToBusiness = useCallback((business: Business) => {
     if (!map.current) return
@@ -645,6 +746,13 @@ export function AtlasMode({
     
     // Update active business marker immediately
     updateActiveBusinessMarker(business)
+    
+    // Set up moveend listener to trigger pulse when camera arrives
+    const onMoveEnd = () => {
+      triggerPinPulse(business.id) // ✨ Trigger arrival pulse
+      map.current?.off('moveend', onMoveEnd) // Clean up listener
+    }
+    map.current.once('moveend', onMoveEnd)
     
     map.current.flyTo({
       center: [business.longitude, business.latitude],
@@ -665,7 +773,7 @@ export function AtlasMode({
       triggerArrivalPing(business)
     }, 2000)
     
-  }, [playSound, updateActiveBusinessMarker, triggerArrivalPing])
+  }, [playSound, updateActiveBusinessMarker, triggerArrivalPing, triggerPinPulse])
   
   // 🎬 TOUR MODE: Generate HUD message for a business
   const generateBusinessHudMessage = useCallback((business: Business): string => {
@@ -899,13 +1007,13 @@ export function AtlasMode({
             context.clearRect(0, 0, this.width, this.height)
             context.beginPath()
             context.arc(this.width / 2, this.height / 2, outerRadius, 0, Math.PI * 2)
-            context.fillStyle = `rgba(0, 208, 131, ${0.4 * (1 - t)})` // Cyan glow
+            context.fillStyle = `rgba(0, 240, 255, ${0.4 * (1 - t)})` // 🎨 NEON_CYAN glow (#00f0ff)
             context.fill()
             
             // Draw inner circle
             context.beginPath()
             context.arc(this.width / 2, this.height / 2, radius, 0, Math.PI * 2)
-            context.fillStyle = 'rgba(0, 208, 131, 1)' // Solid cyan
+            context.fillStyle = 'rgba(0, 240, 255, 1)' // 🎨 NEON_CYAN solid (#00f0ff)
             context.strokeStyle = 'white'
             context.lineWidth = 3 + 4 * (1 - t)
             context.fill()
@@ -981,7 +1089,12 @@ export function AtlasMode({
       }
       
       // Remove existing business layers only if they exist (preserve user location!)
-      const layerIds = ['business-pins'] // Only one layer now (pulsing symbol layer)
+      const layerIds = [
+        'business-pins', 
+        'business-pins-arrival-pulse',
+        'business-clusters',
+        'business-cluster-count'
+      ]
       layerIds.forEach(id => {
         if (map.current!.getLayer(id)) {
           console.log('[Atlas] 🗑️ Removing old layer:', id)
@@ -1007,6 +1120,7 @@ export function AtlasMode({
         
         return {
           type: 'Feature' as const,
+          id: business.id, // ✨ Top-level id required for feature-state
           properties: {
             id: business.id,
             name: business.business_name,
@@ -1022,17 +1136,27 @@ export function AtlasMode({
         }
       })
       
+      // 📊 Count pins by tier for dev visibility
+      const paidCount = features.filter(f => f.properties.isPaid).length
+      const unclaimedCount = features.filter(f => f.properties.isUnclaimed).length
+      const claimedFreeCount = features.length - paidCount - unclaimedCount
+      
       // Add source
       console.log('[Atlas] 🔧 About to add source "businesses" with', features.length, 'features')
+      console.log(`[Atlas] 📊 Pin tier breakdown: ${paidCount} paid (cyan), ${claimedFreeCount} claimed-free, ${unclaimedCount} unclaimed (grey)`)
       try {
         map.current.addSource('businesses', {
           type: 'geojson',
           data: {
             type: 'FeatureCollection',
             features
-          }
+          },
+          // ✨ Enable clustering for density handling
+          cluster: true,
+          clusterRadius: 45, // Pixel radius for clustering
+          clusterMaxZoom: 15 // Max zoom to cluster points (dissolve above this)
         })
-        console.log('[Atlas] ✅ Source "businesses" added successfully')
+        console.log('[Atlas] ✅ Source "businesses" added successfully with clustering enabled')
       } catch (sourceError) {
         console.error('[Atlas] ❌ FAILED to add source:', sourceError)
         throw sourceError
@@ -1066,6 +1190,34 @@ export function AtlasMode({
         }
       })
       
+      // Add arrival pulse layer (above business pins, controlled by feature-state)
+      try {
+        const pulseLayer = getArrivalPulseLayer()
+        if (beforeLayer) {
+          map.current.addLayer(pulseLayer, beforeLayer)
+        } else {
+          map.current.addLayer(pulseLayer)
+        }
+        console.log('[Atlas] ✅ Arrival pulse layer added')
+      } catch (pulseError) {
+        console.error('[Atlas] ❌ Failed to add pulse layer:', pulseError)
+      }
+      
+      // ✨ Add cluster layers (for dense areas)
+      try {
+        const clusterLayers = getClusterLayers()
+        clusterLayers.forEach(layer => {
+          if (beforeLayer) {
+            map.current!.addLayer(layer, beforeLayer)
+          } else {
+            map.current!.addLayer(layer)
+          }
+        })
+        console.log('[Atlas] ✅ Cluster layers added (circle + count)')
+      } catch (clusterError) {
+        console.error('[Atlas] ❌ Failed to add cluster layers:', clusterError)
+      }
+      
       // Attach event handlers ONCE only (or re-attach if layer was recreated)
       if (!businessHandlersAttachedRef.current && map.current.getLayer('business-pins')) {
         // Define handlers that read from refs
@@ -1093,9 +1245,6 @@ export function AtlasMode({
             setHudSummary(generateBusinessHudMessage(business))
             setHudPrimaryBusinessName(null)
             setHudVisible(true)
-            
-            // Track click
-            playSound('select')
           }
         }
         
@@ -1117,10 +1266,49 @@ export function AtlasMode({
         map.current.on('mouseenter', 'business-pins', handleMouseEnter)
         map.current.on('mouseleave', 'business-pins', handleMouseLeave)
         
+        // ✨ Cluster handlers - zoom into cluster on click
+        const handleClusterClick = (e: any) => {
+          if (!e.features || e.features.length === 0 || !map.current) return
+          
+          const feature = e.features[0]
+          const clusterId = feature.properties.cluster_id
+          const source = map.current.getSource('businesses') as mapboxgl.GeoJSONSource
+          
+          if (source && source.getClusterExpansionZoom) {
+            source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+              if (err || !map.current || zoom === null || zoom === undefined) return
+              
+              map.current.easeTo({
+                center: feature.geometry.coordinates,
+                zoom: zoom + 0.5, // Slight extra zoom for better reveal
+                duration: 800
+              })
+            })
+          }
+        }
+        
+        const handleClusterMouseEnter = () => {
+          if (map.current) map.current.getCanvas().style.cursor = 'pointer'
+        }
+        
+        const handleClusterMouseLeave = () => {
+          if (map.current) map.current.getCanvas().style.cursor = ''
+        }
+        
+        // Remove any existing cluster handlers
+        map.current.off('click', 'business-clusters', handleClusterClick)
+        map.current.off('mouseenter', 'business-clusters', handleClusterMouseEnter)
+        map.current.off('mouseleave', 'business-clusters', handleClusterMouseLeave)
+        
+        // Attach cluster handlers
+        map.current.on('click', 'business-clusters', handleClusterClick)
+        map.current.on('mouseenter', 'business-clusters', handleClusterMouseEnter)
+        map.current.on('mouseleave', 'business-clusters', handleClusterMouseLeave)
+        
         businessHandlersAttachedRef.current = true
       }
       
-      console.log('[Atlas] ✅ Neon business pins added:', businesses.length, '(user marker stays on top)')
+      console.log('[Atlas] ✅ Neon business pins added with clustering:', businesses.length, '(user marker stays on top)')
       console.log('[Atlas] 📊 Pin details:', businesses.map(b => ({ 
         name: b.business_name, 
         lat: b.latitude, 

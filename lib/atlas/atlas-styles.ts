@@ -93,6 +93,8 @@ export const getBusinessPinLayers = () => {
     id: 'business-pins',
     type: 'symbol',
     source: 'businesses',
+    // ✨ Only show individual pins (not clusters)
+    filter: ['!', ['has', 'point_count']],
     layout: {
       'icon-image': [
         'case',
@@ -107,6 +109,76 @@ export const getBusinessPinLayers = () => {
 
   // Note: We removed the separate glow layer because the pulsing effect includes glow
   return [pulsingPins]
+}
+
+/**
+ * Arrival pulse layer (animated on pin focus)
+ * Uses feature-state to control which pin pulses
+ * Animates via setPaintProperty in triggerPinPulse()
+ */
+export const getArrivalPulseLayer = (): CircleLayerSpecification => {
+  return {
+    id: 'business-pins-arrival-pulse',
+    type: 'circle',
+    source: 'businesses',
+    // Only show pulse ring for features with isPulsing=true in feature-state
+    filter: ['==', ['feature-state', 'isPulsing'], true],
+    paint: {
+      'circle-radius': 15, // Will be animated 15 → 50
+      'circle-color': NEON_CYAN,
+      'circle-opacity': 0.8, // Will be animated 0.8 → 0
+      'circle-blur': 1
+    }
+  }
+}
+
+/**
+ * Business cluster layers (for dense areas)
+ * Shows elegant neon ring + count when businesses are clustered
+ */
+export const getClusterLayers = () => {
+  // Cluster circle (subtle neon cyan glow)
+  const clusterCircle: CircleLayerSpecification = {
+    id: 'business-clusters',
+    type: 'circle',
+    source: 'businesses',
+    filter: ['has', 'point_count'],
+    paint: {
+      'circle-color': NEON_CYAN,
+      'circle-opacity': 0.6,
+      'circle-radius': [
+        'step',
+        ['get', 'point_count'],
+        20,  // radius for 2-9 points
+        10, 25,  // radius for 10-99 points
+        100, 30  // radius for 100+ points
+      ],
+      'circle-blur': 0.5,
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#ffffff',
+      'circle-stroke-opacity': 0.8
+    }
+  }
+
+  // Cluster count label
+  const clusterCount: SymbolLayerSpecification = {
+    id: 'business-cluster-count',
+    type: 'symbol',
+    source: 'businesses',
+    filter: ['has', 'point_count'],
+    layout: {
+      'text-field': '{point_count_abbreviated}',
+      'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+      'text-size': 14
+    },
+    paint: {
+      'text-color': '#ffffff',
+      'text-halo-color': NEON_CYAN,
+      'text-halo-width': 2
+    }
+  }
+
+  return [clusterCircle, clusterCount]
 }
 
 /**
@@ -159,10 +231,61 @@ export const getActiveBusinessLayers = () => {
 }
 
 /**
+ * Helper: Build a smooth curved arc between two points
+ * Uses quadratic bezier with perpendicular offset for cinematic feel
+ */
+export const buildArcRoute = (
+  startLng: number,
+  startLat: number,
+  endLng: number,
+  endLat: number,
+  numPoints: number = 40
+): number[][] => {
+  const points: number[][] = []
+  
+  // Calculate control point (offset perpendicular to the line)
+  const midLng = (startLng + endLng) / 2
+  const midLat = (startLat + endLat) / 2
+  
+  // Vector from start to end
+  const dx = endLng - startLng
+  const dy = endLat - startLat
+  const distance = Math.sqrt(dx * dx + dy * dy)
+  
+  // Perpendicular offset (10% of distance, subtle curve)
+  const offset = distance * 0.1
+  const perpX = -dy / distance * offset
+  const perpY = dx / distance * offset
+  
+  // Control point
+  const controlLng = midLng + perpX
+  const controlLat = midLat + perpY
+  
+  // Generate bezier curve points
+  for (let i = 0; i <= numPoints; i++) {
+    const t = i / numPoints
+    const oneMinusT = 1 - t
+    
+    // Quadratic bezier formula: B(t) = (1-t)²P₀ + 2(1-t)tP₁ + t²P₂
+    const lng = oneMinusT * oneMinusT * startLng + 
+                2 * oneMinusT * t * controlLng + 
+                t * t * endLng
+    const lat = oneMinusT * oneMinusT * startLat + 
+                2 * oneMinusT * t * controlLat + 
+                t * t * endLat
+    
+    points.push([lng, lat])
+  }
+  
+  return points
+}
+
+/**
  * Route line from user to active business
+ * ✨ Curved arc with animated gradient for guided feel
  */
 export const getRouteLayers = () => {
-  // Glow layer (behind)
+  // Glow layer (behind, subtle)
   const glow: LineLayerSpecification = {
     id: 'route-glow',
     type: 'line',
@@ -177,7 +300,7 @@ export const getRouteLayers = () => {
         14, 12,
         18, 20
       ],
-      'line-opacity': 0.4,
+      'line-opacity': 0.3,
       'line-blur': 4
     },
     layout: {
@@ -186,13 +309,21 @@ export const getRouteLayers = () => {
     }
   }
 
-  // Main line (crisp)
+  // Main line with animated gradient
   const mainLine: LineLayerSpecification = {
     id: 'route-line',
     type: 'line',
     source: 'route',
     paint: {
-      'line-color': QWIKKER_GREEN_BRIGHT,
+      // ✨ Animated gradient: darker green → bright green (travel feel)
+      'line-gradient': [
+        'interpolate',
+        ['linear'],
+        ['line-progress'],
+        0, 'rgba(0, 160, 102, 0.6)',    // Start: darker green, semi-transparent
+        0.5, QWIKKER_GREEN,              // Middle: brand green
+        1, QWIKKER_GREEN_BRIGHT          // End: bright green (destination)
+      ],
       'line-width': [
         'interpolate',
         ['linear'],
@@ -200,8 +331,7 @@ export const getRouteLayers = () => {
         10, 3,
         14, 4,
         18, 6
-      ],
-      'line-opacity': 0.9
+      ]
     },
     layout: {
       'line-cap': 'round',
