@@ -740,7 +740,7 @@ export function AtlasMode({
     setSelectedBusinessIndex(0)
     setSelectedBusiness(tourBusinesses[0])
     
-    // ✨ Tour intro message (no business name - it's already in the bottom card)
+    // ✨ Tour intro message (brief, then show first stop)
     const tourIntro = `Starting your tour of ${tourBusinesses.length} ${tourBusinesses.length === 1 ? 'place' : 'places'}...`
     setHudSummary(tourIntro)
     setHudPrimaryBusinessName(null)
@@ -750,11 +750,25 @@ export function AtlasMode({
     flyToBusiness(tourBusinesses[0])
     updateActiveBusinessMarker(tourBusinesses[0])
     
-    // Start timer for next business
+    // After intro delay, show first business info
+    setTimeout(() => {
+      const firstBusiness = tourBusinesses[0]
+      const reviewCount = firstBusiness.review_count || 0
+      const firstStopMessage = `Stop 1 of ${tourBusinesses.length} • Rated ${firstBusiness.rating}★ by ${reviewCount} ${reviewCount === 1 ? 'person' : 'people'} on Google`
+      setHudSummary(firstStopMessage)
+    }, 1500) // Show intro for 1.5s, then first stop info
+    
+    // Start timer for second business
     if (tourBusinesses.length > 1) {
       tourTimerRef.current = setTimeout(() => {
-        advanceTour(1) // Start at index 1 (second business)
-      }, 3000)
+        advanceTour(1) // Move to index 1 (second business)
+      }, 4500) // 1.5s intro + 3s for first business = 4.5s total
+    } else {
+      // Single business tour - end after showing its info
+      setTimeout(() => {
+        setTourActive(false)
+        setHudVisible(false)
+      }, 4500)
     }
   }, [flyToBusiness, updateActiveBusinessMarker])
   
