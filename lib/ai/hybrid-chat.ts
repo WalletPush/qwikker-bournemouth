@@ -1591,16 +1591,14 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     // We still show rating + review_count + link to Google Maps in business cards
     
     // 🗺️ ATLAS: Build mapPins array (includes ALL businesses for map display)
-    // Paid businesses get cyan pins, unclaimed get grey pins
+    // ALWAYS include ALL tiers so Atlas CTA shows whenever businesses are discussed
     const mapPins: ChatResponse['mapPins'] = []
+    const addedIds = new Set<string>()
     
-    // Add paid/trial businesses (cyan pins)
-    if (businessCarousel && businessCarousel.length > 0) {
-      businessCarousel.forEach(b => {
-        if (b.latitude && b.longitude) {
-          // Find the full business data from tier1Businesses to get reviews
-          const fullBusiness = tier1Businesses.find(t1 => t1.id === b.id)
-          
+    // Add ALL Tier 1 businesses (paid/trial) - whether carousel is shown or not
+    if (tier1Businesses && tier1Businesses.length > 0) {
+      tier1Businesses.forEach((b: any) => {
+        if (b.latitude && b.longitude && !addedIds.has(b.id)) {
           mapPins.push({
             id: b.id,
             business_name: b.business_name,
@@ -1614,14 +1612,15 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             website_url: b.website_url,
             google_place_id: b.google_place_id
           })
+          addedIds.add(b.id)
         }
       })
     }
     
-    // Add top matches (Tier 2 & 3) - from topMatchesText
-    if (topMatchesText && topMatchesText.length > 0) {
-      topMatchesText.forEach((b: any) => {
-        if (b.latitude && b.longitude) {
+    // Add Tier 2 businesses (claimed-free)
+    if (tier2Businesses && tier2Businesses.length > 0) {
+      tier2Businesses.forEach((b: any) => {
+        if (b.latitude && b.longitude && !addedIds.has(b.id)) {
           mapPins.push({
             id: b.id,
             business_name: b.business_name,
@@ -1630,21 +1629,20 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             rating: b.rating,
             review_count: b.review_count,
             display_category: b.display_category,
-            // Tier 2 (claimed-free) vs Tier 3 (unclaimed)
-            business_tier: b.tierSource === 'tier2' ? 'claimed_free' : 'unclaimed',
+            business_tier: 'claimed_free',
             phone: b.phone,
             website_url: b.website_url,
             google_place_id: b.google_place_id
           })
+          addedIds.add(b.id)
         }
       })
     }
     
-    // Add lower-tier businesses (Tier 2 & 3) - from fallbackBusinesses (avoid duplicates)
-    if (fallbackBusinesses && fallbackBusinesses.length > 0) {
-      const existingIds = new Set(mapPins.map(p => p.id))
-      fallbackBusinesses.forEach((b: any) => {
-        if (b.latitude && b.longitude && !existingIds.has(b.id)) {
+    // Add Tier 3 businesses (unclaimed)
+    if (tier3Businesses && tier3Businesses.length > 0) {
+      tier3Businesses.forEach((b: any) => {
+        if (b.latitude && b.longitude && !addedIds.has(b.id)) {
           mapPins.push({
             id: b.id,
             business_name: b.business_name,
@@ -1653,12 +1651,12 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             rating: b.rating,
             review_count: b.review_count,
             display_category: b.display_category,
-            // Tier 2 (claimed-free) vs Tier 3 (unclaimed)
-            business_tier: b.tierSource === 'tier2' ? 'claimed_free' : 'unclaimed',
+            business_tier: 'unclaimed',
             phone: b.phone,
             website_url: b.website_url,
             google_place_id: b.google_place_id
           })
+          addedIds.add(b.id)
         }
       })
     }
