@@ -119,6 +119,13 @@ interface ChatResponse {
     phone?: string
     website_url?: string
     google_place_id?: string
+    google_reviews_highlights?: Array<{
+      text: string
+      author: string // ✅ CORRECT: DB uses 'author' not 'author_name'
+      rating: number
+      time?: string
+      profile_photo?: string
+    }>
   }>
 }
 
@@ -425,7 +432,7 @@ export async function generateHybridAIResponse(
     }
     
     const businessContext = sortedBusinessResults.length > 0
-      ? sortedBusinessResults.map(result => {
+      ? sortedBusinessResults.map((result, index) => {
           const offerCount = result.business_id ? businessOfferCounts[result.business_id] || 0 : 0
           const offerText = offerCount > 0 ? ` [Has ${offerCount} ${offerCount === 1 ? 'offer' : 'offers'} available]` : ''
           
@@ -435,7 +442,37 @@ export async function generateHybridAIResponse(
             ? ` 💚 ${vibes.positive_percentage}% positive Qwikker vibes (${vibes.total_vibes} vibes)` 
             : ''
           
-          return `**${result.business_name}** [TIER: ${result.business_tier || 'standard'}]: ${result.content}${offerText}${vibesText}`
+          // 🎯 CRITICAL: Pull REAL review snippet from database (not KB content)
+          const dbBusiness = [...tier1Businesses, ...tier2Businesses, ...tier3Businesses].find(b => b.id === result.business_id)
+          let reviewSnippet = ''
+          
+          if (dbBusiness?.google_reviews_highlights && Array.isArray(dbBusiness.google_reviews_highlights) && dbBusiness.google_reviews_highlights.length > 0) {
+            // Rotate through reviews to ensure variety (use index to pick different review per business)
+            const review = dbBusiness.google_reviews_highlights[index % dbBusiness.google_reviews_highlights.length]
+            
+            if (review?.text) {
+              // Extract a compelling snippet (30-80 chars)
+              const reviewText = review.text.replace(/[\r\n]+/g, ' ').trim()
+              
+              // Try to find a sentence with positive keywords
+              const sentences = reviewText.split(/[.!?]+/).filter(s => s.trim().length > 20)
+              const positiveKeywords = ['love', 'amazing', 'best', 'great', 'perfect', 'delicious', 'fantastic', 'excellent', 'wonderful', 'awesome', 'incredible', 'favorite', 'favourite']
+              
+              let snippet = sentences.find(s => positiveKeywords.some(kw => s.toLowerCase().includes(kw))) || sentences[0] || reviewText.substring(0, 80)
+              
+              // Clean and truncate
+              snippet = snippet.trim()
+              if (snippet.length > 80) {
+                snippet = snippet.substring(0, 77) + '...'
+              }
+              
+              // Format: "Review: 'text here'" (rating optional)
+              const rating = review.rating ? `${review.rating}★ — ` : ''
+              reviewSnippet = `\n📝 ${rating}"${snippet}"`
+            }
+          }
+          
+          return `**${result.business_name}** [TIER: ${result.business_tier || 'standard'}]: ${result.content}${offerText}${vibesText}${reviewSnippet}`
         }).join('\n\n')
       : ''
 
@@ -466,6 +503,60 @@ YOUR PERSONALITY:
 - Share context and details, not just lists
 - Ask engaging follow-up questions
 - Use natural language: "Oh I love that place!" not "Here are your options:"
+
+🎬 HYBRID REVEAL PATTERN (CRITICAL - THIS IS YOUR FLOW):
+When user asks for restaurants/cafes/bars/etc:
+
+Step 1 — Human-style opener (emotion):
+"Ooo good choice." / "Nice, Thai is strong here." / "Perfect timing for that!"
+→ Short. Confident. Human.
+
+Step 2 — Tease 2 STANDOUTS ONLY (not 6, not 1, exactly 2):
+"Annie's Thai is ridiculously loved (5★, locals rave about it)
+Bird's Nest Thai Kitchen is another gem — proper authentic vibes."
+→ Curated picks with WHY they're good
+→ Include rating, vibe, what makes them special
+→ **Use the REAL review snippets provided in the business data** (marked with 📝)
+→ Each business has DIFFERENT review content - never repeat phrases like "people are obsessed" for multiple businesses!
+→ NO full list dump here!
+
+Step 3 — Invite to Atlas (the magic moment):
+"Want me to show you them on Atlas?"
+→ Makes Atlas feel like a reveal, not a feature
+→ When they tap it → cinematic map tour happens
+
+Step 4 — List becomes secondary:
+→ After Atlas tour, or if they ask "show list", THEN show more businesses
+→ List = reference, Atlas = experience
+
+✅ GOOD EXAMPLE:
+User: "any thai restaurants?"
+You: "Ooo good call. Thai is strong around here.
+
+Annie's Thai is insanely loved by locals (5★, 'the pad thai is perfection and staff so welcoming')
+Bird's Nest Thai Kitchen is another gem (4.9★, 'authentic flavors that transport you straight to Thailand')
+
+Want me to show you where they are on Atlas?"
+
+❌ BAD EXAMPLE (directory style + repetitive - DON'T DO THIS):
+"Here are 6 Thai restaurants in the area:
+1. Annie's Thai — 5★ — people are obsessed with this place
+2. Bird's Nest — 5★ — people are obsessed with this place
+3. Place 3 — 4.8★ — people are obsessed with this place
+[...more]"
+
+🚨 VARIETY RULE:
+- Each business in AVAILABLE BUSINESSES has a unique review snippet (📝)
+- NEVER use generic phrases like "people are obsessed" repeatedly
+- Pull from the actual review text provided
+- Make each business sound DIFFERENT based on their real reviews
+- If no review snippet is provided, use the business description/tagline instead
+
+🎯 KEY MINDSET:
+- Chat = storyteller
+- Atlas = the stage
+- List = the appendix
+- Story → Stage → Appendix (in that order!)
 
 HOW TO RESPOND:
 ✅ GOOD: "Oh nice! Triangle GYROSS is brilliant—they've got this amazing menu with 5 signature items. They're open right now and only a quick walk from town. Want me to show you what they're known for?"
@@ -1524,6 +1615,9 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     if (businessCarousel && businessCarousel.length > 0) {
       businessCarousel.forEach(b => {
         if (b.latitude && b.longitude) {
+          // Find the full business data from tier1Businesses to get reviews
+          const fullBusiness = tier1Businesses.find(t1 => t1.id === b.id)
+          
           mapPins.push({
             id: b.id,
             business_name: b.business_name,
@@ -1535,7 +1629,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             business_tier: 'paid',
             phone: b.phone,
             website_url: b.website_url,
-            google_place_id: b.google_place_id
+            google_place_id: b.google_place_id,
+            google_reviews_highlights: fullBusiness?.google_reviews_highlights || undefined
           })
         }
       })
@@ -1557,7 +1652,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             business_tier: b.tierSource === 'tier2' ? 'claimed_free' : 'unclaimed',
             phone: b.phone,
             website_url: b.website_url,
-            google_place_id: b.google_place_id
+            google_place_id: b.google_place_id,
+            google_reviews_highlights: b.google_reviews_highlights || undefined
           })
         }
       })
@@ -1580,7 +1676,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             business_tier: b.tierSource === 'tier2' ? 'claimed_free' : 'unclaimed',
             phone: b.phone,
             website_url: b.website_url,
-            google_place_id: b.google_place_id
+            google_place_id: b.google_place_id,
+            google_reviews_highlights: b.google_reviews_highlights || undefined
           })
         }
       })
