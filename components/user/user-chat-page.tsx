@@ -805,7 +805,7 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
                       className="w-full bg-gradient-to-r from-cyan-600/20 to-blue-600/20 hover:from-cyan-600/30 hover:to-blue-600/30 border border-cyan-500/30 hover:border-cyan-400/50 text-cyan-300 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 group"
                     >
                       <Map className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                      <span>Show me on Atlas</span>
+                      <span>Show me on Qwikker Atlas</span>
                       <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>

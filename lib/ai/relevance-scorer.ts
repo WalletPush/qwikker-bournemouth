@@ -111,18 +111,38 @@ export function scoreBusinessRelevance(
     }
     
     for (const keyword of intent.keywords) {
-      if (kb.includes(keyword.toLowerCase())) {
+      const keywordLower = keyword.toLowerCase()
+      // Check exact match first
+      if (kb.includes(keywordLower)) {
         const points = isKbPriorityQuery ? 4 : 1
         score += points
         reasons.push(`kb:${keyword}${isKbPriorityQuery ? '(priority)' : ''}`)
         break
       }
+      // For multi-word keywords, also check if ANY word matches (e.g., "kids menu" → check for "kids")
+      if (keywordLower.includes(' ')) {
+        const words = keywordLower.split(' ')
+        for (const word of words) {
+          if (word.length >= 4 && kb.includes(word)) {
+            const points = isKbPriorityQuery ? 4 : 1
+            score += points
+            reasons.push(`kb:${word}(from "${keyword}")${isKbPriorityQuery ? '(priority)' : ''}`)
+            break
+          }
+        }
+        if (score > 0) break // Already scored, no need to check more keywords
+      }
     }
   }
   
   // Debug logging in dev
-  if (process.env.NODE_ENV === 'development' && score > 0) {
-    console.log(`📊 Relevance: ${business.business_name} = ${score} (${reasons.join(', ')})`)
+  if (process.env.NODE_ENV === 'development' && intent.hasIntent) {
+    if (score > 0) {
+      console.log(`📊 Relevance: ${business.business_name} = ${score} (${reasons.join(', ')})`)
+    } else if (kb && kb.length > 50) {
+      // Business has KB content but scored 0 - debug why
+      console.log(`📊 Relevance: ${business.business_name} = 0 (has KB but no match for "${intent.keywords.join(', ')}")`)
+    }
   }
   
   return score

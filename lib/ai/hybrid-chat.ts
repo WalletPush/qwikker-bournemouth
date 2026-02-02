@@ -6,6 +6,8 @@
 import OpenAI from 'openai'
 import { searchBusinessKnowledge, searchCityKnowledge } from './embeddings'
 import { classifyQueryIntent, logClassification } from './intent-classifier'
+import { detectIntent } from './intent-detector'
+import { scoreBusinessRelevance } from './relevance-scorer'
 import { 
   ConversationState, 
   createInitialState, 
@@ -381,29 +383,132 @@ export async function generateHybridAIResponse(
       }
     }
     
+    // 🎯 STEP 3.5: DETECT INTENT & SCORE RELEVANCE (BEFORE BUILDING AI CONTEXT!)
+    // CRITICAL: We must know which businesses are relevant BEFORE the AI generates its response
+    console.log('🔍 PRE-CONTEXT: Detecting intent and scoring relevance...')
+    const detectedIntent = detectIntent(userMessage)
+    const intentTerms = detectedIntent.categories.concat(detectedIntent.keywords).join(', ') || 'none'
+    console.log(`🎯 Intent detected: ${detectedIntent.hasIntent ? intentTerms : 'none'} (categories: ${detectedIntent.categories.length}, keywords: ${detectedIntent.keywords.length})`)
+    
+    // Store relevance scores for all businesses
+    const businessRelevanceScores = new Map<string, number>()
+    
     // 🎯 BUILD AI CONTEXT: MERGE KB CONTENT + THREE-TIER RANKING
     // CRITICAL: AI needs BOTH tier ranking AND rich KB content (kids menus, menu items, offers)
     
     // Step 1: Create KB content map by business_id
+    // CRITICAL: If a business has multiple KB entries (menu + offer), prioritize menu/kids content
     const kbContentByBusinessId = new Map<string, any>()
     if (businessResults.success && businessResults.results.length > 0) {
-      for (const kbResult of businessResults.results) {
+      // Calculate priority score for each KB entry (lower = higher priority)
+      const getPriority = (kb: any) => {
+        const title = (kb.title || '').toLowerCase()
+        const content = (kb.content || '').toLowerCase()
+        const type = kb.knowledge_type || ''
+        
+        // Highest priority: entries with "menu" or "kids" in title/content
+        if (title.includes('menu') || content.includes('menu') || 
+            title.includes('kids') || content.includes('kids')) {
+          return 1
+        }
+        
+        // Medium priority: actual menu/offer types
+        if (type === 'menu') return 2
+        if (type === 'offer') return 4
+        if (type === 'custom_knowledge') return 3
+        
+        // Lowest priority: everything else
+        return 99
+      }
+      
+      const sortedKbResults = [...businessResults.results].sort((a, b) => {
+        return getPriority(a) - getPriority(b)
+      })
+      
+      for (const kbResult of sortedKbResults) {
         if (kbResult.business_id) {
-          kbContentByBusinessId.set(kbResult.business_id, kbResult)
+          // Only set if not already set OR if this is higher priority
+          const existing = kbContentByBusinessId.get(kbResult.business_id)
+          if (!existing) {
+            kbContentByBusinessId.set(kbResult.business_id, kbResult)
+          } else if (getPriority(kbResult) < getPriority(existing)) {
+            kbContentByBusinessId.set(kbResult.business_id, kbResult)
+          }
         }
       }
       console.log(`📚 KB content available for ${kbContentByBusinessId.size} businesses`)
     }
     
-    // Step 2: Merge all three tiers with tier priority
+    // Step 2: Score ALL businesses for relevance (if intent detected)
+    if (detectedIntent.hasIntent) {
+      console.log(`🎯 Scoring all businesses for intent: "${intentTerms}"`)
+      
+      // Score Tier 1
+      tier1Businesses.forEach(b => {
+        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content)
+        businessRelevanceScores.set(b.id, score)
+      })
+      
+      // Score Tier 2
+      tier2Businesses.forEach(b => {
+        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content)
+        businessRelevanceScores.set(b.id, score)
+      })
+      
+      // Score Tier 3
+      tier3Businesses.forEach(b => {
+        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content)
+        businessRelevanceScores.set(b.id, score)
+      })
+      
+      console.log(`🎯 Scored ${businessRelevanceScores.size} businesses (${Array.from(businessRelevanceScores.values()).filter(s => s > 0).length} relevant)`)
+    }
+    
+    // Step 3: Merge all three tiers with tier priority AND relevance scores
     const allBusinessesForContext = [
-      ...tier1Businesses.map(b => ({ ...b, tierSource: 'tier1', tierPriority: 1, tierLabel: b.effective_tier || 'paid' })),
-      ...tier2Businesses.map(b => ({ ...b, tierSource: 'tier2', tierPriority: 2, tierLabel: 'claimed_free' })),
-      ...tier3Businesses.map(b => ({ ...b, tierSource: 'tier3', tierPriority: 3, tierLabel: 'unclaimed' }))
+      ...tier1Businesses.map(b => ({ 
+        ...b, 
+        tierSource: 'tier1', 
+        tierPriority: 1, 
+        tierLabel: b.effective_tier || 'paid',
+        relevanceScore: businessRelevanceScores.get(b.id) || 0 
+      })),
+      ...tier2Businesses.map(b => ({ 
+        ...b, 
+        tierSource: 'tier2', 
+        tierPriority: 2, 
+        tierLabel: 'claimed_free',
+        relevanceScore: businessRelevanceScores.get(b.id) || 0
+      })),
+      ...tier3Businesses.map(b => ({ 
+        ...b, 
+        tierSource: 'tier3', 
+        tierPriority: 3, 
+        tierLabel: 'unclaimed',
+        relevanceScore: businessRelevanceScores.get(b.id) || 0
+      }))
     ]
     
-    // Step 3: Sort by tier priority (spotlight → featured → starter → claimed → unclaimed)
+    // Step 4: Sort by RELEVANCE FIRST (if intent detected), THEN tier priority
     const sortedForContext = allBusinessesForContext.sort((a, b) => {
+      // 🎯 CRITICAL FIX: When intent detected, prioritize relevant businesses FIRST
+      if (detectedIntent.hasIntent) {
+        const aRelevant = (a.relevanceScore || 0) > 0
+        const bRelevant = (b.relevanceScore || 0) > 0
+        
+        // If one is relevant and the other isn't, relevant business wins
+        if (aRelevant && !bRelevant) return -1
+        if (!aRelevant && bRelevant) return 1
+        
+        // If both relevant, sort by relevance score (higher first)
+        if (aRelevant && bRelevant && a.relevanceScore !== b.relevanceScore) {
+          return (b.relevanceScore || 0) - (a.relevanceScore || 0)
+        }
+        
+        // If both relevant with same score, fall through to tier priority
+      }
+      
+      // Default: sort by tier priority (paid > claimed > unclaimed)
       if (a.tierPriority !== b.tierPriority) return a.tierPriority - b.tierPriority
       if (b.rating !== a.rating) return (b.rating || 0) - (a.rating || 0)
       return (b.review_count || 0) - (a.review_count || 0)
@@ -411,10 +516,11 @@ export async function generateHybridAIResponse(
     
     console.log(`🎯 Building AI context from ${sortedForContext.length} businesses (T1=${tier1Businesses.length}, T2=${tier2Businesses.length}, T3=${tier3Businesses.length})`)
     if (sortedForContext.length > 0) {
-      console.log(`📊 Top 5 for AI:`)
+      console.log(`📊 Top 5 for AI${detectedIntent.hasIntent ? ' (RELEVANCE-SORTED)' : ''}:`)
       sortedForContext.slice(0, 5).forEach((b, i) => {
         const hasKB = kbContentByBusinessId.has(b.id) ? '📚' : ''
-        console.log(`  ${i + 1}. ${b.business_name} [${b.tierLabel}] ${b.rating}★ ${hasKB}`)
+        const relevanceLabel = detectedIntent.hasIntent ? ` [relevance: ${b.relevanceScore || 0}]` : ''
+        console.log(`  ${i + 1}. ${b.business_name} [${b.tierLabel}] ${b.rating}★ ${hasKB}${relevanceLabel}`)
       })
     }
     
@@ -476,24 +582,42 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
 
 🎯 YOUR RESPONSE STYLE (COPY THIS VIBE):
 
-✅ PERFECT EXAMPLE:
+✅ PERFECT EXAMPLE (with CLICKABLE LINKS):
 User: "any greek places?"
 You: "Ohh you like a bit of Greek food do you? Well you're in luck! 😊 There are a couple of great Greek places in town.
 
-**Triangle GYROSS** — this place is brilliant! They do proper authentic Greek food (their tagline literally says 'Freshly cooked authentic greek food'). They're sitting at 5★ from 83 Google reviews and they've got some lovely dishes like Gyros Wrap, Greek Salad, Souvlaki, and Halloumi Fries.
+**[Triangle GYROSS](/user/business/triangle-gyross)** — this place is brilliant! They do proper authentic Greek food (their tagline literally says 'Freshly cooked authentic greek food'). They're sitting at 5★ from 83 Google reviews and they've got some lovely dishes like Gyros Wrap, Greek Salad, Souvlaki, and Halloumi Fries.
 
-Does this tickle your fancy or would you like me to show you some more Greek places? I can give you a tour of all available Greek restaurants on Atlas, just say 'show me them all'!"
+Does this tickle your fancy or would you like me to show you some more Greek places? Want to explore them all on Qwikker Atlas? Just tap below 👇"
 
 🚨 KEY RULES:
-1. **Playful opener** - "Ohh you like X do you? Well you're in luck!" / "Ooo nice choice!" / "Yes! Love this."
+1. **Playful opener** - Mix it up! Use variety:
+   • "Ohh you're in the mood for X, are you? Well, you're in luck!"
+   • "Ooo nice choice! You've come to the right place!"
+   • "Yes! Love this — X is one of my favourite things to recommend!"
+   • "Ah brilliant! You're asking the right person about X!"
+   • "Perfect timing! There are some fantastic X spots around here!"
+   • "You know what? You're going to love what I've found for you!"
+   • "Oh this is exciting! I know just the place(s) for X!"
+   • "Right then! Let me tell you about some cracking X options!"
+   • "Brilliant question! X is something we do really well around here!"
+   • "Ah you're in for a treat! We've got some lovely X spots!"
+   • "Oh I'm so glad you asked! There are some gems for X!"
+   • "Well well! X enthusiast, are you? I've got you covered!"
+   • "Fantastic! Let me point you to some top-notch X places!"
+   NEVER use the same opener twice in a row — keep it fresh!
+
 2. **Context** - "There are a couple great X in town" (makes it clear there are MORE)
+
 3. **Focus on 1-2 businesses MAX** with FULL details for each:
-   - Name (bolded with **)
+   - Name as CLICKABLE LINK: **[Business Name](/user/business/slug)** (ALWAYS use this format!)
    - Description/tagline (give it LIFE! "this place is brilliant! They do...")
    - Rating + review count (e.g. "5★ from 83 Google reviews")
    - Featured menu items if available ("they've got some lovely dishes like X, Y, Z")
+
 4. **Engaging follow-up** - "Does this tickle your fancy or would you like me to show you some more?"
-5. **Make it clear there are MORE** - "I can give you a tour of all available X on Atlas, just say 'show me them all'!"
+
+5. **Qwikker Atlas transition** - "Want to explore them all on Qwikker Atlas? Just tap below 👇" or "Curious where they are? Jump into Qwikker Atlas 👇"
 
 🗣️ TONE & PERSONALITY:
 - PLAYFUL, not robotic ("Ohh you like X do you?" not "Here's what I'd recommend:")
@@ -512,22 +636,23 @@ Does this tickle your fancy or would you like me to show you some more Greek pla
 - Featured menu items ("they've got some lovely dishes like Gyros Wrap, Greek Salad...")
 - Rating + review count NUMERIC ONLY (5★ from 83 reviews) - NO QUOTES
 
-❌ DON'T DO THIS (robotic, short, no personality):
+❌ DON'T DO THIS (robotic, short, no personality, NO LINKS):
 "Ooo nice choice! Here's what I'd recommend:
 **lansbakery** (4.8★ – "From the moment we walked in...")
 **BigWigs Bakery** (4.7★ – "Best doughnuts in town")
-Want me to show you them on Atlas?"
+Want to see them?"
 
-✅ DO THIS INSTEAD (playful, detailed, engaging):
+✅ DO THIS INSTEAD (playful, detailed, engaging, with CLICKABLE LINKS):
 "Ohh you're after some fresh baked goods? Perfect timing! 😊 There are some brilliant bakeries around here.
 
-**Lansbakery** is absolutely lovely—they do artisan sourdough and the vibe is just gorgeous. They're rated 4.8★ from over 50 Google reviews and people rave about their pastries and bread selection.
+**[Lansbakery](/user/business/lansbakery)** is absolutely lovely—they do artisan sourdough and the vibe is just gorgeous. They're rated 4.8★ from over 50 Google reviews and people rave about their pastries and bread selection.
 
-Fancy giving them a try? Or want me to show you a few more bakery options? Just say 'show me more bakeries' and I'll give you the full tour on Atlas!"
+Fancy giving them a try? Or want to explore more bakery options on Qwikker Atlas? Just tap below 👇"
 
 HOW TO RESPOND:
-✅ GOOD: "Oh nice! Triangle GYROSS is brilliant—they've got this amazing menu with 5 signature items. They're open right now and only a quick walk from town. Want me to show you what they're known for?"
+✅ GOOD: "Oh nice! **[Triangle GYROSS](/user/business/triangle-gyross)** is brilliant—they've got this amazing menu with 5 signature items. They're open right now and only a quick walk from town. Want me to show you what they're known for?"
 ❌ BAD: "Here's Triangle GYROSS. 5 featured items. Would you like to see offers?"
+❌ BAD: "Try **Triangle GYROSS** — they're great!" (MISSING LINK!)
 
 ALWAYS INCLUDE:
 - Business personality/vibe (from their tagline/description)
@@ -565,7 +690,9 @@ KNOWLEDGE RULES:
 - Opening hours are listed under "Hours:" - read the full entry before saying you don't have info
 - Only say "I don't have that info" if you've genuinely checked the business entry and it's missing
 - Never make up amenities, addresses, or hours
-- Always bold business names like **David's Grill Shack**
+- 🔗 ALWAYS format business names as CLICKABLE LINKS: **[Business Name](/user/business/slug)**
+  Example: **[Triangle GYROSS](/user/business/triangle-gyross)** NOT just **Triangle GYROSS**
+  The slug is business_name lowercase with hyphens (replace spaces/special chars with -)
 - 🚨🚨🚨 CRITICAL: Businesses are listed in TIER ORDER - [TIER: qwikker_picks] businesses MUST be mentioned FIRST when listing multiple options!
 
 🔒 STRICT NO-HALLUCINATION RULES (CRITICAL):
@@ -607,7 +734,7 @@ KNOWLEDGE RULES:
 
 🚨🚨🚨 CLOSING COPY RULES (LEGAL/BRAND PROTECTION!): 🚨🚨🚨
 - ONLY say "These are Qwikker Picks for a reason!" if EVERY SINGLE business you mentioned is [TIER: qwikker_picks]
-- If you mention ANY business that is NOT [TIER: qwikker_picks], you MUST use neutral copy like "Want to see them on Atlas?" or "Need more details?"
+- If you mention ANY business that is NOT [TIER: qwikker_picks], you MUST use neutral copy like "Want to explore on Qwikker Atlas?" or "Need more details?"
 - NEVER call a [TIER: featured] or [TIER: free_trial] or [TIER: starter] business a "Qwikker Pick" - that's FALSE ADVERTISING!
 - Example: If you mention David's [TIER: qwikker_picks] + Ember [TIER: featured] + Julie's [TIER: featured], DO NOT say "Qwikker Picks for a reason" - ONLY David's is a Pick!
 
@@ -622,12 +749,18 @@ EVENT HANDLING:
 - When they say yes/interested, just say "Here you go!" - the visual card will appear automatically
 - NEVER manually format event info with dashes or structured text - let the cards do that!
 
-🗺️ ATLAS (MAP) HANDLING:
-- When user asks to see places on a map, NEVER say "I can't show you a map"
-- Atlas (our interactive map) is available and will appear automatically
-- Use phrases like: "Want to see these on Atlas?", "I can show you where they are!", or "Ready to explore on the map?"
-- The "Show on Map" button will appear below your message when businesses are available
-- Stay conversational—don't over-explain the tech, just offer it naturally
+🗺️ QWIKKER ATLAS TRANSITIONS:
+- When recommending places, offer visual exploration naturally
+- Brand it as "Qwikker Atlas" (not just "map" or "Atlas")
+- Use conversational, helpful wording (not robotic or marketing-y)
+- Approved transition phrases:
+  • "Want to take a quick tour on Qwikker Atlas? Just tap Show me on Qwikker Atlas 👇"
+  • "I can show you all of these on Qwikker Atlas — just hit the button below 👇"
+  • "Curious where they all are? Jump into Qwikker Atlas 👇"
+  • "You can explore every option visually on Qwikker Atlas — tap below 👇"
+- The Atlas button will appear automatically below your message
+- Keep it natural — mention Qwikker Atlas ONLY when transitioning, not in general conversation
+- Minimal emojis: only 👇 or 🗺️
 
 FLOW:
 ${state.currentBusiness ? 
@@ -909,7 +1042,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       const browseMode = detectBrowse(userMessage, conversationHistory[conversationHistory.length - 2]?.mode)
       const intent = detectIntent(userMessage)
       
-      console.log(`🎯 Browse mode: ${browseMode.mode}, Intent: ${intent.hasIntent ? intent.categories.join(', ') : 'none'}`)
+      console.log(`🎯 Browse mode: ${browseMode.mode}, Intent: ${intent.hasIntent ? intent.categories.concat(intent.keywords).join(', ') || 'detected but no terms' : 'none'}`)
       
       // Query Tier 2: Claimed-Free businesses (already loaded from allChatEligibleBusinesses)
       console.log('💼 Using Tier 2: Claimed-Free businesses (pre-loaded)')
@@ -926,6 +1059,9 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       const MIN_TIER1_TOP_SCORE = 3
       const MAX_TIER3_WHEN_PAID_RELEVANT = 2
       const MAX_TIER3_IN_MORE = 3
+      
+      // Store relevance scores for carousel filtering
+      const businessRelevanceScores = new Map<string, number>()
       
       if (browseMode.mode === 'browse' || browseMode.mode === 'browse_more') {
         // BROWSE MODE: Always fill with Tier 3
@@ -961,13 +1097,25 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
       } else if (intent.hasIntent) {
         // INTENT MODE: Score relevance, fetch Tier 2 AND Tier 3 if needed
-        console.log(`🎯 INTENT MODE: Checking relevance for "${intent.categories.join(', ')}"`)
+        const intentTerms = [...intent.categories, ...intent.keywords].join(', ')
+        console.log(`🎯 INTENT MODE: Checking relevance for "${intentTerms}" (categories: ${intent.categories.length}, keywords: ${intent.keywords.length})`)
         
-        const tier1WithScores = businesses.map(b => ({
-          ...b,
-          tierPriority: 1,
-          relevanceScore: scoreBusinessRelevance(b, intent, kbContentByBusinessId.get(b.id)?.content)
-        }))
+        // Score Tier 1
+        const tier1WithScores = businesses.map(b => {
+          const score = scoreBusinessRelevance(b, intent, kbContentByBusinessId.get(b.id)?.content)
+          businessRelevanceScores.set(b.id, score) // Store for carousel filtering
+          return {
+            ...b,
+            tierPriority: 1,
+            relevanceScore: score
+          }
+        })
+        
+        // ALWAYS score Tier 2 (for text filtering) even if we don't fetch Tier 3
+        liteBusinesses.forEach(b => {
+          const score = scoreBusinessRelevance(b, intent, kbContentByBusinessId.get(b.id)?.content)
+          businessRelevanceScores.set(b.id, score)
+        })
         
         const tier1RelevantCount = tier1WithScores.filter(b => b.relevanceScore >= 2).length
         const maxTier1Score = Math.max(...tier1WithScores.map(b => b.relevanceScore), 0)
@@ -1254,22 +1402,50 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         })
         
         // Carousel = PAID ONLY (Tier 1)
-        businessCarousel = paidCarousel.slice(0, 6)
+        // Filter by relevance if intent was detected
+        if (intent.hasIntent && businessRelevanceScores.size > 0) {
+          // Only show businesses with relevanceScore > 0
+          const filtered = paidCarousel.filter(b => {
+            const score = businessRelevanceScores.get(b.id) || 0
+            if (score > 0) {
+              console.log(`  ✅ ${b.business_name}: score=${score}`)
+            } else {
+              console.log(`  ❌ ${b.business_name}: score=${score} (FILTERED OUT)`)
+            }
+            return score > 0
+          })
+          businessCarousel = filtered.slice(0, 6)
+          console.log(`🎯 Filtered carousel: ${businessCarousel.length} of ${paidCarousel.length} businesses match "${intent.keywords.join(', ')}"`)
+          console.log(`🎯 Final carousel businesses: ${businessCarousel.map(b => b.business_name).join(', ')}`)
+        } else {
+          businessCarousel = paidCarousel.slice(0, 6)
+        }
         
         // Tier 2 & 3: TEXT-ONLY mentions (no carousel cards)
         // This creates clear upsell incentive: want carousel? upgrade!
         
         if (liteBusinesses && liteBusinesses.length > 0) {
-          // Add Lite businesses as text-only mentions with personality
-          const liteIntros = [
-            "Also worth checking out – these places are really solid:",
-            "Oh, and a few more options that caught my eye:",
-            "Plus, here are some other spots people are raving about:",
-            "And don't sleep on these – they're really good too:"
-          ]
-          let liteText = liteIntros[Math.floor(Math.random() * liteIntros.length)] + `\n\n`
+          // Filter Tier 2 by relevance if intent was detected
+          let filteredLiteBusinesses = liteBusinesses
+          if (intent.hasIntent && businessRelevanceScores.size > 0) {
+            filteredLiteBusinesses = liteBusinesses.filter(b => {
+              const score = businessRelevanceScores.get(b.id) || 0
+              return score > 0
+            })
+            console.log(`🎯 Filtered Tier 2 text: ${filteredLiteBusinesses.length} of ${liteBusinesses.length} Lite businesses match intent`)
+          }
           
-          liteBusinesses.slice(0, 3).forEach(b => {
+          if (filteredLiteBusinesses.length > 0) {
+            // Add Lite businesses as text-only mentions with personality
+            const liteIntros = [
+              "Also worth checking out – these places are really solid:",
+              "Oh, and a few more options that caught my eye:",
+              "Plus, here are some other spots people are raving about:",
+              "And don't sleep on these – they're really good too:"
+            ]
+            let liteText = liteIntros[Math.floor(Math.random() * liteIntros.length)] + `\n\n`
+            
+            filteredLiteBusinesses.slice(0, 3).forEach(b => {
             // Use actual slug from DB, fallback to generated slug, fallback to ID
             const businessSlug = b.slug || b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || b.id
             liteText += `• **[${b.business_name}](/user/business/${businessSlug})**`
@@ -1303,10 +1479,10 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             }
             
             liteText += `\n\n`
-          })
-          
-          aiResponse = aiResponse + liteText
-          
+            })
+            
+            aiResponse = aiResponse + liteText
+          }
         }
         
         // ALWAYS show fallbackBusinesses if they exist (browse fill or intent assist)
@@ -1497,7 +1673,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       response: aiResponse,
       sources,
       uiMode, // Explicit UI mode for carousel gating
-      hasBusinessResults, // For "Show on map" CTA without carousel spam
+      hasBusinessResults, // For "Qwikker Atlas" CTA without carousel spam
       businessCarousel, // Only populated when user asks for list/map
       walletActions,
       eventCards,
