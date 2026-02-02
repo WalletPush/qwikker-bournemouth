@@ -413,40 +413,46 @@ export async function generateHybridAIResponse(
       })
     }
     
-    // Build context with reviews from DB data (limit to top 15 to keep prompt size reasonable)
+    // Build RICH context with ALL the data (description, tagline, menu items, FULL reviews)
     const businessContext = sortedForContext.length > 0
-      ? sortedForContext.slice(0, 15).map((business, index) => {
+      ? sortedForContext.slice(0, 10).map((business, index) => {
           const offerCount = business.id ? businessOfferCounts[business.id] || 0 : 0
           const offerText = offerCount > 0 ? ` [Has ${offerCount} ${offerCount === 1 ? 'offer' : 'offers'} available]` : ''
           
-          // Build description from available fields
-          const descParts = []
-          if (business.business_tagline) descParts.push(business.business_tagline)
-          if (business.display_category) descParts.push(business.display_category)
-          if (business.business_address) descParts.push(business.business_address)
-          const description = descParts.join(' | ') || 'No description available'
-          
-          // Extract review snippet WITH VARIETY
-          let reviewSnippet = ''
-          if (business.google_reviews_highlights && Array.isArray(business.google_reviews_highlights) && business.google_reviews_highlights.length > 0) {
-            const review = business.google_reviews_highlights[index % business.google_reviews_highlights.length]
-            
-            if (review?.text) {
-              const reviewText = review.text.replace(/[\r\n]+/g, ' ').trim()
-              const sentences = reviewText.split(/[.!?]+/).filter(s => s.trim().length > 20)
-              const positiveKeywords = ['love', 'amazing', 'best', 'great', 'perfect', 'delicious', 'fantastic', 'excellent', 'wonderful', 'awesome', 'incredible', 'favorite', 'favourite']
-              
-              let snippet = sentences.find(s => positiveKeywords.some(kw => s.toLowerCase().includes(kw))) || sentences[0] || reviewText.substring(0, 80)
-              snippet = snippet.trim()
-              if (snippet.length > 80) snippet = snippet.substring(0, 77) + '...'
-              
-              const rating = review.rating ? `${review.rating}★ — ` : ''
-              reviewSnippet = `\n📝 ${rating}"${snippet}"`
-              console.log(`✅ Review for ${business.business_name}: "${snippet.substring(0, 40)}..."`)
-            }
+          // Description/tagline (GIVE IT LIFE!)
+          let descriptionText = ''
+          if (business.business_tagline) {
+            descriptionText = `\nTagline: "${business.business_tagline}"`
+          } else if (business.business_description) {
+            descriptionText = `\nDescription: "${business.business_description}"`
           }
           
-          return `**${business.business_name}** [TIER: ${business.tierLabel}] ${business.rating}★ (${business.review_count || 0} reviews): ${description}${offerText}${reviewSnippet}`
+          // Featured menu items (lovely dishes!)
+          let menuItemsText = ''
+          if (business.featured_items_count && business.featured_items_count > 0) {
+            menuItemsText = `\nFeatured Menu Items: ${business.featured_items_count} items available`
+            // TODO: If we have actual item names, include them here
+          }
+          
+          // 📝 FULL REVIEW SNIPPETS (2 per business, NOT TRUNCATED!)
+          let reviewsText = ''
+          if (business.google_reviews_highlights && Array.isArray(business.google_reviews_highlights) && business.google_reviews_highlights.length > 0) {
+            const reviews = business.google_reviews_highlights.slice(0, 2) // Show 2 reviews
+            reviewsText = '\n📝 Google Reviews:'
+            reviews.forEach(review => {
+              if (review?.text) {
+                // DON'T truncate! Show the full review (or at least first 200 chars)
+                let reviewText = review.text.replace(/[\r\n]+/g, ' ').trim()
+                if (reviewText.length > 200) reviewText = reviewText.substring(0, 197) + '...'
+                reviewsText += `\n  - ${review.rating}★: "${reviewText}"`
+              }
+            })
+            console.log(`✅ Added ${reviews.length} FULL reviews for ${business.business_name}`)
+          }
+          
+          return `**${business.business_name}** [TIER: ${business.tierLabel}]
+Rating: ${business.rating}★ from ${business.review_count || 0} Google reviews
+Category: ${business.display_category || 'Not specified'}${descriptionText}${menuItemsText}${offerText}${reviewsText}`
         }).join('\n\n')
       : 'No businesses available in this city yet.'
     
@@ -471,65 +477,69 @@ export async function generateHybridAIResponse(
                         !userMessage.toLowerCase().match(/(deal|offer|discount|italian|pizza|burger|chinese|indian|thai|mexican|japanese|cocktail|cheap|expensive|fancy|upscale|qwikker pick)/i)
     
     const cityDisplayName = city.charAt(0).toUpperCase() + city.slice(1)
-    const systemPrompt = `You're a local friend helping someone explore ${cityDisplayName}—not a chatbot. You're knowledgeable, enthusiastic, and genuinely helpful.
+    const systemPrompt = `You're a local friend helping someone explore ${cityDisplayName}—warm, playful, and genuinely excited to share hidden gems.
 
-🚨🚨🚨 CRITICAL RULE - READ THIS FIRST 🚨🚨🚨
+🎯 YOUR RESPONSE STYLE (COPY THIS VIBE):
 
-When user asks for restaurants/cafes/bars:
-1. Pick EXACTLY 2 standouts (not 1, not 3, not 5, not 6 - EXACTLY 2!)
-2. Use REAL review quotes from the 📝 sections below (NOT "people are obsessed")
-3. Each business gets DIFFERENT quote
-4. End with "Want me to show you them on Atlas?"
-5. DO NOT list more than 2 businesses in your first response!
+✅ PERFECT EXAMPLE:
+User: "any greek places?"
+You: "Ohh you like a bit of Greek food do you? Well you're in luck! 😊 There are a couple of great Greek places in town.
 
-YOUR PERSONALITY:
-- Talk like a best friend who knows the city inside out
-- Be warm, conversational, and enthusiastic (never robotic or formal)
-- Share context and details, not just lists
-- Ask engaging follow-up questions
-- Use natural language: "Oh I love that place!" not "Here are your options:"
+**Triangle GYROSS** — this place is brilliant! They do proper authentic Greek food (their tagline literally says 'Freshly cooked authentic greek food'). They're sitting at 5★ from 83 Google reviews and they've got some lovely dishes like Gyros Wrap, Greek Salad, Souvlaki, and Halloumi Fries.
 
-🎬 HYBRID REVEAL PATTERN (FOLLOW THIS EXACTLY):
+Here's what people are saying on Google:
+📝 "The food here is absolutely amazing! Best Greek food I've had outside of Greece itself..."
+📝 "Freshly cooked authentic greek food... staff are so friendly and the portions are generous..."
 
-Step 1 — Human-style opener (emotion):
-"Ooo good choice." / "Nice, Thai is strong here." / "Perfect timing for that!"
-→ Short. Confident. Human.
+Does this tickle your fancy or would you like me to show you some more Greek places? I can give you a tour of all available Greek restaurants on Atlas, just say 'show me them all'!"
 
-Step 2 — Tease 2 STANDOUTS ONLY (EXACTLY 2, NO MORE!):
-→ Curated picks with WHY they're good
-→ Include rating + REAL review quote from 📝
-→ Each business MUST have DIFFERENT quote
-→ NO "people are obsessed" - use the actual quotes!
-→ NO full list dump!
+🚨 KEY RULES:
+1. **Playful opener** - "Ohh you like X do you? Well you're in luck!" / "Ooo nice choice!" / "Yes! Love this."
+2. **Context** - "There are a couple great X in town" (makes it clear there are MORE)
+3. **Focus on 1-2 businesses MAX** with FULL details for each:
+   - Name (bolded with **)
+   - Description/tagline (give it LIFE! "this place is brilliant! They do...")
+   - Rating + review count (e.g. "5★ from 83 Google reviews")
+   - Featured menu items if available ("they've got some lovely dishes like X, Y, Z")
+   - 2 FULL review snippets WITH Google attribution (📝 prefix, show MORE not less!)
+4. **Engaging follow-up** - "Does this tickle your fancy or would you like me to show you some more?"
+5. **Make it clear there are MORE** - "I can give you a tour of all available X on Atlas, just say 'show me them all'!"
 
-Step 3 — Invite to Atlas:
-"Want me to show you them on Atlas?"
+🗣️ TONE & PERSONALITY:
+- PLAYFUL, not robotic ("Ohh you like X do you?" not "Here's what I'd recommend:")
+- CONVERSATIONAL, not formal (use "you're" not "you are", add emojis 😊)
+- ENTHUSIASTIC, not dry ("this place is brilliant!" not "This is a restaurant")
+- DETAILED, not brief (use taglines, menu items, FULL review quotes)
+- HUMAN, not AI (contractions, exclamation points, natural flow)
 
-✅ CORRECT RESPONSE:
-User: "any thai restaurants?"
-You: "Ooo good call. Thai is strong around here.
+📝 REVIEW SNIPPETS:
+- Show 2 FULL reviews per business (not truncated!)
+- Format: 📝 "Full quote from Google review..."
+- NEVER say "people are obsessed" - use the ACTUAL quotes!
+- Each quote should be DIFFERENT and show personality
 
-Annie's Thai is insanely loved by locals (5★, 'the pad thai is perfection and staff so welcoming')
-Bird's Nest Thai Kitchen is another gem (4.9★, 'authentic flavors that transport you straight to Thailand')
+🍽️ USE THE RICH DATA:
+- Description/tagline ("They do proper authentic Greek food")
+- Featured menu items ("they've got some lovely dishes like Gyros Wrap, Greek Salad...")
+- Review snippets (2 per business, FULL quotes)
+- Rating + review count (5★ from 83 reviews)
 
-Want me to show you where they are on Atlas?"
+❌ DON'T DO THIS (robotic, short, no personality):
+"Ooo nice choice! Here's what I'd recommend:
+**lansbakery** (4.8★ – "From the moment we walked in...")
+**BigWigs Bakery** (4.7★ – "Best doughnuts in town")
+Want me to show you them on Atlas?"
 
-❌ WRONG - YOU'RE DOING THIS NOW (STOP IT!):
-"So here's what I'm thinking – these spots are all excellent:
-• Bird's Nest Thai Kitchen — 4.5★ — consistently excellent
-• Annie's Thai — 5★ — people are obsessed with this place 🔥
-• 2 BULAN — 4.8★ — people are obsessed with this place 🔥
-• Dining Corner — 4.8★ — people are obsessed with this place 🔥
-• Seeds Eatery — 4.6★ — consistently excellent"
+✅ DO THIS INSTEAD (playful, detailed, engaging):
+"Ohh you're after some fresh baked goods? Perfect timing! 😊 There are some brilliant bakeries around here.
 
-🚨 VARIETY RULE - STOP REPEATING YOURSELF:
-- Each business in AVAILABLE BUSINESSES has a 📝 review snippet
-- USE THE ACTUAL QUOTES - they're right there in the data!
-- NEVER say "people are obsessed" multiple times
-- Pull from the actual review text provided
-- Make each business sound DIFFERENT
+**Lansbakery** is absolutely lovely—they do artisan sourdough and the vibe is just gorgeous. They're rated 4.8★ from over 50 Google reviews and people rave about their pastries and bread selection.
 
-🎯 KEY RULE: ONLY 2 BUSINESSES IN FIRST RESPONSE!
+Here's what locals are saying on Google:
+📝 "From the moment we walked in, we loved the decor and the bustling, happy atmosphere. The coffee was excellent and the pastries were divine..."
+📝 "Best bakery in Bournemouth hands down! Their sourdough is perfection and the staff are so welcoming..."
+
+Fancy giving them a try? Or want me to show you a few more bakery options? Just say 'show me more bakeries' and I'll give you the full tour on Atlas!"
 
 HOW TO RESPOND:
 ✅ GOOD: "Oh nice! Triangle GYROSS is brilliant—they've got this amazing menu with 5 signature items. They're open right now and only a quick walk from town. Want me to show you what they're known for?"
@@ -1146,85 +1156,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       // STEP 5: Build final carousel (PAID-ONLY)
       // 🎯 MONETIZATION: Carousel cards are EXCLUSIVE to paid/trial tiers
       // Free tier (Tier 2 & 3) = text-only mentions (clear upsell incentive)
-      // CRITICAL: If topMatchesText exists (Tier 1 was irrelevant), add it FIRST before carousel
-      if (topMatchesText && topMatchesText.length > 0) {
-        // COMPLETE OVERRIDE: Tier 1 was irrelevant, so IGNORE the AI's response entirely
-        // and generate our own conversational intro
-        const categoryText = intent.categories.length > 0 ? intent.categories[0] : 'places'
-        const topMatchesTier2Count = topMatchesText.filter(b => b.tierSource === 'tier2').length
-        
-        const responses = topMatchesTier2Count > 0 ? [
-          `Oh nice! I've got some ${categoryText} spots that are perfect:`,
-          `Yeah absolutely! Let me tell you about these ${categoryText} places:`,
-          `Ooh yes! Here's what I'd recommend:`,
-          `Perfect timing — I know just the places:`,
-          `Oh brilliant! These ${categoryText} spots are great:`
-        ] : [
-          `Alright, I've found some really solid ${categoryText} places for you:`,
-          `So here's what I'm thinking – these spots are all excellent:`,
-          `Okay, listen – I've got some great options:`,
-          `Let me hook you up with some top-rated spots:`,
-          `Right, so I've been digging and found some gems:`
-        ]
-        
-        // 🎬 HYBRID REVEAL PATTERN: Show EXACTLY 2 standouts with real review quotes
-        const humanOpeners = [
-          `Ooo nice choice!`,
-          `Good call!`,
-          `Perfect!`,
-          `Yes! Love this.`
-        ]
-        
-        aiResponse = humanOpeners[Math.floor(Math.random() * humanOpeners.length)] + ` Here's what I'd recommend:\n\n`
-        console.log(`🎬 HYBRID REVEAL: Showing EXACTLY 2 businesses with real review quotes`)
-        
-        let topMatchesSection = ''
-        
-        // ⚠️ CRITICAL: ONLY 2 BUSINESSES (not 6!)
-        topMatchesText.slice(0, 2).forEach((b, index) => {
-          // Use actual slug from DB, fallback to generated slug, fallback to ID
-          const slug = b.slug || b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || b.id
-          
-          // 🎬 HYBRID REVEAL: Simple, clean format
-          topMatchesSection += `**[${b.business_name}](/user/business/${slug})**`
-          
-          // 📝 REAL REVIEW SNIPPET (not generic text!)
-          if (b.rating) {
-            topMatchesSection += ` (${b.rating}★`
-            
-            // Add REAL review snippet if available
-            if (b.google_reviews_highlights && Array.isArray(b.google_reviews_highlights) && b.google_reviews_highlights.length > 0) {
-              const review = b.google_reviews_highlights[index % b.google_reviews_highlights.length]
-              if (review?.text) {
-                const reviewText = review.text.replace(/[\r\n]+/g, ' ').trim()
-                const sentences = reviewText.split(/[.!?]+/).filter(s => s.trim().length > 20)
-                const positiveKeywords = ['love', 'amazing', 'best', 'great', 'perfect', 'delicious', 'fantastic', 'excellent', 'wonderful', 'awesome', 'incredible', 'favorite', 'favourite']
-                
-                let snippet = sentences.find(s => positiveKeywords.some(kw => s.toLowerCase().includes(kw))) || sentences[0] || reviewText.substring(0, 60)
-                snippet = snippet.trim()
-                if (snippet.length > 70) snippet = snippet.substring(0, 67) + '...'
-                
-                topMatchesSection += ` – "${snippet}")`
-              } else {
-                topMatchesSection += ` from ${b.review_count || 0} reviews)`
-              }
-            } else {
-              topMatchesSection += ` from ${b.review_count || 0} reviews)`
-            }
-          }
-          
-          // 🎬 KEEP IT SIMPLE - No extra fluff in the hybrid reveal
-          
-          topMatchesSection += `\n\n`
-        })
-        
-        // 🗺️ ATLAS INVITATION (the magic moment!)
-        topMatchesSection += `Want me to show you them on Atlas?`
-        
-        aiResponse = aiResponse + topMatchesSection
-        
-        console.log(`🎯 Added ${topMatchesText.length} top matches FIRST - Tier 1 was irrelevant`)
-      }
+      // ✅ NO MORE OVERRIDE - AI writes the response using rich context!
+      console.log(`✅ AI response used AS-IS (no override). Length: ${aiResponse.length} chars`)
       
       if (shouldAttachCarousel && uniqueBusinessIds.length > 0) {
         // Build Tier 1 carousel (Paid/Trial ONLY)
