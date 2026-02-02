@@ -1438,14 +1438,9 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     // Either show for the ONLY match, or don't show at all
     const allTier3Businesses = [...(topMatchesText || []), ...(fallbackBusinesses || [])]
     
-    if (allTier3Businesses && allTier3Businesses.length === 1) {
-      // ONLY 1 business being shown → safe to show its reviews
-      const firstUnclaimedBusiness = allTier3Businesses[0]
-      
-      // ✅ LEGAL COMPLIANCE: Review text removed per Google ToS
-      // We still show rating + review_count + link to Google Maps in business cards
-      }
-    }
+    // ✅ LEGAL COMPLIANCE: Review text removed per Google ToS
+    // We still show rating + review_count + link to Google Maps in business cards
+    
     // 🗺️ ATLAS: Build mapPins array (includes ALL businesses for map display)
     // Paid businesses get cyan pins, unclaimed get grey pins
     const mapPins: ChatResponse['mapPins'] = []
