@@ -194,7 +194,8 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       fullSchedule: formatBusinessHours(business.business_hours, business.business_hours_structured, true), // For hero view
       images: business.business_images || ['/placeholder-business.jpg'],
       logo: business.logo || '/placeholder-logo.jpg',
-      slug: business.business_name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || business.id,
+      // ✅ MATCH CHAT SLUG LOGIC: Use DB slug if available, otherwise generate consistently
+      slug: business.slug || business.business_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || business.id,
       offers: business.business_offers?.filter(offer => {
         // Must be approved
         if (offer.status !== 'approved') return false
