@@ -388,17 +388,28 @@ export async function generateHybridAIResponse(
       }
     }
     
-    // 🎯 BUILD AI CONTEXT FROM THREE-TIER BUSINESSES (NOT KB!)
-    // CRITICAL FIX: AI must see ALL businesses (paid, claimed, unclaimed) with proper tier ranking
+    // 🎯 BUILD AI CONTEXT: MERGE KB CONTENT + THREE-TIER RANKING
+    // CRITICAL: AI needs BOTH tier ranking AND rich KB content (kids menus, menu items, offers)
     
-    // Merge all three tiers with tier priority
+    // Step 1: Create KB content map by business_id
+    const kbContentByBusinessId = new Map<string, any>()
+    if (businessResults.success && businessResults.results.length > 0) {
+      for (const kbResult of businessResults.results) {
+        if (kbResult.business_id) {
+          kbContentByBusinessId.set(kbResult.business_id, kbResult)
+        }
+      }
+      console.log(`📚 KB content available for ${kbContentByBusinessId.size} businesses`)
+    }
+    
+    // Step 2: Merge all three tiers with tier priority
     const allBusinessesForContext = [
       ...tier1Businesses.map(b => ({ ...b, tierSource: 'tier1', tierPriority: 1, tierLabel: b.effective_tier || 'paid' })),
       ...tier2Businesses.map(b => ({ ...b, tierSource: 'tier2', tierPriority: 2, tierLabel: 'claimed_free' })),
       ...tier3Businesses.map(b => ({ ...b, tierSource: 'tier3', tierPriority: 3, tierLabel: 'unclaimed' }))
     ]
     
-    // Sort by tier priority, then rating, then review count
+    // Step 3: Sort by tier priority (spotlight → featured → starter → claimed → unclaimed)
     const sortedForContext = allBusinessesForContext.sort((a, b) => {
       if (a.tierPriority !== b.tierPriority) return a.tierPriority - b.tierPriority
       if (b.rating !== a.rating) return (b.rating || 0) - (a.rating || 0)
@@ -409,54 +420,59 @@ export async function generateHybridAIResponse(
     if (sortedForContext.length > 0) {
       console.log(`📊 Top 5 for AI:`)
       sortedForContext.slice(0, 5).forEach((b, i) => {
-        console.log(`  ${i + 1}. ${b.business_name} [${b.tierLabel}] ${b.rating}★`)
+        const hasKB = kbContentByBusinessId.has(b.id) ? '📚' : ''
+        console.log(`  ${i + 1}. ${b.business_name} [${b.tierLabel}] ${b.rating}★ ${hasKB}`)
       })
     }
     
-    // Build RICH context with ALL the data (description, tagline, menu items, FULL reviews)
+    // Step 4: Build RICH context with KB content merged with DB data
     const businessContext = sortedForContext.length > 0
       ? sortedForContext.slice(0, 10).map((business, index) => {
           const offerCount = business.id ? businessOfferCounts[business.id] || 0 : 0
           const offerText = offerCount > 0 ? ` [Has ${offerCount} ${offerCount === 1 ? 'offer' : 'offers'} available]` : ''
           
-          // Description/tagline (GIVE IT LIFE!)
-          let descriptionText = ''
-          if (business.business_tagline) {
-            descriptionText = `\nTagline: "${business.business_tagline}"`
-          } else if (business.business_description) {
-            descriptionText = `\nDescription: "${business.business_description}"`
-          }
+          // 📚 PRIORITY: Use KB content if available (has rich menu details, kids menus, offer descriptions)
+          const kbContent = kbContentByBusinessId.get(business.id)
           
-          // Featured menu items (lovely dishes!)
-          let menuItemsText = ''
-          if (business.featured_items_count && business.featured_items_count > 0) {
-            menuItemsText = `\nFeatured Menu Items: ${business.featured_items_count} items available`
-            // TODO: If we have actual item names, include them here
+          let richContent = ''
+          if (kbContent && kbContent.content) {
+            // KB content is GOLD - it has everything!
+            richContent = `\n${kbContent.content}`
+            console.log(`✅ Using KB content for ${business.business_name} (${kbContent.content.length} chars)`)
+          } else {
+            // Fallback to basic DB fields
+            if (business.business_tagline) {
+              richContent += `\nTagline: "${business.business_tagline}"`
+            } else if (business.business_description) {
+              richContent += `\nDescription: "${business.business_description}"`
+            }
+            
+            if (business.featured_items_count && business.featured_items_count > 0) {
+              richContent += `\nFeatured Menu Items: ${business.featured_items_count} items available`
+            }
           }
           
           // 📝 FULL REVIEW SNIPPETS (2 per business, NOT TRUNCATED!)
           let reviewsText = ''
           if (business.google_reviews_highlights && Array.isArray(business.google_reviews_highlights) && business.google_reviews_highlights.length > 0) {
-            const reviews = business.google_reviews_highlights.slice(0, 2) // Show 2 reviews
+            const reviews = business.google_reviews_highlights.slice(0, 2)
             reviewsText = '\n📝 Google Reviews:'
             reviews.forEach(review => {
               if (review?.text) {
-                // DON'T truncate! Show the full review (or at least first 200 chars)
                 let reviewText = review.text.replace(/[\r\n]+/g, ' ').trim()
                 if (reviewText.length > 200) reviewText = reviewText.substring(0, 197) + '...'
                 reviewsText += `\n  - ${review.rating}★: "${reviewText}"`
               }
             })
-            console.log(`✅ Added ${reviews.length} FULL reviews for ${business.business_name}`)
           }
           
           return `**${business.business_name}** [TIER: ${business.tierLabel}]
 Rating: ${business.rating}★ from ${business.review_count || 0} Google reviews
-Category: ${business.display_category || 'Not specified'}${descriptionText}${menuItemsText}${offerText}${reviewsText}`
+Category: ${business.display_category || 'Not specified'}${richContent}${offerText}${reviewsText}`
         }).join('\n\n')
       : 'No businesses available in this city yet.'
     
-    console.log(`📊 AI Context: ${sortedForContext.length} total businesses, showing top 15, context length: ${businessContext.length} chars`)
+    console.log(`📊 AI Context: ${sortedForContext.length} total businesses, ${kbContentByBusinessId.size} with KB content, context length: ${businessContext.length} chars`)
 
     const cityContext = cityResults.success && cityResults.results.length > 0
       ? cityResults.results.map(result => 
@@ -491,6 +507,8 @@ Here's what people are saying on Google:
 📝 "The food here is absolutely amazing! Best Greek food I've had outside of Greece itself..."
 📝 "Freshly cooked authentic greek food... staff are so friendly and the portions are generous..."
 
+_Reviews from Google_
+
 Does this tickle your fancy or would you like me to show you some more Greek places? I can give you a tour of all available Greek restaurants on Atlas, just say 'show me them all'!"
 
 🚨 KEY RULES:
@@ -512,11 +530,13 @@ Does this tickle your fancy or would you like me to show you some more Greek pla
 - DETAILED, not brief (use taglines, menu items, FULL review quotes)
 - HUMAN, not AI (contractions, exclamation points, natural flow)
 
-📝 REVIEW SNIPPETS:
+📝 REVIEW SNIPPETS (CRITICAL - GOOGLE ATTRIBUTION REQUIRED):
 - Show 2 FULL reviews per business (not truncated!)
 - Format: 📝 "Full quote from Google review..."
 - NEVER say "people are obsessed" - use the ACTUAL quotes!
 - Each quote should be DIFFERENT and show personality
+- ⚠️ LEGAL REQUIREMENT: After showing reviews, add at the end:
+  "_Reviews from Google_" (small text, italics)
 
 🍽️ USE THE RICH DATA:
 - Description/tagline ("They do proper authentic Greek food")
@@ -538,6 +558,8 @@ Want me to show you them on Atlas?"
 Here's what locals are saying on Google:
 📝 "From the moment we walked in, we loved the decor and the bustling, happy atmosphere. The coffee was excellent and the pastries were divine..."
 📝 "Best bakery in Bournemouth hands down! Their sourdough is perfection and the staff are so welcoming..."
+
+_Reviews from Google_
 
 Fancy giving them a try? Or want me to show you a few more bakery options? Just say 'show me more bakeries' and I'll give you the full tour on Atlas!"
 
@@ -981,7 +1003,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         const tier1WithScores = businesses.map(b => ({
           ...b,
-          relevanceScore: scoreBusinessRelevance(b, intent)
+          tierPriority: 1,
+          relevanceScore: scoreBusinessRelevance(b, intent, kbContentByBusinessId.get(b.id)?.content)
         }))
         
         const tier1RelevantCount = tier1WithScores.filter(b => b.relevanceScore >= 2).length
@@ -1003,7 +1026,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           const tier2WithScores = (liteBusinesses || [])
             .map(b => ({
               ...b,
-              relevanceScore: scoreBusinessRelevance(b, intent),
+              tierPriority: 2,
+              relevanceScore: scoreBusinessRelevance(b, intent, kbContentByBusinessId.get(b.id)?.content),
               tierSource: 'tier2'
             }))
             .filter(b => b.relevanceScore > 0)
@@ -1014,7 +1038,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           const tier3WithScores = (tier3Businesses || [])
             .map(b => ({
               ...b,
-              relevanceScore: scoreBusinessRelevance(b, intent),
+              tierPriority: 3,
+              relevanceScore: scoreBusinessRelevance(b, intent, kbContentByBusinessId.get(b.id)?.content),
               tierSource: 'tier3'
             }))
           
@@ -1041,9 +1066,14 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           
           console.log(`🎯 Tier 3: ${tier3Relevant.length} relevant unclaimed businesses`)
           
-          // Combine Tier 2 + Tier 3, sorted by relevance
+          // Combine Tier 2 + Tier 3, sorted by TIER PRIORITY first, then relevance
           const allLowerTiers = [...tier2WithScores, ...tier3WithScores]
-            .sort((a, b) => b.relevanceScore - a.relevanceScore)
+            .sort((a, b) => {
+              // CRITICAL: Tier priority FIRST (spotlight → featured → starter → claimed → unclaimed)
+              if (a.tierPriority !== b.tierPriority) return a.tierPriority - b.tierPriority
+              // Then by relevance score within tier
+              return b.relevanceScore - a.relevanceScore
+            })
           
           if (tier1HasEnoughRelevant) {
             // Tier 1 has enough relevant matches (2+) - lower tiers are just an assist
@@ -1071,6 +1101,52 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
               .slice(0, MAX_TIER3_IN_MORE)
             
             console.log(`🎯 Tier 1 irrelevant - showing ${topMatchesText.length} Tier 2/3 as top matches`)
+          }
+          
+          // 🔍 DEBUG HARNESS: Kids Menu Query Diagnostic (dev only)
+          if (process.env.NODE_ENV === 'development' && userMessage.toLowerCase().includes('kids')) {
+            console.log('\n' + '='.repeat(80))
+            console.log('🔍 DEBUG HARNESS: Kids Menu Query Diagnostic')
+            console.log('='.repeat(80))
+            
+            // Show KB content retrieved
+            console.log(`\n📚 KB CONTENT RETRIEVED (${kbContentByBusinessId.size} businesses):`)
+            const kbBusinesses = Array.from(kbContentByBusinessId.entries()).slice(0, 5)
+            for (const [businessId, kbRow] of kbBusinesses) {
+              const hasKidsInKB = (kbRow.content || '').toLowerCase().includes('kids')
+              console.log(`  - ${kbRow.business_name}:`)
+              console.log(`    Type: ${kbRow.knowledge_type}`)
+              console.log(`    Has "kids": ${hasKidsInKB ? '✅' : '❌'}`)
+              console.log(`    Content preview: ${(kbRow.content || '').substring(0, 120)}...`)
+            }
+            
+            // Show all scored businesses across all tiers
+            console.log(`\n🎯 SCORED BUSINESSES (Top 15 candidates):`)
+            console.log('Rank | Business Name                | Tier | Priority | hasKB | kbKids | Score | Reasons           | Filtered?')
+            console.log('-----|------------------------------|------|----------|-------|--------|-------|-------------------|----------')
+            
+            const allScoredBusinesses = [
+              ...(tier1WithScores || []).map(b => ({ ...b, tierSource: 'tier1' })),
+              ...(tier2WithScores || []).map(b => ({ ...b, tierSource: 'tier2' })),
+              ...(tier3WithScores || []).map(b => ({ ...b, tierSource: 'tier3' }))
+            ]
+              .sort((a, b) => {
+                if (a.tierPriority !== b.tierPriority) return a.tierPriority - b.tierPriority
+                return b.relevanceScore - a.relevanceScore
+              })
+              .slice(0, 15)
+            
+            allScoredBusinesses.forEach((b, index) => {
+              const hasKB = kbContentByBusinessId.has(b.id)
+              const kbContent = kbContentByBusinessId.get(b.id)?.content || ''
+              const kbMatchedKids = kbContent.toLowerCase().includes('kids')
+              const filteredOut = b.relevanceScore === 0 ? '🚫 YES' : '✅ NO'
+              const reasons = b.matchReasons?.join(', ') || 'N/A'
+              
+              console.log(`${String(index + 1).padStart(4)} | ${b.business_name.substring(0, 28).padEnd(28)} | ${b.tierSource.padEnd(4)} | ${String(b.tierPriority || '?').padStart(8)} | ${hasKB ? '✅' : '❌'.padEnd(5)} | ${kbMatchedKids ? '✅' : '❌'.padEnd(6)} | ${String(b.relevanceScore).padStart(5)} | ${reasons.substring(0, 17).padEnd(17)} | ${filteredOut}`)
+            })
+            
+            console.log('='.repeat(80) + '\n')
           }
         } else {
           console.log(`✅ Tier 1 sufficient (${tier1RelevantCount} relevant, max score ${maxTier1Score})`)
