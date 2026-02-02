@@ -202,6 +202,8 @@ export async function POST(request: NextRequest) {
       hasBusinessResults: result.hasBusinessResults,
       businessCarousel: result.businessCarousel,
       mapPins: result.mapPins, // ✅ ATLAS: All businesses for map (paid + unclaimed)
+      queryCategories: result.queryCategories || [], // ✅ ATLAS: For filtering businesses by query
+      queryKeywords: result.queryKeywords || [], // ✅ ATLAS: For filtering businesses by query
       walletActions: result.walletActions,
       eventCards: result.eventCards,
       googleReviewSnippets: result.googleReviewSnippets,

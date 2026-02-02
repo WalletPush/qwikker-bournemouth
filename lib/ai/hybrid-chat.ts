@@ -122,6 +122,8 @@ interface ChatResponse {
     website_url?: string
     google_place_id?: string
   }>
+  queryCategories?: string[] // ✅ ATLAS: Categories detected in query (for filtering businesses)
+  queryKeywords?: string[] // ✅ ATLAS: Keywords detected in query (for filtering businesses)
 }
 
 /**
@@ -1061,9 +1063,9 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       
       // Detect user intent
       const browseMode = detectBrowse(userMessage, conversationHistory[conversationHistory.length - 2]?.mode)
-      const intent = detectIntent(userMessage)
+      const detectedIntent = detectIntent(userMessage)
       
-      console.log(`🎯 Browse mode: ${browseMode.mode}, Intent: ${intent.hasIntent ? intent.categories.concat(intent.keywords).join(', ') || 'detected but no terms' : 'none'}`)
+      console.log(`🎯 Browse mode: ${browseMode.mode}, Intent: ${detectedIntent.hasIntent ? detectedIntent.categories.concat(detectedIntent.keywords).join(', ') || 'detected but no terms' : 'none'}`)
       
       // Query Tier 2: Claimed-Free businesses (already loaded from allChatEligibleBusinesses)
       console.log('💼 Using Tier 2: Claimed-Free businesses (pre-loaded)')
@@ -1116,14 +1118,14 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           console.log(`📚 Filled with ${fallbackBusinesses.length} Tier 3 businesses (offset: ${browseOffset})`)
         }
         
-      } else if (intent.hasIntent) {
+      } else if (detectedIntent.hasIntent) {
         // INTENT MODE: Score relevance, fetch Tier 2 AND Tier 3 if needed
-        const intentTerms = [...intent.categories, ...intent.keywords].join(', ')
-        console.log(`🎯 INTENT MODE: Checking relevance for "${intentTerms}" (categories: ${intent.categories.length}, keywords: ${intent.keywords.length})`)
+        const intentTerms = [...detectedIntent.categories, ...detectedIntent.keywords].join(', ')
+        console.log(`🎯 INTENT MODE: Checking relevance for "${intentTerms}" (categories: ${detectedIntent.categories.length}, keywords: ${detectedIntent.keywords.length})`)
         
         // Score Tier 1
         const tier1WithScores = businesses.map(b => {
-          const score = scoreBusinessRelevance(b, intent, kbContentByBusinessId.get(b.id)?.content)
+          const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content)
           businessRelevanceScores.set(b.id, score) // Store for carousel filtering
           return {
             ...b,
@@ -1134,7 +1136,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         // ALWAYS score Tier 2 (for text filtering) even if we don't fetch Tier 3
         liteBusinesses.forEach(b => {
-          const score = scoreBusinessRelevance(b, intent, kbContentByBusinessId.get(b.id)?.content)
+          const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content)
           businessRelevanceScores.set(b.id, score)
         })
         
@@ -1158,7 +1160,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             .map(b => ({
               ...b,
               tierPriority: 2,
-              relevanceScore: scoreBusinessRelevance(b, intent, kbContentByBusinessId.get(b.id)?.content),
+              relevanceScore: scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content),
               tierSource: 'tier2'
             }))
             .filter(b => b.relevanceScore > 0)
@@ -1170,12 +1172,12 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             .map(b => ({
               ...b,
               tierPriority: 3,
-              relevanceScore: scoreBusinessRelevance(b, intent, kbContentByBusinessId.get(b.id)?.content),
+              relevanceScore: scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content),
               tierSource: 'tier3'
             }))
           
           // ✅ DEBUG: Log all Tier 3 scores for "indian" query
-          if (intent.categories.includes('indian')) {
+          if (detectedIntent.categories.includes('indian')) {
             console.log(`🔍 DEBUG: Scoring ${tier3Businesses.length} Tier 3 businesses for "indian"`)
             const indianMatches = tier3WithScores.filter(b => b.relevanceScore > 0)
             console.log(`  Found ${indianMatches.length} relevant matches:`)
@@ -1317,7 +1319,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         uiMode = 'suggestions'
         shouldAttachCarousel = false
         console.log('🚫 Browse mode - carousel DISABLED')
-      } else if (intent.hasIntent && topMatchesText.length > 0) {
+      } else if (detectedIntent.hasIntent && topMatchesText.length > 0) {
         // Intent mode with Tier 1 irrelevant = NO carousel, Tier 3 shows first
         uiMode = 'conversational'
         shouldAttachCarousel = false
@@ -1424,7 +1426,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         // Carousel = PAID ONLY (Tier 1)
         // Filter by relevance if intent was detected
-        if (intent.hasIntent && businessRelevanceScores.size > 0) {
+        if (detectedIntent.hasIntent && businessRelevanceScores.size > 0) {
           // Only show businesses with relevanceScore > 0
           const filtered = paidCarousel.filter(b => {
             const score = businessRelevanceScores.get(b.id) || 0
@@ -1436,7 +1438,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             return score > 0
           })
           businessCarousel = filtered.slice(0, 6)
-          console.log(`🎯 Filtered carousel: ${businessCarousel.length} of ${paidCarousel.length} businesses match "${intent.keywords.join(', ')}"`)
+          console.log(`🎯 Filtered carousel: ${businessCarousel.length} of ${paidCarousel.length} businesses match "${detectedIntent.keywords.join(', ')}"`)
           console.log(`🎯 Final carousel businesses: ${businessCarousel.map(b => b.business_name).join(', ')}`)
         } else {
           businessCarousel = paidCarousel.slice(0, 6)
@@ -1448,7 +1450,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         if (liteBusinesses && liteBusinesses.length > 0) {
           // Filter Tier 2 by relevance if intent was detected
           let filteredLiteBusinesses = liteBusinesses
-          if (intent.hasIntent && businessRelevanceScores.size > 0) {
+          if (detectedIntent.hasIntent && businessRelevanceScores.size > 0) {
             filteredLiteBusinesses = liteBusinesses.filter(b => {
               const score = businessRelevanceScores.get(b.id) || 0
               return score > 0
@@ -1697,6 +1699,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       walletActions,
       eventCards,
       mapPins, // ✅ ATLAS: ALL businesses for map (paid cyan + unclaimed grey)
+      queryCategories: detectedIntent.categories, // ✅ ATLAS: For filtering businesses by query
+      queryKeywords: detectedIntent.keywords, // ✅ ATLAS: For filtering businesses by query
       modelUsed: modelToUse,
       classification
     }

@@ -30,6 +30,8 @@ interface ChatMessage {
   needsLocation?: boolean // If true, user asked "near me" but no location available
   showAtlasCta?: boolean // If true, show inline Atlas CTA in message
   locationReason?: string // Why we need location (for CTA copy)
+  queryCategories?: string[] // ✅ ATLAS: Categories detected in query (for filtering businesses)
+  queryKeywords?: string[] // ✅ ATLAS: Keywords detected in query (for filtering businesses)
   businessCarousel?: Array<{
     id: string
     business_name: string
@@ -345,6 +347,8 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
         hasBusinessResults: data.hasBusinessResults,
         businessCarousel: data.businessCarousel,
         mapPins: data.mapPins, // ✅ ATLAS: All businesses for map (paid + unclaimed)
+        queryCategories: data.queryCategories || [], // ✅ ATLAS: For filtering businesses
+        queryKeywords: data.queryKeywords || [], // ✅ ATLAS: For filtering businesses
         walletActions: data.walletActions,
         eventCards: data.eventCards,
         intent: data.intent,
@@ -630,8 +634,40 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
               const lastAIMessage = messages.filter(m => m.type === 'ai').slice(-1)[0]
               if (!lastAIMessage?.mapPins) return undefined
               
+              // ✅ FILTER: Only show businesses relevant to the query
+              const queryCategories = lastAIMessage.queryCategories || []
+              const queryKeywords = lastAIMessage.queryKeywords || []
+              const hasQueryContext = queryCategories.length > 0 || queryKeywords.length > 0
+              
+              let filteredPins = lastAIMessage.mapPins
+              
+              // If we have query context, filter businesses to only relevant ones
+              if (hasQueryContext) {
+                filteredPins = lastAIMessage.mapPins.filter(pin => {
+                  const category = (pin.display_category || '').toLowerCase()
+                  const name = pin.business_name.toLowerCase()
+                  
+                  // Check if business matches any query category or keyword
+                  const matchesCategory = queryCategories.some(cat => 
+                    category.includes(cat.toLowerCase()) || name.includes(cat.toLowerCase())
+                  )
+                  const matchesKeyword = queryKeywords.some(kw => 
+                    category.includes(kw.toLowerCase()) || name.includes(kw.toLowerCase())
+                  )
+                  
+                  return matchesCategory || matchesKeyword
+                })
+                
+                console.log(`🗺️ ATLAS FILTER: ${filteredPins.length}/${lastAIMessage.mapPins.length} businesses match query context`, {
+                  queryCategories,
+                  queryKeywords,
+                  totalPins: lastAIMessage.mapPins.length,
+                  filteredPins: filteredPins.length
+                })
+              }
+              
               // Map to Atlas Business format (ensure required fields are present)
-              return lastAIMessage.mapPins.map(pin => ({
+              return filteredPins.map(pin => ({
                 id: pin.id,
                 business_name: pin.business_name,
                 latitude: pin.latitude,
@@ -797,9 +833,12 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
                   <div className="mt-3">
                     <button
                       onClick={() => {
+                        // ✅ ATLAS: Filter businesses by query context before showing on map
+                        // This prevents showing all 103 businesses when user asked for "cocktails"
                         if (lastBusinessQuery) {
                           setAtlasInitialQuery(lastBusinessQuery)
                         }
+                        // Store the message for filtered mapPins (will be used in Atlas component below)
                         setView('atlas')
                       }}
                       className="w-full bg-gradient-to-r from-cyan-600/20 to-blue-600/20 hover:from-cyan-600/30 hover:to-blue-600/30 border border-cyan-500/30 hover:border-cyan-400/50 text-cyan-300 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 group"
