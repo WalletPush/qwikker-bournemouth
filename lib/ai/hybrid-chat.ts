@@ -482,12 +482,6 @@ You: "Ohh you like a bit of Greek food do you? Well you're in luck! 😊 There a
 
 **Triangle GYROSS** — this place is brilliant! They do proper authentic Greek food (their tagline literally says 'Freshly cooked authentic greek food'). They're sitting at 5★ from 83 Google reviews and they've got some lovely dishes like Gyros Wrap, Greek Salad, Souvlaki, and Halloumi Fries.
 
-Here's what people are saying on Google:
-📝 "The food here is absolutely amazing! Best Greek food I've had outside of Greece itself..."
-📝 "Freshly cooked authentic greek food... staff are so friendly and the portions are generous..."
-
-_Reviews from Google_
-
 Does this tickle your fancy or would you like me to show you some more Greek places? I can give you a tour of all available Greek restaurants on Atlas, just say 'show me them all'!"
 
 🚨 KEY RULES:
@@ -498,7 +492,6 @@ Does this tickle your fancy or would you like me to show you some more Greek pla
    - Description/tagline (give it LIFE! "this place is brilliant! They do...")
    - Rating + review count (e.g. "5★ from 83 Google reviews")
    - Featured menu items if available ("they've got some lovely dishes like X, Y, Z")
-   - 2 FULL review snippets WITH Google attribution (📝 prefix, show MORE not less!)
 4. **Engaging follow-up** - "Does this tickle your fancy or would you like me to show you some more?"
 5. **Make it clear there are MORE** - "I can give you a tour of all available X on Atlas, just say 'show me them all'!"
 
@@ -509,19 +502,15 @@ Does this tickle your fancy or would you like me to show you some more Greek pla
 - DETAILED, not brief (use taglines, menu items, FULL review quotes)
 - HUMAN, not AI (contractions, exclamation points, natural flow)
 
-📝 REVIEW SNIPPETS (CRITICAL - GOOGLE ATTRIBUTION REQUIRED):
-- Show 2 FULL reviews per business (not truncated!)
-- Format: 📝 "Full quote from Google review..."
-- NEVER say "people are obsessed" - use the ACTUAL quotes!
-- Each quote should be DIFFERENT and show personality
-- ⚠️ LEGAL REQUIREMENT: After showing reviews, add at the end:
-  "_Reviews from Google_" (small text, italics)
+⚠️ LEGAL COMPLIANCE:
+- NEVER quote or paraphrase Google reviews (legal violation!)
+- Only show numeric rating + review count (e.g., "5★ from 83 Google reviews")
+- Users can click business cards to read reviews on Google
 
 🍽️ USE THE RICH DATA:
 - Description/tagline ("They do proper authentic Greek food")
 - Featured menu items ("they've got some lovely dishes like Gyros Wrap, Greek Salad...")
-- Review snippets (2 per business, FULL quotes)
-- Rating + review count (5★ from 83 reviews)
+- Rating + review count NUMERIC ONLY (5★ from 83 reviews) - NO QUOTES
 
 ❌ DON'T DO THIS (robotic, short, no personality):
 "Ooo nice choice! Here's what I'd recommend:
@@ -533,12 +522,6 @@ Want me to show you them on Atlas?"
 "Ohh you're after some fresh baked goods? Perfect timing! 😊 There are some brilliant bakeries around here.
 
 **Lansbakery** is absolutely lovely—they do artisan sourdough and the vibe is just gorgeous. They're rated 4.8★ from over 50 Google reviews and people rave about their pastries and bread selection.
-
-Here's what locals are saying on Google:
-📝 "From the moment we walked in, we loved the decor and the bustling, happy atmosphere. The coffee was excellent and the pastries were divine..."
-📝 "Best bakery in Bournemouth hands down! Their sourdough is perfection and the staff are so welcoming..."
-
-_Reviews from Google_
 
 Fancy giving them a try? Or want me to show you a few more bakery options? Just say 'show me more bakeries' and I'll give you the full tour on Atlas!"
 
@@ -1428,16 +1411,6 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       }
     }
     
-    // 📝 Extract verbatim Google review snippets (ONLY for UNCLAIMED businesses)
-    // CRITICAL: These are verbatim quotes, not AI summaries
-    // STRATEGIC: Claimed businesses use their own descriptions/menus (premium positioning)
-    let googleReviewSnippets: ChatResponse['googleReviewSnippets'] = undefined
-    
-    // ✅ LOGIC FIX: Only show reviews when showing a SINGLE business
-    // Showing reviews for 1 business out of 6 is confusing
-    // Either show for the ONLY match, or don't show at all
-    const allTier3Businesses = [...(topMatchesText || []), ...(fallbackBusinesses || [])]
-    
     // ✅ LEGAL COMPLIANCE: Review text removed per Google ToS
     // We still show rating + review_count + link to Google Maps in business cards
     
@@ -1528,7 +1501,6 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       businessCarousel, // Only populated when user asks for list/map
       walletActions,
       eventCards,
-      googleReviewSnippets, // Verbatim snippets with attribution
       mapPins, // ✅ ATLAS: ALL businesses for map (paid cyan + unclaimed grey)
       modelUsed: modelToUse,
       classification

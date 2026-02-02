@@ -95,7 +95,9 @@ export function detectIntent(query: string): IntentResult {
     'dog friendly', 'dog-friendly', 'pet friendly', 'pet-friendly',
     'outdoor seating', 'outdoor', 'patio', 'terrace',
     'romantic', 'date night', 'cozy', 'quiet',
-    'family friendly', 'family-friendly', 'kids menu',
+    'family friendly', 'family-friendly', 
+    'kids menu', 'kids meal', 'kids meals', 'kids food',
+    'children menu', 'children meal', 'children meals', 'childrens menu',
     'brunch', 'breakfast', 'lunch', 'dinner', 'late night'
   ]
   

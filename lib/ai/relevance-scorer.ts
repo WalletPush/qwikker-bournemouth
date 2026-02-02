@@ -92,20 +92,29 @@ export function scoreBusinessRelevance(
     }
   }
   
-  // +1 for KB content match (weak signal - can be false positive)
+  // KB content match - CRITICAL for queries where info lives in KB not in category/name
+  // Examples: "kids menu", "vegan options", "outdoor seating", "gluten free"
+  // For these queries, KB is the STRONGEST signal (+4), not the weakest
+  const kbPriorityKeywords = ['kids', 'children', 'family', 'vegan', 'vegetarian', 'gluten', 'outdoor', 'patio', 'dog', 'pet']
+  const isKbPriorityQuery = intent.keywords.some(kw => 
+    kbPriorityKeywords.some(priority => kw.toLowerCase().includes(priority))
+  )
+  
   if (kb) {
     for (const category of intent.categories) {
       if (kb.includes(category.toLowerCase())) {
-        score += 1
-        reasons.push(`kb:${category}`)
+        const points = isKbPriorityQuery ? 4 : 1
+        score += points
+        reasons.push(`kb:${category}${isKbPriorityQuery ? '(priority)' : ''}`)
         break
       }
     }
     
     for (const keyword of intent.keywords) {
       if (kb.includes(keyword.toLowerCase())) {
-        score += 1
-        reasons.push(`kb:${keyword}`)
+        const points = isKbPriorityQuery ? 4 : 1
+        score += points
+        reasons.push(`kb:${keyword}${isKbPriorityQuery ? '(priority)' : ''}`)
         break
       }
     }
