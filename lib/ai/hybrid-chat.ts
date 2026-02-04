@@ -1752,6 +1752,13 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       }
     }
     
+    // ✅ Combine all businesses for relative ranking
+    const allBusinessesForRanking = [
+      ...(tier1Businesses || []),
+      ...(tier2Businesses || []),
+      ...(tier3Businesses || [])
+    ]
+    
     // Add ALL Tier 1 businesses (paid/trial) - whether carousel is shown or not
     if (tier1Businesses && tier1Businesses.length > 0) {
       tier1Businesses.forEach((b: any) => {
@@ -1773,7 +1780,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
               detectedIntent,
               businessRelevanceScores.get(b.id) || 0,
               context.userLocation,
-              isBrowseModeForReasons
+              isBrowseModeForReasons,
+              allBusinessesForRanking // ✅ Pass all businesses for relative ranking
             ),
             reasonMeta: safeGetReasonMeta(b, context.userLocation) // ✅ Always present
           })
@@ -1803,7 +1811,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
               detectedIntent,
               businessRelevanceScores.get(b.id) || 0,
               context.userLocation,
-              isBrowseModeForReasons
+              isBrowseModeForReasons,
+              allBusinessesForRanking // ✅ Pass all businesses for relative ranking
             ),
             reasonMeta: safeGetReasonMeta(b, context.userLocation) // ✅ Always present
           })
@@ -1833,7 +1842,8 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
               detectedIntent,
               businessRelevanceScores.get(b.id) || 0,
               context.userLocation,
-              isBrowseModeForReasons
+              isBrowseModeForReasons,
+              allBusinessesForRanking // ✅ Pass all businesses for relative ranking
             ),
             reasonMeta: safeGetReasonMeta(b, context.userLocation) // ✅ Always present
           })

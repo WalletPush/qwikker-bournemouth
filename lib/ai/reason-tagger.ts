@@ -31,7 +31,7 @@ export interface ReasonMeta {
 
 /**
  * Get primary reason tag for a business
- * Shows WHAT MAKES THIS ONE DIFFERENT (not just "matches your search")
+ * Shows WHAT MAKES THIS ONE DIFFERENT using RELATIVE ranking
  */
 export function getReasonTag(
   business: any,
@@ -39,7 +39,7 @@ export function getReasonTag(
   relevanceScore: number,
   userLocation?: { lat: number, lng: number } | { latitude: number, longitude: number },
   isBrowseMode: boolean = false,
-  allBusinesses?: any[] // ✅ NEW: For ranking context
+  allBusinesses?: any[] // ✅ For relative ranking
 ): ReasonTag {
   
   // Calculate distance if available
@@ -51,8 +51,33 @@ export function getReasonTag(
     )
   }
   
-  // PRIORITY 1: Exceptional rating (THE BEST)
-  if (business.rating >= 4.7 && business.review_count >= 50) {
+  // ✅ RELATIVE RANKING: Find out where this business stands
+  let isTopRated = false
+  let isClosest = false
+  
+  if (allBusinesses && allBusinesses.length > 1) {
+    // Sort by rating
+    const sortedByRating = [...allBusinesses].sort((a, b) => (b.rating || 0) - (a.rating || 0))
+    isTopRated = sortedByRating[0]?.id === business.id
+    
+    // Sort by distance
+    if (userLocation) {
+      const withDistances = allBusinesses.map(b => ({
+        ...b,
+        dist: b.latitude && b.longitude 
+          ? calculateDistance(
+              normalizeLocation(userLocation),
+              { latitude: b.latitude, longitude: b.longitude }
+            )
+          : Infinity
+      })).sort((a, b) => a.dist - b.dist)
+      
+      isClosest = withDistances[0]?.id === business.id
+    }
+  }
+  
+  // PRIORITY 1: THE highest rated in the set
+  if (isTopRated && business.rating >= 4.5) {
     return { 
       type: 'top_rated', 
       label: `Highest rated (${business.rating}★)`, 
@@ -60,7 +85,16 @@ export function getReasonTag(
     }
   }
   
-  // PRIORITY 2: Open now (immediate utility)
+  // PRIORITY 2: THE closest
+  if (isClosest && distanceMeters !== null && distanceMeters < 5000) {
+    return { 
+      type: 'closest', 
+      label: 'Closest option', 
+      emoji: '' 
+    }
+  }
+  
+  // PRIORITY 3: Open now (immediate utility)
   if (business.business_hours && isOpenNow(business.business_hours)) {
     return { 
       type: 'open_now', 
@@ -69,35 +103,35 @@ export function getReasonTag(
     }
   }
   
-  // PRIORITY 3: Very close (< 500m)
+  // PRIORITY 4: Very close (< 500m)
   if (distanceMeters !== null && distanceMeters < 500) {
     return { 
       type: 'closest', 
-      label: 'Closest option', 
+      label: `Very close (${Math.round(distanceMeters)}m)`, 
       emoji: '' 
     }
   }
   
-  // PRIORITY 4: High rating + lots of reviews (social proof)
+  // PRIORITY 5: High rating + lots of reviews (social proof)
   if (business.rating >= 4.5 && business.review_count >= 100) {
     return { 
       type: 'popular', 
-      label: 'Popular & highly rated', 
+      label: `Well-reviewed (${business.review_count})`, 
       emoji: '' 
     }
   }
   
-  // PRIORITY 5: Highly rated (trustworthy)
+  // PRIORITY 6: High rating
   if (business.rating >= 4.5) {
     return { 
       type: 'highly_rated', 
-      label: `Highly rated (${business.rating}★)`, 
+      label: `${business.rating}★ rated`, 
       emoji: '' 
     }
   }
   
-  // PRIORITY 6: Hidden gem (high rating, fewer reviews)
-  if (business.rating >= 4.4 && business.review_count < 50 && business.review_count >= 10) {
+  // PRIORITY 7: Hidden gem (high rating, fewer reviews)
+  if (business.rating >= 4.3 && business.review_count < 50 && business.review_count >= 10) {
     return { 
       type: 'highly_rated', 
       label: 'Hidden gem', 
@@ -105,7 +139,7 @@ export function getReasonTag(
     }
   }
   
-  // PRIORITY 7: Solid choice (good rating)
+  // PRIORITY 8: Solid choice (good rating)
   if (business.rating >= 4.0) {
     return { 
       type: 'recommended', 
@@ -114,7 +148,7 @@ export function getReasonTag(
     }
   }
   
-  // PRIORITY 8: Fallback (worth checking out)
+  // PRIORITY 9: Fallback (worth checking out)
   return { 
     type: 'recommended', 
     label: 'Worth checking out', 
