@@ -31,7 +31,8 @@ export interface ReasonMeta {
 
 /**
  * Get primary reason tag for a business
- * Shows WHAT MAKES THIS ONE DIFFERENT using RELATIVE ranking
+ * TIER FIRST (paid businesses show tier badge)
+ * THEN differentiation by rating/reviews/distance
  */
 export function getReasonTag(
   business: any,
@@ -41,6 +42,35 @@ export function getReasonTag(
   isBrowseMode: boolean = false,
   allBusinesses?: any[] // ✅ For relative ranking
 ): ReasonTag {
+  
+  // ✅ TIER BADGES FIRST (paid businesses always show their tier)
+  // This is transparent + trustworthy: user sees they're paid but ONLY if relevant
+  
+  if (business.business_tier === 'paid' || business.tier === 'spotlight') {
+    return { 
+      type: 'top_rated', 
+      label: 'Qwikker Pick', 
+      emoji: '' 
+    }
+  }
+  
+  if (business.business_tier === 'featured' || business.tier === 'featured') {
+    return { 
+      type: 'highly_rated', 
+      label: 'Featured', 
+      emoji: '' 
+    }
+  }
+  
+  if (business.business_tier === 'starter' || business.tier === 'starter') {
+    return { 
+      type: 'recommended', 
+      label: 'Recommended', 
+      emoji: '' 
+    }
+  }
+  
+  // ✅ FOR UNCLAIMED/FREE BUSINESSES: Show what makes them special
   
   // Calculate distance if available
   let distanceMeters = null
@@ -53,16 +83,30 @@ export function getReasonTag(
   
   // ✅ RELATIVE RANKING: Find out where this business stands
   let isTopRated = false
+  let isMostReviewed = false
   let isClosest = false
   
   if (allBusinesses && allBusinesses.length > 1) {
-    // Sort by rating
-    const sortedByRating = [...allBusinesses].sort((a, b) => (b.rating || 0) - (a.rating || 0))
+    // Find THE highest rated (among unclaimed/free only)
+    const unclaimedBusinesses = allBusinesses.filter(b => 
+      b.business_tier !== 'paid' && 
+      b.business_tier !== 'featured' && 
+      b.business_tier !== 'starter' &&
+      b.tier !== 'spotlight' &&
+      b.tier !== 'featured' &&
+      b.tier !== 'starter'
+    )
+    
+    const sortedByRating = [...unclaimedBusinesses].sort((a, b) => (b.rating || 0) - (a.rating || 0))
     isTopRated = sortedByRating[0]?.id === business.id
     
-    // Sort by distance
+    // Find THE most reviewed
+    const sortedByReviews = [...unclaimedBusinesses].sort((a, b) => (b.review_count || 0) - (a.review_count || 0))
+    isMostReviewed = sortedByReviews[0]?.id === business.id
+    
+    // Find THE closest
     if (userLocation) {
-      const withDistances = allBusinesses.map(b => ({
+      const withDistances = unclaimedBusinesses.map(b => ({
         ...b,
         dist: b.latitude && b.longitude 
           ? calculateDistance(
@@ -76,8 +120,17 @@ export function getReasonTag(
     }
   }
   
-  // PRIORITY 1: THE highest rated in the set
-  if (isTopRated && business.rating >= 4.5) {
+  // PRIORITY 1: Perfect 5★ with high reviews (THE BEST)
+  if (business.rating === 5.0 && business.review_count >= 100) {
+    return { 
+      type: 'top_rated', 
+      label: `Highest rated (5★, ${business.review_count} reviews)`, 
+      emoji: '' 
+    }
+  }
+  
+  // PRIORITY 2: THE highest rated in the set
+  if (isTopRated && business.rating >= 4.7) {
     return { 
       type: 'top_rated', 
       label: `Highest rated (${business.rating}★)`, 
@@ -85,7 +138,25 @@ export function getReasonTag(
     }
   }
   
-  // PRIORITY 2: THE closest
+  // PRIORITY 3: THE most reviewed (social proof)
+  if (isMostReviewed && business.review_count >= 200) {
+    return { 
+      type: 'popular', 
+      label: `Most reviews (${business.review_count})`, 
+      emoji: '' 
+    }
+  }
+  
+  // PRIORITY 4: Perfect 5★ (but fewer reviews)
+  if (business.rating === 5.0 && business.review_count >= 10) {
+    return { 
+      type: 'top_rated', 
+      label: 'Top rated (5★)', 
+      emoji: '' 
+    }
+  }
+  
+  // PRIORITY 5: THE closest
   if (isClosest && distanceMeters !== null && distanceMeters < 5000) {
     return { 
       type: 'closest', 
@@ -94,16 +165,7 @@ export function getReasonTag(
     }
   }
   
-  // PRIORITY 3: Open now (immediate utility)
-  if (business.business_hours && isOpenNow(business.business_hours)) {
-    return { 
-      type: 'open_now', 
-      label: 'Open now', 
-      emoji: '' 
-    }
-  }
-  
-  // PRIORITY 4: Very close (< 500m)
+  // PRIORITY 6: Very close (< 500m)
   if (distanceMeters !== null && distanceMeters < 500) {
     return { 
       type: 'closest', 
@@ -112,7 +174,7 @@ export function getReasonTag(
     }
   }
   
-  // PRIORITY 5: High rating + lots of reviews (social proof)
+  // PRIORITY 7: High rating + lots of reviews
   if (business.rating >= 4.5 && business.review_count >= 100) {
     return { 
       type: 'popular', 
@@ -121,7 +183,7 @@ export function getReasonTag(
     }
   }
   
-  // PRIORITY 6: High rating
+  // PRIORITY 8: High rating
   if (business.rating >= 4.5) {
     return { 
       type: 'highly_rated', 
@@ -130,7 +192,7 @@ export function getReasonTag(
     }
   }
   
-  // PRIORITY 7: Hidden gem (high rating, fewer reviews)
+  // PRIORITY 9: Hidden gem (high rated, low review count)
   if (business.rating >= 4.3 && business.review_count < 50 && business.review_count >= 10) {
     return { 
       type: 'highly_rated', 
@@ -139,7 +201,16 @@ export function getReasonTag(
     }
   }
   
-  // PRIORITY 8: Solid choice (good rating)
+  // PRIORITY 10: Open now (only if nothing else special)
+  if (business.business_hours && isOpenNow(business.business_hours)) {
+    return { 
+      type: 'open_now', 
+      label: 'Open now', 
+      emoji: '' 
+    }
+  }
+  
+  // PRIORITY 11: Solid choice
   if (business.rating >= 4.0) {
     return { 
       type: 'recommended', 
@@ -148,7 +219,7 @@ export function getReasonTag(
     }
   }
   
-  // PRIORITY 9: Fallback (worth checking out)
+  // PRIORITY 12: Fallback
   return { 
     type: 'recommended', 
     label: 'Worth checking out', 

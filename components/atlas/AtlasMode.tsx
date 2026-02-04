@@ -1938,14 +1938,14 @@ export function AtlasMode({
       {/* ✨ TOUR END DECISION HELPER - "What now?" */}
       {showTourEndHelper && visibleBusinesses.length > 0 && (
         <>
-          {/* Backdrop - blur + darken */}
+          {/* Backdrop - STRONG blur + darken */}
           <div 
-            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
+            className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-xl"
             onClick={() => setShowTourEndHelper(false)}
           />
           
           {/* Modal */}
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md px-6">
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-full max-w-md px-6">
             <div className="bg-black/95 backdrop-blur-xl border-2 border-[#00d083]/30 rounded-3xl p-8 shadow-2xl">
               {/* Header */}
               <div className="text-center mb-6">
