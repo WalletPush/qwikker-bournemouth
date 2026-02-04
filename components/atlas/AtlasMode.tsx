@@ -1420,7 +1420,9 @@ export function AtlasMode({
     }
     processedIncomingBusinessesRef.current = businessKey
     
-    console.log('[Atlas] 🎯 Received businesses from chat:', incomingBusinesses.length, incomingBusinesses)
+    console.log('[Atlas] 🎯 Received businesses from chat:', incomingBusinesses.length)
+    console.log('[Atlas] 📊 First business reason:', incomingBusinesses[0]?.reason)
+    console.log('[Atlas] 📊 First business reasonMeta:', incomingBusinesses[0]?.reasonMeta)
     
     // ✅ CRITICAL: Update ref FIRST before any effects run
     businessesRef.current = incomingBusinesses

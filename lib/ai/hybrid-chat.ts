@@ -1886,12 +1886,21 @@ async function generateBusinessDetailResponse(
   // ✅ TENANT SAFETY: Pass city to ensure correct tenant context
   const supabase = await createTenantAwareServerClient(context.city)
   
-  // SECURITY: tenant-safe + city-match
+  // SECURITY: UUID validation first
+  if (!isValidUUID(businessId)) {
+    console.error(`❌ Invalid business ID: ${businessId}`)
+    return {
+      success: false,
+      error: 'Invalid business ID'
+    }
+  }
+  
+  // Fetch business (allow cross-city for "More details" from Atlas)
   const { data: business, error} = await supabase
     .from('business_profiles')
     .select('*')
     .eq('id', businessId)
-    .eq('city', context.city) // Hostname-derived in production
+    // ✅ REMOVED: .eq('city', context.city) to allow cross-city details
     .single()
   
   if (error || !business) {
