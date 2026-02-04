@@ -15,7 +15,7 @@ import Link from 'next/link'
 import { Search, X, Volume2, VolumeX, MapPin, Star, Phone, Globe, Navigation, ChevronLeft, ChevronRight, Pause, Play, XCircle } from 'lucide-react'
 import type { Business } from './AtlasMode'
 import type { Coordinates } from '@/lib/location/useUserLocation'
-import { calculateWalkingTime } from '@/lib/location/useUserLocation'
+import { formatDistance, calculateDistanceKm } from '@/lib/utils/distance-formatter'
 
 interface AtlasOverlayProps {
   onClose: () => void
@@ -62,12 +62,14 @@ export function AtlasOverlay({
     }
   }
   
-  // Calculate walking time if user location is available
-  const walkingMinutes = selectedBusiness && userLocation
-    ? calculateWalkingTime(userLocation, {
-        lat: selectedBusiness.latitude,
-        lng: selectedBusiness.longitude
-      })
+  // Calculate smart distance if user location is available
+  const distanceInfo = selectedBusiness && userLocation
+    ? formatDistance(
+        calculateDistanceKm(
+          { lat: userLocation.lat, lng: userLocation.lng },
+          { lat: selectedBusiness.latitude, lng: selectedBusiness.longitude }
+        )
+      )
     : null
   
   // Open in maps app
@@ -226,6 +228,14 @@ export function AtlasOverlay({
                   </p>
                 )}
                 
+                {/* Primary Reason Tag */}
+                {selectedBusiness.reason && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 mb-3 rounded-full bg-[#00d083]/10 border border-[#00d083]/30">
+                    {selectedBusiness.reason.emoji && <span>{selectedBusiness.reason.emoji}</span>}
+                    <span className="text-sm text-[#00d083] font-medium">{selectedBusiness.reason.label}</span>
+                  </div>
+                )}
+                
                 <div className="flex flex-wrap items-center gap-4 text-sm">
                   {/* Rating */}
                   <div className="flex items-center gap-1.5">
@@ -236,16 +246,16 @@ export function AtlasOverlay({
                   
                   {/* Category */}
                   {selectedBusiness.display_category && (
-                    <span className="px-2.5 py-1 bg-[#00d083]/20 text-[#00d083] rounded-lg font-medium">
+                    <span className="px-2.5 py-1 bg-white/10 text-white/80 rounded-lg font-medium">
                       {selectedBusiness.display_category}
                     </span>
                   )}
                   
-                  {/* Walking Time */}
-                  {walkingMinutes !== null && (
+                  {/* Smart Distance */}
+                  {distanceInfo && (
                     <div className="flex items-center gap-1.5 text-white/60">
                       <MapPin className="w-4 h-4" />
-                      <span>~{walkingMinutes} min walk</span>
+                      <span>{distanceInfo.text.replace('📍 ', '')}</span>
                     </div>
                   )}
                 </div>

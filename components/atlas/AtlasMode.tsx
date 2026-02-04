@@ -850,37 +850,44 @@ export function AtlasMode({
     setSelectedBusinessIndex(0)
     setSelectedBusiness(tourBusinesses[0])
     
-    // ✨ Tour intro message (brief, then show first stop)
-    const tourIntro = `Starting your tour of ${tourBusinesses.length} ${tourBusinesses.length === 1 ? 'place' : 'places'}...`
-    setHudSummary(tourIntro)
-    setHudPrimaryBusinessName(null)
-    setHudVisible(true)
+    // ✨ Mobile: Open bottom sheet, Desktop: Show HUD
+    if (isMobile) {
+      setShowMobileSheet(true)
+    } else {
+      // ✨ Tour intro message (brief, then show first stop)
+      const tourIntro = `Starting your tour of ${tourBusinesses.length} ${tourBusinesses.length === 1 ? 'place' : 'places'}...`
+      setHudSummary(tourIntro)
+      setHudPrimaryBusinessName(null)
+      setHudVisible(true)
+    }
     
     // Fly to first business
     flyToBusiness(tourBusinesses[0])
     updateActiveBusinessMarker(tourBusinesses[0])
     
-    // After intro delay, show first business info
-    setTimeout(() => {
-      const firstBusiness = tourBusinesses[0]
-      const reviewCount = firstBusiness.review_count || 0
-      const firstStopMessage = `Stop 1 of ${tourBusinesses.length} • Rated ${firstBusiness.rating}★ by ${reviewCount} ${reviewCount === 1 ? 'person' : 'people'} on Google`
-      setHudSummary(firstStopMessage)
-    }, 1500) // Show intro for 1.5s, then first stop info
-    
-    // Start timer for second business
-    if (tourBusinesses.length > 1) {
-      tourTimerRef.current = setTimeout(() => {
-        advanceTour(1) // Move to index 1 (second business)
-      }, 4500) // 1.5s intro + 3s for first business = 4.5s total
-    } else {
-      // Single business tour - end after showing its info
+    // After intro delay, show first business info (desktop only)
+    if (!isMobile) {
       setTimeout(() => {
-        setTourActive(false)
-        setHudVisible(false)
-      }, 4500)
+        const firstBusiness = tourBusinesses[0]
+        const reviewCount = firstBusiness.review_count || 0
+        const firstStopMessage = `Stop 1 of ${tourBusinesses.length} • Rated ${firstBusiness.rating}★ by ${reviewCount} ${reviewCount === 1 ? 'person' : 'people'} on Google`
+        setHudSummary(firstStopMessage)
+      }, 1500) // Show intro for 1.5s, then first stop info
+      
+      // Start timer for second business
+      if (tourBusinesses.length > 1) {
+        tourTimerRef.current = setTimeout(() => {
+          advanceTour(1) // Move to index 1 (second business)
+        }, 4500) // 1.5s intro + 3s for first business = 4.5s total
+      } else {
+        // Single business tour - end after showing its info
+        setTimeout(() => {
+          setTourActive(false)
+          setHudVisible(false)
+        }, 4500)
+      }
     }
-  }, [flyToBusiness, updateActiveBusinessMarker])
+  }, [flyToBusiness, updateActiveBusinessMarker, isMobile])
   
   // 🎬 TOUR MODE: Advance to specific index
   const advanceTour = useCallback((targetIndex: number) => {
@@ -905,15 +912,17 @@ export function AtlasMode({
     flyToBusiness(targetBusiness)
     updateActiveBusinessMarker(targetBusiness)
     
-    // ✨ Update HUD with stop info (no business name - it's in the bottom card)
-    const stopNumber = targetIndex + 1
-    const totalStops = currentBusinesses.length
-    const reviewCount = targetBusiness.review_count || 0
-    const hudMessage = `Stop ${stopNumber} of ${totalStops} • Rated ${targetBusiness.rating}★ by ${reviewCount} ${reviewCount === 1 ? 'person' : 'people'} on Google`
-    
-    setHudSummary(hudMessage)
-    setHudPrimaryBusinessName(null)
-    setHudVisible(true)
+    // ✨ Update HUD with stop info (desktop only, mobile uses bottom sheet)
+    if (!isMobile) {
+      const stopNumber = targetIndex + 1
+      const totalStops = currentBusinesses.length
+      const reviewCount = targetBusiness.review_count || 0
+      const hudMessage = `Stop ${stopNumber} of ${totalStops} • Rated ${targetBusiness.rating}★ by ${reviewCount} ${reviewCount === 1 ? 'person' : 'people'} on Google`
+      
+      setHudSummary(hudMessage)
+      setHudPrimaryBusinessName(null)
+      setHudVisible(true)
+    }
     
     // Schedule next advance if not at end
     if (targetIndex < currentBusinesses.length - 1) {
@@ -923,12 +932,14 @@ export function AtlasMode({
     } else {
       // End of tour
       setTourActive(false)
-      // Keep HUD visible for a bit longer at the end
-      setTimeout(() => {
-        setHudVisible(false)
-      }, 4000)
+      if (!isMobile) {
+        // Keep HUD visible for a bit longer at the end (desktop only)
+        setTimeout(() => {
+          setHudVisible(false)
+        }, 4000)
+      }
     }
-  }, [flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
+  }, [flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage, isMobile])
   
   // 🎬 TOUR MODE: Stop tour
   const stopTour = useCallback(() => {
@@ -1853,6 +1864,38 @@ export function AtlasMode({
         {/* First-Visit Intro Overlay */}
         <AtlasIntroOverlay />
       
+      {/* ✨ MOBILE TOP BAR - Back + Mute buttons */}
+      {isMobile && (
+        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 pt-safe">
+          {/* Back to Chat */}
+          <button
+            onClick={handleClose}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/80 backdrop-blur-md border border-white/20 text-white"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            <span className="font-medium">Back to Chat</span>
+          </button>
+
+          {/* Mute Toggle */}
+          <button
+            onClick={onToggleSound}
+            className="p-3 rounded-full bg-black/80 backdrop-blur-md border border-white/20 text-white"
+          >
+            {soundEnabled ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+              </svg>
+            )}
+          </button>
+        </div>
+      )}
+      
       {/* Status Strip with Filter Pills */}
       {(activeFilters.openNow || activeFilters.maxDistance !== null || visibleBusinesses.length !== baseBusinesses.length) && (
         <div className="absolute top-20 left-0 right-0 z-20 px-4 py-2 bg-black/40 backdrop-blur-sm border-b border-white/10">
@@ -1898,36 +1941,38 @@ export function AtlasMode({
         />
       )}
       
-      {/* Overlay UI - Hide search bar on mobile (we have bottom input) */}
-      <AtlasOverlay
-        onClose={handleClose}
-        onSearch={isMobile ? undefined : handleSearch}
-        searching={searching}
-        selectedBusiness={selectedBusiness}
-        userLocation={userLocation}
-        soundEnabled={soundEnabled}
-        onToggleSound={onToggleSound}
-        tourActive={tourActive}
-        totalBusinesses={businesses.length}
-        currentBusinessIndex={selectedBusinessIndex}
-        onNextBusiness={goToNextBusiness}
-        onPreviousBusiness={goToPreviousBusiness}
-        onStopTour={stopTour}
-        onBusinessSelected={(businessId) => {
-          trackEvent({
-            eventType: 'atlas_business_selected',
-            businessId,
-            performanceMode: performanceMode.enabled
-          })
-        }}
-        onDirectionsClicked={(businessId) => {
-          trackEvent({
-            eventType: 'atlas_directions_clicked',
-            businessId,
-            performanceMode: performanceMode.enabled
-          })
-        }}
-      />
+      {/* Overlay UI - DESKTOP ONLY (mobile uses bottom sheet + input) */}
+      {!isMobile && (
+        <AtlasOverlay
+          onClose={handleClose}
+          onSearch={handleSearch}
+          searching={searching}
+          selectedBusiness={selectedBusiness}
+          userLocation={userLocation}
+          soundEnabled={soundEnabled}
+          onToggleSound={onToggleSound}
+          tourActive={tourActive}
+          totalBusinesses={businesses.length}
+          currentBusinessIndex={selectedBusinessIndex}
+          onNextBusiness={goToNextBusiness}
+          onPreviousBusiness={goToPreviousBusiness}
+          onStopTour={stopTour}
+          onBusinessSelected={(businessId) => {
+            trackEvent({
+              eventType: 'atlas_business_selected',
+              businessId,
+              performanceMode: performanceMode.enabled
+            })
+          }}
+          onDirectionsClicked={(businessId) => {
+            trackEvent({
+              eventType: 'atlas_directions_clicked',
+              businessId,
+              performanceMode: performanceMode.enabled
+            })
+          }}
+        />
+      )}
       
       {/* Chat Context Strip - Moved below search bar to avoid overlap */}
       {mapLoaded && (lastUserQuery || lastAIResponse) && (
@@ -2020,6 +2065,43 @@ export function AtlasMode({
         </div>
       )}
       
+      {/* ✨ MOBILE TOUR CONTROLS - Floating buttons when tour is active */}
+      {isMobile && tourActive && visibleBusinesses.length > 1 && (
+        <div className="absolute bottom-32 right-4 z-30 flex flex-col gap-3">
+          <button
+            onClick={goToPreviousBusiness}
+            className="w-14 h-14 rounded-full bg-black/80 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-lg"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          <button
+            onClick={stopTour}
+            className="w-14 h-14 rounded-full bg-red-500/90 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-lg"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          <button
+            onClick={goToNextBusiness}
+            className="w-14 h-14 rounded-full bg-black/80 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-lg"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          
+          {/* Tour counter pill */}
+          <div className="px-3 py-2 rounded-full bg-[#00d083]/90 backdrop-blur-md text-white text-xs font-semibold text-center">
+            {selectedBusinessIndex + 1} of {visibleBusinesses.length}
+          </div>
+        </div>
+      )}
+      
       {/* ✨ MOBILE BOTTOM SHEET - Replaces overlay on mobile */}
       {isMobile && (
         <BottomSheet
@@ -2030,6 +2112,15 @@ export function AtlasMode({
         >
           {selectedBusiness && (
             <div className="space-y-4">
+              {/* Tour indicator */}
+              {tourActive && (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#00d083]/20 border border-[#00d083]/40">
+                  <span className="text-[#00d083] text-sm font-medium">
+                    Stop {selectedBusinessIndex + 1} of {visibleBusinesses.length}
+                  </span>
+                </div>
+              )}
+              
               <div>
                 <h2 className="text-xl font-bold text-white mb-2">
                   {selectedBusiness.business_name}
@@ -2058,7 +2149,7 @@ export function AtlasMode({
               {/* Reason Tag */}
               {selectedBusiness.reason && (
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#00d083]/20 border border-[#00d083]/40">
-                  <span className="text-[#00d083] text-sm font-medium">{selectedBusiness.reason}</span>
+                  <span className="text-[#00d083] text-sm font-medium">{selectedBusiness.reason.label}</span>
                 </div>
               )}
               
