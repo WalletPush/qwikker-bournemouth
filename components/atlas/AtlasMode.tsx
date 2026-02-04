@@ -12,15 +12,17 @@
  * - Manual location button for Safari compatibility
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import type { Map as MapboxMap, LngLatLike, MapboxGeoJSONFeature } from 'mapbox-gl'
 import Head from 'next/head'
 import { AtlasOverlay } from './AtlasOverlay'
 import { AtlasHudBubble } from './AtlasHudBubble'
 import { ChatContextStrip } from './ChatContextStrip'
 import { AtlasIntroOverlay } from './AtlasIntroOverlay'
+import { BottomSheet } from './BottomSheet'
 import { usePerformanceMode } from '@/lib/atlas/usePerformanceMode'
 import { useAtlasAnalytics } from '@/lib/atlas/useAtlasAnalytics'
+import { useMobile } from '@/lib/hooks/use-mobile'
 import type { Coordinates } from '@/lib/location/useUserLocation'
 import type { LocationStatus } from '@/lib/location/useUserLocation'
 import type { AtlasResponse } from '@/lib/ai/prompts/atlas'
@@ -53,6 +55,16 @@ export interface Business {
   business_tier?: string // ✅ For determining pin color
   isPaid?: boolean // ✅ For cyan pins (paid/trial businesses)
   isUnclaimed?: boolean // ✅ For grey pins (unclaimed businesses)
+  reason?: {
+    type: string
+    label: string
+    emoji: string
+  }
+  reasonMeta?: {
+    isOpenNow: boolean
+    distanceMeters: number | null
+    ratingBadge: string | null
+  }
 }
 
 export interface AtlasConfig {
@@ -78,6 +90,7 @@ interface AtlasModeProps {
   lastUserQuery?: string
   lastAIResponse?: string
   onRequestLocation?: () => void  // Manual location request trigger
+  onRequestDetails?: (businessId: string) => void  // ID-based detail request
   initialQuery?: string | null  // Query to run when Atlas opens (from chat CTA)
   onInitialQueryConsumed?: () => void  // Callback after initial query is consumed
   businesses?: Business[]  // ✅ NEW: Businesses from chat (avoids re-querying)
@@ -96,6 +109,7 @@ export function AtlasMode({
   lastUserQuery,
   lastAIResponse,
   onRequestLocation,
+  onRequestDetails,
   initialQuery,
   onInitialQueryConsumed,
   businesses: incomingBusinesses
@@ -105,8 +119,17 @@ export function AtlasMode({
   const [mapLoaded, setMapLoaded] = useState(false)
   const [searching, setSearching] = useState(false)
   const [businesses, setBusinesses] = useState<Business[]>([])
+  const [baseBusinesses, setBaseBusinesses] = useState<Business[]>([]) // Original unfiltered list
+  const [activeFilters, setActiveFilters] = useState<{
+    openNow: boolean
+    maxDistance: number | null
+  }>({ openNow: false, maxDistance: null })
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null)
   const [selectedBusinessIndex, setSelectedBusinessIndex] = useState<number>(0)
+  
+  // ✨ Mobile detection and bottom sheet
+  const isMobile = useMobile()
+  const [showMobileSheet, setShowMobileSheet] = useState(false)
   
   // Tour mode state
   const [tourActive, setTourActive] = useState(false)
@@ -116,6 +139,14 @@ export function AtlasMode({
   const businessHandlersAttachedRef = useRef(false)
   const businessesRef = useRef<Business[]>([])
   const processedIncomingBusinessesRef = useRef<string | null>(null) // Track if we've processed this batch
+  
+  // ✅ MVP-CRITICAL: Stable event handler refs (prevent handler stacking)
+  const onPinClickRef = useRef<((e: any) => void) | undefined>(undefined)
+  const onPinEnterRef = useRef<(() => void) | undefined>(undefined)
+  const onPinLeaveRef = useRef<(() => void) | undefined>(undefined)
+  const onClusterClickRef = useRef<((e: any) => void) | undefined>(undefined)
+  const onClusterEnterRef = useRef<(() => void) | undefined>(undefined)
+  const onClusterLeaveRef = useRef<(() => void) | undefined>(undefined)
   
   // HUD bubble state
   const [hudVisible, setHudVisible] = useState(false)
@@ -131,6 +162,72 @@ export function AtlasMode({
   
   // Analytics tracking (city derived server-side from hostname)
   const { trackEvent } = useAtlasAnalytics(userId)
+  
+  // Helper: Apply filters to business list (must be defined BEFORE visibleBusinesses)
+  const applyFilters = useCallback((
+    businessList: Business[],
+    filters: typeof activeFilters,
+    userLoc: Coordinates | null
+  ): Business[] => {
+    let filtered = [...businessList]
+    
+    // Filter by open now
+    if (filters.openNow) {
+      filtered = filtered.filter(b => 
+        b.reasonMeta?.isOpenNow === true
+      )
+    }
+    
+    // Filter by distance
+    if (filters.maxDistance !== null && userLoc) {
+      filtered = filtered
+        .map(b => {
+          if (!b.latitude || !b.longitude) return { ...b, distance: Infinity }
+          
+          const R = 6371e3 // Earth radius in meters
+          const φ1 = userLoc.lat * Math.PI / 180
+          const φ2 = b.latitude * Math.PI / 180
+          const Δφ = (b.latitude - userLoc.lat) * Math.PI / 180
+          const Δλ = (b.longitude - userLoc.lng) * Math.PI / 180
+          
+          const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                    Math.cos(φ1) * Math.cos(φ2) *
+                    Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+          const distance = R * c
+          
+          return { ...b, distance }
+        })
+        .filter(b => b.distance! <= filters.maxDistance!)
+        .sort((a, b) => a.distance! - b.distance!)
+    }
+    
+    return filtered
+  }, [])
+  
+  // Computed visible businesses (apply filters to baseBusinesses)
+  const visibleBusinesses = useMemo(() => {
+    return applyFilters(baseBusinesses, activeFilters, userLocation)
+  }, [baseBusinesses, activeFilters, userLocation, applyFilters])
+  
+  // ✅ SHIP-SAFE: Show friendly message when filters result in 0 places
+  useEffect(() => {
+    const hasActiveFilters = activeFilters.openNow || activeFilters.maxDistance !== null
+    
+    if (hasActiveFilters && baseBusinesses.length > 0 && visibleBusinesses.length === 0) {
+      // Filters applied but 0 results - show helpful message
+      const filterNames = []
+      if (activeFilters.openNow) filterNames.push('"Open now"')
+      if (activeFilters.maxDistance) filterNames.push('"Closer"')
+      
+      setHudSummary(`No places match ${filterNames.join(' + ')} — try removing a filter or clearing all`)
+      setHudPrimaryBusinessName(null)
+      setHudVisible(true)
+    } else if (hasActiveFilters && visibleBusinesses.length > 0) {
+      // Filters applied and have results - already handled by status strip
+      // Don't override HUD if user is viewing a business
+    }
+  }, [visibleBusinesses.length, baseBusinesses.length, activeFilters])
   
   // Track Atlas opened on mount
   useEffect(() => {
@@ -708,17 +805,30 @@ export function AtlasMode({
   const generateBusinessHudMessage = useCallback((business: Business): string => {
     const parts: string[] = []
     
-    // Name and rating (NO MARKDOWN - plain text only)
-    parts.push(`${business.business_name} — ${business.rating}★`)
-    
-    // Category
-    if (business.display_category) {
-      parts.push(business.display_category)
+    // Primary reason (why shown)
+    if (business.reason) {
+      parts.push(`${business.reason.emoji} ${business.reason.label}`)
     }
     
-    // ✅ LEGAL COMPLIANCE: Show only numeric rating, not review text
-    if (business.rating) {
-      parts.push(`${business.rating}★ on Google`)
+    // Secondary metadata
+    if (business.reasonMeta) {
+      if (business.reasonMeta.ratingBadge) {
+        parts.push(`⭐ ${business.reasonMeta.ratingBadge}`)
+      }
+      if (business.reasonMeta.isOpenNow) {
+        parts.push('🕐 Open now')
+      }
+      if (business.reasonMeta.distanceMeters) {
+        parts.push(`📍 ${business.reasonMeta.distanceMeters}m`)
+      }
+    }
+    
+    // Fallback if no reason data
+    if (parts.length === 0) {
+      parts.push(`${business.business_name} — ${business.rating}★`)
+      if (business.display_category) {
+        parts.push(business.display_category)
+      }
     }
     
     return parts.join(' • ')
@@ -1029,36 +1139,6 @@ export function AtlasMode({
       // Update ref for event handlers
       businessesRef.current = businesses
       
-      // ✅ CRITICAL: Check if layers already exist with same data - if so, skip removal/re-add
-      // This prevents Fast Refresh from destroying working layers
-      const existingSource = map.current.getSource('businesses')
-      if (existingSource && map.current.getLayer('business-pins')) {
-        console.log('[Atlas] ✅ Layers already exist, skipping re-add')
-        return
-      }
-      
-      // Remove existing business layers only if they exist (preserve user location!)
-      const layerIds = [
-        'business-pins', 
-        'business-pins-arrival-pulse',
-        'business-clusters',
-        'business-cluster-count'
-      ]
-      layerIds.forEach(id => {
-        if (map.current!.getLayer(id)) {
-          console.log('[Atlas] 🗑️ Removing old layer:', id)
-          map.current!.removeLayer(id)
-        }
-      })
-      // Also remove old glow layer if it exists from previous version
-      if (map.current.getLayer('business-pins-glow')) {
-        map.current.removeLayer('business-pins-glow')
-      }
-      if (map.current.getSource('businesses')) {
-        console.log('[Atlas] 🗑️ Removing old source: businesses')
-        map.current.removeSource('businesses')
-      }
-      
       // Create GeoJSON features
       const features = businesses.map(business => {
         // Determine pin styling based on simplified tier from chat
@@ -1090,9 +1170,27 @@ export function AtlasMode({
       const unclaimedCount = features.filter(f => f.properties.isUnclaimed).length
       const claimedFreeCount = features.length - paidCount - unclaimedCount
       
-      // Add source
-      console.log('[Atlas] 🔧 About to add source "businesses" with', features.length, 'features')
+      console.log('[Atlas] 🔧 Processing', features.length, 'features')
       console.log(`[Atlas] 📊 Pin tier breakdown: ${paidCount} paid (cyan), ${claimedFreeCount} claimed-free, ${unclaimedCount} unclaimed (grey)`)
+      
+      // ✅ MVP-CRITICAL FIX: Update existing source via setData() instead of removing/re-adding
+      // This makes filters and pin updates work correctly
+      const existingSource = map.current.getSource('businesses') as any
+      
+      if (existingSource) {
+        // Source exists → just update the data
+        console.log('[Atlas] ✅ Updating existing source via setData():', features.length, 'features')
+        existingSource.setData({
+          type: 'FeatureCollection',
+          features
+        })
+        map.current.triggerRepaint()
+        console.log('[Atlas] ✅ Source updated successfully')
+        return // Done - layers already exist
+      }
+      
+      // Source doesn't exist → add it (first time setup)
+      console.log('[Atlas] 🔧 Adding NEW source "businesses" with', features.length, 'features')
       try {
         map.current.addSource('businesses', {
           type: 'geojson',
@@ -1166,89 +1264,95 @@ export function AtlasMode({
       // Attach event handlers ONCE only (or re-attach if layer was recreated)
       if (!businessHandlersAttachedRef.current && map.current.getLayer('business-pins')) {
         // Define handlers that read from refs
-        const handleClick = (e: any) => {
-          if (!e.features || e.features.length === 0) return
-          
-          const feature = e.features[0]
-          const businessId = feature.properties?.id
-          const business = businessesRef.current.find(b => b.id === businessId)
-          
-          if (business) {
-            // Stop any active tour
-            if (tourActive) {
-              stopTour()
-            }
+        // ✅ MVP-CRITICAL: Define handlers ONCE using stable refs (prevents handler stacking)
+        if (!onPinClickRef.current) {
+          onPinClickRef.current = (e: any) => {
+            if (!e.features || e.features.length === 0) return
             
-            // Update selected business
-            const businessIndex = businessesRef.current.findIndex(b => b.id === businessId)
-            setSelectedBusiness(business)
-            setSelectedBusinessIndex(businessIndex)
-            updateActiveBusinessMarker(business)
-            flyToBusiness(business)
+            const feature = e.features[0]
+            const businessId = feature.properties?.id
+            const business = businessesRef.current.find(b => b.id === businessId)
             
-            // Update HUD with business info
-            setHudSummary(generateBusinessHudMessage(business))
-            setHudPrimaryBusinessName(null)
-            setHudVisible(true)
-          }
-        }
-        
-        const handleMouseEnter = () => {
-          if (map.current) map.current.getCanvas().style.cursor = 'pointer'
-        }
-        
-        const handleMouseLeave = () => {
-          if (map.current) map.current.getCanvas().style.cursor = ''
-        }
-        
-        // Remove any existing handlers (safe for re-attachment)
-        map.current.off('click', 'business-pins', handleClick)
-        map.current.off('mouseenter', 'business-pins', handleMouseEnter)
-        map.current.off('mouseleave', 'business-pins', handleMouseLeave)
-        
-        // Attach fresh handlers
-        map.current.on('click', 'business-pins', handleClick)
-        map.current.on('mouseenter', 'business-pins', handleMouseEnter)
-        map.current.on('mouseleave', 'business-pins', handleMouseLeave)
-        
-        // ✨ Cluster handlers - zoom into cluster on click
-        const handleClusterClick = (e: any) => {
-          if (!e.features || e.features.length === 0 || !map.current) return
-          
-          const feature = e.features[0]
-          const clusterId = feature.properties.cluster_id
-          const source = map.current.getSource('businesses') as mapboxgl.GeoJSONSource
-          
-          if (source && source.getClusterExpansionZoom) {
-            source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-              if (err || !map.current || zoom === null || zoom === undefined) return
+            if (business) {
+              // Stop any active tour
+              if (tourActive) {
+                stopTour()
+              }
               
-              map.current.easeTo({
-                center: feature.geometry.coordinates,
-                zoom: zoom + 0.5, // Slight extra zoom for better reveal
-                duration: 800
+              // Update selected business
+              const businessIndex = businessesRef.current.findIndex(b => b.id === businessId)
+              setSelectedBusiness(business)
+              setSelectedBusinessIndex(businessIndex)
+              updateActiveBusinessMarker(business)
+              flyToBusiness(business)
+              
+              // ✨ Mobile: Show bottom sheet instead of HUD
+              if (isMobile) {
+                setShowMobileSheet(true)
+              } else {
+                // Desktop: Show HUD
+                setHudSummary(generateBusinessHudMessage(business))
+                setHudPrimaryBusinessName(null)
+                setHudVisible(true)
+              }
+            }
+          }
+          
+          onPinEnterRef.current = () => {
+            if (map.current) map.current.getCanvas().style.cursor = 'pointer'
+          }
+          
+          onPinLeaveRef.current = () => {
+            if (map.current) map.current.getCanvas().style.cursor = ''
+          }
+          
+          // ✨ Cluster handlers - zoom into cluster on click
+          onClusterClickRef.current = (e: any) => {
+            if (!e.features || e.features.length === 0 || !map.current) return
+            
+            const feature = e.features[0]
+            const clusterId = feature.properties.cluster_id
+            const source = map.current.getSource('businesses') as any
+            
+            if (source && source.getClusterExpansionZoom) {
+              source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
+                if (err || !map.current || zoom === null || zoom === undefined) return
+                
+                map.current.easeTo({
+                  center: feature.geometry.coordinates,
+                  zoom: zoom + 0.5, // Slight extra zoom for better reveal
+                  duration: 800
+                })
               })
-            })
+            }
+          }
+          
+          onClusterEnterRef.current = () => {
+            if (map.current) map.current.getCanvas().style.cursor = 'pointer'
+          }
+          
+          onClusterLeaveRef.current = () => {
+            if (map.current) map.current.getCanvas().style.cursor = ''
           }
         }
         
-        const handleClusterMouseEnter = () => {
-          if (map.current) map.current.getCanvas().style.cursor = 'pointer'
-        }
+        // ✅ Always detach then attach using the SAME stable references
+        map.current.off('click', 'business-pins', onPinClickRef.current!)
+        map.current.off('mouseenter', 'business-pins', onPinEnterRef.current!)
+        map.current.off('mouseleave', 'business-pins', onPinLeaveRef.current!)
         
-        const handleClusterMouseLeave = () => {
-          if (map.current) map.current.getCanvas().style.cursor = ''
-        }
+        map.current.on('click', 'business-pins', onPinClickRef.current!)
+        map.current.on('mouseenter', 'business-pins', onPinEnterRef.current!)
+        map.current.on('mouseleave', 'business-pins', onPinLeaveRef.current!)
         
-        // Remove any existing cluster handlers
-        map.current.off('click', 'business-clusters', handleClusterClick)
-        map.current.off('mouseenter', 'business-clusters', handleClusterMouseEnter)
-        map.current.off('mouseleave', 'business-clusters', handleClusterMouseLeave)
+        // Cluster handlers
+        map.current.off('click', 'business-clusters', onClusterClickRef.current!)
+        map.current.off('mouseenter', 'business-clusters', onClusterEnterRef.current!)
+        map.current.off('mouseleave', 'business-clusters', onClusterLeaveRef.current!)
         
-        // Attach cluster handlers
-        map.current.on('click', 'business-clusters', handleClusterClick)
-        map.current.on('mouseenter', 'business-clusters', handleClusterMouseEnter)
-        map.current.on('mouseleave', 'business-clusters', handleClusterMouseLeave)
+        map.current.on('click', 'business-clusters', onClusterClickRef.current!)
+        map.current.on('mouseenter', 'business-clusters', onClusterEnterRef.current!)
+        map.current.on('mouseleave', 'business-clusters', onClusterLeaveRef.current!)
         
         businessHandlersAttachedRef.current = true
       }
@@ -1270,6 +1374,14 @@ export function AtlasMode({
       console.error('[Atlas] ❌ Failed to add markers:', error)
     }
   }, [mapLoaded, updateActiveBusinessMarker, flyToBusiness, tourActive, stopTour, generateBusinessHudMessage, playSound])
+  
+  // Update map when visibleBusinesses changes (filters applied)
+  useEffect(() => {
+    if (!mapLoaded || visibleBusinesses.length === 0) return
+    
+    console.log(`[Atlas] 🔄 Updating map with ${visibleBusinesses.length} visible businesses (filters applied)`)
+    addBusinessMarkers(visibleBusinesses)
+  }, [visibleBusinesses, mapLoaded, addBusinessMarkers])
   
   // ✅ RULE #3: Handle incoming businesses from chat (separate effect, waits for mapReady)
   useEffect(() => {
@@ -1304,6 +1416,20 @@ export function AtlasMode({
     
     // Update local state
     setBusinesses(incomingBusinesses)
+    setBaseBusinesses(incomingBusinesses) // Store for filtering
+    
+    // ✅ SHIP-SAFE: Clear filters when new businesses arrive
+    // This prevents confusing UX where filters were applied to empty list,
+    // then businesses arrive but are immediately hidden by stale filters
+    const hadActiveFilters = activeFilters.openNow || activeFilters.maxDistance !== null
+    setActiveFilters({ openNow: false, maxDistance: null })
+    
+    // Show brief notification if we auto-cleared filters
+    if (hadActiveFilters && incomingBusinesses.length > 0) {
+      setHudSummary(`Showing all ${incomingBusinesses.length} places (filters cleared)`)
+      setHudVisible(true)
+      setTimeout(() => setHudVisible(false), 3000)
+    }
     
     // Add pins to map
     console.log('[Atlas] 📍 Calling addBusinessMarkers...')
@@ -1453,6 +1579,44 @@ export function AtlasMode({
   // Search handler (calls Atlas query endpoint for HUD bubble response)
   const handleSearch = useCallback(async (query: string) => {
     console.log('[Atlas Search] 🔍 Starting search for:', query)
+    
+    const lower = query.toLowerCase()
+    
+    // Check for filter commands
+    if (lower.includes('open now') || lower.includes('currently open')) {
+      console.log('[Atlas] 🕐 Applying "open now" filter')
+      setActiveFilters(prev => ({ ...prev, openNow: true }))
+      setHudSummary('Showing only open businesses')
+      setHudVisible(true)
+      return
+    }
+    
+    if (lower.includes('closer') || lower.includes('nearby') || lower.includes('within')) {
+      // ✅ SAFETY: Check if location is available before applying distance filter
+      if (!userLocation) {
+        console.log('[Atlas] ⚠️ Distance filter requested but location not available')
+        setHudSummary('Enable location to filter by distance')
+        setHudVisible(true)
+        return
+      }
+      console.log('[Atlas] 📍 Applying "closer" filter (within 1km)')
+      setActiveFilters(prev => ({ ...prev, maxDistance: 1000 }))
+      setHudSummary('Showing businesses within 1km')
+      setHudVisible(true)
+      return
+    }
+    
+    // Clear/reset commands
+    if (/\b(clear|reset|show all)\b/.test(lower)) {
+      console.log('[Atlas] 🔄 Clearing all filters')
+      setActiveFilters({ openNow: false, maxDistance: null })
+      setHudSummary('Filters cleared')
+      setHudVisible(true)
+      return
+    }
+    
+    // New search - clear filters and run query
+    setActiveFilters({ openNow: false, maxDistance: null })
     setSearching(true)
     setSelectedBusiness(null)
     setHudVisible(false) // Hide previous bubble
@@ -1502,6 +1666,7 @@ export function AtlasMode({
           console.log('[Atlas Search] 📊 Filtered business names:', filteredResults.map((b: Business) => b.business_name))
           
           setBusinesses(filteredResults)
+          setBaseBusinesses(filteredResults) // Store for filtering
           await addBusinessMarkers(filteredResults)
           
           // Select first result as active
@@ -1650,11 +1815,17 @@ export function AtlasMode({
   }, [])
   
   const handleHudMoreDetails = useCallback(() => {
-    // Pass state back to chat mode
-    handleHudDismiss()
-    handleClose()
-    // State handoff is handled via lastAtlasQuery and lastAtlasBusinessIds
-  }, [handleHudDismiss, handleClose])
+    // ID-based detail request
+    if (onRequestDetails && selectedBusiness) {
+      console.log(`📱 Requesting details for business ID: ${selectedBusiness.id}`)
+      onRequestDetails(selectedBusiness.id)
+      handleHudDismiss()
+    } else {
+      // Fallback: close and return to chat
+      handleHudDismiss()
+      handleClose()
+    }
+  }, [selectedBusiness, onRequestDetails, handleHudDismiss, handleClose])
   
   return (
     <>
@@ -1681,6 +1852,40 @@ export function AtlasMode({
         
         {/* First-Visit Intro Overlay */}
         <AtlasIntroOverlay />
+      
+      {/* Status Strip with Filter Pills */}
+      {(activeFilters.openNow || activeFilters.maxDistance !== null || visibleBusinesses.length !== baseBusinesses.length) && (
+        <div className="absolute top-20 left-0 right-0 z-20 px-4 py-2 bg-black/40 backdrop-blur-sm border-b border-white/10">
+          <div className="flex items-center justify-between text-sm text-white/80">
+            <span>
+              Showing {visibleBusinesses.length} 
+              {baseBusinesses.length > 0 && visibleBusinesses.length !== baseBusinesses.length ? ` of ${baseBusinesses.length}` : ''} places
+              {!activeFilters.openNow && !activeFilters.maxDistance && ' • sorted by relevance'}
+            </span>
+            
+            {(activeFilters.openNow || activeFilters.maxDistance) && (
+              <div className="flex items-center gap-2">
+                {activeFilters.openNow && (
+                  <button
+                    onClick={() => setActiveFilters(prev => ({ ...prev, openNow: false }))}
+                    className="px-2 py-1 rounded-full bg-[#00d083]/20 border border-[#00d083]/40 text-[#00d083] text-xs flex items-center gap-1 hover:bg-[#00d083]/30 transition-colors"
+                  >
+                    🕐 Open now <span className="ml-1">×</span>
+                  </button>
+                )}
+                {activeFilters.maxDistance && (
+                  <button
+                    onClick={() => setActiveFilters(prev => ({ ...prev, maxDistance: null }))}
+                    className="px-2 py-1 rounded-full bg-[#00d083]/20 border border-[#00d083]/40 text-[#00d083] text-xs flex items-center gap-1 hover:bg-[#00d083]/30 transition-colors"
+                  >
+                    📍 Within 1km <span className="ml-1">×</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       
       {/* HUD Bubble (ephemeral AI response) */}
       <AtlasHudBubble
@@ -1813,7 +2018,98 @@ export function AtlasMode({
         </div>
       )}
       
+      {/* ✨ MOBILE BOTTOM SHEET - Replaces overlay on mobile */}
+      {isMobile && (
+        <BottomSheet
+          isOpen={showMobileSheet && !!selectedBusiness}
+          onClose={() => setShowMobileSheet(false)}
+          snapPoints={[0.4, 0.7, 0.95]}
+          initialSnap={0}
+        >
+          {selectedBusiness && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-white mb-2">
+                  {selectedBusiness.business_name}
+                </h2>
+                {selectedBusiness.display_category && (
+                  <p className="text-sm text-white/60">{selectedBusiness.display_category}</p>
+                )}
+              </div>
+              
+              {selectedBusiness.rating && (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <span className="text-yellow-400">★</span>
+                    <span className="text-white font-semibold">{selectedBusiness.rating.toFixed(1)}</span>
+                  </div>
+                  {selectedBusiness.review_count && (
+                    <span className="text-white/60 text-sm">({selectedBusiness.review_count} reviews)</span>
+                  )}
+                </div>
+              )}
+              
+              {selectedBusiness.business_address && (
+                <p className="text-white/80 text-sm">{selectedBusiness.business_address}</p>
+              )}
+              
+              {/* Reason Tag */}
+              {selectedBusiness.reason && (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#00d083]/20 border border-[#00d083]/40">
+                  <span className="text-[#00d083] text-sm font-medium">{selectedBusiness.reason}</span>
+                </div>
+              )}
+              
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={handleHudMoreDetails}
+                  className="flex-1 px-4 py-3 rounded-xl bg-[#00d083] hover:bg-[#00ff9d] transition-colors text-white font-semibold"
+                >
+                  More Details
+                </button>
+                <button
+                  onClick={() => {
+                    if (selectedBusiness.latitude && selectedBusiness.longitude) {
+                      window.open(
+                        `https://www.google.com/maps/dir/?api=1&destination=${selectedBusiness.latitude},${selectedBusiness.longitude}`,
+                        '_blank'
+                      )
+                    }
+                  }}
+                  className="flex-1 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white font-semibold"
+                >
+                  Directions
+                </button>
+              </div>
+            </div>
+          )}
+        </BottomSheet>
+      )}
+      
+      {/* ✨ MOBILE BOTTOM INPUT - Quick Atlas search on mobile */}
+      {isMobile && mapLoaded && !showMobileSheet && (
+        <div className="absolute bottom-0 left-0 right-0 z-30 pb-safe">
+          <div className="bg-black/95 backdrop-blur-xl border-t border-white/10 p-4">
+            <input
+              type="text"
+              placeholder="Search Atlas..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const query = e.currentTarget.value
+                  if (query.trim()) {
+                    handleSearch(query)
+                    e.currentTarget.value = ''
+                  }
+                }
+              }}
+              className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent"
+            />
+          </div>
+        </div>
+      )}
+      
     </div>
-  </>
+    </>
   )
 }

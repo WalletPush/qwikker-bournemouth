@@ -89,16 +89,27 @@ interface ChatMessage {
   }>
 }
 
-export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: { currentUser?: any, currentCity?: string, cityDisplayName?: string }) {
+export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bournemouth' }: { currentUser?: any, currentCity?: string, cityDisplayName?: string }) {
   const searchParams = useSearchParams()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  // ✅ MVP-CRITICAL: messagesRef to prevent race conditions on fast interactions
+  const messagesRef = useRef<ChatMessage[]>([])
+  
+  // ✅ Keep messagesRef synced with messages state
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
   const [hasAutoSent, setHasAutoSent] = useState(false)
   
   // ATLAS: View state management
   const [view, setView] = useState<'chat' | 'atlas'>('chat')
+  
+  // ATLAS: Detail request (hidden ID-based handoff)
+  const [detailRequest, setDetailRequest] = useState<string | null>(null)
   const [soundEnabled, setSoundEnabled] = useState(false)
   
   // Near-me query flow
@@ -293,12 +304,16 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
 
     try {
       // 🚨 CRITICAL FIX: Include the current user message in conversation history!
-      const fullConversationHistory = [...messages, userMessage].slice(-8).map(msg => ({
-        role: msg.type === 'user' ? 'user' : 'assistant',
-        content: msg.content
-      }))
+      // ✅ MVP-CRITICAL: Use messagesRef + filter hidden commands
+      const fullConversationHistory = [...messagesRef.current, userMessage]
+        .filter(m => !m.content?.startsWith('__qwikker_')) // Strip hidden commands
+        .slice(-8)
+        .map(msg => ({
+          role: msg.type === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        }))
       
-      console.log(`💬 Sending conversation history with ${fullConversationHistory.length} messages:`, fullConversationHistory)
+      console.log(`💬 Sending conversation history with ${fullConversationHistory.length} messages (hidden commands filtered):`, fullConversationHistory)
 
       // Call the real AI API
       const response = await fetch('/api/ai/chat', {
@@ -380,6 +395,90 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
       setIsTyping(false)
     }
   }
+
+  // ATLAS: Fetch business detail using hidden ID-based command
+  const fetchBusinessDetail = async (businessId: string) => {
+    console.log(`🔍 Fetching business detail for ID: ${businessId}`)
+    setIsTyping(true)
+    
+    try {
+      // ✅ FIXED: Pass last 6 messages for context (keeps AI tone/constraints)
+      // But do NOT include the hidden command as a visible user message
+      const recentHistory = messagesRef.current
+        .filter(m => !m.content?.startsWith('__qwikker_')) // Strip hidden commands defensively
+        .slice(-6)
+        .map(msg => ({
+          role: msg.type === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        }))
+      
+      // Call AI API with HIDDEN command (no user message)
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: `__qwikker_business_detail__:${businessId}`, // Hidden command
+          walletPassId: currentUser?.wallet_pass_id,
+          city: currentCity,
+          conversationHistory: recentHistory, // ✅ Pass context for smarter responses
+          userLocation: locationStatus === 'granted' && userLocation ? userLocation : null
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        // Add ONLY the AI response (no user message)
+        const aiMessage: ChatMessage = {
+          id: Date.now().toString(),
+          type: 'ai',
+          content: data.response || 'Here are the details:',
+          timestamp: new Date().toISOString(),
+          businessCarousel: data.businessCarousel || [],
+          quickReplies: data.quickReplies || ['Back to Atlas', 'Directions', 'Tell me more'],
+        }
+        
+        setMessages(prev => [...prev, aiMessage])
+        console.log(`✅ Business detail fetched successfully`)
+      } else {
+        console.error('❌ Business detail fetch failed:', data.error)
+        
+        const errorMessage: ChatMessage = {
+          id: Date.now().toString(),
+          type: 'ai',
+          content: 'Sorry, I couldn\'t find details for that business.',
+          timestamp: new Date().toISOString(),
+          quickReplies: ['Back to Atlas', 'Try another search']
+        }
+        
+        setMessages(prev => [...prev, errorMessage])
+      }
+    } catch (error) {
+      console.error('❌ Error fetching business detail:', error)
+      
+      const errorMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: 'Sorry, something went wrong loading the details.',
+        timestamp: new Date().toISOString(),
+        quickReplies: ['Back to Atlas']
+      }
+      
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
+      setIsTyping(false)
+    }
+  }
+  
+  // useEffect to trigger detail fetch when detailRequest changes
+  useEffect(() => {
+    if (detailRequest) {
+      fetchBusinessDetail(detailRequest)
+      setDetailRequest(null) // Reset after triggering
+    }
+  }, [detailRequest])
 
   const handleShowOffers = async (businessId: string, businessName: string) => {
     // Add a user message asking for offers
@@ -627,6 +726,11 @@ export function UserChatPage({ currentUser, currentCity = 'bournemouth', cityDis
             lastUserQuery={messages.length > 0 ? messages.filter(m => m.type === 'user').slice(-1)[0]?.content : undefined}
             lastAIResponse={messages.length > 0 ? messages.filter(m => m.type === 'ai').slice(-1)[0]?.content : undefined}
             onRequestLocation={requestPermission}
+            onRequestDetails={(businessId: string) => {
+              // Close Atlas and trigger hidden detail fetch
+              setView('chat')
+              setDetailRequest(businessId)
+            }}
             initialQuery={atlasInitialQuery}
             onInitialQueryConsumed={() => setAtlasInitialQuery(null)}
             businesses={(() => {

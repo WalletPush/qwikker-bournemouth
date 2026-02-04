@@ -16,6 +16,16 @@ interface Business {
   business_tier: 'qwikker_picks' | 'featured' | 'starter' | 'recommended' | 'free_trial'
   rating?: number
   offers_count?: number
+  reason?: {
+    type: string
+    label: string
+    emoji: string
+  }
+  reasonMeta?: {
+    isOpenNow: boolean
+    distanceMeters: number | null
+    ratingBadge: string | null
+  }
 }
 
 interface BusinessCarouselProps {
@@ -133,6 +143,29 @@ export function BusinessCarousel({ businesses, currentUser, className = '', onSh
                       </svg>
                       {business.business_town}
                     </p>
+                  )}
+
+                  {/* Primary reason */}
+                  {business.reason && (
+                    <div className="inline-flex items-center gap-1.5 px-2 py-1 mb-2 rounded-full bg-[#00d083]/10 border border-[#00d083]/30">
+                      {business.reason.emoji && <span className="text-sm">{business.reason.emoji}</span>}
+                      <span className="text-xs text-[#00d083] font-medium">{business.reason.label}</span>
+                    </div>
+                  )}
+
+                  {/* Secondary metadata */}
+                  {business.reasonMeta && (
+                    <div className="flex items-center gap-2 mb-2 text-xs text-slate-400">
+                      {business.reasonMeta.ratingBadge && (
+                        <span>⭐ {business.reasonMeta.ratingBadge}</span>
+                      )}
+                      {business.reasonMeta.isOpenNow && (
+                        <span className="text-[#00d083]">• 🕐 Open now</span>
+                      )}
+                      {business.reasonMeta.distanceMeters && (
+                        <span>• 📍 {business.reasonMeta.distanceMeters}m</span>
+                      )}
+                    </div>
                   )}
 
                   {/* Rating & Offers - Only show if > 0 */}

@@ -8,6 +8,7 @@ import { searchBusinessKnowledge, searchCityKnowledge } from './embeddings'
 import { classifyQueryIntent, logClassification } from './intent-classifier'
 import { detectIntent } from './intent-detector'
 import { scoreBusinessRelevance } from './relevance-scorer'
+import { getReasonTag, getReasonMeta } from './reason-tagger'
 import { 
   ConversationState, 
   createInitialState, 
@@ -17,6 +18,7 @@ import {
 import { createTenantAwareServerClient } from '@/lib/utils/tenant-security'
 import { isFreeTier, isAiEligibleTier, getTierPriority } from '@/lib/atlas/eligibility'
 import { getFranchiseApiKeys } from '@/lib/utils/franchise-api-keys'
+import { normalizeLocation, calculateDistance, isValidUUID } from '@/lib/utils/location'
 import { getBusinessVibeStats } from '@/lib/utils/vibes'
 
 // DO NOT instantiate OpenAI globally - must be per-franchise to use their API key
@@ -121,6 +123,16 @@ interface ChatResponse {
     phone?: string
     website_url?: string
     google_place_id?: string
+    reason?: {
+      type: string
+      label: string
+      emoji: string
+    }
+    reasonMeta?: {
+      isOpenNow: boolean
+      distanceMeters: number | null
+      ratingBadge: string | null
+    }
   }>
   queryCategories?: string[] // ✅ ATLAS: Categories detected in query (for filtering businesses)
   queryKeywords?: string[] // ✅ ATLAS: Keywords detected in query (for filtering businesses)
@@ -139,6 +151,18 @@ export async function generateHybridAIResponse(
   try {
     const { city, userName = 'there' } = context
     
+    // ✅ SHIP-SAFE: Assert city is provided (prevent silent tenant leaks)
+    if (!city || city === 'unknown') {
+      console.error('❌ CRITICAL: No city provided to generateHybridAIResponse')
+      if (process.env.NODE_ENV === 'development') {
+        throw new Error('City is required for AI chat')
+      }
+      return {
+        success: false,
+        error: 'City configuration missing. Please contact support.'
+      }
+    }
+    
     // 🔑 Get franchise-specific OpenAI API key
     const franchiseKeys = await getFranchiseApiKeys(city)
     
@@ -154,6 +178,27 @@ export async function generateHybridAIResponse(
     const openai = new OpenAI({
       apiKey: franchiseKeys.openai_api_key,
     })
+    
+  // 🔍 EARLY EXIT: Handle hidden business detail command
+  // ✅ SAFETY: Only match if entire message is exactly the command (prevent accidental triggers)
+  const detailCommandMatch = userMessage.trim().match(/^__qwikker_business_detail__:(\S+)$/)
+  if (detailCommandMatch) {
+    const businessId = detailCommandMatch[1]
+    
+    // ✅ SHIP-SAFE: Validate UUID format before querying
+    if (!isValidUUID(businessId)) {
+      console.warn(`⚠️ Invalid business ID format: ${businessId}`)
+      return {
+        success: false,
+        error: 'Invalid business identifier',
+        response: 'Sorry, I couldn\'t find that business. Please try again.'
+      }
+    }
+    
+    console.log(`🔍 Hidden detail request detected for business ID: ${businessId}`)
+    // ✅ CONTEXT: Pass conversation history for smarter detail responses
+    return await generateBusinessDetailResponse(businessId, context, openai, conversationHistory)
+  }
     
     // Initialize or use existing conversation state
     let state = conversationState || createInitialState()
@@ -491,34 +536,93 @@ export async function generateHybridAIResponse(
       }))
     ]
     
-    // Step 4: Sort by RELEVANCE FIRST (if intent detected), THEN tier priority
-    const sortedForContext = allBusinessesForContext.sort((a, b) => {
-      // 🎯 CRITICAL FIX: When intent detected, prioritize relevant businesses FIRST
-      if (detectedIntent.hasIntent) {
-        const aRelevant = (a.relevanceScore || 0) > 0
-        const bRelevant = (b.relevanceScore || 0) > 0
+    // Step 4: Apply "Relevance decides IF, Tier decides ORDER" rule
+    const MIN_RESULTS_THRESHOLD = 3
+    let sortedForContext = [...allBusinessesForContext]
+    let isBrowseFallback = false
+    
+    if (detectedIntent.hasIntent) {
+      // Filter to relevant businesses only
+      const relevantBusinesses = allBusinessesForContext.filter(b => 
+        (b.relevanceScore || 0) > 0
+      )
+      
+      console.log(`🎯 Intent detected: ${relevantBusinesses.length} relevant of ${allBusinessesForContext.length} businesses`)
+      
+      // Check if we have enough relevant matches
+      if (relevantBusinesses.length < MIN_RESULTS_THRESHOLD) {
+        console.log(`⚠️ Only ${relevantBusinesses.length} relevant results. Falling back to browse mode (top-rated).`)
+        isBrowseFallback = true
         
-        // If one is relevant and the other isn't, relevant business wins
-        if (aRelevant && !bRelevant) return -1
-        if (!aRelevant && bRelevant) return 1
+        // Fall back to top-rated businesses
+        sortedForContext = [...allBusinessesForContext]
+          .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+          .slice(0, 10)
+      } else {
+        // Use relevant businesses only
+        sortedForContext = relevantBusinesses
+      }
+    }
+    
+    // Sort: Different strategies for browse vs intent mode
+    // ✅ BROWSE FALLBACK: RATING first (trust), then TIER (boost paid slightly)
+    // ✅ INTENT MODE: RELEVANCE first (truth), then TIER (commercial), then RATING, then DISTANCE
+    // ✅ SHIP-SAFE: Normalize location once for all distance calcs
+    const userLoc = normalizeLocation(context.userLocation)
+    
+    sortedForContext.sort((a, b) => {
+      if (isBrowseFallback) {
+        // BROWSE MODE: Rating-first for trust
+        // 1. Rating (higher = better)
+        const ratingA = a.rating || 0
+        const ratingB = b.rating || 0
+        if (ratingA !== ratingB) return ratingB - ratingA
         
-        // If both relevant, sort by relevance score (higher first)
-        if (aRelevant && bRelevant && a.relevanceScore !== b.relevanceScore) {
-          return (b.relevanceScore || 0) - (a.relevanceScore || 0)
+        // 2. Tier priority as tiebreaker (commercial boost)
+        if (a.tierPriority !== b.tierPriority) return a.tierPriority - b.tierPriority
+        
+        // 3. Distance (if available, closer = better)
+        if (userLoc && a.latitude && b.latitude && a.longitude && b.longitude) {
+          const distA = calculateDistance(userLoc, { latitude: a.latitude, longitude: a.longitude })
+          const distB = calculateDistance(userLoc, { latitude: b.latitude, longitude: b.longitude })
+          return distA - distB
         }
         
-        // If both relevant with same score, fall through to tier priority
+        return 0
+      } else {
+        // INTENT MODE: Relevance-first (truth), then tier (commercial tiebreaker only)
+        // ✅ SHIP-SAFE: Maintains "truth-first" promise - paid can't beat high-relevance free
+        
+        // 1. Relevance score (higher = better) - TRUTH FIRST
+        const scoreA = a.relevanceScore || 0
+        const scoreB = b.relevanceScore || 0
+        if (scoreA !== scoreB) return scoreB - scoreA
+        
+        // 2. Tier priority (paid > claimed > unclaimed) - only for tiebreaks
+        if (a.tierPriority !== b.tierPriority) return a.tierPriority - b.tierPriority
+        
+        // 3. Rating (higher = better)
+        const ratingA = a.rating || 0
+        const ratingB = b.rating || 0
+        if (ratingA !== ratingB) return ratingB - ratingA
+        
+        // 4. Distance (if available, closer = better)
+        if (userLoc && a.latitude && b.latitude && a.longitude && b.longitude) {
+          const distA = calculateDistance(userLoc, { latitude: a.latitude, longitude: a.longitude })
+          const distB = calculateDistance(userLoc, { latitude: b.latitude, longitude: b.longitude })
+          return distA - distB
+        }
+        
+        return 0
       }
-      
-      // Default: sort by tier priority (paid > claimed > unclaimed)
-      if (a.tierPriority !== b.tierPriority) return a.tierPriority - b.tierPriority
-      if (b.rating !== a.rating) return (b.rating || 0) - (a.rating || 0)
-      return (b.review_count || 0) - (a.review_count || 0)
     })
     
     console.log(`🎯 Building AI context from ${sortedForContext.length} businesses (T1=${tier1Businesses.length}, T2=${tier2Businesses.length}, T3=${tier3Businesses.length})`)
+    if (isBrowseFallback) {
+      console.log(`⚠️ BROWSE FALLBACK: Not enough relevant matches. Showing top-rated instead.`)
+    }
     if (sortedForContext.length > 0) {
-      console.log(`📊 Top 5 for AI${detectedIntent.hasIntent ? ' (RELEVANCE-SORTED)' : ''}:`)
+      console.log(`📊 Top 5 for AI${detectedIntent.hasIntent && !isBrowseFallback ? ' (RELEVANCE-FILTERED)' : ''}:`)
       sortedForContext.slice(0, 5).forEach((b, i) => {
         const hasKB = kbContentByBusinessId.has(b.id) ? '📚' : ''
         const relevanceLabel = detectedIntent.hasIntent ? ` [relevance: ${b.relevanceScore || 0}]` : ''
@@ -1634,6 +1738,20 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     const mapPins: ChatResponse['mapPins'] = []
     const addedIds = new Set<string>()
     
+    // Determine if this is browse mode for reason tagging
+    const isBrowseModeForReasons = !detectedIntent.hasIntent || isBrowseFallback
+    
+    // ✅ Helper: Safely get reasonMeta (always returns valid object, never undefined)
+    const safeGetReasonMeta = (business: any, userLoc: any) => {
+      try {
+        const meta = getReasonMeta(business, userLoc)
+        return meta || { isOpenNow: false, distanceMeters: null, ratingBadge: null }
+      } catch (error) {
+        console.warn('⚠️ getReasonMeta failed, using fallback:', error)
+        return { isOpenNow: false, distanceMeters: null, ratingBadge: null }
+      }
+    }
+    
     // Add ALL Tier 1 businesses (paid/trial) - whether carousel is shown or not
     if (tier1Businesses && tier1Businesses.length > 0) {
       tier1Businesses.forEach((b: any) => {
@@ -1649,7 +1767,15 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             business_tier: 'paid',
             phone: b.phone,
             website_url: b.website_url,
-            google_place_id: b.google_place_id
+            google_place_id: b.google_place_id,
+            reason: getReasonTag(
+              b,
+              detectedIntent,
+              businessRelevanceScores.get(b.id) || 0,
+              context.userLocation,
+              isBrowseModeForReasons
+            ),
+            reasonMeta: safeGetReasonMeta(b, context.userLocation) // ✅ Always present
           })
           addedIds.add(b.id)
         }
@@ -1671,7 +1797,15 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             business_tier: 'claimed_free',
             phone: b.phone,
             website_url: b.website_url,
-            google_place_id: b.google_place_id
+            google_place_id: b.google_place_id,
+            reason: getReasonTag(
+              b,
+              detectedIntent,
+              businessRelevanceScores.get(b.id) || 0,
+              context.userLocation,
+              isBrowseModeForReasons
+            ),
+            reasonMeta: safeGetReasonMeta(b, context.userLocation) // ✅ Always present
           })
           addedIds.add(b.id)
         }
@@ -1693,7 +1827,15 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             business_tier: 'unclaimed',
             phone: b.phone,
             website_url: b.website_url,
-            google_place_id: b.google_place_id
+            google_place_id: b.google_place_id,
+            reason: getReasonTag(
+              b,
+              detectedIntent,
+              businessRelevanceScores.get(b.id) || 0,
+              context.userLocation,
+              isBrowseModeForReasons
+            ),
+            reasonMeta: safeGetReasonMeta(b, context.userLocation) // ✅ Always present
           })
           addedIds.add(b.id)
         }
@@ -1726,6 +1868,143 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
+    }
+  }
+}
+
+/**
+ * Generate business detail response from hidden ID-based request
+ */
+async function generateBusinessDetailResponse(
+  businessId: string,
+  context: ChatContext,
+  openai: OpenAI,
+  conversationHistory: ChatMessage[] = []
+): Promise<ChatResponse> {
+  console.log(`🔍 Generating detail response for business ID: ${businessId}`)
+  
+  // ✅ TENANT SAFETY: Pass city to ensure correct tenant context
+  const supabase = await createTenantAwareServerClient(context.city)
+  
+  // SECURITY: tenant-safe + city-match
+  const { data: business, error} = await supabase
+    .from('business_profiles')
+    .select('*')
+    .eq('id', businessId)
+    .eq('city', context.city) // Hostname-derived in production
+    .single()
+  
+  if (error || !business) {
+    console.error(`❌ Business not found: ${businessId}`, error)
+    return {
+      success: false,
+      error: 'Business not found'
+    }
+  }
+  
+  console.log(`✅ Found business: ${business.business_name}`)
+  
+  // Build detail context
+  const detailLines = [
+    `Business: ${business.business_name}`,
+    `Category: ${business.display_category || business.system_category || 'Local business'}`,
+    business.business_tagline ? `Tagline: ${business.business_tagline}` : null,
+    business.rating && business.review_count ? 
+      `Rating: ${business.rating}★ from ${business.review_count} Google reviews` : null,
+    business.business_address ? `Location: ${business.business_address}` : null,
+    business.phone ? `Phone: ${business.phone}` : null,
+    business.website_url ? `Website: ${business.website_url}` : null,
+    business.business_hours ? `Hours: ${business.business_hours}` : null
+  ].filter(Boolean).join('\n')
+  
+  // ✅ CONTEXT: Include recent conversation history for smarter responses
+  const recentHistory = conversationHistory
+    .filter(m => !m.content?.startsWith('__qwikker_')) // Strip hidden commands
+    .slice(-6)
+    .map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }))
+  
+  // Generate concise AI response
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { 
+          role: 'system', 
+          content: 'You are a helpful local guide. Be concise, friendly, and factual. Only use provided data. No hallucinations.' 
+        },
+        ...recentHistory, // ✅ Include conversation context
+        { 
+          role: 'user', 
+          content: `User wants details about ${business.business_name}.\n\n${detailLines}\n\nGenerate a 2-3 sentence response highlighting:\n1. What makes this place worth visiting\n2. Key practical info\n3. End with a helpful question or suggestion\n\nNo hallucinations. Use only the provided data.` 
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 200
+    })
+    
+    const aiResponse = completion.choices[0].message.content || 
+      `${business.business_name} is a ${business.display_category || 'local business'} with ${business.rating}★ rating. Want directions?`
+    
+    console.log(`✅ Generated detail response for ${business.business_name}`)
+    
+    return {
+      success: true,
+      response: aiResponse,
+      businessCarousel: [{
+        id: business.id,
+        business_name: business.business_name,
+        business_tagline: business.business_tagline,
+        system_category: business.system_category,
+        display_category: business.display_category,
+        business_tier: business.business_tier || 'unclaimed',
+        tier_priority: 99, // Fallback priority
+        business_address: business.business_address,
+        business_town: business.business_town,
+        logo: business.logo,
+        business_images: business.business_images,
+        rating: business.rating,
+        review_count: business.review_count,
+        latitude: business.latitude,
+        longitude: business.longitude,
+        phone: business.phone,
+        website_url: business.website_url,
+        google_place_id: business.google_place_id
+      }],
+      modelUsed: 'gpt-4o-mini',
+      classification: { complexity: 'simple', queryType: 'business_detail', requiresKB: false }
+    }
+  } catch (error) {
+    console.error(`❌ Error generating detail response:`, error)
+    
+    // Fallback: return basic info without AI enhancement
+    return {
+      success: true,
+      response: `${business.business_name} is located at ${business.business_address || 'this location'}. ${business.rating ? `Rated ${business.rating}★ on Google.` : ''} Want directions?`,
+      businessCarousel: [{
+        id: business.id,
+        business_name: business.business_name,
+        business_tagline: business.business_tagline,
+        system_category: business.system_category,
+        display_category: business.display_category,
+        business_tier: business.business_tier || 'unclaimed',
+        tier_priority: 99,
+        business_address: business.business_address,
+        business_town: business.business_town,
+        logo: business.logo,
+        business_images: business.business_images,
+        rating: business.rating,
+        review_count: business.review_count,
+        latitude: business.latitude,
+        longitude: business.longitude,
+        phone: business.phone,
+        website_url: business.website_url,
+        google_place_id: business.google_place_id
+      }],
+      modelUsed: 'gpt-4o-mini',
+      classification: { complexity: 'simple', queryType: 'business_detail', requiresKB: false }
     }
   }
 }
