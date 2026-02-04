@@ -31,25 +31,32 @@ export interface ReasonMeta {
 
 /**
  * Get primary reason tag for a business
- * Priority reflects user intent > immediacy > social proof
+ * Shows WHAT MAKES THIS ONE DIFFERENT (not just "matches your search")
  */
 export function getReasonTag(
   business: any,
   intent: IntentResult,
   relevanceScore: number,
   userLocation?: { lat: number, lng: number } | { latitude: number, longitude: number },
-  isBrowseMode: boolean = false
+  isBrowseMode: boolean = false,
+  allBusinesses?: any[] // ✅ NEW: For ranking context
 ): ReasonTag {
   
-  // PRIORITY 1: Category match (if user asked for something specific)
-  if (!isBrowseMode && relevanceScore >= 3) {
-    const categoryName = intent.categories[0] || business.display_category
-    if (categoryName) {
-      return { 
-        type: 'category_match', 
-        label: `Popular ${categoryName} spot`, 
-        emoji: '🍜' 
-      }
+  // Calculate distance if available
+  let distanceMeters = null
+  if (userLocation && business.latitude && business.longitude) {
+    distanceMeters = calculateDistance(
+      normalizeLocation(userLocation),
+      { latitude: business.latitude, longitude: business.longitude }
+    )
+  }
+  
+  // PRIORITY 1: Exceptional rating (THE BEST)
+  if (business.rating >= 4.7 && business.review_count >= 50) {
+    return { 
+      type: 'top_rated', 
+      label: `Highest rated (${business.rating}★)`, 
+      emoji: '' 
     }
   }
   
@@ -58,56 +65,59 @@ export function getReasonTag(
     return { 
       type: 'open_now', 
       label: 'Open now', 
-      emoji: '🕐' 
+      emoji: '' 
     }
   }
   
-  // PRIORITY 3: Closest (if very close)
-  if (userLocation && business.latitude && business.longitude) {
-    const distance = calculateDistance(
-      normalizeLocation(userLocation),
-      { latitude: business.latitude, longitude: business.longitude }
-    )
-    if (distance < 500) {
-      return { 
-        type: 'closest', 
-        label: `${Math.round(distance)}m away`, 
-        emoji: '📍' 
-      }
-    }
-  }
-  
-  // PRIORITY 4: Top rated (strong social proof)
-  if (business.rating >= 4.6 && business.review_count >= 100) {
+  // PRIORITY 3: Very close (< 500m)
+  if (distanceMeters !== null && distanceMeters < 500) {
     return { 
-      type: 'top_rated', 
-      label: 'Top rated nearby', 
-      emoji: '⭐' 
+      type: 'closest', 
+      label: 'Closest option', 
+      emoji: '' 
     }
   }
   
-  // PRIORITY 5: Highly rated
-  if (business.rating >= 4.4) {
-    return { 
-      type: 'highly_rated', 
-      label: 'Highly rated', 
-      emoji: '⭐' 
-    }
-  }
-  
-  // PRIORITY 6: Popular (many reviews)
-  if (business.review_count >= 50) {
+  // PRIORITY 4: High rating + lots of reviews (social proof)
+  if (business.rating >= 4.5 && business.review_count >= 100) {
     return { 
       type: 'popular', 
-      label: 'Popular choice', 
-      emoji: '💬' 
+      label: 'Popular & highly rated', 
+      emoji: '' 
     }
   }
   
-  // PRIORITY 7: Fallback
+  // PRIORITY 5: Highly rated (trustworthy)
+  if (business.rating >= 4.5) {
+    return { 
+      type: 'highly_rated', 
+      label: `Highly rated (${business.rating}★)`, 
+      emoji: '' 
+    }
+  }
+  
+  // PRIORITY 6: Hidden gem (high rating, fewer reviews)
+  if (business.rating >= 4.4 && business.review_count < 50 && business.review_count >= 10) {
+    return { 
+      type: 'highly_rated', 
+      label: 'Hidden gem', 
+      emoji: '' 
+    }
+  }
+  
+  // PRIORITY 7: Solid choice (good rating)
+  if (business.rating >= 4.0) {
+    return { 
+      type: 'recommended', 
+      label: 'Solid choice', 
+      emoji: '' 
+    }
+  }
+  
+  // PRIORITY 8: Fallback (worth checking out)
   return { 
     type: 'recommended', 
-    label: 'Recommended', 
+    label: 'Worth checking out', 
     emoji: '' 
   }
 }

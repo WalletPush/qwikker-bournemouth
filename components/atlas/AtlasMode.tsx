@@ -131,6 +131,9 @@ export function AtlasMode({
   const isMobile = useMobile()
   const [showMobileSheet, setShowMobileSheet] = useState(false)
   
+  // ✨ Tour-end decision helper
+  const [showTourEndHelper, setShowTourEndHelper] = useState(false)
+  
   // Tour mode state
   const [tourActive, setTourActive] = useState(false)
   const tourTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -930,14 +933,14 @@ export function AtlasMode({
         advanceTour(targetIndex + 1)
       }, 3000)
     } else {
-      // End of tour
+      // End of tour - show decision helper!
       setTourActive(false)
-      if (!isMobile) {
-        // Keep HUD visible for a bit longer at the end (desktop only)
-        setTimeout(() => {
-          setHudVisible(false)
-        }, 4000)
-      }
+      setHudVisible(false)
+      
+      // ✨ Show "what now?" helper after 500ms
+      setTimeout(() => {
+        setShowTourEndHelper(true)
+      }, 500)
     }
   }, [flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage, isMobile])
   
@@ -1928,6 +1931,89 @@ export function AtlasMode({
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      
+      {/* ✨ TOUR END DECISION HELPER - "What now?" */}
+      {showTourEndHelper && visibleBusinesses.length > 0 && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md px-6">
+          <div className="bg-black/95 backdrop-blur-xl border-2 border-[#00d083]/30 rounded-3xl p-8 shadow-2xl">
+            {/* Header */}
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-bold text-white mb-2">
+                Which one interests you?
+              </h3>
+              <p className="text-white/60 text-sm">
+                Tap below to narrow it down or get details
+              </p>
+            </div>
+            
+            {/* Quick Actions */}
+            <div className="space-y-3 mb-6">
+              <button
+                onClick={() => {
+                  // Find highest rated
+                  const best = [...visibleBusinesses].sort((a, b) => b.rating - a.rating)[0]
+                  if (best) {
+                    setSelectedBusiness(best)
+                    setSelectedBusinessIndex(visibleBusinesses.findIndex(b => b.id === best.id))
+                    flyToBusiness(best)
+                    updateActiveBusinessMarker(best)
+                  }
+                  setShowTourEndHelper(false)
+                }}
+                className="w-full px-6 py-4 rounded-xl bg-[#00d083] hover:bg-[#00ff9d] transition-colors text-white font-semibold text-left flex items-center justify-between"
+              >
+                <span>Show me the best rated</span>
+                <span className="text-xl">★</span>
+              </button>
+              
+              {userLocation && (
+                <button
+                  onClick={() => {
+                    // Find closest
+                    const withDistance = visibleBusinesses.map(b => ({
+                      ...b,
+                      dist: userLocation && b.latitude && b.longitude 
+                        ? Math.hypot(userLocation.lat - b.latitude, userLocation.lng - b.longitude)
+                        : Infinity
+                    })).sort((a, b) => a.dist - b.dist)[0]
+                    
+                    if (withDistance) {
+                      setSelectedBusiness(withDistance)
+                      setSelectedBusinessIndex(visibleBusinesses.findIndex(b => b.id === withDistance.id))
+                      flyToBusiness(withDistance)
+                      updateActiveBusinessMarker(withDistance)
+                    }
+                    setShowTourEndHelper(false)
+                  }}
+                  className="w-full px-6 py-4 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white font-semibold text-left flex items-center justify-between"
+                >
+                  <span>Show me the closest</span>
+                  <span className="text-xl">📍</span>
+                </button>
+              )}
+              
+              <button
+                onClick={() => {
+                  setShowTourEndHelper(false)
+                  handleClose() // Back to chat
+                }}
+                className="w-full px-6 py-4 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white font-semibold text-left flex items-center justify-between"
+              >
+                <span>See all details in chat</span>
+                <span className="text-xl">💬</span>
+              </button>
+            </div>
+            
+            {/* Dismiss */}
+            <button
+              onClick={() => setShowTourEndHelper(false)}
+              className="w-full text-white/40 hover:text-white/60 text-sm transition-colors"
+            >
+              I'll keep browsing
+            </button>
           </div>
         </div>
       )}
