@@ -1887,19 +1887,21 @@ export function AtlasMode({
         </div>
       )}
       
-      {/* HUD Bubble (ephemeral AI response) */}
-      <AtlasHudBubble
-        visible={hudVisible}
-        summary={hudSummary}
-        primaryBusinessName={hudPrimaryBusinessName || undefined}
-        onDismiss={handleHudDismiss}
-        onMoreDetails={handleHudMoreDetails}
-      />
+      {/* HUD Bubble (ephemeral AI response) - DESKTOP ONLY */}
+      {!isMobile && (
+        <AtlasHudBubble
+          visible={hudVisible}
+          summary={hudSummary}
+          primaryBusinessName={hudPrimaryBusinessName || undefined}
+          onDismiss={handleHudDismiss}
+          onMoreDetails={handleHudMoreDetails}
+        />
+      )}
       
-      {/* Overlay UI */}
+      {/* Overlay UI - Hide search bar on mobile (we have bottom input) */}
       <AtlasOverlay
         onClose={handleClose}
-        onSearch={handleSearch}
+        onSearch={isMobile ? undefined : handleSearch}
         searching={searching}
         selectedBusiness={selectedBusiness}
         userLocation={userLocation}
@@ -2089,11 +2091,11 @@ export function AtlasMode({
       
       {/* ✨ MOBILE BOTTOM INPUT - Quick Atlas search on mobile */}
       {isMobile && mapLoaded && !showMobileSheet && (
-        <div className="absolute bottom-0 left-0 right-0 z-30 pb-safe">
-          <div className="bg-black/95 backdrop-blur-xl border-t border-white/10 p-4">
+        <div className="fixed bottom-0 left-0 right-0 z-30 safe-area-bottom">
+          <div className="bg-black/95 backdrop-blur-xl border-t border-white/10 px-4 py-3 pb-6">
             <input
               type="text"
-              placeholder="Search Atlas..."
+              placeholder="Refine search... (e.g. 'closer', 'open now')"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   const query = e.currentTarget.value
@@ -2103,7 +2105,7 @@ export function AtlasMode({
                   }
                 }
               }}
-              className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent"
+              className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 text-base focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent"
             />
           </div>
         </div>
