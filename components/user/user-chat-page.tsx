@@ -64,6 +64,17 @@ interface ChatMessage {
     phone?: string
     website_url?: string
     google_place_id?: string
+    // ✅ Explainability fields
+    reason?: {
+      type: string
+      label: string
+      emoji: string
+    }
+    reasonMeta?: {
+      isOpenNow: boolean
+      distanceMeters: number | null
+      ratingBadge: string | null
+    }
   }>
   walletActions?: Array<{
     type: 'add_to_wallet'
@@ -786,7 +797,10 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                 phone: pin.phone,
                 // Add metadata for Atlas to color pins differently
                 isPaid: pin.business_tier === 'paid',
-                isUnclaimed: pin.business_tier === 'unclaimed'
+                isUnclaimed: pin.business_tier === 'unclaimed',
+                // ✅ CRITICAL: Include reason tags for explainability!
+                reason: pin.reason,
+                reasonMeta: pin.reasonMeta
               }))
             })()}
           />
