@@ -26,10 +26,19 @@ export interface ScoredBusiness {
 export function scoreBusinessRelevance(
   business: any,
   intent: IntentResult,
-  kbContent?: string
+  kbContent?: string,
+  kbSimilarityScore?: number  // ✅ NEW: Use semantic search score as fallback
 ): number {
+  // 🚨 CRITICAL FIX: If intent detection fails BUT semantic search found this business,
+  // use the semantic similarity score instead of returning 0!
+  // This ensures "any good ribs?" works even if "ribs" isn't in the hardcoded keyword list.
   if (!intent.hasIntent) {
-    return 0 // No intent = no scoring
+    if (kbSimilarityScore && kbSimilarityScore > 0.5) {
+      // Scale 0.5-1.0 similarity to 1-5 relevance score
+      const scaledScore = Math.round((kbSimilarityScore - 0.5) * 10)
+      return Math.min(Math.max(scaledScore, 1), 5)  // Clamp to 1-5
+    }
+    return 0 // No intent AND no KB match = no scoring
   }
   
   let score = 0
@@ -151,6 +160,6 @@ export function scoreBusinessRelevance(
 /**
  * Check if a business is relevant (score >= threshold)
  */
-export function isRelevant(business: any, intent: IntentResult, kbContent?: string, threshold: number = 2): boolean {
-  return scoreBusinessRelevance(business, intent, kbContent) >= threshold
+export function isRelevant(business: any, intent: IntentResult, kbContent?: string, threshold: number = 2, kbSimilarityScore?: number): boolean {
+  return scoreBusinessRelevance(business, intent, kbContent, kbSimilarityScore) >= threshold
 }

@@ -446,6 +446,7 @@ export async function generateHybridAIResponse(
     // Step 1: Create KB content map by business_id
     // CRITICAL: If a business has multiple KB entries (menu + offer), prioritize menu/kids content
     const kbContentByBusinessId = new Map<string, any>()
+    const kbScoreById = new Map<string, number>()  // ✅ Store semantic search similarity scores
     if (businessResults.success && businessResults.results.length > 0) {
       // Calculate priority score for each KB entry (lower = higher priority)
       const getPriority = (kb: any) => {
@@ -459,10 +460,11 @@ export async function generateHybridAIResponse(
           return 1
         }
         
-        // Medium priority: actual menu/offer types
+        // ✅ FIX: Treat pdf_document as menu evidence (they ARE the full menus!)
+        if (type === 'pdf_document') return 2
+        if (type === 'custom_knowledge') return 3
         if (type === 'menu') return 2
         if (type === 'offer') return 4
-        if (type === 'custom_knowledge') return 3
         
         // Lowest priority: everything else
         return 99
@@ -474,6 +476,13 @@ export async function generateHybridAIResponse(
       
       for (const kbResult of sortedKbResults) {
         if (kbResult.business_id) {
+          // Store semantic similarity score (for relevance scoring fallback)
+          const similarity = (kbResult as any).similarity ?? 0
+          const existingScore = kbScoreById.get(kbResult.business_id) || 0
+          if (similarity > existingScore) {
+            kbScoreById.set(kbResult.business_id, similarity)
+          }
+          
           // Only set if not already set OR if this is higher priority
           const existing = kbContentByBusinessId.get(kbResult.business_id)
           if (!existing) {
@@ -492,19 +501,19 @@ export async function generateHybridAIResponse(
       
       // Score Tier 1
       tier1Businesses.forEach(b => {
-        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content)
+        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content, kbScoreById.get(b.id))
         businessRelevanceScores.set(b.id, score)
       })
       
       // Score Tier 2
       tier2Businesses.forEach(b => {
-        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content)
+        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content, kbScoreById.get(b.id))
         businessRelevanceScores.set(b.id, score)
       })
       
       // Score Tier 3
       tier3Businesses.forEach(b => {
-        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content)
+        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content, kbScoreById.get(b.id))
         businessRelevanceScores.set(b.id, score)
       })
       
@@ -537,7 +546,9 @@ export async function generateHybridAIResponse(
     ]
     
     // Step 4: Apply "Relevance decides IF, Tier decides ORDER" rule
-    const MIN_RESULTS_THRESHOLD = 3
+    // 🚨 CRITICAL: If we find even 1 business with actual evidence, SHOW IT!
+    // Don't fall back to random top-rated businesses with no data
+    const MIN_RESULTS_THRESHOLD = 1  // ✅ Changed from 3 to 1
     let sortedForContext = [...allBusinessesForContext]
     let isBrowseFallback = false
     
@@ -551,7 +562,7 @@ export async function generateHybridAIResponse(
       
       // Check if we have enough relevant matches
       if (relevantBusinesses.length < MIN_RESULTS_THRESHOLD) {
-        console.log(`⚠️ Only ${relevantBusinesses.length} relevant results. Falling back to browse mode (top-rated).`)
+        console.log(`⚠️ Zero relevant results. Falling back to browse mode (top-rated).`)
         isBrowseFallback = true
         
         // Fall back to top-rated businesses
@@ -827,6 +838,16 @@ KNOWLEDGE RULES:
 - 🚨 If you don't see "green curry" in the data, DO NOT mention green curry - even if it's Thai
 - 🚨 If you don't see "pad thai" in the data, DO NOT mention pad thai - even if it's Thai
 - 🚨 If you don't see "sushi" in the data, DO NOT mention sushi - even if it's Japanese
+
+🚨 NEVER HALLUCINATE ATTRIBUTES ABOUT UNCLAIMED BUSINESSES:
+- 🚨 If a business has NO knowledge base content (no menu, no custom data), you ONLY know: name, category, rating, review_count, location
+- 🚨 NEVER invent attributes like "family-friendly", "good for kids", "cozy", "welcoming vibe", "perfect for families"
+- 🚨 NEVER say "kids will love it", "great for little ones", "variety of meals and snacks that kids will enjoy"
+- 🚨 NEVER describe the atmosphere ("cozy", "welcoming", "charming") unless it's EXPLICITLY in their knowledge base
+- 🚨 If asked "anywhere with kids meals?" and business has NO KB data about kids, say: "They're a [category] spot with [rating]★ - you might want to check their menu directly!" 
+- 🚨 DO NOT fabricate "family-friendly" claims based on the fact it's a cafe or restaurant
+- ❌ FORBIDDEN: "perfect for families", "kids will surely enjoy", "variety of delicious meals and snacks", "welcoming for children"
+- ✅ CORRECT: "They're a cafe with a 4.5★ rating—check their menu to see if they have what you're looking for!"
 
 ❌ FORBIDDEN EXAMPLES (USER ASKS "any good places for green curry?"):
 - WRONG: "Their green curry is definitely worth trying—it's rich and aromatic!" (YOU DON'T KNOW THIS!)
@@ -1245,7 +1266,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         // Score Tier 1
         const tier1WithScores = businesses.map(b => {
-          const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content)
+          const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content, kbScoreById.get(b.id))
           businessRelevanceScores.set(b.id, score) // Store for carousel filtering
           return {
             ...b,
@@ -1256,7 +1277,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         
         // ALWAYS score Tier 2 (for text filtering) even if we don't fetch Tier 3
         liteBusinesses.forEach(b => {
-          const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content)
+          const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content, kbScoreById.get(b.id))
           businessRelevanceScores.set(b.id, score)
         })
         
@@ -1280,7 +1301,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             .map(b => ({
               ...b,
               tierPriority: 2,
-              relevanceScore: scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content),
+              relevanceScore: scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content, kbScoreById.get(b.id)),
               tierSource: 'tier2'
             }))
             .filter(b => b.relevanceScore > 0)
@@ -1292,7 +1313,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             .map(b => ({
               ...b,
               tierPriority: 3,
-              relevanceScore: scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content),
+              relevanceScore: scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id)?.content, kbScoreById.get(b.id)),
               tierSource: 'tier3'
             }))
           

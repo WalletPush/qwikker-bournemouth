@@ -70,7 +70,7 @@ export function detectIntent(query: string): IntentResult {
     indian: ['indian', 'curry', 'tandoori', 'biryani', 'naan'],
     mexican: ['mexican', 'tacos', 'burritos', 'enchiladas', 'quesadilla'],
     french: ['french', 'croissant', 'baguette', 'escargot', 'ratatouille'],
-    american: ['american', 'burger', 'burgers', 'steak', 'bbq', 'barbecue'],
+    american: ['american', 'burger', 'burgers', 'steak', 'bbq', 'barbecue', 'ribs', 'brisket', 'pulled pork', 'smoked'],
     mediterranean: ['mediterranean', 'mezze', 'falafel', 'hummus', 'kebab'],
     vietnamese: ['vietnamese', 'pho', 'banh mi', 'spring roll'],
     korean: ['korean', 'bibimbap', 'kimchi', 'bulgogi'],
