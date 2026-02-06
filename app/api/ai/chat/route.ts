@@ -171,21 +171,36 @@ export async function POST(request: NextRequest) {
       (result.mapPins && result.mapPins.length > 0)
     )
     
-    // 🗺️ ATLAS CTA LOGIC: Only show if CAROUSEL businesses have REAL LOCATIONS
-    // Don't check mapPins - those include unclaimed businesses user isn't interacting with
+    // 🗺️ ATLAS CTA LOGIC: Only show if businesses have REAL LOCATIONS
+    // CRITICAL: Check carousel first (paid businesses), fallback to mapPins if no carousel
+    // When carousel is disabled (Tier 2/3 text mentions), user still sees businesses via text → check mapPins
     // Mock/test businesses with no coordinates should NOT trigger Atlas CTA
-    const hasBusinessesWithLocation = !!(
-      result.businessCarousel?.some((b: any) => b.latitude != null && b.longitude != null)
+    const hasCarouselWithCoords = !!(
+      result.businessCarousel?.length > 0 && 
+      result.businessCarousel.some((b: any) => b.latitude != null && b.longitude != null)
     )
+    const hasMapPinsWithCoords = !!(
+      result.mapPins?.length > 0 &&
+      result.mapPins.some((b: any) => b.latitude != null && b.longitude != null)
+    )
+    
+    // If carousel exists → require carousel coords (don't show Atlas for mock carousel businesses)
+    // If no carousel → check mapPins (user sees Tier 2/3 as text, those are in mapPins)
+    const hasBusinessesWithLocation = result.businessCarousel?.length > 0 
+      ? hasCarouselWithCoords 
+      : hasMapPinsWithCoords
     
     if (process.env.NODE_ENV === 'development') {
       const carouselWithCoords = result.businessCarousel?.filter((b: any) => b.latitude != null && b.longitude != null).map((b: any) => b.business_name) || []
       const carouselNoCoords = result.businessCarousel?.filter((b: any) => b.latitude == null || b.longitude == null).map((b: any) => b.business_name) || []
+      const mapPinsWithCoords = result.mapPins?.filter((b: any) => b.latitude != null && b.longitude != null).length || 0
       console.log('🗺️ ATLAS CTA CHECK:')
       console.log(`   hasActualBusinessResults: ${hasActualBusinessResults}`)
+      console.log(`   hasCarouselWithCoords: ${hasCarouselWithCoords} (${carouselWithCoords.length} businesses)`)
+      console.log(`   hasMapPinsWithCoords: ${hasMapPinsWithCoords} (${mapPinsWithCoords} businesses)`)
       console.log(`   hasBusinessesWithLocation: ${hasBusinessesWithLocation}`)
-      if (carouselWithCoords.length > 0) console.log(`   ✅ With coords: ${carouselWithCoords.join(', ')}`)
-      if (carouselNoCoords.length > 0) console.log(`   ❌ No coords: ${carouselNoCoords.join(', ')}`)
+      if (carouselWithCoords.length > 0) console.log(`   ✅ Carousel with coords: ${carouselWithCoords.join(', ')}`)
+      if (carouselNoCoords.length > 0) console.log(`   ❌ Carousel no coords: ${carouselNoCoords.join(', ')}`)
     }
     
     // Show Atlas CTA only if we have actual businesses AND at least one has valid coordinates
