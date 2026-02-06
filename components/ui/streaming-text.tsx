@@ -10,7 +10,7 @@ interface StreamingTextProps {
   skipStreaming?: boolean // If true, show content immediately (for old messages)
 }
 
-export function StreamingText({ htmlContent, speed = 30, onComplete, onUpdate, skipStreaming = false }: StreamingTextProps) {
+export function StreamingText({ htmlContent, speed = 50, onComplete, onUpdate, skipStreaming = false }: StreamingTextProps) {
   const [displayedHtml, setDisplayedHtml] = useState(skipStreaming ? htmlContent : '')
   const [currentIndex, setCurrentIndex] = useState(skipStreaming ? Infinity : 0)
   const containerRef = useRef<HTMLDivElement>(null)

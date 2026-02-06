@@ -1,4 +1,4 @@
--- Check if mock businesses (Ember & Oak, David's) have google_verified_at set
+-- Find David's grill shack (case-insensitive)
 SELECT 
   business_name,
   system_category,
@@ -19,5 +19,5 @@ SELECT
     ELSE '❌ MOCK/TEST DATA'
   END as business_type
 FROM business_profiles
-WHERE business_name IN ('Ember & Oak Bistro', 'David''s grill shack', 'NEON NEXUS', 'TIDE & TONIC', 'Scizzors')
+WHERE business_name ILIKE '%david%'
 ORDER BY business_name;

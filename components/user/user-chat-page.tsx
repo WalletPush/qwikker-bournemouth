@@ -923,7 +923,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                     >
                       <StreamingText 
                         htmlContent={message.processedContent}
-                        speed={30}
+                        speed={50}
                         skipStreaming={skipStreaming}
                         onUpdate={() => {
                           // Scroll as streaming happens to keep text visible

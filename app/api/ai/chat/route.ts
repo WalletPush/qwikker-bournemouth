@@ -171,11 +171,11 @@ export async function POST(request: NextRequest) {
       (result.mapPins && result.mapPins.length > 0)
     )
     
-    // 🗺️ ATLAS CTA LOGIC: Only show if we have businesses with REAL LOCATIONS
+    // 🗺️ ATLAS CTA LOGIC: Only show if CAROUSEL businesses have REAL LOCATIONS
+    // Don't check mapPins - those include unclaimed businesses user isn't interacting with
     // Mock/test businesses with no coordinates should NOT trigger Atlas CTA
     const hasBusinessesWithLocation = !!(
-      (result.businessCarousel?.some((b: any) => b.latitude != null && b.longitude != null)) ||
-      (result.mapPins?.some((b: any) => b.latitude != null && b.longitude != null))
+      result.businessCarousel?.some((b: any) => b.latitude != null && b.longitude != null)
     )
     
     if (process.env.NODE_ENV === 'development') {
