@@ -165,11 +165,14 @@ export async function POST(request: NextRequest) {
     // CRITICAL FIX: Show Atlas CTA when we have EITHER carousel OR map pins
     // hasBusinessResults = KB hits (can be non-zero even if carousel is empty after filters)
     // businessCarousel = paid businesses (appear in carousel + map)
-    // mapPins = ALL businesses for map (paid + unclaimed)
+    // mapPins = ALL businesses for map (paid + claimed-free + unclaimed)
     const hasActualBusinessResults = !!(
       (result.businessCarousel && result.businessCarousel.length > 0) ||
       (result.mapPins && result.mapPins.length > 0)
     )
+    
+    // Show Atlas CTA whenever we have actual business results
+    // (Includes paid, claimed-free, and unclaimed businesses)
     const showAtlasCta = hasActualBusinessResults
     
     // REMOVED: Quick replies are irrelevant and annoying - users can just type what they want

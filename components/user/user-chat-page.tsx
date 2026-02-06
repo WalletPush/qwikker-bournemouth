@@ -6,6 +6,7 @@ import { BusinessCarousel } from '@/components/ui/business-carousel'
 import { EventCarousel } from '@/components/ui/event-carousel'
 import { AtlasMode } from '@/components/atlas/AtlasMode'
 import { useTenantAtlasConfig } from '@/lib/atlas/useTenantAtlasConfig'
+import { StreamingText } from '@/components/ui/streaming-text'
 import { useUserLocation } from '@/lib/location/useUserLocation'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import React from 'react'
@@ -128,6 +129,9 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   const [lastBusinessQuery, setLastBusinessQuery] = useState<string | null>(null)
   const [atlasInitialQuery, setAtlasInitialQuery] = useState<string | null>(null)
   
+  // Track which messages have completed streaming (for Atlas CTA gating)
+  const [streamingComplete, setStreamingComplete] = useState<Set<string>>(new Set())
+  
   // ATLAS: Load tenant config
   const { config: tenantConfig, loading: configLoading } = useTenantAtlasConfig()
   const atlasEnabled = tenantConfig?.atlas?.enabled && tenantConfig?.atlas?.mapboxPublicToken
@@ -197,13 +201,16 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   // Session storage key for chat memory
   const chatSessionKey = `qwikker-chat-session-${currentUser?.wallet_pass_id || 'guest'}`
 
+  // ✅ SMART SCROLL: Scroll when NEW messages arrive, but not during streaming
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   useEffect(() => {
+    // Only scroll when messages array changes (new message added)
+    // The streaming component handles its own rendering without changing the array
     scrollToBottom()
-  }, [messages])
+  }, [messages.length]) // Changed from [messages] to [messages.length]
 
   // Load chat history from session storage or initialize with welcome message
   useEffect(() => {
@@ -885,7 +892,12 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         
         {/* Chat Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
-          {processedMessages.map((message) => (
+          {processedMessages.map((message, messageIndex) => {
+            // Only stream the LAST AI message, show all others instantly
+            const isLastAiMessage = message.type === 'ai' && messageIndex === processedMessages.length - 1
+            const skipStreaming = !isLastAiMessage
+            
+            return (
             <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] sm:max-w-[75%] ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
                 
@@ -896,11 +908,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                     : 'bg-gradient-to-r from-slate-700/90 to-slate-600/90 text-slate-100 border border-slate-600/50'
                 }`}>
                   {message.type === 'ai' ? (
-                    <div 
-                      className="text-sm leading-relaxed whitespace-pre-wrap"
-                      dangerouslySetInnerHTML={{ 
-                        __html: message.processedContent 
-                      }}
+                    <div
                       onClick={(e) => {
                         const target = e.target as HTMLElement
                         console.log('🖱️ Click detected on:', target.tagName, target.className)
@@ -912,7 +920,23 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                           }
                         }
                       }}
-                    />
+                    >
+                      <StreamingText 
+                        htmlContent={message.processedContent}
+                        speed={30}
+                        skipStreaming={skipStreaming}
+                        onUpdate={() => {
+                          // Scroll as streaming happens to keep text visible
+                          if (!skipStreaming) {
+                            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+                          }
+                        }}
+                        onComplete={() => {
+                          // Mark this message as streaming complete
+                          setStreamingComplete(prev => new Set(prev).add(message.id))
+                        }}
+                      />
+                    </div>
                   ) : (
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                   )}
@@ -946,8 +970,8 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                   </div>
                 )}
                 
-                {/* Atlas CTA - Show inline when showAtlasCta is true */}
-                {message.type === 'ai' && message.showAtlasCta && !message.needsLocation && atlasEnabled && (
+                {/* Atlas CTA - Show inline when showAtlasCta is true AND streaming is complete */}
+                {message.type === 'ai' && message.showAtlasCta && !message.needsLocation && atlasEnabled && streamingComplete.has(message.id) && (
                   <div className="mt-3">
                     <button
                       onClick={() => {
@@ -970,8 +994,8 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                   </div>
                 )}
                 
-                {/* Business Carousel */}
-                {message.businessCarousel && message.businessCarousel.length > 0 && (
+                {/* Business Carousel - 🚨 TEMPORARILY DISABLED: Inaccurate, needs rework */}
+                {/* {message.businessCarousel && message.businessCarousel.length > 0 && (
                   <div className="mt-3 -mx-2 sm:mx-0">
                     <BusinessCarousel 
                       businesses={message.businessCarousel}
@@ -980,7 +1004,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                       onShowOffers={handleShowOffers}
                     />
                   </div>
-                )}
+                )} */}
 
                 {/* Wallet Actions */}
                 {message.walletActions && message.walletActions.length > 0 && (
@@ -1057,7 +1081,8 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                 </p>
               </div>
             </div>
-          ))}
+            )
+          })}
           
           {/* Enhanced Typing Indicator */}
           {isTyping && (

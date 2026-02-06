@@ -6,6 +6,7 @@
  */
 
 import { IntentResult } from './intent-detector'
+import { QueryFacet, isAlcoholCapableCategory, kbHasAlcoholSignal } from './facets'
 
 export interface ScoredBusiness {
   relevanceScore: number
@@ -27,18 +28,81 @@ export function scoreBusinessRelevance(
   business: any,
   intent: IntentResult,
   kbContent?: string,
-  kbSimilarityScore?: number  // ✅ NEW: Use semantic search score as fallback
+  kbSimilarityScore?: number,  // ✅ SEMANTIC SEARCH = EVIDENCE (not fallback!)
+  facet?: QueryFacet  // 🔒 FACET GATE: Apply category filters for specialized queries
 ): number {
-  // 🚨 CRITICAL FIX: If intent detection fails BUT semantic search found this business,
-  // use the semantic similarity score instead of returning 0!
-  // This ensures "any good ribs?" works even if "ribs" isn't in the hardcoded keyword list.
-  if (!intent.hasIntent) {
-    if (kbSimilarityScore && kbSimilarityScore > 0.5) {
-      // Scale 0.5-1.0 similarity to 1-5 relevance score
-      const scaledScore = Math.round((kbSimilarityScore - 0.5) * 10)
-      return Math.min(Math.max(scaledScore, 1), 5)  // Clamp to 1-5
+  // 🔒 FACET GATE: Apply category-aware filtering for specialized queries
+  // Prevents semantic search false positives (e.g., cafes matching "cocktails")
+  if (facet?.alcohol) {
+    const category = (
+      business.display_category || 
+      business.system_category || 
+      business.google_primary_type || 
+      ''
+    ).toLowerCase()
+    
+    const categoryOk = isAlcoholCapableCategory(category)
+    
+    // If business has KB content, check both category AND KB for alcohol signals
+    if (kbContent && kbContent.length > 0) {
+      const kbOk = kbHasAlcoholSignal(kbContent)
+      
+      if (!kbOk && !categoryOk) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🚫 FACET GATE (alcohol): filtered ${business.business_name} (category=${category}, categoryOk=${categoryOk}, kbOk=${kbOk})`)
+        }
+        return 0
+      }
+    } else {
+      // No KB content - rely on category only
+      if (!categoryOk) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🚫 FACET GATE (alcohol): filtered ${business.business_name} (category=${category}, no KB)`)
+        }
+        return 0
+      }
     }
-    return 0 // No intent AND no KB match = no scoring
+  }
+  
+  // 🔥 ARCHITECTURAL RULE: EVIDENCE BEATS INTENT. ALWAYS.
+  // 
+  // Semantic search scanned the KB for the ACTUAL user query ("ribs", "vegan burger", etc.)
+  // If it found a match, that IS the relevance score. Don't re-filter through categories!
+  //
+  // Example:
+  // - User: "any good ribs?"
+  // - Semantic search: Found "ribs" in David's PDF menu → similarity 0.87
+  // - Intent detector: "ribs = american food" → category = "american"
+  // - ❌ OLD: Search KB for "american" → 0 (even though we found ribs!)
+  // - ✅ NEW: Semantic found it → USE THAT SCORE
+  //
+  // Why? Because:
+  // - Ribs could be American, Chinese, Korean, BBQ...
+  // - Semantic search ALREADY found the evidence
+  // - Categories are for decoration, not truth filtering
+  //
+  // 🚨 SEMANTIC THRESHOLD: 0.70 (balanced)
+  // - Catches real matches (Ember & Oak with cocktails)
+  // - Combined with Tier 2/3 evidence gate to prevent spam
+  // - Single threshold, no keyword hacks
+  if (kbSimilarityScore && kbSimilarityScore > 0.70) {
+    // Scale 0.70-1.0 similarity to 1-5 relevance score
+    // Formula: map [0.70, 1.0] → [1, 5]
+    // Linear interpolation: score = 1 + (similarity - 0.70) / 0.30 * 4
+    const normalized = (kbSimilarityScore - 0.70) / 0.30 // 0.0 to 1.0
+    const scaledScore = 1 + (normalized * 4) // 1.0 to 5.0
+    const finalScore = Math.round(Math.min(Math.max(scaledScore, 1), 5))
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 Relevance: ${business.business_name} = ${finalScore} (semantic:${kbSimilarityScore.toFixed(2)})`)
+    }
+    
+    return finalScore
+  }
+  
+  // Fallback: Only use keyword/category matching if semantic search didn't find anything
+  if (!intent.hasIntent) {
+    return 0
   }
   
   let score = 0
@@ -144,7 +208,7 @@ export function scoreBusinessRelevance(
     }
   }
   
-  // Debug logging in dev
+  // Debug logging in dev (only for keyword-based scoring path)
   if (process.env.NODE_ENV === 'development' && intent.hasIntent) {
     if (score > 0) {
       console.log(`📊 Relevance: ${business.business_name} = ${score} (${reasons.join(', ')})`)

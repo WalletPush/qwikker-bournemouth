@@ -98,7 +98,8 @@ export function detectIntent(query: string): IntentResult {
     'family friendly', 'family-friendly', 
     'kids menu', 'kids meal', 'kids meals', 'kids food',
     'children menu', 'children meal', 'children meals', 'childrens menu',
-    'brunch', 'breakfast', 'lunch', 'dinner', 'late night'
+    'brunch', 'breakfast', 'lunch', 'dinner', 'late night',
+    'cocktails', 'cocktail', 'drinks', 'mocktails', 'wine', 'beer', 'spirits'
   ]
   
   for (const term of attributeTerms) {
