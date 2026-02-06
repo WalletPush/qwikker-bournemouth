@@ -132,6 +132,9 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   // Track which messages have completed streaming (for Atlas CTA gating)
   const [streamingComplete, setStreamingComplete] = useState<Set<string>>(new Set())
   
+  // Track initial message count on page load (to prevent re-streaming old messages)
+  const initialMessageCountRef = useRef<number>(0)
+  
   // ATLAS: Load tenant config
   const { config: tenantConfig, loading: configLoading } = useTenantAtlasConfig()
   const atlasEnabled = tenantConfig?.atlas?.enabled && tenantConfig?.atlas?.mapboxPublicToken
@@ -227,6 +230,8 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         if (messageDate === today && parsedMessages.length > 0) {
           console.log('🔄 Restoring chat session with', parsedMessages.length, 'messages')
           setMessages(parsedMessages)
+          // Track initial count to prevent re-streaming old messages
+          initialMessageCountRef.current = parsedMessages.length
           return
         }
       }
@@ -267,6 +272,8 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       ]
     }
     setMessages([welcomeMessage])
+    // Track initial count (welcome message = 1)
+    initialMessageCountRef.current = 1
   }, [currentUser, chatSessionKey])
 
   // Save messages to session storage whenever messages change
@@ -893,9 +900,11 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         {/* Chat Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
           {processedMessages.map((message, messageIndex) => {
-            // Only stream the LAST AI message, show all others instantly
+            // Only stream NEW messages (added after page load)
+            // Messages loaded from sessionStorage should NOT re-stream
+            const isNewMessage = messageIndex >= initialMessageCountRef.current
             const isLastAiMessage = message.type === 'ai' && messageIndex === processedMessages.length - 1
-            const skipStreaming = !isLastAiMessage
+            const skipStreaming = !isNewMessage || !isLastAiMessage
             
             return (
             <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
