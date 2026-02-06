@@ -171,9 +171,44 @@ export async function POST(request: NextRequest) {
       (result.mapPins && result.mapPins.length > 0)
     )
     
-    // Show Atlas CTA whenever we have actual business results
-    // (Includes paid, claimed-free, and unclaimed businesses)
-    const showAtlasCta = hasActualBusinessResults
+    // 🗺️ ATLAS CTA LOGIC: Only show if we have businesses with REAL LOCATIONS
+    // Mock/test businesses with no coordinates should NOT trigger Atlas CTA
+    const hasBusinessesWithLocation = !!(
+      (result.businessCarousel?.some((b: any) => b.latitude != null && b.longitude != null)) ||
+      (result.mapPins?.some((b: any) => b.latitude != null && b.longitude != null))
+    )
+    
+    if (process.env.NODE_ENV === 'development') {
+      const carouselWithCoords = result.businessCarousel?.filter((b: any) => b.latitude != null && b.longitude != null).map((b: any) => b.business_name) || []
+      const carouselNoCoords = result.businessCarousel?.filter((b: any) => b.latitude == null || b.longitude == null).map((b: any) => b.business_name) || []
+      console.log('🗺️ ATLAS CTA CHECK:')
+      console.log(`   hasActualBusinessResults: ${hasActualBusinessResults}`)
+      console.log(`   hasBusinessesWithLocation: ${hasBusinessesWithLocation}`)
+      if (carouselWithCoords.length > 0) console.log(`   ✅ With coords: ${carouselWithCoords.join(', ')}`)
+      if (carouselNoCoords.length > 0) console.log(`   ❌ No coords: ${carouselNoCoords.join(', ')}`)
+    }
+    
+    // Show Atlas CTA only if we have actual businesses AND at least one has valid coordinates
+    const showAtlasCta = hasActualBusinessResults && hasBusinessesWithLocation
+    
+    // 🔧 POST-PROCESS: Remove Atlas mentions from AI response if no CTA should show
+    // (AI doesn't know about coordinates, so it might mention Atlas for mock businesses)
+    let finalResponse = result.response
+    if (!showAtlasCta && finalResponse) {
+      // Remove common Atlas mention patterns
+      finalResponse = finalResponse
+        .replace(/Want to explore.*?Qwikker Atlas.*?👇/gi, '')
+        .replace(/Curious where.*?Qwikker Atlas.*?👇/gi, '')
+        .replace(/Jump into Qwikker Atlas.*?👇/gi, '')
+        .replace(/explore.*?on Qwikker Atlas.*?👇/gi, '')
+        .replace(/Show me on Qwikker Atlas/gi, '')
+        .replace(/\s+Show me on Qwikker Atlas\s*/gi, ' ')
+        .trim()
+      
+      if (process.env.NODE_ENV === 'development' && finalResponse !== result.response) {
+        console.log('🔧 Stripped Atlas mentions from response (no valid coordinates)')
+      }
+    }
     
     // REMOVED: Quick replies are irrelevant and annoying - users can just type what they want
     const quickReplies: string[] = []
@@ -196,7 +231,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({
-      response: result.response,
+      response: finalResponse,
       intent,
       needsLocation: false,
       showAtlasCta,
