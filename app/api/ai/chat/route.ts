@@ -195,14 +195,25 @@ export async function POST(request: NextRequest) {
     // (AI doesn't know about coordinates, so it might mention Atlas for mock businesses)
     let finalResponse = result.response
     if (!showAtlasCta && finalResponse) {
-      // Remove common Atlas mention patterns
+      // Remove common Atlas mention patterns (order matters - specific to general)
       finalResponse = finalResponse
+        // Sentence patterns with Atlas + arrow
         .replace(/Want to explore.*?Qwikker Atlas.*?👇/gi, '')
+        .replace(/Want to check out.*?Qwikker Atlas.*?👇/gi, '')
         .replace(/Curious where.*?Qwikker Atlas.*?👇/gi, '')
         .replace(/Jump into Qwikker Atlas.*?👇/gi, '')
         .replace(/explore.*?on Qwikker Atlas.*?👇/gi, '')
+        .replace(/check out.*?on Qwikker Atlas.*?👇/gi, '')
+        .replace(/see.*?on Qwikker Atlas.*?👇/gi, '')
+        .replace(/view.*?on Qwikker Atlas.*?👇/gi, '')
+        // Leftover "Just tap below" after removing Atlas
+        .replace(/Just tap below.*?👇/gi, '')
+        .replace(/Tap below.*?👇/gi, '')
+        // Standalone Atlas CTA text
         .replace(/Show me on Qwikker Atlas/gi, '')
-        .replace(/\s+Show me on Qwikker Atlas\s*/gi, ' ')
+        // Clean up extra whitespace
+        .replace(/\s+/g, ' ')
+        .replace(/\?\s+\?/g, '?') // Fix double question marks
         .trim()
       
       if (process.env.NODE_ENV === 'development' && finalResponse !== result.response) {
