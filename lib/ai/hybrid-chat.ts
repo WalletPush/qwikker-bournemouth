@@ -137,6 +137,239 @@ interface ChatResponse {
   }>
   queryCategories?: string[] // ✅ ATLAS: Categories detected in query (for filtering businesses)
   queryKeywords?: string[] // ✅ ATLAS: Keywords detected in query (for filtering businesses)
+  metadata?: {
+    atlasAvailable?: boolean // Server-computed: true if 2+ relevant businesses have valid coords
+    coordsCandidateCount?: number // Number of candidates with valid coordinates
+  }
+}
+
+/**
+ * Vocabulary built from actual business inventory (all tiers)
+ */
+type InventoryVocabulary = {
+  categories: Set<string>
+  types: Set<string>
+  terms: Set<string>
+}
+
+/**
+ * Build vocabulary from actual business inventory (dynamic, not hardcoded)
+ * 
+ * NOTES:
+ * - Vocabulary is only as good as the structured data (categories, types, menu_preview, KB)
+ * - If a business serves cocktails but has no evidence in category/menu/KB, it won't match
+ * - This is CORRECT behavior: system is evidence-driven, not inference-driven
+ * 
+ * TODO: For large cities, consider caching this per city for ~5-15 minutes:
+ * - In-memory: globalThis.__qwikkerVocabCache = { [city]: { vocab, timestamp } }
+ * - Invalidate on timestamp > 15 min
+ * - Helps serverless warm instances avoid rebuilding on every request
+ */
+function buildInventoryVocabulary(businesses: any[]): InventoryVocabulary {
+  const categories = new Set<string>()
+  const types = new Set<string>()
+  const terms = new Set<string>()
+
+  const addPhrase = (raw?: string | null) => {
+    if (!raw) return
+    const s = String(raw).toLowerCase().trim()
+    if (!s) return
+    categories.add(s)
+    // split into tokens (keep 3+ so "bar", "pub", "thai" work, but avoid tiny noise)
+    s.split(/[^a-z0-9]+/g).filter(Boolean).forEach(tok => {
+      if (tok.length >= 3) terms.add(tok)
+    })
+  }
+
+  const addType = (raw?: string | null) => {
+    if (!raw) return
+    const s = String(raw).toLowerCase().trim()
+    if (!s) return
+    types.add(s)
+    s.split(/[^a-z0-9]+/g).filter(Boolean).forEach(tok => {
+      if (tok.length >= 3) terms.add(tok)
+    })
+  }
+
+  for (const b of businesses || []) {
+    addPhrase(b.display_category)
+    addPhrase(b.system_category)
+    addType(b.google_primary_type)
+  }
+
+  return { categories, types, terms }
+}
+
+/**
+ * Helper: Force each business mention to start a new paragraph
+ * MECHANICAL FIX: Handles both linked and unlinked bold business names
+ * Pattern matches: **[Name](/link)** OR **Name** (when model forgets links)
+ */
+/**
+ * Helper: Validate business coordinates
+ * Robust check that coordinates are valid numbers within Earth's bounds
+ */
+function hasValidCoords(b: any): boolean {
+  const lat = Number(b?.latitude)
+  const lng = Number(b?.longitude)
+  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+}
+
+/**
+ * Helper: Slugify a business name (single source of truth for slug generation)
+ * Used everywhere we need to derive a slug from business_name
+ */
+function slugifyBusinessName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+/**
+ * Helper: Get business slug (DB slug > generated from name > ID fallback)
+ * CRITICAL: Use this everywhere you format business links or build slug lookups
+ * Ensures deterministic slug matching across AI response parsing and Tier2/3 injection
+ */
+function getBusinessSlug(b: any): string {
+  const slug = typeof b?.slug === 'string' ? b.slug.trim() : ''
+  if (slug) return slug
+  
+  const bn = typeof b?.business_name === 'string' ? b.business_name.trim() : ''
+  if (bn) {
+    const s = slugifyBusinessName(bn)
+    if (s) return s
+  }
+  
+  return String(b?.id ?? '')
+}
+
+/**
+ * Helper: Append a sentence with smart punctuation handling
+ * Prevents edge cases like "..", "!.", "**." by detecting existing punctuation
+ * at the end of base string (including closing quotes/brackets/markdown after punctuation)
+ */
+function appendSentence(base: string, sentence: string): string {
+  let out = (base ?? '').replace(/\s+$/g, '')
+  let s = (sentence ?? '').trim()
+  if (!s) return out
+
+  // If base already ends with end punctuation (optionally followed by closing quotes/brackets/markdown)
+  // Examples: "text!", "text!**", "text!)", "text!\"", "text!**)", etc.
+  const endsWithPunct = /[.!?:](?:["')\]\}*_`~]+)?$/.test(out)
+
+  // If the sentence itself starts with punctuation, don't force an extra period.
+  const sentenceStartsWithPunct = /^[.!?:,]/.test(s)
+
+  if (endsWithPunct) return `${out} ${s}`
+  if (sentenceStartsWithPunct) {
+    // Attach directly for . and , (prevents "text . Also"), space for others
+    if (/^[.,]/.test(s)) return `${out}${s}`
+    return `${out} ${s}`
+  }
+  return `${out}. ${s}`
+}
+
+/**
+ * Build compressed system prompt for AI chat
+ */
+function buildSystemPromptV2(args: {
+  cityDisplayName: string
+  userMessage: string
+  isBroadQuery: boolean
+  stateContext?: string
+  businessContext: string
+  cityContext?: string
+  state: ConversationState
+  atlasAvailable: boolean
+}): string {
+  const { cityDisplayName, userMessage, isBroadQuery, stateContext, businessContext, cityContext, state, atlasAvailable } = args
+
+  const broadBlock = isBroadQuery
+    ? `
+BROAD QUERY MODE:
+- The user asked something broad: "${userMessage}"
+- DO NOT list businesses yet.
+- Ask 1–2 clarifying questions first (cuisine/vibe/budget/deals vs best).
+- Keep it friendly and short.
+`
+    : ''
+
+  const convoFocus = state?.currentBusiness
+    ? `FOCUS: You are currently discussing ${state.currentBusiness.name}. Stay on that unless the user asks to switch.`
+    : `FOCUS: Help them discover what they want, then dive into specifics.`
+
+  return `
+You are a friendly local guide for ${cityDisplayName}. Be warm, playful, and factual. No hallucinations.
+
+⚠️  CRITICAL FORMATTING RULE ⚠️
+Every business name MUST be a clickable markdown link: **[Business Name](/user/business/slug)**
+NEVER write plain bold business names like **Business Name** — always include the link!
+
+HARD RULES (DO NOT BREAK):
+- LINKS (ABSOLUTE): If you mention a business at all, you MUST use the link format **[Business Name](/user/business/slug)**. Never mention a business name without linking it. If you can't link it, don't mention it.
+- NO PLAIN-NAME REFERENCES: Don't say "Triangle GYROSS" or any business name in prose unless it's in the linked format **[Name](/user/business/slug)**.
+- BUSINESS LIST FORMAT: When listing businesses, you MUST output exactly ONE business per paragraph, followed by a blank line. Never put two businesses in the same paragraph.
+- KEEP IT TIGHT: 1–2 sentences per business max (rating + ONE factual detail from AVAILABLE BUSINESSES only).
+- NO BULLET LISTS: Do not use bullets, numbers, or one-line-per-business lists for business results. Use full paragraphs with a blank line between businesses.
+- EVIDENCE BOUNDARY: You may ONLY describe menu items, offers, hours, amenities, vibe/atmosphere, "known for", "specializes in", etc. if that exact info exists in AVAILABLE BUSINESSES / KB / menu_preview / offers. If not present, do NOT infer from category/name or general knowledge. In zero-data mode: name+link, category, rating+review_count, distance only.
+- SHOW ALL UPFRONT: If you have 2+ relevant matches, you MUST mention ALL of them in your FIRST answer. NEVER drip-feed results one-by-one.
+- "ANY MORE?" HANDLING: If the user asks "any more?" and you already showed all matches, say that's all you have. If you realize you missed any, immediately correct yourself and include the missing ones.
+- NO FALSE "I DON'T HAVE": Never say you don't have other relevant places if AVAILABLE BUSINESSES includes any. If unsure, be transparent: "Based on what I can see right now, I'm only seeing X…"
+- NO HALLUCINATIONS: Never invent dishes, vibe, amenities, hours, or offers. Only mention specifics if they appear in AVAILABLE BUSINESSES.
+- 🚨 ZERO-DATA BUSINESSES: If a business has NO menu items, NO knowledge_base content, NO offers, and NO specific attributes beyond name/category/rating/location, you are STRICTLY FORBIDDEN from adding what they are "known for", what they "specialize in", what they "offer", types of food/dishes, atmosphere claims, or assumed services. DO NOT infer from business name or category. If no specific data exists, only mention: name (with link), category, rating + review count, distance. Example: "**[Lans Bakery](/link)** — Bakery (4.6★ from 88 reviews)." NOT: "Known for artisan breads" or "Offers cakes and pastries."
+- GOOGLE REVIEWS: Never quote/paraphrase reviews. Numeric rating + review_count only.
+- OFFERS: Offers are DB-authoritative only. If an offer is not in current data, it does not exist. Never imply "they might have deals".
+- TIERS: Businesses marked [TIER: qwikker_picks] MUST be listed FIRST when showing multiple businesses. Relevance decides what to include; tier decides ordering.
+- "QWIKKER PICKS" WORDING: Only call something a "Qwikker Pick" if EVERY business you mentioned is [TIER: qwikker_picks].
+- ATLAS EXPLORATION: ${atlasAvailable ? 'When you list 2+ businesses, you may add a natural, conversational suggestion that the user can view them on the map. Frame it as a helpful decision tool, not promotional. Examples: "Want to see how these are spaced out? The map below helps you compare." or "If location matters, the map view makes it easy to see which one\'s closest."' : 'DO NOT mention Qwikker Atlas, map views, or location comparisons - the map is not available for these businesses.'}
+- ZERO RESULTS: If you have no matching businesses, be honest. NEVER say "you're in luck" if you have nothing to show.
+
+CONVERSATIONAL COMPANION TONE:
+When users describe plans, cravings, or combinations (e.g., "cocktails and spicy food", "date night ideas", "family dinner with kids"), start with a brief, natural human reaction that acknowledges their plan BEFORE listing businesses. This creates warmth and understanding.
+
+React naturally (1 sentence):
+- "Ooo okay that's a strong combo"
+- "Love that plan"
+- "Say no more — that's my territory"
+- "That's a solid mix actually"
+
+Then optionally frame the decision (1 sentence):
+- "You basically want: good cocktails, something with heat, and a safe pasta option."
+- "So we need somewhere that covers spice and still keeps pasta on the menu."
+
+Vary phrasing naturally — don't repeat the same reaction patterns across responses. Mix it up so each reply feels fresh, not templated.
+
+ONLY use this tone for experiential/planning queries:
+✅ USE: "anywhere with good cocktails?", "date night ideas?", "somewhere cosy with wine"
+❌ DON'T USE: "what time does X close?", "do they have parking?", "is there an offer?"
+
+Keep it brief, friendly, and natural — not slangy or exaggerated. Facts get neutral tone; plans get companion tone.
+
+WHEN YOU HAVE RESULTS:
+- Start with a natural, upbeat opener (but only if you have businesses to show!).
+- 🚨 CRITICAL: List ALL relevant businesses in your FIRST response (do not drip-feed).
+- Do not interpret categories too literally: "cocktails" can include bars AND restaurants that clearly serve cocktails IF the data supports it.
+- If the user asks "any more?":
+  - If none left: "That's all the cocktail spots I can see right now."
+  - If you missed any: "Oh — yes. I should've included **[X](/user/business/slug)** too."
+- If none match, be honest and suggest a nearby alternative category/cuisine.
+
+EXAMPLE LIST FORMAT:
+Ooo nice choice — here are a few great spots!
+
+**[Example Place](/user/business/example-place)** — Rated 4.8★ from 127 Google reviews.
+
+**[Another Place](/user/business/another-place)** — Rated 4.7★ from 88 Google reviews.
+${broadBlock}
+${stateContext ? `CONVERSATION CONTEXT:\n${stateContext}\n` : ''}
+${convoFocus}
+
+AVAILABLE BUSINESSES (sorted by tier; qwikker_picks first):
+${businessContext || 'No businesses available.'}
+
+${cityContext ? `CITY INFO:\n${cityContext}\n` : ''}
+`.trim()
 }
 
 /**
@@ -309,6 +542,22 @@ export async function generateHybridAIResponse(
     
     console.log(`💼 Queried from views: T1=${tier1Businesses.length}, T2=${tier2Businesses.length}, T3=${tier3Businesses.length}`)
     
+    // Build vocabulary from ALL tiers (dynamic, not hardcoded)
+    const allInventoryBusinesses = [
+      ...(tier1Businesses || []),
+      ...(tier2Businesses || []),
+      ...(tier3Businesses || [])
+    ]
+    const vocabulary = buildInventoryVocabulary(allInventoryBusinesses)
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[VOCAB] sizes:', {
+        categories: vocabulary.categories.size,
+        types: vocabulary.types.size,
+        terms: vocabulary.terms.size
+      })
+    }
+    
     const businessOfferCounts: Record<string, number> = {}
     
     if (businessResults.success && businessResults.results.length > 0) {
@@ -434,8 +683,16 @@ export async function generateHybridAIResponse(
     // 🎯 STEP 3.5: DETECT INTENT & SCORE RELEVANCE (BEFORE BUILDING AI CONTEXT!)
     // CRITICAL: We must know which businesses are relevant BEFORE the AI generates its response
     console.log('🔍 PRE-CONTEXT: Detecting intent and scoring relevance...')
-    const detectedIntent = detectIntent(userMessage)
+    const detectedIntent = detectIntent(userMessage, vocabulary, city)
     const facet = detectFacet(userMessage)
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[INTENT]', {
+        hasIntent: detectedIntent.hasIntent,
+        categories: detectedIntent.categories,
+        keywords: detectedIntent.keywords
+      })
+    }
     
     // 🔒 FACET INJECTION: If alcohol facet is detected but no intent, treat as intentful
     // Prevents "cocktails" from being treated as browse mode
@@ -553,6 +810,20 @@ export async function generateHybridAIResponse(
       })
       
       console.log(`🎯 Scored ${businessRelevanceScores.size} businesses (${Array.from(businessRelevanceScores.values()).filter(s => s > 0).length} relevant)`)
+      
+      if (process.env.NODE_ENV === 'development') {
+        const top = Array.from(businessRelevanceScores.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+          .map(([id, score]) => {
+            const b =
+              tier1Businesses.find(x => x.id === id) ||
+              tier2Businesses.find(x => x.id === id) ||
+              tier3Businesses.find(x => x.id === id)
+            return { business: b?.business_name || id, score }
+          })
+        console.log('[RELEVANCE] top10:', top)
+      }
     }
     
     // Step 3: Merge all three tiers with tier priority AND relevance scores
@@ -751,406 +1022,40 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
     const stateContext = generateStateContext(state)
     
     // 🚨 CHECK: Is this a broad query that needs clarification?
-    const isBroadQuery = conversationHistory.length <= 2 && 
-                        (userMessage.toLowerCase().includes('find restaurants') || 
-                         userMessage.toLowerCase().includes('restaurant') ||
-                         userMessage.toLowerCase().includes('find food') ||
-                         userMessage.toLowerCase().includes('where should i eat') ||
-                         userMessage.toLowerCase().includes('best place')) &&
-                        !userMessage.toLowerCase().match(/(deal|offer|discount|italian|pizza|burger|chinese|indian|thai|mexican|japanese|cocktail|cheap|expensive|fancy|upscale|qwikker pick)/i)
+    const isBroadQuery =
+      conversationHistory.length <= 2 &&
+      !detectedIntent.hasIntent &&
+      /\b(restaurant|restaurants|eat|food|place|places|where should i|recommend|suggest|dinner|lunch|breakfast)\b/i.test(userMessage)
     
     const cityDisplayName = city.charAt(0).toUpperCase() + city.slice(1)
-    const systemPrompt = `🚨🚨🚨 FORMATTING RULE #1 (MOST IMPORTANT!) 🚨🚨🚨
-
-When showing multiple businesses, use THIS EXACT FORMAT:
-
-Intro line with personality (e.g., "Well, you're in luck! There are some fantastic spots around here—seriously highly rated for a reason!")
-
-**[Business Name 1](/user/business/slug)** — Rated X.X★ from XX reviews.
-
-**[Business Name 2](/user/business/slug)** — Rated X.X★ from XX reviews.
-
-**[Business Name 3](/user/business/slug)** — Rated X.X★ from XX reviews.
-
-Closing line (e.g., "Want to explore them all on Qwikker Atlas? Just tap below 👇")
-
-❌ NEVER format like this (all in one paragraph):
-"Business 1 — Rated 4.8★. Business 2 — Rated 4.7★. Business 3 — Rated 4.5★."
-
-RULES:
-- Each business = NEW PARAGRAPH with blank line before/after
-- Add personality in intro: "seriously highly rated for a reason!" or "people absolutely love these spots!"
-- Keep it SHORT: Rating + ONE fact from KB maximum per business
-- Atlas CTA: Only add if showing 2+ businesses with locations
-
----
-
-You're a local friend helping someone explore ${cityDisplayName}—warm, playful, and genuinely excited to share hidden gems.
-
-🎯 YOUR RESPONSE STYLE (COPY THIS VIBE):
-
-🚨 CRITICAL FORMATTING RULES (FOLLOW THESE EXACTLY!):
-1. **ONE business per paragraph** - NEVER list multiple businesses in the same paragraph
-2. **Separate with blank lines** - Each business gets its own space  
-3. **Keep it SHORT** - 1-2 sentences per business MAX (rating + ONE fact from KB ONLY)
-4. **NO phone numbers** - Users can click through for contact info
-5. **NO cramming** - If showing 5 businesses, that's 5 separate paragraphs
-6. **NO HALLUCINATING** - NEVER say "wonderful selection of pastries and bread" unless KB explicitly lists these items
-
-✅ GOOD (clean, scannable, easy to read):
-Ooo, you're in the mood for baked goods? Well, there are a few fantastic bakeries around here!
-
-**[Lansbakery](/user/business/lansbakery)** — Rated 4.8★ from 127 reviews.
-
-**[BigWigs Bakery](/user/business/bigwigs)** — Rated 4.7★ from 151 reviews.
-
-**[Idah's the artisan bakery ltd](/user/business/idahs)** — Rated 4.5★ from 144 reviews.
-
-Want to explore them all on Qwikker Atlas? Just tap below 👇
-
-❌ BAD (cramped, unreadable, hallucinating):
-Lansbakery — This place is brilliant! They've got a wonderful selection of pastries and bread. Rated 4.8★ from 127 reviews! BigWigs — Known for their delightful treats, 4.7★ from 151! Idah's — Lovely spot, 4.5★...
-
----
-
-✅ PERFECT EXAMPLE (with CLICKABLE LINKS):
-User: "any greek places?"
-You: "Ohh you like a bit of Greek food do you? Well you're in luck! 😊 There are a couple of great Greek places in town.
-
-**[Triangle GYROSS](/user/business/triangle-gyross)** — This place is brilliant! They do proper authentic Greek food. Rated 5★ from 83 Google reviews.
-
-Does this tickle your fancy? Want to explore them all on Qwikker Atlas? Just tap below 👇"
-
-NOTE: The above example does NOT list specific dishes because they were NOT in the knowledge base. Only mention dishes if they're explicitly in the KB data for that business!
-
-🚨 CRITICAL: CHECK IF YOU HAVE RESULTS BEFORE RESPONDING!
-- IF you have businesses to show → Use playful, enthusiastic opener ("you're in luck!", "ooo nice choice!")
-- IF you have ZERO businesses → Be honest and helpful ("I don't have X yet, but I can help with Y!")
-- NEVER say "you're in luck!" then follow with "I don't have..." — that's contradictory and frustrating!
-
-🚨 KEY RULES:
-1. **Playful opener** - Mix it up! Use variety (BUT ONLY IF YOU HAVE RESULTS!):
-   • "Ohh you're in the mood for X, are you? Well, you're in luck!"
-   • "Ooo nice choice! You've come to the right place!"
-   • "Yes! Love this — X is one of my favourite things to recommend!"
-   • "Ah brilliant! You're asking the right person about X!"
-   • "Perfect timing! There are some fantastic X spots around here!"
-   • "You know what? You're going to love what I've found for you!"
-   
-   🚨 IF YOU HAVE **NO RESULTS** FOR THE QUERY:
-   • "Ah, I don't have any X restaurants in my current lineup yet! But I'd love to help you find something else delicious. What else are you in the mood for?"
-   • "I'm still building my list of X spots in [city] — but I've got some fantastic alternatives if you're flexible?"
-   • "No X restaurants in my database yet, sorry! Want to explore other cuisines or let me know what else you're craving?"
-   
-   ❌ NEVER say "you're in luck!" if you have ZERO results - that's lying!
-   • "Oh this is exciting! I know just the place(s) for X!"
-   • "Right then! Let me tell you about some cracking X options!"
-   • "Brilliant question! X is something we do really well around here!"
-   • "Ah you're in for a treat! We've got some lovely X spots!"
-   • "Oh I'm so glad you asked! There are some gems for X!"
-   • "Well well! X enthusiast, are you? I've got you covered!"
-   • "Fantastic! Let me point you to some top-notch X places!"
-   NEVER use the same opener twice in a row — keep it fresh!
-
-2. **Context** - "There are a couple great X in town" (makes it clear there are MORE)
-
-3. **Show ALL relevant businesses in your first response** - Don't drip-feed them one at a time across multiple messages!
-   - If there are 4 cocktail spots, mention all 4 in the first response
-   - Give FULL details for the top 1-2, then briefly mention the others
-   - Example: "[Full details for #1 and #2]... You've also got [#3] and [#4] - all great options!"
-   - NEVER say "that's all" if you haven't mentioned all relevant businesses yet!
-
-5. **For each business, include:**
-   - Name as CLICKABLE LINK: **[Business Name](/user/business/slug)** (ALWAYS use this format!)
-   - Description/tagline (give it LIFE! "this place is brilliant! They do...")
-   - Rating + review count (e.g. "5★ from 83 Google reviews")
-   - Featured menu items ONLY IF EXPLICITLY IN KB ("they've got some lovely dishes like X, Y, Z")
-
-6. **Engaging follow-up** - "Does this tickle your fancy or need more details about any of these?"
-
-7. **Qwikker Atlas CTA (MANDATORY when showing 2+ businesses!)** 
-   - ALWAYS end with: "Want to explore them all on Qwikker Atlas? Just tap below 👇"
-   - Alternative: "Curious where they are? Jump into Qwikker Atlas 👇"
-   - This lets users see all businesses on a map and start a tour!
-
-🗣️ TONE & PERSONALITY:
-- PLAYFUL, not robotic ("Ohh you like X do you?" not "Here's what I'd recommend:")
-- CONVERSATIONAL, not formal (use "you're" not "you are", add emojis 😊)
-- ENTHUSIASTIC, not dry ("this place is brilliant!" not "This is a restaurant")
-- DETAILED, not brief (use taglines, menu items, FULL review quotes)
-- HUMAN, not AI (contractions, exclamation points, natural flow)
-
-⚠️ LEGAL COMPLIANCE:
-- NEVER quote or paraphrase Google reviews (legal violation!)
-- Only show numeric rating + review count (e.g., "5★ from 83 Google reviews")
-- Users can click business cards to read reviews on Google
-
-🍽️ USE THE RICH DATA (ONLY IF IN KB):
-- Description/tagline ("They do proper authentic Greek food")
-- Featured menu items ONLY IF KB HAS THEM ("they've got some lovely dishes like Gyros Wrap, Greek Salad...")
-- Rating + review count NUMERIC ONLY (5★ from 83 reviews) - NO QUOTES
-
-❌ DON'T DO THIS (robotic, short, no personality, NO LINKS):
-"Ooo nice choice! Here's what I'd recommend:
-**lansbakery** (4.8★ – "From the moment we walked in...")
-**BigWigs Bakery** (4.7★ – "Best doughnuts in town")
-Want to see them?"
-
-✅ DO THIS INSTEAD (playful, detailed, engaging, with CLICKABLE LINKS):
-"Ohh you're after some fresh baked goods? Perfect timing! 😊 There are some brilliant bakeries around here.
-
-**[Lansbakery](/user/business/lansbakery)** — Rated 4.8★ from 127 Google reviews.
-
-Fancy giving them a try? Or want to explore more bakery options on Qwikker Atlas? Just tap below 👇"
-
-NOTE: The above example does NOT mention specific products because the business had NO knowledge base content. Only mention products if EXPLICITLY in KB!
-
-🚨 CRITICAL: If business has NO knowledge base content (empty KB), ONLY mention:
-   - Business name (linked)
-   - Rating + review count
-   - DO NOT infer products, menu items, or descriptions from category alone!
-   
-   ❌ BAD: "lansbakery — 4.8★. People rave about their pastries and bread!" (KB is empty - you're hallucinating!)
-   ✅ GOOD: "lansbakery — Rated 4.8★ from 127 reviews."
-   ✅ GOOD (if KB has items): "lansbakery — Rated 4.8★. They've got sourdough, croissants, and pain au chocolat!" (ONLY if these are explicitly in KB!)
-
-🚨 HOW TO HANDLE MENU INFORMATION:
-
-RULE 1: If you see specific menu items in the business's knowledge base → MENTION THEM! (ONLY IF EXPLICITLY IN KB!)
-✅ "They've got some fantastic cocktails like the Smoky Old Fashioned and Grilled Pineapple Mojito" (IF these are in KB)
-✅ "They've got some lovely dishes like Gyros Wrap, Greek Salad, Souvlaki..." (IF these are in KB)
-❌ "They serve Pad Thai, Green Curry, Tom Yum" (if NOT explicitly in KB, even if it's a Thai restaurant!)
-
-RULE 2: If the business has "Featured Menu Items: X items available" in their data → MENTION IT!
-✅ "They've got 5 featured items on their menu—definitely worth checking out!"
-✅ "They're rated 5★ and have featured menu items available!"
-
-RULE 3: If the business has NO KB content AND NO featured items → Be honest but positive
-✅ "They're a wine bar with a 5★ rating—definitely worth checking out for drinks!"
-✅ "They're rated 5★ from 83 Google reviews and specialize in authentic Greek food—definitely worth checking out their menu!"
-
-RULE 3: If the business has NO KB content AND NO featured items → Be honest but positive
-✅ "They're a wine bar with a 5★ rating—definitely worth checking out for drinks!"
-✅ "They're rated 5★ from 83 Google reviews and specialize in authentic Greek food—definitely worth checking out their menu!"
-
-RULE 4: NEVER use phrases like "I don't have specific menu details" if you DO have featured items OR KB content!
-❌ WRONG: "I don't have specific menu details for Triangle GYROSS" (when they have "Featured Menu Items: 5 items available")
-✅ RIGHT: "They've got 5 featured items on their menu—freshly cooked authentic Greek food!"
-
-RULE 4: NEVER use phrases like "I don't have specific menu details" if you DO have featured items OR KB content!
-❌ WRONG: "I don't have specific menu details for Triangle GYROSS" (when they have "Featured Menu Items: 5 items available")
-✅ RIGHT: "They've got 5 featured items on their menu—freshly cooked authentic Greek food!"
-
-RULE 5: 🚨 DON'T BE OVERLY LITERAL! If the user asks for a FOOD/DRINK item, search the KB content:
-   User asks: "any good pizza?" 
-   ✅ CORRECT: Check KB for "pizza" → Found "Mini Margherita Pizza" at Ember & Oak → MENTION IT!
-   ❌ WRONG: "I don't have dedicated pizza restaurants" (even though the data exists!)
-   
-   Example:
-   - User: "any good pizza?"
-   - KB has: "Mini Margherita Pizza" in Ember & Oak kids menu
-   - ✅ SAY: "Oh yes! Ember & Oak has a Mini Margherita Pizza on their kids menu—part of their £9.95 kids deal!"
-   - ❌ DON'T SAY: "I don't have specific pizza spots" (YOU DO! It's in the data!)
-
-🚨 FOLLOW-UP QUESTIONS: When user asks "what kind of things?" or "what's on it?" → LIST ALL ITEMS FROM KB!
-   User: "what kind of things are on it?"
-   ✅ RIGHT: "They've got Mini Cheeseburger, Chicken Goujons, Mac & Cheese, and Mini Margherita Pizza—all for £9.95 with drink and dessert!"
-   ❌ WRONG: "Mini Margherita Pizza is on there" (when KB has 4+ items - list them ALL!)
-
-RULE 6: 🚨 NEVER INFER MENU ITEMS FROM CATEGORY! Only mention specific dishes/products if they're explicitly in the KB:
-   ❌ WRONG: "Annie's Thai serves Pad Thai, Green Curry, and Tom Yum Soup" (unless KB explicitly lists these!)
-   ❌ WRONG: "Lansbakery does artisan sourdough" (unless KB explicitly mentions sourdough!)
-   ❌ WRONG: "They serve pizza, pasta, and tiramisu" (unless KB explicitly lists these!)
-   ✅ RIGHT: "Annie's Thai is a fantastic Thai spot with a 5★ rating!" (stick to facts: rating, vibe, KB data only)
-   ✅ RIGHT: "Lansbakery is rated 4.8★ from 127 reviews—people rave about their pastries and bread!"
-   
-   DO NOT assume:
-   - Thai restaurant → has Pad Thai, Green Curry
-   - Bakery → has sourdough, croissants
-   - Italian restaurant → has pasta, pizza
-   - Indian restaurant → has curry, naan
-   
-   ONLY mention dishes/products if they are EXPLICITLY in the knowledge base data!
-   
-   🚨 IF THE ITEM EXISTS IN THE KB → MENTION IT! Don't filter yourself out!
-
-❌ NEVER: "They probably have X" or "You could try their X" (unless X is in the data!)
-❌ NEVER: "might have", "often have", "probably offers", "could try" (unless it's explicitly in the data)
-
-HOW TO RESPOND:
-✅ GOOD: "Oh nice! **[Triangle GYROSS](/user/business/triangle-gyross)** is brilliant—they've got this amazing menu with 5 signature items. They're open right now and only a quick walk from town. Want me to show you what they're known for?"
-❌ BAD: "Here's Triangle GYROSS. 5 featured items. Would you like to see offers?"
-❌ BAD: "Try **Triangle GYROSS** — they're great!" (MISSING LINK!)
-❌ BAD: "They craft incredible cocktails" (UNLESS "cocktails" appears in the data!)
-
-ALWAYS INCLUDE:
-- Business personality/vibe (from their tagline/description)
-- Whether they're open NOW or when they open
-- Distance context ("quick walk", "right in the center")
-- What makes them special (featured items, reviews, unique offerings)
-- Relevant follow-ups based on what they ACTUALLY have
-
-🚨 NEVER DISMISS OR TRASH-TALK BUSINESSES:
-❌ NEVER: "let's keep the spotlight on X for now!" (dismissive of other businesses)
-❌ NEVER: "but ooh la la, let's focus on X" (implies others aren't worth mentioning)
-❌ NEVER: "I'll skip Y" or "Y doesn't have what you need" (UNLESS their KB explicitly lacks it)
-✅ CORRECT: If a business has KB content, give it EQUAL treatment
-✅ CORRECT: "You've also got [Business 3] with [their specific offerings from KB]"
-
-If you mention a business by name, you MUST mention what they actually offer (from their KB data).
-Don't name-drop businesses and then say "but let's not talk about them" - that's rude and unhelpful!
-
-INTELLIGENCE:
-- Use the conversation context to stay on topic
-- Remember what you've already mentioned
-- Make smart inferences (if discussing cocktails, "sweet" means sweet drinks)
-- Build naturally on their answers
-- NEVER suggest things they don't have (check offers_count, featured_items_count, etc.)
-
-${isBroadQuery ? `
-🚨 BROAD QUERY DETECTED 🚨
-User just asked "${userMessage}" - this is TOO broad!
-
-❌ DO NOT list businesses yet
-❌ DO NOT dump restaurant recommendations
-❌ DO NOT show offers or cards
-
-✅ INSTEAD: Ask what they're in the mood for
-Example: "Hey! Before I point you in the right direction—are you hunting for deals, or just want the absolute best spots? Any specific cuisine you're craving?"
-
-Quick replies should be: "Best spots", "Current deals", "Italian", "Surprise me"
-` : ''}
-
-${stateContext ? `\nCONVERSATION CONTEXT:\n${stateContext}\n` : ''}
-
-KNOWLEDGE RULES:
-- Read the AVAILABLE BUSINESSES section carefully - all business info is there
-- Business names may vary slightly (Adam's vs Adams) - they're the same business
-- Opening hours are listed under "Hours:" - read the full entry before saying you don't have info
-- Only say "I don't have that info" if you've genuinely checked the business entry and it's missing
-- Never make up amenities, addresses, or hours
-- 🔗 ALWAYS format business names as CLICKABLE LINKS: **[Business Name](/user/business/slug)**
-  Example: **[Triangle GYROSS](/user/business/triangle-gyross)** NOT just **Triangle GYROSS**
-  The slug is business_name lowercase with hyphens (replace spaces/special chars with -)
-- 🚨🚨🚨 CRITICAL: Businesses are listed in TIER ORDER - [TIER: qwikker_picks] businesses MUST be mentioned FIRST when listing multiple options!
-
-🔒 STRICT NO-HALLUCINATION RULES (CRITICAL - YOUR JOB DEPENDS ON THIS):
-- 🚨 ONLY mention specific dishes, drinks, or menu items if they EXPLICITLY appear in the business's knowledge base data below
-- 🚨 NEVER use your general AI knowledge about what restaurants "usually" serve based on their category
-- 🚨 NEVER assume menu items based on cuisine type (Thai ≠ green curry, Japanese ≠ sushi, Bar ≠ cocktails)
-- 🚨 READ the knowledge base content carefully - if a specific item is mentioned there, USE IT enthusiastically in your response!
-
-GOLDEN RULE:
-✅ IF an item appears in the knowledge base → Mention it naturally!
-❌ IF an item does NOT appear in the knowledge base → Don't mention it, even if you think the restaurant "should" have it!
-
-🚨 NEVER HALLUCINATE ATTRIBUTES ABOUT BUSINESSES:
-- 🚨 If a business has NO knowledge base content, you ONLY know: name, category, rating, review_count, location
-- 🚨 NEVER invent attributes based on category (cafes ≠ "family-friendly", bars ≠ "cozy vibe", restaurants ≠ "welcoming")
-- 🚨 NEVER describe atmosphere unless it's EXPLICITLY in the knowledge base
-- 🚨 If asked about features not in the KB, be honest: "They're a [category] with [rating]★ - check their details to see if they have what you need!"
-- ❌ FORBIDDEN: Inventing adjectives or claims not in the data
-- ✅ CORRECT: Stick to facts (name, rating, category) and suggest they check directly
-
-HOW TO RESPOND WHEN ASKED ABOUT SPECIFIC ITEMS:
-
-❌ FORBIDDEN: Making assumptions based on cuisine type
-- "Their [dish] is definitely worth trying!" (unless [dish] is explicitly in the KB)
-- "They serve excellent [dish]" (unless [dish] is explicitly in the KB)
-- "Known for their [dish]" (unless [dish] is explicitly in the KB)
-
-✅ CORRECT: Use what you actually have
-- If the item IS in the KB: Mention it! "They've got [item] - [description from KB]"
-- If the item is NOT in the KB: "They're a [cuisine] restaurant with [rating]★—definitely worth checking their menu!"
-- Be honest: "While I don't have details about that specific item, they specialize in [cuisine] with great reviews"
-
-GENERAL RULES:
-- NEVER make up menu items based on cuisine type or category
-- NEVER use phrases like "might have", "often have", "probably offers", "could try"
-- NEVER describe a dish unless the description is EXPLICITLY in the knowledge base
-- 🚨 GOLDEN RULE: If it's not explicitly in the AVAILABLE BUSINESSES section, it doesn't exist!
-
-🚨🚨🚨 WHEN YOU RUN OUT OF RELEVANT RESULTS (CRITICAL - PREVENTS VIRAL DISASTERS):
-- If user keeps asking "anywhere else?" and you've shown all relevant businesses, BE HONEST!
-- 🚨 NEVER suggest completely irrelevant businesses with "but who knows" or "might have"
-- 🚨 NEVER suggest businesses from wrong categories (barbershops for drinks, gyms for food, etc.)
-- ✅ CORRECT: "Those are the main [category] spots I have! Want me to show other similar places?"
-- ✅ CORRECT: "That's all the [cuisine] places I have right now. Would you like me to show other cuisines nearby?"
-- ❌ FORBIDDEN: Suggesting businesses from completely wrong categories just to have an answer
-- Remember: Being honest about limited results is MUCH BETTER than looking stupid by suggesting irrelevant places!
-
-💳 OFFER HANDLING (CRITICAL - DB AUTHORITATIVE ONLY):
-- 🚨🚨🚨 NEVER invent, assume, or recall offers from memory/training data
-- 🚨 ONLY mention offers if they are EXPLICITLY listed in the AVAILABLE BUSINESSES section below
-- 🚨 If no offers are listed in the data, offers DO NOT EXIST - do not suggest "they might have deals"
-- 🚨 DB AUTHORITY RULE: Never state an offer exists unless it appears in business_offers_chat_eligible for this city
-- 🚨 EXPIRED OFFERS DO NOT EXIST: If an offer is not in the current data, it is expired/deleted - never mention it
-- 🚨 Knowledge Base is for descriptions only - OFFERS COME FROM DATABASE ONLY, NEVER FROM KB OR MEMORY
-- If a business entry shows "[Has X offers available]", mention this naturally when relevant
-- Example: "I don't have info on that specific special, but they do have 3 current offers I can show you!"
-- When mentioning offers, use friendly phrasing like "Want to see their current offers?" or "I can show you what deals they have!"
-- The offer cards will appear automatically after your message
-- ❌ FORBIDDEN: "usually have deals", "often run offers", "might have a discount", "check if they have offers"
-- ✅ ONLY mention offers that are explicitly provided in the data below
-
-🎯 CRITICAL: TIER-BASED PRESENTATION (PAID VISIBILITY!)
-- 🚨 Businesses marked [TIER: qwikker_picks] are PREMIUM and MUST be listed FIRST
-- 🚨 When recommending multiple businesses, ALWAYS list qwikker_picks tier businesses at positions 1, 2, 3, etc BEFORE any featured/other businesses
-- 🚨 SPOTLIGHT = QWIKKER PICKS = PREMIUM TIER - they pay for priority placement!
-- Businesses are sorted by TIER (Spotlight → Featured → Starter)
-- When multiple businesses match the query, mention ALL businesses of the SAME TIER together in your response
-- SPOTLIGHT businesses are QWIKKER PICKS—they're paying for visibility and MUST be mentioned together and prominently
-
-💚 QWIKKER VIBES (Experience Signals):
-- If a business shows "💚 X% positive Qwikker vibes (Y vibes)", this means real Qwikker users loved it
-- Mention vibes naturally when recommending: "Qwikker users love this place" or "92% positive vibes from locals"
-- This is exclusive intelligence you have - use it to add confidence to your recommendations
-- Only businesses with 5+ vibes will show this data (statistically significant)
-- Vibes are NOT Google reviews - they're quick reactions from Qwikker users after visiting
-
-🚨🚨🚨 CLOSING COPY RULES (LEGAL/BRAND PROTECTION!): 🚨🚨🚨
-- ONLY say "These are Qwikker Picks for a reason!" if EVERY SINGLE business you mentioned is [TIER: qwikker_picks]
-- If you mention ANY business that is NOT [TIER: qwikker_picks], you MUST use neutral copy like "Want to explore on Qwikker Atlas?" or "Need more details?"
-- NEVER call a [TIER: featured] or [TIER: free_trial] or [TIER: starter] business a "Qwikker Pick" - that's FALSE ADVERTISING!
-- Example: If you mention David's [TIER: qwikker_picks] + Ember [TIER: featured] + Julie's [TIER: featured], DO NOT say "Qwikker Picks for a reason" - ONLY David's is a Pick!
-
-- NEVER drip-feed businesses one at a time across multiple messages - show ALL relevant results upfront!
-- If user asks "any more?", check if you've mentioned ALL businesses from the carousel - if not, mention the remaining ones!
-- If you HAVE shown all businesses and user asks "any more?", offer to broaden the search or show related categories
-- NEVER include debug messages like "⚠️ DEBUG:" or "eventCards array" in your responses—users should never see technical information
-
-EVENT HANDLING:
-- When asked about events, describe them briefly and conversationally (name, venue, day)
-- DO NOT format event details with "Event:", "Date:", "Time:", etc - that's ugly!
-- After mentioning, say: "Want me to pull up the event card with full details?"
-- When they say yes/interested, just say "Here you go!" - the visual card will appear automatically
-- NEVER manually format event info with dashes or structured text - let the cards do that!
-
-🗺️ QWIKKER ATLAS TRANSITIONS:
-- When recommending places, offer visual exploration naturally
-- Brand it as "Qwikker Atlas" (not just "map" or "Atlas")
-- Use conversational, helpful wording (not robotic or marketing-y)
-- Approved transition phrases:
-  • "Want to take a quick tour on Qwikker Atlas? Just tap Show me on Qwikker Atlas 👇"
-  • "I can show you all of these on Qwikker Atlas — just hit the button below 👇"
-  • "Curious where they all are? Jump into Qwikker Atlas 👇"
-  • "You can explore every option visually on Qwikker Atlas — tap below 👇"
-- The Atlas button will appear automatically below your message
-- Keep it natural — mention Qwikker Atlas ONLY when transitioning, not in general conversation
-- Minimal emojis: only 👇 or 🗺️
-
-FLOW:
-${state.currentBusiness ? 
-  `You're discussing ${state.currentBusiness.name}. Stay focused unless they explicitly ask about other places.` 
-  : 
-  'Help them discover what they want, then dive into specifics.'
-}
-
-AVAILABLE BUSINESSES (sorted by tier - qwikker_picks at TOP):
-${businessContext || 'No specific business data available - suggest they check the Discover page.'}
-
-${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
-
+    
+    // Compute Atlas availability from the SAME candidates we'll show (not all businesses)
+    // This prevents AI from mentioning map when businesses have no valid coordinates
+    const candidatesForAtlas = detectedIntent.hasIntent
+      ? sortedForContext // intent mode: relevant businesses only
+      : allBusinessesForContext // browse mode: all businesses
+    
+    const atlasAvailable = (candidatesForAtlas || []).filter(hasValidCoords).length >= 2
+    
+    if (process.env.NODE_ENV === 'development') {
+      const validCoordCount = (candidatesForAtlas || []).filter(hasValidCoords).length
+      console.log(`🗺️  [ATLAS] Available: ${atlasAvailable} (${validCoordCount} of ${candidatesForAtlas.length} candidates have valid coords)`)
+    }
+    
+    const systemPrompt = buildSystemPromptV2({ 
+      cityDisplayName, 
+      userMessage, 
+      isBroadQuery, 
+      stateContext, 
+      businessContext, 
+      cityContext, 
+      state,
+      atlasAvailable 
+    })
+    
+    if (process.env.NODE_ENV === 'development') console.log('[PROMPT] systemPrompt chars=', systemPrompt.length)
+
+    // 🎯 STEP 5
     // 🎯 STEP 5: Build conversation messages
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
@@ -1173,6 +1078,15 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     })
 
     let aiResponse = completion.choices[0]?.message?.content || ''
+    
+    // --- DEDUPE: Parse AI response for business links to prevent duplicates in Tier2/Tier3 ---
+    // NOTE: These are RAW slugs - not yet validated against actual business inventory
+    const mentionedSlugs = new Set<string>()
+    const linkRegex = /\/user\/business\/([a-z0-9-]+)/g
+    let match: RegExpExecArray | null
+    while ((match = linkRegex.exec(aiResponse)) !== null) {
+      mentionedSlugs.add(match[1])
+    }
     
     // 🎯 STEP 7: Update conversation state
     const extractedBusinesses = extractBusinessNamesFromText(aiResponse)
@@ -1813,8 +1727,54 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         // Tier 2 & 3: TEXT-ONLY mentions (no carousel cards)
         // This creates clear upsell incentive: want carousel? upgrade!
         
+        // --- DEDUPE: Build slug -> ID lookup from all tier businesses ---
+        const slugToId = new Map<string, string>()
+        const allTierBusinesses = [
+          ...(tier1Businesses || []),
+          ...(tier2Businesses || []),
+          ...(tier3Businesses || [])
+        ]
+        
+        for (const b of allTierBusinesses) {
+          const id = String(b.id)
+          const slug = getBusinessSlug(b)
+          slugToId.set(slug, id)
+        }
+        
         // 🚨 CRITICAL: Track which businesses we've already appended to text to prevent duplicates
+        // Now seeded with AI-mentioned businesses (validated against real inventory)
+        
+        // Validate raw slugs against slugToId to prevent false matches (e.g., literal "slug")
+        const validMentionedSlugs = new Set<string>()
+        const invalidSlugs: string[] = []
+        
+        for (const slug of mentionedSlugs) {
+          if (slugToId.has(slug)) {
+            validMentionedSlugs.add(slug)
+          } else {
+            invalidSlugs.push(slug)
+          }
+        }
+        
+        if (process.env.NODE_ENV === 'development' && invalidSlugs.length > 0) {
+          console.warn(`⚠️  [DEDUPE] Invalid AI-linked slugs (not in slugToId): ${invalidSlugs.join(', ')}`)
+        }
+        
+        // Use VALID slugs for everything after this point
+        const aiMentionedCount = validMentionedSlugs.size
+        
         const appendedBusinessIds = new Set<string>()
+        for (const slug of validMentionedSlugs) {
+          const id = slugToId.get(slug)!  // Safe: already validated
+          appendedBusinessIds.add(id)
+        }
+        
+        if (process.env.NODE_ENV === 'development' && validMentionedSlugs.size > 0) {
+          console.log(`🔍 [DEDUPE] AI mentioned ${validMentionedSlugs.size} valid business links: ${Array.from(validMentionedSlugs).join(', ')}`)
+        }
+        
+        // --- GATE: Skip Tier2/3 injection if AI already listed 2+ businesses ---
+        const shouldInjectSupplemental = aiMentionedCount < 2
         
         // 🚨 SOPHISTICATED TIER 2/3 GATE (not just "discovery query")
         // 
@@ -1861,23 +1821,41 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             console.log(`🎯 No relevance scores: skipping Tier 2`)
           }
           
+          // --- DEDUPE: Filter out businesses AI already mentioned ---
+          if (!shouldInjectSupplemental) {
+            // Don't inject Tier2/Tier3 when AI already did a multi-result answer
+            filteredLiteBusinesses = []
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`🎯 [DEDUPE] AI already mentioned ${aiMentionedCount} businesses → skipping Tier2/Tier3 injection`)
+            }
+          } else {
+            // Filter out AI-mentioned businesses
+            filteredLiteBusinesses = (filteredLiteBusinesses || []).filter(b => !appendedBusinessIds.has(String(b.id)))
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`🔍 [DEDUPE] Tier2 after AI-dedupe: ${filteredLiteBusinesses.length}`)
+            }
+          }
+          
           if (filteredLiteBusinesses.length > 0) {
-            // Add Lite businesses as text-only mentions with personality
+            // Add Lite businesses as text-only mentions with neutral phrasing
             const liteIntros = [
-              "Also worth checking out – these places are really solid:",
-              "Oh, and a few more options that caught my eye:",
-              "Plus, here are some other spots people are raving about:",
-              "And don't sleep on these – they're really good too:"
+              "Also worth checking out:",
+              "A couple more solid options:",
+              "Two other good shouts:",
+              "Worth a look:"
             ]
             let liteText = liteIntros[Math.floor(Math.random() * liteIntros.length)] + `\n\n`
             
-            filteredLiteBusinesses.slice(0, 3).forEach(b => {
-            // Track that we've appended this business
-            appendedBusinessIds.add(b.id)
+            filteredLiteBusinesses.slice(0, 3).forEach((b, idx) => {
+            // Track that we've appended this business (normalize ID to string)
+            appendedBusinessIds.add(String(b.id))
             
-            // Use actual slug from DB, fallback to generated slug, fallback to ID
-            const businessSlug = b.slug || b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || b.id
-            liteText += `• **[${b.business_name}](/user/business/${businessSlug})**`
+            // Use deterministic slug helper (single source of truth)
+            const businessSlug = getBusinessSlug(b)
+            
+            // Use paragraph format (not bullets) to match prompt rules
+            liteText += `**[${b.business_name}](/user/business/${businessSlug})**`
             if (b.display_category) {
               liteText += ` — ${b.display_category}`
             }
@@ -1891,26 +1869,37 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             
             // Show featured items count if they have them
             if (b.menu_preview && Array.isArray(b.menu_preview) && b.menu_preview.length > 0) {
-              liteText += `\n   _${b.menu_preview.length} featured items on their menu – check it out!_`
+              liteText = appendSentence(liteText, `${b.menu_preview.length} featured items on their menu – check it out!`)
             }
             
             // Show offers count if they have any - with excitement!
             if (b.approved_offers_count && b.approved_offers_count > 0) {
-              liteText += `\n   🎉 **${b.approved_offers_count} exclusive offer${b.approved_offers_count === 1 ? '' : 's'} available!**`
+              liteText = appendSentence(liteText, `🎉 **${b.approved_offers_count} exclusive offer${b.approved_offers_count === 1 ? '' : 's'} available!**`)
             }
             
             // Add distance info with personality
             if (b.latitude && b.longitude && context.userLocation) {
               const distanceText = getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
               if (distanceText) {
-                liteText += `\n   📍 ${distanceText}`
+                // Use as-is if already conversational/complete sentence, otherwise wrap with "About"
+                const isAlreadyPhrased = /\b(just|right|super|from you|away|walk|corner)\b/i.test(distanceText)
+                let distSentence: string
+                if (isAlreadyPhrased) {
+                  distSentence = distanceText.charAt(0).toUpperCase() + distanceText.slice(1)
+                } else {
+                  // Raw number+unit: add "away" (e.g., "About 1.2 miles away")
+                  const isRawUnit = /^\d+(\.\d+)?\s+(miles?|mi|km|m)$/i.test(distanceText)
+                  distSentence = isRawUnit ? `About ${distanceText} away` : `About ${distanceText}`
+                }
+                liteText = appendSentence(liteText, distSentence)
               }
             }
             
-            liteText += `\n\n`
+            liteText += `\n\n` // Blank line between businesses (paragraph format)
             })
             
-            aiResponse = aiResponse + liteText
+            // Ensure proper separation between AI response and injected content
+            aiResponse = aiResponse.trimEnd() + '\n\n' + liteText.trim()
           }
         }
         
@@ -1920,9 +1909,18 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           // 🚨 FIX: Filter Tier 3 by relevance too (same as Tier 2)
           let filteredFallbackBusinesses = fallbackBusinesses
           
-          // First, remove any businesses already appended in Tier 2
-          filteredFallbackBusinesses = filteredFallbackBusinesses.filter(b => !appendedBusinessIds.has(b.id))
-          console.log(`🚨 Deduplicated Tier 3: ${filteredFallbackBusinesses.length} of ${fallbackBusinesses.length} (removed ${fallbackBusinesses.length - filteredFallbackBusinesses.length} duplicates from Tier 2)`)
+          // --- DEDUPE: Filter out businesses AI already mentioned + Tier 2 appended ---
+          if (!shouldInjectSupplemental) {
+            // Don't inject Tier3 when AI already did a multi-result answer
+            filteredFallbackBusinesses = []
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`🎯 [DEDUPE] AI already mentioned ${aiMentionedCount} businesses → skipping Tier3 injection`)
+            }
+          } else {
+            // First, remove any businesses already appended in AI response or Tier 2
+            filteredFallbackBusinesses = filteredFallbackBusinesses.filter(b => !appendedBusinessIds.has(String(b.id)))
+            console.log(`🚨 Deduplicated Tier 3: ${filteredFallbackBusinesses.length} of ${fallbackBusinesses.length} (removed ${fallbackBusinesses.length - filteredFallbackBusinesses.length} duplicates)`)
+          }
           
           // STRICT FILTER: Same as Tier 2
           if (detectedIntent.hasIntent && businessRelevanceScores.size > 0) {
@@ -1972,10 +1970,11 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           }
           
           fallbackBusinesses.slice(0, 10).forEach((b, index) => {
-            // Use actual slug from DB, fallback to generated slug, fallback to ID
-            const businessSlug = b.slug || b.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || b.id
+            // Use deterministic slug helper (single source of truth)
+            const businessSlug = getBusinessSlug(b)
             
-            fallbackText += `• **[${b.business_name}](/user/business/${businessSlug})**`
+            // Use paragraph format (not bullets) to match prompt rules
+            fallbackText += `**[${b.business_name}](/user/business/${businessSlug})**`
             
             if (b.display_category) {
               fallbackText += ` — ${b.display_category}`
@@ -1996,35 +1995,39 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             
             // Show featured items for Tier 2 (claimed-free)
             if (b.tierSource === 'tier2' && b.featured_items_count && b.featured_items_count > 0) {
-              fallbackText += `\n   _They've got ${b.featured_items_count} featured items on their menu – definitely worth a look_`
+              fallbackText = appendSentence(fallbackText, `They've got ${b.featured_items_count} featured items on their menu – definitely worth a look`)
             }
             
             // Add distance info with personality
             if (b.latitude && b.longitude && context.userLocation) {
               const distanceText = getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
               if (distanceText) {
-                // Parse distance to add commentary
-                const distanceMatch = distanceText.match(/(\d+\.?\d*)\s*(km|m)/)
-                if (distanceMatch) {
-                  const distance = parseFloat(distanceMatch[1])
-                  const unit = distanceMatch[2]
-                  
-                  if (unit === 'm' || (unit === 'km' && distance < 0.5)) {
-                    fallbackText += `\n   📍 Super close – ${distanceText} away (basically right there)`
-                  } else if (unit === 'km' && distance < 2) {
-                    fallbackText += `\n   📍 ${distanceText} away – easy walk or quick ride`
+                // Use as-is if already conversational/complete sentence, otherwise wrap with "About"
+                const isAlreadyPhrased = /\b(just|right|super|from you|away|walk|corner)\b/i.test(distanceText)
+                let distSentence: string
+                if (isAlreadyPhrased) {
+                  // Add personality commentary based on keywords
+                  if (distanceText.includes('right around the corner')) {
+                    distSentence = `${distanceText.charAt(0).toUpperCase() + distanceText.slice(1)} – basically right there`
+                  } else if (distanceText.includes('just a') && distanceText.includes('min walk')) {
+                    distSentence = `${distanceText.charAt(0).toUpperCase() + distanceText.slice(1)} – easy walk`
                   } else {
-                    fallbackText += `\n   📍 ${distanceText} away`
+                    distSentence = distanceText.charAt(0).toUpperCase() + distanceText.slice(1)
                   }
+                } else {
+                  // Raw number+unit: add "away"
+                  const isRawUnit = /^\d+(\.\d+)?\s+(miles?|mi|km|m)$/i.test(distanceText)
+                  distSentence = isRawUnit ? `About ${distanceText} away` : `About ${distanceText}`
                 }
+                fallbackText = appendSentence(fallbackText, distSentence)
               }
             }
             
             if (b.phone) {
-              fallbackText += `\n   📞 [Give them a call: ${b.phone}](tel:${b.phone})`
+              fallbackText = appendSentence(fallbackText, `📞 [Call: ${b.phone}](tel:${b.phone})`)
             }
             
-            fallbackText += `\n\n`
+            fallbackText += `\n\n` // Blank line between businesses (paragraph format)
           })
           
           // Add engaging footer
@@ -2053,7 +2056,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     // ✅ LEGAL COMPLIANCE: Review text removed per Google ToS
     // We still show rating + review_count + link to Google Maps in business cards
     
-    // 🗺️ ATLAS: Build mapPins array (includes ALL businesses for map display)
+    // 🗺️ ATLAS: Build mapPins array (ONLY relevant businesses for the query)
     // CRITICAL: Only build mapPins if we're actually showing businesses (carousel OR text mentions)
     // Don't show Atlas CTA for conversational responses like "thanks" that have no business context
     const mapPins: ChatResponse['mapPins'] = []
@@ -2086,41 +2089,24 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     ]
     
     if (shouldBuildMapPins) {
-      // Add ALL Tier 1 businesses (paid/trial) - whether carousel is shown or not
-      if (tier1Businesses && tier1Businesses.length > 0) {
-        tier1Businesses.forEach((b: any) => {
-          if (b.latitude && b.longitude && !addedIds.has(b.id)) {
-          mapPins.push({
-            id: b.id,
-            business_name: b.business_name,
-            latitude: b.latitude,
-            longitude: b.longitude,
-            rating: b.rating,
-            review_count: b.review_count,
-            display_category: b.display_category,
-            business_tier: 'paid',
-            phone: b.phone,
-            website_url: b.website_url,
-            google_place_id: b.google_place_id,
-            reason: getReasonTag(
-              b,
-              detectedIntent,
-              businessRelevanceScores.get(b.id) || 0,
-              context.userLocation,
-              isBrowseModeForReasons,
-              allBusinessesForRanking // ✅ Pass all businesses for relative ranking
-            ),
-            reasonMeta: safeGetReasonMeta(b, context.userLocation) // ✅ Always present
-          })
-          addedIds.add(b.id)
-        }
-      })
-    }
-    
-    // Add Tier 2 businesses (claimed-free)
-    if (tier2Businesses && tier2Businesses.length > 0) {
-      tier2Businesses.forEach((b: any) => {
+      // 🚨 FIX: Use sortedForContext (relevance-filtered) instead of ALL businesses
+      // This ensures Atlas shows ONLY relevant results (e.g. Greek query => only Greek pins)
+      const relevantBusinessesForAtlas = sortedForContext.slice(0, 25) // Cap at 25 for performance
+      
+      // Optimization: Build tier ID sets once for O(1) lookup (important for large cities)
+      const tier1Ids = new Set((tier1Businesses || []).map((b: any) => b.id))
+      const tier2Ids = new Set((tier2Businesses || []).map((b: any) => b.id))
+      
+      relevantBusinessesForAtlas.forEach((b: any) => {
         if (b.latitude && b.longitude && !addedIds.has(b.id)) {
+          // Determine tier from business data (O(1) Set lookup)
+          let businessTier: 'paid' | 'claimed_free' | 'unclaimed' = 'unclaimed'
+          if (tier1Ids.has(b.id)) {
+            businessTier = 'paid'
+          } else if (tier2Ids.has(b.id)) {
+            businessTier = 'claimed_free'
+          }
+          
           mapPins.push({
             id: b.id,
             business_name: b.business_name,
@@ -2129,7 +2115,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
             rating: b.rating,
             review_count: b.review_count,
             display_category: b.display_category,
-            business_tier: 'claimed_free',
+            business_tier: businessTier,
             phone: b.phone,
             website_url: b.website_url,
             google_place_id: b.google_place_id,
@@ -2146,38 +2132,6 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           addedIds.add(b.id)
         }
       })
-    }
-    
-    // Add Tier 3 businesses (unclaimed)
-    if (tier3Businesses && tier3Businesses.length > 0) {
-      tier3Businesses.forEach((b: any) => {
-        if (b.latitude && b.longitude && !addedIds.has(b.id)) {
-          mapPins.push({
-            id: b.id,
-            business_name: b.business_name,
-            latitude: b.latitude,
-            longitude: b.longitude,
-            rating: b.rating,
-            review_count: b.review_count,
-            display_category: b.display_category,
-            business_tier: 'unclaimed',
-            phone: b.phone,
-            website_url: b.website_url,
-            google_place_id: b.google_place_id,
-            reason: getReasonTag(
-              b,
-              detectedIntent,
-              businessRelevanceScores.get(b.id) || 0,
-              context.userLocation,
-              isBrowseModeForReasons,
-              allBusinessesForRanking // ✅ Pass all businesses for relative ranking
-            ),
-            reasonMeta: safeGetReasonMeta(b, context.userLocation) // ✅ Always present
-          })
-          addedIds.add(b.id)
-        }
-      })
-    }
     
     } // End of shouldBuildMapPins
     
@@ -2186,10 +2140,36 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     const unclaimedCount = mapPins.filter(p => p.business_tier === 'unclaimed').length
     
     if (shouldBuildMapPins) {
-      console.log(`🗺️ ATLAS MAP PINS: ${mapPins.length} total (${paidCount} paid, ${claimedFreeCount} claimed-free, ${unclaimedCount} unclaimed)`)
+      // Accurate log label: "intent pins" vs "browse pins"
+      const pinType = detectedIntent.hasIntent ? 'intent pins' : 'browse pins'
+      console.log(`🗺️ ATLAS MAP PINS: ${mapPins.length} ${pinType} (${paidCount} paid, ${claimedFreeCount} claimed-free, ${unclaimedCount} unclaimed)`)
+      if (process.env.NODE_ENV === 'development' && mapPins.length > 0) {
+        const firstFive = mapPins.slice(0, 5).map(p => p.business_name).join(', ')
+        console.log(`🗺️ [ATLAS] First 5 pins: ${firstFive}`)
+        console.log(`🗺️ [ATLAS] Mode: ${detectedIntent.hasIntent ? `intent (${detectedIntent.categories.join(', ')})` : 'browse'}`)
+      }
     } else {
       console.log(`🗺️ ATLAS MAP PINS: Skipped (no business results to show)`)
     }
+    
+    // --- DEV-ONLY: Duplicate link detection (cheap insurance) ---
+    if (process.env.NODE_ENV === 'development') {
+      const finalLinkRegex = /\/user\/business\/([a-z0-9-]+)/g
+      const finalSlugs: string[] = []
+      let m: RegExpExecArray | null
+      while ((m = finalLinkRegex.exec(aiResponse)) !== null) {
+        finalSlugs.push(m[1])
+      }
+      
+      const uniqueSlugs = new Set(finalSlugs)
+      if (finalSlugs.length !== uniqueSlugs.size) {
+        const duplicates = finalSlugs.filter((slug, idx) => finalSlugs.indexOf(slug) !== idx)
+        console.warn(`⚠️  [DUPLICATE LINKS] Found ${finalSlugs.length} links but only ${uniqueSlugs.size} unique. Duplicates: ${Array.from(new Set(duplicates)).join(', ')}`)
+      }
+    }
+    
+    // NOTE: Final paragraph formatting moved to route.ts (after Atlas stripping)
+    // This ensures formatting is preserved and happens as the absolute last step
     
     return {
       success: true,
@@ -2204,7 +2184,11 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       queryCategories: detectedIntent.categories, // ✅ ATLAS: For filtering businesses by query
       queryKeywords: detectedIntent.keywords, // ✅ ATLAS: For filtering businesses by query
       modelUsed: modelToUse,
-      classification
+      classification,
+      metadata: {
+        atlasAvailable, // Server-computed flag: true if 2+ candidates have valid coords
+        coordsCandidateCount: (candidatesForAtlas || []).filter(hasValidCoords).length
+      }
     }
 
   } catch (error) {
