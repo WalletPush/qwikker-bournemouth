@@ -222,6 +222,7 @@ function hasValidCoords(b: any): boolean {
 function slugifyBusinessName(name: string): string {
   return name
     .toLowerCase()
+    .replace(/['']/g, '') // Remove apostrophes (normal ' + curly ') before slugifying
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
 }

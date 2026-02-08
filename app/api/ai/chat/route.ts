@@ -256,10 +256,10 @@ export async function POST(request: NextRequest) {
     // Show Atlas CTA only if hybrid-chat says it's available (has 2+ valid coords)
     const showAtlasCta = atlasAvailable && hasActualBusinessResults
     
-    // 🔧 POST-PROCESS: Remove Atlas mentions from AI response if model mentioned it but shouldn't have
-    // This is a safety net - the prompt should already prevent this via atlasAvailable flag
+    // 🔧 POST-PROCESS: Remove Atlas mentions from AI response if model mentioned it but UI won't show CTA
+    // CRITICAL: Use showAtlasCta (final UI truth), not atlasAvailable (prompt hint)
     let finalResponse = result.response || ''
-    if (!atlasAvailable && finalResponse) {
+    if (!showAtlasCta && finalResponse) {
       // Remove map-related phrases (be aggressive - catch generic phrasing)
       const mapPhrases = [
         /Want to explore.*?Qwikker Atlas.*?👇/gi,
@@ -293,7 +293,7 @@ export async function POST(request: NextRequest) {
         .trim()
       
       if (process.env.NODE_ENV === 'development' && finalResponse !== result.response) {
-        console.log('🔧 Stripped Atlas mentions from response (atlasAvailable=false)')
+        console.log('🔧 Stripped Atlas mentions from response (showAtlasCta=false)')
       }
     }
     
@@ -301,10 +301,15 @@ export async function POST(request: NextRequest) {
     // This runs AFTER all text mutations (Atlas stripping, etc.)
     finalResponse = forceNewParagraphPerBusinessLink(finalResponse)
     
+    // 📞 DETERMINISTIC FOOTER: Add contact offer when businesses are mentioned
+    const businessLinkCount = (finalResponse.match(/\*\*\[[^\]]+\]\(\/user\/business\/[a-z0-9-]+\)\*\*/g) || []).length
+    if (businessLinkCount >= 1) {
+      finalResponse += `\n\nIf you want, tell me which one and I'll pull up directions, opening hours, and contact details.`
+    }
+    
     // 🔍 DEV-ONLY: Verify paragraph spacing is preserved
     if (process.env.NODE_ENV === 'development') {
       const hasDoubleNewlines = finalResponse.includes('\n\n')
-      const businessLinkCount = (finalResponse.match(/\*\*\[[^\]]+\]\(\/user\/business\/[a-z0-9-]+\)\*\*/g) || []).length
       console.log(`✅ [FINAL] Paragraph spacing preserved: ${hasDoubleNewlines}, ${businessLinkCount} business links`)
       
       // Warn if 2+ businesses but no paragraph breaks (should never happen now)
