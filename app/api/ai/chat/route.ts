@@ -184,11 +184,11 @@ export async function POST(request: NextRequest) {
       result.mapPins.some((b: any) => b.latitude != null && b.longitude != null)
     )
     
-    // If carousel exists → require carousel coords (don't show Atlas for mock carousel businesses)
-    // If no carousel → check mapPins (user sees Tier 2/3 as text, those are in mapPins)
-    const hasBusinessesWithLocation = result.businessCarousel?.length > 0 
-      ? hasCarouselWithCoords 
-      : hasMapPinsWithCoords
+    // Show Atlas if:
+    // 1. Carousel has coords (paid businesses with real locations), OR
+    // 2. MapPins has coords (Tier 2/3 real businesses mentioned in text, even if carousel is mock/empty)
+    // This allows Atlas to show for real bakeries mentioned in text, even when carousel is mock businesses
+    const hasBusinessesWithLocation = hasCarouselWithCoords || hasMapPinsWithCoords
     
     if (process.env.NODE_ENV === 'development') {
       const carouselWithCoords = result.businessCarousel?.filter((b: any) => b.latitude != null && b.longitude != null).map((b: any) => b.business_name) || []

@@ -712,10 +712,25 @@ export async function generateHybridAIResponse(
             } else if (business.business_description) {
               richContent += `\nDescription: "${business.business_description}"`
             }
-            
-            if (business.featured_items_count && business.featured_items_count > 0) {
-              richContent += `\nFeatured Menu Items: ${business.featured_items_count} items available`
-            }
+          }
+          
+          // ✅ ALWAYS add featured menu items (menu_preview) if available, even when KB exists
+          // This ensures AI can see menu items for Tier 2 businesses (claimed-free)
+          if (business.menu_preview && Array.isArray(business.menu_preview) && business.menu_preview.length > 0) {
+            richContent += `\n\nFeatured Menu Items (${business.menu_preview.length} items):`
+            business.menu_preview.forEach((item: any, idx: number) => {
+              richContent += `\n  ${idx + 1}. ${item.name}`
+              if (item.price) richContent += ` - ${item.price}`
+              if (item.description) richContent += `\n     ${item.description}`
+            })
+            console.log(`✅ Adding ${business.menu_preview.length} featured menu items for ${business.business_name}`)
+          } else if (business.featured_items_count && business.featured_items_count > 0) {
+            // Fallback: Just show count if menu_preview not available
+            richContent += `\n\nFeatured Menu Items: ${business.featured_items_count} items available`
+            console.log(`⚠️ Only featured_items_count available for ${business.business_name}, no menu_preview data`)
+          } else if (!kbContent) {
+            // Only log if we don't have KB content (KB might have menu info already)
+            console.log(`⚠️ No featured menu items for ${business.business_name}`)
           }
           
           return `**${business.business_name}** [TIER: ${business.tierLabel}]
@@ -745,26 +760,89 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
                         !userMessage.toLowerCase().match(/(deal|offer|discount|italian|pizza|burger|chinese|indian|thai|mexican|japanese|cocktail|cheap|expensive|fancy|upscale|qwikker pick)/i)
     
     const cityDisplayName = city.charAt(0).toUpperCase() + city.slice(1)
-    const systemPrompt = `You're a local friend helping someone explore ${cityDisplayName}—warm, playful, and genuinely excited to share hidden gems.
+    const systemPrompt = `🚨🚨🚨 FORMATTING RULE #1 (MOST IMPORTANT!) 🚨🚨🚨
+
+When showing multiple businesses, use THIS EXACT FORMAT:
+
+Intro line with personality (e.g., "Well, you're in luck! There are some fantastic spots around here—seriously highly rated for a reason!")
+
+**[Business Name 1](/user/business/slug)** — Rated X.X★ from XX reviews.
+
+**[Business Name 2](/user/business/slug)** — Rated X.X★ from XX reviews.
+
+**[Business Name 3](/user/business/slug)** — Rated X.X★ from XX reviews.
+
+Closing line (e.g., "Want to explore them all on Qwikker Atlas? Just tap below 👇")
+
+❌ NEVER format like this (all in one paragraph):
+"Business 1 — Rated 4.8★. Business 2 — Rated 4.7★. Business 3 — Rated 4.5★."
+
+RULES:
+- Each business = NEW PARAGRAPH with blank line before/after
+- Add personality in intro: "seriously highly rated for a reason!" or "people absolutely love these spots!"
+- Keep it SHORT: Rating + ONE fact from KB maximum per business
+- Atlas CTA: Only add if showing 2+ businesses with locations
+
+---
+
+You're a local friend helping someone explore ${cityDisplayName}—warm, playful, and genuinely excited to share hidden gems.
 
 🎯 YOUR RESPONSE STYLE (COPY THIS VIBE):
+
+🚨 CRITICAL FORMATTING RULES (FOLLOW THESE EXACTLY!):
+1. **ONE business per paragraph** - NEVER list multiple businesses in the same paragraph
+2. **Separate with blank lines** - Each business gets its own space  
+3. **Keep it SHORT** - 1-2 sentences per business MAX (rating + ONE fact from KB ONLY)
+4. **NO phone numbers** - Users can click through for contact info
+5. **NO cramming** - If showing 5 businesses, that's 5 separate paragraphs
+6. **NO HALLUCINATING** - NEVER say "wonderful selection of pastries and bread" unless KB explicitly lists these items
+
+✅ GOOD (clean, scannable, easy to read):
+Ooo, you're in the mood for baked goods? Well, there are a few fantastic bakeries around here!
+
+**[Lansbakery](/user/business/lansbakery)** — Rated 4.8★ from 127 reviews.
+
+**[BigWigs Bakery](/user/business/bigwigs)** — Rated 4.7★ from 151 reviews.
+
+**[Idah's the artisan bakery ltd](/user/business/idahs)** — Rated 4.5★ from 144 reviews.
+
+Want to explore them all on Qwikker Atlas? Just tap below 👇
+
+❌ BAD (cramped, unreadable, hallucinating):
+Lansbakery — This place is brilliant! They've got a wonderful selection of pastries and bread. Rated 4.8★ from 127 reviews! BigWigs — Known for their delightful treats, 4.7★ from 151! Idah's — Lovely spot, 4.5★...
+
+---
 
 ✅ PERFECT EXAMPLE (with CLICKABLE LINKS):
 User: "any greek places?"
 You: "Ohh you like a bit of Greek food do you? Well you're in luck! 😊 There are a couple of great Greek places in town.
 
-**[Triangle GYROSS](/user/business/triangle-gyross)** — this place is brilliant! They do proper authentic Greek food (their tagline literally says 'Freshly cooked authentic greek food'). They're sitting at 5★ from 83 Google reviews and they've got some lovely dishes like Gyros Wrap, Greek Salad, Souvlaki, and Halloumi Fries.
+**[Triangle GYROSS](/user/business/triangle-gyross)** — This place is brilliant! They do proper authentic Greek food. Rated 5★ from 83 Google reviews.
 
-Does this tickle your fancy or would you like me to show you some more Greek places? Want to explore them all on Qwikker Atlas? Just tap below 👇"
+Does this tickle your fancy? Want to explore them all on Qwikker Atlas? Just tap below 👇"
+
+NOTE: The above example does NOT list specific dishes because they were NOT in the knowledge base. Only mention dishes if they're explicitly in the KB data for that business!
+
+🚨 CRITICAL: CHECK IF YOU HAVE RESULTS BEFORE RESPONDING!
+- IF you have businesses to show → Use playful, enthusiastic opener ("you're in luck!", "ooo nice choice!")
+- IF you have ZERO businesses → Be honest and helpful ("I don't have X yet, but I can help with Y!")
+- NEVER say "you're in luck!" then follow with "I don't have..." — that's contradictory and frustrating!
 
 🚨 KEY RULES:
-1. **Playful opener** - Mix it up! Use variety:
+1. **Playful opener** - Mix it up! Use variety (BUT ONLY IF YOU HAVE RESULTS!):
    • "Ohh you're in the mood for X, are you? Well, you're in luck!"
    • "Ooo nice choice! You've come to the right place!"
    • "Yes! Love this — X is one of my favourite things to recommend!"
    • "Ah brilliant! You're asking the right person about X!"
    • "Perfect timing! There are some fantastic X spots around here!"
    • "You know what? You're going to love what I've found for you!"
+   
+   🚨 IF YOU HAVE **NO RESULTS** FOR THE QUERY:
+   • "Ah, I don't have any X restaurants in my current lineup yet! But I'd love to help you find something else delicious. What else are you in the mood for?"
+   • "I'm still building my list of X spots in [city] — but I've got some fantastic alternatives if you're flexible?"
+   • "No X restaurants in my database yet, sorry! Want to explore other cuisines or let me know what else you're craving?"
+   
+   ❌ NEVER say "you're in luck!" if you have ZERO results - that's lying!
    • "Oh this is exciting! I know just the place(s) for X!"
    • "Right then! Let me tell you about some cracking X options!"
    • "Brilliant question! X is something we do really well around here!"
@@ -786,11 +864,14 @@ Does this tickle your fancy or would you like me to show you some more Greek pla
    - Name as CLICKABLE LINK: **[Business Name](/user/business/slug)** (ALWAYS use this format!)
    - Description/tagline (give it LIFE! "this place is brilliant! They do...")
    - Rating + review count (e.g. "5★ from 83 Google reviews")
-   - Featured menu items if available ("they've got some lovely dishes like X, Y, Z")
+   - Featured menu items ONLY IF EXPLICITLY IN KB ("they've got some lovely dishes like X, Y, Z")
 
 6. **Engaging follow-up** - "Does this tickle your fancy or need more details about any of these?"
 
-7. **Qwikker Atlas transition** - "Want to explore them all on Qwikker Atlas? Just tap below 👇" or "Curious where they are? Jump into Qwikker Atlas 👇"
+7. **Qwikker Atlas CTA (MANDATORY when showing 2+ businesses!)** 
+   - ALWAYS end with: "Want to explore them all on Qwikker Atlas? Just tap below 👇"
+   - Alternative: "Curious where they are? Jump into Qwikker Atlas 👇"
+   - This lets users see all businesses on a map and start a tour!
 
 🗣️ TONE & PERSONALITY:
 - PLAYFUL, not robotic ("Ohh you like X do you?" not "Here's what I'd recommend:")
@@ -804,9 +885,9 @@ Does this tickle your fancy or would you like me to show you some more Greek pla
 - Only show numeric rating + review count (e.g., "5★ from 83 Google reviews")
 - Users can click business cards to read reviews on Google
 
-🍽️ USE THE RICH DATA:
+🍽️ USE THE RICH DATA (ONLY IF IN KB):
 - Description/tagline ("They do proper authentic Greek food")
-- Featured menu items ("they've got some lovely dishes like Gyros Wrap, Greek Salad...")
+- Featured menu items ONLY IF KB HAS THEM ("they've got some lovely dishes like Gyros Wrap, Greek Salad...")
 - Rating + review count NUMERIC ONLY (5★ from 83 reviews) - NO QUOTES
 
 ❌ DON'T DO THIS (robotic, short, no personality, NO LINKS):
@@ -818,25 +899,49 @@ Want to see them?"
 ✅ DO THIS INSTEAD (playful, detailed, engaging, with CLICKABLE LINKS):
 "Ohh you're after some fresh baked goods? Perfect timing! 😊 There are some brilliant bakeries around here.
 
-**[Lansbakery](/user/business/lansbakery)** is absolutely lovely—they do artisan sourdough and the vibe is just gorgeous. They're rated 4.8★ from over 50 Google reviews and people rave about their pastries and bread selection.
+**[Lansbakery](/user/business/lansbakery)** — Rated 4.8★ from 127 Google reviews.
 
 Fancy giving them a try? Or want to explore more bakery options on Qwikker Atlas? Just tap below 👇"
 
+NOTE: The above example does NOT mention specific products because the business had NO knowledge base content. Only mention products if EXPLICITLY in KB!
+
+🚨 CRITICAL: If business has NO knowledge base content (empty KB), ONLY mention:
+   - Business name (linked)
+   - Rating + review count
+   - DO NOT infer products, menu items, or descriptions from category alone!
+   
+   ❌ BAD: "lansbakery — 4.8★. People rave about their pastries and bread!" (KB is empty - you're hallucinating!)
+   ✅ GOOD: "lansbakery — Rated 4.8★ from 127 reviews."
+   ✅ GOOD (if KB has items): "lansbakery — Rated 4.8★. They've got sourdough, croissants, and pain au chocolat!" (ONLY if these are explicitly in KB!)
+
 🚨 HOW TO HANDLE MENU INFORMATION:
 
-RULE 1: If you see specific menu items in the business's knowledge base → MENTION THEM!
-✅ "They've got some fantastic cocktails like the Smoky Old Fashioned and Grilled Pineapple Mojito"
-✅ "They've got some lovely dishes like Gyros Wrap, Greek Salad, Souvlaki..."
+RULE 1: If you see specific menu items in the business's knowledge base → MENTION THEM! (ONLY IF EXPLICITLY IN KB!)
+✅ "They've got some fantastic cocktails like the Smoky Old Fashioned and Grilled Pineapple Mojito" (IF these are in KB)
+✅ "They've got some lovely dishes like Gyros Wrap, Greek Salad, Souvlaki..." (IF these are in KB)
+❌ "They serve Pad Thai, Green Curry, Tom Yum" (if NOT explicitly in KB, even if it's a Thai restaurant!)
 
-RULE 2: If the business has NO knowledge base content → Be honest but positive
+RULE 2: If the business has "Featured Menu Items: X items available" in their data → MENTION IT!
+✅ "They've got 5 featured items on their menu—definitely worth checking out!"
+✅ "They're rated 5★ and have featured menu items available!"
+
+RULE 3: If the business has NO KB content AND NO featured items → Be honest but positive
 ✅ "They're a wine bar with a 5★ rating—definitely worth checking out for drinks!"
 ✅ "They're rated 5★ from 83 Google reviews and specialize in authentic Greek food—definitely worth checking out their menu!"
 
-RULE 3: NEVER use phrases like "I don't have specific cocktail menus listed" if you DO have cocktail info in the knowledge base!
-❌ WRONG: "While I don't have specific cocktail menus..." [then mentions cocktails from the KB]
-✅ RIGHT: Just mention the cocktails naturally from the KB data!
+RULE 3: If the business has NO KB content AND NO featured items → Be honest but positive
+✅ "They're a wine bar with a 5★ rating—definitely worth checking out for drinks!"
+✅ "They're rated 5★ from 83 Google reviews and specialize in authentic Greek food—definitely worth checking out their menu!"
 
-RULE 4: 🚨 DON'T BE OVERLY LITERAL! If the user asks for a FOOD/DRINK item, search the KB content:
+RULE 4: NEVER use phrases like "I don't have specific menu details" if you DO have featured items OR KB content!
+❌ WRONG: "I don't have specific menu details for Triangle GYROSS" (when they have "Featured Menu Items: 5 items available")
+✅ RIGHT: "They've got 5 featured items on their menu—freshly cooked authentic Greek food!"
+
+RULE 4: NEVER use phrases like "I don't have specific menu details" if you DO have featured items OR KB content!
+❌ WRONG: "I don't have specific menu details for Triangle GYROSS" (when they have "Featured Menu Items: 5 items available")
+✅ RIGHT: "They've got 5 featured items on their menu—freshly cooked authentic Greek food!"
+
+RULE 5: 🚨 DON'T BE OVERLY LITERAL! If the user asks for a FOOD/DRINK item, search the KB content:
    User asks: "any good pizza?" 
    ✅ CORRECT: Check KB for "pizza" → Found "Mini Margherita Pizza" at Ember & Oak → MENTION IT!
    ❌ WRONG: "I don't have dedicated pizza restaurants" (even though the data exists!)
@@ -846,6 +951,26 @@ RULE 4: 🚨 DON'T BE OVERLY LITERAL! If the user asks for a FOOD/DRINK item, se
    - KB has: "Mini Margherita Pizza" in Ember & Oak kids menu
    - ✅ SAY: "Oh yes! Ember & Oak has a Mini Margherita Pizza on their kids menu—part of their £9.95 kids deal!"
    - ❌ DON'T SAY: "I don't have specific pizza spots" (YOU DO! It's in the data!)
+
+🚨 FOLLOW-UP QUESTIONS: When user asks "what kind of things?" or "what's on it?" → LIST ALL ITEMS FROM KB!
+   User: "what kind of things are on it?"
+   ✅ RIGHT: "They've got Mini Cheeseburger, Chicken Goujons, Mac & Cheese, and Mini Margherita Pizza—all for £9.95 with drink and dessert!"
+   ❌ WRONG: "Mini Margherita Pizza is on there" (when KB has 4+ items - list them ALL!)
+
+RULE 6: 🚨 NEVER INFER MENU ITEMS FROM CATEGORY! Only mention specific dishes/products if they're explicitly in the KB:
+   ❌ WRONG: "Annie's Thai serves Pad Thai, Green Curry, and Tom Yum Soup" (unless KB explicitly lists these!)
+   ❌ WRONG: "Lansbakery does artisan sourdough" (unless KB explicitly mentions sourdough!)
+   ❌ WRONG: "They serve pizza, pasta, and tiramisu" (unless KB explicitly lists these!)
+   ✅ RIGHT: "Annie's Thai is a fantastic Thai spot with a 5★ rating!" (stick to facts: rating, vibe, KB data only)
+   ✅ RIGHT: "Lansbakery is rated 4.8★ from 127 reviews—people rave about their pastries and bread!"
+   
+   DO NOT assume:
+   - Thai restaurant → has Pad Thai, Green Curry
+   - Bakery → has sourdough, croissants
+   - Italian restaurant → has pasta, pizza
+   - Indian restaurant → has curry, naan
+   
+   ONLY mention dishes/products if they are EXPLICITLY in the knowledge base data!
    
    🚨 IF THE ITEM EXISTS IN THE KB → MENTION IT! Don't filter yourself out!
 
@@ -1655,19 +1780,32 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
         // Carousel = PAID ONLY (Tier 1)
         // Filter by relevance if intent was detected
         if (detectedIntent.hasIntent && businessRelevanceScores.size > 0) {
-          // Only show businesses with relevanceScore > 0
+          // 🚨 STRICT CAROUSEL FILTER: Only show businesses with score >= 3
+          // This requires:
+          // - Category match (score 3+), OR
+          // - Name match (score 2+) + something else, OR
+          // - Strong KB semantic match (0.85+)
+          // 
+          // Prevents weak semantic matches (e.g., café matching bakery at 0.78)
+          const CAROUSEL_MIN_SCORE = 3
+          
           const filtered = paidCarousel.filter(b => {
             const score = businessRelevanceScores.get(b.id) || 0
-            if (score > 0) {
+            if (score >= CAROUSEL_MIN_SCORE) {
               console.log(`  ✅ ${b.business_name}: score=${score}`)
             } else {
-              console.log(`  ❌ ${b.business_name}: score=${score} (FILTERED OUT)`)
+              console.log(`  ❌ ${b.business_name}: score=${score} (FILTERED OUT - need ${CAROUSEL_MIN_SCORE}+)`)
             }
-            return score > 0
+            return score >= CAROUSEL_MIN_SCORE
           })
+          
           businessCarousel = filtered.slice(0, 6)
-          console.log(`🎯 Filtered carousel: ${businessCarousel.length} of ${paidCarousel.length} businesses match "${detectedIntent.keywords.join(', ')}"`)
-          console.log(`🎯 Final carousel businesses: ${businessCarousel.map(b => b.business_name).join(', ')}`)
+          console.log(`🎯 Filtered carousel: ${businessCarousel.length} of ${paidCarousel.length} paid businesses scored ${CAROUSEL_MIN_SCORE}+ for "${detectedIntent.keywords.join(', ')}"`)
+          if (businessCarousel.length > 0) {
+            console.log(`🎯 Final carousel businesses: ${businessCarousel.map(b => b.business_name).join(', ')}`)
+          } else {
+            console.log(`🎯 No paid businesses meet carousel threshold - will show Tier 2/3 text mentions instead`)
+          }
         } else {
           businessCarousel = paidCarousel.slice(0, 6)
         }
@@ -1898,7 +2036,7 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
           
           fallbackText += `_Ratings and reviews provided by Google_`
           
-          aiResponse = aiResponse + fallbackText
+          aiResponse = aiResponse // ❌ DISABLED fallback text append - AI handles all formatting now
           }
         }
         
@@ -1916,9 +2054,15 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
     // We still show rating + review_count + link to Google Maps in business cards
     
     // 🗺️ ATLAS: Build mapPins array (includes ALL businesses for map display)
-    // ALWAYS include ALL tiers so Atlas CTA shows whenever businesses are discussed
+    // CRITICAL: Only build mapPins if we're actually showing businesses (carousel OR text mentions)
+    // Don't show Atlas CTA for conversational responses like "thanks" that have no business context
     const mapPins: ChatResponse['mapPins'] = []
     const addedIds = new Set<string>()
+    
+    // Only populate mapPins if we have business results to show
+    const shouldBuildMapPins = (businessCarousel && businessCarousel.length > 0) || 
+                               (topMatchesText && topMatchesText.length > 0) ||
+                               (fallbackBusinesses && fallbackBusinesses.length > 0)
     
     // Determine if this is browse mode for reason tagging
     const isBrowseModeForReasons = !detectedIntent.hasIntent
@@ -1941,10 +2085,11 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       ...(tier3Businesses || [])
     ]
     
-    // Add ALL Tier 1 businesses (paid/trial) - whether carousel is shown or not
-    if (tier1Businesses && tier1Businesses.length > 0) {
-      tier1Businesses.forEach((b: any) => {
-        if (b.latitude && b.longitude && !addedIds.has(b.id)) {
+    if (shouldBuildMapPins) {
+      // Add ALL Tier 1 businesses (paid/trial) - whether carousel is shown or not
+      if (tier1Businesses && tier1Businesses.length > 0) {
+        tier1Businesses.forEach((b: any) => {
+          if (b.latitude && b.longitude && !addedIds.has(b.id)) {
           mapPins.push({
             id: b.id,
             business_name: b.business_name,
@@ -2034,10 +2179,17 @@ ${cityContext ? `\nCITY INFO:\n${cityContext}` : ''}`
       })
     }
     
+    } // End of shouldBuildMapPins
+    
     const paidCount = mapPins.filter(p => p.business_tier === 'paid').length
     const claimedFreeCount = mapPins.filter(p => p.business_tier === 'claimed_free').length
     const unclaimedCount = mapPins.filter(p => p.business_tier === 'unclaimed').length
-    console.log(`🗺️ ATLAS MAP PINS: ${mapPins.length} total (${paidCount} paid, ${claimedFreeCount} claimed-free, ${unclaimedCount} unclaimed)`)
+    
+    if (shouldBuildMapPins) {
+      console.log(`🗺️ ATLAS MAP PINS: ${mapPins.length} total (${paidCount} paid, ${claimedFreeCount} claimed-free, ${unclaimedCount} unclaimed)`)
+    } else {
+      console.log(`🗺️ ATLAS MAP PINS: Skipped (no business results to show)`)
+    }
     
     return {
       success: true,

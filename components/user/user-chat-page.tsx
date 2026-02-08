@@ -201,8 +201,9 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     }
   }, [locationStatus, userLocation, pendingNearMeQuery])
   
-  // Session storage key for chat memory
+  // Session storage keys for chat memory
   const chatSessionKey = `qwikker-chat-session-${currentUser?.wallet_pass_id || 'guest'}`
+  const chatStreamCountKey = `qwikker-chat-stream-count-${currentUser?.wallet_pass_id || 'guest'}`
 
   // ✅ SMART SCROLL: Scroll when NEW messages arrive, but not during streaming
   const scrollToBottom = () => {
@@ -220,6 +221,8 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     try {
       // Try to load existing session
       const savedMessages = sessionStorage.getItem(chatSessionKey)
+      const savedStreamCount = sessionStorage.getItem(chatStreamCountKey)
+      
       if (savedMessages) {
         const parsedMessages = JSON.parse(savedMessages)
         // Only restore if messages are from today (session-based, not persistent)
@@ -230,8 +233,11 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         if (messageDate === today && parsedMessages.length > 0) {
           console.log('🔄 Restoring chat session with', parsedMessages.length, 'messages')
           setMessages(parsedMessages)
-          // Track initial count to prevent re-streaming old messages
-          initialMessageCountRef.current = parsedMessages.length
+          
+          // Restore the stream count from session storage (all these messages have been streamed)
+          const streamCount = savedStreamCount ? parseInt(savedStreamCount, 10) : parsedMessages.length
+          initialMessageCountRef.current = streamCount
+          console.log('📊 Restored stream count:', streamCount, '(preventing re-stream)')
           return
         }
       }
@@ -274,18 +280,23 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     setMessages([welcomeMessage])
     // Track initial count (welcome message = 1)
     initialMessageCountRef.current = 1
-  }, [currentUser, chatSessionKey])
+    // Save stream count to session storage
+    sessionStorage.setItem(chatStreamCountKey, '1')
+  }, [currentUser, chatSessionKey, chatStreamCountKey])
 
   // Save messages to session storage whenever messages change
   useEffect(() => {
     if (messages.length > 0) {
       try {
         sessionStorage.setItem(chatSessionKey, JSON.stringify(messages))
+        // Save the current message count as the stream count
+        // This ensures that when we reload, we know how many messages have already been streamed
+        sessionStorage.setItem(chatStreamCountKey, messages.length.toString())
       } catch (error) {
         console.log('💾 Could not save chat session:', error)
       }
     }
-  }, [messages, chatSessionKey])
+  }, [messages, chatSessionKey, chatStreamCountKey])
 
   // Handle pre-filled message from URL parameter
   useEffect(() => {
@@ -713,6 +724,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   const handleClearChat = () => {
     try {
       sessionStorage.removeItem(chatSessionKey)
+      sessionStorage.removeItem(chatStreamCountKey)
       // Reinitialize with welcome message
       const userName = currentUser?.name?.split(' ')[0] || 'Explorer'
       const welcomeMessage: ChatMessage = {
@@ -759,63 +771,36 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
             initialQuery={atlasInitialQuery}
             onInitialQueryConsumed={() => setAtlasInitialQuery(null)}
             businesses={(() => {
-              // ✅ Pass last AI message's mapPins to Atlas (includes paid + unclaimed)
+              // ✅ Pass carousel businesses to Atlas (what user sees in chat)
+              // NOT mapPins (which includes all tiers, causing 103-stop tours!)
               const lastAIMessage = messages.filter(m => m.type === 'ai').slice(-1)[0]
-              if (!lastAIMessage?.mapPins) return undefined
               
-              // ✅ FILTER: Only show businesses relevant to the query
-              const queryCategories = lastAIMessage.queryCategories || []
-              const queryKeywords = lastAIMessage.queryKeywords || []
-              const hasQueryContext = queryCategories.length > 0 || queryKeywords.length > 0
+              // Prefer businessCarousel (what user sees), fallback to mapPins for older messages
+              const businessesToShow = lastAIMessage?.businessCarousel || lastAIMessage?.mapPins
               
-              let filteredPins = lastAIMessage.mapPins
+              if (!businessesToShow || businessesToShow.length === 0) return undefined
               
-              // If we have query context, filter businesses to only relevant ones
-              if (hasQueryContext) {
-                filteredPins = lastAIMessage.mapPins.filter(pin => {
-                  const category = (pin.display_category || '').toLowerCase()
-                  const name = pin.business_name.toLowerCase()
-                  
-                  // Check if business matches any query category or keyword
-                  const matchesCategory = queryCategories.some(cat => 
-                    category.includes(cat.toLowerCase()) || name.includes(cat.toLowerCase())
-                  )
-                  const matchesKeyword = queryKeywords.some(kw => 
-                    category.includes(kw.toLowerCase()) || name.includes(kw.toLowerCase())
-                  )
-                  
-                  return matchesCategory || matchesKeyword
-                })
-                
-                console.log(`🗺️ ATLAS FILTER: ${filteredPins.length}/${lastAIMessage.mapPins.length} businesses match query context`, {
-                  queryCategories,
-                  queryKeywords,
-                  totalPins: lastAIMessage.mapPins.length,
-                  filteredPins: filteredPins.length
-                })
-              }
+              console.log(`🗺️ ATLAS BUSINESSES: Showing ${businessesToShow.length} businesses from ${lastAIMessage?.businessCarousel ? 'carousel' : 'mapPins'}`)
               
               // Map to Atlas Business format (ensure required fields are present)
-              return filteredPins.map(pin => ({
+              return businessesToShow.map((pin: any) => ({
                 id: pin.id,
                 business_name: pin.business_name,
                 latitude: pin.latitude,
                 longitude: pin.longitude,
-                rating: pin.rating || 0, // ✅ Required by Atlas Business interface
-                review_count: pin.review_count || 0, // ✅ Required by Atlas Business interface
-                business_tagline: undefined,
+                rating: pin.rating || 0,
+                review_count: pin.review_count || 0,
+                business_tagline: pin.business_tagline,
                 display_category: pin.display_category,
-                business_address: undefined,
+                business_address: pin.business_address,
                 google_place_id: pin.google_place_id,
                 website_url: pin.website_url,
                 phone: pin.phone,
-                // Add metadata for Atlas to color pins differently
                 isPaid: pin.business_tier === 'paid',
                 isUnclaimed: pin.business_tier === 'unclaimed',
-                // ✅ CRITICAL: Include reason tags for explainability!
                 reason: pin.reason,
                 reasonMeta: pin.reasonMeta
-              }))
+              })).filter((b: any) => b.latitude && b.longitude) // Only businesses with valid coords
             })()}
           />
         </div>
@@ -932,7 +917,6 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                     >
                       <StreamingText 
                         htmlContent={message.processedContent}
-                        speed={50}
                         skipStreaming={skipStreaming}
                         onUpdate={() => {
                           // Scroll as streaming happens to keep text visible

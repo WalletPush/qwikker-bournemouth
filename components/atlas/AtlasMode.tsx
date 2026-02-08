@@ -788,7 +788,7 @@ export function AtlasMode({
       zoom: 16,
       pitch: 60,
       bearing: 0,
-      duration: 2000,
+      duration: 3000, // Slowed down from 2000ms to 3000ms for more dramatic effect
       essential: true,
       curve: 1.42 // More curved trajectory
     })
@@ -864,33 +864,81 @@ export function AtlasMode({
       setHudVisible(true)
     }
     
-    // Fly to first business
-    flyToBusiness(tourBusinesses[0])
-    updateActiveBusinessMarker(tourBusinesses[0])
-    
-    // After intro delay, show first business info (desktop only)
-    if (!isMobile) {
-      setTimeout(() => {
-        const firstBusiness = tourBusinesses[0]
-        const reviewCount = firstBusiness.review_count || 0
-        const firstStopMessage = `Stop 1 of ${tourBusinesses.length} • Rated ${firstBusiness.rating}★ by ${reviewCount} ${reviewCount === 1 ? 'person' : 'people'} on Google`
-        setHudSummary(firstStopMessage)
-      }, 1500) // Show intro for 1.5s, then first stop info
+    // ✨ STEP 1: If user location exists, show it briefly before flying to first business
+    if (userLocation && map.current) {
+      console.log('🎬 Starting tour from user location:', userLocation)
       
-      // Start timer for second business
-      if (tourBusinesses.length > 1) {
-        tourTimerRef.current = setTimeout(() => {
-          advanceTour(1) // Move to index 1 (second business)
-        }, 4500) // 1.5s intro + 3s for first business = 4.5s total
-      } else {
-        // Single business tour - end after showing its info
+      // Center on user location first
+      map.current.flyTo({
+        center: [userLocation.longitude, userLocation.latitude],
+        zoom: 15,
+        pitch: 0,
+        bearing: 0,
+        duration: 1000,
+        essential: true
+      })
+      map.current.triggerRepaint()
+      
+      // ✨ STEP 2: After 1.5s, fly to first business
+      setTimeout(() => {
+        flyToBusiness(tourBusinesses[0])
+        updateActiveBusinessMarker(tourBusinesses[0])
+        
+        // After intro delay, show first business info (desktop only)
+        if (!isMobile) {
+          setTimeout(() => {
+            const firstBusiness = tourBusinesses[0]
+            const reviewCount = firstBusiness.review_count || 0
+            const firstStopMessage = `Stop 1 of ${tourBusinesses.length} • Rated ${firstBusiness.rating}★ by ${reviewCount} ${reviewCount === 1 ? 'person' : 'people'} on Google`
+            setHudSummary(firstStopMessage)
+          }, 3500) // Wait for slower fly animation (3s) + 500ms
+          
+          // Start timer for second business
+          if (tourBusinesses.length > 1) {
+            tourTimerRef.current = setTimeout(() => {
+              advanceTour(1) // Move to index 1 (second business)
+            }, 6500) // 3s fly + 3.5s at first business
+          } else {
+            // Single business tour - end after showing its info
+            setTimeout(() => {
+              setTourActive(false)
+              setHudVisible(false)
+            }, 6500)
+          }
+        }
+      }, 1500) // Stay at user location for 1.5s
+      
+    } else {
+      // No user location - start directly at first business
+      console.log('🎬 No user location - starting tour directly at first business')
+      
+      flyToBusiness(tourBusinesses[0])
+      updateActiveBusinessMarker(tourBusinesses[0])
+      
+      // After intro delay, show first business info (desktop only)
+      if (!isMobile) {
         setTimeout(() => {
-          setTourActive(false)
-          setHudVisible(false)
-        }, 4500)
+          const firstBusiness = tourBusinesses[0]
+          const reviewCount = firstBusiness.review_count || 0
+          const firstStopMessage = `Stop 1 of ${tourBusinesses.length} • Rated ${firstBusiness.rating}★ by ${reviewCount} ${reviewCount === 1 ? 'person' : 'people'} on Google`
+          setHudSummary(firstStopMessage)
+        }, 1500) // Show intro for 1.5s, then first stop info
+        
+        // Start timer for second business
+        if (tourBusinesses.length > 1) {
+          tourTimerRef.current = setTimeout(() => {
+            advanceTour(1) // Move to index 1 (second business)
+          }, 4500) // 1.5s intro + 3s for first business = 4.5s total
+        } else {
+          // Single business tour - end after showing its info
+          setTimeout(() => {
+            setTourActive(false)
+            setHudVisible(false)
+          }, 4500)
+        }
       }
     }
-  }, [flyToBusiness, updateActiveBusinessMarker, isMobile])
+  }, [flyToBusiness, updateActiveBusinessMarker, isMobile, userLocation])
   
   // 🎬 TOUR MODE: Advance to specific index
   const advanceTour = useCallback((targetIndex: number) => {
@@ -937,10 +985,10 @@ export function AtlasMode({
       setTourActive(false)
       setHudVisible(false)
       
-      // ✨ Show "what now?" helper after 500ms
+      // ✨ Show "what now?" helper after 3 seconds (was 500ms - give user time to see last stop!)
       setTimeout(() => {
         setShowTourEndHelper(true)
-      }, 500)
+      }, 3000)
     }
   }, [flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage, isMobile])
   
