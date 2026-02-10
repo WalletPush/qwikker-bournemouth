@@ -21,6 +21,7 @@ import { isFreeTier, isAiEligibleTier, getTierPriority } from '@/lib/atlas/eligi
 import { getFranchiseApiKeys } from '@/lib/utils/franchise-api-keys'
 import { normalizeLocation, calculateDistance, isValidUUID } from '@/lib/utils/location'
 import { getBusinessVibeStats } from '@/lib/utils/vibes'
+import { getOpenStatusForToday } from '@/lib/utils/opening-hours'
 
 // DO NOT instantiate OpenAI globally - must be per-franchise to use their API key
 // Each franchise pays for their own AI usage via franchise_crm_configs.openai_api_key
@@ -140,6 +141,8 @@ interface ChatResponse {
   metadata?: {
     atlasAvailable?: boolean // Server-computed: true if 2+ relevant businesses have valid coords
     coordsCandidateCount?: number // Number of candidates with valid coordinates
+    currentBusinessId?: string | number | null // Current business ID for state-aware footer
+    currentBusinessSlug?: string | null // Current business slug for detail-mode fetch
   }
 }
 
@@ -213,6 +216,111 @@ function hasValidCoords(b: any): boolean {
   const lat = Number(b?.latitude)
   const lng = Number(b?.longitude)
   return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+}
+
+/**
+ * Detect if user is asking for more details about a specific business
+ * Used to trigger FACT DELIVERY MODE for claimed businesses
+ */
+function isDetailFollowup(userMessage: string, state?: ConversationState): boolean {
+  if (!state?.currentBusiness) return false
+  
+  const msg = userMessage.toLowerCase().trim()
+  
+  // Short affirmative responses
+  if (msg.length <= 10 && /^(yes|yeah|yep|yup|sure|okay|ok|go ahead|perfect|great)!?$/i.test(msg)) {
+    return true
+  }
+  
+  // Explicit detail requests
+  const detailPhrases = [
+    'tell me more',
+    'more details',
+    'more info',
+    'what about',
+    'show me',
+    'pull up',
+    'get me',
+    'details',
+    'hours',
+    'phone',
+    'address',
+    'location',
+    'directions',
+    'contact'
+  ]
+  
+  return detailPhrases.some(phrase => msg.includes(phrase))
+}
+
+/**
+ * Build deterministic fact block for claimed businesses
+ * NO vagueness, NO hedging - just verified owner data
+ */
+function buildOwnerFactBlock(business: any): string | null {
+  // Only for claimed businesses with structured data
+  const isClaimed = business.business_tier === 'paid' || 
+                    business.business_tier === 'spotlight' || 
+                    business.business_tier === 'featured'
+  
+  if (!isClaimed) return null
+  
+  const slug = getBusinessSlug(business)
+  const lines: string[] = []
+  
+  lines.push(`Here's what you need to know about **[${business.business_name}](/user/business/${slug})**:`)
+  lines.push('') // blank line
+  
+  // Rating (only if has reviews)
+  if (business.rating && business.review_count > 0) {
+    lines.push(`**Rating:** ${business.rating}★ from ${business.review_count} Google reviews`)
+  }
+  
+  // Category
+  if (business.display_category) {
+    lines.push(`**Category:** ${business.display_category}`)
+  }
+  
+  // Address
+  if (business.business_address) {
+    lines.push(`**Address:** ${business.business_address}`)
+  }
+  
+  // Phone
+  if (business.phone) {
+    lines.push(`**Phone:** ${business.phone}`)
+  }
+  
+  // Website
+  if (business.website_url) {
+    lines.push(`**Website:** ${business.website_url}`)
+  }
+  
+  // Hours (structured if available, fallback to text)
+  const hours = business.business_hours_structured || business.business_hours
+  if (hours) {
+    if (typeof hours === 'object' && !Array.isArray(hours)) {
+      // Structured hours object
+      lines.push(`**Opening Hours:**`)
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+      days.forEach(day => {
+        const dayData = hours[day]
+        if (dayData) {
+          const dayName = day.charAt(0).toUpperCase() + day.slice(1)
+          if (dayData.closed) {
+            lines.push(`  ${dayName}: Closed`)
+          } else if (dayData.open && dayData.close) {
+            lines.push(`  ${dayName}: ${dayData.open} - ${dayData.close}`)
+          }
+        }
+      })
+    } else if (typeof hours === 'string') {
+      // Text hours
+      lines.push(`**Opening Hours:** ${hours}`)
+    }
+  }
+  
+  return lines.length > 2 ? lines.join('\n') : null
 }
 
 /**
@@ -314,6 +422,41 @@ HARD RULES (DO NOT BREAK):
 - KEEP IT TIGHT: 1–2 sentences per business max (rating + ONE factual detail from AVAILABLE BUSINESSES only).
 - NO BULLET LISTS: Do not use bullets, numbers, or one-line-per-business lists for business results. Use full paragraphs with a blank line between businesses.
 - EVIDENCE BOUNDARY: You may ONLY describe menu items, offers, hours, amenities, vibe/atmosphere, "known for", "specializes in", etc. if that exact info exists in AVAILABLE BUSINESSES / KB / menu_preview / offers. If not present, do NOT infer from category/name or general knowledge. In zero-data mode: name+link, category, rating+review_count, distance only.
+- 🍴 MENU ITEM QUERIES (HIGHEST PRIORITY):
+  When user asks about a SPECIFIC food/drink item (wings, cocktails, burger, ribs, pizza, cider, steak, pasta, etc):
+  ✅ EXTRACT the exact item from KB content with name + price
+  ✅ CITE it directly: "They have X (£Y)" or "Menu includes: X (£Y), Z (£W)"
+  ✅ This OVERRIDES "keep it tight" - show 2-3 specific items with prices if KB has them
+  ✅ If multiple matching items exist, list them with prices
+  ❌ DO NOT use generic descriptions like "specializes in" or "known for" when KB has specific items
+  
+  EXAMPLES (what user will see):
+  Query: "anywhere with wings?"
+  BAD:  "David's Grill Shack — Specializes in grilled meats and smoky barbecue classics."
+  GOOD: "David's Grill Shack — They have BBQ Chicken Wings (6 pieces, £6.95)."
+  
+  Query: "anywhere with cider?"
+  BAD:  "Ember & Oak — They serve a variety of beverages."
+  GOOD: "Ember & Oak — Ciders: Thatchers Gold (£5.50), Rekorderlig Strawberry-Lime (£5.80)."
+  
+  Query: "cocktails?"
+  BAD:  "Known for crafted cocktails."
+  GOOD: "Cocktails include: Smoky Old Fashioned (£9.50), Grilled Pineapple Mojito (£8.50), David's Spicy Margarita (£9.00)."
+
+- 📋 GENERAL MENU QUERIES (ALSO HIGH PRIORITY):
+  When user asks "what food/menu", "what do they serve", "what's on their menu", "tell me about their menu":
+  ✅ CHECK for "Featured Menu Items:" section in AVAILABLE BUSINESSES
+  ✅ If present: Extract and list 3-5 items with names and prices
+  ✅ Format: "They serve [item] (£X), [item] (£Y), and [item] (£Z)"
+  ✅ If "Featured Menu Items" section exists but you say "I don't have menu details", you FAILED
+  ❌ DO NOT say "I don't have menu details" when Featured Menu Items are listed
+  ❌ DO NOT give generic descriptions when actual items are available
+  
+  EXAMPLE:
+  Query: "what food do they serve?"
+  Business has: "Featured Menu Items: 1. Gyros Wrap - £8.50 ... 2. Souvlaki Box - £10.00"
+  BAD:  "I don't have the specific menu details for Triangle GYROSS"
+  GOOD: "Triangle GYROSS serves Gyros Wrap (£8.50), Souvlaki Box (£10.00), and more Greek street food classics."
 - SHOW ALL UPFRONT: If you have 2+ relevant matches, you MUST mention ALL of them in your FIRST answer. NEVER drip-feed results one-by-one.
 - "ANY MORE?" HANDLING: If the user asks "any more?" and you already showed all matches, say that's all you have. If you realize you missed any, immediately correct yourself and include the missing ones.
 - NO FALSE "I DON'T HAVE": Never say you don't have other relevant places if AVAILABLE BUSINESSES includes any. If unsure, be transparent: "Based on what I can see right now, I'm only seeing X…"
@@ -359,9 +502,11 @@ WHEN YOU HAVE RESULTS:
 EXAMPLE LIST FORMAT:
 Ooo nice choice — here are a few great spots!
 
-**[Example Place](/user/business/example-place)** — Rated 4.8★ from 127 Google reviews.
+**[Triangle GYROSS](/user/business/triangle-gyross)** — Greek restaurant · 5★ (83)
+Open now — closes 10pm
 
-**[Another Place](/user/business/another-place)** — Rated 4.7★ from 88 Google reviews.
+**[Ember & Oak Bistro](/user/business/ember-oak-bistro)** — Restaurant · 4.6★ (150)
+Closing soon — open until 9pm
 ${broadBlock}
 ${stateContext ? `CONVERSATION CONTEXT:\n${stateContext}\n` : ''}
 ${convoFocus}
@@ -438,6 +583,64 @@ export async function generateHybridAIResponse(
     // Initialize or use existing conversation state
     let state = conversationState || createInitialState()
     
+    // ✅ Initialize tenant-aware supabase client FIRST (prevents TDZ error)
+    // This must come before any DB queries (including state restoration)
+    const supabase = await createTenantAwareServerClient(city)
+    
+    // ✅ VERIFY: Tenant context is actually set (dev-only)
+    if (process.env.NODE_ENV !== 'production') {
+      const { data: currentCity, error } = await supabase.rpc('get_current_city')
+      console.log('🔒 [TENANT DEBUG] current city =', currentCity, error ? error.message : '')
+    }
+    
+    // 🧠 STEP 1: RESTORE CURRENT BUSINESS FROM HISTORY
+    // Parse conversation history to restore which business we're discussing
+    // This enables Fact Mode to activate on detail follow-ups
+    function extractLastBusinessFromHistory(history: any[]): string | null {
+      if (!history?.length) return null
+      
+      const linkRegex = /\*\*\[[^\]]+\]\(\/user\/business\/([a-z0-9-]+)\)\*\*/
+      
+      // Search backwards through history to find most recent business mention
+      for (let i = history.length - 1; i >= 0; i--) {
+        const msg = history[i]?.content || ''
+        const match = msg.match(linkRegex)
+        if (match) return match[1]
+      }
+      return null
+    }
+    
+    const lastSlug = extractLastBusinessFromHistory(conversationHistory)
+    
+    // 🐛 DEBUG: Log history parsing (dev-only)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`📜 [HISTORY DEBUG] conversationHistory length: ${conversationHistory?.length || 0}`)
+      if (conversationHistory && conversationHistory.length > 0) {
+        console.log(`📜 [HISTORY DEBUG] Last message:`, conversationHistory[conversationHistory.length - 1])
+      }
+      console.log(`📜 [HISTORY DEBUG] Extracted slug: ${lastSlug || 'none'}`)
+    }
+    
+    if (lastSlug && process.env.NODE_ENV !== 'production') {
+      console.log(`📜 [HISTORY DEBUG] Found app slug: ${lastSlug} (DB has no slug column - route.ts will resolve)`)
+    }
+    
+    // 🎯 EARLY DETAIL SHORT-CIRCUIT: Detect follow-up/detail queries about a specific business
+    // If user is asking about a business we already know about (from slug), skip global KB search
+    const lowerMessage = userMessage.toLowerCase()
+    const isFollowUpDetailQuery = /\b(what else|any more|anything else|what do they (sell|serve|have|offer)|what('?s| is) on (the |their )?menu|tell me (more|about)|their menu|their food|kids menu|dessert menu|drink menu|wine list)\b/i.test(lowerMessage)
+    const isAnaphoricQuery = /^(any more|anything else|what else|more|another|more places)[\?\!\.]*$/i.test(userMessage.trim())
+    
+    // Short-circuit: if we have a resolved business slug AND query is about that business
+    const shouldShortCircuitToDetail = (isFollowUpDetailQuery || isAnaphoricQuery) && lastSlug
+    
+    if (shouldShortCircuitToDetail) {
+      console.log(`🎯 [DETAIL SHORT-CIRCUIT] Follow-up query about ${lastSlug} - skipping global KB search`)
+    } else if (isAnaphoricQuery) {
+      // Anaphoric but no clear target - we'll handle this below
+      console.log(`🔍 [ANAPHORA DETECTED] "${userMessage}" needs context resolution`)
+    }
+    
     // 🎯 STEP 1: Classify query complexity
     const classification = classifyQueryIntent(userMessage, conversationHistory)
     const modelToUse = classification.complexity === 'complex' ? 'gpt-4o' : 'gpt-4o-mini'
@@ -447,7 +650,6 @@ export async function generateHybridAIResponse(
     // 🔒 KB AUTHORITY GATE: Distinguish HARD queries from MIXED queries
     // HARD queries (pure offers/events) → DB-only, no KB
     // MIXED queries (discovery + offers) → KB for discovery, DB for filtering
-    const lowerMessage = userMessage.toLowerCase()
     
     // Detect if offers/events are mentioned
     const isOfferQuery = /\b(offers?|deals?|discounts?|promos?|specials?)\b/i.test(lowerMessage) ||
@@ -483,12 +685,13 @@ export async function generateHybridAIResponse(
     
     // 🎯 STEP 2: Search knowledge base with context-aware query expansion
     // ❗ SKIP ENTIRELY if intent requires DB authority (offers, events)
+    // ❗ ALSO SKIP if this is a detail follow-up about a known business
     const searchLimit = userMessage.toLowerCase().includes('list all') ? 30 : 12
     
     let businessResults = { success: true, results: [] as any[] }
     let cityResults = { success: true, results: [] as any[] }
     
-    if (!isKbDisabled) {
+    if (!isKbDisabled && !shouldShortCircuitToDetail) {
       // If user uses pronouns (their, they, it), inject current business name into search
       let enhancedQuery = userMessage
       const usesPronoun = /\b(their|they|them|it|its)\b/i.test(userMessage.toLowerCase())
@@ -518,13 +721,7 @@ export async function generateHybridAIResponse(
     }
     
     // 🎯 Fetch offer counts for businesses to enrich context (DEDUPED)
-    const supabase = await createTenantAwareServerClient(city)
-    
-    // ✅ VERIFY: Tenant context is actually set (dev-only)
-    if (process.env.NODE_ENV !== 'production') {
-      const { data: currentCity, error } = await supabase.rpc('get_current_city')
-      console.log('🔒 [TENANT DEBUG] current city =', currentCity, error ? error.message : '')
-    }
+    // (supabase client already initialized at top of function)
     
     // 🔧 CRITICAL FIX: Query ALL THREE TIERS from their respective views
     // Tier 1: business_profiles_chat_eligible (paid/trial)
@@ -543,11 +740,45 @@ export async function generateHybridAIResponse(
     
     console.log(`💼 Queried from views: T1=${tier1Businesses.length}, T2=${tier2Businesses.length}, T3=${tier3Businesses.length}`)
     
+    // 🎯 DETAIL SHORT-CIRCUIT: If this is a follow-up about a specific business,
+    // filter candidates to only that business (skip global search)
+    let tier1FilteredForDetail = tier1Businesses
+    let tier2FilteredForDetail = tier2Businesses
+    let tier3FilteredForDetail = tier3Businesses
+    
+    if (shouldShortCircuitToDetail && lastSlug) {
+      // Convert slug to business name pattern (e.g., "triangle-gyross" -> "triangle gyross")
+      const namePattern = lastSlug.split('-').join(' ')
+      const allBusinesses = [...tier1Businesses, ...tier2Businesses, ...tier3Businesses]
+      
+      // Find business matching the slug pattern
+      const targetBusiness = allBusinesses.find(b => 
+        b.business_name.toLowerCase().includes(namePattern.toLowerCase()) ||
+        namePattern.toLowerCase().includes(b.business_name.toLowerCase().replace(/[^\w\s]/g, ''))
+      )
+      
+      if (targetBusiness) {
+        // Filter all tiers to only this business
+        tier1FilteredForDetail = tier1Businesses.filter(b => b.id === targetBusiness.id)
+        tier2FilteredForDetail = tier2Businesses.filter(b => b.id === targetBusiness.id)
+        tier3FilteredForDetail = tier3Businesses.filter(b => b.id === targetBusiness.id)
+        
+        console.log(`🎯 [DETAIL FILTER] Locked to: ${targetBusiness.business_name} (id: ${targetBusiness.id})`)
+      } else {
+        console.log(`⚠️ [DETAIL FILTER] Could not resolve slug "${lastSlug}" to business - continuing with all candidates`)
+      }
+    }
+    
+    // Use filtered tiers for the rest of the flow
+    const tier1 = tier1FilteredForDetail
+    const tier2 = tier2FilteredForDetail
+    const tier3 = tier3FilteredForDetail
+    
     // Build vocabulary from ALL tiers (dynamic, not hardcoded)
     const allInventoryBusinesses = [
-      ...(tier1Businesses || []),
-      ...(tier2Businesses || []),
-      ...(tier3Businesses || [])
+      ...(tier1 || []),
+      ...(tier2 || []),
+      ...(tier3 || [])
     ]
     const vocabulary = buildInventoryVocabulary(allInventoryBusinesses)
     
@@ -788,62 +1019,61 @@ export async function generateHybridAIResponse(
       console.log(`🔍 KB similarity scores:`, Array.from(kbScoreById.entries()).map(([id, score]) => `${id.substring(0, 8)}: ${score.toFixed(2)}`).join(', '))
     }
     
-    // Step 2: Score ALL businesses for relevance (if intent detected)
-    if (detectedIntent.hasIntent) {
-      console.log(`🎯 Scoring all businesses for intent: "${intentTerms}"`)
-      
-      // Score Tier 1
-      tier1Businesses.forEach(b => {
-        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
-        businessRelevanceScores.set(b.id, score)
-      })
-      
-      // Score Tier 2
-      tier2Businesses.forEach(b => {
-        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
-        businessRelevanceScores.set(b.id, score)
-      })
-      
-      // Score Tier 3
-      tier3Businesses.forEach(b => {
-        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
-        businessRelevanceScores.set(b.id, score)
-      })
-      
-      console.log(`🎯 Scored ${businessRelevanceScores.size} businesses (${Array.from(businessRelevanceScores.values()).filter(s => s > 0).length} relevant)`)
-      
-      if (process.env.NODE_ENV === 'development') {
-        const top = Array.from(businessRelevanceScores.entries())
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 10)
-          .map(([id, score]) => {
-            const b =
-              tier1Businesses.find(x => x.id === id) ||
-              tier2Businesses.find(x => x.id === id) ||
-              tier3Businesses.find(x => x.id === id)
-            return { business: b?.business_name || id, score }
-          })
-        console.log('[RELEVANCE] top10:', top)
-      }
+    // Step 2: Score ALL businesses for relevance
+    // Semantic search may have found evidence even if intent detector found nothing
+    console.log(`🎯 Scoring all businesses for intent: "${intentTerms || 'semantic-only'}"`)
+    
+    // Score Tier 1
+    tier1.forEach(b => {
+      const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
+      businessRelevanceScores.set(b.id, score)
+    })
+    
+    // Score Tier 2
+    tier2.forEach(b => {
+      const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
+      businessRelevanceScores.set(b.id, score)
+    })
+    
+    // Score Tier 3
+    tier3.forEach(b => {
+      const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
+      businessRelevanceScores.set(b.id, score)
+    })
+    
+    console.log(`🎯 Scored ${businessRelevanceScores.size} businesses (${Array.from(businessRelevanceScores.values()).filter(s => s > 0).length} relevant)`)
+    
+    if (process.env.NODE_ENV === 'development') {
+      const top = Array.from(businessRelevanceScores.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([id, score]) => {
+          const b =
+            tier1.find(x => x.id === id) ||
+            tier2.find(x => x.id === id) ||
+            tier3.find(x => x.id === id)
+          return { business: b?.business_name || id, score }
+        })
+      console.log('[RELEVANCE] top10:', top)
     }
     
     // Step 3: Merge all three tiers with tier priority AND relevance scores
     const allBusinessesForContext = [
-      ...tier1Businesses.map(b => ({ 
+      ...tier1.map(b => ({ 
         ...b, 
         tierSource: 'tier1', 
         tierPriority: 1, 
         tierLabel: b.effective_tier || 'paid',
         relevanceScore: businessRelevanceScores.get(b.id) || 0 
       })),
-      ...tier2Businesses.map(b => ({ 
+      ...tier2.map(b => ({ 
         ...b, 
         tierSource: 'tier2', 
         tierPriority: 2, 
         tierLabel: 'claimed_free',
         relevanceScore: businessRelevanceScores.get(b.id) || 0
       })),
-      ...tier3Businesses.map(b => ({ 
+      ...tier3.map(b => ({ 
         ...b, 
         tierSource: 'tier3', 
         tierPriority: 3, 
@@ -857,25 +1087,24 @@ export async function generateHybridAIResponse(
     // If user asks for Greek and we only have 1, show that 1 Greek place, NOT random cafes!
     let sortedForContext = [...allBusinessesForContext]
     
-    if (detectedIntent.hasIntent) {
-      // Filter to relevant businesses only
-      const relevantBusinesses = allBusinessesForContext.filter(b => 
-        (b.relevanceScore || 0) > 0
-      )
-      
+    // Always filter to relevant businesses when we have scores (semantic or intent-based)
+    const relevantBusinesses = allBusinessesForContext.filter(b => 
+      (b.relevanceScore || 0) > 0
+    )
+    
+    if (relevantBusinesses.length > 0) {
+      // We found relevant businesses - show ONLY those
       console.log(`🎯 Intent detected: ${relevantBusinesses.length} relevant of ${allBusinessesForContext.length} businesses`)
-      
-      // 🚨 NEW RULE: If we have ANY relevant results, use ONLY those
-      // If we have ZERO relevant results, tell the truth (don't fake it with random places)
-      if (relevantBusinesses.length === 0) {
-        console.log(`⚠️ Zero relevant results. AI will explain none found.`)
-        // Don't fall back - let AI say "I don't have any X places" honestly
-        sortedForContext = []
-      } else {
-        console.log(`✅ Using ${relevantBusinesses.length} relevant businesses (no fallback)`)
-        // Use relevant businesses only, even if it's just 1
-        sortedForContext = relevantBusinesses
-      }
+      console.log(`✅ Using ${relevantBusinesses.length} relevant businesses (no fallback)`)
+      sortedForContext = relevantBusinesses
+    } else if (detectedIntent.hasIntent) {
+      // User asked for something specific but we found nothing
+      console.log(`⚠️ Zero relevant results for specific query. AI will explain none found.`)
+      sortedForContext = []
+    } else {
+      // Browse mode / no intent - show all
+      console.log(`📊 No specific intent - showing all ${allBusinessesForContext.length} businesses`)
+      sortedForContext = allBusinessesForContext
     }
     
     // Sort: Different strategies for browse vs intent mode
@@ -931,7 +1160,7 @@ export async function generateHybridAIResponse(
       }
     })
     
-    console.log(`🎯 Building AI context from ${sortedForContext.length} businesses (T1=${tier1Businesses.length}, T2=${tier2Businesses.length}, T3=${tier3Businesses.length})`)
+    console.log(`🎯 Building AI context from ${sortedForContext.length} businesses (T1=${tier1.length}, T2=${tier2.length}, T3=${tier3.length})`)
     
     // 🚨 SANITY FILTER: Remove obviously wrong categories (prevents "barbershop for cocktails")
     // This is a safety net when intent detection fails but context suggests specific type
@@ -1005,9 +1234,23 @@ export async function generateHybridAIResponse(
             console.log(`⚠️ No featured menu items for ${business.business_name}`)
           }
           
-          return `**${business.business_name}** [TIER: ${business.tierLabel}]
-Rating: ${business.rating}★ from ${business.review_count || 0} Google reviews
-Category: ${business.display_category || 'Not specified'}${richContent}${offerText}`
+          // 📅 Add opening hours if available (for initial recommendation)
+          let hoursLine = ''
+          if (business.business_hours_structured) {
+            const openStatus = getOpenStatusForToday(business.business_hours_structured, new Date())
+            if (openStatus.hasHours && openStatus.conversational) {
+              hoursLine = `\nHours: ${openStatus.conversational}`
+            }
+          }
+          
+          // Build rating line (only show if has real reviews)
+          let ratingLine = ''
+          if (business.rating && business.rating > 0 && business.review_count && business.review_count > 0) {
+            ratingLine = `\nRating: ${business.rating}★ from ${business.review_count} Google reviews`
+          }
+          
+          return `**${business.business_name}** [TIER: ${business.tierLabel}]${ratingLine}
+Category: ${business.display_category || 'Not specified'}${hoursLine}${richContent}${offerText}`
         }).join('\n\n')
       : 'No businesses available in this city yet.'
     
@@ -1023,10 +1266,17 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
     const stateContext = generateStateContext(state)
     
     // 🚨 CHECK: Is this a broad query that needs clarification?
+    // Don't treat as broad if we have strong semantic evidence (score >= 2)
+    const hasStrongSemanticEvidence = Array.from(businessRelevanceScores.values()).some(score => score >= 2)
     const isBroadQuery =
       conversationHistory.length <= 2 &&
       !detectedIntent.hasIntent &&
+      !hasStrongSemanticEvidence &&
       /\b(restaurant|restaurants|eat|food|place|places|where should i|recommend|suggest|dinner|lunch|breakfast)\b/i.test(userMessage)
+    
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`🎯 [BROAD QUERY CHECK] hasIntent=${detectedIntent.hasIntent}, hasStrongEvidence=${hasStrongSemanticEvidence}, isBroadQuery=${isBroadQuery}`)
+    }
     
     const cityDisplayName = city.charAt(0).toUpperCase() + city.slice(1)
     
@@ -1064,21 +1314,87 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
       { role: 'user', content: userMessage }
     ]
     
-    // 🎯 STEP 6: Call appropriate model
-    console.log(`\n🤖 CALLING ${modelToUse.toUpperCase()} for query: "${userMessage}"`)
-    console.log(`📊 Conversation depth: ${conversationHistory.length} messages`)
-    console.log(`🎯 State: ${stateContext}`)
+    // 🎯 FACT DELIVERY MODE: Override for detail requests about claimed businesses
+    // Detect if user is asking for details and we have a current business in context
+    const isDetailRequest = isDetailFollowup(userMessage, state)
+    let aiResponse = ''
     
-    const completion = await openai.chat.completions.create({
-      model: modelToUse,
-      messages,
-      temperature: 0.8,
-      max_tokens: 500,
-      presence_penalty: 0.6,
-      frequency_penalty: 0.3
-    })
+    if (isDetailRequest && state?.currentBusiness) {
+      console.log(`📋 [FACT MODE] Detail request detected for business: ${state.currentBusiness.name}`)
+      
+      // Fetch full business data from DB to get all structured fields
+      const { data: fullBusiness } = await supabase
+        .from('business_profiles')
+        .select('*')
+        .eq('id', state.currentBusiness.id)
+        .single()
+      
+      if (fullBusiness) {
+        const factBlock = buildOwnerFactBlock(fullBusiness)
+        
+        if (factBlock) {
+          console.log(`📋 [FACT MODE] Generating deterministic response for ${fullBusiness.business_name}`)
+          
+          // Use GPT just to wrap facts warmly, but with strict instruction
+          const factModePrompt = `You are presenting verified business information to a user.
 
-    let aiResponse = completion.choices[0]?.message?.content || ''
+The data below is owner-verified and MUST be stated exactly as given.
+
+RULES:
+- Present ALL facts clearly
+- Do NOT say "typically", "usually", "might be", "check their site", "confirm"
+- Do NOT add uncertainty or hedging
+- Keep it warm and helpful, but factual
+- After facts, offer to help with directions or booking
+
+VERIFIED DATA:
+${factBlock}
+
+User asked: "${userMessage}"
+
+Present this information clearly and offer further help.`
+
+          const factCompletion = await openai.chat.completions.create({
+            model: modelToUse,
+            messages: [
+              { role: 'system', content: factModePrompt },
+              { role: 'user', content: userMessage }
+            ],
+            temperature: 0.3, // Lower temp for fact delivery
+            max_tokens: 400
+          })
+          
+          aiResponse = factCompletion.choices[0]?.message?.content || factBlock
+          
+          // GUARDRAIL: If model still hedges, use raw fact block
+          const hasHedging = /typically|usually|might|probably|often|generally|tends to|check (their|the) site|confirm/i.test(aiResponse)
+          if (hasHedging) {
+            console.warn(`⚠️  [FACT MODE] Detected hedging in response - using raw fact block`)
+            aiResponse = factBlock
+          }
+          
+          console.log(`✅ [FACT MODE] Generated fact-based response (${aiResponse.length} chars)`)
+        }
+      }
+    }
+    
+    // 🎯 STEP 6: Call appropriate model (skip if fact mode already generated response)
+    if (!aiResponse) {
+      console.log(`\n🤖 CALLING ${modelToUse.toUpperCase()} for query: "${userMessage}"`)
+      console.log(`📊 Conversation depth: ${conversationHistory.length} messages`)
+      console.log(`🎯 State: ${stateContext}`)
+      
+      const completion = await openai.chat.completions.create({
+        model: modelToUse,
+        messages,
+        temperature: 0.8,
+        max_tokens: 500,
+        presence_penalty: 0.6,
+        frequency_penalty: 0.3
+      })
+
+      aiResponse = completion.choices[0]?.message?.content || ''
+    }
     
     // --- DEDUPE: Parse AI response for business links to prevent duplicates in Tier2/Tier3 ---
     // NOTE: These are RAW slugs - not yet validated against actual business inventory
@@ -1263,7 +1579,7 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
     
     // 🎯 ARCHITECTURAL FIX: Merge KB results with direct DB query
     // This ensures businesses without KB content still appear
-    const hasAnyBusinesses = tier1Businesses.length > 0 || tier2Businesses.length > 0 || tier3Businesses.length > 0
+    const hasAnyBusinesses = tier1.length > 0 || tier2.length > 0 || tier3.length > 0
     if (businessResults.success || hasAnyBusinesses) {
       // STEP 1: Build map of all businesses (KB + direct query)
       const businessById = new Map<string, any>()
@@ -1282,25 +1598,25 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
       }
       
       // Add ALL businesses from the three tiers
-      for (const b of tier1Businesses) {
+      for (const b of tier1) {
         if (!businessById.has(b.id)) {
           businessById.set(b.id, { ...b, tierSource: 'tier1' })
         }
       }
-      for (const b of tier2Businesses) {
+      for (const b of tier2) {
         if (!businessById.has(b.id)) {
           businessById.set(b.id, { ...b, tierSource: 'tier2' })
         }
       }
-      for (const b of tier3Businesses) {
+      for (const b of tier3) {
         if (!businessById.has(b.id)) {
           businessById.set(b.id, { ...b, tierSource: 'tier3' })
         }
       }
       
-      console.log(`💼 Tier separation: T1=${tier1Businesses.length}, T2=${tier2Businesses.length}, T3=${tier3Businesses.length}`)
+      console.log(`💼 Tier separation: T1=${tier1.length}, T2=${tier2.length}, T3=${tier3.length}`)
       
-      const businesses = tier1Businesses // ✅ For backward compat, "businesses" = Tier 1
+      const businesses = tier1 // ✅ For backward compat, "businesses" = Tier 1
       hasBusinessResults = businesses.length > 0
       
       console.log(`💼 Total businesses after merge: ${Array.from(businessById.values()).length} (${kbScoreById.size} had KB content)`)
@@ -1337,10 +1653,10 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
       
       console.log(`🎯 Browse mode: ${browseMode.mode}, Intent: ${detectedIntent.hasIntent ? detectedIntent.categories.concat(detectedIntent.keywords).join(', ') || 'detected but no terms' : 'none'}`)
       
-      // Query Tier 2: Claimed-Free businesses (already loaded from tier2Businesses)
+      // Query Tier 2: Claimed-Free businesses (already loaded from tier2)
       console.log('💼 Using Tier 2: Claimed-Free businesses (pre-loaded)')
       const MAX_TIER2_IN_TOP = 2
-      const liteBusinesses = tier2Businesses.slice(0, MAX_TIER2_IN_TOP)
+      const liteBusinesses = tier2.slice(0, MAX_TIER2_IN_TOP)
       
       console.log(`💼 Found ${liteBusinesses?.length || 0} Lite businesses`)
       
@@ -1372,7 +1688,7 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
           const tier3Limit = TARGET_RESULTS - combinedCount
           
           // Use pre-loaded Tier 3 businesses (sorted by rating)
-          fallbackBusinesses = tier3Businesses
+          fallbackBusinesses = tier3
             .sort((a, b) => {
               if (b.rating !== a.rating) return (b.rating || 0) - (a.rating || 0)
               if (b.review_count !== a.review_count) return (b.review_count || 0) - (a.review_count || 0)
@@ -1436,7 +1752,7 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
           console.log(`🎯 Tier 2: ${tier2WithScores.length} relevant claimed-free businesses`)
           
           // ✅ FIX: Score ALL Tier 3 businesses first, THEN filter by relevance
-          const tier3WithScores = (tier3Businesses || [])
+          const tier3WithScores = (tier3 || [])
             .map(b => ({
               ...b,
               tierPriority: 3,
@@ -1446,7 +1762,7 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
           
           // ✅ DEBUG: Log all Tier 3 scores for "indian" query
           if (detectedIntent.categories.includes('indian')) {
-            console.log(`🔍 DEBUG: Scoring ${tier3Businesses.length} Tier 3 businesses for "indian"`)
+            console.log(`🔍 DEBUG: Scoring ${tier3.length} Tier 3 businesses for "indian"`)
             const indianMatches = tier3WithScores.filter(b => b.relevanceScore > 0)
             console.log(`  Found ${indianMatches.length} relevant matches:`)
             indianMatches.slice(0, 5).forEach(b => {
@@ -1697,19 +2013,30 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
         if (detectedIntent.hasIntent && businessRelevanceScores.size > 0) {
           // 🚨 STRICT CAROUSEL FILTER: Only show businesses with score >= 3
           // This requires:
-          // - Category match (score 3+), OR
-          // - Name match (score 2+) + something else, OR
-          // - Strong KB semantic match (0.85+)
-          // 
-          // Prevents weak semantic matches (e.g., café matching bakery at 0.78)
-          const CAROUSEL_MIN_SCORE = 3
+          // 🎯 DYNAMIC carousel threshold based on top score:
+          // - If any business scored 3+ (perfect category match) → show 3+ only
+          // - Else if top score is 2 (semantic strong match) → show 2+ (wings, cocktails, etc.)
+          // - Else (weak/no matches) → no carousel
+          //
+          // This prevents filtering out valid semantic matches (score=2) when no category matches exist
+          const allScores = paidCarousel.map(b => businessRelevanceScores.get(b.id) || 0)
+          const topScore = Math.max(...allScores, 0)
+          
+          let CAROUSEL_MIN_SCORE: number
+          if (topScore >= 3) {
+            CAROUSEL_MIN_SCORE = 3 // Perfect category match - high bar
+          } else if (topScore >= 2) {
+            CAROUSEL_MIN_SCORE = 2 // Semantic match - accept strong KB evidence
+          } else {
+            CAROUSEL_MIN_SCORE = 999 // No relevant businesses - skip carousel
+          }
           
           const filtered = paidCarousel.filter(b => {
             const score = businessRelevanceScores.get(b.id) || 0
             if (score >= CAROUSEL_MIN_SCORE) {
               console.log(`  ✅ ${b.business_name}: score=${score}`)
             } else {
-              console.log(`  ❌ ${b.business_name}: score=${score} (FILTERED OUT - need ${CAROUSEL_MIN_SCORE}+)`)
+              console.log(`  ❌ ${b.business_name}: score=${score} (FILTERED OUT - need ${CAROUSEL_MIN_SCORE}+ [topScore=${topScore}])`)
             }
             return score >= CAROUSEL_MIN_SCORE
           })
@@ -1731,9 +2058,9 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
         // --- DEDUPE: Build slug -> ID lookup from all tier businesses ---
         const slugToId = new Map<string, string>()
         const allTierBusinesses = [
-          ...(tier1Businesses || []),
-          ...(tier2Businesses || []),
-          ...(tier3Businesses || [])
+          ...(tier1 || []),
+          ...(tier2 || []),
+          ...(tier3 || [])
         ]
         
         for (const b of allTierBusinesses) {
@@ -1802,24 +2129,28 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
           // Filter Tier 2 by relevance - STRICT GATE
           let filteredLiteBusinesses = liteBusinesses
           
-          // 🚨 STRICT FILTER: Only show if:
-          // 1. Browse mode (no intent) → allow all
-          // 2. Intent mode → MUST have relevance score >= 2 (strong match only)
-          if (detectedIntent.hasIntent && businessRelevanceScores.size > 0) {
-            // INTENT MODE: Strict filtering (score >= 2)
-            filteredLiteBusinesses = liteBusinesses.filter(b => {
+          // Tier 2 injection should NEVER depend on detectedIntent.hasIntent.
+          // It should depend on whether we have any relevance evidence for this query.
+          const hasAnyRelevant =
+            Array.from(businessRelevanceScores.values()).some((s) => (s || 0) > 0)
+
+          if (isBrowseQuery) {
+            // TRUE browse intent (e.g. "show me restaurants", "qwikker picks")
+            filteredLiteBusinesses = liteBusinesses
+            console.log(`🎯 Browse mode: showing all ${filteredLiteBusinesses.length} Tier 2 businesses`)
+          } else if (hasAnyRelevant) {
+            // SPECIFIC query mode: only inject Tier2 if it is also relevant
+            filteredLiteBusinesses = liteBusinesses.filter((b) => {
               const score = businessRelevanceScores.get(b.id) || 0
-              return score >= 2 // Changed from > 0 to >= 2 (only strong matches)
+              return score >= 1
             })
-            const intentLabel = detectedIntent.categories.concat(detectedIntent.keywords).join(', ') || 'detected intent'
-            console.log(`🎯 STRICT Tier 2 filter: ${filteredLiteBusinesses.length} of ${liteBusinesses.length} Lite businesses have score >= 2 for "${intentLabel}"`)
-          } else if (!detectedIntent.hasIntent) {
-            // BROWSE MODE: Allow all (user asked "show me anything")
-            console.log(`🎯 Browse mode: showing all ${liteBusinesses.length} Tier 2 businesses`)
+            console.log(
+              `🎯 Specific query filter: ${filteredLiteBusinesses.length} of ${liteBusinesses.length} Tier 2 businesses have score >= 1`
+            )
           } else {
-            // NO SCORES: Skip Tier 2
+            // No evidence found for a specific query — do NOT inject random Tier2
             filteredLiteBusinesses = []
-            console.log(`🎯 No relevance scores: skipping Tier 2`)
+            console.log(`🎯 No relevant businesses found for specific query: skipping Tier 2`)
           }
           
           // --- DEDUPE: Filter out businesses AI already mentioned ---
@@ -1923,21 +2254,26 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
             console.log(`🚨 Deduplicated Tier 3: ${filteredFallbackBusinesses.length} of ${fallbackBusinesses.length} (removed ${fallbackBusinesses.length - filteredFallbackBusinesses.length} duplicates)`)
           }
           
-          // STRICT FILTER: Same as Tier 2
-          if (detectedIntent.hasIntent && businessRelevanceScores.size > 0) {
-            // INTENT MODE: Strict filtering (score >= 2)
-            filteredFallbackBusinesses = filteredFallbackBusinesses.filter(b => {
-              const score = businessRelevanceScores.get(b.id) || 0
-              return score >= 2 // Changed from > 0 to >= 2 (only strong matches)
-            })
-            console.log(`🎯 STRICT Tier 3 filter: ${filteredFallbackBusinesses.length} fallback businesses have score >= 2`)
-          } else if (!detectedIntent.hasIntent) {
-            // BROWSE MODE: Allow all
+          // STRICT FILTER: Same as Tier 2 (use relevance evidence, not hasIntent)
+          const hasAnyRelevantTier3 =
+            Array.from(businessRelevanceScores.values()).some((s) => (s || 0) > 0)
+
+          if (isBrowseQuery) {
+            // TRUE browse intent (e.g. "show me restaurants", "qwikker picks")
             console.log(`🎯 Browse mode: showing ${filteredFallbackBusinesses.length} Tier 3 businesses`)
+          } else if (hasAnyRelevantTier3) {
+            // SPECIFIC query mode: only inject Tier3 if it is also relevant
+            filteredFallbackBusinesses = filteredFallbackBusinesses.filter((b) => {
+              const score = businessRelevanceScores.get(b.id) || 0
+              return score >= 1
+            })
+            console.log(
+              `🎯 Specific query filter: ${filteredFallbackBusinesses.length} Tier 3 businesses have score >= 1`
+            )
           } else {
-            // NO SCORES: Skip Tier 3
+            // No evidence found for a specific query — do NOT inject random Tier3
             filteredFallbackBusinesses = []
-            console.log(`🎯 No relevance scores: skipping Tier 3`)
+            console.log(`🎯 No relevant businesses found for specific query: skipping Tier 3`)
           }
           
           // Only show if we have relevant businesses
@@ -2084,9 +2420,9 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
     
     // ✅ Combine all businesses for relative ranking
     const allBusinessesForRanking = [
-      ...(tier1Businesses || []),
-      ...(tier2Businesses || []),
-      ...(tier3Businesses || [])
+      ...(tier1 || []),
+      ...(tier2 || []),
+      ...(tier3 || [])
     ]
     
     if (shouldBuildMapPins) {
@@ -2095,8 +2431,8 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
       const relevantBusinessesForAtlas = sortedForContext.slice(0, 25) // Cap at 25 for performance
       
       // Optimization: Build tier ID sets once for O(1) lookup (important for large cities)
-      const tier1Ids = new Set((tier1Businesses || []).map((b: any) => b.id))
-      const tier2Ids = new Set((tier2Businesses || []).map((b: any) => b.id))
+      const tier1Ids = new Set((tier1 || []).map((b: any) => b.id))
+      const tier2Ids = new Set((tier2 || []).map((b: any) => b.id))
       
       relevantBusinessesForAtlas.forEach((b: any) => {
         if (b.latitude && b.longitude && !addedIds.has(b.id)) {
@@ -2172,6 +2508,15 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
     // NOTE: Final paragraph formatting moved to route.ts (after Atlas stripping)
     // This ensures formatting is preserved and happens as the absolute last step
     
+    // 🧠 STEP 2: UPDATE CURRENT BUSINESS FROM AI RESPONSE
+    // Parse AI response for business links - for debugging only
+    // (DB has no slug column - we cannot query by slug)
+    const mentionedSlugsInResponse = [...aiResponse.matchAll(/\*\*\[[^\]]+\]\(\/user\/business\/([a-z0-9-]+)\)\*\*/g)].map(m => m[1])
+    
+    if (mentionedSlugsInResponse.length > 0 && process.env.NODE_ENV !== 'production') {
+      console.log(`🧠 [STATE DEBUG] AI mentioned slugs: ${mentionedSlugsInResponse.join(', ')} (cannot persist via DB)`)
+    }
+    
     return {
       success: true,
       response: aiResponse,
@@ -2188,7 +2533,9 @@ Category: ${business.display_category || 'Not specified'}${richContent}${offerTe
       classification,
       metadata: {
         atlasAvailable, // Server-computed flag: true if 2+ candidates have valid coords
-        coordsCandidateCount: (candidatesForAtlas || []).filter(hasValidCoords).length
+        coordsCandidateCount: (candidatesForAtlas || []).filter(hasValidCoords).length,
+        currentBusinessId: state.currentBusiness?.id ?? null, // For state-aware footer logic
+        currentBusinessSlug: null // DB has no slug column - always null
       }
     }
 
@@ -2350,24 +2697,14 @@ async function generateBusinessDetailResponse(
 /**
  * Extract business names from text (simplified for state tracking)
  */
+/**
+ * Extract business names from AI response by parsing markdown links
+ * Used for conversation state tracking (which businesses were mentioned)
+ * Dynamic: works with any business that has a properly formatted link
+ */
 function extractBusinessNamesFromText(text: string): string[] {
-  const businesses: string[] = []
-  const businessKeywords = [
-    "David's Grill Shack",
-    "Julie's Sports Pub",
-    "Alexandra's Café",
-    "Orchid & Ivy",
-    "Mike's Pool Bar",
-    "Venezy Burgers",
-    "Adams Cocktail Bar"
-  ]
-  
-  businessKeywords.forEach(business => {
-    if (text.includes(business)) {
-      businesses.push(business)
-    }
-  })
-  
-  return businesses
+  // Match pattern: **[Business Name](/user/business/slug)**
+  const matches = [...text.matchAll(/\*\*\[([^\]]+)\]\(\/user\/business\/[a-z0-9-]+\)\*\*/g)]
+  return matches.map(m => m[1])
 }
 
