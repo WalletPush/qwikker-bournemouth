@@ -132,7 +132,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
         business_category,
         business_type,
         business_images,
-        business_tier,
+        plan,
         logo,
         rating,
         business_address,
@@ -182,6 +182,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
                       'Other',
     businessLogo: offer.business_profiles?.logo,
     businessRating: offer.business_profiles?.rating || 4.5,
+    businessTier: offer.business_profiles?.plan, // Add plan/tier for badges
     title: offer.offer_name,
     description: offer.offer_description || offer.offer_terms || `${offer.offer_type} offer from ${offer.business_profiles?.business_name}`,
     type: offer.offer_type?.toLowerCase().replace(' ', '_') || 'discount',
@@ -202,6 +203,12 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     offer_start_date: offer.offer_start_date,
     offer_end_date: offer.offer_end_date
   }))
+  
+  // Debug: Log tier info for first few offers
+  console.log('🎯 Offer tiers:', realOffers.slice(0, 3).map(o => ({ 
+    business: o.businessName, 
+    tier: o.businessTier 
+  })))
   
   
   return (

@@ -328,7 +328,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
         
         {/* Top badges row */}
         <div className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 flex justify-between items-start z-10">
-          {/* Rarity Badge - Only for Spotlight subscribers */}
+          {/* Rarity Badge - Only for Legendary (Spotlight) items */}
           {(item.rarity || 0) >= 5 && (
             <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full font-bold shadow-lg">
               LEGENDARY
@@ -354,55 +354,46 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
         </div>
 
 
-        <CardHeader className="pb-2 sm:pb-3 pt-10 sm:pt-12 px-3 sm:px-6">
+        <CardHeader className="pb-2 pt-8 sm:pt-12 px-3 sm:px-6">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className={`text-base sm:text-lg mb-1.5 sm:mb-2 transition-all duration-300 ${
+              <CardTitle className={`text-base font-bold sm:text-lg mb-1.5 transition-all duration-300 leading-tight ${
                 isUnlocked 
                   ? 'text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text' 
                   : 'text-slate-300'
               }`}>
                 {isUnlocked ? item.name : '• • • • • • • •'}
               </CardTitle>
-              <p className="text-xs sm:text-sm text-slate-400 mb-0.5 sm:mb-1">{business?.name}</p>
-              <p className="text-[10px] sm:text-xs text-gray-500">{business?.category}</p>
+              <p className="text-xs sm:text-sm text-slate-300 font-medium mb-0.5">{business?.name}</p>
+              <p className="text-[10px] sm:text-xs text-slate-400">{business?.category}</p>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6 pb-3 sm:pb-6">
+        <CardContent className="space-y-2.5 sm:space-y-3 px-3 sm:px-6 pb-3 sm:pb-6">
           {/* Item Description */}
           <div className={`transition-all duration-500 ${isUnlocked ? 'opacity-100' : 'opacity-30'}`}>
-            <p className={`text-xs sm:text-sm leading-relaxed ${isUnlocked ? 'text-slate-300' : 'text-gray-500 blur-sm'}`}>
+            <p className={`text-xs sm:text-sm leading-relaxed line-clamp-3 sm:line-clamp-none ${isUnlocked ? 'text-slate-300' : 'text-gray-500 blur-sm'}`}>
               {isUnlocked ? item.description : 'Unlock this secret to reveal the mysterious description...'}
             </p>
           </div>
 
-          {/* Price */}
-          <div className="flex items-center justify-between">
-            <span className={`font-bold text-base sm:text-lg ${
+          {/* Price - bigger and bolder */}
+          <div className="py-1">
+            <span className={`font-bold text-xl sm:text-2xl ${
               isUnlocked 
                 ? 'text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text' 
                 : 'text-gray-500'
             }`}>
               {isUnlocked ? item.price : '£??'}
             </span>
-            
-            {/* Difficulty/Rarity */}
-            <div className="flex items-center gap-0.5 sm:gap-1">
-              {Array.from({ length: item.rarity || 3 }).map((_, i) => (
-                <svg key={i} className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.381-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
-                </svg>
-              ))}
-            </div>
           </div>
 
           {/* Status and Action */}
-          <div className="space-y-1.5 sm:space-y-2">
+          <div>
             {isLocked ? (
               <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-2.5 sm:p-3 text-center">
-                <div className="flex items-center justify-center gap-2 mb-1.5 sm:mb-2">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
                   <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
@@ -422,22 +413,22 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
                     `"${item.name}" has been added to your collection. Click the card to see how to order it.`
                   )
                 }}
-                className="w-full h-[44px] text-sm sm:text-base bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold shadow-lg"
+                className="w-full h-[44px] sm:h-[48px] text-sm sm:text-base bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold shadow-lg"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                 </svg>
-                Unlock Secret Item (Free!)
+                Unlock Secret
               </Button>
             ) : (
               <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-lg p-2.5 sm:p-3 text-center">
-                <div className="flex items-center justify-center gap-2 mb-0.5 sm:mb-1">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
                   <svg className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   <span className="text-purple-300 font-semibold text-xs sm:text-sm">Unlocked!</span>
                 </div>
-                <p className="text-purple-200 text-[10px] sm:text-sm">Click card for ordering info</p>
+                <p className="text-purple-200 text-xs sm:text-sm">Click card for ordering info</p>
               </div>
             )}
           </div>
@@ -651,43 +642,6 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
         })}
       </div>
       )}
-
-      {/* Free Discovery Encouragement */}
-      <Card className="bg-gradient-to-br from-emerald-900/20 to-teal-900/20 border-emerald-700/30 text-center p-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-teal-500/5 animate-pulse"></div>
-        <div className="relative">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full">
-              <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <h3 className="text-2xl font-bold text-emerald-400">Keep Exploring!</h3>
-          </div>
-          <p className="text-slate-300 mb-6 max-w-2xl mx-auto">
-            Every secret you unlock brings you closer to becoming a true {cityDisplayName} foodie insider. 
-            Chat with our AI to discover more hidden gems and get personalized recommendations!
-          </p>
-          <div className="flex gap-4 justify-center">
-            <Button asChild className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-black font-bold px-6 py-3">
-              <Link href={getNavUrl("/user/chat")}>
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                Chat with AI Guide
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 px-6 py-3">
-              <Link href={getNavUrl("/user/discover")}>
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                Discover More Places
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </Card>
 
       {/* Elegant Modals */}
       <ModalComponent />

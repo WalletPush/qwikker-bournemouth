@@ -249,7 +249,60 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           console.error('Error loading business analytics for activity feed:', error)
         }
         
-        // 2. PENDING CHANGES (waiting for approval)
+        // 2. APPROVED OFFERS (show recently approved offers)
+        if (profile?.business_offers && Array.isArray(profile.business_offers)) {
+          const approvedOffers = profile.business_offers
+            .filter(offer => offer.status === 'approved' && offer.approved_at)
+            .sort((a, b) => new Date(b.approved_at).getTime() - new Date(a.approved_at).getTime())
+            .slice(0, 2) // Show up to 2 most recent
+          
+          approvedOffers.forEach(offer => {
+            realActivity.push({
+              id: `offer_approved_${offer.id}`,
+              type: 'offer_approved',
+              message: `Offer "${offer.offer_name}" approved and live!`,
+              timestamp: new Date(offer.approved_at),
+              icon: (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+              color: 'text-green-400'
+            })
+          })
+        }
+        
+        // 3. APPROVED SECRET MENU ITEMS (from additional_notes)
+        try {
+          if (profile?.additional_notes) {
+            const notesData = JSON.parse(profile.additional_notes)
+            if (notesData.secret_menu_items && Array.isArray(notesData.secret_menu_items)) {
+              const approvedSecretItems = notesData.secret_menu_items
+                .filter(item => item.status === 'approved' && item.approved_at)
+                .sort((a, b) => new Date(b.approved_at).getTime() - new Date(a.approved_at).getTime())
+                .slice(0, 2) // Show up to 2 most recent
+              
+              approvedSecretItems.forEach(item => {
+                realActivity.push({
+                  id: `secret_menu_approved_${item.id || item.name}`,
+                  type: 'secret_menu_approved',
+                  message: `Secret menu item "${item.name}" approved!`,
+                  timestamp: new Date(item.approved_at),
+                  icon: (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  ),
+                  color: 'text-purple-400'
+                })
+              })
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing secret menu items for activity feed:', error)
+        }
+        
+        // 4. PENDING CHANGES (waiting for approval)
         try {
           const { getPendingChanges } = await import('@/lib/actions/pending-changes')
           const changesResult = await getPendingChanges(profile.user_id)
@@ -290,7 +343,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           console.error('Error loading pending changes for activity feed:', error)
         }
         
-        // 3. PROFILE MILESTONES (one-time events)
+        // 5. PROFILE MILESTONES (one-time events)
         
         // Listing approval (most important milestone)
         if (profile.status === 'approved' && profile.approved_at) {
@@ -1008,19 +1061,21 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   </Button>
                 )}
                 
-                {/* Unlock Full Analytics Button */}
-                <div className="pt-3 border-t border-slate-700/50">
-                  <Button 
-                    onClick={() => setShowAnalyticsModal(true)}
-                    size="sm" 
-                    className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    Unlock Full Analytics
-                  </Button>
-                </div>
+                {/* Unlock Full Analytics Button - ONLY for non-Spotlight tiers */}
+                {!isPremiumFeatureUnlocked() && (
+                  <div className="pt-3 border-t border-slate-700/50">
+                    <Button 
+                      onClick={() => setShowAnalyticsModal(true)}
+                      size="sm" 
+                      className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      Unlock Full Analytics
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-8">
@@ -1032,19 +1087,21 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                 <p className="text-slate-400 text-sm">No recent activity</p>
                 <p className="text-slate-500 text-xs mt-1">Activity will appear once your business is live</p>
                 
-                {/* Unlock Full Analytics Button for empty state */}
-                <div className="pt-4">
-                  <Button 
-                    onClick={() => setShowAnalyticsModal(true)}
-                    size="sm" 
-                    className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    Unlock Full Analytics
-                  </Button>
-                </div>
+                {/* Unlock Full Analytics Button for empty state - ONLY for non-Spotlight tiers */}
+                {!isPremiumFeatureUnlocked() && (
+                  <div className="pt-4">
+                    <Button 
+                      onClick={() => setShowAnalyticsModal(true)}
+                      size="sm" 
+                      className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      Unlock Full Analytics
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

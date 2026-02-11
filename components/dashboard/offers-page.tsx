@@ -610,10 +610,45 @@ export function OffersPage({ profile }: OffersPageProps) {
                       )}
                     </div>
                     
+                    {/* Description - Always show if present */}
+                    {offer.offer_description && (
+                      <div className="mt-4 pt-4 border-t border-slate-600">
+                        <span className="text-gray-400 text-sm font-medium mb-2 block">Offer Description:</span>
+                        <p className="text-white text-sm leading-relaxed bg-slate-800/50 p-3 rounded-lg">{offer.offer_description}</p>
+                      </div>
+                    )}
+                    
+                    {/* Terms & Conditions - Collapsible */}
                     {offer.offer_terms && (
                       <div className="mt-4 pt-4 border-t border-slate-600">
-                        <span className="text-gray-400 text-sm">Terms & Conditions:</span>
-                        <p className="text-white text-sm mt-1 leading-relaxed">{offer.offer_terms}</p>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            const termsDiv = document.getElementById(`terms-${offer.id}`)
+                            const arrow = document.getElementById(`arrow-${offer.id}`)
+                            if (termsDiv && arrow) {
+                              termsDiv.classList.toggle('hidden')
+                              arrow.classList.toggle('rotate-180')
+                            }
+                          }}
+                          className="flex items-center gap-2 text-amber-400 hover:text-amber-300 font-semibold text-sm transition-colors"
+                        >
+                          <svg 
+                            id={`arrow-${offer.id}`}
+                            className="w-4 h-4 transition-transform duration-200" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                          Terms & Conditions
+                        </button>
+                        <div id={`terms-${offer.id}`} className="hidden mt-2">
+                          <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-lg">
+                            <p className="text-white text-sm leading-relaxed whitespace-pre-wrap">{offer.offer_terms}</p>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -684,7 +719,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2 text-sm">
+                      <div className="space-y-3 text-sm">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <span className="text-gray-400">Type:</span>
@@ -695,8 +730,47 @@ export function OffersPage({ profile }: OffersPageProps) {
                             <span className="text-white ml-2">{offer.offer_value || 'Not specified'}</span>
                           </div>
                         </div>
+                        
+                        {/* Description */}
                         {offer.offer_description && (
-                          <p className="text-gray-300 mt-2">{offer.offer_description}</p>
+                          <div>
+                            <span className="text-gray-400 font-medium mb-1 block">Description:</span>
+                            <p className="text-white leading-relaxed bg-slate-800/50 p-3 rounded-lg">{offer.offer_description}</p>
+                          </div>
+                        )}
+                        
+                        {/* Terms & Conditions - Collapsible */}
+                        {offer.offer_terms && (
+                          <div className="mt-2">
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                const termsDiv = document.getElementById(`terms-expired-${offer.id}`)
+                                const arrow = document.getElementById(`arrow-expired-${offer.id}`)
+                                if (termsDiv && arrow) {
+                                  termsDiv.classList.toggle('hidden')
+                                  arrow.classList.toggle('rotate-180')
+                                }
+                              }}
+                              className="flex items-center gap-2 text-amber-400 hover:text-amber-300 font-semibold text-sm transition-colors"
+                            >
+                              <svg 
+                                id={`arrow-expired-${offer.id}`}
+                                className="w-4 h-4 transition-transform duration-200" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                              Terms & Conditions
+                            </button>
+                            <div id={`terms-expired-${offer.id}`} className="hidden mt-2">
+                              <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-lg">
+                                <p className="text-white text-sm leading-relaxed whitespace-pre-wrap">{offer.offer_terms}</p>
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </CardContent>

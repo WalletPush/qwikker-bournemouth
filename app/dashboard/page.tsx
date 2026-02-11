@@ -28,7 +28,8 @@ export default async function DashboardPage() {
         offer_value,
         offer_image,
         status,
-        created_at
+        created_at,
+        approved_at
       )
     `)
     .eq('user_id', data.claims.sub)

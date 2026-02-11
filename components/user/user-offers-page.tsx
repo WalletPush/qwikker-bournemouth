@@ -577,152 +577,372 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             : ''
         }`}
       >
-        {/* Header with Image */}
-        <div className="relative h-40 sm:h-48 overflow-hidden rounded-t-xl">
-          <img 
-            src={businessImage} 
-            alt={businessName}
-            className="w-full h-full object-cover object-center transition-opacity duration-300"
-            loading="lazy"
-          />
-          
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-          
-          {/* Offer type badge (top right) */}
-          <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
-            <span className={`${getBadgeColor(offer.type)} text-white text-[10px] sm:text-xs px-2 py-1 sm:px-3 rounded-full font-bold shadow-lg`}>
-              {getBadgeText()}
-            </span>
-          </div>
+        {/* MOBILE LAYOUT: Horizontal (image left, content right) */}
+        <div className="sm:hidden">
+          <div className="flex flex-row items-stretch gap-3 p-3 relative">
+            {/* Left: Image Thumbnail - Compact square */}
+            <div className="relative flex-shrink-0 rounded-lg overflow-hidden" style={{ width: '110px', height: '110px', minWidth: '110px', minHeight: '110px', maxWidth: '110px', maxHeight: '110px' }}>
+              <img 
+                src={businessImage} 
+                alt={businessName}
+                style={{ 
+                  display: 'block',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  margin: 0,
+                  padding: 0,
+                  border: 'none'
+                }}
+                loading="lazy"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/placeholder-business.jpg';
+                }}
+              />
+              
+              {/* All badges stacked vertically on left side to avoid overlap */}
+              <div className="absolute top-1 left-1 flex flex-col gap-0.5 max-w-[90px]">
+                {/* Tier badges first (most prominent) */}
+                {offer.businessTier === 'spotlight' && (
+                  <span className="bg-amber-500/80 text-amber-950 text-[9px] px-1.5 py-0.5 rounded-full font-bold shadow-lg whitespace-nowrap backdrop-blur-sm border border-amber-400/50">
+                    QWIKKER PICK
+                  </span>
+                )}
+                {offer.businessTier === 'featured' && (
+                  <span className="bg-emerald-500/80 text-emerald-950 text-[9px] px-1.5 py-0.5 rounded-full font-bold shadow-lg whitespace-nowrap text-center inline-flex items-center justify-center backdrop-blur-sm border border-emerald-400/50">
+                    FEATURED
+                  </span>
+                )}
+                {/* Status badges */}
+                {offer.isEndingSoon && (
+                  <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold shadow-md whitespace-nowrap">
+                    ENDING SOON
+                  </span>
+                )}
+                {offer.isPopular && (
+                  <span className="bg-yellow-500 text-black text-[9px] px-1.5 py-0.5 rounded-full font-bold shadow-md whitespace-nowrap">
+                    POPULAR
+                  </span>
+                )}
+              </div>
 
-          {/* Status badges (top left) */}
-          <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1">
-            {offer.isPopular && (
-              <span className="bg-yellow-500 text-black text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full font-bold shadow-lg">
-                POPULAR
-              </span>
-            )}
-            {offer.isEndingSoon && (
-              <span className="bg-red-500 text-white text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full font-bold animate-pulse shadow-lg">
-                ENDING SOON
-              </span>
-            )}
-          </div>
-
-          {/* Heart favorite button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              toggleFavorite(offer.id)
-            }}
-            className="absolute bottom-2 right-2 sm:right-3 p-1.5 sm:p-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/70 transition-all duration-200"
-          >
-            <svg 
-              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-200 ${
-                isFavorite ? 'text-red-500 fill-current' : 'text-white'
-              }`} 
-              fill={isFavorite ? 'currentColor' : 'none'} 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-          </button>
-
-          {/* Business name in bottom corner */}
-          <div className="absolute bottom-2 left-2 sm:left-3 right-10 sm:right-12">
-            <p className="text-white font-semibold text-xs sm:text-sm drop-shadow-lg truncate">{businessName}</p>
-            <p className="text-white/90 text-[10px] sm:text-xs drop-shadow-md truncate">{offer.businessCategory}</p>
-          </div>
-
-          {/* In Wallet Badge */}
-          {isInWallet && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-              <div className="bg-blue-500 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                Added to Wallet
+              {/* In Wallet Overlay */}
+              {isInWallet && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              )}
+            </div>
+            
+            {/* Right: Content Stack */}
+            <div className="flex-1 min-w-0 flex flex-col justify-between">
+              {/* Business name */}
+              <div>
+                <p className="text-white font-semibold text-sm leading-tight line-clamp-1 mb-0.5">{businessName}</p>
+                <p className="text-slate-400 text-[10px] line-clamp-1 mb-1.5">{offer.businessCategory}</p>
+              </div>
+              
+              {/* Offer title */}
+              <h3 className="text-slate-100 font-bold text-sm leading-tight line-clamp-2 mb-2">{offer.title}</h3>
+              
+              {/* Value pill - compact (smart label based on offer type) */}
+              <div className="inline-flex self-start items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2.5 py-1">
+                {(() => {
+                  // Smart labeling - only show "Save:" for percentage/discount offers
+                  const value = offer.value || ''
+                  const showSaveLabel = value.includes('%') || value.includes('off') || offer.type === 'percentage_off' || offer.type === 'discount'
+                  
+                  if (showSaveLabel) {
+                    return (
+                      <>
+                        <span className="text-emerald-300 font-medium text-[10px]">Save:</span>
+                        <span className="text-emerald-200 font-semibold text-xs">{value}</span>
+                      </>
+                    )
+                  } else {
+                    // For freebies, fixed prices, 2-for-1, etc. - just show the value
+                    return <span className="text-emerald-200 font-semibold text-xs">{value}</span>
+                  }
+                })()}
               </div>
             </div>
-          )}
-        </div>
-
-        <CardContent className="p-3 sm:p-4 flex flex-col flex-grow">
-          {/* Title and description - flexible content */}
-          <div className="flex-grow">
-            <h3 className="text-slate-100 font-bold text-base sm:text-lg mb-1.5 sm:mb-2">{offer.title}</h3>
-            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-2 sm:mb-3 line-clamp-2">{offer.description}</p>
+            
+            {/* Heart Icon - Absolute positioned top-right */}
+            <button 
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                toggleFavorite(offer.id)
+              }}
+              className={`absolute top-3 right-3 w-7 h-7 flex items-center justify-center backdrop-blur-sm rounded-full transition-all ${
+                isFavorite 
+                  ? 'bg-pink-500/90 hover:bg-pink-600/90' 
+                  : 'bg-slate-800/80 hover:bg-slate-700/80'
+              }`}
+            >
+              <svg 
+                className={`w-3.5 h-3.5 transition-colors ${isFavorite ? 'text-white' : 'text-white'}`} 
+                fill={isFavorite ? 'currentColor' : 'none'} 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Mobile: Action buttons below */}
+          <div className="px-3 pb-3 space-y-1.5">
+            {/* Description - show more link */}
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 setShowModal(true)
               }}
-              className="text-[#00d083] text-xs font-medium hover:text-[#00b86f] transition-colors mb-2 sm:mb-3"
+              className="w-full text-left"
             >
-              ...more
+              <p className="text-slate-300 text-xs leading-snug line-clamp-3 mb-1">{offer.description}</p>
+              <span className="text-emerald-300 text-xs font-medium hover:text-emerald-200 transition-colors">
+                View full details & terms →
+              </span>
             </button>
             
-            {/* Value highlight */}
-            <div className="bg-gradient-to-r from-green-500/15 to-emerald-500/15 border border-green-500/25 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
-              <div className="flex items-center justify-between">
-                <span className="text-green-300 font-semibold text-xs sm:text-sm">You Save:</span>
-                <span className="text-green-400 font-bold text-base sm:text-lg">{offer.value}</span>
-            </div>
-          </div>
-
-          {/* Clean Terms & Expiry - Hidden on mobile */}
-          <div className="hidden sm:block mb-4 text-xs text-slate-400 space-y-1">
-            <p><span className="font-medium">Terms:</span> {offer.termsAndConditions || 'Standard terms apply'}</p>
-            <p><span className="font-medium">Valid until:</span> {offer.validUntil || 'No expiry date'}</p>
-            </div>
-          </div>
-
-          {/* Action buttons - Always at bottom */}
-          <div className="mt-auto space-y-1.5 sm:space-y-2">
-            {!isClaimed ? (
-              <Button 
-                onClick={() => claimOffer(offer.id, offer.title, businessName)}
-                className="w-full h-[44px] text-sm sm:text-base bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-green-500/20"
-              >
-                Claim Offer
-              </Button>
-            ) : (
-              isInWallet ? (
-                <Button
-                  disabled
-                  className="w-full h-[44px] text-sm sm:text-base bg-green-600 text-white font-semibold cursor-default opacity-75"
+            {/* Action buttons */}
+            <div className="space-y-1.5 pt-1">
+              {!isClaimed ? (
+                <Button 
+                  onClick={() => claimOffer(offer.id, offer.title, businessName)}
+                  className="w-full h-[40px] text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all duration-200"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  Claim Offer
+                </Button>
+              ) : (
+                isInWallet ? (
+                  <Button
+                    disabled
+                    className="w-full h-[40px] text-sm bg-emerald-900/60 text-emerald-300 font-medium cursor-default"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Added to Wallet
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => handleAddToWallet(offer.id, offer.title, businessName)}
+                    className="w-full h-[40px] text-sm bg-slate-700 hover:bg-slate-600 text-white font-semibold transition-all duration-200"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add to Wallet
+                  </Button>
+                )
+              )}
+              
+              {/* Share Button - compact */}
+              <ShareButton
+                title={`Amazing Deal: ${offer.title}`}
+                text={`Check out this exclusive offer at ${businessName}: ${offer.title}! Save ${offer.discount} - but you need Qwikker to claim it.`}
+                url={`https://${currentCity}.qwikker.com/join?ref=offer-${offer.id}`}
+                onShare={() => handleShare(offer.id, offer.title, businessName)}
+                className="w-full"
+                size="sm"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* DESKTOP LAYOUT: Vertical (image top, content below) - Keep existing */}
+        <div className="hidden sm:block">
+          {/* Header with Image */}
+          <div className="relative h-48 overflow-hidden rounded-t-xl">
+            <img 
+              src={businessImage} 
+              alt={businessName}
+              className="w-full h-full object-cover object-center transition-opacity duration-300"
+              loading="lazy"
+            />
+            
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+
+            {/* Tier & Status badges (top left) */}
+            <div className="absolute top-3 left-3 flex flex-col gap-1">
+              {/* Tier badges first (most prominent) */}
+              {offer.businessTier === 'spotlight' && (
+                <span className="bg-amber-500/80 text-amber-950 text-xs px-2.5 py-1 rounded-full font-bold shadow-lg backdrop-blur-sm border border-amber-400/50">
+                  QWIKKER PICK
+                </span>
+              )}
+              {offer.businessTier === 'featured' && (
+                <span className="bg-emerald-500/80 text-emerald-950 text-xs px-2.5 py-1 rounded-full font-bold shadow-lg text-center inline-flex items-center justify-center backdrop-blur-sm border border-emerald-400/50">
+                  FEATURED
+                </span>
+              )}
+              {/* Status badges */}
+              {offer.isPopular && (
+                <span className="bg-yellow-500 text-black text-xs px-2 py-1 rounded-full font-bold shadow-lg">
+                  POPULAR
+                </span>
+              )}
+              {offer.isEndingSoon && (
+                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold animate-pulse shadow-lg">
+                  ENDING SOON
+                </span>
+              )}
+            </div>
+
+            {/* Heart favorite button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleFavorite(offer.id)
+              }}
+              className="absolute bottom-2 right-3 p-2 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/70 transition-all duration-200"
+            >
+              <svg 
+                className={`w-4 h-4 transition-colors duration-200 ${
+                  isFavorite ? 'text-red-500 fill-current' : 'text-white'
+                }`} 
+                fill={isFavorite ? 'currentColor' : 'none'} 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
+
+            {/* Business name in bottom corner */}
+            <div className="absolute bottom-2 left-3 right-12">
+              <p className="text-white font-semibold text-sm drop-shadow-lg truncate">{businessName}</p>
+              <p className="text-white/90 text-xs drop-shadow-md truncate">{offer.businessCategory}</p>
+            </div>
+
+            {/* In Wallet Badge */}
+            {isInWallet && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                <div className="bg-blue-500 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   Added to Wallet
+                </div>
+              </div>
+            )}
+          </div>
+
+          <CardContent className="p-4 flex flex-col flex-grow">
+            {/* Title and description - fixed height for alignment */}
+            <div>
+              <h3 className="text-slate-100 font-bold text-lg mb-2 line-clamp-2">{offer.title}</h3>
+              {/* Fixed 2 lines for consistent card height */}
+              <p className="text-slate-300 text-sm leading-relaxed mb-2 line-clamp-2">{offer.description}</p>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowModal(true)
+                }}
+                className="text-emerald-300 text-xs font-medium hover:text-emerald-200 transition-colors mb-3"
+              >
+                ...more
+              </button>
+              
+              {/* Value highlight */}
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 mb-3">
+                <div className="flex items-center justify-between">
+                  {(() => {
+                    // Smart labeling - adapt label based on offer type
+                    const value = offer.value || ''
+                    const isPercentageOrDiscount = value.includes('%') || value.includes('off') || offer.type === 'percentage_off' || offer.type === 'discount'
+                    const isFreebie = offer.type === 'freebie' || value.toLowerCase().includes('free')
+                    
+                    if (isFreebie) {
+                      return (
+                        <>
+                          <span className="text-emerald-300 font-medium text-sm">You Get:</span>
+                          <span className="text-emerald-200 font-semibold text-lg">{value}</span>
+                        </>
+                      )
+                    } else if (isPercentageOrDiscount) {
+                      return (
+                        <>
+                          <span className="text-emerald-300 font-medium text-sm">You Save:</span>
+                          <span className="text-emerald-200 font-semibold text-lg">{value}</span>
+                        </>
+                      )
+                    } else {
+                      // For fixed price, 2-for-1, etc. - use generic "Offer Value"
+                      return (
+                        <>
+                          <span className="text-emerald-300 font-medium text-sm">Offer Value:</span>
+                          <span className="text-emerald-200 font-semibold text-lg">{value}</span>
+                        </>
+                      )
+                    }
+                  })()}
+                </div>
+              </div>
+              
+              {/* Valid until date only - terms are in modal */}
+              {offer.validUntil && (
+                <p className="text-xs text-slate-400">
+                  <span className="font-medium">Valid until:</span> {offer.validUntil}
+                </p>
+              )}
+            </div>
+
+            {/* Action buttons - Always at bottom */}
+            <div className="mt-auto space-y-2">
+              {!isClaimed ? (
+                <Button 
+                  onClick={() => claimOffer(offer.id, offer.title, businessName)}
+                  className="w-full h-[44px] text-base bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all duration-200"
+                >
+                  Claim Offer
                 </Button>
               ) : (
-                <Button
-                  onClick={() => handleAddToWallet(offer.id, offer.title, businessName)}
-                  className="w-full h-[44px] text-sm sm:text-base bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Add to Wallet
-                </Button>
-              )
-            )}
-            
-            {/* Share Button */}
-            <ShareButton
-              title={`Amazing Deal: ${offer.title}`}
-              text={`Check out this exclusive offer at ${businessName}: ${offer.title}! Save ${offer.discount} - but you need Qwikker to claim it.`}
-              url={`https://${currentCity}.qwikker.com/join?ref=offer-${offer.id}`}
-              onShare={() => handleShare(offer.id, offer.title, businessName)}
-              className="w-full"
-              size="sm"
-            />
-          </div>
-        </CardContent>
+                isInWallet ? (
+                  <Button
+                    disabled
+                    className="w-full h-[44px] text-base bg-emerald-900/60 text-emerald-300 font-medium cursor-default"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Added to Wallet
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => handleAddToWallet(offer.id, offer.title, businessName)}
+                    className="w-full h-[44px] text-base bg-slate-700 hover:bg-slate-600 text-white font-semibold transition-all duration-200"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add to Wallet
+                  </Button>
+                )
+              )}
+              
+              {/* Share Button */}
+              <ShareButton
+                title={`Amazing Deal: ${offer.title}`}
+                text={`Check out this exclusive offer at ${businessName}: ${offer.title}! Save ${offer.discount} - but you need Qwikker to claim it.`}
+                url={`https://${currentCity}.qwikker.com/join?ref=offer-${offer.id}`}
+                onShare={() => handleShare(offer.id, offer.title, businessName)}
+                className="w-full"
+                size="sm"
+              />
+            </div>
+          </CardContent>
+        </div>
       </Card>
 
       {/* OFFER DETAILS MODAL */}
@@ -738,8 +958,22 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             {/* Header */}
             <div className="sticky top-0 bg-gradient-to-br from-slate-800 to-slate-900 border-b border-slate-700 p-6 flex items-start justify-between z-10">
               <div className="flex-1 pr-4">
-                <div className={`inline-block ${getBadgeColor(offer.type)} text-white text-xs px-3 py-1 rounded-full font-bold mb-3`}>
-                  {getBadgeText()}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {/* Tier badges */}
+                  {offer.businessTier === 'spotlight' && (
+                    <span className="bg-amber-500/80 text-amber-950 text-xs px-3 py-1 rounded-full font-bold shadow-lg backdrop-blur-sm border border-amber-400/50">
+                      QWIKKER PICK
+                    </span>
+                  )}
+                  {offer.businessTier === 'featured' && (
+                    <span className="bg-emerald-500/80 text-emerald-950 text-xs px-3 py-1 rounded-full font-bold shadow-lg text-center inline-flex items-center justify-center backdrop-blur-sm border border-emerald-400/50">
+                      FEATURED
+                    </span>
+                  )}
+                  {/* Offer type badge */}
+                  <span className={`${getBadgeColor(offer.type)} text-white text-xs px-3 py-1 rounded-full font-bold`}>
+                    {getBadgeText()}
+                  </span>
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">{offer.title}</h2>
                 <p className="text-slate-400">at <span className="text-slate-300 font-medium">{businessName}</span></p>
@@ -768,9 +1002,9 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             {/* Content */}
             <div className="p-6 space-y-6">
               {/* Offer Value */}
-              <div className="bg-gradient-to-r from-green-500/15 to-emerald-500/15 border border-green-500/25 rounded-xl p-6 text-center">
-                <div className="text-sm text-green-300 font-semibold mb-2">You Save:</div>
-                <div className="text-4xl font-bold text-green-400">{offer.value}</div>
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 text-center">
+                <div className="text-sm text-emerald-300 font-medium mb-2">You Save:</div>
+                <div className="text-4xl font-semibold text-emerald-200">{offer.value}</div>
               </div>
 
               {/* Full Description */}
@@ -807,7 +1041,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                       claimOffer(offer.id, offer.title, businessName)
                       setShowModal(false)
                     }}
-                    className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold text-lg rounded-xl"
+                    className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-lg rounded-xl transition-all duration-200"
                   >
                     Claim Offer
                   </Button>
@@ -818,7 +1052,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                         handleAddToWallet(offer.id, offer.title, businessName)
                         setShowModal(false)
                       }}
-                      className="w-full h-12 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-lg rounded-xl"
+                      className="w-full h-12 bg-slate-700 hover:bg-slate-600 text-white font-semibold text-lg rounded-xl transition-all duration-200"
                     >
                       Add to Wallet
                     </Button>

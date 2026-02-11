@@ -101,35 +101,55 @@ export async function POST(request: NextRequest) {
         // 🚨 CRITICAL FIX: Create NEW offer in business_offers table (supports multiple offers)
         const { data: currentBusiness } = await supabaseAdmin
           .from('business_profiles')
-          .select(`
-            id,
-            user_id,
-            profiles!user_id (
-              plan
-            )
-          `)
+          .select('id, user_id, plan, status, business_name')
           .eq('id', change.business_id)
           .single()
         
-        // Check current offer count for this business
-        const { count: offerCount } = await supabaseAdmin
+        // Check current ACTIVE offer count for this business (exclude expired offers)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        
+        const { data: activeOffers } = await supabaseAdmin
           .from('business_offers')
-          .select('*', { count: 'exact' })
+          .select('id, offer_end_date')
           .eq('business_id', change.business_id)
           .eq('status', 'approved')
         
-        const currentOfferCount = offerCount || 0
-        const businessPlan = currentBusiness?.profiles?.plan || 'starter'
+        // Count only offers that are NOT expired (no end date OR end date >= today)
+        const currentOfferCount = (activeOffers || []).filter(offer => 
+          !offer.offer_end_date || new Date(offer.offer_end_date) >= today
+        ).length
+        
+        // ✅ FIX: Use business's plan, not user's plan!
+        const businessPlan = currentBusiness?.plan || 'starter'
+        
+        // ✅ CRITICAL: claimed_free businesses get 1 offer limit regardless of plan
+        const isClaimedFree = currentBusiness?.status === 'claimed_free'
         
         // Check tier limits (updated to match database function)
         let maxOffers = 3 // Default starter
-        if (businessPlan === 'featured') maxOffers = 5
-        if (businessPlan === 'spotlight') maxOffers = 25
+        if (isClaimedFree) {
+          maxOffers = 1
+        } else if (businessPlan === 'featured') {
+          maxOffers = 5
+        } else if (businessPlan === 'spotlight') {
+          maxOffers = 25
+        }
+        
+        console.log(`📊 Offer Limit Check:`, {
+          business: currentBusiness?.business_name,
+          plan: businessPlan,
+          status: currentBusiness?.status,
+          isClaimedFree,
+          currentActive: currentOfferCount,
+          maxAllowed: maxOffers,
+          wouldBlock: currentOfferCount >= maxOffers
+        })
         
         if (currentOfferCount >= maxOffers) {
-          console.error(`❌ Offer limit exceeded: ${businessPlan} plan allows ${maxOffers} offers, business has ${currentOfferCount}`)
+          console.error(`❌ Offer limit exceeded: ${businessPlan} plan ${isClaimedFree ? '(claimed_free)' : ''} allows ${maxOffers} offers, business has ${currentOfferCount} active`)
           return NextResponse.json(
-            { error: `Offer limit exceeded. ${businessPlan} plan allows maximum ${maxOffers} offers.` },
+            { error: `Offer limit exceeded. ${isClaimedFree ? 'Free tier' : businessPlan} allows maximum ${maxOffers} active offers.` },
             { status: 400 }
           )
         }

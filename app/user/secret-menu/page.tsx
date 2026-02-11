@@ -92,7 +92,8 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
       phone,
       business_images,
       additional_notes,
-      status
+      status,
+      plan
     `)
     .eq('city', currentCity) // SECURITY: Filter by franchise city
     .not('business_name', 'is', null)
@@ -115,6 +116,10 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
       }
     }
 
+    // ✅ Make Spotlight tier businesses' items LEGENDARY (rarity 5)
+    const isSpotlight = business.plan === 'spotlight'
+    const rarity = isSpotlight ? 5 : 3
+
     return {
       businessId: business.id,
       businessName: business.business_name,
@@ -127,11 +132,11 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
         description: item.description || 'A delicious secret item',
         price: item.price || null,
         hint: `Ask your server for "${item.itemName}" - they'll know what you mean! 😉`,
-        rarity: 3, // Default rarity for real items
-        pointsReward: 50,
+        rarity: rarity, // Spotlight = 5 (LEGENDARY), others = 3
+        pointsReward: isSpotlight ? 100 : 50, // More points for legendary items
         unlockMethods: [
           { type: 'visit', description: 'Visit the restaurant and ask for this item' },
-          { type: 'points', cost: 25, description: 'Spend 25 points to unlock remotely' }
+          { type: 'points', cost: isSpotlight ? 50 : 25, description: `Spend ${isSpotlight ? 50 : 25} points to unlock remotely` }
         ],
         isReal: true // Flag to identify real items
       }))

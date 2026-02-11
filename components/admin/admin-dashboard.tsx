@@ -2830,7 +2830,52 @@ Qwikker Admin Team`
                                     <p><strong>Offer Name:</strong> {change.change_data.offer_name}</p>
                                     <p><strong>Type:</strong> {change.change_data.offer_type}</p>
                                     <p><strong>Value:</strong> {change.change_data.offer_value}</p>
-                                    {change.change_data.offer_terms && <p><strong>Terms:</strong> {change.change_data.offer_terms}</p>}
+                                    
+                                    {/* Description - Always show if present */}
+                                    {change.change_data.offer_description && (
+                                      <div className="mt-3 mb-3">
+                                        <p className="mb-1"><strong>Description:</strong></p>
+                                        <p className="text-slate-300 bg-slate-800/50 p-3 rounded-lg leading-relaxed">
+                                          {change.change_data.offer_description}
+                                        </p>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Terms & Conditions - Collapsible */}
+                                    {change.change_data.offer_terms && (
+                                      <div className="mt-3">
+                                        <button
+                                          onClick={() => {
+                                            const termsDiv = document.getElementById(`terms-${change.id}`)
+                                            const arrow = document.getElementById(`arrow-${change.id}`)
+                                            if (termsDiv && arrow) {
+                                              termsDiv.classList.toggle('hidden')
+                                              arrow.classList.toggle('rotate-180')
+                                            }
+                                          }}
+                                          className="flex items-center gap-2 text-amber-400 hover:text-amber-300 font-semibold mb-2 transition-colors"
+                                        >
+                                          <svg 
+                                            id={`arrow-${change.id}`}
+                                            className="w-4 h-4 transition-transform duration-200" 
+                                            fill="none" 
+                                            stroke="currentColor" 
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                          </svg>
+                                          Terms & Conditions
+                                        </button>
+                                        <div id={`terms-${change.id}`} className="hidden">
+                                          <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-lg">
+                                            <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+                                              {change.change_data.offer_terms}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
                                     {change.change_data.offer_image && (
                                       <div className="mt-3">
                                         <p><strong>Offer Image:</strong></p>
