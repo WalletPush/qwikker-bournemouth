@@ -21,7 +21,6 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
   const [message, setMessage] = useState('')
   const [audience, setAudience] = useState('all')
   const [destination, setDestination] = useState('offers')
-  const [customUrl, setCustomUrl] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -99,10 +98,6 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
         destination: { type: destination }
       }
 
-      if (destination === 'custom' && customUrl) {
-        payload.destination.url = customUrl
-      }
-
       const response = await fetch('/api/walletpass/push-notification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,7 +112,6 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
 
       setSuccess(`✅ Notification sent to ${data.sentCount} pass holders!`)
       setMessage('')
-      setCustomUrl('')
       
       // Refresh stats after successful send
       await fetchStats()
@@ -349,29 +343,13 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
                   className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="offers">Offers Page</option>
+                  <option value="secret-menu">Secret Menu</option>
+                  <option value="events">Events Page</option>
                   <option value="chat">Start Chat</option>
                   <option value="business">Business Page</option>
-                  <option value="custom">Custom URL</option>
                 </select>
               </div>
             </div>
-
-            {/* Custom URL Input */}
-            {destination === 'custom' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Custom URL</label>
-                <input
-                  type="url"
-                  value={customUrl}
-                  onChange={(e) => setCustomUrl(e.target.value)}
-                  placeholder="https://yoursite.qwikker.com/page"
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                  Must be a qwikker.com domain for security
-                </p>
-              </div>
-            )}
 
             {/* Send Button */}
             <Button 

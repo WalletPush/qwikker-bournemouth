@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     // 3. GET BUSINESS PROFILE & VERIFY OWNERSHIP
     const { data: business, error: businessError } = await supabaseAuth
       .from('business_profiles')
-      .select('id, business_name, city, user_id')
+      .select('id, business_name, slug, city, user_id')
       .eq('user_id', user.id)
       .single()
 
@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
     const businessId = business.id
     const businessCity = business.city
     const businessName = business.business_name
+    const businessSlug = business.slug
 
     if (!businessCity) {
       return NextResponse.json({ 
@@ -243,21 +244,18 @@ export async function POST(request: NextRequest) {
     const destType = destination?.type || 'offers'
 
     if (destType === 'offers') {
-      destinationUrl = `https://${businessCity}.qwikker.com/user/dashboard`
+      destinationUrl = `https://${businessCity}.qwikker.com/user/offers`
+    } else if (destType === 'secret-menu') {
+      destinationUrl = `https://${businessCity}.qwikker.com/user/secret-menu`
+    } else if (destType === 'events') {
+      destinationUrl = `https://${businessCity}.qwikker.com/user/events`
     } else if (destType === 'chat') {
       destinationUrl = `https://${businessCity}.qwikker.com/user/chat`
     } else if (destType === 'business') {
-      destinationUrl = `https://${businessCity}.qwikker.com/user/dashboard`
-    } else if (destType === 'custom' && destination?.url) {
-      // Validate custom URL (allowlist)
-      const customUrl = destination.url
-      if (!customUrl.match(/^https:\/\/([a-z0-9-]+\.)?qwikker\.com\//)) {
-        return NextResponse.json({ 
-          error: 'Custom URL must be a qwikker.com domain' 
-        }, { status: 400 })
-      }
-      destinationUrl = customUrl
+      // Open business modal on discover page
+      destinationUrl = `https://${businessCity}.qwikker.com/user/discover?business=${businessSlug}`
     } else {
+      // Default fallback
       destinationUrl = `https://${businessCity}.qwikker.com/user/dashboard`
     }
 
