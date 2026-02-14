@@ -62,7 +62,8 @@ export function NotificationsPageClient({ currentUser, currentCity, cityDisplayN
     try {
       setLoading(true)
       const offset = page * limit
-      const response = await fetch(`/api/user/notifications?limit=${limit}&offset=${offset}`)
+      const walletPassParam = currentUser?.wallet_pass_id ? `&wallet_pass_id=${currentUser.wallet_pass_id}` : ''
+      const response = await fetch(`/api/user/notifications?limit=${limit}&offset=${offset}${walletPassParam}`)
       
       if (!response.ok) {
         throw new Error('Failed to fetch notifications')
