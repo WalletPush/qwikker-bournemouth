@@ -195,13 +195,13 @@ export async function GET(request: NextRequest) {
       sentRecipients = data || []
     }
 
-    // Get all clicks for these recipients
+    // Get all clicks for these notifications (clicks reference push_notifications directly)
     let clicks: any[] = []
     if (notificationIds.length > 0) {
       const { data, error: clicksError } = await supabase
         .from('push_notification_clicks')
-        .select('recipient_id, push_notification_recipients!inner(push_notification_id)')
-        .in('push_notification_recipients.push_notification_id', notificationIds)
+        .select('push_notification_id, id')
+        .in('push_notification_id', notificationIds)
 
       console.log('📊 Clicks query:', {
         count: data?.length,
@@ -227,13 +227,8 @@ export async function GET(request: NextRequest) {
         // Count sent recipients for this notification
         const notifRecipients = sentRecipients?.filter(r => r.push_notification_id === notif.id).length || 0
         
-        // Count clicks for this notification
-        const notifClicks = clicks?.filter(c => {
-          const recipientNotifId = Array.isArray(c.push_notification_recipients)
-            ? c.push_notification_recipients[0]?.push_notification_id
-            : c.push_notification_recipients?.push_notification_id
-          return recipientNotifId === notif.id
-        }).length || 0
+        // Count clicks for this notification (clicks reference notification directly)
+        const notifClicks = clicks?.filter(c => c.push_notification_id === notif.id).length || 0
 
         console.log('📊 Business metrics:', {
           businessName,
