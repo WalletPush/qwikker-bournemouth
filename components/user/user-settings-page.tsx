@@ -9,6 +9,7 @@ interface UserSettingsPageProps {
     name: string
     email: string
     city?: string
+    wallet_pass_id?: string
   }
   currentCity?: string
   cityDisplayName?: string
@@ -39,7 +40,11 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
 
   const fetchConsent = async () => {
     try {
-      const response = await fetch('/api/user/marketing-consent')
+      const url = currentUser?.wallet_pass_id 
+        ? `/api/user/marketing-consent?wallet_pass_id=${currentUser.wallet_pass_id}`
+        : '/api/user/marketing-consent'
+      
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setPushConsent(data.marketing_push_consent || false)
@@ -55,9 +60,10 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
   const updateConsent = async (type: 'push' | 'email', value: boolean) => {
     setSaving(true)
     try {
-      const payload = type === 'push' 
-        ? { marketing_push_consent: value }
-        : { marketing_email_consent: value }
+      const payload = {
+        ...(type === 'push' ? { marketing_push_consent: value } : { marketing_email_consent: value }),
+        ...(currentUser?.wallet_pass_id ? { wallet_pass_id: currentUser.wallet_pass_id } : {})
+      }
 
       const response = await fetch('/api/user/marketing-consent', {
         method: 'POST',

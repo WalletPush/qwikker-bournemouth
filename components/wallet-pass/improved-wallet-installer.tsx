@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 
 interface ImprovedWalletInstallerProps {
   firstName: string
@@ -17,10 +19,16 @@ export function ImprovedWalletInstaller({
   email, 
   city = 'bournemouth' 
 }: ImprovedWalletInstallerProps) {
-  const [step, setStep] = useState<'ready' | 'creating' | 'downloading' | 'installing' | 'success' | 'error'>('ready')
+  const [step, setStep] = useState<'consent' | 'ready' | 'creating' | 'downloading' | 'installing' | 'success' | 'error' | 'second-chance'>('consent')
   const [errorMessage, setErrorMessage] = useState('')
   const [passUrl, setPassUrl] = useState('')
   const [countdown, setCountdown] = useState(0)
+  const [serialNumber, setSerialNumber] = useState('')
+  
+  // Consent state
+  const [marketingPushConsent, setMarketingPushConsent] = useState(false)
+  const [marketingEmailConsent, setMarketingEmailConsent] = useState(false)
+  const [showSecondChance, setShowSecondChance] = useState(false)
 
   // Detect device and location issues
   const [deviceInfo, setDeviceInfo] = useState({
@@ -53,6 +61,26 @@ export function ImprovedWalletInstaller({
     })
   }, [])
 
+  const handleConsent = () => {
+    // If neither consent was given, show second chance modal
+    if (!marketingPushConsent && !marketingEmailConsent) {
+      setShowSecondChance(true)
+      setStep('second-chance')
+    } else {
+      setStep('ready')
+    }
+  }
+
+  const handleSkipSecondChance = () => {
+    setStep('ready')
+  }
+
+  const handleAcceptSecondChance = () => {
+    setMarketingPushConsent(true)
+    setMarketingEmailConsent(true)
+    setStep('ready')
+  }
+
   const handleInstallPass = async () => {
     try {
       setStep('creating')
@@ -62,7 +90,14 @@ export function ImprovedWalletInstaller({
       const response = await fetch('/api/walletpass/create-main-pass', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firstName, lastName, email, city })
+        body: JSON.stringify({ 
+          firstName, 
+          lastName, 
+          email, 
+          city,
+          marketingPushConsent,
+          marketingEmailConsent
+        })
       })
 
       const result = await response.json()
@@ -72,6 +107,7 @@ export function ImprovedWalletInstaller({
       }
 
       setPassUrl(result.passUrl)
+      setSerialNumber(result.serialNumber)
       setStep('downloading')
 
       // For international/slow connections, add extra delay
@@ -145,6 +181,99 @@ export function ImprovedWalletInstaller({
             {firstName} {lastName} • {city.charAt(0).toUpperCase() + city.slice(1)}
           </p>
         </div>
+
+        {/* Consent Step */}
+        {step === 'consent' && (
+          <div className="space-y-4">
+            <div className="text-center mb-4">
+              <p className="text-gray-300 text-sm">
+                Before we create your pass, would you like to receive promotional updates?
+              </p>
+              <p className="text-gray-500 text-xs mt-2">
+                (Optional - you can change this anytime in settings)
+              </p>
+            </div>
+
+            <div className="space-y-3 bg-slate-700/30 p-4 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="push-consent"
+                  checked={marketingPushConsent}
+                  onCheckedChange={(checked) => setMarketingPushConsent(checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="push-consent" className="text-white font-medium cursor-pointer">
+                    Wallet Pass Promotions
+                  </Label>
+                  <p className="text-gray-400 text-xs mt-1">
+                    Receive exclusive offers, secret menus, and personalized deals directly on your wallet pass
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="email-consent"
+                  checked={marketingEmailConsent}
+                  onCheckedChange={(checked) => setMarketingEmailConsent(checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="email-consent" className="text-white font-medium cursor-pointer">
+                    Email Promotions
+                  </Label>
+                  <p className="text-gray-400 text-xs mt-1">
+                    Get weekly digests of new businesses, special events, and city updates
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleConsent}
+              className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-semibold"
+            >
+              Continue
+            </Button>
+          </div>
+        )}
+
+        {/* Second Chance Modal */}
+        {step === 'second-chance' && (
+          <div className="space-y-4">
+            <div className="text-center">
+              <div className="text-4xl mb-3">🎁</div>
+              <h4 className="text-lg font-semibold text-white mb-2">
+                Don't Miss Out!
+              </h4>
+              <p className="text-gray-300 text-sm mb-4">
+                Stay in the loop with personalized offers, secret menu items, exclusive events, and more from your favorite local businesses.
+              </p>
+              <div className="bg-[#00d083]/10 border border-[#00d083]/30 rounded-lg p-3 mb-4">
+                <p className="text-[#00d083] text-sm font-medium">
+                  ✨ You'll receive updates directly on your wallet pass - no spam, just great local deals!
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Button
+                onClick={handleAcceptSecondChance}
+                className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-semibold"
+              >
+                Yes, Keep Me Updated!
+              </Button>
+              <Button
+                onClick={handleSkipSecondChance}
+                variant="outline"
+                className="w-full text-gray-400 border-gray-600 hover:bg-slate-700"
+              >
+                No Thanks, Continue Without
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Device Warnings */}
         {getDeviceWarnings().length > 0 && (
@@ -240,7 +369,7 @@ export function ImprovedWalletInstaller({
               You can now access your personalized Qwikker dashboard from your wallet
             </p>
             <Button
-              onClick={() => window.location.href = `/user/dashboard?wallet_pass_id=${result.serialNumber || 'new'}`}
+              onClick={() => window.location.href = `/user/dashboard?wallet_pass_id=${serialNumber || 'new'}`}
               className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#009d5f] text-black font-semibold"
             >
               View Dashboard

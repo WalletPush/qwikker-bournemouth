@@ -16,20 +16,22 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
     
-    // 1. AUTHENTICATE USER
+    // 1. PARSE REQUEST FIRST
+    const body = await request.json()
+    const { marketing_push_consent, marketing_email_consent, wallet_pass_id } = body
+    
+    // 2. IDENTIFY USER (either auth or wallet pass)
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (authError || !user) {
+    // User must be either authenticated OR provide wallet_pass_id
+    if ((!user || authError) && !wallet_pass_id) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - no user session or wallet pass ID' },
         { status: 401 }
       )
     }
 
-    // 2. PARSE REQUEST
-    const { marketing_push_consent, marketing_email_consent } = await request.json()
-
-    // Validate boolean values
+    // 3. VALIDATE REQUEST
     if (typeof marketing_push_consent !== 'boolean' && marketing_push_consent !== undefined) {
       return NextResponse.json(
         { error: 'marketing_push_consent must be a boolean' },
@@ -60,13 +62,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 3. UPDATE USER CONSENT (bound to authenticated user)
-    const { data, error } = await supabase
+    // 4. UPDATE USER CONSENT (bound to user_id OR wallet_pass_id)
+    let query = supabase
       .from('app_users')
       .update(updates)
-      .eq('user_id', user.id) // SECURITY: Bind to auth user
-      .select()
-      .single()
+    
+    // Bind to either user_id (auth) or wallet_pass_id
+    if (user?.id) {
+      query = query.eq('user_id', user.id)
+    } else {
+      query = query.eq('wallet_pass_id', wallet_pass_id)
+    }
+    
+    const { data, error } = await query.select().single()
 
     if (error) {
       console.error('Error updating consent:', error)
@@ -102,22 +110,32 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
     
-    // 1. AUTHENTICATE USER
+    // 1. IDENTIFY USER (either auth or wallet pass from query param)
     const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { searchParams } = new URL(request.url)
+    const wallet_pass_id = searchParams.get('wallet_pass_id')
     
-    if (authError || !user) {
+    // User must be either authenticated OR provide wallet_pass_id
+    if ((!user || authError) && !wallet_pass_id) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - no user session or wallet pass ID' },
         { status: 401 }
       )
     }
 
     // 2. GET USER CONSENT
-    const { data, error } = await supabase
+    let query = supabase
       .from('app_users')
       .select('marketing_push_consent, marketing_email_consent')
-      .eq('user_id', user.id)
-      .single()
+    
+    // Bind to either user_id (auth) or wallet_pass_id
+    if (user?.id) {
+      query = query.eq('user_id', user.id)
+    } else {
+      query = query.eq('wallet_pass_id', wallet_pass_id)
+    }
+    
+    const { data, error } = await query.single()
 
     if (error) {
       console.error('Error fetching consent:', error)

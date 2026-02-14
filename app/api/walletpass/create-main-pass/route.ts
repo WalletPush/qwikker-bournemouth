@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🎫 Creating main wallet pass for user')
     
-    const { firstName, lastName, email, city } = await request.json()
+    const { firstName, lastName, email, city, marketingPushConsent, marketingEmailConsent } = await request.json()
     
     if (!firstName || !lastName || !email) {
       return NextResponse.json(
@@ -87,6 +87,42 @@ export async function POST(request: NextRequest) {
         passUrl: result.url,
         passTypeIdentifier: result.passTypeIdentifier
       })
+      
+      // Save/update user record with consent preferences
+      try {
+        const { createClient } = await import('@/lib/supabase/server')
+        const supabase = await createClient()
+        
+        const { error: upsertError } = await supabase
+          .from('app_users')
+          .upsert({
+            wallet_pass_id: result.serialNumber,
+            first_name: firstName,
+            name: `${firstName} ${lastName}`,
+            email: email.toLowerCase(),
+            city: city?.toLowerCase() || 'bournemouth',
+            wallet_pass_status: 'active',
+            marketing_push_consent: marketingPushConsent ?? false,
+            marketing_email_consent: marketingEmailConsent ?? false
+          }, {
+            onConflict: 'wallet_pass_id',
+            ignoreDuplicates: false
+          })
+        
+        if (upsertError) {
+          console.error('⚠️ Failed to save consent to database:', upsertError)
+          // Don't fail the whole request, pass was created successfully
+        } else {
+          console.log('✅ Saved consent preferences to database:', {
+            wallet_pass_id: result.serialNumber,
+            marketing_push_consent: marketingPushConsent ?? false,
+            marketing_email_consent: marketingEmailConsent ?? false
+          })
+        }
+      } catch (dbError) {
+        console.error('⚠️ Database error saving consent:', dbError)
+        // Don't fail the whole request
+      }
       
       // Return immediately - match old simple flow
       return NextResponse.json({ 
