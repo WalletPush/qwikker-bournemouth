@@ -1,19 +1,134 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ElegantModal } from '@/components/ui/elegant-modal'
+import { Bell, Send, Users, MousePointer, TrendingUp, Info, Plus } from 'lucide-react'
 
 interface NotificationsPageClientProps {
   profile: any
 }
 
+interface NotificationStats {
+  eligiblePasses: number
+  sentCount: number
+  clickThroughRate: number
+}
+
 export function NotificationsPageClient({ profile }: NotificationsPageClientProps) {
   const [showModal, setShowModal] = useState(true)
+  const [message, setMessage] = useState('')
+  const [audience, setAudience] = useState('all')
+  const [destination, setDestination] = useState('offers')
+  const [customUrl, setCustomUrl] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  
+  // Stats state
+  const [stats, setStats] = useState<NotificationStats>({
+    eligiblePasses: 0,
+    sentCount: 0,
+    clickThroughRate: 0
+  })
+  const [statsLoading, setStatsLoading] = useState(true)
+  const [statsError, setStatsError] = useState<string | null>(null)
   
   // Check if user has Spotlight or Pro subscription
   const hasSpotlightAccess = profile?.plan === 'spotlight' || profile?.plan === 'pro'
+
+  // Fetch stats on mount
+  useEffect(() => {
+    if (!hasSpotlightAccess) {
+      setStatsLoading(false)
+      return
+    }
+
+    fetchStats()
+  }, [hasSpotlightAccess])
+
+  const fetchStats = async () => {
+    try {
+      setStatsLoading(true)
+      setStatsError(null)
+      
+      const response = await fetch('/api/dashboard/notification-stats')
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch stats')
+      }
+
+      const data = await response.json()
+      setStats({
+        eligiblePasses: data.eligiblePasses || 0,
+        sentCount: data.sentCount || 0,
+        clickThroughRate: data.clickThroughRate || 0
+      })
+    } catch (err: any) {
+      console.error('Error fetching notification stats:', err)
+      setStatsError(err.message || 'Failed to load stats')
+    } finally {
+      setStatsLoading(false)
+    }
+  }
+
+  const handleAddFirstName = () => {
+    setMessage(prev => prev + '{first_name}')
+  }
+
+  const handleSendNotification = async () => {
+    if (!message.trim()) {
+      setError('Message is required')
+      return
+    }
+
+    if (message.length > 200) {
+      setError('Message must be 200 characters or less')
+      return
+    }
+
+    setSending(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const payload: any = {
+        message: message.trim(),
+        audience: { type: audience },
+        destination: { type: destination }
+      }
+
+      if (destination === 'custom' && customUrl) {
+        payload.destination.url = customUrl
+      }
+
+      const response = await fetch('/api/walletpass/push-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send notification')
+      }
+
+      setSuccess(`✅ Notification sent to ${data.sentCount} pass holders!`)
+      setMessage('')
+      setCustomUrl('')
+      
+      // Refresh stats after successful send
+      await fetchStats()
+
+    } catch (err: any) {
+      setError(err.message || 'Failed to send notification')
+    } finally {
+      setSending(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Show upgrade modal for non-Spotlight users */}
@@ -48,15 +163,15 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>Target all followers, nearby users, or loyalty members</span>
+                  <span>Target all pass holders or offer claimers</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>Schedule notifications or send immediately</span>
+                  <span>Track clicks & engagement</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>Track delivery, opens, clicks & redemptions</span>
+                  <span>Short tracking links embedded automatically</span>
                 </div>
               </div>
             </div>
@@ -74,202 +189,284 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
           <p className="text-gray-400">Engage customers with targeted messaging</p>
         </div>
 
-      {/* Notification Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-400">Subscribers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">2,847</div>
-            <p className="text-xs text-[#00d083] flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l9.2-9.2M17 17V7H7" />
-              </svg>
-              +12.4% this month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-400">Sent This Month</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">1,247</div>
-            <p className="text-xs text-[#00d083] flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l9.2-9.2M17 17V7H7" />
-              </svg>
-              +28.7% from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-400">Open Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">68.2%</div>
-            <p className="text-xs text-[#00d083] flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l9.2-9.2M17 17V7H7" />
-              </svg>
-              +5.1% from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-400">Click Through</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">24.8%</div>
-            <p className="text-xs text-[#00d083] flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l9.2-9.2M17 17V7H7" />
-              </svg>
-              +3.2% from last month
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Send Notification */}
-      <Card className="bg-slate-800/50 border-slate-700 mb-8">
-        <CardHeader>
-          <CardTitle className="text-white">Send New Notification</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Message</label>
-            <textarea 
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white placeholder-gray-400"
-              rows={3}
-              placeholder="🎉 New secret menu item just dropped! Limited time only..."
-            />
+        {/* Instructional Banner */}
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <p className="text-sm text-blue-300 leading-relaxed">
+                <strong>How it works:</strong> Push notifications appear instantly on users' phones. 
+                The Wallet pass shows only the latest message, but users can view the full history 
+                in their Notifications tab.
+              </p>
+              <p className="text-xs text-blue-300/70">
+                <strong>Limits:</strong> 20 pushes per month • 60 second cooldown between city pushes
+              </p>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        </div>
+
+        {/* Notification Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Eligible Passes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">
+                {statsLoading ? '--' : stats.eligiblePasses.toLocaleString()}
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Active pass holders with marketing consent
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                <Send className="w-4 h-4" />
+                Sent (30 Days)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">
+                {statsLoading ? '--' : stats.sentCount.toLocaleString()}
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Total notifications sent this month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                <MousePointer className="w-4 h-4" />
+                Click-Through Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">
+                {statsLoading ? '--' : `${stats.clickThroughRate}%`}
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                % of recipients who tapped links
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Stats Error */}
+        {statsError && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-6">
+            <p className="text-sm text-red-300">
+              Failed to load stats: {statsError}
+            </p>
+          </div>
+        )}
+
+        {/* Eligible Passes Info */}
+        <div className="bg-slate-800/30 border border-slate-700 rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-medium text-slate-300 mb-2">Who receives notifications?</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            <strong className="text-slate-300">Eligible Pass Holders</strong> are users in your city with:
+            (1) an active wallet pass, and (2) marketing consent enabled. 
+            Users can toggle this in their Settings at any time.
+          </p>
+        </div>
+
+        {/* Send Notification Form */}
+        <Card className="bg-slate-800/50 border-slate-700 mb-8">
+          <CardHeader>
+            <CardTitle className="text-white">Send New Notification</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Success/Error Messages */}
+            {success && (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-sm text-green-300">
+                {success}
+              </div>
+            )}
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-300">
+                {error}
+              </div>
+            )}
+
+            {/* Message Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Target Audience</label>
-              <select className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
-                <option>All Subscribers</option>
-                <option>Nearby Users Only</option>
-                <option>Loyalty Members Only</option>
-                <option>Recent Visitors</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Send Time</label>
-              <select className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white">
-                <option>Send Now</option>
-                <option>Schedule for Later</option>
-                <option>Best Time (AI Optimized)</option>
-              </select>
-            </div>
-          </div>
-          <Button className="w-full bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold">
-            Send Notification
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Recent Notifications */}
-      <Card className="bg-slate-800/50 border-slate-700 mb-8">
-        <CardHeader>
-          <CardTitle className="text-white">Recent Notifications</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg">
-              <div className="flex-1">
-                <h4 className="font-medium text-white">🎉 New secret menu item just dropped!</h4>
-                <p className="text-sm text-gray-400 mt-1">Sent to 2,847 subscribers • 2 hours ago</p>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-300">Message</label>
+                <button
+                  type="button"
+                  onClick={handleAddFirstName}
+                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add First Name
+                </button>
               </div>
-              <div className="text-right">
-                <p className="text-[#00d083] font-semibold">72% opened</p>
-                <p className="text-xs text-gray-400">28% clicked</p>
+              <textarea 
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={3}
+                maxLength={200}
+                placeholder="We just added a new secret menu item! Come and check it out, {first_name}!"
+              />
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-xs text-slate-500">
+                  <span className="text-slate-400">💡 Your business name is auto-added.</span> Use <code className="bg-slate-700 px-1 py-0.5 rounded text-blue-400">{'{first_name}'}</code> for personalization
+                </p>
+                <p className={`text-xs ${message.length > 180 ? 'text-yellow-400' : 'text-slate-500'}`}>
+                  {message.length}/200
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg">
-              <div className="flex-1">
-                <h4 className="font-medium text-white">☕ Happy Hour: 20% off all coffee drinks!</h4>
-                <p className="text-sm text-gray-400 mt-1">Sent to 1,923 nearby users • 1 day ago</p>
+            {/* Audience and Destination */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Target Audience</label>
+                <select 
+                  value={audience}
+                  onChange={(e) => setAudience(e.target.value)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Eligible Passes in City</option>
+                  <option value="claimed">Users Who've Claimed Offers</option>
+                </select>
               </div>
-              <div className="text-right">
-                <p className="text-[#00d083] font-semibold">68% opened</p>
-                <p className="text-xs text-gray-400">31% clicked</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Destination</label>
+                <select 
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="offers">Offers Page</option>
+                  <option value="chat">Start Chat</option>
+                  <option value="business">Business Page</option>
+                  <option value="custom">Custom URL</option>
+                </select>
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg">
-              <div className="flex-1">
-                <h4 className="font-medium text-white">🎂 Birthday treat for our loyalty members!</h4>
-                <p className="text-sm text-gray-400 mt-1">Sent to 487 loyalty members • 3 days ago</p>
+            {/* Custom URL Input */}
+            {destination === 'custom' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Custom URL</label>
+                <input
+                  type="url"
+                  value={customUrl}
+                  onChange={(e) => setCustomUrl(e.target.value)}
+                  placeholder="https://yoursite.qwikker.com/page"
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Must be a qwikker.com domain for security
+                </p>
               </div>
-              <div className="text-right">
-                <p className="text-[#00d083] font-semibold">84% opened</p>
-                <p className="text-xs text-gray-400">42% clicked</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            )}
 
-      {/* Notification Types */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-              </svg>
-              Offer Alerts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-400 text-sm">
-              Instantly notify customers when new offers go live or when limited-time deals are about to expire.
-            </p>
+            {/* Send Button */}
+            <Button 
+              onClick={handleSendNotification}
+              disabled={sending || !message.trim()}
+              className="w-full bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {sending ? 'Sending...' : 'Send Notification'}
+            </Button>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800/50 border-slate-700">
+        {/* Recent Notifications */}
+        <Card className="bg-slate-800/50 border-slate-700 mb-8">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              Secret Menu
-            </CardTitle>
+            <CardTitle className="text-white">Recent Notifications</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-400 text-sm">
-              Build excitement by announcing secret menu items exclusively to your most loyal customers.
-            </p>
+            <div className="text-center py-8 text-slate-400">
+              <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">No notifications sent yet</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Your sent notifications will appear here
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Location Based
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-400 text-sm">
-              Send targeted messages to users who are nearby or have visited your location recently.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Tips for Effective Notifications */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-[#00d083]" />
+                Best Practices
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="text-sm text-slate-400 space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="text-[#00d083] mt-1">•</span>
+                  <span>Keep messages under 100 characters for best impact</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[#00d083] mt-1">•</span>
+                  <span>Use personalization: <code className="bg-slate-700 px-1 rounded text-xs">{'{first_name}'}</code></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[#00d083] mt-1">•</span>
+                  <span>Send during business hours for higher CTR</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <MousePointer className="w-5 h-5 text-[#00d083]" />
+                Tracking Links
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Every notification includes a short tracking link automatically. 
+                When users tap it, you'll see click-through metrics and they'll land on your chosen destination.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Info className="w-5 h-5 text-[#00d083]" />
+                Rate Limits
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="text-sm text-slate-400 space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="text-[#00d083] mt-1">•</span>
+                  <span><strong className="text-slate-300">20 pushes per month</strong> (Spotlight)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[#00d083] mt-1">•</span>
+                  <span><strong className="text-slate-300">60 second cooldown</strong> between city pushes</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[#00d083] mt-1">•</span>
+                  <span>Protects users from spam</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

@@ -8,6 +8,8 @@ export interface ConversationState {
   currentBusiness: {
     id: string
     name: string
+    google_place_id?: string // Stable Google ID for DB lookups
+    slug?: string // For detail-mode business fetch
     contextType: 'browsing' | 'detailed_view' | 'comparing'
   } | null
   

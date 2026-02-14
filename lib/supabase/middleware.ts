@@ -56,6 +56,7 @@ export async function updateSession(request: NextRequest) {
     '/api',         // API routes handle their own authentication
     '/s/',          // Shortlinks
     '/c/',          // Chat shortlinks
+    '/n/',          // Push notification tracking links (cookie-free)
     '/claim',       // Business claim flow (creates account after verification)
     '/welcome',     // Welcome page
     '/onboarding',  // Onboarding flow
