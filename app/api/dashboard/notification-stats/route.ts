@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('business_profiles')
       .select('id, city')
-      .eq('user_id', user.id)
+      .eq('owner_user_id', user.id)
       .single()
 
     if (profileError || !profile) {
@@ -107,26 +107,26 @@ export async function GET(request: NextRequest) {
 
     const totalSent = recipients?.length || 0
 
-    // Get click counts
+    // Get click counts - clicks link directly to push_notifications via push_notification_id
     const { data: clicks, error: clicksError } = await supabase
       .from('push_notification_clicks')
       .select(`
-        push_notification_recipient_id,
-        push_notification_recipients!inner(
-          push_notifications!inner(business_id, created_at)
-        )
+        id,
+        wallet_pass_id,
+        push_notification_id,
+        push_notifications!inner(business_id, created_at)
       `)
-      .eq('push_notification_recipients.push_notifications.business_id', profile.id)
-      .gte('push_notification_recipients.push_notifications.created_at', thirtyDaysAgo.toISOString())
+      .eq('push_notifications.business_id', profile.id)
+      .gte('push_notifications.created_at', thirtyDaysAgo.toISOString())
 
     if (clicksError) {
       console.error('Error fetching clicks:', clicksError)
       // Don't fail the whole request, just return 0 CTR
     }
 
-    // Count unique recipients who clicked
+    // Count unique clickers by wallet_pass_id
     const uniqueClickers = new Set(
-      clicks?.map((c: any) => c.push_notification_recipient_id) || []
+      clicks?.map((c: any) => c.wallet_pass_id).filter(Boolean) || []
     )
     const totalClicked = uniqueClickers.size
 
