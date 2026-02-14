@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
       
       // Save/update user record with consent preferences
       try {
-        const { createClient } = await import('@/lib/supabase/server')
-        const supabase = await createClient()
+        const { createServiceRoleClient } = await import('@/lib/supabase/server')
+        const supabase = createServiceRoleClient()
         
         const { error: upsertError } = await supabase
           .from('app_users')
