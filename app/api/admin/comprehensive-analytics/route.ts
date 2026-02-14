@@ -145,11 +145,43 @@ export async function GET(request: NextRequest) {
       ? totalVisits / totalUsers
       : 0
 
+    // Get push notification analytics
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+    // Total push notifications sent for this city
+    const { data: pushNotifications } = await supabase
+      .from('push_notifications')
+      .select('id, created_at')
+      .eq('city', franchiseCity)
+
+    // Push notifications sent this week
+    const pushesThisWeek = pushNotifications?.filter(
+      notif => new Date(notif.created_at) >= sevenDaysAgo
+    ).length || 0
+
+    // Total recipients who received pushes
+    const { data: sentRecipients } = await supabase
+      .from('push_notification_recipients')
+      .select('notification_id, push_notifications!inner(city)')
+      .eq('status', 'sent')
+      .eq('push_notifications.city', franchiseCity)
+
+    // Total clicks
+    const { data: clicks } = await supabase
+      .from('push_notification_clicks')
+      .select('recipient_id, push_notification_recipients!inner(notification_id, push_notifications!inner(city))')
+      .eq('push_notification_recipients.push_notifications.city', franchiseCity)
+
     return NextResponse.json({
       offerClaimTrends: processedOfferClaimTrends,
       topBusinesses,
       passInstallRate,
-      averageVisitsPerUser
+      averageVisitsPerUser,
+      totalPushNotifications: pushNotifications?.length || 0,
+      pushesThisWeek,
+      totalPushRecipients: sentRecipients?.length || 0,
+      totalPushClicks: clicks?.length || 0
     })
 
   } catch (error) {
