@@ -107,22 +107,6 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Calculate conversion rates and sort by performance
-    const topBusinesses = Array.from(businessPerformanceMap.values())
-      .map(business => ({
-        ...business,
-        conversion_rate: business.total_visits > 0 
-          ? Math.round((business.offer_claims / business.total_visits) * 100)
-          : 0
-      }))
-      .sort((a, b) => {
-        // Sort by total engagement (visits + claims)
-        const aEngagement = a.total_visits + a.offer_claims
-        const bEngagement = b.total_visits + b.offer_claims
-        return bEngagement - aEngagement
-      })
-      .slice(0, 10) // Top 10 businesses
-
     // Calculate pass install rate
     const { count: totalUsers } = await supabase
       .from('app_users')
@@ -149,29 +133,170 @@ export async function GET(request: NextRequest) {
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-    // Total push notifications sent for this city
-    const { data: pushNotifications } = await supabase
+    // Get all push notifications for this city directly (no join needed)
+    const { data: pushNotifications, error: pushError } = await supabase
       .from('push_notifications')
-      .select('id, created_at')
+      .select('id, created_at, business_id, city')
       .eq('city', franchiseCity)
+
+    console.log('📊 Push notifications query:', {
+      franchiseCity,
+      count: pushNotifications?.length,
+      error: pushError,
+      sample: pushNotifications?.[0]
+    })
+
+    // Get business names for these push notifications
+    const businessIds = [...new Set(pushNotifications?.map(n => n.business_id).filter(Boolean))] || []
+    const { data: businesses } = await supabase
+      .from('business_profiles')
+      .select('id, business_name')
+      .in('id', businessIds)
+    
+    const businessIdToName = new Map(businesses?.map(b => [b.id, b.business_name]) || [])
 
     // Push notifications sent this week
     const pushesThisWeek = pushNotifications?.filter(
       notif => new Date(notif.created_at) >= sevenDaysAgo
     ).length || 0
 
-    // Total recipients who received pushes
-    const { data: sentRecipients } = await supabase
-      .from('push_notification_recipients')
-      .select('notification_id, push_notifications!inner(city)')
-      .eq('status', 'sent')
-      .eq('push_notifications.city', franchiseCity)
+    // Get all recipients for these notifications
+    const notificationIds = pushNotifications?.map(n => n.id) || []
+    console.log('📊 Notification IDs:', notificationIds.length)
+    
+    let sentRecipients: any[] = []
+    if (notificationIds.length > 0) {
+      // First, let's see ALL recipients regardless of status
+      const { data: allRecipients } = await supabase
+        .from('push_notification_recipients')
+        .select('push_notification_id, id, status')
+        .in('push_notification_id', notificationIds)
+      
+      console.log('📊 ALL Recipients (any status):', {
+        total: allRecipients?.length,
+        byStatus: allRecipients?.reduce((acc, r) => {
+          acc[r.status] = (acc[r.status] || 0) + 1
+          return acc
+        }, {} as Record<string, number>)
+      })
 
-    // Total clicks
-    const { data: clicks } = await supabase
-      .from('push_notification_clicks')
-      .select('recipient_id, push_notification_recipients!inner(notification_id, push_notifications!inner(city))')
-      .eq('push_notification_recipients.push_notifications.city', franchiseCity)
+      const { data, error: recipientsError } = await supabase
+        .from('push_notification_recipients')
+        .select('push_notification_id, id')
+        .in('push_notification_id', notificationIds)
+        .eq('status', 'sent')
+
+      console.log('📊 Recipients query (status=sent):', {
+        count: data?.length,
+        error: recipientsError,
+        sample: data?.[0]
+      })
+      
+      sentRecipients = data || []
+    }
+
+    // Get all clicks for these recipients
+    let clicks: any[] = []
+    if (notificationIds.length > 0) {
+      const { data, error: clicksError } = await supabase
+        .from('push_notification_clicks')
+        .select('recipient_id, push_notification_recipients!inner(push_notification_id)')
+        .in('push_notification_recipients.push_notification_id', notificationIds)
+
+      console.log('📊 Clicks query:', {
+        count: data?.length,
+        error: clicksError,
+        sample: data?.[0]
+      })
+      
+      clicks = data || []
+    }
+
+    // Build per-business push notification metrics
+    const businessPushMap = new Map()
+    pushNotifications?.forEach(notif => {
+      const businessName = businessIdToName.get(notif.business_id)
+      
+      console.log('📊 Processing notification:', {
+        id: notif.id,
+        business_id: notif.business_id,
+        businessName
+      })
+      
+      if (businessName) {
+        // Count sent recipients for this notification
+        const notifRecipients = sentRecipients?.filter(r => r.push_notification_id === notif.id).length || 0
+        
+        // Count clicks for this notification
+        const notifClicks = clicks?.filter(c => {
+          const recipientNotifId = Array.isArray(c.push_notification_recipients)
+            ? c.push_notification_recipients[0]?.push_notification_id
+            : c.push_notification_recipients?.push_notification_id
+          return recipientNotifId === notif.id
+        }).length || 0
+
+        console.log('📊 Business metrics:', {
+          businessName,
+          notifRecipients,
+          notifClicks
+        })
+
+        if (businessPushMap.has(businessName)) {
+          const existing = businessPushMap.get(businessName)
+          businessPushMap.set(businessName, {
+            push_sent: existing.push_sent + 1,
+            push_recipients: existing.push_recipients + notifRecipients,
+            push_clicks: existing.push_clicks + notifClicks
+          })
+        } else {
+          businessPushMap.set(businessName, {
+            push_sent: 1,
+            push_recipients: notifRecipients,
+            push_clicks: notifClicks
+          })
+        }
+      }
+    })
+
+    console.log('📊 Final business push map:', Array.from(businessPushMap.entries()))
+
+    // Merge push metrics into business performance map
+    businessPushMap.forEach((pushMetrics, businessName) => {
+      if (businessPerformanceMap.has(businessName)) {
+        const existing = businessPerformanceMap.get(businessName)
+        businessPerformanceMap.set(businessName, {
+          ...existing,
+          ...pushMetrics
+        })
+      } else {
+        businessPerformanceMap.set(businessName, {
+          business_name: businessName,
+          total_visits: 0,
+          offer_claims: 0,
+          last_activity: new Date().toISOString(),
+          ...pushMetrics
+        })
+      }
+    })
+
+    // Calculate conversion rates and sort by performance
+    const topBusinesses = Array.from(businessPerformanceMap.values())
+      .map(business => ({
+        ...business,
+        conversion_rate: business.total_visits > 0 
+          ? Math.round((business.offer_claims / business.total_visits) * 100)
+          : 0,
+        push_ctr: business.push_recipients > 0
+          ? Math.round((business.push_clicks / business.push_recipients) * 100)
+          : 0
+      }))
+      .sort((a, b) => {
+        // Sort by total engagement (visits + claims)
+        const aEngagement = a.total_visits + a.offer_claims
+        const bEngagement = b.total_visits + b.offer_claims
+        return bEngagement - aEngagement
+      })
+      .slice(0, 10) // Top 10 businesses
 
     return NextResponse.json({
       offerClaimTrends: processedOfferClaimTrends,

@@ -19,6 +19,10 @@ interface BusinessPerformance {
   offer_claims: number
   conversion_rate: number
   last_activity: string
+  push_sent?: number
+  push_recipients?: number
+  push_clicks?: number
+  push_ctr?: number
 }
 
 interface ComprehensiveAnalytics extends AdminAnalytics {
@@ -492,7 +496,7 @@ export function ComprehensiveAdminAnalytics({ city }: { city: string }) {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div className="grid grid-cols-6 gap-4 text-sm">
                         <div>
                           <div className="text-blue-400 font-semibold">{business.total_visits}</div>
                           <div className="text-slate-400 text-xs">Visits</div>
@@ -504,6 +508,18 @@ export function ComprehensiveAdminAnalytics({ city }: { city: string }) {
                         <div>
                           <div className="text-green-400 font-semibold">{business.conversion_rate}%</div>
                           <div className="text-slate-400 text-xs">Rate</div>
+                        </div>
+                        <div>
+                          <div className="text-purple-400 font-semibold">{business.push_sent || 0}</div>
+                          <div className="text-slate-400 text-xs">Pushes</div>
+                        </div>
+                        <div>
+                          <div className="text-cyan-400 font-semibold">{business.push_clicks || 0}</div>
+                          <div className="text-slate-400 text-xs">Clicks</div>
+                        </div>
+                        <div>
+                          <div className="text-pink-400 font-semibold">{business.push_ctr || 0}%</div>
+                          <div className="text-slate-400 text-xs">CTR</div>
                         </div>
                       </div>
                     </div>
