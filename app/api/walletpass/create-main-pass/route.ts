@@ -93,34 +93,62 @@ export async function POST(request: NextRequest) {
         const { createServiceRoleClient } = await import('@/lib/supabase/server')
         const supabase = createServiceRoleClient()
         
-        // Check if user already exists (by wallet_pass_id or email)
+        // Build consent update fields
+        const consentFields: Record<string, any> = {
+          wallet_pass_id: result.serialNumber,
+          first_name: firstName,
+          name: `${firstName} ${lastName}`,
+          email: email.toLowerCase(),
+          city: city?.toLowerCase() || 'bournemouth',
+          wallet_pass_status: 'active',
+          marketing_push_consent: marketingPushConsent ?? false,
+          email_marketing_consent: marketingEmailConsent ?? false,
+          ...(marketingPushConsent ? { marketing_push_consent_at: new Date().toISOString() } : {}),
+          ...(marketingEmailConsent ? { email_marketing_consent_at: new Date().toISOString() } : {}),
+        }
+
+        // Check if user already exists (by email - they may have a different wallet_pass_id)
         const { data: existingUser } = await supabase
           .from('app_users')
-          .select('user_id, wallet_pass_id')
-          .or(`wallet_pass_id.eq.${result.serialNumber},email.eq.${email.toLowerCase()}`)
+          .select('id, wallet_pass_id')
+          .eq('email', email.toLowerCase())
           .maybeSingle()
 
-        const userId = existingUser?.user_id ?? crypto.randomUUID()
+        let upsertError: any = null
 
-        const { error: upsertError } = await supabase
-          .from('app_users')
-          .upsert({
-            user_id: userId,
-            wallet_pass_id: result.serialNumber,
-            first_name: firstName,
-            name: `${firstName} ${lastName}`,
-            email: email.toLowerCase(),
-            city: city?.toLowerCase() || 'bournemouth',
-            wallet_pass_status: 'active',
-            marketing_push_consent: marketingPushConsent ?? false,
-            email_marketing_consent: marketingEmailConsent ?? false,
-            // Set consent timestamps when consent is given
-            ...(marketingPushConsent ? { marketing_push_consent_at: new Date().toISOString() } : {}),
-            ...(marketingEmailConsent ? { email_marketing_consent_at: new Date().toISOString() } : {}),
-          }, {
-            onConflict: 'wallet_pass_id',
-            ignoreDuplicates: false
-          })
+        if (existingUser) {
+          // UPDATE existing user - only touch safe fields, don't overwrite NOT NULL columns
+          const { error } = await supabase
+            .from('app_users')
+            .update(consentFields)
+            .eq('id', existingUser.id)
+          upsertError = error
+        } else {
+          // Also check by wallet_pass_id (in case email changed)
+          const { data: existingByPass } = await supabase
+            .from('app_users')
+            .select('id')
+            .eq('wallet_pass_id', result.serialNumber)
+            .maybeSingle()
+
+          if (existingByPass) {
+            const { error } = await supabase
+              .from('app_users')
+              .update(consentFields)
+              .eq('id', existingByPass.id)
+            upsertError = error
+          } else {
+            // Truly new user - insert with all required fields
+            const { error } = await supabase
+              .from('app_users')
+              .insert({
+                ...consentFields,
+                user_id: crypto.randomUUID(),
+                referral_code: `QWK-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+              })
+            upsertError = error
+          }
+        }
         
         if (upsertError) {
           console.error('⚠️ Failed to save consent to database:', upsertError)
@@ -129,7 +157,8 @@ export async function POST(request: NextRequest) {
           console.log('✅ Saved consent preferences to database:', {
             wallet_pass_id: result.serialNumber,
             marketing_push_consent: marketingPushConsent ?? false,
-            email_marketing_consent: marketingEmailConsent ?? false
+            email_marketing_consent: marketingEmailConsent ?? false,
+            isNewUser: !existingUser
           })
         }
       } catch (dbError) {
