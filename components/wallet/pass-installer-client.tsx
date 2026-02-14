@@ -27,6 +27,12 @@ export function PassInstallerClient({
   const [showQR, setShowQR] = useState(false)
   const [passUrl, setPassUrl] = useState<string | null>(null)
   const [serialNumber, setSerialNumber] = useState<string | null>(null)
+  
+  // Marketing consent state
+  const [showConsent, setShowConsent] = useState(false)
+  const [showSecondChance, setShowSecondChance] = useState(false)
+  const [marketingPushConsent, setMarketingPushConsent] = useState(false)
+  const [emailMarketingConsent, setEmailMarketingConsent] = useState(false)
 
   // Detect device type
   useEffect(() => {
@@ -88,8 +94,39 @@ export function PassInstallerClient({
     }
   }, [success, countdown, serialNumber, formData.firstName, formData.lastName])
 
-  async function handleSubmit(e: React.FormEvent) {
+  // Form submit -> show consent modal instead of directly creating pass
+  function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setError(null)
+    setShowConsent(true)
+  }
+
+  // After consent choice, proceed to create the pass
+  function handleConsentContinue() {
+    if (!marketingPushConsent && !emailMarketingConsent) {
+      // Neither selected -> show second chance
+      setShowConsent(false)
+      setShowSecondChance(true)
+    } else {
+      setShowConsent(false)
+      setShowSecondChance(false)
+      createPass()
+    }
+  }
+
+  function handleSecondChanceAccept() {
+    setMarketingPushConsent(true)
+    setEmailMarketingConsent(true)
+    setShowSecondChance(false)
+    createPass()
+  }
+
+  function handleSecondChanceSkip() {
+    setShowSecondChance(false)
+    createPass()
+  }
+
+  async function createPass() {
     setLoading(true)
     setError(null)
 
@@ -102,7 +139,9 @@ export function PassInstallerClient({
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
-          city: city // Dynamic per hostname
+          city: city, // Dynamic per hostname
+          marketingPushConsent,
+          marketingEmailConsent: emailMarketingConsent
         })
       })
 
@@ -275,8 +314,8 @@ export function PassInstallerClient({
             </div>
 
             {/* Form (hidden on desktop) */}
-            {deviceType !== 'desktop' && !success && (
-              <form onSubmit={handleSubmit} className="space-y-4">
+            {deviceType !== 'desktop' && !success && !showConsent && !showSecondChance && (
+              <form onSubmit={handleFormSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
                     First Name
@@ -347,6 +386,116 @@ export function PassInstallerClient({
                   Free forever · No payment required
                 </p>
               </form>
+            )}
+
+            {/* Marketing Consent Modal */}
+            {showConsent && !success && (
+              <div className="space-y-5">
+                <div className="text-center">
+                  <p className="text-neutral-300 text-sm">
+                    Before we create your pass, would you like to receive promotional updates?
+                  </p>
+                  <p className="text-neutral-500 text-xs mt-2">
+                    Optional — you can change this anytime in settings
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <label
+                    className="flex items-start gap-3 p-4 bg-neutral-800/50 border border-neutral-700/50 rounded-lg cursor-pointer hover:border-neutral-600 transition-colors"
+                    htmlFor="consent-push"
+                  >
+                    <input
+                      type="checkbox"
+                      id="consent-push"
+                      checked={marketingPushConsent}
+                      onChange={(e) => setMarketingPushConsent(e.target.checked)}
+                      className="mt-1 w-4 h-4 accent-[#00D083] rounded"
+                    />
+                    <div>
+                      <p className="text-white font-medium text-sm">Wallet Pass Promotions</p>
+                      <p className="text-neutral-400 text-xs mt-1">
+                        Receive exclusive offers, secret menus and personalised deals directly on your wallet pass
+                      </p>
+                    </div>
+                  </label>
+
+                  <label
+                    className="flex items-start gap-3 p-4 bg-neutral-800/50 border border-neutral-700/50 rounded-lg cursor-pointer hover:border-neutral-600 transition-colors"
+                    htmlFor="consent-email"
+                  >
+                    <input
+                      type="checkbox"
+                      id="consent-email"
+                      checked={emailMarketingConsent}
+                      onChange={(e) => setEmailMarketingConsent(e.target.checked)}
+                      className="mt-1 w-4 h-4 accent-[#00D083] rounded"
+                    />
+                    <div>
+                      <p className="text-white font-medium text-sm">Email Promotions</p>
+                      <p className="text-neutral-400 text-xs mt-1">
+                        Get weekly digests of new businesses, special events and city updates
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                <button
+                  onClick={handleConsentContinue}
+                  className="w-full py-4 bg-[#00D083] hover:bg-[#00b86f] text-black font-semibold text-base rounded-lg transition-all shadow-lg shadow-[#00D083]/10 hover:shadow-[#00D083]/20"
+                >
+                  Continue
+                </button>
+
+                <button
+                  onClick={() => { setShowConsent(false) }}
+                  className="w-full py-2 text-neutral-500 hover:text-neutral-300 text-sm transition-colors"
+                >
+                  ← Back to form
+                </button>
+              </div>
+            )}
+
+            {/* Second Chance Modal */}
+            {showSecondChance && !success && (
+              <div className="space-y-5">
+                <div className="text-center">
+                  <div className="text-4xl mb-3">🎁</div>
+                  <h4 className="text-lg font-semibold text-white mb-2">
+                    Don't Miss Out!
+                  </h4>
+                  <p className="text-neutral-300 text-sm mb-4">
+                    Stay in the loop with personalised offers, secret menu items, exclusive events and more from your favourite local businesses.
+                  </p>
+                  <div className="bg-[#00D083]/10 border border-[#00D083]/30 rounded-lg p-3 mb-4">
+                    <p className="text-[#00D083] text-sm font-medium">
+                      You'll receive updates directly on your wallet pass — no spam, just great local deals!
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSecondChanceAccept}
+                  className="w-full py-4 bg-[#00D083] hover:bg-[#00b86f] text-black font-semibold text-base rounded-lg transition-all shadow-lg shadow-[#00D083]/10 hover:shadow-[#00D083]/20"
+                >
+                  Yes, Keep Me Updated!
+                </button>
+                <button
+                  onClick={handleSecondChanceSkip}
+                  className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 text-sm rounded-lg border border-neutral-700 transition-colors"
+                >
+                  No Thanks, Continue Without
+                </button>
+              </div>
+            )}
+
+            {/* Loading State (shown during pass creation) */}
+            {loading && !success && !showConsent && !showSecondChance && (
+              <div className="text-center py-8">
+                <div className="animate-spin w-10 h-10 border-4 border-[#00D083] border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-neutral-300 font-medium">Creating your pass...</p>
+                <p className="text-neutral-500 text-sm mt-2">This may take a few seconds</p>
+              </div>
             )}
 
             {/* Success Message */}

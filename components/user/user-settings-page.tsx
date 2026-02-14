@@ -48,7 +48,7 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
       if (response.ok) {
         const data = await response.json()
         setPushConsent(data.marketing_push_consent || false)
-        setEmailConsent(data.marketing_email_consent || false)
+        setEmailConsent(data.email_marketing_consent || false)
       }
     } catch (error) {
       console.error('Error fetching consent:', error)
@@ -61,7 +61,7 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
     setSaving(true)
     try {
       const payload = {
-        ...(type === 'push' ? { marketing_push_consent: value } : { marketing_email_consent: value }),
+        ...(type === 'push' ? { marketing_push_consent: value } : { email_marketing_consent: value }),
         ...(currentUser?.wallet_pass_id ? { wallet_pass_id: currentUser.wallet_pass_id } : {})
       }
 

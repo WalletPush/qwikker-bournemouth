@@ -103,7 +103,10 @@ export async function POST(request: NextRequest) {
             city: city?.toLowerCase() || 'bournemouth',
             wallet_pass_status: 'active',
             marketing_push_consent: marketingPushConsent ?? false,
-            marketing_email_consent: marketingEmailConsent ?? false
+            email_marketing_consent: marketingEmailConsent ?? false,
+            // Set consent timestamps when consent is given
+            ...(marketingPushConsent ? { marketing_push_consent_at: new Date().toISOString() } : {}),
+            ...(marketingEmailConsent ? { email_marketing_consent_at: new Date().toISOString() } : {}),
           }, {
             onConflict: 'wallet_pass_id',
             ignoreDuplicates: false
@@ -116,7 +119,7 @@ export async function POST(request: NextRequest) {
           console.log('✅ Saved consent preferences to database:', {
             wallet_pass_id: result.serialNumber,
             marketing_push_consent: marketingPushConsent ?? false,
-            marketing_email_consent: marketingEmailConsent ?? false
+            email_marketing_consent: marketingEmailConsent ?? false
           })
         }
       } catch (dbError) {
