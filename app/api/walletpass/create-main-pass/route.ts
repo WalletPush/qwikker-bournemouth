@@ -93,9 +93,19 @@ export async function POST(request: NextRequest) {
         const { createServiceRoleClient } = await import('@/lib/supabase/server')
         const supabase = createServiceRoleClient()
         
+        // Check if user already exists (by wallet_pass_id or email)
+        const { data: existingUser } = await supabase
+          .from('app_users')
+          .select('user_id, wallet_pass_id')
+          .or(`wallet_pass_id.eq.${result.serialNumber},email.eq.${email.toLowerCase()}`)
+          .maybeSingle()
+
+        const userId = existingUser?.user_id ?? crypto.randomUUID()
+
         const { error: upsertError } = await supabase
           .from('app_users')
           .upsert({
+            user_id: userId,
             wallet_pass_id: result.serialNumber,
             first_name: firstName,
             name: `${firstName} ${lastName}`,
