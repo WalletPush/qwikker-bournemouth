@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('business_profiles')
       .select('id, city')
-      .eq('owner_user_id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (profileError || !profile) {

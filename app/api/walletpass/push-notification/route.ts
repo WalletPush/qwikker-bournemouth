@@ -47,11 +47,17 @@ export async function POST(request: NextRequest) {
     // 3. GET BUSINESS PROFILE & VERIFY OWNERSHIP
     const { data: business, error: businessError } = await supabaseAuth
       .from('business_profiles')
-      .select('id, business_name, slug, city, owner_user_id')
-      .eq('owner_user_id', user.id)
+      .select('id, business_name, slug, city, user_id')
+      .eq('user_id', user.id)
       .single()
 
     if (businessError || !business) {
+      console.error('❌ Business profile not found:', {
+        userId: user.id,
+        userEmail: user.email,
+        businessError: businessError?.message,
+        businessErrorCode: businessError?.code,
+      })
       return NextResponse.json({ 
         error: 'Business profile not found' 
       }, { status: 404 })
