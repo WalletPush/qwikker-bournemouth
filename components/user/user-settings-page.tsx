@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 interface UserSettingsPageProps {
@@ -19,13 +19,11 @@ interface UserSettingsPageProps {
 }
 
 export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth', stats }: UserSettingsPageProps) {
-  const [notifications, setNotifications] = useState({
-    geoOffers: true,
-    newBusinesses: true,
-    secretMenus: false,
-    weeklyDigest: true,
-    sms: false
-  })
+  // Marketing consent state
+  const [pushConsent, setPushConsent] = useState(false)
+  const [emailConsent, setEmailConsent] = useState(false)
+  const [consentLoading, setConsentLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   const [preferences, setPreferences] = useState({
     categories: ['Restaurant', 'Cafe', 'Bar'],
@@ -34,8 +32,54 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
     priceRange: 'All'
   })
 
-  const toggleNotification = (key: keyof typeof notifications) => {
-    setNotifications(prev => ({ ...prev, [key]: !prev[key] }))
+  // Fetch current consent status on mount
+  useEffect(() => {
+    fetchConsent()
+  }, [])
+
+  const fetchConsent = async () => {
+    try {
+      const response = await fetch('/api/user/marketing-consent')
+      if (response.ok) {
+        const data = await response.json()
+        setPushConsent(data.marketing_push_consent || false)
+        setEmailConsent(data.marketing_email_consent || false)
+      }
+    } catch (error) {
+      console.error('Error fetching consent:', error)
+    } finally {
+      setConsentLoading(false)
+    }
+  }
+
+  const updateConsent = async (type: 'push' | 'email', value: boolean) => {
+    setSaving(true)
+    try {
+      const payload = type === 'push' 
+        ? { marketing_push_consent: value }
+        : { marketing_email_consent: value }
+
+      const response = await fetch('/api/user/marketing-consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (response.ok) {
+        if (type === 'push') {
+          setPushConsent(value)
+        } else {
+          setEmailConsent(value)
+        }
+      } else {
+        throw new Error('Failed to update consent')
+      }
+    } catch (error) {
+      console.error('Error updating consent:', error)
+      alert('Failed to update preferences. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const shareQwikker = () => {
@@ -105,98 +149,60 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
       {/* Notifications */}
       <Card className="bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600">
         <CardHeader>
-            <CardTitle className="text-slate-100 flex items-center gap-2">
-            Notifications
+          <CardTitle className="text-slate-100 flex items-center gap-2">
+            Marketing Preferences
           </CardTitle>
-          <p className="text-slate-400">Choose what updates you'd like to receive</p>
+          <p className="text-slate-400">Control promotional notifications from businesses</p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg">
-              <div>
-                <p className="text-white font-medium">Location-based Offers</p>
-                <p className="text-slate-400 text-sm">Get notified when you're near businesses with active offers</p>
+          {consentLoading ? (
+            <div className="text-center py-4 text-slate-400">Loading preferences...</div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                <div>
+                  <p className="text-white font-medium">Wallet Pass Promotions</p>
+                  <p className="text-slate-400 text-sm">Receive promotional push notifications from businesses on your wallet pass</p>
+                </div>
+                <button
+                  onClick={() => updateConsent('push', !pushConsent)}
+                  disabled={saving}
+                  className={`w-12 h-6 rounded-full transition-colors disabled:opacity-50 ${
+                    pushConsent ? 'bg-[#00d083]' : 'bg-gray-600'
+                  }`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                    pushConsent ? 'translate-x-6' : 'translate-x-0.5'
+                  }`} />
+                </button>
               </div>
-              <button
-                onClick={() => toggleNotification('geoOffers')}
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  notifications.geoOffers ? 'bg-[#00d083]' : 'bg-gray-600'
-                }`}
-              >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  notifications.geoOffers ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
-              </button>
-            </div>
 
-            <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg">
-              <div>
-                <p className="text-white font-medium">New Businesses</p>
-                <p className="text-slate-400 text-sm">Be the first to know when new businesses join Qwikker</p>
+              <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                <div>
+                  <p className="text-white font-medium">Email Promotions</p>
+                  <p className="text-slate-400 text-sm">Receive weekly digest and promotional emails about offers and events</p>
+                </div>
+                <button
+                  onClick={() => updateConsent('email', !emailConsent)}
+                  disabled={saving}
+                  className={`w-12 h-6 rounded-full transition-colors disabled:opacity-50 ${
+                    emailConsent ? 'bg-[#00d083]' : 'bg-gray-600'
+                  }`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                    emailConsent ? 'translate-x-6' : 'translate-x-0.5'
+                  }`} />
+                </button>
               </div>
-              <button
-                onClick={() => toggleNotification('newBusinesses')}
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  notifications.newBusinesses ? 'bg-[#00d083]' : 'bg-gray-600'
-                }`}
-              >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  notifications.newBusinesses ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
-              </button>
-            </div>
 
-            <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg">
-              <div>
-                <p className="text-white font-medium">Secret Menu Updates</p>
-                <p className="text-slate-400 text-sm">Get notified when new secret menu items are added</p>
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mt-4">
+                <p className="text-xs text-blue-300 leading-relaxed">
+                  <strong>Note:</strong> Service notifications (offer claimed, reward updates) will still be sent regardless of these settings. 
+                  These toggles only control promotional messages.
+                </p>
               </div>
-              <button
-                onClick={() => toggleNotification('secretMenus')}
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  notifications.secretMenus ? 'bg-[#00d083]' : 'bg-gray-600'
-                }`}
-              >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  notifications.secretMenus ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
-              </button>
             </div>
-
-            <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg">
-              <div>
-                <p className="text-white font-medium">Weekly Digest</p>
-                <p className="text-slate-400 text-sm">A summary of new offers, businesses, and your activity</p>
-              </div>
-              <button
-                onClick={() => toggleNotification('weeklyDigest')}
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  notifications.weeklyDigest ? 'bg-[#00d083]' : 'bg-gray-600'
-                }`}
-              >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  notifications.weeklyDigest ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg">
-              <div>
-                <p className="text-white font-medium">SMS Notifications</p>
-                <p className="text-slate-400 text-sm">Receive important updates via text message</p>
-              </div>
-              <button
-                onClick={() => toggleNotification('sms')}
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  notifications.sms ? 'bg-[#00d083]' : 'bg-gray-600'
-                }`}
-              >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  notifications.sms ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
-              </button>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
