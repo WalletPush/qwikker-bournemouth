@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     // 3. GET BUSINESS PROFILE & VERIFY OWNERSHIP
     const { data: business, error: businessError } = await supabaseAuth
       .from('business_profiles')
-      .select('id, business_name, slug, city, user_id')
+      .select('id, business_name, city, user_id')
       .eq('user_id', user.id)
       .single()
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     const businessId = business.id
     const businessCity = business.city
     const businessName = business.business_name
-    const businessSlug = business.slug
+    const businessSlug = business.id // Use business ID for URLs (slug column doesn't exist)
 
     if (!businessCity) {
       return NextResponse.json({ 
