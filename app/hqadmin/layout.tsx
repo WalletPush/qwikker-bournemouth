@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { HQLogoutButton } from '@/components/hqadmin/hq-logout-button'
 
 export const metadata = {
   title: 'QWIKKER HQ',
@@ -96,6 +97,7 @@ export default async function HQAdminLayout({
               <NavLink href="/hqadmin/settings" icon="settings">
                 Settings
               </NavLink>
+              <HQLogoutButton />
             </div>
           </nav>
         </aside>

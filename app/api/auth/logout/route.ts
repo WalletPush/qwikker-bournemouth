@@ -13,13 +13,13 @@ import { cookies } from 'next/headers'
  */
 export async function POST(request: Request) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     
     // Sign out from Supabase (clears Supabase session)
     await supabase.auth.signOut()
     
     // Get ALL cookies
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const allCookies = cookieStore.getAll()
     
     // Delete ALL Supabase cookies (sb-*) AND custom cookies (qwikker_*)
@@ -70,11 +70,44 @@ export async function POST(request: Request) {
 }
 
 /**
- * GET handler for accidental GET requests (should use POST)
+ * GET handler - supports redirects from middleware (e.g., franchise isolation fail-closed)
+ * Performs the same logout as POST, then redirects to the specified URL or login page
  */
-export async function GET() {
-  return NextResponse.json(
-    { error: 'Method not allowed. Use POST to logout.' },
-    { status: 405 }
-  )
+export async function GET(request: Request) {
+  try {
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+
+    const cookieStore = await cookies()
+    const allCookies = cookieStore.getAll()
+
+    let deletedCount = 0
+    allCookies.forEach(cookie => {
+      const name = cookie.name
+      if (name.startsWith('sb-') || name.startsWith('qwikker_')) {
+        try {
+          cookieStore.delete(name)
+          deletedCount++
+          console.log(`🗑️  Deleted cookie: ${name}`)
+        } catch (error) {
+          console.warn(`⚠️  Failed to delete cookie ${name}:`, error)
+        }
+      }
+    })
+
+    console.log(`✅ GET Logout successful - ${deletedCount} session cookies cleared`)
+
+    // Check for redirect parameter
+    const url = new URL(request.url)
+    const redirectPath = url.searchParams.get('redirect') || '/auth/login'
+    
+    // Build absolute redirect URL
+    const redirectUrl = new URL(redirectPath, url.origin)
+    return NextResponse.redirect(redirectUrl.toString())
+  } catch (error) {
+    console.error('❌ GET Logout error:', error)
+    // Fallback: redirect to login even on error
+    const url = new URL(request.url)
+    return NextResponse.redirect(new URL('/auth/login', url.origin).toString())
+  }
 }

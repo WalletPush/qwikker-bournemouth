@@ -2,44 +2,34 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { useRouter } from 'next/navigation'
 
+/**
+ * Logout button for the Business Dashboard
+ * 
+ * CRITICAL: Uses window.location.href (hard redirect) instead of Next.js router.
+ * The Next.js soft navigation (router.replace + router.refresh) causes a redirect loop
+ * because the in-memory Supabase client session persists even after server-side cookies
+ * are cleared. A hard redirect ensures ALL client-side state is wiped.
+ */
 export function LogoutButton() {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
 
   const logout = async () => {
     setLoading(true)
     
     try {
-      // CRITICAL: Call server-side logout to clear httpOnly cookies
-      // Client-side signOut() alone does NOT clear httpOnly cookies
-      const response = await fetch('/api/auth/logout', {
+      // Clear httpOnly cookies via server-side logout endpoint
+      await fetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include', // Include httpOnly cookies in request
+        credentials: 'include',
       })
-      
-      if (!response.ok) {
-        console.error('Logout request failed:', response.status)
-      }
-      
-      // Use router.replace (not push) to prevent back-button issues
-      // This removes the current page from history
-      router.replace('/auth/login')
-      
-      // Force a hard refresh to clear any cached state
-      router.refresh()
-      
     } catch (error) {
-      console.error('❌ Logout failed:', error)
-      
-      // Even if logout fails, redirect to login (fail-safe)
-      router.replace('/auth/login')
-      router.refresh()
-    } finally {
-      // Don't set loading to false - we're navigating away
-      // setLoading(false) would cause UI flash
+      console.error('Logout API error (proceeding with redirect):', error)
     }
+    
+    // ALWAYS hard redirect to clear all in-memory state (Supabase client session, RSC cache)
+    // This prevents the soft-navigation redirect loop
+    window.location.href = '/auth/login'
   }
 
   return (
