@@ -76,6 +76,40 @@ export async function GET(
       console.error('Error counting approved claims:', approvedError)
     }
 
+    // Fetch push notification stats
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+    // Total pushes sent (all time) for this city
+    const { data: allPushes } = await supabase
+      .from('push_notifications')
+      .select('id, business_profiles!inner(city)')
+      .eq('business_profiles.city', franchise.city)
+
+    const totalPushes = allPushes?.length || 0
+
+    // Pushes sent this week
+    const { data: weekPushes } = await supabase
+      .from('push_notifications')
+      .select('id, business_profiles!inner(city), created_at')
+      .eq('business_profiles.city', franchise.city)
+      .gte('created_at', sevenDaysAgo.toISOString())
+
+    const pushesThisWeek = weekPushes?.length || 0
+
+    // Total recipients reached
+    const { count: totalRecipients } = await supabase
+      .from('push_notification_recipients')
+      .select('*, push_notifications!inner(business_profiles!inner(city))', { count: 'exact', head: true })
+      .eq('push_notifications.business_profiles.city', franchise.city)
+      .eq('status', 'sent')
+
+    // Total clicks
+    const { count: totalClicks } = await supabase
+      .from('push_notification_clicks')
+      .select('*, push_notification_recipients!inner(push_notifications!inner(business_profiles!inner(city)))', { count: 'exact', head: true })
+      .eq('push_notification_recipients.push_notifications.business_profiles.city', franchise.city)
+
     // Fetch recent audit logs for this franchise
     const { data: auditLogs, error: auditError } = await supabase
       .from('hq_audit_logs')
@@ -105,7 +139,11 @@ export async function GET(
       stats: {
         businesses: businessCount || 0,
         pending_claims: pendingClaims || 0,
-        approved_claims: approvedClaims || 0
+        approved_claims: approvedClaims || 0,
+        push_total: totalPushes,
+        push_this_week: pushesThisWeek,
+        push_recipients: totalRecipients || 0,
+        push_clicks: totalClicks || 0
       },
       audit_logs: auditLogs || []
     })

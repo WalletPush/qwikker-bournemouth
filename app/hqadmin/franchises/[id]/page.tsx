@@ -47,6 +47,10 @@ interface FranchiseDetail {
     businesses: number
     pending_claims: number
     approved_claims: number
+    push_total: number
+    push_this_week: number
+    push_recipients: number
+    push_clicks: number
   }
   audit_logs: Array<{
     id: string
@@ -165,10 +169,31 @@ export default function FranchiseDetailPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <StatCard label="Total Businesses" value={stats.businesses} />
         <StatCard label="Pending Claims" value={stats.pending_claims} alert={stats.pending_claims > 0} />
         <StatCard label="Approved Claims" value={stats.approved_claims} />
+      </div>
+
+      {/* Push Notification Stats */}
+      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 mb-6">
+        <h2 className="text-lg font-medium text-white mb-4">Push Notification Analytics</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <StatCard label="Total Pushes Sent" value={stats.push_total} />
+          <StatCard label="Pushes This Week" value={stats.push_this_week} />
+          <StatCard label="Total Recipients" value={stats.push_recipients} />
+          <StatCard label="Total Clicks" value={stats.push_clicks} />
+        </div>
+        {stats.push_recipients > 0 && (
+          <div className="mt-4 pt-4 border-t border-neutral-800">
+            <div className="flex items-center gap-2 text-sm text-neutral-400">
+              <span>Click-Through Rate:</span>
+              <span className="text-[#00d083] font-semibold">
+                {((stats.push_clicks / stats.push_recipients) * 100).toFixed(1)}%
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Control Levers */}
