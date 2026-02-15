@@ -89,10 +89,13 @@ export async function GET(request: NextRequest) {
   
   let businessMap = new Map()
   if (businessIds.length > 0) {
-    const { data: businesses } = await supabase
+    const { data: businesses, error: bizError } = await supabase
       .from('business_profiles')
-      .select('id, business_name, logo_url')
+      .select('id, business_name')
       .in('id', businessIds)
+    if (bizError) {
+      console.error('Error fetching business names:', bizError)
+    }
     businessMap = new Map(businesses?.map(b => [b.id, b]) || [])
   }
 
@@ -104,7 +107,7 @@ export async function GET(request: NextRequest) {
     
     if (!pushData) return null
     
-    const business = businessMap.get(pushData.business_id) || { business_name: 'Unknown', logo_url: null }
+    const business = businessMap.get(pushData.business_id) || { business_name: 'Unknown' }
     
     return {
       id: n.id,
@@ -114,7 +117,7 @@ export async function GET(request: NextRequest) {
       trackingUrl: n.tracking_url || pushData.destination_url,
       businessId: pushData.business_id,
       businessName: business.business_name || 'Unknown',
-      businessLogo: business.logo_url,
+      businessLogo: null, // logo_url not yet on business_profiles
       city: pushData.city,
       shortCode: pushData.short_code
     }
