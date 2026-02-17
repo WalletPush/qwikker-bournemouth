@@ -27,7 +27,10 @@ export function AISupportChat({ profile }: AISupportChatProps) {
 • **Optimizing your listing** - Best practices for photos, descriptions, and offers
 • **Understanding analytics** - How to read your performance metrics
 • **Managing offers** - Creating compelling deals that convert
+• **Contact Centre** - Report bugs, message your city admin, or complete tasks
 • **Technical support** - Troubleshooting any issues
+
+Tip: The **Contact Centre** in your sidebar is the fastest way to report a bug or speak directly with your city admin!
 
 What would you like help with today?`,
       timestamp: new Date()
@@ -104,30 +107,34 @@ What would you like help with today?`,
   }
 
   const quickActions = [
+    { label: 'Report a bug', message: 'How do I report a bug or issue with the platform?' },
     { label: 'Complete my profile', message: 'What do I need to complete my business profile?' },
-    { label: 'Improve my photos', message: 'How can I take better photos for my business listing?' },
+    { label: 'Contact my admin', message: 'How do I message my city admin directly?' },
     { label: 'Create better offers', message: 'What makes a good business offer that customers will use?' },
     { label: 'Understand analytics', message: 'Help me understand my business analytics and performance metrics' },
-    { label: 'Get more reviews', message: 'How can I encourage customers to leave reviews?' },
   ]
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button
+      <div className="fixed bottom-0 right-6 z-50">
+        <button
           onClick={() => setIsOpen(true)}
-          className="w-14 h-14 rounded-full bg-slate-800 border border-slate-700 hover:bg-slate-700 shadow-lg transition-all duration-300"
+          className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 border-b-0 rounded-t-lg hover:bg-slate-700 shadow-lg transition-all text-sm text-slate-300 hover:text-white"
         >
-          <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-        </Button>
+          Help
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+          </svg>
+        </button>
       </div>
     )
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-0 right-6 z-50">
       <Card className="w-96 h-[500px] bg-slate-900/95 backdrop-blur-xl border border-slate-700 shadow-2xl">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">

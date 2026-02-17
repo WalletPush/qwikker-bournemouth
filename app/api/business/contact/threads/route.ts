@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { sendContactSlackNotification } from '@/lib/utils/contact-slack'
+import type { FranchiseCity } from '@/lib/utils/city-detection'
 
 export const dynamic = 'force-dynamic'
 
@@ -99,6 +101,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Canonical severity -> thread priority mapping
+const SEVERITY_TO_PRIORITY: Record<string, string> = {
+  critical: 'urgent',
+  high: 'high',
+  medium: 'normal',
+  low: 'low',
+}
+
 export async function POST(request: NextRequest) {
   try {
     const profile = await getBusinessProfile()
@@ -106,7 +116,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { subject, category, message } = await request.json()
+    const body = await request.json()
+    const {
+      subject,
+      category,
+      message,
+      // Bug-specific fields
+      severity,
+      stepsToReproduce,
+      expectedBehavior,
+      actualBehavior,
+      // Universal fields
+      attachments: clientAttachments,
+      diagnosticsEnabled,
+      activityTrail: clientTrail,
+    } = body
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
@@ -114,15 +138,93 @@ export async function POST(request: NextRequest) {
 
     const validCategories = [
       'bug', 'feature_request', 'billing', 'listing', 'menu',
-      'photos', 'offers', 'events', 'app_issue', 'other'
+      'photos', 'offers', 'events', 'app_issue', 'other',
+      'support', 'platform_issue', 'task'
     ]
     if (category && !validCategories.includes(category)) {
       return NextResponse.json({ error: 'Invalid category' }, { status: 400 })
     }
 
+    const isBug = category === 'bug' || category === 'app_issue'
+    const userAgent = request.headers.get('user-agent') || 'unknown'
+
+    // Server-rebuilt diagnostics (always built server-side, never trust client)
+    const serverDiagnostics: Record<string, unknown> = {
+      receivedAt: new Date().toISOString(),
+      city: profile.city,
+      threadType: 'business_admin',
+      role: 'business',
+      businessId: profile.id,
+      userAgent,
+      buildId: process.env.NEXT_PUBLIC_BUILD_ID || process.env.VERCEL_GIT_COMMIT_SHA || 'dev',
+    }
+
+    // Merge safe client diagnostics only if enabled
+    if (diagnosticsEnabled === true) {
+      // Allowed client fields (never trust raw URLs with querystrings)
+      const safeDiag = body.clientDiagnostics || {}
+      if (safeDiag.pageUrl && typeof safeDiag.pageUrl === 'string') {
+        serverDiagnostics.pageUrl = safeDiag.pageUrl.split('?')[0].split('#')[0]
+      }
+      if (safeDiag.viewport && typeof safeDiag.viewport === 'string') {
+        serverDiagnostics.viewport = safeDiag.viewport.slice(0, 30)
+      }
+      if (safeDiag.timezone && typeof safeDiag.timezone === 'string') {
+        serverDiagnostics.timezone = safeDiag.timezone.slice(0, 50)
+      }
+      if (safeDiag.platform && typeof safeDiag.platform === 'string') {
+        serverDiagnostics.platform = safeDiag.platform.slice(0, 50)
+      }
+    }
+
+    // Validate and normalize attachments array
+    const attachments: Array<{ type: string; url: string; name?: string }> = []
+    if (Array.isArray(clientAttachments)) {
+      for (const att of clientAttachments.slice(0, 10)) {
+        if (att && typeof att.url === 'string' && att.url.startsWith('http')) {
+          attachments.push({
+            type: typeof att.type === 'string' ? att.type.slice(0, 20) : 'image',
+            url: att.url.slice(0, 500),
+            name: typeof att.name === 'string' ? att.name.slice(0, 100) : undefined,
+          })
+        }
+      }
+    }
+
+    // Validate and cap activity trail
+    let activityTrail: unknown[] = []
+    if (diagnosticsEnabled === true && Array.isArray(clientTrail)) {
+      activityTrail = clientTrail.slice(-25).map((evt: Record<string, unknown>) => ({
+        ts: typeof evt.ts === 'string' ? evt.ts : '',
+        type: typeof evt.type === 'string' ? evt.type.slice(0, 20) : 'unknown',
+        path: typeof evt.path === 'string' ? evt.path.split('?')[0].split('#')[0].slice(0, 200) : '',
+        target: typeof evt.target === 'string' ? evt.target.slice(0, 80) : undefined,
+      }))
+    }
+
+    // Compute thread priority from severity (bug-specific)
+    const threadPriority = isBug && severity
+      ? (SEVERITY_TO_PRIORITY[severity] || 'normal')
+      : 'normal'
+
+    // Build message metadata
+    const messageMetadata: Record<string, unknown> = {
+      diagnostics: serverDiagnostics,
+      attachments,
+    }
+    if (isBug) {
+      messageMetadata.severity = severity || 'medium'
+      if (stepsToReproduce) messageMetadata.stepsToReproduce = String(stepsToReproduce).slice(0, 2000)
+      if (expectedBehavior) messageMetadata.expectedBehavior = String(expectedBehavior).slice(0, 1000)
+      if (actualBehavior) messageMetadata.actualBehavior = String(actualBehavior).slice(0, 1000)
+    }
+    if (activityTrail.length > 0) {
+      messageMetadata.activityTrail = activityTrail
+    }
+
     const adminClient = createServiceRoleClient()
 
-    // Create thread
+    // Create thread (with priority mapped from severity)
     const { data: thread, error: threadError } = await adminClient
       .from('contact_threads')
       .insert({
@@ -133,8 +235,10 @@ export async function POST(request: NextRequest) {
         created_by_role: 'business',
         subject: subject?.trim() || null,
         category: category || 'other',
+        priority: threadPriority,
         last_message_preview: message.trim().slice(0, 120),
         last_message_from_role: 'business',
+        metadata: isBug ? { severity: severity || 'medium' } : {},
       })
       .select()
       .single()
@@ -172,8 +276,8 @@ export async function POST(request: NextRequest) {
         )
     }
 
-    // Create first message
-    const { data: msg, error: msgError } = await adminClient
+    // Create first message (with full metadata)
+    const { error: msgError } = await adminClient
       .from('contact_messages')
       .insert({
         thread_id: thread.id,
@@ -181,6 +285,7 @@ export async function POST(request: NextRequest) {
         sender_role: 'business',
         message_type: 'message',
         body: message.trim(),
+        metadata: messageMetadata,
       })
       .select()
       .single()
@@ -199,6 +304,18 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
       })
 
+    // Send Slack notification to admin (non-blocking)
+    sendContactSlackNotification({
+      city: profile.city as FranchiseCity,
+      businessName: profile.business_name || 'Unknown Business',
+      category: category || 'other',
+      subject: subject?.trim() || undefined,
+      messagePreview: message.trim(),
+      threadId: thread.id,
+      eventType: 'new_thread',
+      severity: isBug ? (severity || 'medium') : undefined,
+    }).catch(() => {})
+
     return NextResponse.json({
       success: true,
       thread: {
@@ -206,6 +323,7 @@ export async function POST(request: NextRequest) {
         subject: thread.subject,
         category: thread.category,
         status: thread.status,
+        priority: thread.priority,
       },
     })
   } catch (error: unknown) {

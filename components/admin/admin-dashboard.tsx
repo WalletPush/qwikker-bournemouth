@@ -23,6 +23,7 @@ import { AdminDashboardOverview } from './admin-dashboard-overview'
 import { PricingCardEditor } from './pricing-card-editor'
 import { AdminSetupPage } from './admin-setup-page'
 import { EventPreviewCard } from '@/components/ui/event-preview-card'
+import { AdminContactCentreClient } from './admin-contact-centre-client'
 
 interface Business {
   id: string
@@ -72,9 +73,9 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const searchParams = useSearchParams()
   
   // Get initial tab from URL or default to 'pending'
-  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'unclaimed' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'import' | 'claims' | 'qr-management' | 'ai-test' | 'pricing' | 'setup'>(() => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'unclaimed' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'contact-centre' | 'import' | 'claims' | 'qr-management' | 'ai-test' | 'pricing' | 'setup'>(() => {
     const urlTab = searchParams.get('tab')
-    const validTabs = ['overview', 'pending', 'updates', 'live', 'unclaimed', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'import', 'claims', 'qr-management', 'ai-test', 'pricing', 'setup']
+    const validTabs = ['overview', 'pending', 'updates', 'live', 'unclaimed', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'contact-centre', 'import', 'claims', 'qr-management', 'ai-test', 'pricing', 'setup']
     return validTabs.includes(urlTab || '') ? (urlTab as any) : 'overview'
   })
 
@@ -98,6 +99,9 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   
   // Filter state for AI eligible
   const [showOnlyAiEligible, setShowOnlyAiEligible] = useState(false)
+
+  // Contact Centre badge count
+  const [contactCentreBadge, setContactCentreBadge] = useState(0)
 
   // AI Eligible selection handlers
   const toggleBusinessSelection = (businessId: string) => {
@@ -202,6 +206,24 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
     
     loadClaims()
   }, [city])
+
+  // Fetch Contact Centre badge count
+  useEffect(() => {
+    const fetchContactBadge = async () => {
+      try {
+        const res = await fetch('/api/admin/contact/counts')
+        if (res.ok) {
+          const data = await res.json()
+          setContactCentreBadge(data.badgeCount || 0)
+        }
+      } catch {
+        // Silently fail - badge is non-critical
+      }
+    }
+    fetchContactBadge()
+    const interval = setInterval(fetchContactBadge, 60_000)
+    return () => clearInterval(interval)
+  }, [])
 
   const [processingClaim, setProcessingClaim] = useState<string | null>(null)
 
@@ -480,6 +502,10 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
   const updateActiveTab = (newTab: 'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'import' | 'claims' | 'qr-management' | 'ai-test' | 'pricing' | 'setup') => {
     setActiveTab(newTab)
     setIsMobileMenuOpen(false) // Close mobile menu when tab is selected
+    // Reset filters so listings always show on every tab
+    setSearchTerm('')
+    setFilterCategory('all')
+    setFilterTier('all')
     // Update URL without page refresh
     const url = new URL(window.location.href)
     url.searchParams.set('tab', newTab)
@@ -819,6 +845,12 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
       id: 'contacts', 
       label: 'Contacts', 
       icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>, 
+    },
+    { 
+      id: 'contact-centre', 
+      label: 'Contact Centre', 
+      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>,
+      count: contactCentreBadge,
     },
   ]
 
@@ -1357,7 +1389,7 @@ Qwikker Admin Team`
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                       activeTab === item.id
                         ? 'bg-[#00d083]/20 text-[#00d083]'
-                        : item.count > 0 && (item.id === 'incomplete' || item.id === 'pending' || item.id === 'updates' || item.id === 'claims')
+                        : item.count > 0 && (item.id === 'incomplete' || item.id === 'pending' || item.id === 'updates' || item.id === 'claims' || item.id === 'contact-centre')
                           ? 'bg-red-500/20 text-red-400 border border-red-500/30' // Red ONLY when count > 0 AND needs attention
                           : item.count > 0 && item.id === 'live'
                           ? 'bg-green-500/20 text-green-400 border border-green-500/30' // Green ONLY when count > 0 AND live
@@ -1534,6 +1566,7 @@ Qwikker Admin Team`
                 {activeTab === 'pricing' && 'Pricing & Billing'}
                 {activeTab === 'setup' && 'Franchise Setup'}
                 {activeTab === 'contacts' && 'Business Contacts'}
+                {activeTab === 'contact-centre' && 'Contact Centre'}
                 {activeTab === 'import' && 'Import Businesses'}
                 {activeTab === 'claims' && 'Claim Requests'}
                 {activeTab === 'qr-management' && 'QR Code Management'}
@@ -1852,11 +1885,12 @@ Qwikker Admin Team`
                   {activeTab === 'pricing' && 'Pricing & Billing'}
                   {activeTab === 'setup' && 'Franchise Setup'}
                   {activeTab === 'contacts' && 'Business Contacts'}
+                  {activeTab === 'contact-centre' && 'Contact Centre'}
                   {activeTab === 'qr-management' && 'QR Code Management'}
                   {activeTab === 'ai-test' && 'AI Chat Testing'}
                 </h2>
                 <p className="text-slate-400">
-                  {activeTab === 'overview' && `Quick overview of ${cityDisplayName} admin activities and priority actions`}
+                  {activeTab === 'overview' && `Quick overview of ${cityDisplayName} admin activities and priority action`}
                   {activeTab === 'pending' && 'Businesses awaiting your review and approval'}
                   {activeTab === 'updates' && 'Changes from approved businesses awaiting your review'}
                   {activeTab === 'incomplete' && 'Businesses that need to complete their profiles'}
@@ -1865,6 +1899,7 @@ Qwikker Admin Team`
                   {activeTab === 'analytics' && `Performance metrics and user analytics for ${cityDisplayName}`}
                   {activeTab === 'pricing' && `Customize pricing cards, currency, and billing settings for ${cityDisplayName}`}
                   {activeTab === 'contacts' && `CRM contact management with GHL sync for ${cityDisplayName}`}
+                  {activeTab === 'contact-centre' && `Manage messages and tasks with businesses in ${cityDisplayName}`}
                   {activeTab === 'import' && 'Auto-populate your city with businesses from Google Places API'}
                   {activeTab === 'claims' && 'Review and approve business owners claiming their listings'}
                   {activeTab === 'qr-management' && 'Generate and manage QR codes for businesses, offers, and secret menus'}
@@ -3483,6 +3518,11 @@ Qwikker Admin Team`
               {/* Contacts Tab */}
               {activeTab === 'contacts' && (
                 <ContactsTab city={city} cityDisplayName={cityDisplayName} />
+              )}
+
+              {/* Contact Centre Tab */}
+              {activeTab === 'contact-centre' && (
+                <AdminContactCentreClient city={city} />
               )}
 
               {/* Import Businesses Tab */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -133,7 +133,28 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const [isSavingNotes, setIsSavingNotes] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'contact' | 'files' | 'activity' | 'tasks' | 'offers' | 'events' | 'controls' | 'analytics'>('overview')
   const [newTask, setNewTask] = useState('')
+  const [newTaskBody, setNewTaskBody] = useState('')
+  const [newTaskActionType, setNewTaskActionType] = useState('other')
+  const [newTaskPriority, setNewTaskPriority] = useState('normal')
+  const [showTaskForm, setShowTaskForm] = useState(false)
   const [isAddingTask, setIsAddingTask] = useState(false)
+
+  // Admin-assigned tasks (from Contact Centre API)
+  const [adminTasks, setAdminTasks] = useState<Array<{
+    id: string
+    title: string
+    status: string
+    assignedByName: string
+    assignedAt: string
+    actionType?: string
+  }>>([])
+  const [loadingAdminTasks, setLoadingAdminTasks] = useState(false)
+
+  // Message business state
+  const [showMessageForm, setShowMessageForm] = useState(false)
+  const [messageSubject, setMessageSubject] = useState('')
+  const [messageBody, setMessageBody] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
 
   // DEBUG: Check subscription data
   console.log(`🔍 CRM Card for ${business.business_name}:`, {
@@ -550,24 +571,121 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     }
   }
 
-  const handleAddTask = () => {
+  // Create a real task via Contact Centre API (shows in business Action Items + Contact Centre)
+  const handleAddTask = async () => {
     if (!newTask.trim()) return
     setIsAddingTask(true)
-    setTimeout(() => {
-      const now = new Date()
-      const dueDate = new Date(now)
-      dueDate.setDate(dueDate.getDate() + 7)
-      
-      businessTasks.push({
-        id: Date.now(),
-        title: newTask,
-        due: dueDate.toISOString().split('T')[0],
-        priority: 'medium',
-        completed: false
+    try {
+      const res = await fetch('/api/admin/contact/tasks/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId: business.id,
+          title: newTask.trim(),
+          body: newTaskBody.trim() || newTask.trim(),
+          actionType: newTaskActionType,
+          priority: newTaskPriority,
+        }),
       })
+      if (!res.ok) {
+        const data = await res.json()
+        console.error('Failed to create task:', data.error)
+        return
+      }
+      // Add to local admin tasks list for immediate feedback
+      setAdminTasks(prev => [...prev, {
+        id: `new-${Date.now()}`,
+        title: newTask.trim(),
+        status: 'open',
+        assignedByName: 'You',
+        assignedAt: new Date().toISOString(),
+        actionType: newTaskActionType,
+      }])
       setNewTask('')
+      setNewTaskBody('')
+      setNewTaskActionType('other')
+      setNewTaskPriority('normal')
+      setShowTaskForm(false)
+    } catch (err) {
+      console.error('Error creating task:', err)
+    } finally {
       setIsAddingTask(false)
-    }, 500)
+    }
+  }
+
+  // Fetch admin-assigned tasks for this business from Contact Centre threads
+  const fetchAdminTasks = useCallback(async () => {
+    if (!business.id) return
+    setLoadingAdminTasks(true)
+    try {
+      const res = await fetch(`/api/admin/contact/threads?type=business_admin&category=task`)
+      if (!res.ok) return
+      const data = await res.json()
+      const threads = data.threads || []
+      // Filter threads for this business only
+      const bizThreads = threads.filter((t: { businessId: string }) => t.businessId === business.id)
+      if (bizThreads.length === 0) return
+
+      // Fetch messages for each thread to find task messages
+      const tasks: Array<{ id: string; title: string; status: string; assignedByName: string; assignedAt: string }> = []
+      for (const thread of bizThreads) {
+        const msgRes = await fetch(`/api/admin/contact/threads/${thread.id}`)
+        if (!msgRes.ok) continue
+        const msgData = await msgRes.json()
+        for (const msg of (msgData.messages || [])) {
+          if (msg.messageType === 'task' && msg.metadata) {
+            tasks.push({
+              id: msg.id,
+              title: (msg.metadata as Record<string, unknown>).title as string || msg.body,
+              status: (msg.metadata as Record<string, unknown>).status as string || 'open',
+              assignedByName: (msg.metadata as Record<string, unknown>).assignedByName as string || 'Admin',
+              assignedAt: (msg.metadata as Record<string, unknown>).assignedAt as string || msg.createdAt,
+            })
+          }
+        }
+      }
+      setAdminTasks(tasks)
+    } catch (err) {
+      console.error('Error fetching admin tasks:', err)
+    } finally {
+      setLoadingAdminTasks(false)
+    }
+  }, [business.id])
+
+  // Fetch admin tasks when Tasks tab is active
+  useEffect(() => {
+    if (activeTab === 'tasks') {
+      fetchAdminTasks()
+    }
+  }, [activeTab, fetchAdminTasks])
+
+  // Send message to business (admin-initiated thread)
+  const handleSendMessage = async () => {
+    if (!messageBody.trim()) return
+    setSendingMessage(true)
+    try {
+      const res = await fetch('/api/admin/contact/threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId: business.id,
+          subject: messageSubject.trim() || null,
+          message: messageBody.trim(),
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        console.error('Failed to send message:', data.error)
+        return
+      }
+      setMessageSubject('')
+      setMessageBody('')
+      setShowMessageForm(false)
+    } catch (err) {
+      console.error('Error sending message:', err)
+    } finally {
+      setSendingMessage(false)
+    }
   }
 
   const handleCall = () => {
@@ -782,6 +900,22 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 </svg>
               </button>
               
+              {/* Message Button - Opens CRM with compose form (only for claimed businesses) */}
+              {isClaimed && (
+                <button
+                  onClick={() => {
+                    setIsExpanded(true)
+                    setShowMessageForm(true)
+                  }}
+                  className="p-2 bg-cyan-900/30 hover:bg-cyan-800/40 border border-cyan-500/30 rounded-lg transition-all hover:scale-105"
+                  title="Message Business"
+                >
+                  <svg className="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </button>
+              )}
+
               {/* CRM Button */}
               <Button
                 onClick={() => setIsExpanded(true)}
@@ -1071,12 +1205,65 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </svg>
             Sync
           </Button>
+          {isClaimed && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/20 flex items-center gap-2"
+              onClick={() => setShowMessageForm(!showMessageForm)}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              Message
+            </Button>
+          )}
         </div>
         
         <div className="text-sm text-slate-400">
           Last updated: {business.updated_at ? new Date(business.updated_at).toLocaleString() : 'Unknown'}
         </div>
       </div>
+
+      {/* Inline Message Compose Form */}
+      {showMessageForm && (
+        <div className="mb-6 p-4 bg-cyan-950/30 border border-cyan-500/20 rounded-xl space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-cyan-400">
+              Message {business.business_name}
+            </h4>
+            <button
+              onClick={() => setShowMessageForm(false)}
+              className="text-slate-500 hover:text-slate-300 text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+          <Input
+            placeholder="Subject (optional)"
+            value={messageSubject}
+            onChange={(e) => setMessageSubject(e.target.value)}
+            className="bg-slate-900/50 border-slate-700 text-white text-sm"
+          />
+          <textarea
+            placeholder="Type your message..."
+            value={messageBody}
+            onChange={(e) => setMessageBody(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-md text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+          />
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              onClick={handleSendMessage}
+              disabled={sendingMessage || !messageBody.trim()}
+              className="bg-cyan-600 hover:bg-cyan-700 text-white"
+            >
+              {sendingMessage ? 'Sending...' : 'Send Message'}
+            </Button>
+          </div>
+        </div>
+      )}
 
           {/* Remove old Quick Info Bar - now integrated into header */}
           <div className="hidden">
@@ -1932,69 +2119,181 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-white">Tasks & Follow-ups</h3>
-                  <div className="text-sm text-slate-400">
-                    {businessTasks.filter(t => !t.completed).length} pending
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm text-slate-400">
+                      {adminTasks.filter(t => t.status === 'open').length} pending
+                    </div>
+                    {isClaimed && (
+                      <Button
+                        size="sm"
+                        onClick={() => setShowTaskForm(!showTaskForm)}
+                        className="bg-blue-600 hover:bg-blue-700 text-xs"
+                      >
+                        {showTaskForm ? 'Cancel' : '+ New Task'}
+                      </Button>
+                    )}
                   </div>
                 </div>
 
-                <Card className="bg-slate-800/30 border-slate-700">
-                  <CardContent className="p-4">
-                    <div className="flex gap-3">
+                {/* Create new task - expanded form */}
+                {showTaskForm && (
+                  <Card className="bg-blue-950/20 border-blue-500/20">
+                    <CardContent className="p-4 space-y-3">
                       <Input
                         value={newTask}
                         onChange={(e) => setNewTask(e.target.value)}
-                        placeholder="Add a new task or follow-up..."
-                        className="bg-slate-700 border-slate-600 text-white"
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
+                        placeholder="Task title..."
+                        className="bg-slate-800 border-slate-700 text-white"
                       />
-                      <Button
-                        onClick={handleAddTask}
-                        disabled={isAddingTask || !newTask.trim()}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        {isAddingTask ? 'Adding...' : 'Add'}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <div className="space-y-3">
-                  {businessTasks.map((task) => (
-                    <Card key={task.id} className="bg-slate-800/30 border-slate-700">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                              task.completed 
-                                ? 'bg-green-500 border-green-500' 
-                                : 'border-slate-400 hover:border-green-400'
-                            }`}>
-                              {task.completed && (
-                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <div className={`font-medium ${task.completed ? 'text-slate-400 line-through' : 'text-white'}`}>
-                                {task.title}
-                              </div>
-                              <div className="flex items-center gap-3 mt-1">
-                                <span className="text-slate-400 text-xs">Due: {task.due}</span>
-                                <span className={`text-xs px-2 py-1 rounded ${
-                                  task.priority === 'high' ? 'bg-red-500/20 text-red-300' :
-                                  task.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-300' :
-                                  'bg-blue-500/20 text-blue-300'
-                                }`}>
-                                  {task.priority}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
+                      <textarea
+                        value={newTaskBody}
+                        onChange={(e) => setNewTaskBody(e.target.value)}
+                        placeholder="Description / details for the business..."
+                        rows={2}
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-slate-400 mb-1 block">Action Type</label>
+                          <select
+                            value={newTaskActionType}
+                            onChange={(e) => setNewTaskActionType(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                          >
+                            <option value="update_profile">Update Profile</option>
+                            <option value="upload_menu">Upload Menu</option>
+                            <option value="respond">Respond / Reply</option>
+                            <option value="review_offer">Review Offer</option>
+                            <option value="upload_photos">Upload Photos</option>
+                            <option value="update_hours">Update Hours</option>
+                            <option value="other">Other</option>
+                          </select>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        <div>
+                          <label className="text-xs text-slate-400 mb-1 block">Priority</label>
+                          <select
+                            value={newTaskPriority}
+                            onChange={(e) => setNewTaskPriority(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                          >
+                            <option value="low">Low</option>
+                            <option value="normal">Normal</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-slate-500">
+                          Creates a Contact Centre thread + Action Item for the business
+                        </p>
+                        <Button
+                          onClick={handleAddTask}
+                          disabled={isAddingTask || !newTask.trim()}
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          {isAddingTask ? 'Creating...' : 'Create Task'}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Incomplete onboarding action items */}
+                {(() => {
+                  const missing: Array<{ label: string; type: string }> = []
+                  if (!business.business_name) missing.push({ label: 'Add business name', type: 'profile' })
+                  if (!business.business_description) missing.push({ label: 'Add business description', type: 'profile' })
+                  if (!business.business_tagline) missing.push({ label: 'Add business tagline', type: 'profile' })
+                  if (!business.business_hours && !business.business_hours_structured) missing.push({ label: 'Set opening hours', type: 'profile' })
+                  if (!business.business_address || !business.business_town) missing.push({ label: 'Complete business address', type: 'profile' })
+                  if (!business.system_category && !business.business_category) missing.push({ label: 'Select business category', type: 'profile' })
+                  if (!business.logo) missing.push({ label: 'Upload business logo', type: 'photos' })
+                  if (!business.business_images || business.business_images.length === 0) missing.push({ label: 'Upload business photos', type: 'photos' })
+                  if (!business.offer_name) missing.push({ label: 'Create first exclusive offer', type: 'offers' })
+                  if (!business.menu_url && (!business.business_menus || business.business_menus.length === 0)) missing.push({ label: 'Upload menu / service list', type: 'menu' })
+
+                  if (missing.length === 0) return null
+                  return (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-amber-400 flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        Incomplete Onboarding ({missing.length})
+                      </h4>
+                      <div className="grid gap-2">
+                        {missing.map((item, i) => (
+                          <div key={i} className="flex items-center gap-3 p-2.5 bg-amber-950/20 border border-amber-500/15 rounded-lg">
+                            <div className="w-2 h-2 bg-amber-400 rounded-full flex-shrink-0" />
+                            <span className="text-sm text-amber-200 flex-1">{item.label}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/15 text-amber-400 rounded">
+                              {item.type}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Admin-assigned tasks from Contact Centre */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-cyan-400">Admin-Assigned Tasks</h4>
+                  {loadingAdminTasks ? (
+                    <div className="text-center text-slate-400 py-4 text-sm">Loading tasks...</div>
+                  ) : adminTasks.length === 0 ? (
+                    <div className="text-center text-slate-500 py-4 text-sm">
+                      No tasks assigned yet
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {adminTasks.map((task) => (
+                        <Card key={task.id} className="bg-slate-800/30 border-slate-700">
+                          <CardContent className="p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                                  task.status === 'completed' || task.status === 'done'
+                                    ? 'bg-green-500 border-green-500'
+                                    : 'border-slate-400'
+                                }`}>
+                                  {(task.status === 'completed' || task.status === 'done') && (
+                                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className={`font-medium text-sm ${(task.status === 'completed' || task.status === 'done') ? 'text-slate-400 line-through' : 'text-white'}`}>
+                                    {task.title}
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                    <span className="text-slate-500 text-xs">
+                                      {task.assignedByName} &middot; {new Date(task.assignedAt).toLocaleDateString()}
+                                    </span>
+                                    {task.actionType && task.actionType !== 'other' && (
+                                      <span className="text-[10px] px-1.5 py-0.5 bg-blue-500/15 text-blue-400 rounded">
+                                        {task.actionType.replace(/_/g, ' ')}
+                                      </span>
+                                    )}
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                      (task.status === 'completed' || task.status === 'done')
+                                        ? 'bg-green-500/20 text-green-300'
+                                        : 'bg-amber-500/20 text-amber-300'
+                                    }`}>
+                                      {task.status}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

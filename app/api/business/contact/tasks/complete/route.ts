@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { sendContactSlackNotification } from '@/lib/utils/contact-slack'
+import type { FranchiseCity } from '@/lib/utils/city-detection'
 
 /**
  * Business Contact Centre - Complete a Task
@@ -26,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Verify business owns the thread containing this task
     const { data: profile } = await adminClient
       .from('business_profiles')
-      .select('id, business_name')
+      .select('id, business_name, city')
       .eq('user_id', user.id)
       .single()
 
@@ -96,6 +98,17 @@ export async function POST(request: NextRequest) {
         updated_at: now,
       })
       .eq('id', taskMsg.thread_id)
+
+    // Send Slack notification (non-blocking)
+    if (profile.city) {
+      sendContactSlackNotification({
+        city: profile.city as FranchiseCity,
+        businessName: profile.business_name || 'Unknown Business',
+        messagePreview: `Task completed: ${taskTitle}`,
+        threadId: taskMsg.thread_id,
+        eventType: 'task_complete',
+      }).catch(() => {})
+    }
 
     return NextResponse.json({ success: true, messageId, status: 'done' })
   } catch (error: unknown) {

@@ -7,7 +7,7 @@ import { submitBusinessForReview } from '@/lib/actions/business-actions'
 import { getPendingChanges } from '@/lib/actions/pending-changes'
 import { switchToManualListing } from '@/lib/actions/verification-actions'
 import { verificationSatisfied } from '@/lib/utils/verification-utils'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ElegantModal } from '@/components/ui/elegant-modal'
 
 interface ActionItemsPageProps {
@@ -21,6 +21,85 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   const [showCompletionModal, setShowCompletionModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [isSwitchingToManual, setIsSwitchingToManual] = useState(false)
+
+  // Admin-assigned tasks from Contact Centre
+  interface AdminTask {
+    id: string
+    threadId: string
+    title: string
+    body: string
+    actionType: string
+    status: string
+    deepLink: string | null
+    assignedAt: string
+    assignedByName: string
+  }
+  const [adminTasks, setAdminTasks] = useState<AdminTask[]>([])
+  const [loadingAdminTasks, setLoadingAdminTasks] = useState(false)
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
+
+  // Fetch admin tasks
+  const fetchAdminTasks = useCallback(async () => {
+    try {
+      setLoadingAdminTasks(true)
+      // Get threads and look for task messages
+      const res = await fetch('/api/business/contact/threads')
+      if (!res.ok) return
+      const data = await res.json()
+      const threads = data.threads || []
+
+      const tasks: AdminTask[] = []
+      for (const thread of threads) {
+        const threadRes = await fetch(`/api/business/contact/threads/${thread.id}`)
+        if (!threadRes.ok) continue
+        const threadData = await threadRes.json()
+        const msgs = threadData.messages || []
+        for (const msg of msgs) {
+          if (msg.messageType === 'task' && msg.metadata) {
+            tasks.push({
+              id: msg.id,
+              threadId: thread.id,
+              title: msg.metadata.title || 'Task',
+              body: msg.body,
+              actionType: msg.metadata.actionType || 'other',
+              status: msg.metadata.status || 'open',
+              deepLink: msg.metadata.deepLink || null,
+              assignedAt: msg.metadata.assignedAt || msg.createdAt,
+              assignedByName: msg.metadata.assignedByName || 'Admin',
+            })
+          }
+        }
+      }
+      setAdminTasks(tasks)
+    } catch (err) {
+      console.error('Error fetching admin tasks:', err)
+    } finally {
+      setLoadingAdminTasks(false)
+    }
+  }, [])
+
+  // Complete an admin task
+  const completeAdminTask = async (messageId: string) => {
+    setCompletingTaskId(messageId)
+    try {
+      const res = await fetch('/api/business/contact/tasks/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId }),
+      })
+      if (res.ok) {
+        setAdminTasks(prev => prev.map(t => t.id === messageId ? { ...t, status: 'done' } : t))
+      }
+    } catch (err) {
+      console.error('Error completing task:', err)
+    } finally {
+      setCompletingTaskId(null)
+    }
+  }
+
+  useEffect(() => {
+    fetchAdminTasks()
+  }, [fetchAdminTasks])
 
   // Fetch pending changes on component mount
   useEffect(() => {
@@ -1059,6 +1138,75 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
           </div>
         </div>
       </ElegantModal>
+
+      {/* Admin-Assigned Tasks Section */}
+      {adminTasks.length > 0 && (
+        <Card className="bg-slate-800/50 border-slate-700 mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-cyan-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              Tasks from Admin
+              <span className="ml-auto text-xs text-slate-400">
+                {adminTasks.filter(t => t.status === 'open').length} open
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {adminTasks.map(task => (
+              <div
+                key={task.id}
+                className={`p-4 rounded-xl border ${
+                  task.status === 'done'
+                    ? 'bg-green-950/20 border-green-500/20'
+                    : 'bg-cyan-950/20 border-cyan-500/20'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-white text-sm">{task.title}</h4>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                        task.status === 'done'
+                          ? 'bg-green-500/20 text-green-400'
+                          : 'bg-amber-500/20 text-amber-400'
+                      }`}>
+                        {task.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-300 mb-2">{task.body}</p>
+                    <p className="text-xs text-slate-500">
+                      Assigned by {task.assignedByName} &middot;{' '}
+                      {new Date(task.assignedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0 flex items-center gap-2">
+                    {task.deepLink && (
+                      <Link
+                        href={task.deepLink}
+                        className="px-3 py-1.5 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all"
+                      >
+                        Go
+                      </Link>
+                    )}
+                    {task.status === 'open' && (
+                      <Button
+                        size="sm"
+                        onClick={() => completeAdminTask(task.id)}
+                        disabled={completingTaskId === task.id}
+                        className="text-xs bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {completingTaskId === task.id ? 'Completing...' : 'Mark Done'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

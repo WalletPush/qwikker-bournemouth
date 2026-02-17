@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button'
 import {
   MessageSquare, Send, Plus, ArrowLeft, Clock, AlertCircle,
   CheckCircle, Bug, Lightbulb, CreditCard, Store, Image,
-  Tag, Calendar, Smartphone, HelpCircle, ChevronRight
+  Tag, Calendar, Smartphone, HelpCircle, ChevronRight,
+  Shield, ShieldAlert, ShieldX, Skull
 } from 'lucide-react'
+import { BugSummaryCard } from '@/components/contact-centre/bug-summary-card'
 
-// Category config with icons and labels
+// ─── Category config ─────────────────────────────────────────────
 const CATEGORIES = [
   { value: 'bug', label: 'Bug Report', icon: Bug, color: 'text-red-400' },
   { value: 'feature_request', label: 'Feature Request', icon: Lightbulb, color: 'text-yellow-400' },
@@ -23,10 +25,19 @@ const CATEGORIES = [
   { value: 'other', label: 'Other', icon: HelpCircle, color: 'text-slate-400' },
 ] as const
 
+// ─── Severity config (canonical) ─────────────────────────────────
+const SEVERITIES = [
+  { value: 'low', label: 'Low', icon: Shield, color: 'text-slate-400', bg: 'bg-slate-500/10 border-slate-500/30', desc: 'Minor issue, workaround exists' },
+  { value: 'medium', label: 'Medium', icon: ShieldAlert, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30', desc: 'Noticeable issue, partially working' },
+  { value: 'high', label: 'High', icon: ShieldX, color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/30', desc: 'Major issue, feature broken' },
+  { value: 'critical', label: 'Critical', icon: Skull, color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/30', desc: 'System down or data loss' },
+] as const
+
 const STATUS_COLORS: Record<string, string> = {
   open: 'bg-green-500/20 text-green-400 border-green-500/30',
   pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   closed: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+  resolved: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -34,6 +45,86 @@ const PRIORITY_COLORS: Record<string, string> = {
   normal: 'text-blue-400',
   high: 'text-orange-400',
   urgent: 'text-red-400',
+}
+
+// ─── Activity Trail Ring Buffer ──────────────────────────────────
+interface TrailEvent {
+  ts: string
+  type: 'page_view' | 'click' | 'api_error' | 'navigation'
+  path: string
+  target?: string
+  meta?: Record<string, unknown>
+}
+
+const MAX_TRAIL_EVENTS = 25
+const MAX_TRAIL_AGE_MS = 5 * 60 * 1000 // 5 minutes
+
+// Strip querystring and hash from paths (privacy)
+function stripPath(url: string): string {
+  try {
+    const u = new URL(url, window.location.origin)
+    return u.pathname
+  } catch {
+    return url.split('?')[0].split('#')[0]
+  }
+}
+
+// Global ring buffer (persists across re-renders within the session)
+let trailBuffer: TrailEvent[] = []
+let trailListenerActive = false
+
+function pushTrailEvent(evt: TrailEvent) {
+  const now = Date.now()
+  // Trim old events
+  trailBuffer = trailBuffer.filter(e => now - new Date(e.ts).getTime() < MAX_TRAIL_AGE_MS)
+  trailBuffer.push(evt)
+  // Keep max size
+  if (trailBuffer.length > MAX_TRAIL_EVENTS) {
+    trailBuffer = trailBuffer.slice(-MAX_TRAIL_EVENTS)
+  }
+}
+
+function getTrailSnapshot(): TrailEvent[] {
+  const now = Date.now()
+  return trailBuffer
+    .filter(e => now - new Date(e.ts).getTime() < MAX_TRAIL_AGE_MS)
+    .slice(-MAX_TRAIL_EVENTS)
+}
+
+function startTrailCapture() {
+  if (trailListenerActive || typeof window === 'undefined') return
+  trailListenerActive = true
+
+  // Track page views / navigation
+  const originalPushState = history.pushState.bind(history)
+  history.pushState = function (...args) {
+    originalPushState(...args)
+    pushTrailEvent({ ts: new Date().toISOString(), type: 'navigation', path: stripPath(window.location.href) })
+  }
+
+  window.addEventListener('popstate', () => {
+    pushTrailEvent({ ts: new Date().toISOString(), type: 'navigation', path: stripPath(window.location.href) })
+  })
+
+  // Track clicks (only on interactive elements, never capture text content)
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement
+    if (!target) return
+    const tag = target.tagName?.toLowerCase()
+    if (!['a', 'button', 'input', 'select'].includes(tag) && !target.closest('button') && !target.closest('a')) return
+    const btn = target.closest('button') || target.closest('a') || target
+    // Build a safe target identifier (no personal data)
+    const id = btn.id || btn.getAttribute('data-testid') || btn.getAttribute('aria-label') || tag
+    pushTrailEvent({
+      ts: new Date().toISOString(),
+      type: 'click',
+      path: stripPath(window.location.href),
+      target: String(id).slice(0, 80),
+    })
+  }, { passive: true, capture: true })
+
+  // Initial page view
+  pushTrailEvent({ ts: new Date().toISOString(), type: 'page_view', path: stripPath(window.location.href) })
 }
 
 interface Thread {
@@ -89,8 +180,22 @@ export function ContactCentreClient() {
   const [newBody, setNewBody] = useState('')
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [createSuccess, setCreateSuccess] = useState(false)
+
+  // Bug-specific fields
+  const [bugSeverity, setBugSeverity] = useState<string>('medium')
+  const [bugStepsToReproduce, setBugStepsToReproduce] = useState('')
+  const [bugExpectedBehavior, setBugExpectedBehavior] = useState('')
+  const [bugActualBehavior, setBugActualBehavior] = useState('')
+  const [attachmentUrl, setAttachmentUrl] = useState('')
+  const [diagnosticsEnabled, setDiagnosticsEnabled] = useState(true)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Start activity trail capture on mount
+  useEffect(() => {
+    startTrailCapture()
+  }, [])
 
   // Fetch threads
   const fetchThreads = useCallback(async () => {
@@ -187,21 +292,56 @@ export function ContactCentreClient() {
     }
   }
 
+  // Reset new-thread form to defaults
+  const resetNewThreadForm = () => {
+    setNewSubject('')
+    setNewCategory('other')
+    setNewBody('')
+    setBugSeverity('medium')
+    setBugStepsToReproduce('')
+    setBugExpectedBehavior('')
+    setBugActualBehavior('')
+    setAttachmentUrl('')
+    setDiagnosticsEnabled(true)
+    setError(null)
+    setCreateSuccess(false)
+  }
+
   // Create new thread
   const handleCreateThread = async () => {
     if (!newBody.trim() || creating) return
     setCreating(true)
     setError(null)
 
+    // Build the payload
+    const isBug = newCategory === 'bug' || newCategory === 'app_issue'
+    const attachments = attachmentUrl.trim()
+      ? [{ type: 'image', url: attachmentUrl.trim(), name: 'screenshot' }]
+      : []
+    const activityTrail = diagnosticsEnabled ? getTrailSnapshot() : []
+
+    const payload: Record<string, unknown> = {
+      subject: newSubject.trim() || null,
+      category: newCategory,
+      message: newBody.trim(),
+      attachments,
+      diagnosticsEnabled,
+      activityTrail,
+    }
+
+    // Bug-specific fields
+    if (isBug) {
+      payload.severity = bugSeverity
+      payload.stepsToReproduce = bugStepsToReproduce.trim() || null
+      payload.expectedBehavior = bugExpectedBehavior.trim() || null
+      payload.actualBehavior = bugActualBehavior.trim() || null
+    }
+
     try {
       const res = await fetch('/api/business/contact/threads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject: newSubject.trim() || null,
-          category: newCategory,
-          message: newBody.trim(),
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (!res.ok) {
@@ -212,29 +352,35 @@ export function ContactCentreClient() {
 
       const data = await res.json()
 
-      // Reset form
-      setShowNewThread(false)
-      setNewSubject('')
-      setNewCategory('other')
-      setNewBody('')
+      // Show success state briefly, then navigate to the thread
+      setCreateSuccess(true)
 
-      // Refresh and open the new thread
+      // Refresh threads in background
       await fetchThreads()
-      if (data.thread?.id) {
-        const newThread = {
-          id: data.thread.id,
-          subject: data.thread.subject,
-          category: data.thread.category,
-          status: 'open',
-          priority: 'normal',
-          lastMessageAt: new Date().toISOString(),
-          lastMessagePreview: newBody.trim().slice(0, 120),
-          lastMessageFromRole: 'business',
-          unreadCount: 0,
-          createdAt: new Date().toISOString(),
+
+      // Auto-open the thread after a short delay
+      setTimeout(() => {
+        if (data.thread?.id) {
+          const newThread: Thread = {
+            id: data.thread.id,
+            subject: data.thread.subject,
+            category: data.thread.category,
+            status: 'open',
+            priority: data.thread.priority || 'normal',
+            lastMessageAt: new Date().toISOString(),
+            lastMessagePreview: newBody.trim().slice(0, 120),
+            lastMessageFromRole: 'business',
+            unreadCount: 0,
+            createdAt: new Date().toISOString(),
+          }
+          setShowNewThread(false)
+          resetNewThreadForm()
+          openThread(newThread)
+        } else {
+          setShowNewThread(false)
+          resetNewThreadForm()
         }
-        openThread(newThread)
-      }
+      }, 1500)
     } catch {
       setError('Failed to create thread')
     } finally {
@@ -271,12 +417,34 @@ export function ContactCentreClient() {
 
   // --- RENDER ---
 
+  const isBugCategory = newCategory === 'bug' || newCategory === 'app_issue'
+
   // New Thread Form
   if (showNewThread) {
+    // Success state after submission
+    if (createSuccess) {
+      const isBugSuccess = newCategory === 'bug' || newCategory === 'app_issue'
+      return (
+        <div className="flex flex-col items-center justify-center py-24 space-y-4">
+          <div className="w-16 h-16 rounded-full bg-[#00d083]/20 flex items-center justify-center">
+            <CheckCircle className="w-8 h-8 text-[#00d083]" />
+          </div>
+          <h2 className="text-xl font-semibold text-white">
+            {isBugSuccess ? 'Bug Report Submitted' : 'Message Sent'}
+          </h2>
+          <p className="text-sm text-slate-400 text-center max-w-xs">
+            {isBugSuccess
+              ? "We've sent this to your city admin. They've been notified and you'll get replies right here."
+              : "Your city admin team has been notified. You'll get replies right here."}
+          </p>
+        </div>
+      )
+    }
+
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => setShowNewThread(false)} className="text-slate-400 hover:text-white">
+          <button onClick={() => { setShowNewThread(false); resetNewThreadForm() }} className="text-slate-400 hover:text-white">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="text-2xl font-bold text-white">New Message</h1>
@@ -317,36 +485,137 @@ export function ContactCentreClient() {
 
             {/* Subject */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Subject (optional)</label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Subject {isBugCategory ? '' : '(optional)'}</label>
               <input
                 type="text"
                 value={newSubject}
                 onChange={e => setNewSubject(e.target.value)}
-                placeholder="Brief summary of your issue..."
+                placeholder={isBugCategory ? 'Brief bug summary, e.g. "Offer page crashes on load"' : 'Brief summary of your issue...'}
                 className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00d083]/50"
               />
             </div>
 
-            {/* Bug severity (shown for bug category) */}
-            {newCategory === 'bug' && (
-              <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4 space-y-3">
-                <p className="text-sm text-red-300 font-medium">Bug Report Details</p>
-                <p className="text-xs text-slate-400">
-                  Please describe the steps to reproduce, what you expected vs what happened. Include screenshots if possible.
+            {/* Bug Report Fields (shown for bug or app_issue) */}
+            {isBugCategory && (
+              <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4 space-y-4">
+                <p className="text-sm text-red-300 font-medium flex items-center gap-2">
+                  <Bug className="w-4 h-4" />
+                  Bug Report Details
                 </p>
+
+                {/* Severity Picker */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2">Severity</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {SEVERITIES.map(sev => {
+                      const SevIcon = sev.icon
+                      const isSelected = bugSeverity === sev.value
+                      return (
+                        <button
+                          key={sev.value}
+                          onClick={() => setBugSeverity(sev.value)}
+                          className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg border text-xs font-medium transition-colors ${
+                            isSelected
+                              ? `${sev.bg} ${sev.color} border-current`
+                              : 'border-slate-700 bg-slate-800/50 text-slate-500 hover:border-slate-600'
+                          }`}
+                        >
+                          <SevIcon className="w-4 h-4" />
+                          <span>{sev.label}</span>
+                          {isSelected && <span className="text-[10px] opacity-70">{sev.desc}</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Steps to Reproduce */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Steps to Reproduce</label>
+                  <textarea
+                    value={bugStepsToReproduce}
+                    onChange={e => setBugStepsToReproduce(e.target.value)}
+                    rows={3}
+                    placeholder={"1. Go to...\n2. Click on...\n3. Scroll to..."}
+                    className="w-full bg-slate-700/50 border border-slate-600 rounded-lg p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                  />
+                </div>
+
+                {/* Expected vs Actual */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Expected Behavior</label>
+                    <textarea
+                      value={bugExpectedBehavior}
+                      onChange={e => setBugExpectedBehavior(e.target.value)}
+                      rows={2}
+                      placeholder="What should have happened..."
+                      className="w-full bg-slate-700/50 border border-slate-600 rounded-lg p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Actual Behavior</label>
+                    <textarea
+                      value={bugActualBehavior}
+                      onChange={e => setBugActualBehavior(e.target.value)}
+                      rows={2}
+                      placeholder="What actually happened..."
+                      className="w-full bg-slate-700/50 border border-slate-600 rounded-lg p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Message */}
+            {/* Message / Description */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Message</label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                {isBugCategory ? 'Additional Details' : 'Message'}
+              </label>
               <textarea
                 value={newBody}
                 onChange={e => setNewBody(e.target.value)}
-                rows={5}
-                placeholder="Describe your issue or request in detail..."
+                rows={isBugCategory ? 3 : 5}
+                placeholder={isBugCategory ? 'Any other relevant information...' : 'Describe your issue or request in detail...'}
                 className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00d083]/50"
               />
+            </div>
+
+            {/* Screenshot / Attachment URL */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Screenshot URL (optional)</label>
+              <input
+                type="url"
+                value={attachmentUrl}
+                onChange={e => setAttachmentUrl(e.target.value)}
+                placeholder="https://res.cloudinary.com/... or paste image URL"
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00d083]/50"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">Upload to Cloudinary or any image host, then paste the URL here.</p>
+            </div>
+
+            {/* Diagnostics Toggle */}
+            <div className="flex items-center justify-between bg-slate-800/50 border border-slate-700 rounded-lg p-3">
+              <div>
+                <p className="text-sm text-slate-300 font-medium">Include diagnostics</p>
+                <p className="text-xs text-slate-500">
+                  Shares your browser info, page URL, and recent navigation to help debug faster.
+                </p>
+              </div>
+              <button
+                onClick={() => setDiagnosticsEnabled(!diagnosticsEnabled)}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  diagnosticsEnabled ? 'bg-[#00d083]' : 'bg-slate-600'
+                }`}
+                role="switch"
+                aria-checked={diagnosticsEnabled}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    diagnosticsEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
             </div>
 
             <Button
@@ -354,7 +623,7 @@ export function ContactCentreClient() {
               disabled={creating || !newBody.trim()}
               className="w-full bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold disabled:opacity-50"
             >
-              {creating ? 'Sending...' : 'Send Message'}
+              {creating ? 'Sending...' : isBugCategory ? 'Submit Bug Report' : 'Send Message'}
             </Button>
           </CardContent>
         </Card>
@@ -430,6 +699,16 @@ export function ContactCentreClient() {
                     <p className="text-sm text-slate-200 whitespace-pre-wrap">{msg.body}</p>
                   )}
 
+                  {/* Bug Summary Card (for messages with bug metadata) */}
+                  {msg.metadata?.severity && (
+                    <div className="mt-2">
+                      <BugSummaryCard
+                        metadata={msg.metadata as Record<string, unknown>}
+                        showDiagnostics={false}
+                      />
+                    </div>
+                  )}
+
                   {/* Task action button */}
                   {msg.messageType === 'task' && (msg.metadata?.status as string) === 'open' && (
                     <div className="flex items-center gap-2 mt-3">
@@ -477,7 +756,7 @@ export function ContactCentreClient() {
 
         {/* Message Input */}
         {activeThread.status !== 'closed' && (
-          <div className="flex-shrink-0 pt-4 border-t border-slate-800">
+          <div className="flex-shrink-0 pt-4 pb-2 border-t border-slate-800">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -515,13 +794,26 @@ export function ContactCentreClient() {
           <h1 className="text-2xl font-bold text-white">Contact Centre</h1>
           <p className="text-slate-400 text-sm mt-1">Message your city admin team</p>
         </div>
-        <Button
-          onClick={() => setShowNewThread(true)}
-          className="bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          New Message
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => {
+              setNewCategory('bug')
+              setShowNewThread(true)
+            }}
+            variant="outline"
+            className="border-red-500/30 text-red-400 hover:bg-red-500/10 flex items-center gap-2"
+          >
+            <Bug className="w-4 h-4" />
+            Report a Bug
+          </Button>
+          <Button
+            onClick={() => setShowNewThread(true)}
+            className="bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            New Message
+          </Button>
+        </div>
       </div>
 
       {error && (
