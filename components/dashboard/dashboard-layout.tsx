@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LogoutButton } from '@/components/logout-button'
@@ -69,6 +69,12 @@ const navItems: NavItem[] = [
     href: '/dashboard/action-items' 
   },
   { 
+    id: 'contact-centre', 
+    title: 'Contact Centre', 
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>, 
+    href: '/dashboard/contact-centre' 
+  },
+  { 
     id: 'social-wizard', 
     title: 'Social Wizard', 
     icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>, 
@@ -118,9 +124,29 @@ const navItems: NavItem[] = [
 
 export function DashboardLayout({ children, currentSection, profile, actionItemsCount = 0 }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [contactBadge, setContactBadge] = useState(0)
   const router = useRouter()
 
   const businessName = profile?.business_name || 'Your Business'
+
+  // Fetch Contact Centre badge count
+  const fetchContactBadge = useCallback(async () => {
+    try {
+      const res = await fetch('/api/business/contact/counts')
+      if (res.ok) {
+        const data = await res.json()
+        setContactBadge(data.badgeCount || 0)
+      }
+    } catch {
+      // Silently fail - badge is non-critical
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchContactBadge()
+    const interval = setInterval(fetchContactBadge, 60_000)
+    return () => clearInterval(interval)
+  }, [fetchContactBadge])
   
   // Generate initials - filter out special characters and use first two words
   const getBusinessInitials = (name: string): string => {
@@ -285,6 +311,11 @@ export function DashboardLayout({ children, currentSection, profile, actionItems
                   {item.id === 'action-items' && actionItemsCount > 0 && (
                     <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold min-w-[20px] text-center">
                       {actionItemsCount}
+                    </span>
+                  )}
+                  {item.id === 'contact-centre' && contactBadge > 0 && (
+                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold min-w-[20px] text-center">
+                      {contactBadge > 99 ? '99+' : contactBadge}
                     </span>
                   )}
                 </Link>
