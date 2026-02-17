@@ -103,6 +103,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Tier check passed: ${tierName}`)
 
+    // Service role client for cross-table queries (business owner can't read app_users via RLS)
+    const supabaseAdmin = createServiceRoleClient()
+
     // 5. GET WALLETPUSH CREDENTIALS
     const credentials = await getWalletPushCredentials(businessCity)
     
@@ -130,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     if (pushIds.length > 0) {
       // Count how many of these pushes have at least 1 sent recipient
-      const { data: sentRecipients } = await supabaseAuth
+      const { data: sentRecipients } = await supabaseAdmin
         .from('push_notification_recipients')
         .select('push_notification_id')
         .in('push_notification_id', pushIds)
@@ -189,7 +192,7 @@ export async function POST(request: NextRequest) {
     let targetUsers: any[] = []
 
     if (audienceType === 'all') {
-      const { data: users } = await supabaseAuth
+      const { data: users } = await supabaseAdmin
         .from('app_users')
         .select('wallet_pass_id, pass_type_identifier, first_name, name, city')
         .eq('city', businessCity)
@@ -200,7 +203,7 @@ export async function POST(request: NextRequest) {
       targetUsers = users || []
     } else if (audienceType === 'claimed') {
       // Users who have claimed offers with this business
-      const { data: claimers } = await supabaseAuth
+      const { data: claimers } = await supabaseAdmin
         .from('offer_claims')
         .select(`
           app_users!inner(
@@ -267,7 +270,6 @@ export async function POST(request: NextRequest) {
 
     // 10. CREATE NOTIFICATION RECORD WITH SHORT CODE
     // Use try-insert-retry pattern (not check-then-insert - avoids race conditions)
-    const supabaseAdmin = createServiceRoleClient()
     const notificationType = 'promotional' // Always promotional for business dashboard
 
     let notification: any = null
