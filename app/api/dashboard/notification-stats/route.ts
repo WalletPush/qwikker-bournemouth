@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,8 +40,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Use service role for cross-table data queries (business owner can't read app_users via RLS)
+    const adminClient = createServiceRoleClient()
+
     // Query 1: Count eligible passes in business's city
-    const { count: eligiblePasses, error: eligibleError } = await supabase
+    const { count: eligiblePasses, error: eligibleError } = await adminClient
       .from('app_users')
       .select('*', { count: 'exact', head: true })
       .eq('city', profile.city)
@@ -61,7 +64,7 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    const { data: sentNotifications, error: sentError } = await supabase
+    const { data: sentNotifications, error: sentError } = await adminClient
       .from('push_notifications')
       .select('id, push_notification_recipients!inner(status)')
       .eq('business_id', profile.id)
@@ -86,7 +89,7 @@ export async function GET(request: NextRequest) {
 
     // Query 3: Calculate click-through rate
     // Get all sent recipients from last 30 days
-    const { data: recipients, error: recipientsError } = await supabase
+    const { data: recipients, error: recipientsError } = await adminClient
       .from('push_notification_recipients')
       .select(`
         id,
@@ -108,7 +111,7 @@ export async function GET(request: NextRequest) {
     const totalSent = recipients?.length || 0
 
     // Get click counts - clicks link directly to push_notifications via push_notification_id
-    const { data: clicks, error: clicksError } = await supabase
+    const { data: clicks, error: clicksError } = await adminClient
       .from('push_notification_clicks')
       .select(`
         id,
