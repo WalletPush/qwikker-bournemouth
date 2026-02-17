@@ -127,16 +127,59 @@ export async function GET(request: NextRequest) {
       // Don't fail the whole request, just return 0 CTR
     }
 
-    // Count unique clickers by wallet_pass_id
-    const uniqueClickers = new Set(
-      clicks?.map((c: any) => c.wallet_pass_id).filter(Boolean) || []
+    // Count unique clicks per (notification, user) pair
+    // This measures "what % of sends resulted in a click"
+    const clickPairs = new Set(
+      clicks?.map((c: any) => `${c.push_notification_id}:${c.wallet_pass_id}`).filter(Boolean) || []
     )
-    const totalClicked = uniqueClickers.size
+    const totalClicked = clickPairs.size
 
-    // Calculate CTR
+    // Calculate CTR: unique (notification, user) clicks / total sent recipients
     const clickThroughRate = totalSent > 0 
       ? Math.round((totalClicked / totalSent) * 100 * 10) / 10  // Round to 1 decimal
       : 0
+
+    // Query 4: Fetch recent notifications for the "Sent" list (last 30 days, max 20)
+    const { data: recentNotifs, error: recentError } = await adminClient
+      .from('push_notifications')
+      .select('id, message, destination_type, audience_type, sent_count, failed_count, created_at, short_code')
+      .eq('business_id', profile.id)
+      .gte('created_at', thirtyDaysAgo.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    if (recentError) {
+      console.error('Error fetching recent notifications:', recentError)
+    }
+
+    // For each recent notification, get click count
+    const recentIds = (recentNotifs || []).map(n => n.id)
+    let clicksByNotif = new Map<string, number>()
+
+    if (recentIds.length > 0) {
+      const { data: recentClicks } = await adminClient
+        .from('push_notification_clicks')
+        .select('push_notification_id')
+        .in('push_notification_id', recentIds)
+
+      // Count clicks per notification
+      for (const click of recentClicks || []) {
+        const count = clicksByNotif.get(click.push_notification_id) || 0
+        clicksByNotif.set(click.push_notification_id, count + 1)
+      }
+    }
+
+    const recentNotifications = (recentNotifs || []).map(n => ({
+      id: n.id,
+      message: n.message,
+      destinationType: n.destination_type,
+      audienceType: n.audience_type,
+      sentCount: n.sent_count || 0,
+      failedCount: n.failed_count || 0,
+      clickCount: clicksByNotif.get(n.id) || 0,
+      createdAt: n.created_at,
+      shortCode: n.short_code,
+    }))
 
     return NextResponse.json({
       eligiblePasses: eligiblePasses || 0,
@@ -145,7 +188,8 @@ export async function GET(request: NextRequest) {
       stats: {
         totalSent,
         totalClicked
-      }
+      },
+      recentNotifications,
     })
 
   } catch (error: any) {

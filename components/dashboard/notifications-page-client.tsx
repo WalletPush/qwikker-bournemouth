@@ -4,10 +4,37 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ElegantModal } from '@/components/ui/elegant-modal'
-import { Bell, Send, Users, MousePointer, TrendingUp, Info, Plus } from 'lucide-react'
+import { Bell, Send, Users, MousePointer, TrendingUp, Info, Plus, Clock, CheckCircle, XCircle } from 'lucide-react'
+
+// Helper to format relative time
+function formatTimeAgo(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMins / 60)
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffMins < 1) return 'just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 30) return `${diffDays}d ago`
+  return date.toLocaleDateString()
+}
 
 interface NotificationsPageClientProps {
   profile: any
+}
+
+interface RecentNotification {
+  id: string
+  message: string
+  destinationType: string
+  audienceType: string
+  sentCount: number
+  failedCount: number
+  clickCount: number
+  createdAt: string
+  shortCode: string
 }
 
 interface NotificationStats {
@@ -31,6 +58,8 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
     sentCount: 0,
     clickThroughRate: 0
   })
+  const [recentNotifications, setRecentNotifications] = useState<RecentNotification[]>([])
+  const [showAllNotifs, setShowAllNotifs] = useState(false)
   const [statsLoading, setStatsLoading] = useState(true)
   const [statsError, setStatsError] = useState<string | null>(null)
   
@@ -64,6 +93,7 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
         sentCount: data.sentCount || 0,
         clickThroughRate: data.clickThroughRate || 0
       })
+      setRecentNotifications(data.recentNotifications || [])
     } catch (err: any) {
       console.error('Error fetching notification stats:', err)
       setStatsError(err.message || 'Failed to load stats')
@@ -365,16 +395,92 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
         {/* Recent Notifications */}
         <Card className="bg-slate-800/50 border-slate-700 mb-8">
           <CardHeader>
-            <CardTitle className="text-white">Recent Notifications</CardTitle>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Recent Notifications
+              <span className="text-xs font-normal text-slate-500 ml-1">(Last 30 days)</span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-slate-400">
-              <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">No notifications sent yet</p>
-              <p className="text-xs text-slate-500 mt-1">
-                Your sent notifications will appear here
-              </p>
-            </div>
+            {statsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            ) : recentNotifications.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">No notifications sent yet</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Your sent notifications will appear here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {(showAllNotifs ? recentNotifications : recentNotifications.slice(0, 5)).map((notif) => {
+                  const sentDate = new Date(notif.createdAt)
+                  const timeAgo = formatTimeAgo(sentDate)
+                  const ctr = notif.sentCount > 0
+                    ? Math.round((notif.clickCount / notif.sentCount) * 100)
+                    : 0
+
+                  return (
+                    <div
+                      key={notif.id}
+                      className="bg-slate-900/50 border border-slate-700 rounded-lg p-4"
+                    >
+                      {/* Top row: message + time */}
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <p className="text-sm text-slate-200 flex-1 line-clamp-2">
+                          {notif.message}
+                        </p>
+                        <span className="text-xs text-slate-500 whitespace-nowrap flex-shrink-0">
+                          {timeAgo}
+                        </span>
+                      </div>
+
+                      {/* Stats row */}
+                      <div className="flex items-center gap-4 text-xs flex-wrap">
+                        <div className="flex items-center gap-1.5 text-green-400">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>{notif.sentCount} sent</span>
+                        </div>
+                        {notif.failedCount > 0 && (
+                          <div className="flex items-center gap-1.5 text-red-400">
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>{notif.failedCount} failed</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5 text-blue-400">
+                          <MousePointer className="w-3.5 h-3.5" />
+                          <span>{notif.clickCount} click{notif.clickCount !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-slate-400">
+                          <TrendingUp className="w-3.5 h-3.5" />
+                          <span>{ctr}% CTR</span>
+                        </div>
+
+                        {/* Destination badge */}
+                        <span className="ml-auto px-2 py-0.5 bg-slate-700 text-slate-300 rounded text-[10px] uppercase tracking-wider">
+                          {notif.destinationType}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {/* View more / View less toggle */}
+                {recentNotifications.length > 5 && (
+                  <button
+                    onClick={() => setShowAllNotifs(prev => !prev)}
+                    className="w-full py-2.5 text-sm font-medium text-blue-400 hover:text-blue-300 bg-slate-900/30 hover:bg-slate-900/50 border border-slate-700 rounded-lg transition-colors"
+                  >
+                    {showAllNotifs
+                      ? 'Show less'
+                      : `View all ${recentNotifications.length} notifications`}
+                  </button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

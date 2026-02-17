@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, createContext, useContext } from 'react'
+import { useState, useEffect, useCallback, createContext, useContext } from 'react'
 import Link from 'next/link'
 
 interface UserDashboardLayoutProps {
@@ -83,6 +83,7 @@ const navItems: NavItem[] = [
 
 export function UserDashboardLayout({ children, currentSection, currentUser, walletPassId, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserDashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [notifBadge, setNotifBadge] = useState(0)
   
   // Save wallet_pass_id to localStorage for persistence across navigation
   useEffect(() => {
@@ -94,6 +95,33 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
       }
     }
   }, [walletPassId])
+
+  // Fetch unread notification count for sidebar badge
+  const fetchUnreadCount = useCallback(async () => {
+    const wpId = walletPassId || (typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('wallet_pass_id')
+        || localStorage.getItem('qwikker-wallet-pass-id')
+      : null)
+
+    if (!wpId) return
+
+    try {
+      const res = await fetch(`/api/user/notifications?countOnly=true&wallet_pass_id=${wpId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setNotifBadge(data.unreadCount || 0)
+      }
+    } catch {
+      // Silently fail - badge is non-critical
+    }
+  }, [walletPassId])
+
+  useEffect(() => {
+    fetchUnreadCount()
+    // Refresh badge every 60 seconds
+    const interval = setInterval(fetchUnreadCount, 60_000)
+    return () => clearInterval(interval)
+  }, [fetchUnreadCount])
 
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
@@ -176,6 +204,11 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
             >
               <div className={currentSection === item.id ? "text-[#00d083]" : "text-slate-400"}>{item.icon}</div>
               <span className="flex-1">{item.title}</span>
+              {item.id === 'notifications' && notifBadge > 0 && (
+                <span className="ml-auto px-2 py-0.5 text-xs font-bold bg-blue-500 text-white rounded-full min-w-[20px] text-center">
+                  {notifBadge > 99 ? '99+' : notifBadge}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

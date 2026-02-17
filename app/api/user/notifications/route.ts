@@ -8,6 +8,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
  * Supports both Supabase Auth users and wallet_pass_id identification.
  * 
  * GET /api/user/notifications?wallet_pass_id=xxx&limit=50&offset=0
+ * GET /api/user/notifications?wallet_pass_id=xxx&countOnly=true  (lightweight unread count)
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -45,9 +46,36 @@ export async function GET(request: NextRequest) {
   // Use service role client for data queries (wallet pass users have no auth session)
   const supabase = createServiceRoleClient()
 
+  // Lightweight unread count mode (for sidebar badge)
+  const countOnly = searchParams.get('countOnly') === 'true'
+
+  if (countOnly) {
+    const { count: unreadCount, error: countError } = await supabase
+      .from('push_notification_recipients')
+      .select('*', { count: 'exact', head: true })
+      .eq('wallet_pass_id', walletPassId)
+      .eq('status', 'sent')
+      .is('read_at', null)
+
+    if (countError) {
+      console.error('Error fetching unread count:', countError)
+      return NextResponse.json({ error: 'Failed to fetch unread count' }, { status: 500 })
+    }
+
+    return NextResponse.json({ unreadCount: unreadCount || 0 })
+  }
+
   // Pagination
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
   const offset = parseInt(searchParams.get('offset') || '0')
+
+  // Fetch unread count (for badge display alongside full results)
+  const { count: unreadCount } = await supabase
+    .from('push_notification_recipients')
+    .select('*', { count: 'exact', head: true })
+    .eq('wallet_pass_id', walletPassId)
+    .eq('status', 'sent')
+    .is('read_at', null)
 
   // Fetch notifications for this wallet pass
   const { data: notifications, error } = await supabase
@@ -55,6 +83,7 @@ export async function GET(request: NextRequest) {
     .select(`
       id,
       sent_at,
+      read_at,
       personalized_message,
       tracking_url,
       push_notifications!inner(
@@ -113,6 +142,7 @@ export async function GET(request: NextRequest) {
       id: n.id,
       message: n.personalized_message || pushData.message,
       sentAt: n.sent_at,
+      readAt: n.read_at,
       destinationUrl: pushData.destination_url,
       trackingUrl: n.tracking_url || pushData.destination_url,
       businessId: pushData.business_id,
@@ -126,6 +156,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     success: true,
     notifications: formatted,
+    unreadCount: unreadCount || 0,
     pagination: { limit, offset, hasMore: formatted.length === limit }
   })
 }
