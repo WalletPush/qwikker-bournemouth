@@ -93,6 +93,18 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   // How Qwikker Works modal state
   const [showHowQwikkerWorksModal, setShowHowQwikkerWorksModal] = useState(false)
 
+  // Activity feed modal + badge state
+  const [showActivityModal, setShowActivityModal] = useState(false)
+  const [newActivityCount, setNewActivityCount] = useState(0)
+
+  // Push notification stats state
+  const [pushStats, setPushStats] = useState<{
+    eligiblePasses: number
+    sentCount: number
+    clickThroughRate: number
+    recentNotifications: Array<{ id: string; message: string; sentCount: number; createdAt: string }>
+  } | null>(null)
+
   // Show welcome modal on mount if needed
   useEffect(() => {
     if (
@@ -206,45 +218,52 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   useEffect(() => {
     if (profile?.user_id) {
       const loadActivityFeed = async () => {
-        const realActivity = []
+        const realActivity: Array<{ id: string; type: string; message: string; timestamp: Date; icon: React.ReactNode; color: string }> = []
         
-        // 1. REAL-TIME ANALYTICS (most recent, highest priority)
+        // 1. GRANULAR ACTIVITY EVENTS (individual claims, visits with names)
         try {
           const { getBusinessActivityData } = await import('@/lib/actions/business-analytics-actions')
           const businessAnalytics = await getBusinessActivityData(profile.id)
           
-          // Recent offer claims (last 7 days)
-          if (businessAnalytics.recentClaims > 0) {
-            realActivity.push({
-              id: `recent_claims_${profile.id}`,
-              type: 'offer_claimed',
-              message: `${businessAnalytics.recentClaims} offer${businessAnalytics.recentClaims > 1 ? 's' : ''} claimed this week`,
-              timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago for sorting
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-              ),
-              color: 'text-orange-400'
+          // Individual offer claims with user names
+          businessAnalytics.recentActivity
+            .filter(e => e.type === 'offer_claim')
+            .forEach((event, i) => {
+              const name = event.firstName || 'Someone'
+              const offerLabel = event.itemName ? ` "${event.itemName}"` : ''
+              realActivity.push({
+                id: `claim_${i}_${event.timestamp}`,
+                type: 'offer_claimed',
+                message: `${name} claimed your offer${offerLabel}`,
+                timestamp: new Date(event.timestamp),
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                ),
+                color: 'text-orange-400'
+              })
             })
-          }
-          
-          // Recent business visits (last 7 days)
-          if (businessAnalytics.recentVisits > 0) {
-            realActivity.push({
-              id: `recent_visits_${profile.id}`,
-              type: 'business_visit',
-              message: `${businessAnalytics.recentVisits} page visit${businessAnalytics.recentVisits > 1 ? 's' : ''} this week`,
-              timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12 hours ago for sorting
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              ),
-              color: 'text-blue-400'
+
+          // Individual profile views with user names
+          businessAnalytics.recentActivity
+            .filter(e => e.type === 'profile_view')
+            .forEach((event, i) => {
+              const name = event.firstName || 'Someone'
+              realActivity.push({
+                id: `visit_${i}_${event.timestamp}`,
+                type: 'profile_view',
+                message: `${name} viewed your profile`,
+                timestamp: new Date(event.timestamp),
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                ),
+                color: 'text-blue-400'
+              })
             })
-          }
         } catch (error) {
           console.error('Error loading business analytics for activity feed:', error)
         }
@@ -252,11 +271,11 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         // 2. APPROVED OFFERS (show recently approved offers)
         if (profile?.business_offers && Array.isArray(profile.business_offers)) {
           const approvedOffers = profile.business_offers
-            .filter(offer => offer.status === 'approved' && offer.approved_at)
-            .sort((a, b) => new Date(b.approved_at).getTime() - new Date(a.approved_at).getTime())
-            .slice(0, 2) // Show up to 2 most recent
+            .filter((offer: any) => offer.status === 'approved' && offer.approved_at)
+            .sort((a: any, b: any) => new Date(b.approved_at).getTime() - new Date(a.approved_at).getTime())
+            .slice(0, 3)
           
-          approvedOffers.forEach(offer => {
+          approvedOffers.forEach((offer: any) => {
             realActivity.push({
               id: `offer_approved_${offer.id}`,
               type: 'offer_approved',
@@ -272,22 +291,27 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           })
         }
         
-        // 3. APPROVED SECRET MENU ITEMS (from additional_notes)
+        // 3. SECRET MENU ITEMS (from additional_notes)
+        // Items only exist in this array after admin approval.
+        // New items have status='approved' + approved_at; legacy items lack these fields.
         try {
           if (profile?.additional_notes) {
             const notesData = JSON.parse(profile.additional_notes)
             if (notesData.secret_menu_items && Array.isArray(notesData.secret_menu_items)) {
-              const approvedSecretItems = notesData.secret_menu_items
-                .filter(item => item.status === 'approved' && item.approved_at)
-                .sort((a, b) => new Date(b.approved_at).getTime() - new Date(a.approved_at).getTime())
-                .slice(0, 2) // Show up to 2 most recent
+              const secretItems = notesData.secret_menu_items
+                .filter((item: any) => item.itemName && (item.status === 'approved' || !item.status))
+                .sort((a: any, b: any) =>
+                  new Date(b.approved_at || b.created_at || 0).getTime() -
+                  new Date(a.approved_at || a.created_at || 0).getTime()
+                )
+                .slice(0, 3)
               
-              approvedSecretItems.forEach(item => {
+              secretItems.forEach((item: any) => {
                 realActivity.push({
-                  id: `secret_menu_approved_${item.id || item.name}`,
+                  id: `secret_menu_${item.id || item.itemName}`,
                   type: 'secret_menu_approved',
-                  message: `Secret menu item "${item.name}" approved!`,
-                  timestamp: new Date(item.approved_at),
+                  message: `Secret menu item "${item.itemName}" approved!`,
+                  timestamp: new Date(item.approved_at || item.created_at || profile.created_at),
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -308,7 +332,6 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           const changesResult = await getPendingChanges(profile.user_id)
           
           if (changesResult.success && changesResult.pendingChanges.length > 0) {
-            // Only show the most recent pending change
             const mostRecentChange = changesResult.pendingChanges[0]
             
             if (mostRecentChange.change_type === 'offer') {
@@ -344,13 +367,9 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         }
         
         // 5. PROFILE MILESTONES (one-time events)
-        
-        // Listing approval (most important milestone)
         if (profile.status === 'approved' && profile.approved_at) {
           const approvalTime = new Date(profile.approved_at)
           const createdTime = new Date(profile.created_at)
-          
-          // Only show if approval happened after creation (valid timestamp)
           if (approvalTime > createdTime) {
             realActivity.push({
               id: 'listing_approved',
@@ -367,7 +386,6 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           }
         }
         
-        // Profile joined (fallback if no other activity)
         if (profile.created_at) {
           realActivity.push({
             id: 'profile_created',
@@ -383,17 +401,60 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           })
         }
       
-        // Sort by timestamp (newest first) and take top 4
+        // Sort by timestamp (newest first) -- store ALL items, slice only in render
         const sortedActivity = realActivity
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-          .slice(0, 4)
         
         setActivityFeed(sortedActivity)
+
+        // Track new activity count via localStorage
+        const storageKey = `activity_feed_seen_${profile.id}`
+        const lastSeenCount = parseInt(localStorage.getItem(storageKey) || '0', 10)
+        const newCount = Math.max(0, sortedActivity.length - lastSeenCount)
+        setNewActivityCount(newCount)
       }
       
       loadActivityFeed()
     }
   }, [profile, businessVisits])
+
+  // Mark activity as seen when modal opens
+  const handleOpenActivityModal = () => {
+    setShowActivityModal(true)
+    setNewActivityCount(0)
+    if (profile?.id) {
+      localStorage.setItem(`activity_feed_seen_${profile.id}`, String(activityFeed.length))
+    }
+  }
+
+  // Fetch push notification stats for the dashboard card
+  const fetchPushStats = async () => {
+    try {
+      const res = await fetch('/api/dashboard/notification-stats')
+      if (!res.ok) return
+      const data = await res.json()
+      setPushStats({
+        eligiblePasses: data.eligiblePasses || 0,
+        sentCount: data.sentCount || 0,
+        clickThroughRate: data.clickThroughRate || 0,
+        recentNotifications: (data.recentNotifications || []).slice(0, 2).map((n: any) => ({
+          id: n.id,
+          message: n.message,
+          sentCount: n.sentCount,
+          createdAt: n.createdAt,
+        })),
+      })
+    } catch (err) {
+      console.error('Error fetching push stats:', err)
+    }
+  }
+
+  useEffect(() => {
+    if (isFeatureUnlocked('push_notifications')) {
+      fetchPushStats()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Calculate if ready for review (no required fields missing)
   const isReadyForReview = profile?.business_name && 
@@ -999,7 +1060,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-slate-300 group-hover:text-[#00d083] transition-colors">Active Offers</p>
-                      <p className="text-xl font-bold text-white">{profile?.business_offers?.filter(offer => offer.status === 'approved')?.length || 0}</p>
+                      <p className="text-xl font-bold text-white">{profile?.business_offers?.filter(offer => offer.status === 'approved' && (!offer.offer_end_date || new Date(offer.offer_end_date) >= new Date()))?.length || 0}</p>
                     </div>
                     <svg className="w-5 h-5 text-slate-400 group-hover:text-[#00d083] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -1041,12 +1102,17 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               Activity Feed
+              {newActivityCount > 0 && (
+                <span className="ml-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                  {newActivityCount} new
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {activityFeed.length > 0 ? (
               <div className="space-y-3">
-                {activityFeed.slice(0, 4).map((activity) => (
+                {activityFeed.slice(0, 3).map((activity) => (
                   <div key={activity.id} className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg">
                     <div className={`${activity.color} flex-shrink-0 mt-0.5`}>{activity.icon}</div>
                     <div className="flex-1">
@@ -1055,9 +1121,9 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                     </div>
                   </div>
                 ))}
-                {activityFeed.length > 4 && (
-                  <Button variant="ghost" size="sm" className="w-full text-slate-400 hover:text-white">
-                    View all activity
+                {activityFeed.length > 3 && (
+                  <Button variant="ghost" size="sm" className="w-full text-slate-400 hover:text-white" onClick={handleOpenActivityModal}>
+                    View all activity ({activityFeed.length} items)
                   </Button>
                 )}
                 
@@ -1376,8 +1442,9 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           </CardHeader>
           <CardContent className={!isFeatureUnlocked('push_notifications') ? "blur-[8px] select-none pointer-events-none" : ""}>
             {isFeatureUnlocked('push_notifications') ? (
-              // Unlocked: Show action button and recent notifications
+              // Unlocked: Show real stats, send button, and recent notifications
               <div className="space-y-4">
+                {/* Send button -- navigates to push notifications page */}
                 <Button asChild variant="outline" className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
                   <Link href="/dashboard/notifications">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1386,18 +1453,43 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                     Send New Push Notification
                   </Link>
                 </Button>
+
+                {/* Real stats row */}
+                {pushStats && (
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="bg-slate-700/30 rounded-lg p-2">
+                      <p className="text-lg font-bold text-white">{pushStats.eligiblePasses}</p>
+                      <p className="text-[10px] text-slate-500">Eligible</p>
+                    </div>
+                    <div className="bg-slate-700/30 rounded-lg p-2">
+                      <p className="text-lg font-bold text-white">{pushStats.sentCount}</p>
+                      <p className="text-[10px] text-slate-500">Sent (30d)</p>
+                    </div>
+                    <div className="bg-slate-700/30 rounded-lg p-2">
+                      <p className="text-lg font-bold text-white">{pushStats.clickThroughRate}%</p>
+                      <p className="text-[10px] text-slate-500">CTR</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent real notifications */}
                 <div>
                   <h4 className="text-sm font-medium text-slate-400 mb-2">Recent Notifications</h4>
                   <div className="space-y-2">
-                    <div className="bg-slate-700/30 rounded-lg p-2 text-xs">
-                      <p className="text-white font-medium">Weekend Special</p>
-                      <p className="text-slate-400">Sent 2 hours ago • 156 delivered</p>
-                    </div>
-                    <div className="bg-slate-700/30 rounded-lg p-2 text-xs">
-                      <p className="text-white font-medium">New Menu Item</p>
-                      <p className="text-slate-400">Sent yesterday • 243 delivered</p>
-                    </div>
+                    {pushStats?.recentNotifications && pushStats.recentNotifications.length > 0 ? (
+                      pushStats.recentNotifications.map(n => (
+                        <div key={n.id} className="bg-slate-700/30 rounded-lg p-2 text-xs">
+                          <p className="text-white font-medium truncate">{n.message}</p>
+                          <p className="text-slate-400">{formatTimeAgo(new Date(n.createdAt))} • {n.sentCount} delivered</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-500">No notifications sent yet</p>
+                    )}
                   </div>
+                  <Link href="/dashboard/notifications" className="block text-center text-xs text-slate-500 hover:text-slate-300 transition-colors mt-2">
+                    View all →
+                  </Link>
                 </div>
               </div>
             ) : (
@@ -1682,6 +1774,31 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         isOpen={showHowQwikkerWorksModal}
         onClose={() => setShowHowQwikkerWorksModal(false)}
       />
+
+      {/* Activity Feed Modal */}
+      <ElegantModal
+        isOpen={showActivityModal}
+        onClose={() => setShowActivityModal(false)}
+        title="All Activity"
+        description="Your complete activity feed"
+        type="info"
+        size="lg"
+      >
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+          {activityFeed.length > 0 ? activityFeed.map((activity) => (
+            <div key={activity.id} className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg">
+              <div className={`${activity.color} flex-shrink-0 mt-0.5`}>{activity.icon}</div>
+              <div className="flex-1">
+                <p className={`text-sm font-medium ${activity.color}`}>{activity.message}</p>
+                <p className="text-xs text-slate-500">{formatTimeAgo(activity.timestamp)}</p>
+              </div>
+            </div>
+          )) : (
+            <p className="text-center text-slate-500 py-8">No activity yet</p>
+          )}
+        </div>
+      </ElegantModal>
+
     </div>
   )
 }

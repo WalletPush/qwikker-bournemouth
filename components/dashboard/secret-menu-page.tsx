@@ -15,6 +15,8 @@ interface SecretMenuItem {
   description?: string
   price?: string
   created_at: string
+  status?: string
+  approved_at?: string
 }
 
 interface SecretMenuPageProps {

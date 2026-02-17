@@ -42,32 +42,42 @@ export interface BusinessAnalytics {
   }>
 }
 
-// Lightweight analytics for dashboard home (just recent activity)
+// Individual activity event for the dashboard feed
+export interface ActivityEvent {
+  type: 'offer_claim' | 'profile_view' | 'qr_scan'
+  firstName: string | null
+  itemName?: string
+  timestamp: string
+}
+
+// Lightweight analytics for dashboard home (recent activity with individual events)
 export async function getBusinessActivityData(businessId: string): Promise<{
   recentVisits: number
   recentClaims: number
   recentQRScans: number
+  recentActivity: ActivityEvent[]
 }> {
   try {
     const supabase = createServiceRoleClient()
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     
-    // Get recent visits (last 7 days)
+    // Get recent visits (last 7 days) with wallet_pass_id for name lookups
     const { data: visits } = await supabase
       .from('user_business_visits')
-      .select('id')
+      .select('id, visit_date, wallet_pass_id')
       .eq('business_id', businessId)
       .gte('visit_date', sevenDaysAgo.toISOString())
+      .order('visit_date', { ascending: false })
+      .limit(20)
     
-    // Get recent claims (last 7 days)
+    // Get recent claims (last 7 days) with wallet_pass_id and offer details
     const { data: claims } = await supabase
       .from('user_offer_claims')
-      .select(`
-        id,
-        business_offers!inner(business_id)
-      `)
-      .eq('business_offers.business_id', businessId)
+      .select('id, claimed_at, wallet_pass_id, offer_title, business_id')
+      .eq('business_id', businessId)
       .gte('claimed_at', sevenDaysAgo.toISOString())
+      .order('claimed_at', { ascending: false })
+      .limit(20)
     
     // Get recent QR scans (last 7 days)
     const { data: qrScans } = await supabase
@@ -79,17 +89,65 @@ export async function getBusinessActivityData(businessId: string): Promise<{
       .eq('qr_codes.business_id', businessId)
       .gte('scanned_at', sevenDaysAgo.toISOString())
     
+    // Collect all wallet_pass_ids to batch-lookup names
+    const walletPassIds = new Set<string>()
+    visits?.forEach(v => { if (v.wallet_pass_id) walletPassIds.add(v.wallet_pass_id) })
+    claims?.forEach(c => { if (c.wallet_pass_id) walletPassIds.add(c.wallet_pass_id) })
+
+    // Batch lookup first names from app_users
+    const nameMap: Record<string, string> = {}
+    if (walletPassIds.size > 0) {
+      const { data: users } = await supabase
+        .from('app_users')
+        .select('wallet_pass_id, first_name, name')
+        .in('wallet_pass_id', Array.from(walletPassIds))
+      
+      users?.forEach(u => {
+        const displayName = u.first_name || u.name?.split(' ')[0] || null
+        if (displayName && u.wallet_pass_id) {
+          nameMap[u.wallet_pass_id] = displayName
+        }
+      })
+    }
+
+    // Build granular activity events
+    const recentActivity: ActivityEvent[] = []
+
+    // Individual offer claims
+    claims?.forEach(claim => {
+      recentActivity.push({
+        type: 'offer_claim',
+        firstName: claim.wallet_pass_id ? nameMap[claim.wallet_pass_id] || null : null,
+        itemName: claim.offer_title || undefined,
+        timestamp: claim.claimed_at,
+      })
+    })
+
+    // Individual profile views (business visits)
+    visits?.forEach(visit => {
+      recentActivity.push({
+        type: 'profile_view',
+        firstName: visit.wallet_pass_id ? nameMap[visit.wallet_pass_id] || null : null,
+        timestamp: visit.visit_date,
+      })
+    })
+
+    // Sort by newest first, cap at 15 events
+    recentActivity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    
     return {
       recentVisits: visits?.length || 0,
       recentClaims: claims?.length || 0,
-      recentQRScans: qrScans?.length || 0
+      recentQRScans: qrScans?.length || 0,
+      recentActivity: recentActivity.slice(0, 15),
     }
   } catch (error) {
     console.error('❌ Error fetching business activity:', error)
     return {
       recentVisits: 0,
       recentClaims: 0,
-      recentQRScans: 0
+      recentQRScans: 0,
+      recentActivity: [],
     }
   }
 }

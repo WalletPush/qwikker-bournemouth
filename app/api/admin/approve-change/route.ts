@@ -321,7 +321,13 @@ export async function POST(request: NextRequest) {
         }
         
         const secretMenuItems = (existingNotes as Record<string, unknown>).secret_menu_items as unknown[] || []
-        secretMenuItems.push(change.change_data)
+        // Stamp approval metadata onto the item before storing
+        const approvedItem = {
+          ...change.change_data,
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+        }
+        secretMenuItems.push(approvedItem)
         
         updateData = {
           additional_notes: JSON.stringify({

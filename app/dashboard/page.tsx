@@ -27,6 +27,7 @@ export default async function DashboardPage() {
         offer_type,
         offer_value,
         offer_image,
+        offer_end_date,
         status,
         created_at,
         approved_at
