@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useRef } from 'react'
-import { getPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
+import { getPlaceholderUrl, getImageCountForCategory } from '@/lib/placeholders/getPlaceholderImage'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,25 +17,9 @@ type Props = {
   onSave: (variant: number) => Promise<void>
 }
 
-// Dynamic variant count based on category
-const CATEGORY_VARIANTS: Record<string, number> = {
-  restaurant: 10,
-  cafe: 10,
-  bakery: 10,
-  bar: 10,
-  dessert: 10,
-  barber: 10,
-  salon: 10,
-  wellness: 10,
-  pub: 10,
-  tattoo: 10,
-  entertainment: 10,
-  // Default for other categories
-  default: 10,
-}
-
 function getVariantsForCategory(category: SystemCategory): Array<{ id: number; label: string }> {
-  const count = CATEGORY_VARIANTS[category] || CATEGORY_VARIANTS.default
+  const count = getImageCountForCategory(category)
+  if (count <= 0) return [{ id: 0, label: 'Default' }]
   return Array.from({ length: count }, (_, i) => ({
     id: i,
     label: `Variant ${i.toString().padStart(2, '0')}`,

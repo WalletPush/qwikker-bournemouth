@@ -1,95 +1,121 @@
 /**
- * Deterministic placeholder image selection for unclaimed businesses
- * 
- * ASSET STRUCTURE:
- * - /public/placeholders/<system_category>/00.webp
- * - /public/placeholders/<system_category>/01.webp
- * - /public/placeholders/<system_category>/02.webp
- * - Fallback: /public/placeholders/default/00.webp
- * 
- * SELECTION LOGIC:
- * - 3 images per category (indexed 0, 1, 2)
- * - 6 style variants (indexed 0-5) applied via CSS
- * - Both selections derived deterministically from business.id
- * - Same business ID always gets same image + style combination
+ * Deterministic placeholder image + style selection for unclaimed businesses.
+ *
+ * VISUAL VARIETY STRATEGY:
+ *   base images  x  crop positions  x  color treatments  =  unique looks
+ *   6 (restaurant)  x  5 crops  x  4 colors  =  120 combinations
+ *   3 (pub)         x  5 crops  x  4 colors  =   60 combinations
+ *
+ * All derived deterministically from business.id so the same business
+ * always renders identically (no flicker between page loads).
  */
 
-/**
- * Simple, fast, deterministic hash function (djb2 variant)
- * Returns consistent positive integer for any input string
- * 
- * @param str - Input string to hash (typically business ID)
- * @returns Positive integer hash value
- */
+// Actual .webp file counts per category folder in /public/placeholders/
+const IMAGE_COUNTS: Record<string, number> = {
+  restaurant: 6,
+  bar: 6,
+  tattoo: 6,
+  bakery: 5,
+  dessert: 5,
+  cafe: 4,
+  barber: 4,
+  wellness: 4,
+  pub: 3,
+  salon: 3,
+  default: 1,
+}
+
+// Crop positions applied via Tailwind object-position
+const CROP_POSITIONS = [
+  'object-center',
+  'object-top',
+  'object-bottom',
+  'object-left',
+  'object-right',
+] as const
+
+// Color treatments applied via Tailwind filter utilities
+const COLOR_TREATMENTS = [
+  '',                                          // 0: neutral
+  'brightness-105 saturate-[1.1]',             // 1: warm/vivid
+  'brightness-[0.97] saturate-[0.9]',          // 2: cool/muted
+  'brightness-110 contrast-[1.05]',            // 3: bright/crisp
+] as const
+
+// Overlay tints (semi-transparent gradient overlays)
+const OVERLAY_TINTS = [
+  null,                                                                                       // 0: none
+  'bg-gradient-to-t from-amber-900/15 to-transparent',                                        // 1: warm bottom
+  'bg-gradient-to-b from-slate-900/10 to-transparent',                                        // 2: cool top
+  'bg-gradient-to-tr from-orange-900/10 via-transparent to-blue-900/10',                       // 3: split tone
+] as const
+
 function stableHash(str: string): number {
   let hash = 5381
   for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i)
-    hash = ((hash << 5) + hash) + char // hash * 33 + char
+    hash = ((hash << 5) + hash) + str.charCodeAt(i)
   }
   return Math.abs(hash)
 }
 
+function imageCount(category: string): number {
+  return IMAGE_COUNTS[category] ?? 0
+}
+
 /**
- * Get deterministic placeholder image URL for a business
- * 
- * @param systemCategory - System category (e.g. 'restaurant', 'cafe')
- * @param businessId - Unique business identifier (UUID)
- * @returns Path to placeholder image (e.g. '/placeholders/restaurant/01.webp')
- * 
- * @example
- * getPlaceholderUrl('restaurant', 'abc-123-def-456')
- * // => '/placeholders/restaurant/01.webp' (deterministic)
+ * Resolve which category folder to use.
+ * Falls back to 'default' if the category has no images.
+ */
+function resolveCategory(systemCategory: string): string {
+  const count = imageCount(systemCategory)
+  return count > 0 ? systemCategory : 'default'
+}
+
+/**
+ * Get the placeholder image URL for a business.
  */
 export function getPlaceholderUrl(systemCategory: string, businessId: string): string {
-  // Categories with placeholder images available
-  const validCategories = ['restaurant', 'cafe', 'bar', 'barber', 'bakery', 'dessert']
-  
-  // If category doesn't have images yet, use default
-  const category = validCategories.includes(systemCategory) ? systemCategory : 'default'
-  
-  // Calculate variant index (0, 1, or 2) - only used if not default
-  const variantIndex = category === 'default' ? 0 : stableHash(businessId) % 3
-  
-  // Pad to 2 digits ("00", "01", "02")
-  const variantStr = variantIndex.toString().padStart(2, '0')
-  
-  const finalUrl = `/placeholders/${category}/${variantStr}.webp`
-  
-  // DEV-only: Log fallback when category has no placeholder images
-  if (process.env.NODE_ENV === 'development' && category === 'default' && systemCategory !== 'default' && systemCategory !== 'other') {
-    console.warn(`⚠️ Placeholder fallback: "${systemCategory}" → /placeholders/default/00.webp`)
+  const category = resolveCategory(systemCategory)
+  const count = imageCount(category)
+  const idx = count <= 1 ? 0 : stableHash(businessId) % count
+  return `/placeholders/${category}/${idx.toString().padStart(2, '0')}.webp`
+}
+
+/**
+ * Full visual variation bundle for a business placeholder.
+ * Returns image URL + all CSS classes + optional overlay.
+ */
+export function getPlaceholderVariation(systemCategory: string, businessId: string): {
+  url: string
+  imgClass: string
+  overlayClass: string | null
+} {
+  const url = getPlaceholderUrl(systemCategory, businessId)
+
+  const cropIdx = stableHash(businessId + ':crop') % CROP_POSITIONS.length
+  const colorIdx = stableHash(businessId + ':color') % COLOR_TREATMENTS.length
+  const tintIdx = stableHash(businessId + ':tint') % OVERLAY_TINTS.length
+
+  const crop = CROP_POSITIONS[cropIdx]
+  const color = COLOR_TREATMENTS[colorIdx]
+  const tint = OVERLAY_TINTS[tintIdx]
+
+  const imgClass = ['object-cover w-full h-full', crop, color].filter(Boolean).join(' ')
+
+  return {
+    url,
+    imgClass,
+    overlayClass: tint ?? null,
   }
-  
-  // Return path to image
-  return finalUrl
 }
 
 /**
- * Get deterministic style variant index for a business
- * 
- * Uses a different seed (':style' suffix) to ensure style index is independent
- * from image index (otherwise same hash would give correlated results)
- * 
- * @param businessId - Unique business identifier (UUID)
- * @returns Style index (0-5)
- * 
- * @example
- * getPlaceholderStyle('abc-123-def-456')
- * // => 3 (deterministic)
+ * Get the number of available images for a category.
  */
-export function getPlaceholderStyle(businessId: string): number {
-  // Use different seed to avoid correlation with image selection
-  const styleIndex = stableHash(businessId + ':style') % 6
-  return styleIndex
+export function getImageCountForCategory(systemCategory: string): number {
+  return imageCount(resolveCategory(systemCategory))
 }
 
-/**
- * Get fallback placeholder URL (used when category folder doesn't exist)
- * 
- * @returns Path to default placeholder
- */
 export function getFallbackPlaceholderUrl(): string {
   return '/placeholders/default/00.webp'
 }
-

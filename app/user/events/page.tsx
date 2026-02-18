@@ -5,6 +5,8 @@ import { cookies } from 'next/headers'
 import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getCityDisplayName } from '@/lib/utils/city-detection'
 
+export const dynamic = 'force-dynamic'
+
 export default async function Events() {
   // SECURITY: Validate franchise first
   let currentCity: string

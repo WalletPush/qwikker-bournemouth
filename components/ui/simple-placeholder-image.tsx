@@ -1,5 +1,4 @@
-import { getPlaceholderUrl, getPlaceholderStyle, getFallbackPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
-import { getPlaceholderClasses, getOverlayClass } from '@/lib/placeholders/getPlaceholderClass'
+import { getPlaceholderVariation, getFallbackPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
 
 interface SimplePlaceholderImageProps {
   businessId: string
@@ -9,11 +8,8 @@ interface SimplePlaceholderImageProps {
 }
 
 /**
- * Simple deterministic placeholder image with style variants
- * 
- * Uses 3 image variants + 6 CSS style variants = 18 possible combinations per category
- * All selections deterministic based on business ID
- * Minimal effects - no heavy gradients or blurs
+ * Deterministic placeholder image with CSS-driven visual variation.
+ * Combines base image + crop position + color treatment + tint overlay.
  */
 export function SimplePlaceholderImage({
   businessId,
@@ -21,35 +17,28 @@ export function SimplePlaceholderImage({
   businessName,
   className = ''
 }: SimplePlaceholderImageProps) {
-  // Get deterministic image URL and style index
-  const imageUrl = getPlaceholderUrl(systemCategory, businessId)
-  const styleIndex = getPlaceholderStyle(businessId)
-  const classes = getPlaceholderClasses(styleIndex)
+  const { url, imgClass, overlayClass } = getPlaceholderVariation(systemCategory, businessId)
 
-  // Handle image load errors (fallback to default)
   const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget
-    if (img.src !== getFallbackPlaceholderUrl()) {
-      img.src = getFallbackPlaceholderUrl()
+    const fallback = getFallbackPlaceholderUrl()
+    if (!img.src.endsWith(fallback)) {
+      img.src = fallback
     }
   }
 
   return (
-    <div className={`${classes.wrapperClass} ${className}`}>
-      {/* Main image */}
+    <div className={`relative overflow-hidden ${className}`}>
       <img
-        src={imageUrl}
+        src={url}
         alt=""
-        className={`absolute inset-0 w-full h-full ${classes.imgClass} z-[1]`}
+        className={`absolute inset-0 z-[1] ${imgClass}`}
         loading="lazy"
         onError={handleError}
       />
-
-      {/* Overlay (if style requires it) */}
-      {classes.overlay && (
-        <div className={getOverlayClass(classes.overlay) || ''} />
+      {overlayClass && (
+        <div className={`absolute inset-0 ${overlayClass} pointer-events-none z-[2]`} />
       )}
     </div>
   )
 }
-

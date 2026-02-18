@@ -4,6 +4,8 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { PassInstallerClient } from '@/components/wallet/pass-installer-client'
 import { redirect } from 'next/navigation'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'Get Your Pass | QWIKKER',
   description: 'Join your local QWIKKER community and start discovering exclusive offers'

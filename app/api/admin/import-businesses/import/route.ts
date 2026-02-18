@@ -11,6 +11,7 @@ import {
 } from '@/lib/constants/system-categories'
 import { CATEGORY_MAPPING } from '@/lib/constants/category-mapping'
 import { validatePlace } from '@/lib/import/validate-place'
+import { getImageCountForCategory } from '@/lib/placeholders/getPlaceholderImage'
 
 interface ImportRequest {
   city?: string // DEPRECATED: Now derived from hostname server-side (ignored if provided)
@@ -573,7 +574,7 @@ export async function POST(request: NextRequest) {
                 google_photo_name: place.photos?.[0]?.name || null,
                 business_tagline: simpleTagline, // Simple format: "Category • Location"
                 tagline_source: 'generated', // Mark as auto-generated
-                placeholder_variant: 0, // 🔒 CRITICAL: Always use neutral default (variant 0) on import
+                placeholder_variant: hashVariant(placeId, getImageCountForCategory(systemCategory)),
                 status: 'unclaimed',
                 visibility: 'discover_only',
                 auto_imported: true,
@@ -701,5 +702,14 @@ export async function POST(request: NextRequest) {
       'Connection': 'keep-alive',
     },
   })
+}
+
+function hashVariant(str: string, max: number): number {
+  if (max <= 1) return 0
+  let hash = 5381
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i)
+  }
+  return Math.abs(hash) % max
 }
 

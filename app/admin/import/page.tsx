@@ -3,6 +3,8 @@ import { getCityFromRequest } from '@/lib/utils/city-detection'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import AdminImportClient from './import-client'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminImportPage() {
   // Get city from subdomain
   const headersList = await headers()

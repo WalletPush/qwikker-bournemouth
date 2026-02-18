@@ -4,6 +4,8 @@ import { CityLandingPage } from '@/components/marketing/city-landing-page'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { headers } from 'next/headers'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'QWIKKER — Your city, curated',
   description: 'A city pass that lives in your phone wallet. Unlocks real local offers, Secret Menu items, and dish-level recommendations.',

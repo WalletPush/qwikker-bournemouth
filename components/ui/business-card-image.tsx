@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { getPlaceholderUrl, getFallbackPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
+import { getPlaceholderVariation, getFallbackPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
 import { optimizeCloudinaryUrl, getBusinessImageSizes } from '@/lib/utils/optimize-image-url'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 
@@ -45,25 +45,28 @@ export function BusinessCardImage({
     )
   }
 
-  // Unclaimed businesses: Use deterministic placeholder from local /public/placeholders/
-  const placeholderUrl = getPlaceholderUrl(systemCategory, businessId)
+  // Unclaimed businesses: deterministic placeholder with visual variation
+  const { url, imgClass, overlayClass } = getPlaceholderVariation(systemCategory, businessId)
   
   return (
     <div className={`relative ${className} overflow-hidden`}>
-      {/* Abstract detail shot - empty alt since this is decorative */}
       <img
-        src={placeholderUrl}
+        src={url}
         alt=""
-        className="w-full h-full object-cover"
+        className={imgClass}
         loading="lazy"
         onError={(e) => {
-          // Fallback to default placeholder if category-specific one doesn't exist
           const target = e.target as HTMLImageElement
           target.src = getFallbackPlaceholderUrl()
         }}
       />
       
-      {/* Dark overlay gradient to ensure text is readable */}
+      {/* Tint overlay for color variety */}
+      {overlayClass && (
+        <div className={`absolute inset-0 ${overlayClass} pointer-events-none`} />
+      )}
+
+      {/* Dark gradient for text readability */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/40 to-transparent" />
 
       {/* Top-right: Unclaimed badge (simple, no tooltip here) */}

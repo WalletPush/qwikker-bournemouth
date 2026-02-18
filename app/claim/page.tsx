@@ -409,7 +409,7 @@ export default function ClaimPage() {
                       // Resolve category and placeholder URL
                       const resolvedCategory = resolveSystemCategory(business) || (business as any).system_category || (business as any).systemCategory || 'other'
                       const placeholderVariant = (business as any).placeholder_variant ?? undefined
-                      const imgSrc = business.image || getPlaceholderUrl(resolvedCategory, business.id, placeholderVariant)
+                      const imgSrc = business.image || getPlaceholderUrl(resolvedCategory, business.id)
                       
                       return (
                         <Card 
