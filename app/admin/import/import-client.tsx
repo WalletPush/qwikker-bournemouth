@@ -12,11 +12,11 @@ import {
   Star, 
   Search, 
   AlertCircle, 
-  Coins,
   Download,
   Building2,
   XCircle,
-  Info
+  Info,
+  ExternalLink
 } from 'lucide-react'
 import {
   Select,
@@ -27,7 +27,14 @@ import {
 } from '@/components/ui/select'
 import { ImportProgressModal } from '@/components/admin/import-progress-modal'
 import { ONBOARDING_CATEGORY_OPTIONS, type SystemCategory, SYSTEM_CATEGORY_LABEL } from '@/lib/constants/system-categories'
-import { formatCurrency, getCurrencySymbol } from '@/lib/utils/currency-client'
+import { CATEGORY_MAPPING } from '@/lib/constants/category-mapping'
+
+const MAX_GRID_POINTS = 25
+const MAX_TYPES_PER_CATEGORY = 15
+const MAX_REQUESTS_PER_PREVIEW = 400
+const GRID_CELL_SPACING = 3600
+const GRID_RADIUS_MANY = 3000
+const GRID_RADIUS_FEW = 5000
 
 interface AdminImportClientProps {
   city: string
@@ -47,6 +54,7 @@ interface BusinessResult {
   systemCategory?: string // Optional: stable enum for reference
   googleTypes?: string[] // Raw Google types for cuisine tags
   googlePrimaryType?: string // Google's primary type (e.g. "cafe", "restaurant", "night_club")
+  matchReason?: string | null
   distance: number
   status: string
   hasPhoto: boolean
@@ -68,8 +76,16 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
   const [showPreview, setShowPreview] = useState(false)
   const [searchError, setSearchError] = useState('')
   const [costData, setCostData] = useState<{
-    preview: { amount: string; requests: number; description: string }
-    import: { estimatedPerBusiness: string; estimatedTotal: string; businessCount: number; description: string }
+    preview: { description: string }
+    import: { description: string }
+  } | null>(null)
+  const [searchMeta, setSearchMeta] = useState<{
+    center: { lat: number; lng: number }
+    resolvedLocation: string
+    resolutionMethod: string
+    gridPoints: number
+    typesSearched: number
+    requestsMade: number
   } | null>(null)
   const [skipDuplicates, setSkipDuplicates] = useState(true)
   const [sortBy, setSortBy] = useState<'rating' | 'distance' | 'reviews'>('rating')
@@ -150,6 +166,33 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
       .slice(0, 2) // Show max 2 cuisine tags
   }
 
+  // Pre-search request estimation (no currency -- multi-tenant)
+  const estimatePreSearchRequests = () => {
+    const config = CATEGORY_MAPPING[category]
+    if (!config) return { requests: 0, gridPoints: 1, typeCount: 0 }
+
+    const typeCount = Math.min(config.googleTypes.length, MAX_TYPES_PER_CATEGORY)
+    const isManyTypes = typeCount >= 5
+    const threshold = isManyTypes ? GRID_RADIUS_MANY : GRID_RADIUS_FEW
+
+    let gridPoints = 1
+    if (radius[0] > threshold) {
+      const stepsNeeded = Math.ceil(radius[0] / GRID_CELL_SPACING)
+      gridPoints = 1 + (2 * stepsNeeded) * (2 * stepsNeeded)
+      gridPoints = Math.min(gridPoints, MAX_GRID_POINTS)
+    }
+
+    let requests = gridPoints * typeCount
+    if (requests > MAX_REQUESTS_PER_PREVIEW) {
+      gridPoints = Math.max(1, Math.floor(MAX_REQUESTS_PER_PREVIEW / typeCount))
+      requests = gridPoints * typeCount
+    }
+
+    return { requests, gridPoints, typeCount }
+  }
+
+  const preEstimate = estimatePreSearchRequests()
+
   const handleSearch = async () => {
     setIsSearching(true)
     setSearchError('')
@@ -179,14 +222,16 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
 
       setResults(data.results || [])
       setCostData(data.costs || null)
+      setSearchMeta(data.search || null)
       setSelectedResults([])
       setShowPreview(true)
 
       console.log(`✅ Found ${data.totalFound} businesses`)
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to search businesses'
       console.error('Search error:', error)
-      setSearchError(error.message || 'Failed to search businesses')
+      setSearchError(message)
       setResults([])
     } finally {
       setIsSearching(false)
@@ -395,67 +440,41 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
         </p>
       </div>
 
-      {/* Google Places API Costs */}
-      <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800">
+      {/* Google Places API Info */}
+      <Card className="border-slate-200 dark:border-slate-700">
         <CardContent className="p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/50">
-              <Info className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+          <div className="flex items-start gap-3">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 mt-0.5">
+              <Info className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
             </div>
-            <h3 className="font-semibold text-orange-900 dark:text-orange-100">
-              Google Places API Costs (Two-Stage Import)
-            </h3>
-          </div>
+            <div className="space-y-2 text-sm">
+              <p className="font-semibold">How this works</p>
+              <p className="text-muted-foreground">
+                Each preview sends search requests to Google Places. Larger radii and categories with many sub-types use more requests.
+                Most franchises stay well within Google&apos;s monthly free tier.
+              </p>
+              <a
+                href="https://console.cloud.google.com/billing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                Open Google Cloud billing
+                <ExternalLink className="w-3 h-3" />
+              </a>
 
-          <div className="space-y-4 text-sm leading-relaxed">
-            {/* Preview */}
-            <div className="space-y-2">
-              <p className="font-semibold text-orange-900 dark:text-orange-100">Preview:</p>
-              <p className="text-orange-800 dark:text-orange-200">
-                Preview searches are cheap and charged <strong className="text-orange-900 dark:text-orange-100">per request</strong> — not per business.
-              </p>
-              <p className="text-orange-800 dark:text-orange-200">
-                Uses Google Places search requests to discover businesses.
-                Each request can return multiple businesses.
-                Google typically charges ~£0.02–£0.03 per request.
-              </p>
-              
-              {costData?.preview && (
-                <div className="mt-2 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-100 dark:bg-orange-900/30 px-3 py-2 text-xs">
-                  <div className="flex items-center justify-between text-orange-900 dark:text-orange-100">
-                    <span>This preview:</span>
-                    <span className="font-semibold">
-                      {getCurrencySymbol(currencyCode)}{costData.preview.amount}
-                    </span>
-                  </div>
-                  <div className="text-orange-700 dark:text-orange-300 mt-1">
-                    {costData.preview.description}
-                  </div>
+              {/* Post-search summary */}
+              {searchMeta && (
+                <div className="mt-3 p-3 rounded-lg border bg-slate-50 dark:bg-slate-900/50 space-y-1 text-xs">
+                  <p className="font-medium text-foreground">Last preview</p>
+                  <p className="text-muted-foreground">
+                    {searchMeta.requestsMade} requests across {searchMeta.gridPoints} search point{searchMeta.gridPoints > 1 ? 's' : ''} ({searchMeta.typesSearched} types)
+                  </p>
+                  <p className="text-muted-foreground">
+                    Resolved &quot;{searchMeta.resolvedLocation}&quot; → {searchMeta.center.lat.toFixed(4)}, {searchMeta.center.lng.toFixed(4)} ({searchMeta.resolutionMethod})
+                  </p>
                 </div>
               )}
-            </div>
-
-            {/* Import */}
-            <div className="space-y-2">
-              <p className="font-semibold text-orange-900 dark:text-orange-100">Import:</p>
-              <p className="text-orange-800 dark:text-orange-200">
-                Importing selected businesses is <strong className="text-emerald-700 dark:text-emerald-300">usually £0 extra</strong> because 
-                it uses data already fetched during preview.
-              </p>
-              <p className="text-orange-700 dark:text-orange-300">
-                If additional details (phone, website, opening hours) are fetched later using <strong className="text-orange-800 dark:text-orange-200">Place Details</strong>, 
-                Google may apply a small per-business charge.
-              </p>
-            </div>
-
-            {/* Billing */}
-            <div className="space-y-2">
-              <p className="font-semibold text-orange-900 dark:text-orange-100">Billing:</p>
-              <ul className="space-y-1 text-orange-800 dark:text-orange-200">
-                <li>• All Google Places API costs are charged directly to your <strong className="text-orange-900 dark:text-orange-100">Google Cloud account</strong></li>
-                <li>• View usage at: <strong className="text-orange-900 dark:text-orange-100">Google Cloud → Billing → Reports</strong></li>
-                <li>• Billing data may take a few hours to appear</li>
-              </ul>
             </div>
           </div>
         </CardContent>
@@ -664,6 +683,32 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
               Limit the number of results (start small to test, 50-200 recommended).
               Higher values increase preview cost slightly but improve coverage.
             </p>
+          </div>
+
+          {/* Pre-Search Estimates */}
+          <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border space-y-1.5 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Estimated requests:</span>
+              <span className="font-semibold">~{preEstimate.requests}</span>
+            </div>
+            {preEstimate.gridPoints > 1 && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Grid points:</span>
+                <span className="font-semibold">{preEstimate.gridPoints}</span>
+              </div>
+            )}
+            {preEstimate.gridPoints > 1 && (
+              <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
+                <MapPin className="w-3 h-3 flex-shrink-0" />
+                Grid search active — {preEstimate.gridPoints} points across your {(radius[0] / 1000).toFixed(1)}km radius for broader coverage
+              </p>
+            )}
+            {preEstimate.requests > 300 && (
+              <p className="text-xs text-orange-700 dark:text-orange-300 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                Large search — consider reducing radius or choosing a different category
+              </p>
+            )}
           </div>
 
           {/* Search Button */}
@@ -905,6 +950,11 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
                         {result.googlePrimaryType && (
                           <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
                             Google: {result.googlePrimaryType.replace(/_/g, ' ')}
+                          </Badge>
+                        )}
+                        {result.matchReason && (
+                          <Badge variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">
+                            Matched: {result.matchReason}
                           </Badge>
                         )}
                         {getCuisineTags(result.googleTypes).map(tag => (

@@ -9,7 +9,8 @@ import {
   isValidSystemCategory,
   type SystemCategory,
 } from '@/lib/constants/system-categories'
-import { validateCategoryMatch } from '@/lib/import/category-filters'
+import { CATEGORY_MAPPING } from '@/lib/constants/category-mapping'
+import { validatePlace } from '@/lib/import/validate-place'
 
 interface ImportRequest {
   city?: string // DEPRECATED: Now derived from hostname server-side (ignored if provided)
@@ -431,39 +432,23 @@ export async function POST(request: NextRequest) {
               continue
             }
 
-            // Final validation
-            if (place.businessStatus === 'CLOSED_PERMANENTLY') {
-              console.log(`⚠️ Skipping ${place.displayName?.text}: Permanently closed`)
-              skipped++
-              
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-                type: 'progress',
-                current: i + 1,
-                total,
-                imported,
-                skipped,
-                failed,
-                currentBusiness: place.displayName?.text || placeId,
-                status: 'skipped',
-                reason: 'Permanently closed'
-              })}\n\n`))
-              
-              continue
-            }
-
-            // 🔒 TWO-STAGE CATEGORY FILTERING (ENFORCED - prevents bypassing via UI bugs)
-            // This is the same validation as preview, ensuring no mismatched businesses slip through
-            const categoryValidation = validateCategoryMatch(
+            // Shared validation: denylist + closed + category
+            const categoryConfig = CATEGORY_MAPPING[systemCategory]
+            const importValidation = validatePlace(
               {
                 name: place.displayName?.text || '',
                 types: place.types,
-                primary_type: place.types?.[0],
+                primaryType: place.primaryType || place.types?.[0],
+                businessStatus: place.businessStatus,
               },
-              systemCategory
+              {
+                categoryConfig: categoryConfig || undefined,
+                excludeLodging: systemCategory !== 'hotel',
+              }
             )
 
-            if (!categoryValidation.valid) {
-              console.log(`❌ CATEGORY MISMATCH: ${place.displayName?.text} - ${categoryValidation.reason}`)
+            if (!importValidation.valid) {
+              console.log(`❌ Import rejected ${place.displayName?.text}: ${importValidation.rejectReason}`)
               skipped++
 
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({
@@ -475,7 +460,7 @@ export async function POST(request: NextRequest) {
                 failed,
                 currentBusiness: place.displayName?.text || placeId,
                 status: 'skipped',
-                reason: `Category mismatch: ${categoryValidation.reason}`
+                reason: importValidation.rejectReason || 'Validation failed'
               })}\n\n`))
 
               continue
