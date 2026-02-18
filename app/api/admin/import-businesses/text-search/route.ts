@@ -66,16 +66,20 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔍 Text search: "${textQuery}" in ${location} (franchise: ${requestCity})`)
 
-    // Build request -- use locationRestriction (hard boundary) to keep results in franchise area
+    // Build request -- use locationRestriction.rectangle (hard boundary)
+    // Text Search API only supports rectangle, not circle
     const requestBody: Record<string, unknown> = {
       textQuery: `${textQuery} in ${location}`,
     }
 
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      const radiusKm = 50
+      const latDelta = radiusKm / 111.32
+      const lngDelta = radiusKm / (111.32 * Math.cos((lat as number) * Math.PI / 180))
       requestBody.locationRestriction = {
-        circle: {
-          center: { latitude: lat, longitude: lng },
-          radius: 50000,
+        rectangle: {
+          low: { latitude: (lat as number) - latDelta, longitude: (lng as number) - lngDelta },
+          high: { latitude: (lat as number) + latDelta, longitude: (lng as number) + lngDelta },
         },
       }
     }
