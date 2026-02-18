@@ -56,7 +56,7 @@ export async function addSecretMenuItem(userId: string, itemData: {
     
     const notificationResult = await sendCitySlackNotification({
       title: `🤫 New Secret Menu Item: ${itemData.itemName}`,
-      message: `${profile.business_name} has submitted a new secret menu item for admin approval.\n\n**Item Details:**\n• Name: ${itemData.itemName}\n• Description: ${itemData.description || 'Not provided'}\n• Price: ${itemData.price || 'Not provided'}\n\n🔗 View in admin: ${process.env.NEXT_PUBLIC_BASE_URL || 'https://app.qwikker.com'}/admin?tab=applications`,
+      message: `${profile.business_name} has submitted a new secret menu item for admin approval.\n\n**Item Details:**\n• Name: ${itemData.itemName}\n• Description: ${itemData.description || 'Not provided'}\n• Price: ${itemData.price || 'Not provided'}\n\n🔗 View in admin: https://${(profile.city || 'bournemouth').toLowerCase()}.qwikker.com/admin?tab=updates`,
       city: profile.city || 'bournemouth',
       type: 'offer_created',
       data: { businessName: profile.business_name, itemName: itemData.itemName, changeId: changeRecord.id }
@@ -148,7 +148,7 @@ export async function createOffer(userId: string, offerData: {
     
     const notificationResult = await sendCitySlackNotification({
       title: `💰 New Offer Submitted: ${offerData.offerName}`,
-      message: `${profile.business_name} has submitted a new offer for admin approval.\n\n**Offer Details:**\n• Value: ${offerData.offerValue}\n• Type: ${offerData.offerType}\n• Claims: ${offerData.offerClaimAmount}\n\n🔗 View in admin: ${process.env.NEXT_PUBLIC_BASE_URL || 'https://app.qwikker.com'}/admin?tab=applications`,
+      message: `${profile.business_name} has submitted a new offer for admin approval.\n\n**Offer Details:**\n• Value: ${offerData.offerValue}\n• Type: ${offerData.offerType}\n• Claims: ${offerData.offerClaimAmount}\n\n🔗 View in admin: https://${(profile.city || 'bournemouth').toLowerCase()}.qwikker.com/admin?tab=updates`,
       city: profile.city || 'bournemouth',
       type: 'offer_created',
       data: { businessName: profile.business_name, offerName: offerData.offerName, changeId: changeRecord.id }

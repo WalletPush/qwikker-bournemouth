@@ -145,13 +145,118 @@ export function FranchiseBillingSettings({
               <select 
                 className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white"
                 value={config.currency}
-                onChange={(e) => setConfig({...config, currency: e.target.value})}
+                onChange={(e) => {
+                  const code = e.target.value
+                  const symbolMap: Record<string, string> = {
+                    GBP: '£', USD: '$', CAD: 'C$', EUR: '€', AUD: 'A$',
+                    NZD: 'NZ$', CHF: 'CHF', JPY: '¥', CNY: '¥', HKD: 'HK$',
+                    SGD: 'S$', INR: '₹', IDR: 'Rp', MYR: 'RM', THB: '฿',
+                    PHP: '₱', VND: '₫', KRW: '₩', TWD: 'NT$', PKR: '₨',
+                    BDT: '৳', LKR: 'Rs', NPR: 'Rs', AED: 'د.إ', SAR: '﷼',
+                    QAR: 'QR', KWD: 'KD', BHD: 'BD', OMR: 'OMR', JOD: 'JD',
+                    EGP: 'E£', ZAR: 'R', NGN: '₦', KES: 'KSh', GHS: 'GH₵',
+                    TZS: 'TSh', UGX: 'USh', MAD: 'MAD', TND: 'DT',
+                    BRL: 'R$', MXN: 'MX$', ARS: 'AR$', CLP: 'CL$', COP: 'COL$',
+                    PEN: 'S/.', UYU: '$U', CRC: '₡', GTQ: 'Q', DOP: 'RD$',
+                    SEK: 'kr', NOK: 'kr', DKK: 'kr', PLN: 'zł', CZK: 'Kč',
+                    HUF: 'Ft', RON: 'lei', BGN: 'лв', HRK: 'kn', RSD: 'din',
+                    TRY: '₺', RUB: '₽', UAH: '₴', GEL: '₾', ILS: '₪',
+                    ISK: 'kr', ALL: 'L', MKD: 'ден', BAM: 'KM',
+                    XOF: 'CFA', XAF: 'FCFA', XPF: 'F', FJD: 'FJ$',
+                    PGK: 'K', WST: 'WS$', TOP: 'T$', MMK: 'K', KHR: '៛', LAK: '₭',
+                  }
+                  setConfig({ ...config, currency: code, currency_symbol: symbolMap[code] || code })
+                }}
               >
-                <option value="GBP">GBP (British Pound)</option>
-                <option value="USD">USD (US Dollar)</option>
-                <option value="CAD">CAD (Canadian Dollar)</option>
-                <option value="EUR">EUR (Euro)</option>
-                <option value="AUD">AUD (Australian Dollar)</option>
+                <optgroup label="Major Currencies">
+                  <option value="GBP">GBP - British Pound (£)</option>
+                  <option value="USD">USD - US Dollar ($)</option>
+                  <option value="EUR">EUR - Euro (€)</option>
+                  <option value="CAD">CAD - Canadian Dollar (C$)</option>
+                  <option value="AUD">AUD - Australian Dollar (A$)</option>
+                  <option value="NZD">NZD - New Zealand Dollar (NZ$)</option>
+                  <option value="CHF">CHF - Swiss Franc (CHF)</option>
+                  <option value="JPY">JPY - Japanese Yen (¥)</option>
+                  <option value="CNY">CNY - Chinese Yuan (¥)</option>
+                </optgroup>
+                <optgroup label="Asia & Pacific">
+                  <option value="HKD">HKD - Hong Kong Dollar (HK$)</option>
+                  <option value="SGD">SGD - Singapore Dollar (S$)</option>
+                  <option value="INR">INR - Indian Rupee (₹)</option>
+                  <option value="IDR">IDR - Indonesian Rupiah (Rp)</option>
+                  <option value="MYR">MYR - Malaysian Ringgit (RM)</option>
+                  <option value="THB">THB - Thai Baht (฿)</option>
+                  <option value="PHP">PHP - Philippine Peso (₱)</option>
+                  <option value="VND">VND - Vietnamese Dong (₫)</option>
+                  <option value="KRW">KRW - South Korean Won (₩)</option>
+                  <option value="TWD">TWD - Taiwan Dollar (NT$)</option>
+                  <option value="PKR">PKR - Pakistani Rupee (₨)</option>
+                  <option value="BDT">BDT - Bangladeshi Taka (৳)</option>
+                  <option value="LKR">LKR - Sri Lankan Rupee (Rs)</option>
+                  <option value="NPR">NPR - Nepalese Rupee (Rs)</option>
+                  <option value="MMK">MMK - Myanmar Kyat (K)</option>
+                  <option value="KHR">KHR - Cambodian Riel (៛)</option>
+                  <option value="LAK">LAK - Lao Kip (₭)</option>
+                  <option value="FJD">FJD - Fijian Dollar (FJ$)</option>
+                  <option value="PGK">PGK - Papua New Guinean Kina (K)</option>
+                  <option value="WST">WST - Samoan Tala (WS$)</option>
+                  <option value="TOP">TOP - Tongan Paanga (T$)</option>
+                </optgroup>
+                <optgroup label="Middle East">
+                  <option value="AED">AED - UAE Dirham (د.إ)</option>
+                  <option value="SAR">SAR - Saudi Riyal (﷼)</option>
+                  <option value="QAR">QAR - Qatari Riyal (QR)</option>
+                  <option value="KWD">KWD - Kuwaiti Dinar (KD)</option>
+                  <option value="BHD">BHD - Bahraini Dinar (BD)</option>
+                  <option value="OMR">OMR - Omani Rial (OMR)</option>
+                  <option value="JOD">JOD - Jordanian Dinar (JD)</option>
+                  <option value="ILS">ILS - Israeli Shekel (₪)</option>
+                  <option value="EGP">EGP - Egyptian Pound (E£)</option>
+                </optgroup>
+                <optgroup label="Africa">
+                  <option value="ZAR">ZAR - South African Rand (R)</option>
+                  <option value="NGN">NGN - Nigerian Naira (₦)</option>
+                  <option value="KES">KES - Kenyan Shilling (KSh)</option>
+                  <option value="GHS">GHS - Ghanaian Cedi (GH₵)</option>
+                  <option value="TZS">TZS - Tanzanian Shilling (TSh)</option>
+                  <option value="UGX">UGX - Ugandan Shilling (USh)</option>
+                  <option value="MAD">MAD - Moroccan Dirham (MAD)</option>
+                  <option value="TND">TND - Tunisian Dinar (DT)</option>
+                  <option value="XOF">XOF - West African CFA (CFA)</option>
+                  <option value="XAF">XAF - Central African CFA (FCFA)</option>
+                </optgroup>
+                <optgroup label="Americas">
+                  <option value="BRL">BRL - Brazilian Real (R$)</option>
+                  <option value="MXN">MXN - Mexican Peso (MX$)</option>
+                  <option value="ARS">ARS - Argentine Peso (AR$)</option>
+                  <option value="CLP">CLP - Chilean Peso (CL$)</option>
+                  <option value="COP">COP - Colombian Peso (COL$)</option>
+                  <option value="PEN">PEN - Peruvian Sol (S/.)</option>
+                  <option value="UYU">UYU - Uruguayan Peso ($U)</option>
+                  <option value="CRC">CRC - Costa Rican Colón (₡)</option>
+                  <option value="GTQ">GTQ - Guatemalan Quetzal (Q)</option>
+                  <option value="DOP">DOP - Dominican Peso (RD$)</option>
+                </optgroup>
+                <optgroup label="Europe">
+                  <option value="SEK">SEK - Swedish Krona (kr)</option>
+                  <option value="NOK">NOK - Norwegian Krone (kr)</option>
+                  <option value="DKK">DKK - Danish Krone (kr)</option>
+                  <option value="PLN">PLN - Polish Zloty (zł)</option>
+                  <option value="CZK">CZK - Czech Koruna (Kč)</option>
+                  <option value="HUF">HUF - Hungarian Forint (Ft)</option>
+                  <option value="RON">RON - Romanian Leu (lei)</option>
+                  <option value="BGN">BGN - Bulgarian Lev (лв)</option>
+                  <option value="HRK">HRK - Croatian Kuna (kn)</option>
+                  <option value="RSD">RSD - Serbian Dinar (din)</option>
+                  <option value="TRY">TRY - Turkish Lira (₺)</option>
+                  <option value="RUB">RUB - Russian Ruble (₽)</option>
+                  <option value="UAH">UAH - Ukrainian Hryvnia (₴)</option>
+                  <option value="GEL">GEL - Georgian Lari (₾)</option>
+                  <option value="ISK">ISK - Icelandic Króna (kr)</option>
+                  <option value="ALL">ALL - Albanian Lek (L)</option>
+                  <option value="MKD">MKD - Macedonian Denar (ден)</option>
+                  <option value="BAM">BAM - Bosnian Mark (KM)</option>
+                </optgroup>
               </select>
             </div>
             

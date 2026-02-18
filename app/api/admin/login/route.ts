@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       return NextResponse.json(
-        { success: false, error: result.error },
+        { success: false, error: 'Incorrect username or password' },
         { status: 401 }
       )
     }

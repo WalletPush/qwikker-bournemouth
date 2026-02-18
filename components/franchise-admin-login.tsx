@@ -49,25 +49,21 @@ export default function FranchiseAdminLogin({ city, cityDisplayName }: Franchise
       console.log('📡 Response received:', response.status, response.statusText)
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error('❌ Response error:', errorText)
-        setError(`Server error: ${response.status}`)
+        setError('Incorrect username or password')
         return
       }
 
       const data = await response.json()
-      console.log('✅ Response data:', data)
 
       if (data.success) {
-        console.log('Login successful, redirecting to /admin')
         router.push('/admin')
         router.refresh()
       } else {
-        setError(data.error || 'Login failed')
+        setError('Incorrect username or password')
       }
     } catch (error) {
-      console.error('💥 Network error:', error)
-      setError(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('Login error:', error)
+      setError('Something went wrong. Please try again.')
     } finally {
       setIsLoading(false)
     }

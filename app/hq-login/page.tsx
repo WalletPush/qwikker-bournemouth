@@ -25,14 +25,8 @@ export default function HQAdminLoginPage() {
         password
       })
 
-      if (signInError) {
-        setError(signInError.message)
-        setLoading(false)
-        return
-      }
-
-      if (!data.user) {
-        setError('Login failed')
+      if (signInError || !data.user) {
+        setError('Incorrect email or password')
         setLoading(false)
         return
       }
@@ -55,8 +49,8 @@ export default function HQAdminLoginPage() {
       router.push('/hqadmin')
       router.refresh()
 
-    } catch (err: any) {
-      setError(err.message || 'Login failed')
+    } catch (err: unknown) {
+      setError('Incorrect email or password')
       setLoading(false)
     }
   }

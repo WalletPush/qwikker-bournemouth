@@ -40,69 +40,42 @@ export async function getAdminAnalytics(city: string): Promise<AdminAnalytics> {
       console.log(`📊 Admin Analytics for franchise ${city} covering cities:`, coveredCities)
     }
     
-    // Get total and active users - FRANCHISE FILTERED
-    const { count: totalUsers } = await supabase
-      .from('app_users')
-      .select('*', { count: 'exact', head: true })
-      .in('city', coveredCities)
-
-    const { count: activeUsers } = await supabase
-      .from('app_users')
-      .select('*', { count: 'exact', head: true })
-      .eq('wallet_pass_status', 'active')
-      .in('city', coveredCities)
-
-    // Get business metrics - FRANCHISE FILTERED
-    const { count: totalBusinesses } = await supabase
-      .from('business_profiles')
-      .select('*', { count: 'exact', head: true })
-      .in('business_town', coveredCities)
-
-    const { count: approvedBusinesses } = await supabase
-      .from('business_profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'approved')
-      .in('business_town', coveredCities)
-
-    const { count: pendingApplications } = await supabase
-      .from('business_profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending_review')
-      .in('business_town', coveredCities)
-
-    // Get engagement metrics
-    const { count: totalOffersClaimed } = await supabase
-      .from('user_offer_claims')
-      .select('*', { count: 'exact', head: true })
-
-    const { count: totalBusinessVisits } = await supabase
-      .from('user_business_visits')
-      .select('*', { count: 'exact', head: true })
-
-    // Get recent signups (last 7 days)
+    // Pre-compute date boundaries
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-    const { count: recentSignups } = await supabase
-      .from('app_users')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', sevenDaysAgo.toISOString())
-
-    // Calculate growth percentages (last 7 days vs previous 7 days)
     const fourteenDaysAgo = new Date()
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
 
-    const { count: previousWeekUsers } = await supabase
-      .from('app_users')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', fourteenDaysAgo.toISOString())
-      .lt('created_at', sevenDaysAgo.toISOString())
-
-    const { count: previousWeekBusinesses } = await supabase
-      .from('business_profiles')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', fourteenDaysAgo.toISOString())
-      .lt('created_at', sevenDaysAgo.toISOString())
+    // Run all count queries in parallel -- ALL filtered by franchise cities
+    const [
+      { count: totalUsers },
+      { count: activeUsers },
+      { count: totalBusinesses },
+      { count: approvedBusinesses },
+      { count: pendingApplications },
+      { count: totalOffersClaimed },
+      { count: totalBusinessVisits },
+      { count: recentSignups },
+      { count: previousWeekUsers },
+      { count: recentBusinessSignups },
+      { count: previousWeekBusinesses },
+    ] = await Promise.all([
+      supabase.from('app_users').select('*', { count: 'exact', head: true }).in('city', coveredCities),
+      supabase.from('app_users').select('*', { count: 'exact', head: true }).eq('wallet_pass_status', 'active').in('city', coveredCities),
+      supabase.from('business_profiles').select('*', { count: 'exact', head: true }).in('business_town', coveredCities),
+      supabase.from('business_profiles').select('*', { count: 'exact', head: true }).eq('status', 'approved').in('business_town', coveredCities),
+      supabase.from('business_profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending_review').in('business_town', coveredCities),
+      // Offer claims filtered by franchise via join on app_users city
+      supabase.from('user_offer_claims').select('*, app_users!inner(city)', { count: 'exact', head: true }).in('app_users.city', coveredCities),
+      // Business visits filtered by franchise via join on business_profiles
+      supabase.from('user_business_visits').select('*, business_profiles!inner(business_town)', { count: 'exact', head: true }).in('business_profiles.business_town', coveredCities),
+      // Recent user signups filtered by franchise city
+      supabase.from('app_users').select('*', { count: 'exact', head: true }).in('city', coveredCities).gte('created_at', sevenDaysAgo.toISOString()),
+      supabase.from('app_users').select('*', { count: 'exact', head: true }).in('city', coveredCities).gte('created_at', fourteenDaysAgo.toISOString()).lt('created_at', sevenDaysAgo.toISOString()),
+      // Recent business signups filtered by franchise city
+      supabase.from('business_profiles').select('*', { count: 'exact', head: true }).in('business_town', coveredCities).gte('created_at', sevenDaysAgo.toISOString()),
+      supabase.from('business_profiles').select('*', { count: 'exact', head: true }).in('business_town', coveredCities).gte('created_at', fourteenDaysAgo.toISOString()).lt('created_at', sevenDaysAgo.toISOString()),
+    ])
 
     // Calculate growth percentages
     const userGrowthPercentage = previousWeekUsers > 0 
@@ -110,8 +83,8 @@ export async function getAdminAnalytics(city: string): Promise<AdminAnalytics> {
       : recentSignups > 0 ? 100 : 0
 
     const businessGrowthPercentage = previousWeekBusinesses > 0 
-      ? Math.round(((recentSignups || 0) - previousWeekBusinesses) / previousWeekBusinesses * 100)
-      : 0
+      ? Math.round(((recentBusinessSignups || 0) - previousWeekBusinesses) / previousWeekBusinesses * 100)
+      : recentBusinessSignups > 0 ? 100 : 0
 
     return {
       totalUsers: totalUsers || 0,

@@ -23,102 +23,54 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
     // 🎯 SIMPLIFIED FRANCHISE SYSTEM: Get franchise city
     const franchiseCity = await getFranchiseCity(city)
 
-    // Get recent wallet pass installations (user signups) - CITY FILTERED
-    const { data: newPassInstalls } = await supabase
-      .from('app_users')
-      .select(`
-        id,
-        name,
-        wallet_pass_id,
-        wallet_pass_assigned_at,
-        city,
-        created_at
-      `)
-      .not('wallet_pass_id', 'is', null)
-      .eq('city', franchiseCity) // 🎯 SIMPLIFIED: Filter by franchise city
-      .order('wallet_pass_assigned_at', { ascending: false })
-      .limit(15)
+    // Run all initial data fetches in parallel
+    const [
+      { data: newPassInstalls },
+      { data: newApplications },
+      { data: offerClaims },
+      { data: claimRequests },
+      { data: statusChanges },
+    ] = await Promise.all([
+      // Recent wallet pass installations (user signups)
+      supabase
+        .from('app_users')
+        .select('id, name, wallet_pass_id, wallet_pass_assigned_at, city, created_at')
+        .not('wallet_pass_id', 'is', null)
+        .eq('city', franchiseCity)
+        .order('wallet_pass_assigned_at', { ascending: false })
+        .limit(15),
+      // Recent business profile applications
+      supabase
+        .from('business_profiles')
+        .select('id, business_name, created_at, status, user_id, business_town, auto_imported')
+        .eq('city', franchiseCity)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      // Recent offer claims and redemptions
+      supabase
+        .from('user_offer_claims')
+        .select('id, offer_title, business_name, claimed_at, wallet_pass_id, status, updated_at, app_users!inner(city)')
+        .eq('app_users.city', franchiseCity)
+        .order('claimed_at', { ascending: false })
+        .limit(20),
+      // Recent claim requests
+      supabase
+        .from('claim_requests')
+        .select('id, created_at, status, business_email, business_website, business_id, user_id')
+        .eq('city', franchiseCity)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      // Recent status changes
+      supabase
+        .from('business_profiles')
+        .select('id, business_name, updated_at, status, created_at, business_town')
+        .eq('city', franchiseCity)
+        .not('updated_at', 'is', null)
+        .order('updated_at', { ascending: false })
+        .limit(20),
+    ])
 
-    // Get recent business profile applications (business signups) - CITY FILTERED
-    const { data: newApplications } = await supabase
-      .from('business_profiles')
-      .select(`
-        id,
-        business_name,
-        created_at,
-        status,
-        user_id,
-        business_town,
-        auto_imported
-      `)
-      .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Use city field for franchise
-      .order('created_at', { ascending: false })
-      .limit(10)
-
-    // Get recent offer claims and redemptions - FRANCHISE FILTERED
-    const { data: offerClaims } = await supabase
-      .from('user_offer_claims')
-      .select(`
-        id,
-        offer_title,
-        business_name,
-        claimed_at,
-        wallet_pass_id,
-        status,
-        updated_at,
-        app_users!inner(city)
-      `)
-      .eq('app_users.city', franchiseCity) // 🔒 SECURITY: Filter by franchise
-      .order('claimed_at', { ascending: false })
-      .limit(20)
-
-    // 🚫 DISABLED: Business visits clutter the admin feed (will flood with real user activity)
-    // Get recent business visits - FRANCHISE FILTERED
-    // const { data: businessVisits } = await supabase
-    //   .from('user_business_visits')
-    //   .select(`
-    //     id,
-    //     visit_date,
-    //     business_id,
-    //     user_id,
-    //     app_users!inner(city)
-    //   `)
-    //   .eq('app_users.city', franchiseCity) // 🔒 SECURITY: Filter by franchise
-    //   .order('visit_date', { ascending: false })
-    //   .limit(8)
     const businessVisits = null // Disabled to keep feed focused on admin actions
-
-    // Get recent claim requests - CITY FILTERED
-    const { data: claimRequests } = await supabase
-      .from('claim_requests')
-      .select(`
-        id,
-        created_at,
-        status,
-        business_email,
-        business_website,
-        business_id,
-        user_id
-      `)
-      .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING
-      .order('created_at', { ascending: false })
-      .limit(10)
-
-    // Get recent status changes - CITY FILTERED
-    const { data: statusChanges, error: statusError } = await supabase
-      .from('business_profiles')
-      .select(`
-        id,
-        business_name,
-        updated_at,
-        status,
-        created_at,
-        business_town
-      `)
-      .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Only show this city's businesses
-      .not('updated_at', 'is', null) // 🔧 FIX: Use proper null check syntax
-      .order('updated_at', { ascending: false })
-      .limit(20)
 
     // Process new wallet pass installations
     if (newPassInstalls) {
@@ -300,22 +252,26 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
       }
     }
 
-    // Process offer claims and redemptions
-    if (offerClaims) {
-      for (const claim of offerClaims) {
-        // Get user name from wallet pass ID
-        let userName = 'Unknown User'
-        if (claim.wallet_pass_id) {
-          const { data: user } = await supabase
-            .from('app_users')
-            .select('name')
-            .eq('wallet_pass_id', claim.wallet_pass_id)
-            .single()
-          
-          if (user) userName = user.name || 'Unknown User'
-        }
+    // Process offer claims and redemptions (batch user lookup)
+    if (offerClaims && offerClaims.length > 0) {
+      // Batch lookup: collect all wallet_pass_ids and fetch user names in one query
+      const walletPassIds = [...new Set(offerClaims.map(c => c.wallet_pass_id).filter(Boolean))]
+      const userNameMap = new Map<string, string>()
 
-        // Add claim activity
+      if (walletPassIds.length > 0) {
+        const { data: users } = await supabase
+          .from('app_users')
+          .select('wallet_pass_id, name')
+          .in('wallet_pass_id', walletPassIds)
+
+        users?.forEach(u => {
+          if (u.wallet_pass_id && u.name) userNameMap.set(u.wallet_pass_id, u.name)
+        })
+      }
+
+      for (const claim of offerClaims) {
+        const userName = (claim.wallet_pass_id && userNameMap.get(claim.wallet_pass_id)) || 'Unknown User'
+
         const claimDate = new Date(claim.claimed_at)
         const claimTimeAgo = getTimeAgo(claimDate)
 
@@ -331,7 +287,6 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
           color: 'bg-blue-500'
         })
 
-        // Add redemption activity if status is wallet_added or redeemed
         if (claim.status === 'wallet_added' || claim.status === 'redeemed') {
           const updateDate = new Date(claim.updated_at || claim.claimed_at)
           const updateTimeAgo = getTimeAgo(updateDate)
@@ -389,29 +344,34 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
     //   }
     // }
 
-    // Process claim requests
-    if (claimRequests) {
+    // Process claim requests (batch lookups for businesses and users)
+    if (claimRequests && claimRequests.length > 0) {
+      const businessIds = [...new Set(claimRequests.map(c => c.business_id).filter(Boolean))]
+      const userIds = [...new Set(claimRequests.map(c => c.user_id).filter(Boolean))]
+
+      // Batch fetch business names and user emails in parallel
+      const [businessResult, profileResult] = await Promise.all([
+        businessIds.length > 0
+          ? supabase.from('business_profiles').select('id, business_name').in('id', businessIds)
+          : Promise.resolve({ data: [] }),
+        userIds.length > 0
+          ? supabase.from('profiles').select('user_id, email').in('user_id', userIds)
+          : Promise.resolve({ data: [] }),
+      ])
+
+      const businessNameMap = new Map<string, string>()
+      businessResult.data?.forEach((b: any) => { if (b.id && b.business_name) businessNameMap.set(b.id, b.business_name) })
+
+      const userEmailMap = new Map<string, string>()
+      profileResult.data?.forEach((u: any) => { if (u.user_id && u.email) userEmailMap.set(u.user_id, u.email) })
+
       for (const claim of claimRequests) {
         const claimDate = new Date(claim.created_at)
         const timeAgo = getTimeAgo(claimDate)
 
-        // Get business and user details
-        const { data: business } = await supabase
-          .from('business_profiles')
-          .select('business_name')
-          .eq('id', claim.business_id)
-          .single()
+        const businessName = (claim.business_id && businessNameMap.get(claim.business_id)) || 'Unknown Business'
+        const userEmail = (claim.user_id && userEmailMap.get(claim.user_id)) || claim.business_email || 'Unknown User'
 
-        const { data: user } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('user_id', claim.user_id)
-          .single()
-
-        const businessName = business?.business_name || 'Unknown Business'
-        const userEmail = user?.email || claim.business_email || 'Unknown User'
-
-        // Set icon and color based on status
         let iconType = 'document'
         let color = 'bg-amber-500'
         let statusText = 'claimed'

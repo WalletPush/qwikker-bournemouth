@@ -66,17 +66,13 @@ export function ComprehensiveAdminAnalytics({ city }: { city: string }) {
   const fetchComprehensiveAnalytics = async () => {
     setLoading(true)
     try {
-      // Fetch basic analytics
-      const basicAnalytics = await getAdminAnalytics(city)
-      
-      // Fetch recent activity
-      const recentActivity = await getAdminActivity(city, 10)
-      
-      // Fetch real QR analytics
-      const realQRData = await getRealQRAnalytics(city, 30)
-      
-      // Fetch additional data from API
-      const response = await fetch(`/api/admin/comprehensive-analytics?city=${city}`)
+      // Fetch all data sources in parallel
+      const [basicAnalytics, recentActivity, realQRData, response] = await Promise.all([
+        getAdminAnalytics(city),
+        getAdminActivity(city, 10),
+        getRealQRAnalytics(city, 30),
+        fetch(`/api/admin/comprehensive-analytics?city=${city}`),
+      ])
       const additionalData = await response.json()
 
       const comprehensiveAnalytics: ComprehensiveAnalytics = {

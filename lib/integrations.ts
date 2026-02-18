@@ -298,10 +298,10 @@ export async function sendBusinessUpdateNotification(profileData: any, updateTyp
       message = createReferralCreditedMessage(businessName, ownerName, details)
       break
     case 'offer_pending_approval':
-      message = createOfferPendingApprovalMessage(businessName, ownerName, details)
+      message = createOfferPendingApprovalMessage(businessName, ownerName, details, profileData.city)
       break
     case 'secret_menu_pending_approval':
-      message = createSecretMenuPendingApprovalMessage(businessName, ownerName, details)
+      message = createSecretMenuPendingApprovalMessage(businessName, ownerName, details, profileData.city)
       break
     case 'file_pending_approval':
       message = createFilePendingApprovalMessage(businessName, ownerName, details)
@@ -583,7 +583,8 @@ function createReferralCreditedMessage(businessName: string, ownerName: string, 
   }
 }
 
-function createOfferPendingApprovalMessage(businessName: string, ownerName: string, details: any) {
+function createOfferPendingApprovalMessage(businessName: string, ownerName: string, details: any, city?: string) {
+  const adminUrl = `https://${(city || 'bournemouth').toLowerCase()}.qwikker.com/admin?tab=updates`
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return 'Not specified'
     return new Date(dateStr).toLocaleDateString('en-GB')
@@ -637,7 +638,7 @@ function createOfferPendingApprovalMessage(businessName: string, ownerName: stri
               type: "plain_text",
               text: "Review in Admin Dashboard"
             },
-            url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin?tab=updates`,
+            url: adminUrl,
             style: "primary"
           }
         ]
@@ -646,7 +647,8 @@ function createOfferPendingApprovalMessage(businessName: string, ownerName: stri
   }
 }
 
-function createSecretMenuPendingApprovalMessage(businessName: string, ownerName: string, details: any) {
+function createSecretMenuPendingApprovalMessage(businessName: string, ownerName: string, details: any, city?: string) {
+  const adminUrl = `https://${(city || 'bournemouth').toLowerCase()}.qwikker.com/admin?tab=updates`
   return {
     text: `🚨 ADMIN APPROVAL NEEDED: ${ownerName} (${businessName}) submitted secret menu item: ${details.itemName}`,
     blocks: [
@@ -673,7 +675,7 @@ function createSecretMenuPendingApprovalMessage(businessName: string, ownerName:
               type: "plain_text",
               text: "Review in Admin Dashboard"
             },
-            url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin?tab=updates`,
+            url: adminUrl,
             style: "primary"
           }
         ]

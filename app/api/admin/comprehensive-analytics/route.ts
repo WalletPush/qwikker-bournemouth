@@ -17,64 +17,83 @@ export async function GET(request: NextRequest) {
     const franchiseCity = await getFranchiseCity(city)
     console.log(`📊 Comprehensive Analytics for ${city} franchise city: ${franchiseCity}`)
 
-    // Get offer claim trends (last 30 days)
+    // Pre-compute date boundaries
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-    const { data: offerClaimTrends } = await supabase
-      .from('user_offer_claims')
-      .select(`
-        claimed_at,
-        business_name,
-        offer_title
-      `)
-      .gte('claimed_at', thirtyDaysAgo.toISOString())
-      .order('claimed_at', { ascending: false })
+    // ── Phase 1: Run all independent queries in parallel ──
+    const [
+      { data: offerClaimTrends },
+      { data: businessVisits },
+      { data: businessOfferClaims },
+      { count: totalUsers },
+      { count: usersWithPasses },
+      { count: totalVisitsCount },
+      { data: pushNotifications },
+    ] = await Promise.all([
+      // Offer claim trends -- franchise filtered via app_users join
+      supabase
+        .from('user_offer_claims')
+        .select('claimed_at, business_name, offer_title, app_users!inner(city)')
+        .in('app_users.city', [franchiseCity])
+        .gte('claimed_at', thirtyDaysAgo.toISOString())
+        .order('claimed_at', { ascending: false })
+        .limit(500),
+      // Business visits for performance map -- franchise filtered
+      supabase
+        .from('user_business_visits')
+        .select('business_id, business_profiles!inner(business_name, business_town, updated_at)')
+        .eq('business_profiles.city', franchiseCity)
+        .limit(500),
+      // Offer claims per business -- franchise filtered via app_users join
+      supabase
+        .from('user_offer_claims')
+        .select('business_id, business_name, app_users!inner(city)')
+        .in('app_users.city', [franchiseCity])
+        .limit(500),
+      // Total users in franchise
+      supabase
+        .from('app_users')
+        .select('*', { count: 'exact', head: true })
+        .eq('city', franchiseCity),
+      // Users with wallet passes in franchise
+      supabase
+        .from('app_users')
+        .select('*', { count: 'exact', head: true })
+        .eq('city', franchiseCity)
+        .not('wallet_pass_id', 'is', null),
+      // True total visits count (not capped by limit) for accurate avg calculation
+      supabase
+        .from('user_business_visits')
+        .select('*, business_profiles!inner(city)', { count: 'exact', head: true })
+        .eq('business_profiles.city', franchiseCity),
+      // Push notifications
+      supabase
+        .from('push_notifications')
+        .select('id, created_at, business_id, city')
+        .eq('city', franchiseCity)
+        .limit(500),
+    ])
 
-    // Group offer claims by date and business
+    // ── Process offer claim trends ──
     const trendMap = new Map()
     offerClaimTrends?.forEach(claim => {
-      const date = claim.claimed_at.split('T')[0] // Get date part
+      const date = claim.claimed_at.split('T')[0]
       const key = `${date}-${claim.business_name}`
-      
       if (trendMap.has(key)) {
         trendMap.get(key).claims += 1
       } else {
-        trendMap.set(key, {
-          date: claim.claimed_at,
-          business_name: claim.business_name,
-          claims: 1
-        })
+        trendMap.set(key, { date: claim.claimed_at, business_name: claim.business_name, claims: 1 })
       }
     })
-
     const processedOfferClaimTrends = Array.from(trendMap.values())
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-    // Get top performing businesses
-    const { data: businessVisits } = await supabase
-      .from('user_business_visits')
-      .select(`
-        business_id,
-        business_profiles!inner(
-          business_name,
-          business_town,
-          updated_at
-        )
-      `)
-      .eq('business_profiles.city', franchiseCity)
-
-    const { data: businessOfferClaims } = await supabase
-      .from('user_offer_claims')
-      .select(`
-        business_id,
-        business_name
-      `)
-
-    // Calculate business performance metrics
+    // ── Build business performance map ──
     const businessPerformanceMap = new Map()
-    
-    // Count visits per business
+
     businessVisits?.forEach(visit => {
       const businessName = visit.business_profiles?.business_name
       if (businessName) {
@@ -91,7 +110,6 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Count offer claims per business
     businessOfferClaims?.forEach(claim => {
       if (claim.business_name) {
         if (businessPerformanceMap.has(claim.business_name)) {
@@ -107,134 +125,49 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Calculate pass install rate
-    const { count: totalUsers } = await supabase
-      .from('app_users')
-      .select('*', { count: 'exact', head: true })
-      .eq('city', franchiseCity)
-
-    const { count: usersWithPasses } = await supabase
-      .from('app_users')
-      .select('*', { count: 'exact', head: true })
-      .eq('city', franchiseCity)
-      .not('wallet_pass_id', 'is', null)
-
+    // ── Pass install rate and average visits ──
     const passInstallRate = totalUsers > 0 
-      ? Math.round((usersWithPasses / totalUsers) * 100)
+      ? Math.round(((usersWithPasses || 0) / totalUsers) * 100)
       : 0
 
-    // Calculate average visits per user
-    const totalVisits = businessVisits?.length || 0
     const averageVisitsPerUser = totalUsers > 0 
-      ? totalVisits / totalUsers
+      ? (totalVisitsCount || 0) / totalUsers
       : 0
 
-    // Get push notification analytics
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-    // Get all push notifications for this city directly (no join needed)
-    const { data: pushNotifications, error: pushError } = await supabase
-      .from('push_notifications')
-      .select('id, created_at, business_id, city')
-      .eq('city', franchiseCity)
-
-    console.log('📊 Push notifications query:', {
-      franchiseCity,
-      count: pushNotifications?.length,
-      error: pushError,
-      sample: pushNotifications?.[0]
-    })
-
-    // Get business names for these push notifications
-    const businessIds = [...new Set(pushNotifications?.map(n => n.business_id).filter(Boolean))] || []
-    const { data: businesses } = await supabase
-      .from('business_profiles')
-      .select('id, business_name')
-      .in('id', businessIds)
-    
-    const businessIdToName = new Map(businesses?.map(b => [b.id, b.business_name]) || [])
-
-    // Push notifications sent this week
+    // ── Push notification analytics ──
     const pushesThisWeek = pushNotifications?.filter(
       notif => new Date(notif.created_at) >= sevenDaysAgo
     ).length || 0
 
-    // Get all recipients for these notifications
+    // Phase 2: Fetch push-related data that depends on notification IDs
     const notificationIds = pushNotifications?.map(n => n.id) || []
-    console.log('📊 Notification IDs:', notificationIds.length)
-    
-    let sentRecipients: any[] = []
-    if (notificationIds.length > 0) {
-      // First, let's see ALL recipients regardless of status
-      const { data: allRecipients } = await supabase
-        .from('push_notification_recipients')
-        .select('push_notification_id, id, status')
-        .in('push_notification_id', notificationIds)
-      
-      console.log('📊 ALL Recipients (any status):', {
-        total: allRecipients?.length,
-        byStatus: allRecipients?.reduce((acc, r) => {
-          acc[r.status] = (acc[r.status] || 0) + 1
-          return acc
-        }, {} as Record<string, number>)
-      })
+    const pushBusinessIds = [...new Set(pushNotifications?.map(n => n.business_id).filter(Boolean))] || []
 
-      const { data, error: recipientsError } = await supabase
-        .from('push_notification_recipients')
-        .select('push_notification_id, id')
-        .in('push_notification_id', notificationIds)
-        .eq('status', 'sent')
+    // Run push sub-queries in parallel
+    const [businessNamesResult, recipientsResult, clicksResult] = await Promise.all([
+      pushBusinessIds.length > 0
+        ? supabase.from('business_profiles').select('id, business_name').in('id', pushBusinessIds)
+        : Promise.resolve({ data: [] as any[] }),
+      notificationIds.length > 0
+        ? supabase.from('push_notification_recipients').select('push_notification_id, id').in('push_notification_id', notificationIds).eq('status', 'sent')
+        : Promise.resolve({ data: [] as any[] }),
+      notificationIds.length > 0
+        ? supabase.from('push_notification_clicks').select('push_notification_id, id').in('push_notification_id', notificationIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ])
 
-      console.log('📊 Recipients query (status=sent):', {
-        count: data?.length,
-        error: recipientsError,
-        sample: data?.[0]
-      })
-      
-      sentRecipients = data || []
-    }
-
-    // Get all clicks for these notifications (clicks reference push_notifications directly)
-    let clicks: any[] = []
-    if (notificationIds.length > 0) {
-      const { data, error: clicksError } = await supabase
-        .from('push_notification_clicks')
-        .select('push_notification_id, id')
-        .in('push_notification_id', notificationIds)
-
-      console.log('📊 Clicks query:', {
-        count: data?.length,
-        error: clicksError,
-        sample: data?.[0]
-      })
-      
-      clicks = data || []
-    }
+    const businessIdToName = new Map((businessNamesResult.data || []).map((b: any) => [b.id, b.business_name]))
+    const sentRecipients = recipientsResult.data || []
+    const clicks = clicksResult.data || []
 
     // Build per-business push notification metrics
     const businessPushMap = new Map()
     pushNotifications?.forEach(notif => {
       const businessName = businessIdToName.get(notif.business_id)
       
-      console.log('📊 Processing notification:', {
-        id: notif.id,
-        business_id: notif.business_id,
-        businessName
-      })
-      
       if (businessName) {
-        // Count sent recipients for this notification
         const notifRecipients = sentRecipients?.filter(r => r.push_notification_id === notif.id).length || 0
-        
-        // Count clicks for this notification (clicks reference notification directly)
         const notifClicks = clicks?.filter(c => c.push_notification_id === notif.id).length || 0
-
-        console.log('📊 Business metrics:', {
-          businessName,
-          notifRecipients,
-          notifClicks
-        })
 
         if (businessPushMap.has(businessName)) {
           const existing = businessPushMap.get(businessName)
@@ -252,8 +185,6 @@ export async function GET(request: NextRequest) {
         }
       }
     })
-
-    console.log('📊 Final business push map:', Array.from(businessPushMap.entries()))
 
     // Merge push metrics into business performance map
     businessPushMap.forEach((pushMetrics, businessName) => {

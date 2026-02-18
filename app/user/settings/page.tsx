@@ -85,21 +85,63 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     }
   }
   
-  // Get stats for city badge
-  const { data: businesses } = await supabase
+  // Get stats for city badge (use franchise `city` column, not `business_town`)
+  // Use service role to get accurate counts regardless of RLS
+  const { createServiceRoleClient } = await import('@/lib/supabase/server')
+  const supabaseAdmin = createServiceRoleClient()
+
+  const { data: businesses } = await supabaseAdmin
     .from('business_profiles')
-    .select('id, business_offers!left(id, status, offer_end_date)')
+    .select('id, additional_notes, business_offers!left(id, status, offer_end_date)')
     .eq('city', currentCity)
-    .in('status', ['approved', 'unclaimed', 'claimed_free'])
+    .in('status', ['approved', 'claimed_free', 'unclaimed'])
   
-  const totalBusinesses = businesses?.length || 0
-  const totalOffers = businesses?.reduce((total, b) => {
-    const activeOffers = (b.business_offers || []).filter(offer => 
-      offer.status === 'active' && 
-      (!offer.offer_end_date || new Date(offer.offer_end_date) >= new Date())
+  const now = new Date()
+
+  // Fetch subscriptions to exclude expired trials
+  const businessIds = (businesses || []).map(b => b.id)
+  const { data: subscriptions } = businessIds.length > 0
+    ? await supabaseAdmin
+        .from('business_subscriptions')
+        .select('business_id, is_in_free_trial, free_trial_end_date')
+        .in('business_id', businessIds)
+    : { data: [] }
+
+  const expiredTrialIds = new Set(
+    (subscriptions || [])
+      .filter(s => s.is_in_free_trial && s.free_trial_end_date && new Date(s.free_trial_end_date) < now)
+      .map(s => s.business_id)
+  )
+
+  // Exclude expired trials
+  const liveBusinesses = (businesses || []).filter(b => !expiredTrialIds.has(b.id))
+
+  const totalBusinesses = liveBusinesses.length
+  const totalOffers = liveBusinesses.reduce((total, b) => {
+    const activeOffers = (b.business_offers || []).filter((offer: { status: string; offer_end_date?: string }) => 
+      offer.status === 'approved' && 
+      (!offer.offer_end_date || new Date(offer.offer_end_date) >= now)
     )
     return total + activeOffers.length
-  }, 0) || 0
+  }, 0)
+  const totalSecretMenuItems = liveBusinesses.reduce((total, b) => {
+    try {
+      const raw = b.additional_notes
+      const notes = typeof raw === 'string' ? JSON.parse(raw) : raw
+      const items = (notes?.secret_menu_items as unknown[]) || []
+      return total + items.length
+    } catch {
+      return total
+    }
+  }, 0)
+
+  // Get upcoming approved events for this city
+  const { count: totalEvents } = await supabaseAdmin
+    .from('business_events')
+    .select('*, business_profiles!inner(city)', { count: 'exact', head: true })
+    .eq('status', 'approved')
+    .eq('business_profiles.city', currentCity)
+    .gte('event_date', now.toISOString().split('T')[0])
   
   return (
     <UserDashboardLayout 
@@ -113,7 +155,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         currentUser={currentUser}
         currentCity={currentCity}
         cityDisplayName={cityDisplayName}
-        stats={{ totalBusinesses, totalOffers }}
+        stats={{ totalBusinesses, totalOffers, totalSecretMenuItems, totalEvents: totalEvents || 0 }}
       />
     </UserDashboardLayout>
   )

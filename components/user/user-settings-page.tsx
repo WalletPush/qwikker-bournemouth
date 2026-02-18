@@ -16,6 +16,8 @@ interface UserSettingsPageProps {
   stats?: {
     totalBusinesses: number
     totalOffers: number
+    totalSecretMenuItems: number
+    totalEvents: number
   }
 }
 
@@ -25,6 +27,10 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
   const [emailConsent, setEmailConsent] = useState(false)
   const [consentLoading, setConsentLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  const [liveCities, setLiveCities] = useState<Array<{ city: string; display_name: string; subdomain: string; status: string; country_name: string }>>([])
+  const [showCities, setShowCities] = useState(false)
+  const [citiesLoading, setCitiesLoading] = useState(false)
 
   const [preferences, setPreferences] = useState({
     categories: ['Restaurant', 'Cafe', 'Bar'],
@@ -55,6 +61,28 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
     } finally {
       setConsentLoading(false)
     }
+  }
+
+  const fetchLiveCities = async () => {
+    setCitiesLoading(true)
+    try {
+      const response = await fetch('/api/public/live-cities')
+      if (response.ok) {
+        const data = await response.json()
+        setLiveCities(data.cities || [])
+      }
+    } catch (error) {
+      console.error('Error fetching live cities:', error)
+    } finally {
+      setCitiesLoading(false)
+    }
+  }
+
+  const handleShowCities = () => {
+    if (!showCities && liveCities.length === 0) {
+      fetchLiveCities()
+    }
+    setShowCities(!showCities)
   }
 
   const updateConsent = async (type: 'push' | 'email', value: boolean) => {
@@ -308,7 +336,7 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
               <p className="text-white font-medium">Current City</p>
               <p className="text-blue-400 text-lg font-semibold">{cityDisplayName}</p>
               <p className="text-slate-400 text-sm">
-                {stats ? `${stats.totalBusinesses} businesses • ${stats.totalOffers} active offers` : 'Loading...'}
+                {stats ? `${stats.totalBusinesses} businesses • ${stats.totalOffers} offers • ${stats.totalSecretMenuItems} secret menus • ${stats.totalEvents} events` : 'Loading...'}
               </p>
             </div>
             <div className="w-12 h-12 bg-slate-700 border border-slate-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
@@ -317,17 +345,84 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
           </div>
 
           <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-600">
-            <p className="text-white font-medium mb-2">Traveling?</p>
+            <p className="text-white font-medium mb-2">Explore Other Cities</p>
             <p className="text-slate-400 text-sm mb-3">
-              If you're visiting another city, we can suggest installing additional Qwikker passes for those locations.
+              Qwikker is live in multiple locations. Install additional passes to discover businesses wherever you go.
             </p>
-            <Button variant="outline" className="border-slate-500 text-slate-300 hover:bg-slate-700">
+            <Button
+              variant="outline"
+              className="border-slate-500 text-slate-300 hover:bg-slate-700"
+              onClick={handleShowCities}
+            >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Detect My Location
+              {showCities ? 'Hide Locations' : 'View Live Qwikker Locations'}
             </Button>
+
+            {showCities && (
+              <div className="mt-4 space-y-2">
+                {citiesLoading ? (
+                  <div className="flex items-center gap-2 text-slate-400 text-sm py-2">
+                    <div className="w-4 h-4 border-2 border-slate-500 border-t-white rounded-full animate-spin" />
+                    Loading locations...
+                  </div>
+                ) : liveCities.length > 0 ? (
+                  <>
+                    {/* Group by country */}
+                    {Object.entries(
+                      liveCities.reduce<Record<string, typeof liveCities>>((acc, city) => {
+                        const country = city.country_name || 'Other'
+                        if (!acc[country]) acc[country] = []
+                        acc[country].push(city)
+                        return acc
+                      }, {})
+                    ).map(([country, cities]) => (
+                      <div key={country}>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{country}</p>
+                        <div className="space-y-1.5">
+                          {cities.map((city) => {
+                            const isCurrentCity = city.subdomain?.toLowerCase() === currentCity?.toLowerCase()
+                            return (
+                              <div
+                                key={city.city}
+                                className={`flex items-center justify-between p-2.5 rounded-lg border transition-colors ${
+                                  isCurrentCity
+                                    ? 'bg-[#00d083]/10 border-[#00d083]/30'
+                                    : 'bg-slate-700/30 border-slate-600/50 hover:border-slate-500/50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-2 h-2 rounded-full bg-green-400" />
+                                  <span className="text-white text-sm font-medium">{city.display_name}</span>
+                                  {isCurrentCity && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#00d083]/20 text-[#00d083] font-semibold">
+                                      YOU ARE HERE
+                                    </span>
+                                  )}
+                                </div>
+                                {!isCurrentCity && (
+                                  <a
+                                    href={`https://${city.subdomain}.qwikker.com`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                                  >
+                                    Visit →
+                                  </a>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <p className="text-slate-500 text-sm py-2">No other locations available yet.</p>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
