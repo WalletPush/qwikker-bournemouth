@@ -123,7 +123,6 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   
   // ATLAS: Detail request (hidden ID-based handoff)
   const [detailRequest, setDetailRequest] = useState<string | null>(null)
-  const [soundEnabled, setSoundEnabled] = useState(false)
   
   // Near-me query flow
   const [pendingNearMeQuery, setPendingNearMeQuery] = useState<string | null>(null)
@@ -790,8 +789,6 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
             locationStatus={locationStatus}
             isActive={view === 'atlas'}
             onClose={() => setView('chat')}
-            soundEnabled={soundEnabled}
-            onToggleSound={() => setSoundEnabled(!soundEnabled)}
             city={tenantConfig.city || 'unknown'}
             userId={currentUser?.wallet_pass_id}
             lastUserQuery={messages.length > 0 ? messages.filter(m => m.type === 'user').slice(-1)[0]?.content : undefined}

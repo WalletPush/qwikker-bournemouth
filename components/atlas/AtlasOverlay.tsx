@@ -7,12 +7,12 @@
  * - Search input (top floating)
  * - Business info bubble (bottom)
  * - Back to chat button (top-left)
- * - Sound toggle (top-right)
+ * - Back to chat button (top-left corner)
  */
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Search, X, Volume2, VolumeX, MapPin, Star, Phone, Globe, Navigation, ChevronLeft, ChevronRight, Pause, Play, XCircle } from 'lucide-react'
+import { Search, X, MapPin, Star, Phone, Globe, Navigation, ChevronLeft, ChevronRight, Pause, Play, XCircle } from 'lucide-react'
 import type { Business } from './AtlasMode'
 import type { Coordinates } from '@/lib/location/useUserLocation'
 import { formatDistance, calculateDistanceKm } from '@/lib/utils/distance-formatter'
@@ -24,8 +24,6 @@ interface AtlasOverlayProps {
   searching: boolean
   selectedBusiness: Business | null
   userLocation: Coordinates | null
-  soundEnabled: boolean
-  onToggleSound: () => void
   onBusinessSelected?: (businessId: string) => void
   onDirectionsClicked?: (businessId: string) => void
   // Tour mode props
@@ -48,8 +46,6 @@ export function AtlasOverlay({
   searching,
   selectedBusiness,
   userLocation,
-  soundEnabled,
-  onToggleSound,
   onBusinessSelected,
   onDirectionsClicked,
   tourActive = false,
@@ -128,14 +124,6 @@ export function AtlasOverlay({
           <span className="font-medium">Back to Chat</span>
         </button>
         
-        {/* Sound Toggle */}
-        <button
-          onClick={onToggleSound}
-          className="pointer-events-auto p-3 bg-black/60 hover:bg-black/80 backdrop-blur-lg border border-white/10 rounded-xl text-white transition-all shadow-xl"
-          title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
-        >
-          {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-        </button>
       </div>
       
       {/* Search Input */}

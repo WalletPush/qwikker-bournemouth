@@ -86,8 +86,6 @@ interface AtlasModeProps {
   userLocation: Coordinates | null
   locationStatus?: LocationStatus
   onClose: () => void
-  soundEnabled: boolean
-  onToggleSound: () => void
   city: string
   userId?: string
   lastUserQuery?: string
@@ -107,8 +105,6 @@ export function AtlasMode({
   userLocation,
   locationStatus,
   onClose,
-  soundEnabled,
-  onToggleSound,
   city,
   userId,
   lastUserQuery,
@@ -455,15 +451,10 @@ export function AtlasMode({
     }
   }, [])
   
-  // Play sound helper (gated behind isActive to prevent sounds when hidden)
-  const playSound = useCallback((audio: HTMLAudioElement | null) => {
-    if (!soundEnabled || !audio || !isActive) return
-    
-    audio.currentTime = 0
-    audio.play().catch(() => {
-      // Ignore autoplay restrictions or missing files
-    })
-  }, [soundEnabled, isActive])
+  // Play sound helper (currently disabled -- no-op)
+  const playSound = useCallback((_audio: HTMLAudioElement | null) => {
+    // Sound feature not yet active
+  }, [])
   
   // Initialize Mapbox map
   useEffect(() => {
@@ -2191,21 +2182,6 @@ export function AtlasMode({
             <span className="font-medium">Back to Chat</span>
           </button>
 
-          {/* Mute Toggle */}
-          <button
-            onClick={onToggleSound}
-            className="p-3 rounded-full bg-black/80 backdrop-blur-md border border-white/20 text-white"
-          >
-            {soundEnabled ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-              </svg>
-            )}
-          </button>
         </div>
       )}
       
@@ -2351,8 +2327,6 @@ export function AtlasMode({
           searching={searching}
           selectedBusiness={selectedBusiness}
           userLocation={userLocation}
-          soundEnabled={soundEnabled}
-          onToggleSound={onToggleSound}
           tourActive={tourActive}
           totalBusinesses={businesses.length}
           currentBusinessIndex={selectedBusinessIndex}
