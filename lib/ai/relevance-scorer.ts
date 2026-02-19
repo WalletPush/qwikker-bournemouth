@@ -64,6 +64,26 @@ export function scoreBusinessRelevance(
     }
   }
   
+  // Negation gate: if business matches a negated category, exclude it
+  if (intent.negatedCategories && intent.negatedCategories.length > 0) {
+    const category = (
+      business.display_category || 
+      business.system_category || 
+      business.google_primary_type || 
+      ''
+    ).toLowerCase()
+    const businessName = (business.business_name || '').toLowerCase()
+    
+    for (const negated of intent.negatedCategories) {
+      if (category.includes(negated) || businessName.includes(negated)) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🚫 NEGATION: filtered ${business.business_name} (matches negated "${negated}")`)
+        }
+        return 0
+      }
+    }
+  }
+  
   // 🔥 ARCHITECTURAL RULE: EVIDENCE BEATS INTENT. ALWAYS.
   // 
   // Semantic search scanned the KB for the ACTUAL user query ("ribs", "vegan burger", etc.)
@@ -91,7 +111,7 @@ export function scoreBusinessRelevance(
     // Linear interpolation: score = 1 + (similarity - 0.70) / 0.30 * 4
     const normalized = (kbSimilarityScore - 0.70) / 0.30 // 0.0 to 1.0
     const scaledScore = 1 + (normalized * 4) // 1.0 to 5.0
-    const finalScore = Math.round(Math.min(Math.max(scaledScore, 1), 5))
+    const finalScore = Math.round(Math.min(Math.max(scaledScore, 1), 5) * 10) / 10
     
     if (process.env.NODE_ENV === 'development') {
       console.log(`📊 Relevance: ${business.business_name} = ${finalScore} (semantic:${kbSimilarityScore.toFixed(2)})`)
@@ -114,15 +134,25 @@ export function scoreBusinessRelevance(
   const googlePrimaryType = (business.google_primary_type || '').toLowerCase()
   const kb = (kbContent || '').toLowerCase()
   
+  // Intent-to-type expansion: map intent categories to their related google_primary_type values
+  const intentTypeExpansion: Record<string, string[]> = {
+    bar: ['bar', 'pub', 'night_club', 'wine_bar', 'cocktail_bar', 'sports_bar', 'dive_bar', 'lounge', 'gastropub'],
+    cafe: ['cafe', 'coffee_shop'],
+    bakery: ['bakery'],
+    dessert: ['ice_cream_shop', 'dessert_shop'],
+  }
+  
   // +3 for category match (strongest signal)
-  // Check both the mapped category AND the original keywords
   for (const category of intent.categories) {
     const cat = category.toLowerCase()
+    const expandedTypes = intentTypeExpansion[cat] || []
     
     if (
       displayCategory.includes(cat) ||
       systemCategory.includes(cat) ||
-      googlePrimaryType.includes(cat)
+      systemCategory === 'pub' && cat === 'bar' ||
+      googlePrimaryType.includes(cat) ||
+      expandedTypes.some(t => googlePrimaryType === t || systemCategory === t)
     ) {
       score += 3
       reasons.push(`category:${category}`)

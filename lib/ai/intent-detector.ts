@@ -11,6 +11,7 @@ export interface IntentResult {
   hasIntent: boolean
   categories: string[] // e.g. ["greek", "mediterranean"]
   keywords: string[] // e.g. ["vegan", "gluten-free"]
+  negatedCategories: string[] // e.g. ["italian"] for "not italian"
   confidence: number // 0-1
 }
 
@@ -60,7 +61,7 @@ export function detectIntent(query: string): IntentResult {
   const categories: string[] = []
   const keywords: string[] = []
   
-  // Cuisine categories (most common)
+  // Cuisine / venue categories
   const cuisineMap: Record<string, string[]> = {
     greek: ['greek', 'gyro', 'gyros', 'souvlaki', 'moussaka', 'tzatziki'],
     italian: ['italian', 'pizza', 'pasta', 'risotto', 'carbonara', 'lasagna', 'focaccia'],
@@ -79,6 +80,8 @@ export function detectIntent(query: string): IntentResult {
     seafood: ['seafood', 'fish', 'oyster', 'lobster', 'crab', 'shrimp'],
     bakery: ['bakery', 'bakeries', 'bread', 'pastry', 'pastries', 'bake'],
     cafe: ['cafe', 'coffee', 'espresso', 'cappuccino', 'latte'],
+    bar: ['bar', 'bars', 'pub', 'pubs', 'nightclub', 'nightlife', 'night out', 'wine bar', 'cocktail bar', 'sports bar', 'lounge'],
+    dessert: ['dessert', 'desserts', 'ice cream', 'gelato', 'frozen yogurt', 'bubble tea', 'boba'],
   }
   
   // Check cuisines
@@ -99,12 +102,30 @@ export function detectIntent(query: string): IntentResult {
     'kids menu', 'kids meal', 'kids meals', 'kids food',
     'children menu', 'children meal', 'children meals', 'childrens menu',
     'brunch', 'breakfast', 'lunch', 'dinner', 'late night',
-    'cocktails', 'cocktail', 'drinks', 'mocktails', 'wine', 'beer', 'spirits'
+    'cocktails', 'cocktail', 'drink', 'drinks', 'mocktails', 'wine', 'beer', 'spirits',
+    'open now', 'open late', 'tonight', 'this evening', 'this weekend',
   ]
   
   for (const term of attributeTerms) {
     if (q.includes(term)) {
       keywords.push(term)
+    }
+  }
+  
+  // Negation detection: "not italian", "no pizza", "except sushi", "besides greek"
+  const negatedCategories: string[] = []
+  const negationPattern = /\b(?:not|no|except|besides|other than|anything but|without)\s+(\w+)/gi
+  let negMatch: RegExpExecArray | null
+  while ((negMatch = negationPattern.exec(q)) !== null) {
+    const negatedTerm = negMatch[1].toLowerCase()
+    // Check if negated term matches any cuisine category
+    for (const [cuisine, terms] of Object.entries(cuisineMap)) {
+      if (terms.some(t => t === negatedTerm) || cuisine === negatedTerm) {
+        negatedCategories.push(cuisine)
+        // Remove from positive categories if it was matched
+        const idx = categories.indexOf(cuisine)
+        if (idx !== -1) categories.splice(idx, 1)
+      }
     }
   }
   
@@ -122,6 +143,7 @@ export function detectIntent(query: string): IntentResult {
     hasIntent,
     categories,
     keywords,
+    negatedCategories,
     confidence
   }
 }

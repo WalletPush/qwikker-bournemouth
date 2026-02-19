@@ -26,6 +26,11 @@ import { getOpenStatusForToday } from '@/lib/utils/opening-hours'
 // DO NOT instantiate OpenAI globally - must be per-franchise to use their API key
 // Each franchise pays for their own AI usage via franchise_crm_configs.openai_api_key
 
+// Relevance score thresholds (single source of truth)
+const CONTEXT_MIN = 1   // Include in AI context (let the model decide)
+const INJECT_MIN = 2    // Inject Tier 2/3 as supplemental text
+const CAROUSEL_MIN = 3  // Show in carousel (Tier 1 only, high confidence)
+
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
@@ -380,6 +385,79 @@ function appendSentence(base: string, sentence: string): string {
 }
 
 /**
+ * Post-process AI response: strip banned phrases, guard hallucinations for zero-data businesses
+ */
+function postProcessResponse(response: string, businesses: any[]): string {
+  let result = response
+  
+  // 1. Strip banned opening phrases
+  const bannedOpeners = [
+    /^(Ooo|Love that plan|Say no more|Great shout|Solid pick)[!.,—–\s]*/i,
+  ]
+  for (const pattern of bannedOpeners) {
+    result = result.replace(pattern, '')
+  }
+  
+  // 2. Strip banned inline phrases globally
+  const bannedPhrases = [
+    /people are (\*\*)?obsessed(\*\*)? with this place/gi,
+    /absolute gem/gi,
+    /hidden gem/gi,
+    /real gems?/gi,
+    /you're in luck/gi,
+    /🔥/g,
+  ]
+  for (const pattern of bannedPhrases) {
+    result = result.replace(pattern, '')
+  }
+  
+  // 3. Hallucination guard for zero-data businesses
+  // Build set of business names that have KB/menu data
+  const businessesWithData = new Set<string>()
+  for (const b of businesses) {
+    if (b.kb_content || b.menu_preview || b.knowledge_base_content) {
+      businessesWithData.add((b.business_name || '').toLowerCase())
+    }
+  }
+  
+  // For businesses NOT in the data set, strip "known for" / "specializes in" claims
+  const hallucinationPatterns = [
+    /known for\s+[^.!?\n]+/gi,
+    /speciali[sz]es? in\s+[^.!?\n]+/gi,
+    /famous for\s+[^.!?\n]+/gi,
+    /renowned for\s+[^.!?\n]+/gi,
+  ]
+  
+  // Only strip if the claim follows a business name that has NO data
+  // Extract business name -> slug pairs from the response
+  const businessLinkPattern = /\*\*\[([^\]]+)\]\(\/user\/business\/[^)]+\)\*\*/g
+  let linkMatch: RegExpExecArray | null
+  while ((linkMatch = businessLinkPattern.exec(result)) !== null) {
+    const mentionedName = linkMatch[1].toLowerCase()
+    if (!businessesWithData.has(mentionedName)) {
+      // This business has no data -- check the text after its link for hallucination patterns
+      const afterLink = result.slice(linkMatch.index + linkMatch[0].length, linkMatch.index + linkMatch[0].length + 200)
+      for (const pattern of hallucinationPatterns) {
+        const hMatch = pattern.exec(afterLink)
+        if (hMatch && hMatch.index < 100) {
+          // Strip the hallucinated claim from the full response
+          const fullStart = linkMatch.index + linkMatch[0].length + hMatch.index
+          result = result.slice(0, fullStart) + result.slice(fullStart + hMatch[0].length)
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`🧹 Stripped hallucination for "${mentionedName}": "${hMatch[0]}"`)
+          }
+        }
+      }
+    }
+  }
+  
+  // 4. Clean up double spaces and trailing whitespace from stripping
+  result = result.replace(/  +/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
+  
+  return result
+}
+
+/**
  * Build compressed system prompt for AI chat
  */
 function buildSystemPromptV2(args: {
@@ -391,123 +469,88 @@ function buildSystemPromptV2(args: {
   cityContext?: string
   state: ConversationState
   atlasAvailable: boolean
+  currentTime?: string
+  previousResponses?: string[]
 }): string {
-  const { cityDisplayName, userMessage, isBroadQuery, stateContext, businessContext, cityContext, state, atlasAvailable } = args
-
-  const broadBlock = isBroadQuery
-    ? `
-BROAD QUERY MODE:
-- The user asked something broad: "${userMessage}"
-- DO NOT list businesses yet.
-- Ask 1–2 clarifying questions first (cuisine/vibe/budget/deals vs best).
-- Keep it friendly and short.
-`
-    : ''
+  const { cityDisplayName, userMessage, isBroadQuery, stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, previousResponses } = args
 
   const convoFocus = state?.currentBusiness
     ? `FOCUS: You are currently discussing ${state.currentBusiness.name}. Stay on that unless the user asks to switch.`
     : `FOCUS: Help them discover what they want, then dive into specifics.`
 
-  return `
-You are a friendly local guide for ${cityDisplayName}. Be warm, playful, and factual. No hallucinations.
+  // Temporal context: current time for "open now" / "tonight" awareness
+  const temporalBlock = currentTime
+    ? `\nCURRENT TIME: ${currentTime}\nWhen listing results, mention open/closed status if hours are available. List open businesses first, but ALWAYS still include closed businesses — just note they are currently closed. Never skip a relevant business just because it is closed. If hours are missing, do not guess — just omit status.\n`
+    : ''
 
-⚠️  CRITICAL FORMATTING RULE ⚠️
+  // Variety context: avoid repeating exact openers
+  const varietyBlock = previousResponses && previousResponses.length > 0
+    ? `\nVARIETY: Your last ${previousResponses.length} response(s) started with: ${previousResponses.map(r => `"${r.slice(0, 60)}…"`).join(', ')}. Do NOT repeat the same opening sentence or structure.\n`
+    : ''
+
+  // Clarify-first rule for very broad queries with no constraints
+  const clarifyBlock = isBroadQuery
+    ? `
+CLARIFY-FIRST: The user asked something broad: "${userMessage}"
+Show 2–3 top picks immediately, then ask ONE short preference question to narrow it down.
+Examples of good questions (pick the most relevant):
+- For bars: "Cocktail bar vibe, pub with a beer garden, or somewhere with food and drinks?"
+- For restaurants: "Any cuisine in mind, or something specific like date night, family, outdoor seating?"
+- For cafes: "After a coffee spot, brunch place, or somewhere to work from?"
+Do NOT block results — always show picks first, then ask.`
+    : ''
+
+  return `
+You are a local concierge for ${cityDisplayName}. Be helpful, warm, and accurate. Never fabricate information.
+${temporalBlock}
+⚠️  CRITICAL FORMATTING RULES ⚠️
 Every business name MUST be a clickable markdown link: **[Business Name](/user/business/slug)**
 NEVER write plain bold business names like **Business Name** — always include the link!
 
 HARD RULES (DO NOT BREAK):
-- LINKS (ABSOLUTE): If you mention a business at all, you MUST use the link format **[Business Name](/user/business/slug)**. Never mention a business name without linking it. If you can't link it, don't mention it.
-- NO PLAIN-NAME REFERENCES: Don't say "Triangle GYROSS" or any business name in prose unless it's in the linked format **[Name](/user/business/slug)**.
-- BUSINESS LIST FORMAT: When listing businesses, you MUST output exactly ONE business per paragraph, followed by a blank line. Never put two businesses in the same paragraph.
+- LINKS: Every business mention MUST use **[Business Name](/user/business/slug)**. If you can't link it, don't mention it.
+- ONE BUSINESS PER PARAGRAPH: Separate businesses with a blank line. Never put two in the same paragraph.
 - KEEP IT TIGHT: 1–2 sentences per business max (rating + ONE factual detail from AVAILABLE BUSINESSES only).
-- NO BULLET LISTS: Do not use bullets, numbers, or one-line-per-business lists for business results. Use full paragraphs with a blank line between businesses.
-- EVIDENCE BOUNDARY: You may ONLY describe menu items, offers, hours, amenities, vibe/atmosphere, "known for", "specializes in", etc. if that exact info exists in AVAILABLE BUSINESSES / KB / menu_preview / offers. If not present, do NOT infer from category/name or general knowledge. In zero-data mode: name+link, category, rating+review_count, distance only.
+- NO BULLET LISTS for business results. Use full paragraphs.
+- EVIDENCE BOUNDARY: Only describe menu items, offers, hours, amenities, vibe if that exact info exists in AVAILABLE BUSINESSES / KB / menu_preview / offers. If not present, do NOT infer from category/name. In zero-data mode: name+link, category, rating+review_count, distance only.
 - 🍴 MENU ITEM QUERIES (HIGHEST PRIORITY):
-  When user asks about a SPECIFIC food/drink item (wings, cocktails, burger, ribs, pizza, cider, steak, pasta, etc):
+  When user asks about a SPECIFIC food/drink item (wings, cocktails, burger, ribs, pizza, etc):
   ✅ EXTRACT the exact item from KB content with name + price
-  ✅ CITE it directly: "They have X (£Y)" or "Menu includes: X (£Y), Z (£W)"
-  ✅ This OVERRIDES "keep it tight" - show 2-3 specific items with prices if KB has them
+  ✅ CITE directly: "They have X (£Y)"
   ✅ If multiple matching items exist, list them with prices
-  ❌ DO NOT use generic descriptions like "specializes in" or "known for" when KB has specific items
-  
-  EXAMPLES (what user will see):
-  Query: "anywhere with wings?"
-  BAD:  "David's Grill Shack — Specializes in grilled meats and smoky barbecue classics."
-  GOOD: "David's Grill Shack — They have BBQ Chicken Wings (6 pieces, £6.95)."
-  
-  Query: "anywhere with cider?"
-  BAD:  "Ember & Oak — They serve a variety of beverages."
-  GOOD: "Ember & Oak — Ciders: Thatchers Gold (£5.50), Rekorderlig Strawberry-Lime (£5.80)."
-  
-  Query: "cocktails?"
-  BAD:  "Known for crafted cocktails."
-  GOOD: "Cocktails include: Smoky Old Fashioned (£9.50), Grilled Pineapple Mojito (£8.50), David's Spicy Margarita (£9.00)."
-
-- 📋 GENERAL MENU QUERIES (ALSO HIGH PRIORITY):
-  When user asks "what food/menu", "what do they serve", "what's on their menu", "tell me about their menu":
-  ✅ CHECK for "Featured Menu Items:" section in AVAILABLE BUSINESSES
-  ✅ If present: Extract and list 3-5 items with names and prices
-  ✅ Format: "They serve [item] (£X), [item] (£Y), and [item] (£Z)"
-  ✅ If "Featured Menu Items" section exists but you say "I don't have menu details", you FAILED
+  ❌ DO NOT use generic descriptions like "specializes in" when KB has specific items
+- 📋 GENERAL MENU QUERIES:
+  When user asks "what food/menu", "what do they serve":
+  ✅ CHECK for "Featured Menu Items:" in AVAILABLE BUSINESSES
+  ✅ If present: list 3-5 items with names and prices
   ❌ DO NOT say "I don't have menu details" when Featured Menu Items are listed
-  ❌ DO NOT give generic descriptions when actual items are available
-  
-  EXAMPLE:
-  Query: "what food do they serve?"
-  Business has: "Featured Menu Items: 1. Gyros Wrap - £8.50 ... 2. Souvlaki Box - £10.00"
-  BAD:  "I don't have the specific menu details for Triangle GYROSS"
-  GOOD: "Triangle GYROSS serves Gyros Wrap (£8.50), Souvlaki Box (£10.00), and more Greek street food classics."
-- SHOW ALL UPFRONT: If you have 2+ relevant matches, you MUST mention ALL of them in your FIRST answer. NEVER drip-feed results one-by-one.
-- "ANY MORE?" HANDLING: If the user asks "any more?" and you already showed all matches, say that's all you have. If you realize you missed any, immediately correct yourself and include the missing ones.
-- NO FALSE "I DON'T HAVE": Never say you don't have other relevant places if AVAILABLE BUSINESSES includes any. If unsure, be transparent: "Based on what I can see right now, I'm only seeing X…"
-- NO HALLUCINATIONS: Never invent dishes, vibe, amenities, hours, or offers. Only mention specifics if they appear in AVAILABLE BUSINESSES.
-- 🚨 ZERO-DATA BUSINESSES: If a business has NO menu items, NO knowledge_base content, NO offers, and NO specific attributes beyond name/category/rating/location, you are STRICTLY FORBIDDEN from adding what they are "known for", what they "specialize in", what they "offer", types of food/dishes, atmosphere claims, or assumed services. DO NOT infer from business name or category. If no specific data exists, only mention: name (with link), category, rating + review count, distance. Example: "**[Lans Bakery](/link)** — Bakery (4.6★ from 88 reviews)." NOT: "Known for artisan breads" or "Offers cakes and pastries."
-- GOOGLE REVIEWS: Never quote/paraphrase reviews. Numeric rating + review_count only.
-- OFFERS: Offers are DB-authoritative only. If an offer is not in current data, it does not exist. Never imply "they might have deals".
-- TIERS: Businesses marked [TIER: qwikker_picks] MUST be listed FIRST when showing multiple businesses. Relevance decides what to include; tier decides ordering.
-- "QWIKKER PICKS" WORDING: Only call something a "Qwikker Pick" if EVERY business you mentioned is [TIER: qwikker_picks].
-- ATLAS EXPLORATION: ${atlasAvailable ? 'When you list 2+ businesses, you may add a natural, conversational suggestion that the user can view them on the map. Frame it as a helpful decision tool, not promotional. Examples: "Want to see how these are spaced out? The map below helps you compare." or "If location matters, the map view makes it easy to see which one\'s closest."' : 'DO NOT mention Qwikker Atlas, map views, or location comparisons - the map is not available for these businesses.'}
-- ZERO RESULTS: If you have no matching businesses, be honest. NEVER say "you're in luck" if you have nothing to show.
+- SHOW ALL UPFRONT: If you have 2+ relevant matches, mention ALL in your FIRST answer. Never drip-feed.
+- NO HALLUCINATIONS: Never invent dishes, vibe, amenities, hours, or offers. Only mention specifics from AVAILABLE BUSINESSES.
+- 🚨 ZERO-DATA BUSINESSES: If a business has NO menu items, NO KB content, NO offers — ONLY mention: name (with link), category, rating + review count, distance. DO NOT add what they are "known for", "specialize in", or "offer". DO NOT infer from business name or category.
+- GOOGLE REVIEWS: Numeric rating + review_count only. Never quote or paraphrase review text.
+- OFFERS: DB-authoritative only. If an offer is not in current data, it does not exist.
+- TIERS: If there are relevant Qwikker Picks for the user's request, list them first. Never force a Qwikker Pick that doesn't match the request — relevance always wins over tier.
+- "QWIKKER PICKS": Only use this label if EVERY business you mentioned is [TIER: qwikker_picks].
+- ATLAS: ${atlasAvailable ? 'When listing 2+ businesses, you may suggest viewing them on the map as a decision tool.' : 'DO NOT mention map views — the map is not available for these businesses.'}
+- ZERO RESULTS: Be honest. NEVER say "you're in luck" if you have nothing to show. Suggest a nearby alternative category or ask what else they'd like.
+- MATCH USER LANGUAGE: If the user asked for "bars", say "bars" in your response — never substitute with "dining options", "restaurants", or "places to eat". Mirror the user's terminology.
+- "ANY MORE?" HANDLING: If you showed all matches, say so. If you missed any, correct yourself immediately.
 
-CONVERSATIONAL COMPANION TONE:
-When users describe plans, cravings, or combinations (e.g., "cocktails and spicy food", "date night ideas", "family dinner with kids"), start with a brief, natural human reaction that acknowledges their plan BEFORE listing businesses. This creates warmth and understanding.
+MULTI-PART QUERIES:
+When the user asks for more than one thing (e.g. "drinks then food", "cocktails AND spicy food", "brunch and shopping"):
+- Address EACH part separately in your response
+- Group businesses by the part they satisfy (e.g. "For drinks:" then "For food:")
+- If one part has results and another doesn't, say so clearly
 
-React naturally (1 sentence):
-- "Ooo okay that's a strong combo"
-- "Love that plan"
-- "Say no more — that's my territory"
-- "That's a solid mix actually"
-
-Then optionally frame the decision (1 sentence):
-- "You basically want: good cocktails, something with heat, and a safe pasta option."
-- "So we need somewhere that covers spice and still keeps pasta on the menu."
-
-Vary phrasing naturally — don't repeat the same reaction patterns across responses. Mix it up so each reply feels fresh, not templated.
-
-ONLY use this tone for experiential/planning queries:
-✅ USE: "anywhere with good cocktails?", "date night ideas?", "somewhere cosy with wine"
-❌ DON'T USE: "what time does X close?", "do they have parking?", "is there an offer?"
-
-Keep it brief, friendly, and natural — not slangy or exaggerated. Facts get neutral tone; plans get companion tone.
-
-WHEN YOU HAVE RESULTS:
-- Start with a natural, upbeat opener (but only if you have businesses to show!).
-- 🚨 CRITICAL: List ALL relevant businesses in your FIRST response (do not drip-feed).
-- Do not interpret categories too literally: "cocktails" can include bars AND restaurants that clearly serve cocktails IF the data supports it.
-- If the user asks "any more?":
-  - If none left: "That's all the cocktail spots I can see right now."
-  - If you missed any: "Oh — yes. I should've included **[X](/user/business/slug)** too."
-- If none match, be honest and suggest a nearby alternative category/cuisine.
-
-EXAMPLE LIST FORMAT:
-Ooo nice choice — here are a few great spots!
-
-**[Triangle GYROSS](/user/business/triangle-gyross)** — Greek restaurant · 5★ (83)
-Open now — closes 10pm
-
-**[Ember & Oak Bistro](/user/business/ember-oak-bistro)** — Restaurant · 4.6★ (150)
-Closing soon — open until 9pm
-${broadBlock}
+TONE:
+- Be conversational and warm for planning/discovery queries ("date night", "any good bars", "somewhere cosy")
+- Be factual and direct for information queries ("what time does X close", "do they have parking", "is there an offer")
+- NEVER use these phrases: "Love that plan", "Say no more", "Ooo", "you're in luck", "great shout", "solid pick", "absolute gem", "hidden gem", "people are obsessed"
+- NEVER use fire emoji 🔥 in business descriptions
+- NEVER use exclamation marks more than once per response
+- Keep warmth natural — a knowledgeable friend, not a hype machine
+${varietyBlock}
+${clarifyBlock}
 ${stateContext ? `CONVERSATION CONTEXT:\n${stateContext}\n` : ''}
 ${convoFocus}
 
@@ -915,7 +958,7 @@ export async function generateHybridAIResponse(
     // 🎯 STEP 3.5: DETECT INTENT & SCORE RELEVANCE (BEFORE BUILDING AI CONTEXT!)
     // CRITICAL: We must know which businesses are relevant BEFORE the AI generates its response
     console.log('🔍 PRE-CONTEXT: Detecting intent and scoring relevance...')
-    const detectedIntent = detectIntent(userMessage, vocabulary, city)
+    const detectedIntent = detectIntent(userMessage)
     const facet = detectFacet(userMessage)
     
     if (process.env.NODE_ENV === 'development') {
@@ -1087,15 +1130,21 @@ export async function generateHybridAIResponse(
     // If user asks for Greek and we only have 1, show that 1 Greek place, NOT random cafes!
     let sortedForContext = [...allBusinessesForContext]
     
-    // Always filter to relevant businesses when we have scores (semantic or intent-based)
+    // Filter to relevant businesses. When intent is detected AND we have strong
+    // category matches (score >= CAROUSEL_MIN), raise the bar to exclude semantic
+    // noise (cafes/restaurants matching "bar" via KB text similarity alone).
+    const allScores = allBusinessesForContext.map(b => b.relevanceScore || 0)
+    const topContextScore = Math.max(...allScores, 0)
+    const contextThreshold = (detectedIntent.hasIntent && topContextScore >= CAROUSEL_MIN) 
+      ? INJECT_MIN  // Strong category matches exist -- exclude weak semantic noise
+      : CONTEXT_MIN // No strong matches -- accept everything > 0
+    
     const relevantBusinesses = allBusinessesForContext.filter(b => 
-      (b.relevanceScore || 0) > 0
+      (b.relevanceScore || 0) >= contextThreshold
     )
     
     if (relevantBusinesses.length > 0) {
-      // We found relevant businesses - show ONLY those
-      console.log(`🎯 Intent detected: ${relevantBusinesses.length} relevant of ${allBusinessesForContext.length} businesses`)
-      console.log(`✅ Using ${relevantBusinesses.length} relevant businesses (no fallback)`)
+      console.log(`🎯 ${relevantBusinesses.length} relevant of ${allBusinessesForContext.length} (threshold: ${contextThreshold}, topScore: ${topContextScore})`)
       sortedForContext = relevantBusinesses
     } else if (detectedIntent.hasIntent) {
       // User asked for something specific but we found nothing
@@ -1107,22 +1156,21 @@ export async function generateHybridAIResponse(
       sortedForContext = allBusinessesForContext
     }
     
-    // Sort: Different strategies for browse vs intent mode
-    // ✅ BROWSE FALLBACK: RATING first (trust), then TIER (boost paid slightly)
-    // ✅ INTENT MODE: RELEVANCE first (truth), then TIER (commercial), then RATING, then DISTANCE
-    // ✅ SHIP-SAFE: Normalize location once for all distance calcs
+    // Sort strategies:
+    // BROWSE MODE: Tier first (paid always above unclaimed), then rating within tier
+    // INTENT MODE: Relevance first (truth), then tier as tiebreaker, then rating
     const userLoc = normalizeLocation(context.userLocation)
     
     sortedForContext.sort((a, b) => {
       if (!detectedIntent.hasIntent) {
-        // BROWSE MODE: Rating-first for trust
-        // 1. Rating (higher = better)
+        // BROWSE MODE: Tier-first guarantees paying businesses always appear above unclaimed
+        // 1. Tier priority (paid > claimed > unclaimed)
+        if (a.tierPriority !== b.tierPriority) return a.tierPriority - b.tierPriority
+        
+        // 2. Rating within same tier (higher = better)
         const ratingA = a.rating || 0
         const ratingB = b.rating || 0
         if (ratingA !== ratingB) return ratingB - ratingA
-        
-        // 2. Tier priority as tiebreaker (commercial boost)
-        if (a.tierPriority !== b.tierPriority) return a.tierPriority - b.tierPriority
         
         // 3. Distance (if available, closer = better)
         if (userLoc && a.latitude && b.latitude && a.longitude && b.longitude) {
@@ -1133,23 +1181,30 @@ export async function generateHybridAIResponse(
         
         return 0
       } else {
-        // INTENT MODE: Relevance-first (truth), then tier (commercial tiebreaker only)
-        // ✅ SHIP-SAFE: Maintains "truth-first" promise - paid can't beat high-relevance free
-        
-        // 1. Relevance score (higher = better) - TRUTH FIRST
+        // INTENT MODE: Integer relevance band first, then tier within band, then
+        // decimal precision within same band+tier. This ensures a score-5 bar always
+        // beats a score-2 restaurant, but within the same band (e.g. both "2.x"),
+        // a spotlight business ranks above a featured one -- that's what they pay for.
         const scoreA = a.relevanceScore || 0
         const scoreB = b.relevanceScore || 0
-        if (scoreA !== scoreB) return scoreB - scoreA
+        const bandA = Math.floor(scoreA)
+        const bandB = Math.floor(scoreB)
         
-        // 2. Tier priority (paid > claimed > unclaimed) - only for tiebreaks
+        // 1. Integer relevance band (higher = genuinely more relevant)
+        if (bandA !== bandB) return bandB - bandA
+        
+        // 2. Tier priority within same band (paid > claimed > unclaimed)
         if (a.tierPriority !== b.tierPriority) return a.tierPriority - b.tierPriority
         
-        // 3. Rating (higher = better)
+        // 3. Decimal precision within same band + tier (higher semantic = better)
+        if (scoreA !== scoreB) return scoreB - scoreA
+        
+        // 4. Rating (higher = better)
         const ratingA = a.rating || 0
         const ratingB = b.rating || 0
         if (ratingA !== ratingB) return ratingB - ratingA
         
-        // 4. Distance (if available, closer = better)
+        // 5. Distance (if available, closer = better)
         if (userLoc && a.latitude && b.latitude && a.longitude && b.longitude) {
           const distA = calculateDistance(userLoc, { latitude: a.latitude, longitude: a.longitude })
           const distB = calculateDistance(userLoc, { latitude: b.latitude, longitude: b.longitude })
@@ -1162,26 +1217,34 @@ export async function generateHybridAIResponse(
     
     console.log(`🎯 Building AI context from ${sortedForContext.length} businesses (T1=${tier1.length}, T2=${tier2.length}, T3=${tier3.length})`)
     
-    // 🚨 SANITY FILTER: Remove obviously wrong categories (prevents "barbershop for cocktails")
-    // This is a safety net when intent detection fails but context suggests specific type
-    const obviouslyWrongCategories = [
-      'barber', 'barbershop', 'hair salon', 'salon', 'hairdresser',
-      'dentist', 'dental', 'doctor', 'medical', 'clinic',
-      'car wash', 'auto', 'garage', 'mechanic',
-      'gym', 'fitness', 'yoga studio',
-      'bank', 'atm', 'finance'
-    ]
+    // Sanity filter: only apply for food/drink intent queries (not general browse or service queries)
+    const foodDrinkCategories = new Set([
+      'greek', 'italian', 'chinese', 'japanese', 'thai', 'indian', 'mexican',
+      'french', 'american', 'mediterranean', 'vietnamese', 'korean', 'spanish',
+      'turkish', 'seafood', 'bakery', 'cafe', 'bar', 'dessert'
+    ])
+    const isFoodDrinkIntent = detectedIntent.categories.some(c => foodDrinkCategories.has(c)) ||
+      detectedIntent.keywords.some(k => ['cocktails', 'cocktail', 'drink', 'drinks', 'beer', 'wine', 'brunch', 'breakfast', 'lunch', 'dinner'].includes(k))
     
-    sortedForContext = sortedForContext.filter(b => {
-      const category = (b.display_category || b.system_category || b.google_primary_type || '').toLowerCase()
-      const isObviouslyWrong = obviouslyWrongCategories.some(wrong => category.includes(wrong))
-      if (isObviouslyWrong) {
-        console.log(`🚨 FILTERED OUT: ${b.business_name} (category: ${category}) - obviously not food/drink`)
-      }
-      return !isObviouslyWrong
-    })
-    
-    console.log(`🎯 After sanity filter: ${sortedForContext.length} businesses remaining`)
+    if (isFoodDrinkIntent) {
+      const nonFoodCategories = [
+        'barber', 'barbershop', 'hair salon', 'salon', 'hairdresser',
+        'dentist', 'dental', 'doctor', 'medical', 'clinic',
+        'car wash', 'auto', 'garage', 'mechanic',
+        'gym', 'fitness', 'yoga studio',
+        'bank', 'atm', 'finance'
+      ]
+      
+      sortedForContext = sortedForContext.filter(b => {
+        const category = (b.display_category || b.system_category || b.google_primary_type || '').toLowerCase()
+        const isWrong = nonFoodCategories.some(wrong => category.includes(wrong))
+        if (isWrong) {
+          console.log(`🚨 FILTERED: ${b.business_name} (${category}) — not relevant for food/drink query`)
+        }
+        return !isWrong
+      })
+      console.log(`🎯 After food/drink sanity filter: ${sortedForContext.length} businesses remaining`)
+    }
     
     if (sortedForContext.length > 0) {
       console.log(`📊 Top 5 for AI${detectedIntent.hasIntent ? ' (RELEVANCE-FILTERED)' : ''}:`)
@@ -1265,17 +1328,22 @@ Category: ${business.display_category || 'Not specified'}${hoursLine}${richConte
     // 🎯 STEP 4: Build context-aware system prompt (SIMPLE AND CLEAR)
     const stateContext = generateStateContext(state)
     
-    // 🚨 CHECK: Is this a broad query that needs clarification?
-    // Don't treat as broad if we have strong semantic evidence (score >= 2)
-    const hasStrongSemanticEvidence = Array.from(businessRelevanceScores.values()).some(score => score >= 2)
-    const isBroadQuery =
-      conversationHistory.length <= 2 &&
-      !detectedIntent.hasIntent &&
-      !hasStrongSemanticEvidence &&
-      /\b(restaurant|restaurants|eat|food|place|places|where should i|recommend|suggest|dinner|lunch|breakfast)\b/i.test(userMessage)
+    // Broad query detection: trigger clarify-first when the user gives a category
+    // but zero constraints (no vibe, no area, no dish). Covers both "any restaurants?"
+    // and "any bars?" — the AI shows top picks + asks one preference question.
+    const relevantCount = allBusinessesForContext.filter(b => (b.relevanceScore || 0) >= INJECT_MIN).length
+    const hasCategoryButNoConstraints = detectedIntent.hasIntent 
+      && detectedIntent.categories.length > 0 
+      && detectedIntent.keywords.length === 0
+    const isGenericDiscovery = !detectedIntent.hasIntent 
+      && /\b(restaurant|restaurants|eat|food|place|places|where should i|recommend|suggest|dinner|lunch|breakfast|bar|bars|pub|pubs|drinks?|cocktails?|cafe|cafes|coffee)\b/i.test(userMessage)
+    
+    const isBroadQuery = conversationHistory.length <= 2 
+      && (hasCategoryButNoConstraints || isGenericDiscovery)
+      && relevantCount >= 3
     
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`🎯 [BROAD QUERY CHECK] hasIntent=${detectedIntent.hasIntent}, hasStrongEvidence=${hasStrongSemanticEvidence}, isBroadQuery=${isBroadQuery}`)
+      console.log(`🎯 [BROAD QUERY CHECK] hasIntent=${detectedIntent.hasIntent}, relevantCount=${relevantCount}, isBroadQuery=${isBroadQuery}`)
     }
     
     const cityDisplayName = city.charAt(0).toUpperCase() + city.slice(1)
@@ -1293,6 +1361,19 @@ Category: ${business.display_category || 'Not specified'}${hoursLine}${richConte
       console.log(`🗺️  [ATLAS] Available: ${atlasAvailable} (${validCoordCount} of ${candidatesForAtlas.length} candidates have valid coords)`)
     }
     
+    // Temporal context: pass current time for "open now" / "tonight" awareness
+    const now = new Date()
+    const currentTime = now.toLocaleString('en-GB', { 
+      weekday: 'long', hour: '2-digit', minute: '2-digit', 
+      timeZone: 'Europe/London' 
+    })
+    
+    // Extract last 2 AI responses for variety tracking
+    const previousResponses = conversationHistory
+      .filter(m => m.role === 'assistant')
+      .slice(-2)
+      .map(m => m.content)
+    
     const systemPrompt = buildSystemPromptV2({ 
       cityDisplayName, 
       userMessage, 
@@ -1301,7 +1382,9 @@ Category: ${business.display_category || 'Not specified'}${hoursLine}${richConte
       businessContext, 
       cityContext, 
       state,
-      atlasAvailable 
+      atlasAvailable,
+      currentTime,
+      previousResponses
     })
     
     if (process.env.NODE_ENV === 'development') console.log('[PROMPT] systemPrompt chars=', systemPrompt.length)
@@ -1395,6 +1478,9 @@ Present this information clearly and offer further help.`
 
       aiResponse = completion.choices[0]?.message?.content || ''
     }
+    
+    // === POST-PROCESSING GUARDRAILS ===
+    aiResponse = postProcessResponse(aiResponse, allBusinessesForContext)
     
     // --- DEDUPE: Parse AI response for business links to prevent duplicates in Tier2/Tier3 ---
     // NOTE: These are RAW slugs - not yet validated against actual business inventory
@@ -1891,25 +1977,30 @@ Present this information clearly and offer further help.`
       // Extract unique business IDs (Tier 1 only) for carousel
       const uniqueBusinessIds = Array.from(new Set(businesses.map(b => b.id)))
       
-      // ✅ FIXED: Browse queries should NOT trigger carousel
-      // Carousel only for:
-      // - Map queries (explicit "show on atlas")
-      // - Intent queries where Tier 1 is relevant
+      // Carousel gating: only show for specific intent with relevant Tier 1, or map mode
+      // Check if any Tier 1 business scored high enough for carousel
+      const tier1HasStrongMatch = uniqueBusinessIds.some(id => 
+        (businessRelevanceScores.get(id) || 0) >= CAROUSEL_MIN
+      )
+      
       if (wantsMap) {
         uiMode = 'map'
         shouldAttachCarousel = true
+      } else if (detectedIntent.hasIntent) {
+        // Intent mode: ONLY show carousel if Tier 1 has genuine category matches
+        uiMode = 'conversational'
+        shouldAttachCarousel = tier1HasStrongMatch
+        if (tier1HasStrongMatch) {
+          console.log(`✅ Carousel enabled: Tier 1 has matches scoring >= ${CAROUSEL_MIN}`)
+        } else {
+          console.log(`🚫 Carousel disabled: intent "${detectedIntent.categories.join(', ')}" but no Tier 1 scored >= ${CAROUSEL_MIN}`)
+        }
       } else if (browseMode.mode !== 'not_browse') {
-        // Browse mode = NO carousel, just text list
         uiMode = 'suggestions'
         shouldAttachCarousel = false
-        console.log('🚫 Browse mode - carousel DISABLED')
-      } else if (detectedIntent.hasIntent && topMatchesText.length > 0) {
-        // Intent mode with Tier 1 irrelevant = NO carousel, Tier 3 shows first
-        uiMode = 'conversational'
-        shouldAttachCarousel = false
-        console.log('🚫 Intent mode with weak Tier 1 - carousel DISABLED, Tier 3 shows first')
+        console.log('🚫 Carousel disabled: generic browse mode')
       } else {
-        // Default: conversational with carousel if results exist
+        // No intent, no browse -- general conversation, show Tier 1 if available
         uiMode = 'conversational'
         shouldAttachCarousel = uniqueBusinessIds.length > 0
       }
@@ -2009,47 +2100,34 @@ Present this information clearly and offer further help.`
         })
         
         // Carousel = PAID ONLY (Tier 1)
-        // Filter by relevance if intent was detected
+        // Filter carousel by relevance: STRICT — only show Tier 1 businesses
+        // that genuinely match the intent (score >= CAROUSEL_MIN).
+        // No fallback to lower thresholds. If Tier 1 doesn't match, no carousel.
         if (detectedIntent.hasIntent && businessRelevanceScores.size > 0) {
-          // 🚨 STRICT CAROUSEL FILTER: Only show businesses with score >= 3
-          // This requires:
-          // 🎯 DYNAMIC carousel threshold based on top score:
-          // - If any business scored 3+ (perfect category match) → show 3+ only
-          // - Else if top score is 2 (semantic strong match) → show 2+ (wings, cocktails, etc.)
-          // - Else (weak/no matches) → no carousel
-          //
-          // This prevents filtering out valid semantic matches (score=2) when no category matches exist
-          const allScores = paidCarousel.map(b => businessRelevanceScores.get(b.id) || 0)
-          const topScore = Math.max(...allScores, 0)
-          
-          let CAROUSEL_MIN_SCORE: number
-          if (topScore >= 3) {
-            CAROUSEL_MIN_SCORE = 3 // Perfect category match - high bar
-          } else if (topScore >= 2) {
-            CAROUSEL_MIN_SCORE = 2 // Semantic match - accept strong KB evidence
-          } else {
-            CAROUSEL_MIN_SCORE = 999 // No relevant businesses - skip carousel
-          }
-          
           const filtered = paidCarousel.filter(b => {
             const score = businessRelevanceScores.get(b.id) || 0
-            if (score >= CAROUSEL_MIN_SCORE) {
-              console.log(`  ✅ ${b.business_name}: score=${score}`)
+            if (score >= CAROUSEL_MIN) {
+              console.log(`  ✅ Carousel: ${b.business_name} score=${score}`)
             } else {
-              console.log(`  ❌ ${b.business_name}: score=${score} (FILTERED OUT - need ${CAROUSEL_MIN_SCORE}+ [topScore=${topScore}])`)
+              console.log(`  ❌ Carousel skip: ${b.business_name} score=${score} (need ${CAROUSEL_MIN}+)`)
             }
-            return score >= CAROUSEL_MIN_SCORE
+            return score >= CAROUSEL_MIN
           })
           
           businessCarousel = filtered.slice(0, 6)
-          console.log(`🎯 Filtered carousel: ${businessCarousel.length} of ${paidCarousel.length} paid businesses scored ${CAROUSEL_MIN_SCORE}+ for "${detectedIntent.keywords.join(', ')}"`)
+          
           if (businessCarousel.length > 0) {
-            console.log(`🎯 Final carousel businesses: ${businessCarousel.map(b => b.business_name).join(', ')}`)
+            console.log(`🎯 Carousel: ${businessCarousel.length} businesses scored ${CAROUSEL_MIN}+: ${businessCarousel.map(b => b.business_name).join(', ')}`)
           } else {
-            console.log(`🎯 No paid businesses meet carousel threshold - will show Tier 2/3 text mentions instead`)
+            console.log(`🎯 No Tier 1 businesses match intent — carousel disabled, Tier 2/3 text only`)
+            shouldAttachCarousel = false
           }
-        } else {
+        } else if (!detectedIntent.hasIntent) {
+          // No specific intent (browse/general) — show top Tier 1 by tier priority
           businessCarousel = paidCarousel.slice(0, 6)
+        } else {
+          businessCarousel = []
+          shouldAttachCarousel = false
         }
         
         // Tier 2 & 3: TEXT-ONLY mentions (no carousel cards)
@@ -2116,10 +2194,8 @@ Present this information clearly and offer further help.`
         // - This prevents "Triangle spam on every response"
         
         const isBrowseQuery = browseMode.mode === 'browse'
-        // 🔒 TIGHTENED EVIDENCE GATE: Require score >= 2 (STRONG evidence, not weak >0 matches)
-        // Prevents Tier2/3 spam on every "no intent / weak match" query
         const hasEvidence = businessRelevanceScores.size > 0 && 
-          Array.from(businessRelevanceScores.values()).some(score => score >= 2)
+          Array.from(businessRelevanceScores.values()).some(score => score >= INJECT_MIN)
         
         const shouldShowTier2 = isBrowseQuery || hasEvidence
         
@@ -2170,67 +2246,45 @@ Present this information clearly and offer further help.`
           }
           
           if (filteredLiteBusinesses.length > 0) {
-            // Add Lite businesses as text-only mentions with neutral phrasing
             const liteIntros = [
               "Also worth checking out:",
-              "A couple more solid options:",
-              "Two other good shouts:",
-              "Worth a look:"
+              "A couple more options:",
+              "Worth a look:",
             ]
             let liteText = liteIntros[Math.floor(Math.random() * liteIntros.length)] + `\n\n`
             
-            filteredLiteBusinesses.slice(0, 3).forEach((b, idx) => {
-            // Track that we've appended this business (normalize ID to string)
+            filteredLiteBusinesses.slice(0, 3).forEach((b) => {
             appendedBusinessIds.add(String(b.id))
             
-            // Use deterministic slug helper (single source of truth)
             const businessSlug = getBusinessSlug(b)
             
-            // Use paragraph format (not bullets) to match prompt rules
             liteText += `**[${b.business_name}](/user/business/${businessSlug})**`
             if (b.display_category) {
               liteText += ` — ${b.display_category}`
             }
             
-            // Add personality to ratings
-            if (b.rating && b.rating >= 4.5) {
-              liteText += ` (${b.rating}★ – really well-loved)`
-            } else if (b.rating && b.rating > 0) {
-              liteText += ` (${b.rating}★)`
+            if (b.rating && b.rating > 0 && b.review_count) {
+              liteText += ` (${b.rating}★ from ${b.review_count} reviews)`
             }
             
-            // Show featured items count if they have them
             if (b.menu_preview && Array.isArray(b.menu_preview) && b.menu_preview.length > 0) {
-              liteText = appendSentence(liteText, `${b.menu_preview.length} featured items on their menu – check it out!`)
+              liteText = appendSentence(liteText, `${b.menu_preview.length} featured menu items`)
             }
             
-            // Show offers count if they have any - with excitement!
             if (b.approved_offers_count && b.approved_offers_count > 0) {
-              liteText = appendSentence(liteText, `🎉 **${b.approved_offers_count} exclusive offer${b.approved_offers_count === 1 ? '' : 's'} available!**`)
+              liteText = appendSentence(liteText, `${b.approved_offers_count} offer${b.approved_offers_count === 1 ? '' : 's'} available`)
             }
             
-            // Add distance info with personality
             if (b.latitude && b.longitude && context.userLocation) {
               const distanceText = getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
               if (distanceText) {
-                // Use as-is if already conversational/complete sentence, otherwise wrap with "About"
-                const isAlreadyPhrased = /\b(just|right|super|from you|away|walk|corner)\b/i.test(distanceText)
-                let distSentence: string
-                if (isAlreadyPhrased) {
-                  distSentence = distanceText.charAt(0).toUpperCase() + distanceText.slice(1)
-                } else {
-                  // Raw number+unit: add "away" (e.g., "About 1.2 miles away")
-                  const isRawUnit = /^\d+(\.\d+)?\s+(miles?|mi|km|m)$/i.test(distanceText)
-                  distSentence = isRawUnit ? `About ${distanceText} away` : `About ${distanceText}`
-                }
-                liteText = appendSentence(liteText, distSentence)
+                liteText = appendSentence(liteText, distanceText.charAt(0).toUpperCase() + distanceText.slice(1))
               }
             }
             
-            liteText += `\n\n` // Blank line between businesses (paragraph format)
+            liteText += `\n\n`
             })
             
-            // Ensure proper separation between AI response and injected content
             aiResponse = aiResponse.trimEnd() + '\n\n' + liteText.trim()
           }
         }
@@ -2282,101 +2336,42 @@ Present this information clearly and offer further help.`
           }
           
           if (filteredFallbackBusinesses.length > 0) {
-            // Use filtered list for display
             fallbackBusinesses = filteredFallbackBusinesses
             
-            // More conversational, personalized intros
-            const moreIntros = [
-            "Alright, I've got some solid picks for you! Here's what's catching my eye:",
-            "So I've been digging around and found some real gems:",
-            "Okay, listen – these places are definitely worth checking out:",
-            "Right, so I've got a few spots that people are absolutely loving right now:",
-            "Here's the deal – these are some of the top-rated places around here:",
-            "I've rounded up some seriously good options for you:"
-          ]
-          let fallbackText = moreIntros[Math.floor(Math.random() * moreIntros.length)] + `\n\n`
-          
-          // Add a bit more context based on what we found
-          const totalCount = fallbackBusinesses.length
-          const avgRating = fallbackBusinesses.reduce((sum, b) => sum + (b.rating || 0), 0) / totalCount
-          
-          if (avgRating >= 4.5) {
-            fallbackText += `_All of these are seriously highly rated – like, people **really** love them._\n\n`
-          } else if (avgRating >= 4.0) {
-            fallbackText += `_These are all solid spots with great reviews from locals and visitors._\n\n`
-          }
-          
-          fallbackBusinesses.slice(0, 10).forEach((b, index) => {
-            // Use deterministic slug helper (single source of truth)
-            const businessSlug = getBusinessSlug(b)
+            const MAX_TIER3_INJECT = 6
+            const neutralIntros = [
+              "A few more options:",
+              "Also in the area:",
+              "You might also like:",
+            ]
+            let fallbackText = neutralIntros[Math.floor(Math.random() * neutralIntros.length)] + `\n\n`
             
-            // Use paragraph format (not bullets) to match prompt rules
-            fallbackText += `**[${b.business_name}](/user/business/${businessSlug})**`
-            
-            if (b.display_category) {
-              fallbackText += ` — ${b.display_category}`
-            }
-            
-            // Add personality based on rating
-            if (b.rating && b.review_count) {
-              if (b.rating >= 4.7) {
-                fallbackText += ` (${b.rating}★ from ${b.review_count} Google reviews – people are **obsessed** with this place 🔥)`
-              } else if (b.rating >= 4.5) {
-                fallbackText += ` (${b.rating}★ from ${b.review_count} Google reviews – consistently excellent)`
-              } else if (b.rating >= 4.0) {
-                fallbackText += ` (${b.rating}★ from ${b.review_count} Google reviews – solid choice)`
-              } else {
-                fallbackText += ` (${b.rating}★ from ${b.review_count} Google reviews)`
+            fallbackBusinesses.slice(0, MAX_TIER3_INJECT).forEach((b) => {
+              const businessSlug = getBusinessSlug(b)
+              
+              fallbackText += `**[${b.business_name}](/user/business/${businessSlug})**`
+              
+              if (b.display_category) {
+                fallbackText += ` — ${b.display_category}`
               }
-            }
-            
-            // Show featured items for Tier 2 (claimed-free)
-            if (b.tierSource === 'tier2' && b.featured_items_count && b.featured_items_count > 0) {
-              fallbackText = appendSentence(fallbackText, `They've got ${b.featured_items_count} featured items on their menu – definitely worth a look`)
-            }
-            
-            // Add distance info with personality
-            if (b.latitude && b.longitude && context.userLocation) {
-              const distanceText = getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
-              if (distanceText) {
-                // Use as-is if already conversational/complete sentence, otherwise wrap with "About"
-                const isAlreadyPhrased = /\b(just|right|super|from you|away|walk|corner)\b/i.test(distanceText)
-                let distSentence: string
-                if (isAlreadyPhrased) {
-                  // Add personality commentary based on keywords
-                  if (distanceText.includes('right around the corner')) {
-                    distSentence = `${distanceText.charAt(0).toUpperCase() + distanceText.slice(1)} – basically right there`
-                  } else if (distanceText.includes('just a') && distanceText.includes('min walk')) {
-                    distSentence = `${distanceText.charAt(0).toUpperCase() + distanceText.slice(1)} – easy walk`
-                  } else {
-                    distSentence = distanceText.charAt(0).toUpperCase() + distanceText.slice(1)
-                  }
-                } else {
-                  // Raw number+unit: add "away"
-                  const isRawUnit = /^\d+(\.\d+)?\s+(miles?|mi|km|m)$/i.test(distanceText)
-                  distSentence = isRawUnit ? `About ${distanceText} away` : `About ${distanceText}`
+              
+              if (b.rating && b.review_count) {
+                fallbackText += ` (${b.rating}★ from ${b.review_count} reviews)`
+              }
+              
+              if (b.latitude && b.longitude && context.userLocation) {
+                const distanceText = getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
+                if (distanceText) {
+                  fallbackText = appendSentence(fallbackText, distanceText.charAt(0).toUpperCase() + distanceText.slice(1))
                 }
-                fallbackText = appendSentence(fallbackText, distSentence)
               }
-            }
+              
+              fallbackText += `\n\n`
+            })
             
-            if (b.phone) {
-              fallbackText = appendSentence(fallbackText, `📞 [Call: ${b.phone}](tel:${b.phone})`)
-            }
+            fallbackText += `_Ratings and reviews provided by Google_`
             
-            fallbackText += `\n\n` // Blank line between businesses (paragraph format)
-          })
-          
-          // Add engaging footer
-          if (fallbackBusinesses.length > 10) {
-            fallbackText += `_...and I've got ${fallbackBusinesses.length - 10} more spots if none of these hit the mark. Just let me know what you're after!_\n\n`
-          } else {
-            fallbackText += `_Want more options or looking for something specific? Just ask – I've got tons more recommendations!_\n\n`
-          }
-          
-          fallbackText += `_Ratings and reviews provided by Google_`
-          
-          aiResponse = aiResponse // ❌ DISABLED fallback text append - AI handles all formatting now
+            aiResponse = aiResponse.trimEnd() + '\n\n' + fallbackText.trim()
           }
         }
         

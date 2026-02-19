@@ -196,7 +196,9 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       name: business.business_name,
       category: categoryLabel(business), // Consistent fallback: display_category → business_category → business_type → 'Other'
       systemCategory: business.system_category, // For filtering logic
+      system_category: business.system_category, // Snake-case alias for business-card getPrimaryLabel
       displayCategory: business.display_category, // For display
+      display_category: business.display_category, // Snake-case alias for business-card getPrimaryLabel
       google_primary_type: business.google_primary_type, // Google's primary type (e.g., 'greek_restaurant')
       google_types: business.google_types, // All Google types
       business_category: business.business_category, // Legacy category field

@@ -166,7 +166,7 @@ function detectNearMeIntent(message: string): boolean {
 /**
  * Detect primary intent from user message
  */
-function detectIntent(message: string): 'near_me' | 'browse' | 'events' | 'offers' | 'unknown' {
+function classifyMessageType(message: string): 'near_me' | 'browse' | 'events' | 'offers' | 'unknown' {
   const lowerMessage = message.toLowerCase()
   
   if (detectNearMeIntent(message)) return 'near_me'
@@ -235,37 +235,17 @@ export async function POST(request: NextRequest) {
     }
     
     // Detect intent
-    const intent = detectIntent(message)
+    const intent = classifyMessageType(message)
     const isNearMeQuery = intent === 'near_me'
     const hasUserLocation = !!(userLocation?.lat && userLocation?.lng)
     
     console.log(`🎯 Intent: ${intent}, NearMe: ${isNearMeQuery}, HasLocation: ${hasUserLocation}`)
     
-    // Gate near-me queries: if user asks "near me" but no location, block results and ask for permission
+    // Near-me queries without location: still return results, but flag that location would help
     const needsLocation = isNearMeQuery && !hasUserLocation
     
     if (needsLocation) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🚫 Near-me query without location - GATE ACTIVE')
-        console.log('   businessCarousel: undefined ✅')
-        console.log('   eventCards: [] ✅')
-        console.log('   hasBusinessResults: false ✅')
-        console.log('   showAtlasCta: false ✅')
-      }
-      console.log('🚫 Near-me query without location - requesting permission')
-      return NextResponse.json({
-        response: `I'd love to show you places nearby! To find the best options within walking distance, I'll need to use your location.`,
-        intent,
-        needsLocation: true,
-        showAtlasCta: false,
-        locationReason: 'to show you places within walking distance',
-        quickReplies: ["Use my location", "Show city centre instead"],
-        hasBusinessResults: false,
-        businessCarousel: undefined, // CRITICAL: No cards until location granted
-        eventCards: [], // CRITICAL: No events until location granted
-        sources: [],
-        metadata: { city, userName, intent, needsLocationGate: true }
-      })
+      console.log('📍 Near-me query without location — will return results sorted by rating, flag for location')
     }
 
     // 🚀 Generate AI response using HYBRID system (GPT-4o-mini + GPT-4o)
@@ -915,7 +895,7 @@ export async function POST(request: NextRequest) {
 
     console.log('🎯 API RESPONSE:', {
       intent,
-      needsLocation: false,
+      needsLocation,
       showAtlasCta,
       hasBusinessResults: result.hasBusinessResults,
       businessCarouselCount: result.businessCarousel?.length || 0,
@@ -925,7 +905,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       response: finalResponse,
       intent,
-      needsLocation: false,
+      needsLocation,
       showAtlasCta,
       sources: result.sources || [],
       quickReplies,

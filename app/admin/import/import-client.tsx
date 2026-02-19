@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -146,6 +146,11 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
   } | null>(null)
   const [isImportComplete, setIsImportComplete] = useState(false)
   const [isImportCancelled, setIsImportCancelled] = useState(false)
+  const [importedPlaceIds, setImportedPlaceIds] = useState<string[]>([])
+  const [completedAt, setCompletedAt] = useState<string | null>(null)
+  const [importedData, setImportedData] = useState<BusinessResult[]>([])
+  // Ref so the SSE loop can synchronously check finalization without stale closure issues
+  const hasFinalized = useRef(false)
 
   // Helper: Extract cuisine tags from Google types
   const getCuisineTags = (googleTypes?: string[]): string[] => {
@@ -284,6 +289,7 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
     setShowProgressModal(true)
     setIsImportComplete(false)
     setIsImportCancelled(false)
+    hasFinalized.current = false
     setImportProgress({
       current: 0,
       total: selectedResults.length,
@@ -340,6 +346,10 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
                 status: data.status
               })
             } else if (data.type === 'complete') {
+              // Guard against duplicate SSE events (e.g. from reconnect edge cases)
+              if (hasFinalized.current) return
+              hasFinalized.current = true
+
               setImportProgress({
                 current: data.total,
                 total: data.total,
@@ -349,6 +359,10 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
                 currentBusiness: 'Complete!',
                 status: 'success'
               })
+              const succeededIds: string[] = data.importedPlaceIds ?? []
+              setImportedPlaceIds(succeededIds)
+              setImportedData(results.filter(r => succeededIds.includes(r.placeId)))
+              setCompletedAt(new Date().toISOString())
               setIsImportComplete(true)
               setIsImporting(false)
               
@@ -361,6 +375,10 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
               
               return
             } else if (data.type === 'cancelled') {
+              // Guard against duplicate SSE events
+              if (hasFinalized.current) return
+              hasFinalized.current = true
+
               setImportProgress({
                 current: data.total,
                 total: data.total,
@@ -370,6 +388,10 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
                 currentBusiness: 'Cancelled',
                 status: 'failed'
               })
+              const partialIds: string[] = data.importedPlaceIds ?? []
+              setImportedPlaceIds(partialIds)
+              setImportedData(results.filter(r => partialIds.includes(r.placeId)))
+              setCompletedAt(new Date().toISOString())
               setIsImportCancelled(true)
               setIsImporting(false)
               return
@@ -411,6 +433,10 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
     setImportProgress(null)
     setIsImportComplete(false)
     setIsImportCancelled(false)
+    setImportedPlaceIds([])
+    setImportedData([])
+    setCompletedAt(null)
+    hasFinalized.current = false
   }
 
   const handleSelectAll = () => {
@@ -1001,6 +1027,9 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
         onStop={handleStopImport}
         isComplete={isImportComplete}
         isCancelled={isImportCancelled}
+        importedData={importedData}
+        completedAt={completedAt}
+        city={city}
       />
     </div>
   )

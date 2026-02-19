@@ -987,8 +987,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                   </div>
                 )}
                 
-                {/* Business Carousel - 🚨 TEMPORARILY DISABLED: Inaccurate, needs rework */}
-                {/* {message.businessCarousel && message.businessCarousel.length > 0 && (
+                {message.businessCarousel && message.businessCarousel.length > 0 && (
                   <div className="mt-3 -mx-2 sm:mx-0">
                     <BusinessCarousel 
                       businesses={message.businessCarousel}
@@ -997,7 +996,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                       onShowOffers={handleShowOffers}
                     />
                   </div>
-                )} */}
+                )}
 
                 {/* Wallet Actions */}
                 {message.walletActions && message.walletActions.length > 0 && (

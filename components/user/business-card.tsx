@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { BusinessCardImage } from '@/components/ui/business-card-image'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
-import { formatPrice } from '@/lib/utils/price-formatter'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
 import { getCategoryLabel } from '@/lib/utils/google-category-label'
@@ -574,7 +573,7 @@ export function BusinessCard({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <span className="text-sm">{business.address}, {business.town || business.location}</span>
+          <span className="text-sm line-clamp-2">{business.address}, {business.town || business.location}</span>
         </div>
 
         {/* Phone - Hidden on mobile */}
@@ -613,27 +612,6 @@ export function BusinessCard({
             </div>
           )
         })()}
-
-        {/* Compact Menu Preview */}
-        {business.menuPreview && business.menuPreview.length > 0 && (
-          <div className="bg-slate-700/30 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm">🍽</span>
-              <p className="text-slate-100 text-sm font-medium">Popular items:</p>
-            </div>
-            <div className="space-y-1">
-              {business.menuPreview?.slice(0, 2).map((item: any, index: number) => (
-                <div key={index} className="flex items-center justify-between">
-                  <p className="text-slate-300 text-xs">{item.name}</p>
-                  <p className="text-[#00d083] text-xs font-medium">{formatPrice(item.price)}</p>
-                </div>
-              ))}
-              {(business.menuPreview?.length || 0) > 2 && (
-                <p className="text-slate-400 text-xs">+{(business.menuPreview?.length || 0) - 2} more items...</p>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Special Features */}
         <div className="flex items-center justify-between">

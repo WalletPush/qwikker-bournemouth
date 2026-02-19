@@ -356,6 +356,9 @@ export async function POST(request: NextRequest) {
         let skipped = 0
         let failed = 0
         const total = placeIds.length
+        const importedPlaceIds: string[] = []
+        const skippedPlaceIds: string[] = []
+        const failedItems: { placeId: string; reason: string }[] = []
 
         // Process each place
         for (let i = 0; i < placeIds.length; i++) {
@@ -366,7 +369,10 @@ export async function POST(request: NextRequest) {
               imported,
               skipped,
               failed,
-              total
+              total,
+              importedPlaceIds,
+              skippedPlaceIds,
+              failedItems,
             })}\n\n`))
             controller.close()
             return
@@ -418,6 +424,7 @@ export async function POST(request: NextRequest) {
             if (place.error) {
               console.error(`❌ Failed to get details for ${placeId}:`, place.error.message)
               failed++
+              failedItems.push({ placeId, reason: `Google Places API error: ${place.error.message}` })
               
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({
                 type: 'progress',
@@ -433,8 +440,18 @@ export async function POST(request: NextRequest) {
               continue
             }
 
-            // Shared validation: denylist + closed + category
-            const categoryConfig = CATEGORY_MAPPING[systemCategory]
+            // Deterministic category remap: google_primary_type is the strongest signal.
+            // Prevents bars landing in restaurant, pubs landing in cafe, etc.
+            const BAR_TYPES = new Set(['bar', 'pub', 'night_club', 'cocktail_bar', 'wine_bar', 'sports_bar', 'dive_bar', 'lounge', 'gastropub'])
+            const resolvedCategory: SystemCategory = (googlePrimaryType && BAR_TYPES.has(googlePrimaryType))
+              ? (googlePrimaryType === 'pub' || googlePrimaryType === 'gastropub' ? 'pub' : 'bar')
+              : systemCategory
+
+            if (resolvedCategory !== systemCategory) {
+              console.log(`🔄 Category remap: ${place.displayName?.text} — ${systemCategory} → ${resolvedCategory} (primaryType: ${googlePrimaryType})`)
+            }
+
+            const categoryConfig = CATEGORY_MAPPING[resolvedCategory]
             const importValidation = validatePlace(
               {
                 name: place.displayName?.text || '',
@@ -444,13 +461,14 @@ export async function POST(request: NextRequest) {
               },
               {
                 categoryConfig: categoryConfig || undefined,
-                excludeLodging: systemCategory !== 'hotel',
+                excludeLodging: resolvedCategory !== 'hotel',
               }
             )
 
             if (!importValidation.valid) {
               console.log(`❌ Import rejected ${place.displayName?.text}: ${importValidation.rejectReason}`)
               skipped++
+              skippedPlaceIds.push(placeId)
 
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({
                 type: 'progress',
@@ -471,6 +489,7 @@ export async function POST(request: NextRequest) {
             if (skipDuplicates && existingPlaceIds.has(placeId)) {
               console.log(`⚠️ Skipping ${place.displayName?.text}: Already imported`)
               skipped++
+              skippedPlaceIds.push(placeId)
               
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({
                 type: 'progress',
@@ -509,6 +528,7 @@ export async function POST(request: NextRequest) {
             if (!isValidSystemCategory(system_category)) {
               console.error(`⚠️ Invalid system_category detected: "${system_category}" for ${place.displayName?.text}`)
               failed++
+              failedItems.push({ placeId, reason: `Invalid system category: ${system_category}` })
               continue
             }
 
@@ -552,11 +572,11 @@ export async function POST(request: NextRequest) {
               .from('business_profiles')
               .insert({
                 business_name: place.displayName?.text || 'Unknown',
-                system_category: systemCategory, // Use category selected in import form
-                display_category: formattedCategory, // Use formatted google_primary_type (e.g., "Night club", not "Bar / Wine Bar")
-                google_types: googleTypes, // Store raw Google types for reference (includes cuisine types like 'nepalese_restaurant')
-                google_primary_type: googlePrimaryType, // Primary type from Google (e.g., 'nepalese_restaurant', 'coffee_shop')
-                business_type: systemCategory, // Map system_category to business_type (legacy field)
+                system_category: resolvedCategory,
+                display_category: formattedCategory,
+                google_types: googleTypes,
+                google_primary_type: googlePrimaryType,
+                business_type: resolvedCategory,
                 business_town: townName, // Use extracted town name
                 city: city.toLowerCase(),
                 business_address: place.formattedAddress || '', // ✅ FIXED: Use correct column name
@@ -574,7 +594,7 @@ export async function POST(request: NextRequest) {
                 google_photo_name: place.photos?.[0]?.name || null,
                 business_tagline: simpleTagline, // Simple format: "Category • Location"
                 tagline_source: 'generated', // Mark as auto-generated
-                placeholder_variant: hashVariant(placeId, getImageCountForCategory(systemCategory)),
+                placeholder_variant: hashVariant(placeId, getImageCountForCategory(resolvedCategory)),
                 status: 'unclaimed',
                 visibility: 'discover_only',
                 auto_imported: true,
@@ -586,6 +606,7 @@ export async function POST(request: NextRequest) {
             if (insertError) {
               console.error(`❌ Failed to insert ${place.displayName?.text}:`, insertError)
               failed++
+              failedItems.push({ placeId, reason: `Database insert error: ${insertError.message}` })
               
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({
                 type: 'progress',
@@ -602,6 +623,7 @@ export async function POST(request: NextRequest) {
             }
 
             imported++
+            importedPlaceIds.push(placeId)
             console.log(`✅ Imported: ${place.displayName?.text}`)
 
             // Send progress update
@@ -627,6 +649,7 @@ export async function POST(request: NextRequest) {
               console.error('Stack trace:', error.stack)
             }
             failed++
+            failedItems.push({ placeId, reason: errorMessage })
             
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({
               type: 'progress',
@@ -642,13 +665,16 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Send completion message
+        // Send completion message with placeId arrays so client can filter for export
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({
           type: 'complete',
           imported,
           skipped,
           failed,
-          total
+          total,
+          importedPlaceIds,
+          skippedPlaceIds,
+          failedItems,
         })}\n\n`))
 
         console.log(`✅ Import complete: ${imported} imported, ${skipped} skipped, ${failed} failed`)
