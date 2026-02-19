@@ -2288,11 +2288,15 @@ export function AtlasMode({
                 <button
                   onClick={() => {
                     setShowTourEndHelper(false)
-                    handleClose() // Back to chat
+                    if (selectedBusiness && onTellMeMore) {
+                      onTellMeMore(`Tell me more about ${selectedBusiness.business_name}`, selectedBusiness.id)
+                    } else {
+                      handleClose()
+                    }
                   }}
                   className="w-full px-6 py-4 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white font-semibold text-center"
                 >
-                  See all details in chat
+                  See details in chat
                 </button>
               </div>
               
