@@ -2,16 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -365,24 +355,24 @@ export function ImportProgressModal({
       </Dialog>
 
       {/* Close-without-export confirmation */}
-      <AlertDialog open={showCloseWarning} onOpenChange={setShowCloseWarning}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>You haven&apos;t downloaded the export yet</AlertDialogTitle>
-            <AlertDialogDescription>
-              {importedData.length} business{importedData.length !== 1 ? 'es were' : ' was'} imported but not yet exported. Once you close this modal the export will no longer be available. Close anyway?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowCloseWarning(false)}>
+      <Dialog open={showCloseWarning} onOpenChange={setShowCloseWarning}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>You haven&apos;t downloaded the export yet</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {importedData.length} business{importedData.length !== 1 ? 'es were' : ' was'} imported but not yet exported. Once you close this modal the export will no longer be available. Close anyway?
+          </p>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setShowCloseWarning(false)}>
               Go back
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmClose}>
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmClose}>
               Close without exporting
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
