@@ -11,7 +11,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Search, X, MapPin, Star, Phone, Globe, Navigation, ChevronLeft, ChevronRight, Pause, Play, XCircle } from 'lucide-react'
+import { Search, X, Star, Phone, Globe, Navigation, ChevronLeft, ChevronRight, Pause, Play, XCircle } from 'lucide-react'
 import type { Business } from './AtlasMode'
 import type { Coordinates } from '@/lib/location/useUserLocation'
 import { formatDistance, calculateDistanceKm } from '@/lib/utils/distance-formatter'
@@ -269,30 +269,6 @@ export function AtlasOverlay({
                 {selectedBusiness.isUnclaimed && (
                   <p className="text-xs text-white/30 mb-2">Imported from Google</p>
                 )}
-                
-                <div className="flex flex-wrap items-center gap-4 text-sm">
-                  {/* Rating */}
-                  <div className="flex items-center gap-1.5">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-white font-medium">{selectedBusiness.rating}</span>
-                    <span className="text-white/40">({selectedBusiness.review_count})</span>
-                  </div>
-                  
-                  {/* Category */}
-                  {selectedBusiness.display_category && (
-                    <span className="px-2.5 py-1 bg-white/10 text-white/80 rounded-lg font-medium">
-                      {selectedBusiness.display_category}
-                    </span>
-                  )}
-                  
-                  {/* Smart Distance */}
-                  {distanceInfo && (
-                    <div className="flex items-center gap-1.5 text-white/60">
-                      <MapPin className="w-4 h-4" />
-                      <span>{distanceInfo.text.replace('📍 ', '')}</span>
-                    </div>
-                  )}
-                </div>
                 
                 {/* Address */}
                 {selectedBusiness.business_address && (

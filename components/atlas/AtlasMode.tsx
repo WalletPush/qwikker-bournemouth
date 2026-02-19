@@ -2606,14 +2606,9 @@ export function AtlasMode({
                 </div>
               )}
               
-              <div>
-                <h2 className="text-xl font-bold text-white mb-2">
-                  {selectedBusiness.business_name}
-                </h2>
-                {selectedBusiness.display_category && (
-                  <p className="text-sm text-white/60">{selectedBusiness.display_category}</p>
-                )}
-              </div>
+              <h2 className="text-xl font-bold text-white">
+                {selectedBusiness.business_name}
+              </h2>
               
               {/* Fact Chips (mobile) */}
               {selectedBusinessFactChips.length > 0 && (
