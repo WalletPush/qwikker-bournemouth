@@ -2288,8 +2288,12 @@ export function AtlasMode({
                 <button
                   onClick={() => {
                     setShowTourEndHelper(false)
-                    if (selectedBusiness && onTellMeMore) {
-                      onTellMeMore(`Tell me more about ${selectedBusiness.business_name}`, selectedBusiness.id)
+                    if (onTellMeMore && visibleBusinesses.length > 0) {
+                      const names = visibleBusinesses.map(b => b.business_name)
+                      const message = visibleBusinesses.length === 1
+                        ? `Tell me more about ${names[0]}`
+                        : `Compare ${names.join(', ')} — which one should I visit?`
+                      onTellMeMore(message, visibleBusinesses[0].id)
                     } else {
                       handleClose()
                     }
