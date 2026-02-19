@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveRequestCity } from '@/lib/utils/tenant-city'
-import { isAtlasEligible } from '@/lib/atlas/eligibility'
+import { hasValidCoords } from '@/lib/atlas/eligibility'
 
 /**
  * GET /api/atlas/search
@@ -186,28 +186,10 @@ export async function GET(request: NextRequest) {
       })
       .slice(0, Math.min(limit, 50))
     
-    // 🔒 CRITICAL: Runtime check for tier leakage (should never happen via view)
-    const leakedBusinesses = (businesses || []).filter(b => 
-      !isAtlasEligible({ 
-        business_tier: b.business_tier, 
-        latitude: b.latitude, 
-        longitude: b.longitude 
-      })
+    // Defense-in-depth: views already enforce eligibility, just verify coords
+    const filteredBusinesses = (businesses || []).filter(b => 
+      hasValidCoords(b.latitude, b.longitude)
     )
-    
-    let filteredBusinesses = businesses || []
-    
-    if (leakedBusinesses.length > 0) {
-      console.error('❌ CRITICAL: free_tier or invalid tier leaked into Atlas search:', 
-        leakedBusinesses.map(b => ({ id: b.id, name: b.business_name, tier: b.business_tier }))
-      )
-      // Filter them out as a safety net
-      filteredBusinesses = filteredBusinesses.filter(b => isAtlasEligible({
-        business_tier: b.business_tier,
-        latitude: b.latitude,
-        longitude: b.longitude
-      }))
-    }
     
     if (isDev) {
       console.debug(`[Atlas Search] city=${city} query="${query}" results=${filteredBusinesses.length}`)
