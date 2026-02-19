@@ -1407,7 +1407,7 @@ export function AtlasMode({
         // Determine pin styling based on simplified tier from chat
         // mapPins use: 'paid' | 'unclaimed' | 'claimed_free'
         const tier = business.business_tier || 'unclaimed'
-        const isPaid = tier === 'paid'
+        const isPaid = tier === 'paid' || tier === 'trial'
         const isUnclaimed = tier === 'unclaimed'
         
         return {
@@ -1925,21 +1925,19 @@ export function AtlasMode({
       if (atlasResponse.businessIds?.length > 0) {
         console.log('[Atlas Search] ✅ Found', atlasResponse.businessIds.length, 'business IDs')
         
-        // Fetch full business data for map markers
-        const limit = performanceMode.enabled ? performanceMode.maxMarkers : config.maxResults
-        console.log('[Atlas Search] 📡 Calling /api/atlas/search with limit:', limit)
-        const detailsResponse = await fetch(`/api/atlas/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+        // Hydrate: fetch full business data by IDs (avoids re-searching with mismatched terms)
+        const idsToFetch = atlasResponse.businessIds.slice(
+          0, performanceMode.enabled ? performanceMode.maxMarkers : config.maxResults
+        )
+        console.log('[Atlas Search] 📡 Hydrating', idsToFetch.length, 'business IDs...')
+        const detailsResponse = await fetch(`/api/atlas/search?ids=${idsToFetch.join(',')}`)
         const detailsData = await detailsResponse.json()
-        console.log('[Atlas Search] 📦 /api/atlas/search response:', detailsData)
+        console.log('[Atlas Search] 📦 Hydration response:', detailsData)
         
         if (detailsData.ok && detailsData.results) {
-          console.log('[Atlas Search] 📊 Total results from search:', detailsData.results.length)
-          
-          const filteredResults = detailsData.results.filter((b: Business) => 
-            atlasResponse.businessIds.includes(b.id)
-          )
-          console.log('[Atlas Search] 📊 Filtered results (matching query IDs):', filteredResults.length)
-          console.log('[Atlas Search] 📊 Filtered business names:', filteredResults.map((b: Business) => b.business_name))
+          const filteredResults = detailsData.results as Business[]
+          console.log('[Atlas Search] 📊 Hydrated results:', filteredResults.length)
+          console.log('[Atlas Search] 📊 Business names:', filteredResults.map((b: Business) => b.business_name))
           
           setBusinesses(filteredResults)
           setBaseBusinesses(filteredResults)
