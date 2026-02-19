@@ -7,7 +7,6 @@
  * - Search input (top floating)
  * - Business info bubble (bottom)
  * - Back to chat button (top-left)
- * - Back to chat button (top-left corner)
  */
 
 import { useState } from 'react'
