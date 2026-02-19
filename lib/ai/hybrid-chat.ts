@@ -1985,25 +1985,19 @@ Present this information clearly and offer further help.`
       
       if (wantsMap) {
         uiMode = 'map'
-        shouldAttachCarousel = true
+        shouldAttachCarousel = false
       } else if (detectedIntent.hasIntent) {
-        // Intent mode: ONLY show carousel if Tier 1 has genuine category matches
         uiMode = 'conversational'
-        shouldAttachCarousel = tier1HasStrongMatch
-        if (tier1HasStrongMatch) {
-          console.log(`✅ Carousel enabled: Tier 1 has matches scoring >= ${CAROUSEL_MIN}`)
-        } else {
-          console.log(`🚫 Carousel disabled: intent "${detectedIntent.categories.join(', ')}" but no Tier 1 scored >= ${CAROUSEL_MIN}`)
-        }
+        shouldAttachCarousel = false
       } else if (browseMode.mode !== 'not_browse') {
         uiMode = 'suggestions'
         shouldAttachCarousel = false
-        console.log('🚫 Carousel disabled: generic browse mode')
       } else {
-        // No intent, no browse -- general conversation, show Tier 1 if available
         uiMode = 'conversational'
-        shouldAttachCarousel = uniqueBusinessIds.length > 0
+        shouldAttachCarousel = false
       }
+      // Carousel disabled: Tier 1 is test data only. Re-enable when real paid businesses exist.
+      console.log(`🎨 UI Mode: ${uiMode}, carousel: OFF (disabled until real Tier 1 data)`)
       
       console.log(`🎨 UI Mode: ${uiMode}, shouldAttachCarousel: ${shouldAttachCarousel}`)
       

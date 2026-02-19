@@ -96,8 +96,6 @@ export async function GET(request: NextRequest) {
           google_place_id,
           website_url,
           phone,
-          opening_hours,
-          price_level,
           business_tier
         `)
         .in('id', ids)
