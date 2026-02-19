@@ -72,6 +72,68 @@ export async function GET(request: NextRequest) {
     const query = rawQuery.replace(/[?!.,;:'"()]/g, '').trim()
     const limitParam = url.searchParams.get('limit')
     const limit = limitParam ? parseInt(limitParam, 10) : (config.atlas_max_results ?? 12)
+    const idsParam = url.searchParams.get('ids')?.trim() || ''
+    
+    // Hydration mode: fetch enriched fields for specific business IDs
+    if (idsParam) {
+      const ids = idsParam.split(',').filter(Boolean).slice(0, 25)
+      if (ids.length === 0) {
+        return NextResponse.json({ ok: true, results: [] })
+      }
+      
+      const { data: hydrated, error: hydrateError } = await supabase
+        .from('business_profiles')
+        .select(`
+          id,
+          business_name,
+          latitude,
+          longitude,
+          rating,
+          review_count,
+          business_tagline,
+          display_category,
+          business_address,
+          google_place_id,
+          website_url,
+          phone,
+          opening_hours,
+          price_level,
+          business_tier
+        `)
+        .in('id', ids)
+        .eq('city', city)
+      
+      if (hydrateError) {
+        console.error('[Atlas Hydrate] Error:', hydrateError)
+        return NextResponse.json({ ok: false, error: 'Hydration failed' }, { status: 500 })
+      }
+      
+      // Build enriched map with offer/event counts
+      const enrichedMap: Record<string, any> = {}
+      for (const biz of (hydrated || [])) {
+        const { count: offersCount } = await supabase
+          .from('business_offers')
+          .select('*', { count: 'exact', head: true })
+          .eq('business_id', biz.id)
+          .eq('is_active', true)
+        
+        enrichedMap[biz.id] = {
+          ...biz,
+          has_offers: (offersCount || 0) > 0,
+          offers_count: offersCount || 0,
+        }
+      }
+      
+      if (isDev) {
+        console.debug(`[Atlas Hydrate] city=${city} ids=${ids.length} hydrated=${Object.keys(enrichedMap).length}`)
+      }
+      
+      return NextResponse.json({
+        ok: true,
+        results: Object.values(enrichedMap),
+        meta: { city, mode: 'hydrate', count: Object.keys(enrichedMap).length }
+      })
+    }
     
     // Build query using ALL THREE TIER VIEWS (same as /api/atlas/query)
     // ✅ FIX: PostgREST uses * as wildcard, not %

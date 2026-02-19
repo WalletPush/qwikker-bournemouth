@@ -8,6 +8,19 @@ html, body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Safe area utilities for iOS notch / home indicator */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* Logo size constraints - prevent oversized logos after PWA removal */
 .qwikker-logo {
   max-height: 48px;
@@ -52,14 +65,21 @@ button {
 
 /* Fix mobile navigation and touch targets */
 @media (max-width: 768px) {
-  /* Ensure minimum touch target size */
-  button,
-  a,
-  input,
-  select,
-  textarea {
+  /* Ensure minimum touch target size (exclude Atlas map overlay) */
+  :not(.atlas-container) > button,
+  :not(.atlas-container) > a,
+  :not(.atlas-container) > input,
+  :not(.atlas-container) > select,
+  :not(.atlas-container) > textarea {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Atlas uses its own touch target sizing */
+  .atlas-container button,
+  .atlas-container a {
+    min-height: unset;
+    min-width: unset;
   }
   
   /* Fix mobile grid layouts */

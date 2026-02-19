@@ -153,6 +153,44 @@ export function useUserLocation(fallbackCenter?: Coordinates): UseUserLocationRe
 }
 
 /**
+ * Silently prime the location cache if permission is already granted.
+ * Uses navigator.permissions.query() which is non-blocking and non-prompting.
+ * Safe to call on page mount -- never shows a permission dialog.
+ */
+export async function primeLocationCache(): Promise<void> {
+  if (typeof window === 'undefined' || !navigator.geolocation) return
+  
+  const cached = getCachedLocation()
+  if (cached) return // Already have a valid cache
+  
+  try {
+    if (!navigator.permissions?.query) return // Unsupported (older browsers)
+    
+    const permissionStatus = await navigator.permissions.query({ name: 'geolocation' })
+    
+    if (permissionStatus.state === 'granted') {
+      // Permission already granted -- silently fetch and cache
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCachedLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          })
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Location] Cache primed silently')
+          }
+        },
+        () => { /* Silently ignore errors */ },
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: CACHE_DURATION_MS }
+      )
+    }
+    // If 'prompt' or 'denied', do nothing -- wait for explicit user action
+  } catch {
+    // permissions.query not supported or threw -- skip silently
+  }
+}
+
+/**
  * Calculate walking time based on straight-line distance
  * Assumes 4.8 km/h walking speed
  */

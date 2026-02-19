@@ -8,17 +8,43 @@ import {
   createFallbackAtlasResponse,
   type AtlasResponse 
 } from '@/lib/ai/prompts/atlas'
-import { isAtlasEligible, getTierPriority } from '@/lib/atlas/eligibility'
+import { hasValidCoords } from '@/lib/atlas/eligibility'
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 }) : null
 
+// Expand common user search terms into DB-matching category synonyms
+const SEARCH_SYNONYMS: Record<string, string[]> = {
+  'food': ['restaurant', 'food', 'dining', 'eatery', 'grill', 'kitchen', 'bistro', 'diner'],
+  'restaurants': ['restaurant', 'dining', 'eatery', 'grill', 'kitchen', 'bistro', 'diner'],
+  'bars': ['bar', 'pub', 'tavern', 'lounge', 'cocktail', 'nightlife'],
+  'bars and pubs': ['bar', 'pub', 'tavern', 'lounge', 'cocktail', 'nightlife'],
+  'coffee': ['coffee', 'cafe', 'café', 'espresso', 'tea'],
+  'cafes': ['cafe', 'café', 'coffee', 'bakery', 'tea'],
+  'drinks': ['bar', 'pub', 'cocktail', 'wine', 'brewery'],
+  'family': ['family', 'kid', 'children', 'play', 'pizza'],
+  'cocktails': ['cocktail', 'bar', 'lounge', 'mixology'],
+  'nightlife': ['bar', 'pub', 'nightclub', 'club', 'lounge', 'cocktail'],
+  'things to do': ['entertainment', 'activity', 'attraction', 'museum', 'theatre', 'cinema'],
+  'greek': ['greek', 'gyro', 'souvlaki', 'mediterranean'],
+  'italian': ['italian', 'pizza', 'pasta', 'trattoria'],
+  'indian': ['indian', 'curry', 'tandoori', 'masala'],
+  'chinese': ['chinese', 'noodle', 'dim sum', 'wok'],
+  'japanese': ['japanese', 'sushi', 'ramen', 'izakaya'],
+  'mexican': ['mexican', 'taco', 'burrito', 'cantina'],
+  'thai': ['thai', 'pad thai', 'satay'],
+}
+
 /**
  * Atlas Query Endpoint
  * 
- * Handles spatial queries in Atlas mode with strict, minimal responses.
- * Returns ephemeral HUD bubble content, not chat messages.
+ * Uses the same three-tier system as chat (hybrid-chat.ts):
+ *   Tier 1: business_profiles_chat_eligible (paid/trial)
+ *   Tier 2: business_profiles_lite_eligible (claimed-free with menu items)
+ *   Tier 3: business_profiles_ai_fallback_pool (admin-approved unclaimed)
+ * 
+ * Never queries raw business_profiles -- views enforce eligibility at DB level.
  */
 export async function POST(request: NextRequest) {
   if (!openai) {
@@ -38,8 +64,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 🔒 SECURITY: Derive city server-side from hostname
-    const cityResult = await resolveRequestCity(request)
+    const cityResult = await resolveRequestCity(request, { allowQueryOverride: true })
     if (!cityResult.ok) {
       return NextResponse.json(
         createFallbackAtlasResponse('City could not be determined'),
@@ -49,7 +74,6 @@ export async function POST(request: NextRequest) {
     const city = cityResult.city
     console.log(`🗺️ Atlas query for city: ${city}`)
 
-    // Get tenant Atlas config
     const supabase = createServiceRoleClient()
     const { data: config } = await supabase
       .from('franchise_crm_configs')
@@ -57,147 +81,110 @@ export async function POST(request: NextRequest) {
       .eq('city', city)
       .single()
 
-    const minRating = config?.atlas_min_rating || 4.4
     const maxResults = config?.atlas_max_results || 5
 
-    // 🔧 ATLAS FIX: Use SAME logic as chat - query ALL columns from tier views
-    // This matches lib/ai/hybrid-chat.ts line 250-254
-    console.log(`🗺️ Atlas: Querying database for "${message}" in city: ${city}`)
-    console.log(`🗺️ Atlas: Min rating: ${minRating}, Max results: ${maxResults}`)
+    console.log(`🗺️ Atlas: Querying for "${message}" in city: ${city}, maxResults: ${maxResults}`)
     
-    // ✅ FIX: PostgREST uses % as wildcard for ilike, not *
-    // ✅ Clean the search term: remove punctuation, extra spaces
-    const cleanMessage = message.replace(/[?!.,;:'"()]/g, '').trim()
-    const searchTerm = `%${cleanMessage}%`  // 🚨 FIX: Use % not * for PostgREST
-    console.log(`🗺️ Atlas: Search term: ${searchTerm} (original: "${message}")`)
+    const cleanMessage = message.replace(/[?!.,;:'"()]/g, '').trim().toLowerCase()
+    const expandedTerms = SEARCH_SYNONYMS[cleanMessage] || [cleanMessage]
+    const orConditions = expandedTerms.flatMap(term => [
+      `display_category.ilike.*${term}*`,
+      `system_category.ilike.*${term}*`,
+      `google_primary_type.ilike.*${term}*`,
+      `business_name.ilike.*${term}*`,
+    ]).join(',')
     
-    // 🗺️ ATLAS FIX: Query base table, not AI views
-    // Atlas (the map) should show ALL businesses, not just AI-eligible ones
-    // AI eligibility views are too restrictive for map visualization
-    const { data: allBusinesses, error: searchError } = await supabase
-      .from('business_profiles')
-      .select('*')
-      .eq('city', city)
-      .gte('rating', minRating)
-      .not('latitude', 'is', null)  // Must have coordinates for map
-      .not('longitude', 'is', null)
-      .or(`display_category.ilike.${searchTerm},system_category.ilike.${searchTerm},google_primary_type.ilike.${searchTerm},business_name.ilike.${searchTerm}`)
-      .limit(maxResults * 3)  // Get extra for sorting
+    console.log(`🗺️ Atlas: Search "${cleanMessage}" → ${expandedTerms.length} terms: [${expandedTerms.join(', ')}]`)
     
-    if (searchError) {
-      console.error('🗺️ Atlas: Search error:', searchError)
-    }
+    // Query all three tier views in parallel (same as hybrid-chat.ts)
+    // Views already enforce: eligible tier + valid coords + valid city
+    const [tier1Response, tier2Response, tier3Response] = await Promise.all([
+      supabase
+        .from('business_profiles_chat_eligible')
+        .select('*')
+        .eq('city', city)
+        .or(orConditions)
+        .order('rating', { ascending: false, nullsFirst: false })
+        .limit(maxResults),
+      supabase
+        .from('business_profiles_lite_eligible')
+        .select('*')
+        .eq('city', city)
+        .or(orConditions)
+        .order('rating', { ascending: false, nullsFirst: false })
+        .limit(maxResults),
+      supabase
+        .from('business_profiles_ai_fallback_pool')
+        .select('*')
+        .eq('city', city)
+        .or(orConditions)
+        .order('rating', { ascending: false, nullsFirst: false })
+        .limit(maxResults),
+    ])
     
-    console.log(`🗺️ Atlas: Raw query returned ${allBusinesses?.length || 0} businesses from base table`)
-    if (allBusinesses && allBusinesses.length > 0) {
-      console.log(`🗺️ Atlas: Sample businesses:`, allBusinesses.slice(0, 3).map(b => ({
-        name: b.business_name,
-        category: b.display_category,
-        tier: b.business_tier,
-        status: b.status
-      })))
-    }
-    
-    // Tag each business with simplified tier for pin coloring
-    // Check actual tier columns to determine pin color
-    const businessesWithTier = (allBusinesses || []).map(b => {
-      // Paid tier (any paid subscription)
-      if (b.business_tier && ['spotlight', 'featured', 'starter'].includes(b.business_tier)) {
-        return { ...b, business_tier: 'paid' as const }
-      }
-      // Claimed free tier
-      if (b.status === 'claimed' && b.business_tier === 'free') {
-        return { ...b, business_tier: 'claimed_free' as const }
-      }
-      // Unclaimed/default
-      return { ...b, business_tier: 'unclaimed' as const }
-    })
-    
-    // Create tier-separated responses for compatibility
-    const tier1Response = { data: businessesWithTier.filter(b => b.business_tier === 'paid'), error: null }
-    const tier2Response = { data: businessesWithTier.filter(b => b.business_tier === 'claimed_free'), error: null }
-    const tier3Response = { data: businessesWithTier.filter(b => b.business_tier === 'unclaimed'), error: null }
-    
-    console.log(`🗺️ Atlas: Query results - T1: ${tier1Response.data?.length || 0}, T2: ${tier2Response.data?.length || 0}, T3: ${tier3Response.data?.length || 0}`)
     if (tier1Response.error) console.error('🗺️ Atlas: Tier 1 error:', tier1Response.error)
     if (tier2Response.error) console.error('🗺️ Atlas: Tier 2 error:', tier2Response.error)
     if (tier3Response.error) console.error('🗺️ Atlas: Tier 3 error:', tier3Response.error)
     
-    // Tag each result with its simplified tier for pin coloring (match chat's mapPins format)
+    // Tag each tier for pin coloring
     const tier1 = (tier1Response.data || []).map(b => ({ ...b, business_tier: 'paid' as const }))
     const tier2 = (tier2Response.data || []).map(b => ({ ...b, business_tier: 'claimed_free' as const }))
     const tier3 = (tier3Response.data || []).map(b => ({ ...b, business_tier: 'unclaimed' as const }))
     
-    // Combine and deduplicate by business ID (paid businesses win)
-    const allResults = [...tier1, ...tier2, ...tier3]
-    console.log(`🗺️ Atlas: Combined ${allResults.length} total results before deduplication`)
+    console.log(`🗺️ Atlas: T1 (paid): ${tier1.length}, T2 (claimed-free): ${tier2.length}, T3 (fallback): ${tier3.length}`)
     
-    const businessMap = new Map()
-    allResults.forEach(b => {
+    // Combine with tier priority: paid > claimed_free > unclaimed
+    // Deduplicate by business ID (higher tier wins)
+    const businessMap = new Map<string, any>()
+    ;[...tier1, ...tier2, ...tier3].forEach(b => {
       if (!businessMap.has(b.id)) {
         businessMap.set(b.id, b)
       }
     })
     
-    const businessesRaw = Array.from(businessMap.values()).slice(0, maxResults * 3)
+    // Defense-in-depth: only include businesses with valid coords
+    const allResults = Array.from(businessMap.values())
+      .filter(b => hasValidCoords(b.latitude, b.longitude))
     
-    if (businessesRaw.length === 0) {
-      console.log(`🗺️ Atlas: No businesses found for "${message}"`)
+    console.log(`🗺️ Atlas: ${allResults.length} combined results after dedup + coord check`)
+    
+    if (allResults.length === 0) {
+      console.log(`🗺️ Atlas: No eligible businesses found for "${message}"`)
       return NextResponse.json({
-        summary: 'No high-rated matches nearby. Try a broader search.',
+        summary: `No results for "${message}" — try a different search.`,
         businessIds: [],
         primaryBusinessId: null,
-        ui: {
-          focus: 'pins',
-          autoDismissMs: 3500
-        }
+        ui: { focus: 'pins', autoDismissMs: 3500 }
       } as AtlasResponse)
     }
 
-    console.log(`🗺️ Atlas: Found ${businessesRaw.length} businesses`)
-    
-    // 🔒 RUNTIME GUARD: Verify no tier leakage
-    const leaked = businessesRaw.filter(b => !isAtlasEligible({
-      business_tier: b.business_tier,
-      latitude: b.latitude,
-      longitude: b.longitude
-    }))
-    
-    if (leaked.length > 0) {
-      console.error('🚨 CRITICAL: Tier/coord leakage in Atlas query!', leaked)
-    }
-    
-    // Filter out any ineligible businesses
-    const businesses = businessesRaw.filter(b => isAtlasEligible({
-      business_tier: b.business_tier,
-      latitude: b.latitude,
-      longitude: b.longitude
-    }))
-    
-    // Sort by tier priority, then rating
-    businesses.sort((a, b) => {
-      const tierA = getTierPriority(a.business_tier)
-      const tierB = getTierPriority(b.business_tier)
+    // Sort: paid first, then by rating descending
+    allResults.sort((a, b) => {
+      const tierOrder: Record<string, number> = { paid: 0, claimed_free: 1, unclaimed: 2 }
+      const tierA = tierOrder[a.business_tier] ?? 2
+      const tierB = tierOrder[b.business_tier] ?? 2
       if (tierA !== tierB) return tierA - tierB
-      
-      const ratingA = a.rating || 0
-      const ratingB = b.rating || 0
-      if (ratingA !== ratingB) return ratingB - ratingA
-      
-      return 0
+      return (b.rating || 0) - (a.rating || 0)
     })
-
-    // Take top results
-    const topBusinesses = businesses.slice(0, maxResults)
-    const businessIds = topBusinesses.map(b => b.id)
+    
+    // Respect maxResults -- never dump all at once
+    const businesses = allResults.slice(0, maxResults)
+    const businessIds = businesses.map(b => b.id)
+    
+    console.log(`🗺️ Atlas: Returning ${businesses.length} businesses:`, businesses.map(b => ({
+      name: b.business_name,
+      tier: b.business_tier,
+      rating: b.rating,
+      category: b.display_category
+    })))
 
     // Call OpenAI for summary
     const systemPrompt = ATLAS_SYSTEM_PROMPT.replace('{CITY}', city)
     
     const userPrompt = `User query: "${message}"
 
-Found ${topBusinesses.length} businesses:
-${topBusinesses.map((b, i) => `${i + 1}. ${b.business_name} (${b.display_category || 'Business'}, ${b.rating}★)`).join('\n')}
+Found ${businesses.length} businesses:
+${businesses.map((b, i) => `${i + 1}. ${b.business_name} (${b.display_category || 'Business'}, ${b.rating}★)`).join('\n')}
 
 Generate a SHORT, helpful summary.`
 
@@ -219,27 +206,32 @@ Generate a SHORT, helpful summary.`
       }
 
       const parsedResponse = JSON.parse(rawResponse)
-      const validated = validateAtlasResponse(parsedResponse)
+
+      if (validateAtlasResponse(parsedResponse)) {
+        return NextResponse.json({
+          summary: parsedResponse.summary,
+          businessIds,
+          primaryBusinessId: businessIds[0] || null,
+          ui: parsedResponse.ui
+        } satisfies AtlasResponse)
+      }
 
       return NextResponse.json({
-        ...validated,
+        summary: parsedResponse.summary || `Found ${businesses.length} places.`,
         businessIds,
-        primaryBusinessId: businessIds[0] || null
-      } as AtlasResponse)
+        primaryBusinessId: businessIds[0] || null,
+        ui: { focus: 'pins' as const, autoDismissMs: 4200 }
+      } satisfies AtlasResponse)
 
     } catch (aiError) {
       console.error('❌ Atlas AI error:', aiError)
       
-      // Fallback to simple summary
-      const firstBusiness = topBusinesses[0]
+      const firstBusiness = businesses[0]
       return NextResponse.json({
-        summary: `Found ${topBusinesses.length} ${message} spots. Check out ${firstBusiness.business_name}!`,
+        summary: `Found ${businesses.length} ${message} spots. Check out ${firstBusiness.business_name}!`,
         businessIds,
         primaryBusinessId: businessIds[0] || null,
-        ui: {
-          focus: 'pins',
-          autoDismissMs: 5000
-        }
+        ui: { focus: 'pins', autoDismissMs: 5000 }
       } as AtlasResponse)
     }
 

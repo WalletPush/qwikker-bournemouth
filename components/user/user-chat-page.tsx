@@ -7,7 +7,7 @@ import { EventCarousel } from '@/components/ui/event-carousel'
 import { AtlasMode } from '@/components/atlas/AtlasMode'
 import { useTenantAtlasConfig } from '@/lib/atlas/useTenantAtlasConfig'
 import { StreamingText } from '@/components/ui/streaming-text'
-import { useUserLocation } from '@/lib/location/useUserLocation'
+import { useUserLocation, primeLocationCache } from '@/lib/location/useUserLocation'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import React from 'react'
 import Link from 'next/link'
@@ -119,6 +119,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   
   // ATLAS: View state management
   const [view, setView] = useState<'chat' | 'atlas'>('chat')
+  const [atlasEverOpened, setAtlasEverOpened] = useState(false)
   
   // ATLAS: Detail request (hidden ID-based handoff)
   const [detailRequest, setDetailRequest] = useState<string | null>(null)
@@ -162,6 +163,11 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   const { coords: userLocation, requestPermission, status: locationStatus } = useUserLocation(
     tenantConfig?.center ? { lat: tenantConfig.center.lat, lng: tenantConfig.center.lng } : undefined
   )
+  
+  // Soft location priming: silently cache if permission already granted
+  useEffect(() => {
+    primeLocationCache()
+  }, [])
   
   // ATLAS: Auto-request location when Atlas opens (once per session)
   const locationRequestedRef = useRef(false)
@@ -745,16 +751,44 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     }
   }
 
+  // Memoize atlas businesses to prevent unnecessary re-renders when Atlas is kept mounted
+  const atlasBusinesses = useMemo(() => {
+    const lastAIMessage = messages.filter(m => m.type === 'ai').slice(-1)[0]
+    const businessesToShow = lastAIMessage?.businessCarousel || lastAIMessage?.mapPins
+    
+    if (!businessesToShow || businessesToShow.length === 0) return undefined
+    
+    return businessesToShow.map((pin: any) => ({
+      id: pin.id,
+      business_name: pin.business_name,
+      latitude: pin.latitude,
+      longitude: pin.longitude,
+      rating: pin.rating || 0,
+      review_count: pin.review_count || 0,
+      business_tagline: pin.business_tagline,
+      display_category: pin.display_category,
+      business_address: pin.business_address,
+      google_place_id: pin.google_place_id,
+      website_url: pin.website_url,
+      phone: pin.phone,
+      isPaid: pin.business_tier === 'paid',
+      isUnclaimed: pin.business_tier === 'unclaimed',
+      reason: pin.reason,
+      reasonMeta: pin.reasonMeta
+    })).filter((b: any) => b.latitude && b.longitude)
+  }, [messages])
+
   return (
     <>
-      {/* ATLAS MODE: Full-screen map (BREAKS OUT of parent container) */}
-      {view === 'atlas' && atlasEnabled && tenantConfig?.atlas && atlasCenter && (
-        <div className="fixed inset-0 z-[9999]">
+      {/* ATLAS MODE: Mount on first open, then keep alive with visibility toggle (not display:none) */}
+      {atlasEnabled && tenantConfig?.atlas && atlasCenter && atlasEverOpened && (
+        <div className={`fixed inset-0 z-[9999] ${view === 'atlas' ? '' : 'invisible pointer-events-none'}`}>
           <AtlasMode
             config={tenantConfig.atlas}
             center={atlasCenter}
             userLocation={userLocation}
             locationStatus={locationStatus}
+            isActive={view === 'atlas'}
             onClose={() => setView('chat')}
             soundEnabled={soundEnabled}
             onToggleSound={() => setSoundEnabled(!soundEnabled)}
@@ -764,44 +798,16 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
             lastAIResponse={messages.length > 0 ? messages.filter(m => m.type === 'ai').slice(-1)[0]?.content : undefined}
             onRequestLocation={requestPermission}
             onRequestDetails={(businessId: string) => {
-              // Close Atlas and trigger hidden detail fetch
               setView('chat')
               setDetailRequest(businessId)
             }}
             initialQuery={atlasInitialQuery}
             onInitialQueryConsumed={() => setAtlasInitialQuery(null)}
-            businesses={(() => {
-              // ✅ Pass carousel businesses to Atlas (what user sees in chat)
-              // NOT mapPins (which includes all tiers, causing 103-stop tours!)
-              const lastAIMessage = messages.filter(m => m.type === 'ai').slice(-1)[0]
-              
-              // Prefer businessCarousel (what user sees), fallback to mapPins for older messages
-              const businessesToShow = lastAIMessage?.businessCarousel || lastAIMessage?.mapPins
-              
-              if (!businessesToShow || businessesToShow.length === 0) return undefined
-              
-              console.log(`🗺️ ATLAS BUSINESSES: Showing ${businessesToShow.length} businesses from ${lastAIMessage?.businessCarousel ? 'carousel' : 'mapPins'}`)
-              
-              // Map to Atlas Business format (ensure required fields are present)
-              return businessesToShow.map((pin: any) => ({
-                id: pin.id,
-                business_name: pin.business_name,
-                latitude: pin.latitude,
-                longitude: pin.longitude,
-                rating: pin.rating || 0,
-                review_count: pin.review_count || 0,
-                business_tagline: pin.business_tagline,
-                display_category: pin.display_category,
-                business_address: pin.business_address,
-                google_place_id: pin.google_place_id,
-                website_url: pin.website_url,
-                phone: pin.phone,
-                isPaid: pin.business_tier === 'paid',
-                isUnclaimed: pin.business_tier === 'unclaimed',
-                reason: pin.reason,
-                reasonMeta: pin.reasonMeta
-              })).filter((b: any) => b.latitude && b.longitude) // Only businesses with valid coords
-            })()}
+            businesses={atlasBusinesses}
+            onTellMeMore={(text, businessId) => {
+              setView('chat')
+              handleSendMessage(text)
+            }}
           />
         </div>
       )}
@@ -851,6 +857,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
           {atlasEnabled && (
             <button
               onClick={() => {
+                setAtlasEverOpened(true)
                 setView('atlas')
                 if (userLocation === null) {
                   requestPermission()
@@ -973,7 +980,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                         if (lastBusinessQuery) {
                           setAtlasInitialQuery(lastBusinessQuery)
                         }
-                        // Store the message for filtered mapPins (will be used in Atlas component below)
+                        setAtlasEverOpened(true)
                         setView('atlas')
                       }}
                       className="w-full bg-gradient-to-r from-cyan-600/20 to-blue-600/20 hover:from-cyan-600/30 hover:to-blue-600/30 border border-cyan-500/30 hover:border-cyan-400/50 text-cyan-300 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 group"

@@ -16,6 +16,7 @@ import { Search, X, Volume2, VolumeX, MapPin, Star, Phone, Globe, Navigation, Ch
 import type { Business } from './AtlasMode'
 import type { Coordinates } from '@/lib/location/useUserLocation'
 import { formatDistance, calculateDistanceKm } from '@/lib/utils/distance-formatter'
+import type { FactChip } from '@/lib/atlas/buildBusinessFacts'
 
 interface AtlasOverlayProps {
   onClose: () => void
@@ -34,6 +35,11 @@ interface AtlasOverlayProps {
   onNextBusiness?: () => void
   onPreviousBusiness?: () => void
   onStopTour?: () => void
+  factChips?: FactChip[]
+  onIntentChipTap?: (label: string) => void
+  isSaved?: boolean
+  onToggleSave?: () => void
+  onTellMeMore?: () => void
 }
 
 export function AtlasOverlay({
@@ -51,7 +57,12 @@ export function AtlasOverlay({
   currentBusinessIndex = 0,
   onNextBusiness,
   onPreviousBusiness,
-  onStopTour
+  onStopTour,
+  factChips = [],
+  onIntentChipTap,
+  isSaved = false,
+  onToggleSave,
+  onTellMeMore
 }: AtlasOverlayProps) {
   const [query, setQuery] = useState('')
   
@@ -152,6 +163,22 @@ export function AtlasOverlay({
             </button>
           </div>
         </form>
+        
+        {/* Search Intent Chips */}
+        <div className="pointer-events-auto flex gap-2 mt-3 overflow-x-auto scrollbar-hide pb-1">
+          {['Open now', 'Closest', 'Top rated', 'Qwikker Picks', 'Coffee', 'Cocktails', 'Family'].map((chip) => (
+            <button
+              key={chip}
+              onClick={() => {
+                if (onIntentChipTap) onIntentChipTap(chip)
+                else onSearch(chip)
+              }}
+              className="flex-shrink-0 px-3.5 py-2 bg-white/5 hover:bg-[#00d083]/15 border border-white/10 hover:border-[#00d083]/30 rounded-full text-xs text-white/70 hover:text-[#00d083] transition-all whitespace-nowrap"
+            >
+              {chip}
+            </button>
+          ))}
+        </div>
       </div>
       
       {/* Business Info Bubble (Bottom) */}
@@ -236,6 +263,26 @@ export function AtlasOverlay({
                   </div>
                 )}
                 
+                {/* Fact Chips */}
+                {factChips.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {factChips.map((chip, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg text-xs text-white/70"
+                      >
+                        <span>{chip.icon}</span>
+                        <span>{chip.label}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Trust cue for unclaimed businesses */}
+                {selectedBusiness.isUnclaimed && (
+                  <p className="text-xs text-white/30 mb-2">Imported from Google</p>
+                )}
+                
                 <div className="flex flex-wrap items-center gap-4 text-sm">
                   {/* Rating */}
                   <div className="flex items-center gap-1.5">
@@ -280,6 +327,29 @@ export function AtlasOverlay({
             
             {/* Quick Actions */}
             <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/10">
+              {onTellMeMore && (
+                <button
+                  onClick={onTellMeMore}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#00d083]/10 hover:bg-[#00d083]/20 border border-[#00d083]/30 rounded-xl text-[#00d083] hover:text-[#00ff9d] transition-all text-sm"
+                >
+                  <span>Tell me more</span>
+                </button>
+              )}
+              
+              {onToggleSave && (
+                <button
+                  onClick={onToggleSave}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-sm ${
+                    isSaved
+                      ? 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-400'
+                      : 'bg-white/5 hover:bg-white/10 text-white/80 hover:text-white'
+                  }`}
+                >
+                  <Star className={`w-4 h-4 ${isSaved ? 'fill-yellow-400' : ''}`} />
+                  <span>{isSaved ? 'Saved' : 'Save'}</span>
+                </button>
+              )}
+              
               {selectedBusiness.phone && (
                 <a
                   href={`tel:${selectedBusiness.phone}`}

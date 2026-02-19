@@ -15,10 +15,12 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import type { Map as MapboxMap, LngLatLike, MapboxGeoJSONFeature } from 'mapbox-gl'
 import Head from 'next/head'
+import { X } from 'lucide-react'
 import { AtlasOverlay } from './AtlasOverlay'
 import { AtlasHudBubble } from './AtlasHudBubble'
 import { ChatContextStrip } from './ChatContextStrip'
 import { AtlasIntroOverlay } from './AtlasIntroOverlay'
+import { AtlasVibeSetup } from './AtlasVibeSetup'
 import { BottomSheet } from './BottomSheet'
 import { usePerformanceMode } from '@/lib/atlas/usePerformanceMode'
 import { useAtlasAnalytics } from '@/lib/atlas/useAtlasAnalytics'
@@ -26,6 +28,7 @@ import { useMobile } from '@/lib/hooks/use-mobile'
 import type { Coordinates } from '@/lib/location/useUserLocation'
 import type { LocationStatus } from '@/lib/location/useUserLocation'
 import type { AtlasResponse } from '@/lib/ai/prompts/atlas'
+import { buildBusinessFacts } from '@/lib/atlas/buildBusinessFacts'
 import {
   getUserLocationLayers,
   getBusinessPinLayers,
@@ -94,6 +97,8 @@ interface AtlasModeProps {
   initialQuery?: string | null  // Query to run when Atlas opens (from chat CTA)
   onInitialQueryConsumed?: () => void  // Callback after initial query is consumed
   businesses?: Business[]  // ✅ NEW: Businesses from chat (avoids re-querying)
+  isActive?: boolean  // Whether Atlas is the foreground view (for pausing when hidden)
+  onTellMeMore?: (text: string, businessId: string) => void  // Return to chat with pre-loaded message
 }
 
 export function AtlasMode({
@@ -112,10 +117,13 @@ export function AtlasMode({
   onRequestDetails,
   initialQuery,
   onInitialQueryConsumed,
-  businesses: incomingBusinesses
+  businesses: incomingBusinesses,
+  isActive = true,
+  onTellMeMore
 }: AtlasModeProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<MapboxMap | null>(null)
+  const mapReadyRef = useRef(false)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [searching, setSearching] = useState(false)
   const [businesses, setBusinesses] = useState<Business[]>([])
@@ -126,6 +134,20 @@ export function AtlasMode({
   }>({ openNow: false, maxDistance: null })
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null)
   const [selectedBusinessIndex, setSelectedBusinessIndex] = useState<number>(0)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const statusTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [showVibeSetup, setShowVibeSetup] = useState(false)
+  const [showSearchThisArea, setShowSearchThisArea] = useState(false)
+  const resultBoundsRef = useRef<{ lat: number; lng: number } | null>(null)
+  const routeAnimationRef = useRef<number | null>(null)
+  const [showLegend, setShowLegend] = useState(false)
+  const [savedBusinessIds, setSavedBusinessIds] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const saved = localStorage.getItem('qwikker_atlas_saved')
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch { return new Set() }
+  })
   
   // ✨ Mobile detection and bottom sheet
   const isMobile = useMobile()
@@ -159,12 +181,17 @@ export function AtlasMode({
   const [lastAtlasQuery, setLastAtlasQuery] = useState<string | null>(null)
   const [lastAtlasBusinessIds, setLastAtlasBusinessIds] = useState<string[]>([])
   const ranInitialQueryRef = useRef(false)
+  const [emptyStateDismissed, setEmptyStateDismissed] = useState(false)
   
   // Performance mode detection
   const performanceMode = usePerformanceMode()
   
   // Analytics tracking (city derived server-side from hostname)
   const { trackEvent } = useAtlasAnalytics(userId)
+  
+  // Hydrated business data (enriched fields fetched in background)
+  const hydratedDataRef = useRef<Map<string, any>>(new Map())
+  const hydrationRequestedRef = useRef<Set<string>>(new Set())
   
   // Helper: Apply filters to business list (must be defined BEFORE visibleBusinesses)
   const applyFilters = useCallback((
@@ -213,6 +240,105 @@ export function AtlasMode({
     return applyFilters(baseBusinesses, activeFilters, userLocation)
   }, [baseBusinesses, activeFilters, userLocation, applyFilters])
   
+  // Hydrate businesses (fetch enriched fields like opening_hours, offers)
+  const hydrateBusinesses = useCallback(async (businessList: Business[]) => {
+    const idsToHydrate = businessList
+      .map(b => b.id)
+      .filter(id => !hydrationRequestedRef.current.has(id))
+    
+    if (idsToHydrate.length === 0) return
+    
+    idsToHydrate.forEach(id => hydrationRequestedRef.current.add(id))
+    const startMs = Date.now()
+    
+    try {
+      const response = await fetch(`/api/atlas/search?ids=${idsToHydrate.join(',')}`)
+      const data = await response.json()
+      const elapsedMs = Date.now() - startMs
+      
+      if (data.ok && data.results) {
+        for (const biz of data.results) {
+          hydratedDataRef.current.set(biz.id, biz)
+        }
+        console.log(`[Atlas] Hydrated ${data.results.length} businesses in ${elapsedMs}ms`)
+      }
+    } catch (error) {
+      console.error('[Atlas] Hydration failed:', error)
+    }
+  }, [])
+  
+  // Fact chips: track hydration completions to re-render chips
+  const [hydratedVersion, setHydratedVersion] = useState(0)
+  
+  // Trigger hydration when businesses change
+  useEffect(() => {
+    if (baseBusinesses.length > 0 && isActive) {
+      hydrateBusinesses(baseBusinesses).then(() => {
+        setHydratedVersion(v => v + 1)
+      })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseBusinesses.length, isActive])
+  
+  // Track result center for "Search this area" detection
+  useEffect(() => {
+    if (baseBusinesses.length > 0) {
+      const avgLat = baseBusinesses.reduce((s, b) => s + b.latitude, 0) / baseBusinesses.length
+      const avgLng = baseBusinesses.reduce((s, b) => s + b.longitude, 0) / baseBusinesses.length
+      resultBoundsRef.current = { lat: avgLat, lng: avgLng }
+      setShowSearchThisArea(false)
+    }
+  }, [baseBusinesses])
+  
+  // Listen for map moveend to detect when user pans far from results
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    
+    const onMoveEnd = () => {
+      if (!resultBoundsRef.current || !map.current) return
+      const center = map.current.getCenter()
+      const rCenter = resultBoundsRef.current
+      // Haversine-ish quick distance check (~km)
+      const dLat = Math.abs(center.lat - rCenter.lat)
+      const dLng = Math.abs(center.lng - rCenter.lng)
+      const approxKm = Math.sqrt(dLat * dLat + dLng * dLng) * 111
+      setShowSearchThisArea(approxKm > 1.5)
+    }
+    
+    map.current.on('moveend', onMoveEnd)
+    const currentMap = map.current
+    return () => { currentMap.off('moveend', onMoveEnd) }
+  }, [mapLoaded])
+  
+  // Transient status message helper
+  const showStatus = useCallback((msg: string, durationMs = 2000) => {
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
+    setStatusMessage(msg)
+    statusTimerRef.current = setTimeout(() => setStatusMessage(null), durationMs)
+  }, [])
+  
+  const handleSearchThisArea = useCallback(() => {
+    if (!map.current) return
+    const center = map.current.getCenter()
+    setShowSearchThisArea(false)
+    showStatus('Searching this area...')
+    trackEvent({ eventType: 'atlas_area_search' })
+    if (vibeSearchRef.current) {
+      vibeSearchRef.current(`places near ${center.lat.toFixed(4)},${center.lng.toFixed(4)}`)
+    }
+  }, [showStatus, trackEvent])
+  
+  const selectedBusinessFactChips = useMemo(() => {
+    if (!selectedBusiness) return []
+    const hydrated = hydratedDataRef.current.get(selectedBusiness.id)
+    return buildBusinessFacts(selectedBusiness, {
+      userLocation,
+      hydratedData: hydrated,
+      isMobile: isMobile
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBusiness?.id, userLocation, isMobile, hydratedVersion])
+  
   // ✅ SHIP-SAFE: Show friendly message when filters result in 0 places
   useEffect(() => {
     const hasActiveFilters = activeFilters.openNow || activeFilters.maxDistance !== null
@@ -232,13 +358,78 @@ export function AtlasMode({
     }
   }, [visibleBusinesses.length, baseBusinesses.length, activeFilters])
   
-  // Track Atlas opened on mount
+  // Track Atlas opened when it becomes active (not just on mount)
+  const prevIsActiveRef = useRef(false)
   useEffect(() => {
-    trackEvent({
-      eventType: 'atlas_opened',
-      performanceMode: performanceMode.enabled
+    if (isActive && !prevIsActiveRef.current) {
+      trackEvent({
+        eventType: 'atlas_opened',
+        performanceMode: performanceMode.enabled
+      })
+      // Resize map when becoming visible again (canvas may have stale dimensions)
+      if (map.current && mapLoaded) {
+        requestAnimationFrame(() => {
+          map.current?.resize()
+        })
+      }
+      // Check if vibe setup should show (cold start, no businesses, not onboarded)
+      const onboardedKey = `atlasOnboarded:${city}`
+      const hasOnboarded = typeof window !== 'undefined' && localStorage.getItem(onboardedKey) === 'true'
+      if (!hasOnboarded && (!incomingBusinesses || incomingBusinesses.length === 0)) {
+        setShowVibeSetup(true)
+      }
+    }
+    prevIsActiveRef.current = isActive
+  }, [isActive, trackEvent, performanceMode.enabled, mapLoaded, city, incomingBusinesses])
+  
+  // Ref-bridged callbacks (defined later, avoids declaration order issues)
+  const vibeSearchRef = useRef<((q: string) => void) | null>(null)
+  const addBusinessMarkersRef = useRef<((businesses: Business[]) => Promise<void>) | null>(null)
+  
+  const handleVibeComplete = useCallback((preferences: { mood: string; transport: string; priority: string }) => {
+    const onboardedKey = `atlasOnboarded:${city}`
+    const prefsKey = `atlasPrefs:${city}`
+    
+    try {
+      localStorage.setItem(onboardedKey, 'true')
+      localStorage.setItem(prefsKey, JSON.stringify({ ...preferences, timestamp: Date.now() }))
+    } catch { /* localStorage not available */ }
+    
+    setShowVibeSetup(false)
+    showStatus('Finding places...')
+    
+    trackEvent({ eventType: 'atlas_vibe_setup_completed', query: `${preferences.mood}/${preferences.transport}/${preferences.priority}` })
+    
+    const moodQuery = preferences.mood === 'surprise' ? '' : preferences.mood.replace(/_/g, ' ')
+    if (moodQuery && vibeSearchRef.current) {
+      vibeSearchRef.current(moodQuery)
+    }
+  }, [city, showStatus, trackEvent])
+  
+  const handleToggleSave = useCallback((businessId: string) => {
+    setSavedBusinessIds(prev => {
+      const next = new Set(prev)
+      if (next.has(businessId)) {
+        next.delete(businessId)
+      } else {
+        next.add(businessId)
+        trackEvent({ eventType: 'atlas_save_business', businessId })
+      }
+      try {
+        localStorage.setItem('qwikker_atlas_saved', JSON.stringify([...next]))
+      } catch { /* */ }
+      return next
     })
-  }, [trackEvent, performanceMode.enabled])
+  }, [trackEvent])
+  
+  const handleVibeSkip = useCallback(() => {
+    const onboardedKey = `atlasOnboarded:${city}`
+    try {
+      localStorage.setItem(onboardedKey, 'true')
+    } catch { /* */ }
+    setShowVibeSetup(false)
+    trackEvent({ eventType: 'atlas_vibe_setup_skipped' })
+  }, [city, trackEvent])
   
   // Audio refs
   const audioWakeRef = useRef<HTMLAudioElement | null>(null)
@@ -264,15 +455,15 @@ export function AtlasMode({
     }
   }, [])
   
-  // Play sound helper
+  // Play sound helper (gated behind isActive to prevent sounds when hidden)
   const playSound = useCallback((audio: HTMLAudioElement | null) => {
-    if (!soundEnabled || !audio) return
+    if (!soundEnabled || !audio || !isActive) return
     
     audio.currentTime = 0
     audio.play().catch(() => {
       // Ignore autoplay restrictions or missing files
     })
-  }, [soundEnabled])
+  }, [soundEnabled, isActive])
   
   // Initialize Mapbox map
   useEffect(() => {
@@ -309,43 +500,36 @@ export function AtlasMode({
           fadeDuration: performanceMode.enabled ? 150 : 300
         })
         
-        // Add fog for atmosphere (only if performance mode OFF)
-        mapInstance.on('load', () => {
-          console.log('[Atlas] 🔄 Map load event fired, checking style...')
+        // Wait for map to be fully ready: style loaded + first render complete (idle)
+        mapInstance.once('idle', () => {
+          console.log('[Atlas] ✅ Map idle (style loaded, first render done). mapReadyRef = true')
           
-          // ✅ CRITICAL FIX: Wait for BOTH loaded() AND isStyleLoaded()
-          // Fixes frozen map where jumpTo/flyTo commands are ignored
-          const checkFullyLoaded = () => {
-            if (mapInstance.isStyleLoaded() && mapInstance.loaded()) {
-              console.log('[Atlas] ✅ Map AND style fully loaded! Ready to accept commands.')
-              
-              if (process.env.NODE_ENV === 'development') {
-                // Debug: Store map instance globally for Fast Refresh debugging
-                ;(window as any).__atlasMap = mapInstance
-                console.log('[Atlas] window.__atlasMap set for debugging')
-              }
-              
-              if (!performanceMode.enabled && performanceMode.fog) {
-                mapInstance.setFog({
-                  color: 'rgb(5, 5, 15)',
-                  'high-color': 'rgb(10, 15, 30)',
-                  'horizon-blend': 0.3,
-                  'space-color': 'rgb(0, 0, 5)',
-                  'star-intensity': 0.5
-                })
-              }
-              
-              setMapLoaded(true)
-              
-              // Play wake sound
-              playSound(audioWakeRef.current)
-            } else {
-              console.log('[Atlas] ⏳ Not ready yet (isStyleLoaded:', mapInstance.isStyleLoaded(), ', loaded:', mapInstance.loaded(), '), retrying in 100ms...')
-              setTimeout(checkFullyLoaded, 100)
-            }
+          if (process.env.NODE_ENV === 'development') {
+            ;(window as any).__atlasMap = mapInstance
+            console.log('[Atlas] window.__atlasMap set for debugging')
           }
           
-          checkFullyLoaded()
+          if (!performanceMode.enabled && performanceMode.fog) {
+            mapInstance.setFog({
+              color: 'rgb(5, 10, 12)',
+              'high-color': 'rgb(8, 20, 18)',
+              'horizon-blend': 0.3,
+              'space-color': 'rgb(0, 5, 3)',
+              'star-intensity': 0.4
+            })
+          }
+          
+          // Subtle Qwikker green tint on water
+          try {
+            if (mapInstance.getLayer('water')) {
+              mapInstance.setPaintProperty('water', 'fill-color', 'hsl(160, 15%, 12%)')
+            }
+          } catch { /* style may not have water layer */ }
+          
+          mapReadyRef.current = true
+          setMapLoaded(true)
+          
+          playSound(audioWakeRef.current)
         })
         
         // Add navigation controls
@@ -367,18 +551,15 @@ export function AtlasMode({
     initMap()
     
     return () => {
-      // ✅ CRITICAL: Don't destroy map on Fast Refresh (development only)
-      // In production, this cleanup will run on unmount as expected
-      if (process.env.NODE_ENV === 'production') {
-        if (userMarkerRef.current) {
-          userMarkerRef.current.remove()
-        }
-        if (map.current) {
-          map.current.remove()
-          map.current = null
-        }
-      } else {
-        console.log('[Atlas] Skipping cleanup (Fast Refresh detected)')
+      // Only destroy map on true unmount (page navigation away)
+      // With keep-alive mount, this rarely fires -- only on page leave
+      mapReadyRef.current = false
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove()
+      }
+      if (map.current) {
+        map.current.remove()
+        map.current = null
       }
     }
   }, [
@@ -399,13 +580,20 @@ export function AtlasMode({
   // Pending flyTo request (queue if map not loaded yet)
   const pendingFlyToRef = useRef<{ coords: Coordinates; zoom: number } | null>(null)
   
+  // Pending user marker (queue if map not ready when location arrives)
+  const pendingUserMarkerRef = useRef<Coordinates | null>(null)
+  
+  // Pending business markers (queue if map not ready when businesses arrive)
+  const pendingBusinessMarkersRef = useRef<Business[] | null>(null)
+  
   // User location marker ref (HTML marker for 3D pin)
   const userMarkerRef = useRef<any>(null)
   
   // User location marker management (3D PIN STYLE) - always on top!
   const addUserLocationMarker = useCallback(async (coords: Coordinates) => {
-    if (!map.current || !mapLoaded) {
-      console.log('[Atlas] ⚠️ Cannot add marker: mapLoaded=', mapLoaded)
+    if (!map.current || !mapReadyRef.current) {
+      console.log('[Atlas] ⚠️ Cannot add marker: mapReady=', mapReadyRef.current, '-- queuing')
+      pendingUserMarkerRef.current = coords
       return
     }
     
@@ -421,10 +609,10 @@ export function AtlasMode({
         userMarkerRef.current.remove()
       }
       
-      // Create 3D pin element
+      // Create 3D pin element (z-index: 2 to render above the vignette overlay at z-1)
       const el = document.createElement('div')
       el.className = 'user-location-3d-pin'
-      el.style.cssText = 'width: 40px; height: 60px; cursor: pointer; position: relative;'
+      el.style.cssText = 'width: 40px; height: 60px; cursor: pointer; position: relative; z-index: 2;'
       el.innerHTML = `
         <div class="pin-container" style="position: relative; width: 100%; height: 100%; animation: pinDrop 0.6s ease-out;">
           <div class="pin-head" style="
@@ -478,26 +666,20 @@ export function AtlasMode({
     }
   }, [mapLoaded])
   
-  // FlyTo helper with queue support
+  // FlyTo helper with queue support (gated on mapReadyRef for determinism)
   const flyToLocation = useCallback((coords: Coordinates, zoom: number) => {
-    console.log('[Atlas] 🔧 flyToLocation called:', { coords, zoom, hasMap: !!map.current, mapLoaded })
+    console.log('[Atlas] 🔧 flyToLocation called:', { coords, zoom, hasMap: !!map.current, mapReady: mapReadyRef.current })
     
-    if (!map.current) {
-      console.error('[Atlas] ❌ No map instance!')
-      return
-    }
-    
-    if (!mapLoaded) {
-      console.log('[Atlas] ⏳ Map not loaded, queuing flyTo')
-      // Queue the request until map loads
+    if (!map.current || !mapReadyRef.current) {
+      console.log('[Atlas] ⏳ Map not ready, queuing flyTo')
       pendingFlyToRef.current = { coords, zoom }
       return
     }
     
     console.log('[Atlas] ✈️ Executing flyTo:', coords)
-    console.log('[Atlas] 🗺️ Map loaded state:', map.current.loaded())
     
     try {
+      map.current.resize()
       map.current.flyTo({
         center: [coords.lng, coords.lat],
         zoom,
@@ -505,22 +687,35 @@ export function AtlasMode({
         essential: true,
         curve: 1.2
       })
-      // Force render loop to ensure animation starts
       map.current.triggerRepaint()
-      console.log('[Atlas] ✅ flyTo command sent successfully with forced render')
+      console.log('[Atlas] ✅ flyTo command sent successfully')
     } catch (error) {
       console.error('[Atlas] ❌ flyTo FAILED:', error)
     }
   }, [mapLoaded])
   
-  // Execute pending flyTo when map loads
+  // Execute pending operations when map becomes ready
   useEffect(() => {
-    if (mapLoaded && pendingFlyToRef.current) {
+    if (!mapLoaded) return
+    
+    if (pendingFlyToRef.current) {
       const pending = pendingFlyToRef.current
       pendingFlyToRef.current = null
       flyToLocation(pending.coords, pending.zoom)
     }
-  }, [mapLoaded, flyToLocation])
+    
+    if (pendingUserMarkerRef.current) {
+      const pendingCoords = pendingUserMarkerRef.current
+      pendingUserMarkerRef.current = null
+      addUserLocationMarker(pendingCoords)
+    }
+    
+    if (pendingBusinessMarkersRef.current && addBusinessMarkersRef.current) {
+      const pendingBusinesses = pendingBusinessMarkersRef.current
+      pendingBusinessMarkersRef.current = null
+      addBusinessMarkersRef.current(pendingBusinesses)
+    }
+  }, [mapLoaded, flyToLocation, addUserLocationMarker])
   
   // Handle user location updates
   // Track incoming businesses count for dependency
@@ -613,8 +808,12 @@ export function AtlasMode({
       map.current.removeSource('active-business')
     }
     
-    // Clear route layers
-    const routeLayerIds = ['route-glow', 'route-line']
+    // Clear route layers and animation
+    if (routeAnimationRef.current !== null) {
+      cancelAnimationFrame(routeAnimationRef.current)
+      routeAnimationRef.current = null
+    }
+    const routeLayerIds = ['route-glow', 'route-line', 'route-dash']
     routeLayerIds.forEach(id => {
       if (map.current!.getLayer(id)) {
         map.current!.removeLayer(id)
@@ -627,11 +826,17 @@ export function AtlasMode({
   
   // Add route line from user to active business
   const addRouteLineToActive = useCallback(async (activeBusiness: Business) => {
-    if (!map.current || !mapLoaded || !userLocation) return
+    if (!map.current || !mapReadyRef.current || !userLocation) return
     
     try {
+      // Cancel existing route animation
+      if (routeAnimationRef.current !== null) {
+        cancelAnimationFrame(routeAnimationRef.current)
+        routeAnimationRef.current = null
+      }
+      
       // Remove existing route
-      const routeLayerIds = ['route-glow', 'route-line']
+      const routeLayerIds = ['route-glow', 'route-line', 'route-dash']
       routeLayerIds.forEach(id => {
         if (map.current!.getLayer(id)) {
           map.current!.removeLayer(id)
@@ -641,16 +846,14 @@ export function AtlasMode({
         map.current.removeSource('route')
       }
       
-      // ✨ Generate smooth curved arc route (cinematic, not straight)
       const curvedCoordinates = buildArcRoute(
         userLocation.lng,
         userLocation.lat,
         activeBusiness.longitude,
         activeBusiness.latitude,
-        40 // 40 points for smooth curve
+        40
       )
       
-      // Add route source with curved arc
       map.current.addSource('route', {
         type: 'geojson',
         data: {
@@ -664,29 +867,41 @@ export function AtlasMode({
             }
           }]
         },
-        // ✨ Enable line metrics for animated gradient
         lineMetrics: true
       })
       
-      // Add route layers (glow + line) BELOW all markers
       const routeLayers = getRouteLayers()
       const beforeLayer = map.current.getLayer('business-pins-glow') ? 'business-pins-glow' : undefined
       
       routeLayers.forEach(layer => {
+        // Only add dash layer on high-performance devices
+        if (layer.id === 'route-dash' && performanceMode.enabled) return
         map.current!.addLayer(layer, beforeLayer)
       })
       
+      // Start marching ants animation (only on high-perf / desktop)
+      if (!performanceMode.enabled && map.current.getLayer('route-dash')) {
+        let dashOffset = 0
+        const animateDash = () => {
+          if (!map.current || !map.current.getLayer('route-dash')) return
+          dashOffset += 0.15
+          map.current.setPaintProperty('route-dash', 'line-dasharray', [2, 4 + (dashOffset % 6)])
+          routeAnimationRef.current = requestAnimationFrame(animateDash)
+        }
+        routeAnimationRef.current = requestAnimationFrame(animateDash)
+      }
+      
       if (process.env.NODE_ENV === 'development') {
-        console.log('[Atlas] Route line drawn to active business')
+        console.log('[Atlas] Route line drawn to active business', performanceMode.enabled ? '(static)' : '(animated)')
       }
     } catch (error) {
       console.error('[Atlas] Failed to add route line:', error)
     }
-  }, [mapLoaded, userLocation])
+  }, [mapLoaded, userLocation, performanceMode.enabled])
   
   // Update active business marker
   const updateActiveBusinessMarker = useCallback(async (business: Business) => {
-    if (!map.current || !mapLoaded) return
+    if (!map.current || !mapReadyRef.current) return
     
     try {
       // Remove existing active business layers
@@ -870,7 +1085,7 @@ export function AtlasMode({
       
       // Center on user location first
       map.current.flyTo({
-        center: [userLocation.longitude, userLocation.latitude],
+        center: [userLocation.lng, userLocation.lat],
         zoom: 15,
         pitch: 0,
         bearing: 0,
@@ -1064,13 +1279,9 @@ export function AtlasMode({
   const addBusinessMarkers = useCallback(async (businesses: Business[]) => {
     console.log('[Atlas] 📍 addBusinessMarkers called with', businesses.length, 'businesses')
     
-    if (!map.current) {
-      console.error('[Atlas] ❌ No map instance!')
-      return
-    }
-    
-    if (!mapLoaded) {
-      console.error('[Atlas] ❌ Map not loaded!')
+    if (!map.current || !mapReadyRef.current) {
+      console.log('[Atlas] ⏳ Map not ready, queuing business markers')
+      pendingBusinessMarkersRef.current = businesses
       return
     }
     
@@ -1530,52 +1741,59 @@ export function AtlasMode({
         }
       }
       
-      // ✅ CRITICAL: Wait for map to be truly loaded before moving
-      if (!map.current.loaded()) {
-        console.warn('[Atlas] ⏳ Map not fully loaded yet, waiting for idle...')
+      // Wait for map to be truly ready before animating
+      if (!mapReadyRef.current) {
+        console.warn('[Atlas] ⏳ Map not ready, waiting for idle...')
         map.current.once('idle', () => {
-          console.log('[Atlas] ✅ Map idle, retrying jumpTo...')
-          if (map.current && map.current.loaded()) {
-            map.current.jumpTo({
-              center: [first.longitude, first.latitude],
-              zoom: 14
-            })
-            // Force render loop
+          console.log('[Atlas] ✅ Map idle, executing cinematic flyTo')
+          if (map.current) {
             map.current.resize()
+            map.current.flyTo({
+              center: [first.longitude, first.latitude],
+              zoom: 14,
+              duration: 2000,
+              curve: 1.42,
+              essential: true
+            })
             map.current.triggerRepaint()
-            map.current.fire('move')
-            map.current.fire('moveend')
-            console.log('[Atlas] ✅ jumpTo executed after idle with forced render')
-            
-            // ✅ START TOUR (idle branch)
+            console.log('[Atlas] ✅ flyTo executed after idle')
             startTourIfMultiple()
           }
         })
+        // Safety fallback: if idle doesn't fire in 3s, force jumpTo
+        const safetyTimeout = setTimeout(() => {
+          if (map.current && !mapReadyRef.current) {
+            console.warn('[Atlas] ⚠️ Idle timeout, falling back to jumpTo')
+            map.current.jumpTo({ center: [first.longitude, first.latitude], zoom: 14 })
+            map.current.resize()
+            map.current.triggerRepaint()
+            startTourIfMultiple()
+          }
+        }, 3000)
+        // Clear safety timeout if idle fires first
+        map.current.once('idle', () => clearTimeout(safetyTimeout))
         return
       }
       
       try {
-        // ✅ NUCLEAR OPTION: Use jumpTo (instant) instead of flyTo (animated)
-        // This bypasses any animation issues
-        map.current.jumpTo({
-          center: [first.longitude, first.latitude],
-          zoom: 14
-        })
-        console.log('[Atlas] ✅ jumpTo command sent (instant teleport)')
-        
-        // ✅ CRITICAL FIX: Force render loop to update visual
-        // jumpTo updates internal state but doesn't always trigger repaint
+        showStatus(`Flying to ${first.business_name}...`)
         map.current.resize()
+        map.current.flyTo({
+          center: [first.longitude, first.latitude],
+          zoom: 14,
+          duration: 2000,
+          curve: 1.42,
+          essential: true
+        })
         map.current.triggerRepaint()
-        // Fire move events to wake up render loop
-        map.current.fire('move')
-        map.current.fire('moveend')
-        console.log('[Atlas] ✅ Forced render loop and events')
+        console.log('[Atlas] ✅ Cinematic flyTo sent to first business')
       } catch (error) {
-        console.error('[Atlas] ❌ jumpTo FAILED:', error)
+        console.error('[Atlas] ❌ flyTo FAILED, falling back to jumpTo:', error)
+        try {
+          map.current!.jumpTo({ center: [first.longitude, first.latitude], zoom: 14 })
+        } catch (e) { /* last resort failed */ }
       }
       
-      // ✅ START TOUR (main branch)
       startTourIfMultiple()
     }
   }, [mapLoaded, incomingBusinesses, addBusinessMarkers, updateActiveBusinessMarker, startTour])
@@ -1589,7 +1807,6 @@ export function AtlasMode({
     
     if (!userLocation || !map.current) {
       console.warn('[Atlas] ❌ Cannot recenter: no location or map')
-      alert(`Cannot recenter:\n- Has location: ${!!userLocation}\n- Has map: ${!!map.current}\n- Status: ${locationStatus}`)
       return
     }
     
@@ -1609,9 +1826,9 @@ export function AtlasMode({
       console.log('  Container match:', map.current.getContainer() === mapContainer.current)
     }
     
-    // Guard: ensure map is fully ready
-    if (!mapLoaded || !map.current.isStyleLoaded()) {
-      console.warn('[Atlas] Cannot recenter: map not fully loaded')
+    // Guard: ensure map is fully ready (use ref for determinism)
+    if (!mapReadyRef.current || !map.current.isStyleLoaded()) {
+      console.warn('[Atlas] Cannot recenter: map not ready')
       return
     }
     
@@ -1643,13 +1860,15 @@ export function AtlasMode({
   // Search handler (calls Atlas query endpoint for HUD bubble response)
   const handleSearch = useCallback(async (query: string) => {
     console.log('[Atlas Search] 🔍 Starting search for:', query)
+    setEmptyStateDismissed(false)
     
     const lower = query.toLowerCase()
     
-    // Check for filter commands
+    // Check for filter commands (filters preserve tour index when possible)
     if (lower.includes('open now') || lower.includes('currently open')) {
       console.log('[Atlas] 🕐 Applying "open now" filter')
       setActiveFilters(prev => ({ ...prev, openNow: true }))
+      showStatus('Filtering: open now')
       setHudSummary('Showing only open businesses')
       setHudVisible(true)
       return
@@ -1682,6 +1901,7 @@ export function AtlasMode({
     // New search - clear filters and run query
     setActiveFilters({ openNow: false, maxDistance: null })
     setSearching(true)
+    showStatus('Finding places...')
     setSelectedBusiness(null)
     setHudVisible(false) // Hide previous bubble
     
@@ -1706,11 +1926,13 @@ export function AtlasMode({
       const atlasResponse: AtlasResponse = await response.json()
       console.log('[Atlas Search] 📦 /api/atlas/query response:', atlasResponse)
       
+      const dismissMs = atlasResponse.ui?.autoDismissMs ?? 4200
+      
       // Store query and business IDs for state handoff
       setLastAtlasQuery(query)
-      setLastAtlasBusinessIds(atlasResponse.businessIds)
+      setLastAtlasBusinessIds(atlasResponse.businessIds ?? [])
       
-      if (atlasResponse.businessIds.length > 0) {
+      if (atlasResponse.businessIds?.length > 0) {
         console.log('[Atlas Search] ✅ Found', atlasResponse.businessIds.length, 'business IDs')
         
         // Fetch full business data for map markers
@@ -1730,10 +1952,9 @@ export function AtlasMode({
           console.log('[Atlas Search] 📊 Filtered business names:', filteredResults.map((b: Business) => b.business_name))
           
           setBusinesses(filteredResults)
-          setBaseBusinesses(filteredResults) // Store for filtering
+          setBaseBusinesses(filteredResults)
           await addBusinessMarkers(filteredResults)
           
-          // Select first result as active
           if (filteredResults.length > 0) {
             setSelectedBusinessIndex(0)
             const firstBusiness = filteredResults[0]
@@ -1741,16 +1962,14 @@ export function AtlasMode({
             await updateActiveBusinessMarker(firstBusiness)
             flyToBusiness(firstBusiness)
             
-            // 🎬 AUTO-START TOUR: If multiple results, start tour after HUD dismisses
             if (filteredResults.length > 1) {
-              console.log('[Atlas Search] 🎬 Will start tour in', atlasResponse.ui.autoDismissMs + 500, 'ms')
+              console.log('[Atlas Search] 🎬 Will start tour in', dismissMs + 500, 'ms')
               setTimeout(() => {
-                startTour(filteredResults) // Pass businesses explicitly
-              }, atlasResponse.ui.autoDismissMs + 500) // Start tour 500ms after HUD dismisses
+                startTour(filteredResults)
+              }, dismissMs + 500)
             }
           }
           
-          // Find primary business name (if specified)
           let primaryBusinessName: string | null = null
           if (atlasResponse.primaryBusinessId) {
             const primaryBusiness = filteredResults.find((b: Business) => 
@@ -1759,21 +1978,17 @@ export function AtlasMode({
             primaryBusinessName = primaryBusiness?.business_name || null
           }
           
-          // Show HUD bubble with AI response
-          setHudSummary(atlasResponse.summary)
+          setHudSummary(atlasResponse.summary || 'Found places nearby.')
           setHudPrimaryBusinessName(primaryBusinessName)
           
-          // Delay bubble appearance (120ms after map begins moving)
           setTimeout(() => {
             setHudVisible(true)
             
-            // Set auto-dismiss timer
             hudDismissTimerRef.current = setTimeout(() => {
               setHudVisible(false)
-            }, atlasResponse.ui.autoDismissMs)
+            }, dismissMs)
           }, 120)
           
-          // Track search performed
           trackEvent({
             eventType: 'atlas_search_performed',
             query,
@@ -1785,8 +2000,7 @@ export function AtlasMode({
         }
       } else {
         console.log('[Atlas Search] ⚠️ No business IDs returned from query')
-        // No results - show HUD bubble with message
-        setHudSummary(atlasResponse.summary)
+        setHudSummary(atlasResponse.summary || 'No results found.')
         setHudPrimaryBusinessName(null)
         
         setTimeout(() => {
@@ -1794,7 +2008,7 @@ export function AtlasMode({
           
           hudDismissTimerRef.current = setTimeout(() => {
             setHudVisible(false)
-          }, atlasResponse.ui.autoDismissMs)
+          }, dismissMs)
         }, 120)
       }
       
@@ -1814,6 +2028,10 @@ export function AtlasMode({
       setSearching(false)
     }
   }, [userLocation, addBusinessMarkers, flyToBusiness, config.maxResults, performanceMode, trackEvent])
+  
+  // Bridge refs to callbacks (avoids declaration-order issues)
+  vibeSearchRef.current = handleSearch
+  addBusinessMarkersRef.current = addBusinessMarkers
   
   // Auto-run initial query when Atlas opens with chat context (run once only)
   // ✅ CRITICAL: SKIP this if businesses were passed from chat - we already have the data!
@@ -1853,6 +2071,43 @@ export function AtlasMode({
       }
     })
   }, [mapLoaded])
+  
+  // Pause/resume when Atlas becomes inactive/active
+  useEffect(() => {
+    if (isActive) {
+      // Resize map when returning (visibility was hidden, canvas may need recalc)
+      if (map.current) {
+        requestAnimationFrame(() => {
+          map.current?.resize()
+          map.current?.triggerRepaint()
+          // Re-add user marker after visibility toggle (marker DOM may need refresh)
+          if (userLocation && mapReadyRef.current) {
+            addUserLocationMarker(userLocation)
+          }
+        })
+      }
+    } else {
+      if (tourTimerRef.current) {
+        clearTimeout(tourTimerRef.current)
+        tourTimerRef.current = null
+      }
+      if (hudDismissTimerRef.current) {
+        clearTimeout(hudDismissTimerRef.current)
+        hudDismissTimerRef.current = null
+      }
+      if (statusTimerRef.current) {
+        clearTimeout(statusTimerRef.current)
+        statusTimerRef.current = null
+      }
+      if (routeAnimationRef.current !== null) {
+        cancelAnimationFrame(routeAnimationRef.current)
+        routeAnimationRef.current = null
+      }
+      setHudVisible(false)
+      setStatusMessage(null)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, userLocation, addUserLocationMarker])
   
   // Handle close with analytics
   const handleClose = useCallback(() => {
@@ -1901,21 +2156,26 @@ export function AtlasMode({
         />
       </Head>
       
-      <div className="fixed inset-0 z-50 bg-black">
+      <div className="atlas-container fixed inset-0 z-50 bg-black">
         {/* Map Container - Explicit height and width for Mapbox */}
         <div ref={mapContainer} className="absolute inset-0 w-full h-full" style={{ minHeight: '100vh' }} />
         
-        {/* VIGNETTE OVERLAY - Cinematic lighting effect */}
+        {/* VIGNETTE OVERLAY - Subtle edge darkening */}
         <div 
           className="absolute inset-0 pointer-events-none z-[1]"
           style={{
-            background: 'radial-gradient(ellipse at center, transparent 20%, rgba(0,0,0,0.4) 80%, rgba(0,0,0,0.8) 100%)',
-            mixBlendMode: 'multiply'
+            background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.15) 75%, rgba(0,0,0,0.35) 100%)',
           }}
         />
         
-        {/* First-Visit Intro Overlay */}
-        <AtlasIntroOverlay />
+        {/* Vibe Setup (replaces intro overlay for cold starts) */}
+        {showVibeSetup && (
+          <AtlasVibeSetup
+            city={city}
+            onComplete={handleVibeComplete}
+            onSkip={handleVibeSkip}
+          />
+        )}
       
       {/* ✨ MOBILE TOP BAR - Back + Mute buttons */}
       {isMobile && (
@@ -1949,24 +2209,24 @@ export function AtlasMode({
         </div>
       )}
       
-      {/* Status Strip with Filter Pills */}
+      {/* Status Strip with Filter Pills -- stacked below top bar on mobile */}
       {(activeFilters.openNow || activeFilters.maxDistance !== null || visibleBusinesses.length !== baseBusinesses.length) && (
-        <div className="absolute top-20 left-0 right-0 z-20 px-4 py-2 bg-black/40 backdrop-blur-sm border-b border-white/10">
-          <div className="flex items-center justify-between text-sm text-white/80">
+        <div className={`absolute ${isMobile ? 'top-14' : 'top-20'} left-0 right-0 z-[15] px-4 py-2 bg-black/40 backdrop-blur-sm border-b border-white/10`}>
+          <div className={`flex items-center justify-between ${isMobile ? 'text-xs' : 'text-sm'} text-white/80`}>
             <span>
-              Showing {visibleBusinesses.length} 
-              {baseBusinesses.length > 0 && visibleBusinesses.length !== baseBusinesses.length ? ` of ${baseBusinesses.length}` : ''} places
-              {!activeFilters.openNow && !activeFilters.maxDistance && ' • sorted by relevance'}
+              {visibleBusinesses.length} 
+              {baseBusinesses.length > 0 && visibleBusinesses.length !== baseBusinesses.length ? ` / ${baseBusinesses.length}` : ''} places
+              {!activeFilters.openNow && !activeFilters.maxDistance && !isMobile && ' • sorted by relevance'}
             </span>
             
             {(activeFilters.openNow || activeFilters.maxDistance) && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {activeFilters.openNow && (
                   <button
                     onClick={() => setActiveFilters(prev => ({ ...prev, openNow: false }))}
                     className="px-2 py-1 rounded-full bg-[#00d083]/20 border border-[#00d083]/40 text-[#00d083] text-xs flex items-center gap-1 hover:bg-[#00d083]/30 transition-colors"
                   >
-                    🕐 Open now <span className="ml-1">×</span>
+                    Open now <span className="ml-1">×</span>
                   </button>
                 )}
                 {activeFilters.maxDistance && (
@@ -1974,7 +2234,7 @@ export function AtlasMode({
                     onClick={() => setActiveFilters(prev => ({ ...prev, maxDistance: null }))}
                     className="px-2 py-1 rounded-full bg-[#00d083]/20 border border-[#00d083]/40 text-[#00d083] text-xs flex items-center gap-1 hover:bg-[#00d083]/30 transition-colors"
                   >
-                    📍 Within 1km <span className="ml-1">×</span>
+                    Within 1km <span className="ml-1">×</span>
                   </button>
                 )}
               </div>
@@ -2099,6 +2359,13 @@ export function AtlasMode({
           onNextBusiness={goToNextBusiness}
           onPreviousBusiness={goToPreviousBusiness}
           onStopTour={stopTour}
+          factChips={selectedBusinessFactChips}
+          onIntentChipTap={(chip) => handleSearch(chip)}
+          isSaved={selectedBusiness ? savedBusinessIds.has(selectedBusiness.id) : false}
+          onToggleSave={selectedBusiness ? () => handleToggleSave(selectedBusiness.id) : undefined}
+          onTellMeMore={selectedBusiness && onTellMeMore ? () => {
+            onTellMeMore(`Tell me more about ${selectedBusiness.business_name}`, selectedBusiness.id)
+          } : undefined}
           onBusinessSelected={(businessId) => {
             trackEvent({
               eventType: 'atlas_business_selected',
@@ -2116,8 +2383,8 @@ export function AtlasMode({
         />
       )}
       
-      {/* Chat Context Strip - Moved below search bar to avoid overlap */}
-      {mapLoaded && (lastUserQuery || lastAIResponse) && (
+      {/* Chat Context Strip - Desktop only (mobile has bottom input) */}
+      {!isMobile && mapLoaded && (lastUserQuery || lastAIResponse) && (
         <ChatContextStrip
           userQuery={lastUserQuery}
           aiResponse={lastAIResponse}
@@ -2134,26 +2401,127 @@ export function AtlasMode({
         </div>
       )}
       
-      {/* ATLAS STATUS PILL - Bottom left */}
-      {mapLoaded && (
-        <div className="absolute bottom-6 left-6 z-10 pointer-events-none">
-          <div className="px-4 py-2.5 rounded-full bg-black/60 backdrop-blur-md border border-[#00d083]/30 shadow-lg">
-            <div className="flex items-center gap-2.5">
-              <div className="w-2 h-2 rounded-full bg-[#00d083] animate-pulse" />
-              <p className="text-sm font-medium text-white/90">Atlas Active</p>
-              <span className="text-xs text-white/50">·</span>
-              <p className="text-xs text-white/60">{city}</p>
+      {/* Empty State -- only show briefly, not when HUD is visible */}
+      {mapLoaded && !searching && baseBusinesses.length === 0 && !showVibeSetup && !hudVisible && !emptyStateDismissed && (
+        <div className={`absolute ${isMobile ? 'bottom-24' : 'bottom-28'} left-1/2 -translate-x-1/2 z-20 w-full max-w-sm px-4`}>
+          <div className="relative bg-black/70 backdrop-blur-lg rounded-2xl px-5 py-4 border border-white/10">
+            <button
+              onClick={() => setEmptyStateDismissed(true)}
+              className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="w-3.5 h-3.5 text-white/50" />
+            </button>
+            <p className="text-white/70 text-sm text-center mb-3 pr-4">
+              {!userLocation
+                ? 'Try searching for something specific'
+                : 'No places matched — try a different search'
+              }
+            </p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => handleSearch('restaurants')}
+                className="px-4 py-2 bg-[#00d083]/20 border border-[#00d083]/30 rounded-full text-[#00d083] text-sm hover:bg-[#00d083]/30 transition-colors"
+              >
+                Restaurants
+              </button>
+              <button
+                onClick={() => handleSearch('bars and pubs')}
+                className="px-4 py-2 bg-[#00d083]/20 border border-[#00d083]/30 rounded-full text-[#00d083] text-sm hover:bg-[#00d083]/30 transition-colors"
+              >
+                Bars
+              </button>
+              <button
+                onClick={() => handleSearch('cafes')}
+                className="px-4 py-2 bg-[#00d083]/20 border border-[#00d083]/30 rounded-full text-[#00d083] text-sm hover:bg-[#00d083]/30 transition-colors"
+              >
+                Cafes
+              </button>
             </div>
           </div>
         </div>
       )}
       
-      {/* MANUAL LOCATION BUTTON - Show when location is idle/denied (Safari fix) */}
+      {/* "Search this area" pill -- below context strip / search bar area */}
+      {showSearchThisArea && mapLoaded && (
+        <div className={`absolute ${isMobile ? 'top-28' : 'top-44'} left-1/2 -translate-x-1/2 z-30`}>
+          <button
+            onClick={handleSearchThisArea}
+            className="px-5 py-2.5 rounded-full bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold text-sm shadow-xl transition-colors"
+          >
+            Search this area
+          </button>
+        </div>
+      )}
+      
+      {/* Status Breadcrumb Pill (transient) -- centered, above bottom UI */}
+      {statusMessage && (
+        <div className={`absolute ${isMobile ? 'top-20' : 'bottom-48'} left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-fade-in`}>
+          <div className="px-5 py-2.5 rounded-full bg-black/80 backdrop-blur-lg border border-[#00d083]/30 shadow-xl">
+            <p className="text-sm font-medium text-white/90 whitespace-nowrap">{statusMessage}</p>
+          </div>
+        </div>
+      )}
+      
+      {/* ATLAS STATUS PILL - Bottom left, raised above mobile input bar */}
+      {mapLoaded && (
+        <div className={`absolute ${isMobile ? 'bottom-20' : 'bottom-6'} left-4 z-10 pointer-events-none`}>
+          <div className="px-3 py-2 rounded-full bg-black/60 backdrop-blur-md border border-[#00d083]/30 shadow-lg">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#00d083] animate-pulse" />
+              <p className="text-xs font-medium text-white/80">Atlas</p>
+              <span className="text-xs text-white/40">·</span>
+              <p className="text-xs text-white/50">{city}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Pin Legend (?) button -- positioned below mobile top bar to avoid overlap */}
+      {mapLoaded && (
+        <div className={`absolute ${isMobile ? 'top-16 right-4' : 'top-6 right-6'} z-20`}>
+          <button
+            onClick={() => {
+              const next = !showLegend
+              setShowLegend(next)
+              if (next) trackEvent({ eventType: 'atlas_legend_opened' })
+            }}
+            className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-white/60 hover:text-white text-sm font-bold transition-colors"
+          >
+            ?
+          </button>
+          
+          {showLegend && (
+            <div className="absolute top-12 right-0 w-64 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl z-50">
+              <h4 className="text-sm font-semibold text-white mb-3">Map pins</h4>
+              <div className="space-y-2.5 text-xs text-white/70">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-[#00f0ff]" />
+                  <span>Highlighted = Qwikker Pick</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-white/40" />
+                  <span>Grey = more places nearby</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-[#00d083]" />
+                  <span>Green = your location</span>
+                </div>
+              </div>
+              <p className="text-xs text-white/40 mt-3">
+                Some places haven&apos;t been claimed yet — info may be limited.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* MANUAL LOCATION BUTTON - raised on mobile to clear bottom input */}
       {mapLoaded && locationStatus && (locationStatus === 'idle' || locationStatus === 'denied' || locationStatus === 'unavailable') && onRequestLocation && (
-        <div className="absolute bottom-24 right-6 z-10">
+        <div className={`absolute ${isMobile ? 'bottom-24 left-4 right-4' : 'bottom-24 right-6'} z-10`}>
           <button
             onClick={onRequestLocation}
-            className="px-4 py-3 rounded-full bg-[#00d083] hover:bg-[#00ff9d] transition-colors shadow-lg border border-white/20 flex items-center gap-2"
+            className={`px-4 py-3 rounded-full bg-[#00d083] hover:bg-[#00ff9d] transition-colors shadow-lg border border-white/20 flex items-center gap-2 ${isMobile ? 'w-full justify-center' : ''}`}
           >
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -2164,9 +2532,9 @@ export function AtlasMode({
         </div>
       )}
       
-      {/* RECENTER TO USER BUTTON - Show when user location is available */}
+      {/* RECENTER TO USER BUTTON - Positioned to avoid overlap with tour controls on mobile */}
       {mapLoaded && userLocation && (
-        <div className="absolute bottom-32 right-6 z-[9999]">
+        <div className={`absolute ${isMobile && tourActive ? 'bottom-64' : 'bottom-32'} ${isMobile ? 'right-4' : 'right-6'} z-20`}>
           <button
             onClick={handleRecenterToUser}
             className="w-12 h-12 rounded-full bg-[#00d083] hover:bg-[#00ff9d] transition-colors shadow-lg border-2 border-white flex items-center justify-center group pointer-events-auto"
@@ -2185,16 +2553,10 @@ export function AtlasMode({
         </div>
       )}
       
-      {/* DEBUG: Show if userLocation exists */}
-      {mapLoaded && (
-        <div className="absolute top-20 left-6 z-10 bg-black/80 text-white px-3 py-2 rounded text-xs">
-          Location: {userLocation ? `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}` : 'NONE'}
-        </div>
-      )}
       
-      {/* Location Fallback Pill - Show when viewing city center */}
+      {/* Location Fallback Pill - Show when viewing city center, raised on mobile */}
       {mapLoaded && locationStatus && (locationStatus === 'denied' || locationStatus === 'unavailable') && !userLocation && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+        <div className={`absolute ${isMobile ? 'bottom-24' : 'bottom-6'} left-1/2 -translate-x-1/2 z-10 pointer-events-none`}>
           <div className="px-4 py-2.5 rounded-full bg-slate-800/90 backdrop-blur-md border border-slate-700/50 shadow-lg">
             <p className="text-xs text-slate-300 whitespace-nowrap flex items-center gap-2">
               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2272,20 +2634,28 @@ export function AtlasMode({
                 )}
               </div>
               
-              {selectedBusiness.rating && (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <span className="text-yellow-400">★</span>
-                    <span className="text-white font-semibold">{selectedBusiness.rating.toFixed(1)}</span>
-                  </div>
-                  {selectedBusiness.review_count && (
-                    <span className="text-white/60 text-sm">({selectedBusiness.review_count} reviews)</span>
-                  )}
+              {/* Fact Chips (mobile) */}
+              {selectedBusinessFactChips.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedBusinessFactChips.map((chip, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg text-xs text-white/70"
+                    >
+                      <span>{chip.icon}</span>
+                      <span>{chip.label}</span>
+                    </span>
+                  ))}
                 </div>
               )}
               
+              {/* Trust cue */}
+              {selectedBusiness.isUnclaimed && (
+                <p className="text-xs text-white/30">Imported from Google</p>
+              )}
+              
               {selectedBusiness.business_address && (
-                <p className="text-white/80 text-sm">{selectedBusiness.business_address}</p>
+                <p className="text-white/60 text-sm">{selectedBusiness.business_address}</p>
               )}
               
               {/* Reason Tag */}
@@ -2297,11 +2667,30 @@ export function AtlasMode({
               
               {/* Actions */}
               <div className="flex gap-3 pt-4">
+                {onTellMeMore ? (
+                  <button
+                    onClick={() => onTellMeMore(`Tell me more about ${selectedBusiness.business_name}`, selectedBusiness.id)}
+                    className="flex-1 px-4 py-3 rounded-xl bg-[#00d083] hover:bg-[#00ff9d] transition-colors text-white font-semibold"
+                  >
+                    Tell me more
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleHudMoreDetails}
+                    className="flex-1 px-4 py-3 rounded-xl bg-[#00d083] hover:bg-[#00ff9d] transition-colors text-white font-semibold"
+                  >
+                    More Details
+                  </button>
+                )}
                 <button
-                  onClick={handleHudMoreDetails}
-                  className="flex-1 px-4 py-3 rounded-xl bg-[#00d083] hover:bg-[#00ff9d] transition-colors text-white font-semibold"
+                  onClick={() => handleToggleSave(selectedBusiness.id)}
+                  className={`p-3 rounded-xl transition-colors ${
+                    savedBusinessIds.has(selectedBusiness.id)
+                      ? 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-400'
+                      : 'bg-white/10 hover:bg-white/20 text-white'
+                  }`}
                 >
-                  More Details
+                  ★
                 </button>
                 <button
                   onClick={() => {

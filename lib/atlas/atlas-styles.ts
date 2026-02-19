@@ -322,5 +322,29 @@ export const getRouteLayers = () => {
     }
   }
 
-  return [glow, mainLine]
+  // Animated dash overlay (marching ants effect)
+  const dashOverlay: LineLayerSpecification = {
+    id: 'route-dash',
+    type: 'line',
+    source: 'route',
+    paint: {
+      'line-color': QWIKKER_GREEN_BRIGHT,
+      'line-width': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        10, 2,
+        14, 3,
+        18, 4
+      ],
+      'line-dasharray': [2, 4],
+      'line-opacity': 0.6
+    },
+    layout: {
+      'line-cap': 'round',
+      'line-join': 'round'
+    }
+  }
+
+  return [glow, mainLine, dashOverlay]
 }

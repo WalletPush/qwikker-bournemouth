@@ -17,6 +17,16 @@ export type AtlasEventType =
   | 'atlas_directions_clicked'
   | 'atlas_returned_to_chat'
   | 'atlas_closed'
+  | 'atlas_vibe_setup_completed'
+  | 'atlas_vibe_setup_skipped'
+  | 'atlas_search_refined'
+  | 'atlas_flyto_failed'
+  | 'atlas_hydration_timing'
+  | 'atlas_area_search'
+  | 'atlas_save_business'
+  | 'atlas_chip_tap'
+  | 'atlas_tell_me_more'
+  | 'atlas_legend_opened'
 
 interface TrackEventParams {
   eventType: AtlasEventType
