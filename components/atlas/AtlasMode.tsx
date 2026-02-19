@@ -15,7 +15,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import type { Map as MapboxMap, LngLatLike, MapboxGeoJSONFeature } from 'mapbox-gl'
 import Head from 'next/head'
-import { X } from 'lucide-react'
 import { AtlasOverlay } from './AtlasOverlay'
 import { AtlasHudBubble } from './AtlasHudBubble'
 import { ChatContextStrip } from './ChatContextStrip'
@@ -2392,7 +2391,7 @@ export function AtlasMode({
               className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
               aria-label="Dismiss"
             >
-              <X className="w-3.5 h-3.5 text-white/50" />
+              <svg className="w-3.5 h-3.5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <p className="text-white/70 text-sm text-center mb-3 pr-4">
               {!userLocation
