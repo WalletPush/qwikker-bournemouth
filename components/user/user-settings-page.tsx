@@ -151,8 +151,8 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
       </Card>
 
       {/* Share Section */}
-      <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/30 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-transparent to-cyan-500/10 animate-pulse"></div>
+      <Card className="relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/30 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-transparent to-cyan-500/10 animate-pulse pointer-events-none"></div>
         <CardHeader>
           <CardTitle className="text-slate-100 text-xl flex items-center gap-2">
             <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
