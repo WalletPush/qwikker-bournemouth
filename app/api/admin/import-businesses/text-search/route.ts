@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.types,places.primaryType,places.location',
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.types,places.primaryType,places.location,places.nationalPhoneNumber,places.websiteUri',
       },
       body: JSON.stringify(requestBody),
     })
@@ -149,6 +149,8 @@ export async function POST(request: NextRequest) {
         photoName: null,
         lat: placeLocation?.latitude || null,
         lng: placeLocation?.longitude || null,
+        phone: (place.nationalPhoneNumber as string) || null,
+        website: (place.websiteUri as string) || null,
       })
     }
 

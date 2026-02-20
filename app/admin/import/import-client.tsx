@@ -58,6 +58,8 @@ interface BusinessResult {
   distance: number
   lat?: number | null
   lng?: number | null
+  phone?: string | null
+  website?: string | null
   status: string
   hasPhoto: boolean
   photoName: string | null

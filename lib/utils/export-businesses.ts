@@ -17,6 +17,8 @@ export interface ExportableBusiness {
   distance: number
   lat?: number | null
   lng?: number | null
+  phone?: string | null
+  website?: string | null
   hasPhoto?: boolean
 }
 
@@ -53,6 +55,8 @@ const CSV_HEADERS = [
   'Match Reason',
   'Distance (km)',
   'Import Date',
+  'Phone',
+  'Website',
 ]
 
 export function exportAsCSV(
@@ -78,6 +82,8 @@ export function exportAsCSV(
     csvField(b.matchReason ?? ''),
     csvField((b.distance / 1000).toFixed(2)),
     csvField(dateOnly),
+    csvField(b.phone ?? ''),
+    csvField(b.website ?? ''),
   ].join(','))
 
   return [CSV_HEADERS.join(','), ...rows].join('\r\n')
@@ -102,6 +108,8 @@ export function exportAsJSON(
     lng: b.lng ?? null,
     matchReason: b.matchReason ?? null,
     distanceKm: +(b.distance / 1000).toFixed(2),
+    phone: b.phone ?? null,
+    website: b.website ?? null,
     importDate,
   }))
 

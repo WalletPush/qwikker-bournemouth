@@ -43,6 +43,8 @@ interface PlaceResult {
   primaryType?: string
   businessStatus?: string
   formattedAddress?: string
+  nationalPhoneNumber?: string
+  websiteUri?: string
   photos?: Array<{ name: string; widthPx: number; heightPx: number }>
 }
 
@@ -267,7 +269,7 @@ export async function POST(request: NextRequest) {
           headers: {
             'Content-Type': 'application/json',
             'X-Goog-Api-Key': apiKey,
-            'X-Goog-FieldMask': 'places.id,places.displayName,places.rating,places.userRatingCount,places.location,places.types,places.primaryType,places.businessStatus,places.formattedAddress,places.photos',
+            'X-Goog-FieldMask': 'places.id,places.displayName,places.rating,places.userRatingCount,places.location,places.types,places.primaryType,places.businessStatus,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.photos',
           },
           body: JSON.stringify(searchBody),
         })
@@ -370,6 +372,8 @@ export async function POST(request: NextRequest) {
         distance: Math.round(distance),
         lat: place.location?.latitude ?? null,
         lng: place.location?.longitude ?? null,
+        phone: place.nationalPhoneNumber || null,
+        website: place.websiteUri || null,
         status: place.businessStatus || 'OPERATIONAL',
         hasPhoto: !!place.photos?.[0]?.name,
         photoName: place.photos?.[0]?.name || null,
