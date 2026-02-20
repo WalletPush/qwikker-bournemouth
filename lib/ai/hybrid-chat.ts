@@ -1120,7 +1120,7 @@ export async function generateHybridAIResponse(
         ...b, 
         tierSource: 'tier1', 
         tierPriority: 1, 
-        tierLabel: b.effective_tier || 'paid',
+        tierLabel: ({ spotlight: 'qwikker_picks', featured: 'featured', starter: 'recommended' } as Record<string, string>)[b.effective_tier] || 'recommended',
         relevanceScore: businessRelevanceScores.get(b.id) || 0 
       })),
       ...tier2.map(b => ({ 
