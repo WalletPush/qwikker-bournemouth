@@ -116,6 +116,12 @@ export function AtlasMode({
   isActive = true,
   onTellMeMore
 }: AtlasModeProps) {
+  // #region agent log - server-visible debug helper
+  const dlog = useCallback((tag: string, data: Record<string, unknown>) => {
+    console.log(`[Atlas] ${tag}`, data)
+    fetch('/api/debug/atlas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tag, data }) }).catch(() => {})
+  }, [])
+  // #endregion
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<MapboxMap | null>(null)
   const mapReadyRef = useRef(false)
@@ -1256,17 +1262,16 @@ export function AtlasMode({
   
   // Add markers for businesses (NEON CYAN PINS) - but keep user marker on top
   const addBusinessMarkers = useCallback(async (businesses: Business[]) => {
-    console.log('[Atlas] 📍 addBusinessMarkers called with', businesses.length, 'businesses', 'mapReady:', mapReadyRef.current, 'mapExists:', !!map.current)
+    dlog('📍 addBusinessMarkers', { count: businesses.length, mapReady: mapReadyRef.current, mapExists: !!map.current, mapLoaded: map.current?.loaded?.() ?? false })
     
     if (!map.current || !mapReadyRef.current) {
-      console.log('[Atlas] ⏳ Map not ready, queuing business markers')
+      dlog('⏳ mapNotReady', { queued: businesses.length })
       pendingBusinessMarkersRef.current = businesses
       return
     }
     
-    // ✅ CRITICAL: Map MUST be fully loaded before adding layers
     if (!map.current.loaded()) {
-      console.warn('[Atlas] ⏳ Map not fully loaded, waiting for idle event...')
+      dlog('⏳ mapNotLoaded', { waitingForIdle: true })
       map.current.once('idle', () => {
         console.log('[Atlas] ✅ Map idle, retrying addBusinessMarkers...')
         addBusinessMarkers(businesses)
@@ -1291,7 +1296,7 @@ export function AtlasMode({
       
       // 🎨 CREATE PULSING DOT IMAGES (animated pins)
       // #region agent log
-      console.log('[Atlas] 🎨 Image check: cyan=', map.current.hasImage('pulsing-dot-cyan'), 'grey=', map.current.hasImage('pulsing-dot-grey'))
+      dlog('🎨 imageCheck', { hasCyan: map.current.hasImage('pulsing-dot-cyan'), hasGrey: map.current.hasImage('pulsing-dot-grey') })
       // #endregion
       // Cyan pulsing dot for paid businesses
       if (!map.current.hasImage('pulsing-dot-cyan')) {
@@ -1436,7 +1441,7 @@ export function AtlasMode({
         // Source exists → update data, but verify layers still exist
         const pinsLayerExists = !!map.current.getLayer('business-pins')
         const clustersLayerExists = !!map.current.getLayer('business-clusters')
-        console.log('[Atlas] 🔄 Source exists. Layers check: pins=', pinsLayerExists, 'clusters=', clustersLayerExists)
+        dlog('🔄 sourceExists', { pinsLayerExists, clustersLayerExists, featureCount: features.length })
         
         existingSource.setData({
           type: 'FeatureCollection',
@@ -1631,7 +1636,7 @@ export function AtlasMode({
         businessHandlersAttachedRef.current = true
       }
       
-      console.log('[Atlas] ✅ Neon business pins added with clustering:', businesses.length, '(user marker stays on top)')
+      dlog('✅ pinsAdded', { count: businesses.length, layersNow: map.current.getStyle().layers.map((l: any) => l.id).filter((id: string) => id.includes('business') || id.includes('cluster')) })
       console.log('[Atlas] 📊 Pin details:', businesses.map(b => ({ 
         name: b.business_name, 
         lat: b.latitude, 
@@ -1645,9 +1650,9 @@ export function AtlasMode({
       console.log('[Atlas] ✅ Forced map repaint')
       
     } catch (error) {
-      console.error('[Atlas] ❌ CRITICAL: Failed to add markers:', error, 'Stack:', error instanceof Error ? error.stack : 'N/A')
+      dlog('❌ CRITICAL_FAIL', { error: String(error), stack: error instanceof Error ? error.stack : 'N/A' })
     }
-  }, [mapLoaded, updateActiveBusinessMarker, flyToBusiness, tourActive, stopTour, generateBusinessHudMessage, playSound])
+  }, [mapLoaded, dlog, updateActiveBusinessMarker, flyToBusiness, tourActive, stopTour, generateBusinessHudMessage, playSound])
   
   // Update map when visibleBusinesses changes (filters applied)
   useEffect(() => {
