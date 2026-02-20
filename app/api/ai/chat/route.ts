@@ -832,6 +832,11 @@ export async function POST(request: NextRequest) {
       finalResponse = finalResponse.replace(/\n{3,}/g, '\n\n').trim()
     }
     
+    // 🗺️ ATLAS TEXT: Ensure Atlas is mentioned when CTA will show
+    if (showAtlasCta && finalResponse && !/atlas/i.test(finalResponse)) {
+      finalResponse = finalResponse.trimEnd() + '\n\nTap **Explore on Atlas** below to take a guided tour of these spots on the map!'
+    }
+
     // 🎯 FINAL FORMATTING: Force business paragraphs (MUST BE LAST STEP)
     // This runs AFTER all text mutations (Atlas stripping, etc.)
     finalResponse = forceNewParagraphPerBusinessLink(finalResponse)

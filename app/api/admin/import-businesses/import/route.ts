@@ -440,6 +440,9 @@ export async function POST(request: NextRequest) {
               continue
             }
 
+            // Extract primaryType early (needed for category remap below)
+            const googlePrimaryType = place.primaryType || null
+
             // Deterministic category remap: google_primary_type is the strongest signal.
             // Prevents bars landing in restaurant, pubs landing in cafe, etc.
             const BAR_TYPES = new Set(['bar', 'pub', 'night_club', 'cocktail_bar', 'wine_bar', 'sports_bar', 'dive_bar', 'lounge', 'gastropub'])
@@ -533,7 +536,6 @@ export async function POST(request: NextRequest) {
             }
 
             // Extract richer Google data
-            const googlePrimaryType = place.primaryType || null
             const businessPostcode = extractPostcode(place.addressComponents)
 
             // Extract town/area from address for tagline

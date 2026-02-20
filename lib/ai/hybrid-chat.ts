@@ -2404,10 +2404,8 @@ Present this information clearly and offer further help.`
     const mapPins: ChatResponse['mapPins'] = []
     const addedIds = new Set<string>()
     
-    // Only populate mapPins if we have business results to show
-    const shouldBuildMapPins = (businessCarousel && businessCarousel.length > 0) || 
-                               (topMatchesText && topMatchesText.length > 0) ||
-                               (fallbackBusinesses && fallbackBusinesses.length > 0)
+    // Only populate mapPins if we have businesses with coordinates to show
+    const shouldBuildMapPins = sortedForContext.some((b: any) => b.latitude && b.longitude)
     
     // Determine if this is browse mode for reason tagging
     const isBrowseModeForReasons = !detectedIntent.hasIntent
