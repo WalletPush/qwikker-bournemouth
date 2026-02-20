@@ -82,7 +82,6 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
     .from('business_profiles')
     .select(`
       id,
-      slug,
       business_name,
       business_type,
       system_category,
