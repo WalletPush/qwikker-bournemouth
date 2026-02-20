@@ -522,9 +522,9 @@ export async function POST(request: NextRequest) {
               console.log('hours_structured_keys', businessHoursStructured ? Object.keys(businessHoursStructured) : null)
             }
 
-            // Map Google types to system_category
+            // Map Google types to system_category (primaryType is the strongest signal)
             const googleTypes = place.types || []
-            const system_category = mapGoogleTypesToSystemCategory(googleTypes)
+            const system_category = mapGoogleTypesToSystemCategory(googleTypes, googlePrimaryType)
             const display_category = SYSTEM_CATEGORY_LABEL[system_category]
 
             // Sanity check: Ensure system_category is valid before insert

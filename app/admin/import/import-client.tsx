@@ -56,6 +56,8 @@ interface BusinessResult {
   googlePrimaryType?: string // Google's primary type (e.g. "cafe", "restaurant", "night_club")
   matchReason?: string | null
   distance: number
+  lat?: number | null
+  lng?: number | null
   status: string
   hasPhoto: boolean
   photoName: string | null

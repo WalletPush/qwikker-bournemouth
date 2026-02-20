@@ -368,6 +368,8 @@ export async function POST(request: NextRequest) {
         googlePrimaryType: place.primaryType || place.types?.[0] || null,
         matchReason: validation.matchReason || null,
         distance: Math.round(distance),
+        lat: place.location?.latitude ?? null,
+        lng: place.location?.longitude ?? null,
         status: place.businessStatus || 'OPERATIONAL',
         hasPhoto: !!place.photos?.[0]?.name,
         photoName: place.photos?.[0]?.name || null,

@@ -66,20 +66,53 @@ export const SYSTEM_CATEGORY_LABEL: Record<SystemCategory, string> = {
 // ====================
 // Used by import tool to map raw Google Place types → system_category
 
-export function mapGoogleTypesToSystemCategory(types: string[]): SystemCategory {
-  const t = new Set(types.map(type => type.toLowerCase()));
+export function mapGoogleTypesToSystemCategory(types: string[], primaryType?: string | null): SystemCategory {
+  const pt = (primaryType ?? '').toLowerCase()
+  const t = new Set((types ?? []).map(x => (x ?? '').toLowerCase()))
 
-  // Food & Drink (order matters - most specific first)
+  // ──────────────────────────────────────────────────
+  // 1) PRIMARY TYPE (Google's authoritative classification)
+  //    Precedence: bar/pub > *_restaurant > cafe > rest
+  // ──────────────────────────────────────────────────
+  if (pt) {
+    if (pt === 'pub' || pt === 'gastropub') return 'pub'
+    if (pt === 'bar' || pt === 'night_club' || pt === 'wine_bar' || pt === 'cocktail_bar' || pt === 'sports_bar' || pt === 'dive_bar' || pt === 'lounge') return 'bar'
+    if (pt === 'fast_food_restaurant') return 'fast_food'
+    if (pt === 'meal_takeaway') return 'takeaway'
+    if (pt === 'restaurant' || pt.endsWith('_restaurant')) return 'restaurant'
+    if (pt === 'cafe' || pt === 'coffee_shop') return 'cafe'
+    if (pt === 'bakery') return 'bakery'
+    if (pt === 'ice_cream_shop' || pt === 'dessert_shop' || pt === 'dessert_restaurant') return 'dessert'
+    if (pt === 'hair_care' || pt === 'hair_salon' || pt === 'barber_shop') return 'barber'
+    if (pt === 'beauty_salon' || pt === 'spa' || pt === 'nail_salon') return 'salon'
+    if (pt === 'tattoo_shop' || pt === 'tattoo_studio' || pt === 'piercing_studio') return 'tattoo'
+    if (pt === 'physiotherapist' || pt === 'massage_spa' || pt === 'wellness_center' || pt === 'acupuncture' || pt === 'osteopath' || pt === 'chiropractor') return 'wellness'
+    if (pt === 'gym' || pt === 'fitness_center' || pt === 'yoga_studio' || pt === 'pilates_studio') return 'fitness'
+    if (pt === 'sporting_goods_store' || pt === 'sports_club' || pt === 'sports_complex') return 'sports'
+    if (pt === 'lodging' || pt === 'hotel' || pt === 'motel' || pt === 'bed_and_breakfast') return 'hotel'
+    if (pt === 'event_venue' || pt === 'banquet_hall' || pt === 'wedding_venue' || pt === 'conference_center') return 'venue'
+    if (pt === 'tourist_attraction' || pt === 'amusement_park' || pt === 'museum' || pt === 'art_gallery' || pt === 'movie_theater') return 'entertainment'
+  }
+
+  // ──────────────────────────────────────────────────
+  // 2) FALLBACK: scan types[] (noisy — same precedence)
+  //    bar/pub > any *_restaurant > cafe > rest
+  // ──────────────────────────────────────────────────
+
+  // Bars & pubs first
+  if (t.has("pub") || t.has("gastropub")) return "pub";
+  if (t.has("bar") || t.has("night_club") || t.has("wine_bar") || t.has("cocktail_bar") || t.has("sports_bar")) return "bar";
+
+  // Restaurants (catch any *_restaurant before cafe, so a halal_restaurant
+  // with coffee_shop in types[] still maps to restaurant)
+  if (t.has("fast_food_restaurant")) return "fast_food";
+  if (t.has("meal_takeaway")) return "takeaway";
+  for (const x of t) { if (x === 'restaurant' || x.endsWith('_restaurant')) return 'restaurant' }
+
+  // Cafe only wins if no restaurant type is present
   if (t.has("cafe") || t.has("coffee_shop")) return "cafe";
   if (t.has("bakery")) return "bakery";
-  if (t.has("pub") || t.has("gastropub")) return "pub"; // ✅ Check pub BEFORE bar
-  if (t.has("bar") || t.has("night_club") || t.has("wine_bar")) return "bar"; // Bar (excluding pubs)
   if (t.has("ice_cream_shop") || t.has("dessert_shop")) return "dessert";
-  if (t.has("fast_food_restaurant")) return "fast_food"; // Fast food chains
-  if (t.has("meal_takeaway")) return "takeaway"; // Independent takeaway
-  if (t.has("restaurant") || t.has("pizza_restaurant") || t.has("italian_restaurant") || 
-      t.has("chinese_restaurant") || t.has("indian_restaurant") || t.has("mexican_restaurant") ||
-      t.has("japanese_restaurant") || t.has("thai_restaurant") || t.has("french_restaurant")) return "restaurant";
 
   // Beauty & Wellness
   if (t.has("hair_care") || t.has("hair_salon") || t.has("barber_shop")) return "barber";

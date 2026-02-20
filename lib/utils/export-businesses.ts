@@ -76,7 +76,7 @@ export function exportAsCSV(
     csvField(b.lat ?? ''),
     csvField(b.lng ?? ''),
     csvField(b.matchReason ?? ''),
-    csvField(b.distance),
+    csvField((b.distance / 1000).toFixed(2)),
     csvField(dateOnly),
   ].join(','))
 
@@ -101,7 +101,7 @@ export function exportAsJSON(
     lat: b.lat ?? null,
     lng: b.lng ?? null,
     matchReason: b.matchReason ?? null,
-    distanceKm: b.distance,
+    distanceKm: +(b.distance / 1000).toFixed(2),
     importDate,
   }))
 
