@@ -96,7 +96,8 @@ export async function GET(request: NextRequest) {
           google_place_id,
           website_url,
           phone,
-          business_tier
+          business_tier,
+          business_hours_structured
         `)
         .in('id', ids)
         .eq('city', city)
@@ -117,6 +118,7 @@ export async function GET(request: NextRequest) {
         
         enrichedMap[biz.id] = {
           ...biz,
+          opening_hours: biz.business_hours_structured || null,
           has_offers: (offersCount || 0) > 0,
           offers_count: offersCount || 0,
         }

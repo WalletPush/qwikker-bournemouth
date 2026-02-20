@@ -720,7 +720,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   // Handle business name clicks
   const handleBusinessClick = (businessName: string) => {
     // Convert business name to slug format (match business page generation)
-    const slug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-')
+    const slug = businessName.toLowerCase().replace(/['']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
     const url = `/user/business/${slug}${currentUser?.wallet_pass_id ? `?wallet_pass_id=${currentUser.wallet_pass_id}` : ''}`
     window.location.href = url
   }
@@ -893,7 +893,8 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
             // Messages loaded from sessionStorage should NOT re-stream
             const isNewMessage = messageIndex >= initialMessageCountRef.current
             const isLastAiMessage = message.type === 'ai' && messageIndex === processedMessages.length - 1
-            const skipStreaming = !isNewMessage || !isLastAiMessage
+            const alreadyStreamed = streamingComplete.has(message.id)
+            const skipStreaming = !isNewMessage || !isLastAiMessage || alreadyStreamed
             
             return (
             <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>

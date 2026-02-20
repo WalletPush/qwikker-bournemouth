@@ -217,7 +217,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
         ? business.business_images 
         : [business.logo || '/placeholder-business.jpg'],
       logo: business.logo || '/placeholder-logo.jpg',
-      slug: business.business_name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || business.id,
+      slug: business.business_name?.toLowerCase().replace(/['']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || business.id,
       offers: filterActiveOffers(business.business_offers || []).map(offer => ({
         id: offer.id,
         title: offer.offer_name,

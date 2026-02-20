@@ -9,6 +9,7 @@ interface TrackBusinessVisitParams {
 }
 
 export async function trackBusinessVisit({ businessId, visitorName, visitorWalletPassId }: TrackBusinessVisitParams) {
+  console.log(`[Visit Debug] trackBusinessVisit called: name=${visitorName || 'NOT_PROVIDED'}, walletPassId=${visitorWalletPassId || 'NOT_PROVIDED'}, businessId=${businessId}`)
   try {
     const supabase = createServiceRoleClient()
     

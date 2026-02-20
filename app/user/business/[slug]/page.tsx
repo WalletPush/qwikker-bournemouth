@@ -57,7 +57,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
         currentUser = {
           id: user.id,
           wallet_pass_id: user.wallet_pass_id,
-          name: user.name,
+          name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || null,
           email: user.email,
           city: user.city,
           tier: user.tier,
@@ -195,7 +195,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       images: business.business_images || ['/placeholder-business.jpg'],
       logo: business.logo || '/placeholder-logo.jpg',
       // ✅ MATCH CHAT SLUG LOGIC: Use DB slug if available, otherwise generate consistently
-      slug: business.slug || business.business_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || business.id,
+      slug: business.slug || business.business_name?.toLowerCase().replace(/['']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || business.id,
       offers: business.business_offers?.filter(offer => {
         // Must be approved
         if (offer.status !== 'approved') return false
@@ -268,6 +268,9 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
   
   // Find the specific business being viewed
   const viewedBusiness = allBusinesses.find(business => business.slug === slug)
+  if (!viewedBusiness) {
+    console.log(`[Slug Debug] Business NOT found: urlSlug="${slug}", available slugs:`, allBusinesses.map(b => b.slug).slice(0, 15))
+  }
   
   // Get visitor info and business ID for client-side tracking
   // IMPORTANT: Track ALL visits, not just users with wallet passes!

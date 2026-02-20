@@ -63,6 +63,13 @@ button {
   }
 }
 
+/* Atlas: Ensure Mapbox HTML markers (user pin) render above ALL overlays.
+   Markers are children of the map container. The vignette and other UI sit above
+   the map. We force markers to a very high z-index so they're always visible. */
+.atlas-container .mapboxgl-marker {
+  z-index: 10 !important;
+}
+
 /* Fix mobile navigation and touch targets */
 @media (max-width: 768px) {
   /* Ensure minimum touch target size (exclude Atlas map overlay) */
