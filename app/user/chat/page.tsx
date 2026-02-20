@@ -54,6 +54,9 @@ export default async function ChatPage({
   
   // Priority: URL wallet_pass_id > URL user_id > cookie
   const userId = urlWalletPassId || urlUserId || cookieWalletPassId || null
+  // #region agent log
+  console.log(`[ChatPage] Wallet: urlParam=${urlWalletPassId || 'NONE'}, urlUserId=${urlUserId || 'NONE'}, cookie=${cookieWalletPassId ? 'SET' : 'NONE'}, resolved=${userId ? 'SET' : 'NULL'}`)
+  // #endregion
   
   // Persist wallet pass to cookie if from URL
   if (urlWalletPassId && urlWalletPassId !== cookieWalletPassId) {

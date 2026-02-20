@@ -83,32 +83,50 @@ export const getUserLocationLayers = () => {
 }
 
 /**
- * Business pin layers (animated pulsing dots)
- * ✅ Cyan pulsing dots for paid/trial businesses
- * ✅ Grey pulsing dots for unclaimed businesses
+ * Business pin layers (circle-based, works on all devices)
+ * ✅ Cyan for paid/trial businesses
+ * ✅ Grey for unclaimed businesses
  */
-export const getBusinessPinLayers = () => {
-  // Use animated pulsing dot images instead of static circles
-  const pulsingPins: SymbolLayerSpecification = {
-    id: 'business-pins',
-    type: 'symbol',
+export const getBusinessPinLayers = (): CircleLayerSpecification[] => {
+  const glow: CircleLayerSpecification = {
+    id: 'business-pins-glow',
+    type: 'circle',
     source: 'businesses',
-    // ✨ Only show individual pins (not clusters)
     filter: ['!', ['has', 'point_count']],
-    layout: {
-      'icon-image': [
+    paint: {
+      'circle-radius': 16,
+      'circle-color': [
         'case',
-        ['==', ['get', 'isPaid'], true], 'pulsing-dot-cyan',   // Cyan pulsing for paid
-        ['==', ['get', 'isUnclaimed'], true], 'pulsing-dot-grey', // Grey pulsing for unclaimed
-        'pulsing-dot-cyan'                                        // Default cyan
+        ['==', ['get', 'isPaid'], true], NEON_CYAN,
+        ['==', ['get', 'isUnclaimed'], true], '#6b7280',
+        NEON_CYAN
       ],
-      'icon-allow-overlap': true,
-      'icon-ignore-placement': true
+      'circle-opacity': 0.25,
+      'circle-blur': 0.6
     }
   }
 
-  // Note: We removed the separate glow layer because the pulsing effect includes glow
-  return [pulsingPins]
+  const pin: CircleLayerSpecification = {
+    id: 'business-pins',
+    type: 'circle',
+    source: 'businesses',
+    filter: ['!', ['has', 'point_count']],
+    paint: {
+      'circle-radius': 8,
+      'circle-color': [
+        'case',
+        ['==', ['get', 'isPaid'], true], NEON_CYAN,
+        ['==', ['get', 'isUnclaimed'], true], '#6b7280',
+        NEON_CYAN
+      ],
+      'circle-opacity': 1,
+      'circle-stroke-width': 2.5,
+      'circle-stroke-color': '#ffffff',
+      'circle-stroke-opacity': 0.9
+    }
+  }
+
+  return [glow, pin]
 }
 
 // 🚨 REMOVED: Arrival pulse layer

@@ -516,11 +516,12 @@ PERSONALITY:
 - Vary your openers — don't start every response the same way
 ${temporalBlock}
 ⚠️  CRITICAL FORMATTING RULES ⚠️
-Every business name MUST be a clickable markdown link: **[Business Name](/user/business/slug)**
-NEVER write plain bold business names like **Business Name** — always include the link!
+Every business has a [SLUG: ...] tag in AVAILABLE BUSINESSES. Use it to build the link.
+Example: If a business has [SLUG: sobo-beach], write: **[Sobo Beach](/user/business/sobo-beach)**
+NEVER write plain bold business names — always include the link!
 
 HARD RULES (DO NOT BREAK):
-- LINKS: Every business mention MUST use **[Business Name](/user/business/slug)**. If you can't link it, don't mention it.
+- LINKS: Every business mention MUST use **[Business Name](/user/business/{slug from SLUG tag})**. If you can't find the slug, don't mention it.
 - ONE BUSINESS PER PARAGRAPH: Separate businesses with a blank line. Never put two in the same paragraph.
 - KEEP IT TIGHT: 1–2 sentences per business max (rating + ONE factual detail from AVAILABLE BUSINESSES only).
 - NO BULLET LISTS for business results. Use full paragraphs.
@@ -1325,7 +1326,8 @@ export async function generateHybridAIResponse(
             ratingLine = `\nRating: ${business.rating}★ from ${business.review_count} Google reviews`
           }
           
-          return `**${business.business_name}** [TIER: ${business.tierLabel}]${ratingLine}
+          const businessSlug = getBusinessSlug(business)
+          return `**${business.business_name}** [TIER: ${business.tierLabel}] [SLUG: ${businessSlug}]${ratingLine}
 Category: ${business.display_category || 'Not specified'}${hoursLine}${richContent}${offerText}`
         }).join('\n\n')
       : 'No businesses available in this city yet.'

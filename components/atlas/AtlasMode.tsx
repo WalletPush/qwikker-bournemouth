@@ -1274,121 +1274,13 @@ export function AtlasMode({
     // loaded() can return false mid-flight (loading tiles) which blocked pin creation.
     
     try {
-      const mapboxglModule = await import('mapbox-gl')
-      const mapboxgl = mapboxglModule.default
-      
-      // ⚠️ DOUBLE CHECK: Style must be loaded before accessing getStyle()
       if (!map.current.getStyle()) {
-        console.warn('[Atlas] ⏳ Style not ready yet, waiting...')
+        dlog('⏳ styleNotReady', { retrying: true })
         setTimeout(() => addBusinessMarkers(businesses), 100)
         return
       }
       
-      console.log('[Atlas] ✅ Mapbox GL loaded, adding', businesses.length, 'pins')
-      console.log('[Atlas] 🗺️ Existing sources:', Object.keys(map.current.getStyle().sources))
-      console.log('[Atlas] 🗺️ Existing layers:', map.current.getStyle().layers.map(l => l.id))
-      
-      // 🎨 CREATE PULSING DOT IMAGES (animated pins)
-      // #region agent log
-      dlog('🎨 imageCheck', { hasCyan: map.current.hasImage('pulsing-dot-cyan'), hasGrey: map.current.hasImage('pulsing-dot-grey') })
-      // #endregion
-      // Cyan pulsing dot for paid businesses
-      if (!map.current.hasImage('pulsing-dot-cyan')) {
-        const size = 60
-        const pulsingDotCyan = {
-          width: size,
-          height: size,
-          data: new Uint8Array(size * size * 4),
-          context: null as any,
-          
-          onAdd: function() {
-            const canvas = document.createElement('canvas')
-            canvas.width = this.width
-            canvas.height = this.height
-            this.context = canvas.getContext('2d')
-          },
-          
-          render: function() {
-            const duration = 2000 // 2 second pulse
-            const t = (performance.now() % duration) / duration
-            
-            const radius = (size / 2) * 0.4
-            const outerRadius = (size / 2) * 0.9 * t + radius
-            const context = this.context
-            
-            // Draw outer pulsing circle
-            context.clearRect(0, 0, this.width, this.height)
-            context.beginPath()
-            context.arc(this.width / 2, this.height / 2, outerRadius, 0, Math.PI * 2)
-            context.fillStyle = `rgba(0, 240, 255, ${0.4 * (1 - t)})` // 🎨 NEON_CYAN glow (#00f0ff)
-            context.fill()
-            
-            // Draw inner circle
-            context.beginPath()
-            context.arc(this.width / 2, this.height / 2, radius, 0, Math.PI * 2)
-            context.fillStyle = 'rgba(0, 240, 255, 1)' // 🎨 NEON_CYAN solid (#00f0ff)
-            context.strokeStyle = 'white'
-            context.lineWidth = 3 + 4 * (1 - t)
-            context.fill()
-            context.stroke()
-            
-            this.data = context.getImageData(0, 0, this.width, this.height).data
-            map.current!.triggerRepaint()
-            return true
-          }
-        }
-        map.current.addImage('pulsing-dot-cyan', pulsingDotCyan, { pixelRatio: 2 })
-        console.log('[Atlas] ✅ Added pulsing cyan dot image')
-      }
-      
-      // Grey pulsing dot for unclaimed businesses (slower, subtler)
-      if (!map.current.hasImage('pulsing-dot-grey')) {
-        const size = 50
-        const pulsingDotGrey = {
-          width: size,
-          height: size,
-          data: new Uint8Array(size * size * 4),
-          context: null as any,
-          
-          onAdd: function() {
-            const canvas = document.createElement('canvas')
-            canvas.width = this.width
-            canvas.height = this.height
-            this.context = canvas.getContext('2d')
-          },
-          
-          render: function() {
-            const duration = 3000 // 3 second pulse (slower)
-            const t = (performance.now() % duration) / duration
-            
-            const radius = (size / 2) * 0.35
-            const outerRadius = (size / 2) * 0.7 * t + radius
-            const context = this.context
-            
-            // Draw outer pulsing circle
-            context.clearRect(0, 0, this.width, this.height)
-            context.beginPath()
-            context.arc(this.width / 2, this.height / 2, outerRadius, 0, Math.PI * 2)
-            context.fillStyle = `rgba(156, 163, 175, ${0.2 * (1 - t)})` // Grey glow
-            context.fill()
-            
-            // Draw inner circle
-            context.beginPath()
-            context.arc(this.width / 2, this.height / 2, radius, 0, Math.PI * 2)
-            context.fillStyle = 'rgba(107, 114, 128, 1)' // Solid grey
-            context.strokeStyle = 'rgba(255, 255, 255, 0.5)'
-            context.lineWidth = 2 + 2 * (1 - t)
-            context.fill()
-            context.stroke()
-            
-            this.data = context.getImageData(0, 0, this.width, this.height).data
-            map.current!.triggerRepaint()
-            return true
-          }
-        }
-        map.current.addImage('pulsing-dot-grey', pulsingDotGrey, { pixelRatio: 2 })
-        console.log('[Atlas] ✅ Added pulsing grey dot image')
-      }
+      dlog('🔧 addingPins', { businessCount: businesses.length })
       
       // Update ref for event handlers
       businessesRef.current = businesses
