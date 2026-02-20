@@ -1256,7 +1256,7 @@ export function AtlasMode({
   
   // Add markers for businesses (NEON CYAN PINS) - but keep user marker on top
   const addBusinessMarkers = useCallback(async (businesses: Business[]) => {
-    console.log('[Atlas] 📍 addBusinessMarkers called with', businesses.length, 'businesses')
+    console.log('[Atlas] 📍 addBusinessMarkers called with', businesses.length, 'businesses', 'mapReady:', mapReadyRef.current, 'mapExists:', !!map.current)
     
     if (!map.current || !mapReadyRef.current) {
       console.log('[Atlas] ⏳ Map not ready, queuing business markers')
@@ -1290,6 +1290,9 @@ export function AtlasMode({
       console.log('[Atlas] 🗺️ Existing layers:', map.current.getStyle().layers.map(l => l.id))
       
       // 🎨 CREATE PULSING DOT IMAGES (animated pins)
+      // #region agent log
+      console.log('[Atlas] 🎨 Image check: cyan=', map.current.hasImage('pulsing-dot-cyan'), 'grey=', map.current.hasImage('pulsing-dot-grey'))
+      // #endregion
       // Cyan pulsing dot for paid businesses
       if (!map.current.hasImage('pulsing-dot-cyan')) {
         const size = 60
@@ -1430,15 +1433,34 @@ export function AtlasMode({
       const existingSource = map.current.getSource('businesses') as any
       
       if (existingSource) {
-        // Source exists → just update the data
-        console.log('[Atlas] ✅ Updating existing source via setData():', features.length, 'features')
+        // Source exists → update data, but verify layers still exist
+        const pinsLayerExists = !!map.current.getLayer('business-pins')
+        const clustersLayerExists = !!map.current.getLayer('business-clusters')
+        console.log('[Atlas] 🔄 Source exists. Layers check: pins=', pinsLayerExists, 'clusters=', clustersLayerExists)
+        
         existingSource.setData({
           type: 'FeatureCollection',
           features
         })
         map.current.triggerRepaint()
-        console.log('[Atlas] ✅ Source updated successfully')
-        return // Done - layers already exist
+        
+        // If layers are missing (e.g. after cleanup), re-add them
+        if (!pinsLayerExists) {
+          console.warn('[Atlas] ⚠️ Source exists but pin layers missing! Re-adding layers...')
+          const pinLayers = getBusinessPinLayers()
+          pinLayers.forEach(layer => {
+            try { map.current!.addLayer(layer) } catch (e) { console.error('[Atlas] ❌ Re-add layer failed:', e) }
+          })
+          try {
+            const clusterLayers = getClusterLayers()
+            clusterLayers.forEach(layer => {
+              try { map.current!.addLayer(layer) } catch (e) { console.error('[Atlas] ❌ Re-add cluster failed:', e) }
+            })
+          } catch (e) { console.error('[Atlas] ❌ Cluster layers failed:', e) }
+        }
+        
+        console.log('[Atlas] ✅ Source updated, features:', features.length)
+        return
       }
       
       // Source doesn't exist → add it (first time setup)
@@ -1623,7 +1645,7 @@ export function AtlasMode({
       console.log('[Atlas] ✅ Forced map repaint')
       
     } catch (error) {
-      console.error('[Atlas] ❌ Failed to add markers:', error)
+      console.error('[Atlas] ❌ CRITICAL: Failed to add markers:', error, 'Stack:', error instanceof Error ? error.stack : 'N/A')
     }
   }, [mapLoaded, updateActiveBusinessMarker, flyToBusiness, tourActive, stopTour, generateBusinessHudMessage, playSound])
   

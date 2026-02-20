@@ -968,7 +968,27 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                   </div>
                 )}
                 
-                {/* Atlas CTA moved to above input area */}
+                {/* Atlas CTA - inline at bottom of AI message */}
+                {message.type === 'ai' && message.showAtlasCta && !message.needsLocation && atlasEnabled && streamingComplete.has(message.id) && (
+                  <div className="mt-3">
+                    <button
+                      onClick={() => {
+                        if (lastBusinessQuery) {
+                          setAtlasInitialQuery(lastBusinessQuery)
+                        }
+                        setAtlasEverOpened(true)
+                        setView('atlas')
+                      }}
+                      className="w-full bg-gradient-to-r from-cyan-600/20 to-blue-600/20 hover:from-cyan-600/30 hover:to-blue-600/30 border border-cyan-500/30 hover:border-cyan-400/50 text-cyan-300 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 group"
+                    >
+                      <Map className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      <span>Explore on Qwikker Atlas</span>
+                      <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
                 
                 {message.businessCarousel && message.businessCarousel.length > 0 && (
                   <div className="mt-3 -mx-2 sm:mx-0">
@@ -1077,28 +1097,6 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
           
           <div ref={messagesEndRef} />
         </div>
-
-        {/* Atlas CTA - Show above input when available */}
-        {atlasEnabled && lastBusinessQuery && messages.some(m => m.showAtlasCta && streamingComplete.has(m.id)) && view === 'chat' && (
-          <div className="px-4 pt-3 pb-1 border-t border-slate-600/30">
-            <button
-              onClick={() => {
-                if (lastBusinessQuery) {
-                  setAtlasInitialQuery(lastBusinessQuery)
-                }
-                setAtlasEverOpened(true)
-                setView('atlas')
-              }}
-              className="w-full bg-gradient-to-r from-cyan-600/20 to-blue-600/20 hover:from-cyan-600/30 hover:to-blue-600/30 border border-cyan-500/30 hover:border-cyan-400/50 text-cyan-300 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 group"
-            >
-              <Map className="w-4 h-4 group-hover:scale-110 transition-transform" />
-              <span>Explore on Qwikker Atlas</span>
-              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-        )}
 
         {/* Input Area */}
         <div className="p-4 border-t border-slate-600/50 bg-gradient-to-r from-slate-800/50 to-slate-700/50">
