@@ -588,17 +588,20 @@ export function AtlasMode({
       return
     }
     
+    // If marker exists, just update position (don't re-create to avoid "floating")
+    if (userMarkerRef.current) {
+      // #region agent log
+      console.log('[Atlas] 📍 Updating existing user marker position:', coords.lat.toFixed(5), coords.lng.toFixed(5))
+      // #endregion
+      userMarkerRef.current.setLngLat([coords.lng, coords.lat])
+      return
+    }
+    
     try {
       const mapboxglModule = await import('mapbox-gl')
       const mapboxgl = mapboxglModule.default
       
       console.log('[Atlas] 📍 Creating 3D pin marker at:', coords)
-      
-      // Remove existing marker if it exists
-      if (userMarkerRef.current) {
-        console.log('[Atlas] Removing old marker')
-        userMarkerRef.current.remove()
-      }
       
       // Create 3D pin element (z-index: 2 to render above the vignette overlay at z-1)
       const el = document.createElement('div')
@@ -870,59 +873,52 @@ export function AtlasMode({
       const beforeLayer = map.current.getLayer('business-pins-glow') ? 'business-pins-glow' : undefined
       
       routeLayers.forEach(layer => {
-        if (layer.id === 'route-dash' && performanceMode.enabled) return
         map.current!.addLayer(layer, beforeLayer)
       })
       
-      // Progressive draw animation: reveal the line from start to end over 2s
-      const drawDuration = 2000
-      const drawStart = performance.now()
+      // Animate route: start with low opacity, fade in, then run marching ants
       const mapRef = map.current
       
-      const animateDraw = (now: number) => {
+      // Set initial low opacity
+      if (mapRef.getLayer('route-glow')) {
+        mapRef.setPaintProperty('route-glow', 'line-opacity', 0)
+      }
+      if (mapRef.getLayer('route-line')) {
+        mapRef.setPaintProperty('route-line', 'line-opacity', 0)
+      }
+      
+      // Fade in over 1.5s
+      const fadeStart = performance.now()
+      const fadeDuration = 1500
+      
+      const animateFade = (now: number) => {
         if (!mapRef || !mapRef.getSource('route')) return
+        const progress = Math.min((now - fadeStart) / fadeDuration, 1)
+        const opacity = progress * progress // ease-in
         
-        const elapsed = now - drawStart
-        const progress = Math.min(elapsed / drawDuration, 1)
-        const eased = 1 - Math.pow(1 - progress, 3) // ease-out cubic
-        
-        // Reveal line progressively using line-trim-offset
-        try {
-          if (mapRef.getLayer('route-glow')) {
-            mapRef.setPaintProperty('route-glow', 'line-trim-offset', [0, 1 - eased])
-          }
-          if (mapRef.getLayer('route-line')) {
-            mapRef.setPaintProperty('route-line', 'line-trim-offset', [0, 1 - eased])
-          }
-          if (mapRef.getLayer('route-dash')) {
-            mapRef.setPaintProperty('route-dash', 'line-trim-offset', [0, 1 - eased])
-          }
-        } catch {
-          // line-trim-offset not supported, line shows instantly (fine)
+        if (mapRef.getLayer('route-glow')) {
+          mapRef.setPaintProperty('route-glow', 'line-opacity', opacity * 0.4)
+        }
+        if (mapRef.getLayer('route-line')) {
+          mapRef.setPaintProperty('route-line', 'line-opacity', opacity)
         }
         
         if (progress < 1) {
-          routeAnimationRef.current = requestAnimationFrame(animateDraw)
-        } else {
-          // After draw completes, start marching ants if available
-          if (!performanceMode.enabled && mapRef.getLayer('route-dash')) {
-            let dashOffset = 0
-            const animateDash = () => {
-              if (!mapRef || !mapRef.getLayer('route-dash')) return
-              dashOffset += 0.15
-              mapRef.setPaintProperty('route-dash', 'line-dasharray', [2, 4 + (dashOffset % 6)])
-              routeAnimationRef.current = requestAnimationFrame(animateDash)
-            }
+          routeAnimationRef.current = requestAnimationFrame(animateFade)
+        } else if (mapRef.getLayer('route-dash')) {
+          // Start marching ants after fade completes
+          let dashOffset = 0
+          const animateDash = () => {
+            if (!mapRef || !mapRef.getLayer('route-dash')) return
+            dashOffset += 0.15
+            mapRef.setPaintProperty('route-dash', 'line-dasharray', [2, 4 + (dashOffset % 6)])
             routeAnimationRef.current = requestAnimationFrame(animateDash)
           }
+          routeAnimationRef.current = requestAnimationFrame(animateDash)
         }
       }
       
-      routeAnimationRef.current = requestAnimationFrame(animateDraw)
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Atlas] Route line drawing progressively to active business')
-      }
+      routeAnimationRef.current = requestAnimationFrame(animateFade)
     } catch (error) {
       console.error('[Atlas] Failed to add route line:', error)
     }
@@ -1110,80 +1106,33 @@ export function AtlasMode({
       setHudVisible(true)
     }
     
-    // ✨ STEP 1: If user location exists, show it briefly before flying to first business
-    if (userLocation && map.current) {
-      console.log('🎬 Starting tour from user location:', userLocation)
-      
-      // Center on user location first
-      map.current.flyTo({
-        center: [userLocation.lng, userLocation.lat],
-        zoom: 15,
-        pitch: 0,
-        bearing: 0,
-        duration: 1000,
-        essential: true
-      })
-      map.current.triggerRepaint()
-      
-      // ✨ STEP 2: After 1.5s, fly to first business
+    // Go directly to first business (no detour to user location)
+    console.log('🎬 Flying to first business:', tourBusinesses[0].business_name)
+    
+    flyToBusiness(tourBusinesses[0])
+    updateActiveBusinessMarker(tourBusinesses[0])
+    
+    if (!isMobile) {
       setTimeout(() => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/9abe399a-5db7-4bf4-8330-76a1aa12c0eb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AtlasMode.tsx:startTour:step2',message:'Flying to first business after user location',data:{isMobile,businessName:tourBusinesses[0]?.business_name,totalBusinesses:tourBusinesses.length},timestamp:Date.now(),hypothesisId:'H-A'})}).catch(()=>{});
-        // #endregion
-        flyToBusiness(tourBusinesses[0])
-        updateActiveBusinessMarker(tourBusinesses[0])
-        
-        if (!isMobile) {
-          setTimeout(() => {
-            const firstBusiness = tourBusinesses[0]
-            const reviewCount = firstBusiness.review_count || 0
-            const firstStopMessage = `Stop 1 of ${tourBusinesses.length} • Rated ${firstBusiness.rating}★ by ${reviewCount} ${reviewCount === 1 ? 'person' : 'people'} on Google`
-            setHudSummary(firstStopMessage)
-          }, 3500)
-        }
-        
-        // Start timer to advance to second business (desktop AND mobile)
-        if (tourBusinesses.length > 1) {
-          tourTimerRef.current = setTimeout(() => {
-            advanceTour(1)
-          }, isMobile ? 5000 : 6500)
-        } else {
-          setTimeout(() => {
-            setTourActive(false)
-            if (!isMobile) setHudVisible(false)
-          }, isMobile ? 5000 : 6500)
-        }
-      }, 1500) // Stay at user location for 1.5s
-      
-    } else {
-      // No user location - start directly at first business
-      console.log('🎬 No user location - starting tour directly at first business')
-      
-      flyToBusiness(tourBusinesses[0])
-      updateActiveBusinessMarker(tourBusinesses[0])
-      
-      if (!isMobile) {
-        setTimeout(() => {
-          const firstBusiness = tourBusinesses[0]
-          const reviewCount = firstBusiness.review_count || 0
-          const firstStopMessage = `Stop 1 of ${tourBusinesses.length} • Rated ${firstBusiness.rating}★ by ${reviewCount} ${reviewCount === 1 ? 'person' : 'people'} on Google`
-          setHudSummary(firstStopMessage)
-        }, 1500)
-      }
-      
-      // Start timer to advance (desktop AND mobile)
-      if (tourBusinesses.length > 1) {
-        tourTimerRef.current = setTimeout(() => {
-          advanceTour(1)
-        }, isMobile ? 4000 : 4500)
-      } else {
-        setTimeout(() => {
-          setTourActive(false)
-          if (!isMobile) setHudVisible(false)
-        }, isMobile ? 4000 : 4500)
-      }
+        const firstBusiness = tourBusinesses[0]
+        const reviewCount = firstBusiness.review_count || 0
+        const firstStopMessage = `Stop 1 of ${tourBusinesses.length} • Rated ${firstBusiness.rating}★ by ${reviewCount} ${reviewCount === 1 ? 'person' : 'people'} on Google`
+        setHudSummary(firstStopMessage)
+      }, 1500)
     }
-  }, [flyToBusiness, updateActiveBusinessMarker, isMobile, userLocation])
+    
+    // Schedule advance to next business
+    if (tourBusinesses.length > 1) {
+      tourTimerRef.current = setTimeout(() => {
+        advanceTour(1)
+      }, isMobile ? 5000 : 5500)
+    } else {
+      setTimeout(() => {
+        setTourActive(false)
+        if (!isMobile) setHudVisible(false)
+      }, isMobile ? 5000 : 5500)
+    }
+  }, [flyToBusiness, updateActiveBusinessMarker, isMobile])
   
   // 🎬 TOUR MODE: Advance to specific index
   const advanceTour = useCallback((targetIndex: number) => {
@@ -1199,9 +1148,6 @@ export function AtlasMode({
     }
     
     console.log(`🎬 Tour advancing to business ${targetIndex + 1}/${currentBusinesses.length}`)
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/9abe399a-5db7-4bf4-8330-76a1aa12c0eb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AtlasMode.tsx:advanceTour',message:'Tour advancing',data:{targetIndex,totalBusinesses:currentBusinesses.length,businessName:currentBusinesses[targetIndex]?.business_name},timestamp:Date.now(),hypothesisId:'H-A'})}).catch(()=>{});
-    // #endregion
     
     const targetBusiness = currentBusinesses[targetIndex]
     
@@ -1233,13 +1179,10 @@ export function AtlasMode({
       setTourActive(false)
       setHudVisible(false)
       
-      // ✨ Show "what now?" helper after 3 seconds (was 500ms - give user time to see last stop!)
+      // Show decision helper after 6s (give user time to view last stop)
       setTimeout(() => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/9abe399a-5db7-4bf4-8330-76a1aa12c0eb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AtlasMode.tsx:advanceTour:tourEnd',message:'Decision layer triggered',data:{reason:'tour_complete'},timestamp:Date.now(),hypothesisId:'H-E'})}).catch(()=>{});
-        // #endregion
         setShowTourEndHelper(true)
-      }, 3000)
+      }, 6000)
     }
   }, [flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage, isMobile])
   
@@ -2628,7 +2571,7 @@ export function AtlasMode({
         <BottomSheet
           isOpen={showMobileSheet && !!selectedBusiness}
           onClose={() => setShowMobileSheet(false)}
-          snapPoints={[0.55, 0.75, 0.95]}
+          snapPoints={[0.45, 0.7, 0.95]}
           initialSnap={0}
         >
           {selectedBusiness && (

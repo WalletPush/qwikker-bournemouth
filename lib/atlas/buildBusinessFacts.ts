@@ -89,7 +89,7 @@ export function buildBusinessFacts(
 
   const chips: FactChip[] = []
 
-  // 1. Open/Closed status (only if hours available)
+  // 1. Open/Closed status
   const openStatus = parseOpenStatus(hydratedData, now)
   if (openStatus) {
     if (openStatus.isOpen) {
@@ -98,8 +98,8 @@ export function buildBusinessFacts(
     } else {
       chips.push({ icon: '🕒', label: 'Closed', priority: 1 })
     }
-  } else if (hydratedData && !hydratedData.opening_hours) {
-    chips.push({ icon: '🕒', label: 'Hours not listed', priority: 1 })
+  } else if (hydratedData) {
+    chips.push({ icon: '🕒', label: 'Hours not listed', priority: 5 })
   }
 
   // 2. Distance + walk time (only if user location available)

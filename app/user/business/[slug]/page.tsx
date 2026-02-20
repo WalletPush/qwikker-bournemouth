@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { trackBusinessVisit } from '@/lib/actions/business-visit-actions'
-import { getWalletPassCookie } from '@/lib/utils/wallet-session'
+import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
 import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getBusinessVibeStats } from '@/lib/utils/vibes'
 
@@ -41,6 +41,11 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
   }
   
   const walletPassId = urlWalletPassId || cookieWalletPassId || null
+  
+  // Persist wallet pass to cookie if from URL
+  if (urlWalletPassId && urlWalletPassId !== cookieWalletPassId) {
+    try { await setWalletPassCookie(urlWalletPassId) } catch {}
+  }
   
   // Get current user for the layout
   let currentUser = null

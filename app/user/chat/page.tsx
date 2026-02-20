@@ -5,7 +5,7 @@ import { getCityDisplayName } from '@/lib/utils/city-detection'
 export const dynamic = 'force-dynamic'
 // Removed service role import for security
 import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
-import { getWalletPassCookie } from '@/lib/utils/wallet-session'
+import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
 
 export default async function ChatPage({
   searchParams
@@ -55,17 +55,22 @@ export default async function ChatPage({
   // Priority: URL wallet_pass_id > URL user_id > cookie
   const userId = urlWalletPassId || urlUserId || cookieWalletPassId || null
   
+  // Persist wallet pass to cookie if from URL
+  if (urlWalletPassId && urlWalletPassId !== cookieWalletPassId) {
+    try { await setWalletPassCookie(urlWalletPassId) } catch {}
+  }
+  
   // Get current user for personalized chat
   let currentUser = null
   
   try {
     const { data: user } = await supabase
       .from('app_users')
-      .select('name, level, tier, total_points, city, preferred_categories')
+      .select('first_name, last_name, level, tier, total_points, city, preferred_categories')
       .eq('wallet_pass_id', userId)
-      .eq('city', currentCity) // Explicit city filter for extra safety
+      .eq('city', currentCity)
       .single()
-    currentUser = user
+    currentUser = user ? { ...user, name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || null } : null
   } catch (error) {
     console.log('No user found, using generic chat')
   }

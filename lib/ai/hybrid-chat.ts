@@ -471,8 +471,9 @@ function buildSystemPromptV2(args: {
   atlasAvailable: boolean
   currentTime?: string
   previousResponses?: string[]
+  userName?: string
 }): string {
-  const { cityDisplayName, userMessage, isBroadQuery, stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, previousResponses } = args
+  const { cityDisplayName, userMessage, isBroadQuery, stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, previousResponses, userName } = args
 
   const convoFocus = state?.currentBusiness
     ? `FOCUS: You are currently discussing ${state.currentBusiness.name}. Stay on that unless the user asks to switch.`
@@ -500,8 +501,19 @@ Examples of good questions (pick the most relevant):
 Do NOT block results — always show picks first, then ask.`
     : ''
 
+  const nameGreeting = userName && userName !== 'there' ? `The user's name is ${userName}. Use their first name naturally in your opening line (e.g. "Hey ${userName.split(' ')[0]}," or "Right then ${userName.split(' ')[0]},"). Don't overuse it — once at the start is enough.` : 'You don\'t know the user\'s name. Use a friendly generic opener.'
+
   return `
-You are a local concierge for ${cityDisplayName}. Be helpful, warm, and accurate. Never fabricate information.
+You are Qwikker — a sharp, witty local concierge for ${cityDisplayName}. You know the area like a local who actually goes out. Be helpful, warm, a little cheeky, and always accurate. Never fabricate information.
+${nameGreeting}
+
+PERSONALITY:
+- Sound like a knowledgeable mate who knows all the best spots, not a corporate chatbot
+- Use natural, expressive language: "Oooh nice choice", "Right then", "Good shout", "Here's what I'd go with"
+- Keep it punchy. One good opener line, then get to the useful info
+- Be genuinely enthusiastic when the request is fun — bars, date nights, nightlife — match their energy
+- For practical queries (hours, directions, menus), be direct and efficient
+- Vary your openers — don't start every response the same way
 ${temporalBlock}
 ⚠️  CRITICAL FORMATTING RULES ⚠️
 Every business name MUST be a clickable markdown link: **[Business Name](/user/business/slug)**
@@ -545,10 +557,11 @@ When the user asks for more than one thing (e.g. "drinks then food", "cocktails 
 TONE:
 - Be conversational and warm for planning/discovery queries ("date night", "any good bars", "somewhere cosy")
 - Be factual and direct for information queries ("what time does X close", "do they have parking", "is there an offer")
-- NEVER use these phrases: "Love that plan", "Say no more", "Ooo", "you're in luck", "great shout", "solid pick", "absolute gem", "hidden gem", "people are obsessed"
+- BANNED PHRASES: "Love that plan", "Say no more", "you're in luck", "absolute gem", "hidden gem", "people are obsessed", "you won't regret it", "I've got you covered"
+- ALLOWED: Natural reactions like "Oooh nice", "Right then", "Good shout" are fine — just don't use them if they don't fit the context (e.g. don't say "Love that plan" when the user didn't make a plan)
 - NEVER use fire emoji 🔥 in business descriptions
-- NEVER use exclamation marks more than once per response
-- Keep warmth natural — a knowledgeable friend, not a hype machine
+- Max 2 exclamation marks per response
+- Sound like a knowledgeable local friend — not a generic assistant or a hype machine
 ${varietyBlock}
 ${clarifyBlock}
 ${stateContext ? `CONVERSATION CONTEXT:\n${stateContext}\n` : ''}
@@ -1384,7 +1397,8 @@ Category: ${business.display_category || 'Not specified'}${hoursLine}${richConte
       state,
       atlasAvailable,
       currentTime,
-      previousResponses
+      previousResponses,
+      userName
     })
     
     if (process.env.NODE_ENV === 'development') console.log('[PROMPT] systemPrompt chars=', systemPrompt.length)

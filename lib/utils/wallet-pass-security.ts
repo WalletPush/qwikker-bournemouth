@@ -33,7 +33,7 @@ export async function validateWalletPassId(walletPassId: string): Promise<{
     
     const { data: user, error } = await supabase
       .from('app_users')
-      .select('id, wallet_pass_id, name, email, city, tier, level, wallet_pass_status')
+      .select('id, wallet_pass_id, first_name, last_name, email, city, tier, level, wallet_pass_status')
       .eq('wallet_pass_id', walletPassId)
       .eq('wallet_pass_status', 'active') // Only allow active passes
       .single()
@@ -46,13 +46,14 @@ export async function validateWalletPassId(walletPassId: string): Promise<{
       }
     }
 
-    console.log(`✅ Security: Valid wallet pass ID for user: ${user.name}`)
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || null
+    console.log(`✅ Security: Valid wallet pass ID for user: ${fullName || user.email}`)
     return { 
       isValid: true, 
       user: {
         id: user.id,
         wallet_pass_id: user.wallet_pass_id,
-        name: user.name,
+        name: fullName,
         email: user.email,
         city: user.city,
         tier: user.tier,
