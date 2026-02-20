@@ -41,6 +41,9 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
   }
   
   const walletPassId = urlWalletPassId || cookieWalletPassId || null
+  // #region agent log
+  console.log(`[BusinessPage] Wallet resolution: urlParam=${urlWalletPassId || 'NONE'}, cookie=${cookieWalletPassId ? 'SET' : 'NONE'}, resolved=${walletPassId ? 'SET' : 'NULL'}, slug=${slug}`)
+  // #endregion
   
   // Persist wallet pass to cookie if from URL
   if (urlWalletPassId && urlWalletPassId !== cookieWalletPassId) {
@@ -79,6 +82,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
     .from('business_profiles')
     .select(`
       id,
+      slug,
       business_name,
       business_type,
       system_category,
@@ -273,9 +277,12 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
   
   // Find the specific business being viewed
   const viewedBusiness = allBusinesses.find(business => business.slug === slug)
+  // #region agent log
+  console.log(`[BusinessPage] Slug match: urlSlug="${slug}", found=${!!viewedBusiness}, totalBusinesses=${allBusinesses.length}, realCount=${realBusinesses.length}`)
   if (!viewedBusiness) {
-    console.log(`[Slug Debug] Business NOT found: urlSlug="${slug}", available slugs:`, allBusinesses.map(b => b.slug).slice(0, 15))
+    console.log(`[BusinessPage] Available slugs:`, realBusinesses.map(b => `${b.name} → ${b.slug}`).slice(0, 20))
   }
+  // #endregion
   
   // Get visitor info and business ID for client-side tracking
   // IMPORTANT: Track ALL visits, not just users with wallet passes!

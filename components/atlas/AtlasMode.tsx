@@ -1270,14 +1270,8 @@ export function AtlasMode({
       return
     }
     
-    if (!map.current.loaded()) {
-      dlog('⏳ mapNotLoaded', { waitingForIdle: true })
-      map.current.once('idle', () => {
-        console.log('[Atlas] ✅ Map idle, retrying addBusinessMarkers...')
-        addBusinessMarkers(businesses)
-      })
-      return
-    }
+    // NOTE: removed map.loaded() check — mapReadyRef.current already confirms style is loaded.
+    // loaded() can return false mid-flight (loading tiles) which blocked pin creation.
     
     try {
       const mapboxglModule = await import('mapbox-gl')
