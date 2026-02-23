@@ -401,7 +401,7 @@ export async function POST(request: NextRequest) {
             const walletPushResponse = await fetch(messageUrl, {
               method: 'PUT',
               headers: getWalletPushAuthHeader(credentials.apiKey!),
-              body: JSON.stringify({ value: messageWithLink })
+              body: JSON.stringify({ value: messageWithLink, push: true })
             })
 
             if (!walletPushResponse.ok) {
