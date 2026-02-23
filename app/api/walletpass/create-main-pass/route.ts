@@ -210,8 +210,10 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Updates pass back-of-card links with personalized URLs after creation.
- * Runs async (fire-and-forget) so it doesn't block the pass download.
+ * Updates pass back-of-card links with short URLs after creation.
+ * Extracts the suffix from the WalletPush serial for use as a shortlink code.
+ * e.g. wp-1771886311839-g89ug8bv6 → code = g89ug8bv6
+ *      /c/g89ug8bv6 → chat, /o/g89ug8bv6 → offers
  */
 async function updatePassLinksAsync(
   apiKey: string,
@@ -219,14 +221,18 @@ async function updatePassLinksAsync(
   serialNumber: string,
   cityBaseUrl: string
 ) {
+  // Extract suffix after last dash for short URL code
+  const parts = serialNumber.split('-')
+  const shortCode = parts[parts.length - 1] || serialNumber
+
   const linkUpdates = [
     {
       field: WALLET_PASS_FIELDS.AI_URL,
-      value: `${cityBaseUrl}/user/chat?wallet_pass_id=${serialNumber}`
+      value: `${cityBaseUrl}/c/${shortCode}`
     },
     {
       field: WALLET_PASS_FIELDS.OFFERS_URL,
-      value: `${cityBaseUrl}/user/offers?wallet_pass_id=${serialNumber}`
+      value: `${cityBaseUrl}/o/${shortCode}`
     },
   ]
 
