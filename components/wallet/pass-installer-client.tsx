@@ -22,7 +22,7 @@ export function PassInstallerClient({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [countdown, setCountdown] = useState(10)
+  const [countdown, setCountdown] = useState(15)
   const [deviceType, setDeviceType] = useState<'desktop' | 'iphone' | 'android'>('desktop')
   const [showQR, setShowQR] = useState(false)
   const [passUrl, setPassUrl] = useState<string | null>(null)
@@ -159,9 +159,14 @@ export function PassInstallerClient({
       setSuccess(true)
       setLoading(false)
       
-      // Redirect to pass URL (opens wallet app on mobile, downloads on desktop)
-      // The countdown timer will then redirect to /welcome after 10 seconds
-      window.location.href = finalPassUrl
+      // Trigger .pkpass download without navigating away from the page.
+      // Using a temporary link keeps React alive so the countdown works.
+      const link = document.createElement('a')
+      link.href = finalPassUrl
+      link.style.display = 'none'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
 
     } catch (err: any) {
       console.error('Pass creation error:', err)
@@ -470,21 +475,28 @@ export function PassInstallerClient({
                   Your Pass is Ready!
                 </h3>
                 <p className="text-neutral-300 mb-4">
-                  Please add the pass to your wallet now.
+                  Add the pass to your wallet, then continue to your dashboard.
                 </p>
-                <div className="bg-neutral-800 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-neutral-400">
-                    Redirecting to your dashboard in <span className="text-[#00D083] font-bold text-lg">{countdown}</span> seconds...
-                  </p>
-                </div>
+                
                 {passUrl && (
                   <a
                     href={passUrl}
-                    className="inline-block px-6 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-sm transition-colors"
+                    className="block w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-sm transition-colors mb-3"
                   >
-                    Didn't work? Tap here to add pass
+                    Didn&apos;t get the pass? Tap here to install
                   </a>
                 )}
+                
+                <a
+                  href={`/welcome?wallet_pass_id=${serialNumber}&name=${encodeURIComponent(formData.firstName + ' ' + formData.lastName)}`}
+                  className="block w-full py-4 bg-[#00D083] hover:bg-[#00b86f] text-black font-semibold text-base rounded-lg transition-all shadow-lg shadow-[#00D083]/10"
+                >
+                  Continue to Dashboard
+                </a>
+                
+                <p className="text-xs text-neutral-500 mt-3">
+                  Auto-redirecting in {countdown}s...
+                </p>
               </div>
             )}
           </div>
