@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
       'Email': email,
       'AI_Url': `${cityBaseUrl}/chat`,
       'Offers_Url': `${cityBaseUrl}/offers`,
-      'Dashboard_Url': `${cityBaseUrl}/dashboard`,
       'Last_Message': `Hey ${firstName}, Your Qwikker ${displayName} pass is now installed and ready for use. You will now be redirected to your dashboard. Access this any time from the back of your pass.`,
     }
     
