@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
 import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
+import { getWalletPushFieldUrl, getWalletPushAuthHeader, WALLET_PASS_FIELDS } from '@/lib/config/wallet-pass-fields'
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     const firstName = user?.first_name || user?.name?.split(' ')[0] || 'User'
     
     // Use stored pass_type_identifier or fallback to default
-    const passTypeId = user.pass_type_identifier || 'pass.com.qwikker'
+    const passTypeId = user.pass_type_identifier || 'pass.come.globalwalletpush'
     const serialNumber = userWalletPassId
 
     // SECURITY: Use validated city from user record or request context
@@ -90,21 +91,13 @@ export async function POST(request: NextRequest) {
     const offerName = currentOffer || 'Offer'
     const passDisplayText = `${offerName} at ${businessName} (Expires: ${expiryFormatted})`
     
-    // 🎯 DIRECT API APPROACH: Two PUT calls
-    // 1. Update Current_Offer (changes pass content)
-    // 2. Update Last_Message (triggers push notification)
+    // Two PUT calls: update Current_Offer (pass content) + Last_Message (triggers push)
     
-    const baseUrl = 'https://app2.walletpush.io/api/v1/passes'
-    
-    // Call 1: Update Current_Offer
-    const offerUrl = `${baseUrl}/${passTypeId}/${serialNumber}/values/Current_Offer`
+    const offerUrl = getWalletPushFieldUrl(passTypeId, serialNumber, WALLET_PASS_FIELDS.CURRENT_OFFER)
     
     const offerResponse = await fetch(offerUrl, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': appKey
-      },
+      headers: getWalletPushAuthHeader(appKey),
       body: JSON.stringify({ value: passDisplayText })
     })
     
@@ -119,16 +112,12 @@ export async function POST(request: NextRequest) {
 
     const offerResult = await offerResponse.json()
     
-    // Call 2: Update Last_Message (triggers push notification)
     const pushMessage = `🎉 Congratulations ${firstName}! You have redeemed: ${currentOffer || 'your offer'}!`
-    const messageUrl = `${baseUrl}/${passTypeId}/${serialNumber}/values/Last_Message`
+    const messageUrl = getWalletPushFieldUrl(passTypeId, serialNumber, WALLET_PASS_FIELDS.LAST_MESSAGE)
 
     const messageResponse = await fetch(messageUrl, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': appKey
-      },
+      headers: getWalletPushAuthHeader(appKey),
       body: JSON.stringify({ value: pushMessage })
     })
     

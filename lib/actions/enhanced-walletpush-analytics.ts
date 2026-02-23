@@ -3,6 +3,7 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
 import { estimatePassDeletions } from '@/lib/utils/pass-status-tracker'
+import { getWalletPushAnalyticsUrl, getWalletPushAuthHeader } from '@/lib/config/wallet-pass-fields'
 
 interface EnhancedWalletPushAnalytics {
   // Real data from our database
@@ -122,11 +123,12 @@ export async function getEnhancedWalletPushAnalytics(city: string): Promise<Enha
     try {
       const credentials = await getWalletPushCredentials(city)
       if (credentials.apiKey && credentials.templateId) {
-        const response = await fetch(`https://app2.walletpush.io/api/v1/templates/${credentials.templateId}/analytics`, {
-          headers: { 'Authorization': credentials.apiKey }
+        const response = await fetch(getWalletPushAnalyticsUrl(credentials.templateId), {
+          headers: getWalletPushAuthHeader(credentials.apiKey)
         })
         
-        if (response.ok) {
+        const contentType = response.headers.get('content-type') || ''
+        if (response.ok && contentType.includes('application/json')) {
           const data = await response.json()
           walletPushData = {
             passesCreated: data.passes_created || 0,

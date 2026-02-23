@@ -1,6 +1,7 @@
 'use server'
 
 import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
+import { getWalletPushAnalyticsUrl, getWalletPushActivityUrl, getWalletPushAuthHeader } from '@/lib/config/wallet-pass-fields'
 
 interface WalletPushAnalytics {
   passesCreated: number
@@ -38,8 +39,7 @@ export async function getWalletPushAnalytics(city: string = 'bournemouth'): Prom
       }
     }
     
-    // Fetch analytics from WalletPush API
-    const analyticsUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/analytics`
+    const analyticsUrl = getWalletPushAnalyticsUrl(MOBILE_WALLET_TEMPLATE_ID)
     
     console.log(`📊 Fetching WalletPush analytics for ${city}:`, {
       url: analyticsUrl,
@@ -49,19 +49,12 @@ export async function getWalletPushAnalytics(city: string = 'bournemouth'): Prom
     
     const response = await fetch(analyticsUrl, {
       method: 'GET',
-      headers: {
-        'Authorization': MOBILE_WALLET_APP_KEY,
-        'Content-Type': 'application/json',
-      }
+      headers: getWalletPushAuthHeader(MOBILE_WALLET_APP_KEY),
     })
     
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error(`Failed to fetch WalletPush analytics for ${city}:`, {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText
-      })
+    const contentType = response.headers.get('content-type') || ''
+    if (!response.ok || !contentType.includes('application/json')) {
+      console.warn(`WalletPush analytics not available for ${city} (status: ${response.status}, content-type: ${contentType})`)
       return {
         passesCreated: 0,
         passesInstalled: 0,
@@ -73,19 +66,16 @@ export async function getWalletPushAnalytics(city: string = 'bournemouth'): Prom
     
     const data = await response.json()
     
-    // Fetch recent activity
-    const activityUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/activity`
+    const activityUrl = getWalletPushActivityUrl(MOBILE_WALLET_TEMPLATE_ID)
     
     const activityResponse = await fetch(activityUrl, {
       method: 'GET',
-      headers: {
-        'Authorization': MOBILE_WALLET_APP_KEY,
-        'Content-Type': 'application/json',
-      }
+      headers: getWalletPushAuthHeader(MOBILE_WALLET_APP_KEY),
     })
     
     let recentActivity = []
-    if (activityResponse.ok) {
+    const activityContentType = activityResponse.headers.get('content-type') || ''
+    if (activityResponse.ok && activityContentType.includes('application/json')) {
       const activityData = await activityResponse.json()
       recentActivity = (activityData.activities || []).map((activity: any) => ({
         type: activity.type || 'pass_installed',

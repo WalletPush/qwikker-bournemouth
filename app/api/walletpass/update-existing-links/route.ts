@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
+import { getWalletPushFieldUrl, getWalletPushAuthHeader, WALLET_PASS_FIELDS } from '@/lib/config/wallet-pass-fields'
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,42 +29,40 @@ export async function POST(request: NextRequest) {
     }
     
     const city = user.city || 'bournemouth'
-    const passTypeId = user.pass_type_identifier || 'pass.com.qwikker'
+    const passTypeId = user.pass_type_identifier || 'pass.come.globalwalletpush'
     const serialNumber = userWalletPassId
-    const appKey = 'xIwpMeyEfuoAtvyCeLsNkQOuCYhOWahJYDHpQzlLfJbFWhptwLhArihcLcBCfpmF'
     
-    const baseUrl = 'https://app2.walletpush.io/api/v1/passes'
+    const credentials = await getWalletPushCredentials(city)
+    if (!credentials.apiKey) {
+      console.error(`❌ Missing WalletPush API key for ${city}`)
+      return NextResponse.json({ error: 'WalletPush credentials not configured' }, { status: 500 })
+    }
     
-    // Update all the personalized links
     const updates = [
       {
-        field: 'Offers_Url',
+        field: WALLET_PASS_FIELDS.OFFERS_URL,
         value: `https://${city}.qwikker.com/user/offers?wallet_pass_id=${serialNumber}`
       },
       {
-        field: 'AI_Url', 
+        field: WALLET_PASS_FIELDS.AI_URL, 
         value: `https://${city}.qwikker.com/user/chat?wallet_pass_id=${serialNumber}`
       },
       {
-        field: 'Dashboard_Url',
+        field: WALLET_PASS_FIELDS.DASHBOARD_URL,
         value: `https://${city}.qwikker.com/user/dashboard?wallet_pass_id=${serialNumber}`
       }
     ]
     
     console.log(`📡 Updating ${updates.length} fields for user: ${user.name}`)
     
-    // Update each field
     for (const update of updates) {
-      const updateUrl = `${baseUrl}/${passTypeId}/${serialNumber}/values/${update.field}`
+      const updateUrl = getWalletPushFieldUrl(passTypeId, serialNumber, update.field)
       
       console.log(`🔄 Updating ${update.field}:`, update.value)
       
       const response = await fetch(updateUrl, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': appKey
-        },
+        headers: getWalletPushAuthHeader(credentials.apiKey),
         body: JSON.stringify({ value: update.value })
       })
       

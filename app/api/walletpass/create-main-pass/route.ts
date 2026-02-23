@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
+import { getWalletPushCreateUrl, getWalletPushAuthHeader } from '@/lib/config/wallet-pass-fields'
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Create main user wallet pass
-    const createUrl = `https://app2.walletpush.io/api/v1/templates/${MOBILE_WALLET_TEMPLATE_ID}/pass`
+    const createUrl = getWalletPushCreateUrl(MOBILE_WALLET_TEMPLATE_ID)
     
     // Get the request host to build dynamic URLs
     const host = request.headers.get('host') || 'qwikker.com'
@@ -60,10 +61,7 @@ export async function POST(request: NextRequest) {
     
     const response = await fetch(createUrl, {
       method: 'POST',
-      headers: {
-        'Authorization': MOBILE_WALLET_APP_KEY,
-        'Content-Type': 'application/json',
-      },
+      headers: getWalletPushAuthHeader(MOBILE_WALLET_APP_KEY),
       body: JSON.stringify(passData)
     })
     
@@ -80,12 +78,18 @@ export async function POST(request: NextRequest) {
     
     const result = await response.json()
     
-    if (result.url && result.serialNumber) {
+    // New WalletPush returns { success, serialNumber, passTypeIdentifier, apple: { downloadUrl }, google: { saveUrl } }
+    // Old WalletPush returned { url, serialNumber }
+    const passUrl = result.apple?.downloadUrl || result.url
+    const passSerialNumber = result.serialNumber
+    const passTypeId = result.passTypeIdentifier || 'pass.come.globalwalletpush'
+    
+    if (passUrl && passSerialNumber) {
       console.log('✅ Main wallet pass created:', {
         user: `${firstName} ${lastName}`,
-        serialNumber: result.serialNumber,
-        passUrl: result.url,
-        passTypeIdentifier: result.passTypeIdentifier
+        serialNumber: passSerialNumber,
+        passUrl: passUrl,
+        passTypeIdentifier: passTypeId
       })
       
       // Save/update user record with consent preferences
@@ -95,7 +99,8 @@ export async function POST(request: NextRequest) {
         
         // Build consent update fields
         const consentFields: Record<string, any> = {
-          wallet_pass_id: result.serialNumber,
+          wallet_pass_id: passSerialNumber,
+          pass_type_identifier: passTypeId,
           first_name: firstName,
           name: `${firstName} ${lastName}`,
           email: email.toLowerCase(),
@@ -166,12 +171,11 @@ export async function POST(request: NextRequest) {
         // Don't fail the whole request
       }
       
-      // Return immediately - match old simple flow
       return NextResponse.json({ 
         success: true, 
-        passUrl: result.url,
-        serialNumber: result.serialNumber,
-        passTypeIdentifier: result.passTypeIdentifier || 'pass.com.WalletPush',
+        passUrl: passUrl,
+        serialNumber: passSerialNumber,
+        passTypeIdentifier: passTypeId,
         message: 'Main wallet pass created successfully'
       })
     } else {

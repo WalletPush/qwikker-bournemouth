@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
-import { WALLET_PASS_FIELDS } from '@/lib/config/wallet-pass-fields'
+import { WALLET_PASS_FIELDS, getWalletPushFieldUrl, getWalletPushAuthHeader } from '@/lib/config/wallet-pass-fields'
 import { generateShortCode } from '@/lib/utils/short-code'
 
 /**
@@ -326,8 +326,6 @@ export async function POST(request: NextRequest) {
     let failedCount = 0
     const MAX_CODE_RETRIES = 5
 
-    const baseUrl = 'https://app2.walletpush.io/api/v1/passes'
-
     console.log(`📤 Sending to ${targetUsers.length} users in parallel...`)
 
     // Process ALL users in parallel (no batching for speed)
@@ -397,16 +395,12 @@ export async function POST(request: NextRequest) {
             // 4) EMBED SHORT LINK IN LAST_MESSAGE (auto-tappable)
             const messageWithLink = `${personalizedMessage}\n\nTap: ${trackingUrl}`
 
-            // 5) UPDATE WALLET PASS (ONLY Last_Message field)
-            const passTypeId = user.pass_type_identifier || 'pass.com.qwikker'
-            const messageUrl = `${baseUrl}/${passTypeId}/${user.wallet_pass_id}/values/${WALLET_PASS_FIELDS.LAST_MESSAGE}`
+            const passTypeId = user.pass_type_identifier || 'pass.come.globalwalletpush'
+            const messageUrl = getWalletPushFieldUrl(passTypeId, user.wallet_pass_id, WALLET_PASS_FIELDS.LAST_MESSAGE)
 
             const walletPushResponse = await fetch(messageUrl, {
               method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': credentials.apiKey!
-              },
+              headers: getWalletPushAuthHeader(credentials.apiKey!),
               body: JSON.stringify({ value: messageWithLink })
             })
 
