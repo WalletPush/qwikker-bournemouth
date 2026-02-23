@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
-import { getWalletPushCreateUrl, getWalletPushAuthHeader } from '@/lib/config/wallet-pass-fields'
+import { getWalletPushCreateUrl, getWalletPushAuthHeader, getWalletPushFieldUrl, WALLET_PASS_FIELDS } from '@/lib/config/wallet-pass-fields'
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,13 +51,16 @@ export async function POST(request: NextRequest) {
     
     const displayName = citySubdomain.charAt(0).toUpperCase() + citySubdomain.slice(1)
     
-    // Send all field values upfront so the pass is fully populated on creation
+    // Send all field values upfront so the pass is fully populated on creation.
+    // AI_Url/Offers_Url use placeholder wallet_pass_id that gets updated post-creation
+    // with the real WalletPush serial number.
     const passData: Record<string, string> = {
       'First_Name': firstName,
       'Last_Name': lastName,
       'Email': email,
-      'AI_Url': `${cityBaseUrl}/chat`,
-      'Offers_Url': `${cityBaseUrl}/offers`,
+      'Current_Offer': `Welcome to Qwikker ${displayName}! Check out our amazing local offers.`,
+      'AI_Url': `${cityBaseUrl}/user/chat`,
+      'Offers_Url': `${cityBaseUrl}/user/offers`,
       'Last_Message': `Hey ${firstName}, Your Qwikker ${displayName} pass is now installed and ready for use. You will now be redirected to your dashboard. Access this any time from the back of your pass.`,
     }
     
@@ -176,8 +179,12 @@ export async function POST(request: NextRequest) {
         }
       } catch (dbError) {
         console.error('⚠️ Database error saving consent:', dbError)
-        // Don't fail the whole request
       }
+      
+      // Fire-and-forget: update pass links with personalized URLs containing wallet_pass_id
+      updatePassLinksAsync(
+        MOBILE_WALLET_APP_KEY, passTypeId, passSerialNumber, cityBaseUrl
+      ).catch(err => console.warn('⚠️ Non-critical: pass link update failed:', err))
       
       return NextResponse.json({ 
         success: true, 
@@ -199,5 +206,45 @@ export async function POST(request: NextRequest) {
       success: false, 
       error: 'Failed to create main wallet pass' 
     }, { status: 500 })
+  }
+}
+
+/**
+ * Updates pass back-of-card links with personalized URLs after creation.
+ * Runs async (fire-and-forget) so it doesn't block the pass download.
+ */
+async function updatePassLinksAsync(
+  apiKey: string,
+  passTypeId: string,
+  serialNumber: string,
+  cityBaseUrl: string
+) {
+  const linkUpdates = [
+    {
+      field: WALLET_PASS_FIELDS.AI_URL,
+      value: `${cityBaseUrl}/user/chat?wallet_pass_id=${serialNumber}`
+    },
+    {
+      field: WALLET_PASS_FIELDS.OFFERS_URL,
+      value: `${cityBaseUrl}/user/offers?wallet_pass_id=${serialNumber}`
+    },
+  ]
+
+  for (const update of linkUpdates) {
+    try {
+      const url = getWalletPushFieldUrl(passTypeId, serialNumber, update.field)
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: getWalletPushAuthHeader(apiKey),
+        body: JSON.stringify({ value: update.value })
+      })
+      if (res.ok) {
+        console.log(`✅ Updated ${update.field} → ${update.value}`)
+      } else {
+        console.warn(`⚠️ Failed to update ${update.field}: ${res.status}`)
+      }
+    } catch (err) {
+      console.warn(`⚠️ Error updating ${update.field}:`, err)
+    }
   }
 }
