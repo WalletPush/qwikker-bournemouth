@@ -49,12 +49,17 @@ export async function POST(request: NextRequest) {
     // Generate unique serial number for this pass
     const serialNumber = `QWIK-${city?.toUpperCase() || 'BOURNE'}-${firstName.toUpperCase()}-${Date.now()}`
     
-    // ✅ SIMPLE: Match old working code - just send the basics
-    // WalletPush template already has all the fields configured
-    const passData = {
+    const displayName = citySubdomain.charAt(0).toUpperCase() + citySubdomain.slice(1)
+    
+    // Send all field values upfront so the pass is fully populated on creation
+    const passData: Record<string, string> = {
       'First_Name': firstName,
       'Last_Name': lastName,
-      'Email': email
+      'Email': email,
+      'AI_Url': `${cityBaseUrl}/chat`,
+      'Offers_Url': `${cityBaseUrl}/offers`,
+      'Dashboard_Url': `${cityBaseUrl}/dashboard`,
+      'Last_Message': `Hey ${firstName}, Your Qwikker ${displayName} pass is now installed and ready for use. You will now be redirected to your dashboard. Access this any time from the back of your pass.`,
     }
     
     console.log('📡 Creating WalletPush pass for:', firstName, lastName)
@@ -79,8 +84,12 @@ export async function POST(request: NextRequest) {
     const result = await response.json()
     
     // New WalletPush returns { success, serialNumber, passTypeIdentifier, apple: { downloadUrl }, google: { saveUrl } }
-    // Old WalletPush returned { url, serialNumber }
-    const passUrl = result.apple?.downloadUrl || result.url
+    // apple.downloadUrl is /api/pass-install/{serial} which is a web page with its own redirect.
+    // We need the direct .pkpass download: /api/apple-pass/{serial}/download
+    const rawAppleUrl = result.apple?.downloadUrl || result.url || ''
+    const passUrl = rawAppleUrl.includes('/api/pass-install/')
+      ? rawAppleUrl.replace('/api/pass-install/', '/api/apple-pass/') + '/download'
+      : rawAppleUrl
     const passSerialNumber = result.serialNumber
     const passTypeId = result.passTypeIdentifier || 'pass.come.globalwalletpush'
     
