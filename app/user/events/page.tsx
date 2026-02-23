@@ -1,7 +1,7 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { UserEventsPage } from '@/components/user/user-events-page'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
-import { cookies } from 'next/headers'
+import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getCityDisplayName } from '@/lib/utils/city-detection'
 
@@ -28,9 +28,7 @@ export default async function Events() {
 
   const supabase = createServiceRoleClient()
   
-  // Get wallet pass ID from cookies
-  const cookieStore = await cookies()
-  const walletPassId = cookieStore.get('wallet_pass_id')?.value
+  const walletPassId = await getWalletPassCookie()
 
   // Fetch upcoming approved events with business details - FILTERED by current city
   const { data: eventsData, error } = await supabase
