@@ -372,13 +372,13 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                 className="h-full w-full"
               />
               {business.status === 'unclaimed' && !business.owner_user_id && (
-              <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 items-end">
-                <span className="inline-block px-1.5 py-0.5 rounded text-[9px] bg-slate-800/60 backdrop-blur-sm border border-slate-700/30 text-slate-400">
+              <div className="absolute top-3 right-3 z-20 flex flex-col gap-1 items-end">
+                <span className="px-1.5 py-0.5 rounded text-[9px] leading-tight bg-slate-800/60 backdrop-blur-sm border border-slate-700/30 text-slate-400">
                   Listing not yet claimed
                 </span>
                 <a
                   href={`/claim?business_id=${business.id}`}
-                  className="self-start inline-block px-1.5 py-0.5 rounded text-[9px] bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
+                  className="px-1.5 py-0.5 rounded text-[9px] leading-tight bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
                 >
                   Your business? Claim here
                 </a>
@@ -396,13 +396,13 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
               showDots={true}
             />
             {business.status === 'unclaimed' && !business.owner_user_id && (
-              <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 items-end max-w-[180px]">
-                <span className="px-1.5 py-0.5 rounded text-[9px] bg-slate-800/60 backdrop-blur-sm border border-slate-700/30 text-slate-400">
+              <div className="absolute top-3 right-3 z-20 flex flex-col gap-1 items-end">
+                <span className="px-1.5 py-0.5 rounded text-[9px] leading-tight bg-slate-800/60 backdrop-blur-sm border border-slate-700/30 text-slate-400">
                   Listing not yet claimed
                 </span>
                 <a
                   href={`/claim?business_id=${business.id}`}
-                  className="self-start inline-block px-1.5 py-0.5 rounded text-[9px] bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
+                  className="px-1.5 py-0.5 rounded text-[9px] leading-tight bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
                 >
                   Your business? Claim here
                 </a>
