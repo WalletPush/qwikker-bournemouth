@@ -577,18 +577,18 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 bg-slate-800/50 rounded-lg p-1">
+      <div className="flex space-x-1 bg-slate-800/50 rounded-lg p-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 px-2 sm:px-4 py-3 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 whitespace-nowrap ${
+            className={`flex-1 min-w-0 px-2 sm:px-4 py-3 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ${
               activeTab === tab.id
                 ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black'
                 : 'text-slate-300 hover:text-slate-100 hover:bg-slate-700/50'
             }`}
           >
-            <span className="block sm:inline">{tab.label}</span>
+            <span className="block sm:inline truncate">{tab.id === 'reviews' ? <><span className="sm:hidden">Reviews</span><span className="hidden sm:inline">{tab.label}</span></> : tab.label}</span>
             {tab.count !== null && (
               <span className={`ml-1 sm:ml-2 text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full ${
                 activeTab === tab.id ? 'bg-black/20' : 'bg-slate-600'
