@@ -485,14 +485,14 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
               return (
                 <Card key={prog.id} className="bg-zinc-900/50 border-zinc-800 overflow-hidden">
                   <CardContent className="p-4">
-                    <div className="flex gap-4 items-start">
-                      {/* Left: compact card preview */}
+                    <div className="flex flex-col md:flex-row gap-4 items-start">
+                      {/* Card preview: full-width on mobile, compact on desktop */}
                       <LoyaltyCardPreview
                         {...toLoyaltyCardPreviewProps({
                           ...prog,
                           business_name: business?.business_name,
                         })}
-                        className="mx-0 shrink-0 !max-w-[260px]"
+                        className="md:mx-0 md:shrink-0 md:!max-w-[260px]"
                       />
 
                       {/* Right: info + stats + actions */}
