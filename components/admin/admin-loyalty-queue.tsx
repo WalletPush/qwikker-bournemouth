@@ -485,8 +485,32 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
               return (
                 <Card key={prog.id} className="bg-zinc-900/50 border-zinc-800 overflow-hidden">
                   <CardContent className="p-4">
-                    <div className="flex flex-col md:flex-row gap-4 items-start">
-                      {/* Card preview: full-width on mobile, compact on desktop */}
+                    {/* Header: business info + status */}
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {business?.logo && (
+                          <img src={business.logo} alt="" className="w-8 h-8 rounded-lg object-cover bg-zinc-800 shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-white font-medium text-sm truncate">
+                            {business?.business_name || 'Unknown Business'}
+                          </p>
+                          <p className="text-zinc-500 text-xs truncate">
+                            {prog.program_name || 'Loyalty Program'}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
+                        prog.status === 'active'
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-amber-500/20 text-amber-400'
+                      }`}>
+                        {prog.status === 'active' ? 'Active' : 'Paused'}
+                      </span>
+                    </div>
+
+                    {/* Desktop: side-by-side | Mobile: card on top, stats below */}
+                    <div className="flex flex-col md:flex-row gap-4">
                       <LoyaltyCardPreview
                         {...toLoyaltyCardPreviewProps({
                           ...prog,
@@ -495,50 +519,26 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
                         className="md:mx-0 md:shrink-0 md:!max-w-[260px]"
                       />
 
-                      {/* Right: info + stats + actions */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch">
-                        <div className="flex items-start justify-between gap-2 mb-4">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            {business?.logo && (
-                              <img src={business.logo} alt="" className="w-8 h-8 rounded-lg object-cover bg-zinc-800 shrink-0" />
-                            )}
-                            <div className="min-w-0">
-                              <p className="text-white font-medium text-sm truncate">
-                                {business?.business_name || 'Unknown Business'}
-                              </p>
-                              <p className="text-zinc-500 text-xs truncate">
-                                {prog.program_name || 'Loyalty Program'}
-                              </p>
-                            </div>
-                          </div>
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
-                            prog.status === 'active'
-                              ? 'bg-emerald-500/20 text-emerald-400'
-                              : 'bg-amber-500/20 text-amber-400'
-                          }`}>
-                            {prog.status === 'active' ? 'Active' : 'Paused'}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-4 flex-1">
-                          <div className="bg-zinc-800/40 rounded-lg px-3 py-2.5">
-                            <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-1">Members</p>
-                            <p className="text-white text-lg font-semibold flex items-center gap-1.5">
-                              <Users className="w-4 h-4 text-emerald-500" />
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        <div className="grid grid-cols-2 gap-3 md:gap-x-6 md:gap-y-4 md:flex-1">
+                          <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
+                            <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-0.5">Members</p>
+                            <p className="text-white text-base md:text-lg font-semibold flex items-center gap-1.5">
+                              <Users className="w-3.5 h-3.5 text-emerald-500" />
                               {prog.member_count}
                             </p>
                           </div>
-                          <div className="bg-zinc-800/40 rounded-lg px-3 py-2.5">
-                            <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-1">Type</p>
-                            <p className="text-white text-lg font-semibold capitalize">{prog.type}</p>
+                          <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
+                            <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-0.5">Type</p>
+                            <p className="text-white text-base md:text-lg font-semibold capitalize">{prog.type}</p>
                           </div>
-                          <div className="bg-zinc-800/40 rounded-lg px-3 py-2.5">
-                            <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-1">Reward</p>
+                          <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
+                            <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-0.5">Reward</p>
                             <p className="text-white text-sm font-semibold truncate">{prog.reward_description}</p>
                           </div>
-                          <div className="bg-zinc-800/40 rounded-lg px-3 py-2.5">
-                            <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-1">Threshold</p>
-                            <p className="text-white text-lg font-semibold">{prog.reward_threshold} <span className="text-sm font-normal text-zinc-400">{prog.stamp_label.toLowerCase()}</span></p>
+                          <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
+                            <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-0.5">Threshold</p>
+                            <p className="text-white text-base md:text-lg font-semibold">{prog.reward_threshold} <span className="text-xs font-normal text-zinc-400">{prog.stamp_label.toLowerCase()}</span></p>
                           </div>
                         </div>
 
