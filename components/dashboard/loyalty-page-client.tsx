@@ -220,13 +220,13 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
       </div>
       {program && (
         <>
-          {/* Card preview left, program info right */}
-          <div className="flex gap-5 items-start">
+          {/* Card preview + program info: stacked on mobile, side-by-side on desktop */}
+          <div className="flex flex-col md:flex-row gap-5 items-start">
             <LoyaltyCardPreview
               {...toLoyaltyCardPreviewProps({ ...program, business_name: profile?.business_name })}
-              className="mx-0 shrink-0"
+              className="md:mx-0 md:shrink-0"
             />
-            <div className="flex-1 min-w-0 space-y-3">
+            <div className="w-full md:flex-1 md:min-w-0 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg px-3 py-3">
                   <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-1">Reward</p>
