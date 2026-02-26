@@ -5,9 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { StampGrid } from '@/components/loyalty/stamp-grid'
 import { STAMP_ICONS } from '@/lib/loyalty/loyalty-utils'
 import type { StampIconKey } from '@/lib/loyalty/loyalty-utils'
-import { Loader2, ChevronDown, ChevronUp, ExternalLink, Trophy, Gift } from 'lucide-react'
+import { Loader2, ChevronDown, ChevronUp, ExternalLink, Trophy, Gift, ScanLine } from 'lucide-react'
 import Link from 'next/link'
 import { RedemptionDisplay } from '@/components/loyalty/redemption-display'
+import { QrScanner } from '@/components/loyalty/qr-scanner'
 
 interface Membership {
   id: string
@@ -68,10 +69,21 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
   }, [walletPassId])
 
   const [redeemingMembership, setRedeemingMembership] = useState<Membership | null>(null)
+  const [showScanner, setShowScanner] = useState(false)
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedId((prev) => (prev === id ? null : id))
   }, [])
+
+  const reloadMemberships = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/loyalty/me?walletPassId=${encodeURIComponent(walletPassId)}`)
+      if (res.ok) {
+        const data = await res.json()
+        setMemberships(data.memberships || [])
+      }
+    } catch {}
+  }, [walletPassId])
 
   if (isLoading) {
     return (
@@ -82,7 +94,20 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
   }
 
   if (memberships.length === 0) {
-    return <EmptyRewardsState walletPassId={walletPassId} />
+    return (
+      <>
+        <EmptyRewardsState walletPassId={walletPassId} />
+        <AnimatePresence>
+          {showScanner && (
+            <QrScanner
+              walletPassId={walletPassId}
+              onClose={() => setShowScanner(false)}
+              onStampEarned={reloadMemberships}
+            />
+          )}
+        </AnimatePresence>
+      </>
+    )
   }
 
   // Redemption overlay
@@ -109,6 +134,25 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
 
   return (
     <div className="space-y-4 px-1">
+      {/* Scan to earn button */}
+      <button
+        onClick={() => setShowScanner(true)}
+        className="w-full flex items-center justify-center gap-2 h-11 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors"
+      >
+        <ScanLine className="w-4 h-4" />
+        Scan to Earn
+      </button>
+
+      <AnimatePresence>
+        {showScanner && (
+          <QrScanner
+            walletPassId={walletPassId}
+            onClose={() => setShowScanner(false)}
+            onStampEarned={reloadMemberships}
+          />
+        )}
+      </AnimatePresence>
+
       {memberships.map((m) => {
         const p = m.program
         const balance = p.type === 'stamps' ? m.stamps_balance : m.points_balance

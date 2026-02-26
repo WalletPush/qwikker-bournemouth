@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     // 1. Resolve program
     const { data: program } = await serviceRole
       .from('loyalty_programs')
-      .select('*, business_profiles!inner(business_name)')
+      .select('*, business_profiles!inner(business_name, logo)')
       .eq('public_id', publicId)
       .eq('city', city)
       .single()
@@ -266,6 +266,8 @@ export async function POST(request: NextRequest) {
       ? new Date(Date.now() + nextGapMs).toISOString()
       : null
 
+    const businessName = (program as any).business_profiles?.business_name || ''
+
     return NextResponse.json({
       success: true,
       newBalance,
@@ -273,6 +275,15 @@ export async function POST(request: NextRequest) {
       rewardUnlocked,
       proximityMessage,
       nextEligibleAt,
+      program: {
+        business_name: businessName,
+        logo_url: (program as any).business_profiles?.logo || program.logo_url || null,
+        program_name: program.program_name,
+        reward_description: program.reward_description,
+        reward_threshold: program.reward_threshold,
+        stamp_icon: program.stamp_icon,
+        stamp_label: program.stamp_label,
+      },
     })
   } catch (error) {
     console.error('[loyalty/earn]', error)
