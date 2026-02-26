@@ -39,16 +39,20 @@ interface IssueLoyaltyPassResult {
  */
 export async function issueLoyaltyPass(
   program: { walletpush_template_id: string; walletpush_api_key: string },
-  _memberData: { firstName: string; lastName: string; email: string },
+  memberData: { firstName: string; lastName: string; email: string },
   initialFields: Record<string, string>
 ): Promise<IssueLoyaltyPassResult | null> {
   try {
     const url = getWalletPushCreateUrl(program.walletpush_template_id)
     const headers = getWalletPushAuthHeader(program.walletpush_api_key)
 
-    // Only send fields that match template placeholders.
-    // Person data (firstName/lastName/email) is NOT a template placeholder.
-    const body = { ...initialFields }
+    // Field names must exactly match template placeholders.
+    const body = {
+      ...initialFields,
+      First_Name: memberData.firstName,
+      Last_Name: memberData.lastName,
+      Email: memberData.email,
+    }
 
     const response = await fetch(url, {
       method: 'POST',
