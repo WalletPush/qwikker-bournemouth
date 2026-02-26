@@ -98,22 +98,14 @@ export async function POST(request: NextRequest) {
     if (hasWalletPushCredentials(program)) {
       const initialFields = getLoyaltyPassFieldValues(program, membership, program.type)
 
-      const memberFirstName = firstName || 'Qwikker'
-      const memberLastName = lastName || 'Member'
-      const memberEmail = email || `${walletPassId}@pass.qwikker.com`
-
       const result = await issueLoyaltyPass(
         program,
         {
-          firstName: memberFirstName,
-          lastName: memberLastName,
-          email: memberEmail,
+          firstName: firstName || 'Qwikker',
+          lastName: lastName || 'Member',
+          email: email || `${walletPassId}@pass.qwikker.com`,
         },
-        {
-          ...initialFields,
-          Member_Name: `${memberFirstName} ${memberLastName}`,
-          Member_Email: memberEmail,
-        }
+        initialFields
       )
 
       if (result) {

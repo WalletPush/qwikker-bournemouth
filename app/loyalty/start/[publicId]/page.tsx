@@ -2,7 +2,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
+import { StartPageUnauth } from '@/components/loyalty/start-page-unauth'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,47 +72,23 @@ export default async function LoyaltyStartPage({ params, searchParams }: StartPa
   }
 
   // --- Unauthenticated user ---
-  const returnTo = mode === 'earn' && token
+  const returnPath = mode === 'earn' && token
     ? `/loyalty/earn/${publicId}?t=${encodeURIComponent(token)}`
     : `/loyalty/join/${publicId}`
 
-  const joinUrl = `/join?returnTo=${encodeURIComponent(returnTo)}`
-  const businessName = bp.business_name || 'this business'
-  const businessLogo = bp.logo
+  const joinUrl = `/join?returnTo=${encodeURIComponent(returnPath)}`
 
   return (
-    <div className="min-h-screen bg-[#0b0f14] flex flex-col items-center justify-center px-4 py-10">
-      <div className="max-w-sm w-full flex flex-col items-center gap-6">
-        {businessLogo && (
-          <img src={businessLogo} alt="" className="w-16 h-16 rounded-2xl object-cover bg-zinc-800" />
-        )}
-
-        <div className="text-center">
-          <h1 className="text-white text-2xl font-bold">
-            Get {businessName} Rewards
-          </h1>
-          <p className="text-zinc-400 text-sm mt-2">
-            Collect {program.reward_threshold} {program.stamp_label?.toLowerCase() || 'stamps'} to earn{' '}
-            <span className="text-emerald-400 font-medium">{program.reward_description}</span>
-          </p>
-        </div>
-
-        <div className="bg-zinc-800/40 border border-zinc-700/50 rounded-xl p-4 text-center">
-          <p className="text-zinc-300 text-sm">
-            You&apos;ll install the free Qwikker Pass first, then you&apos;ll be brought straight back here.
-          </p>
-        </div>
-
-        <Link
-          href={joinUrl}
-          className="w-full flex items-center justify-center h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors text-sm"
-        >
-          Install Qwikker Pass (10 seconds)
-        </Link>
-
-        <p className="text-zinc-600 text-xs">No app required.</p>
-      </div>
-    </div>
+    <StartPageUnauth
+      publicId={publicId}
+      joinUrl={joinUrl}
+      businessName={bp.business_name || 'this business'}
+      businessLogo={bp.logo}
+      rewardThreshold={program.reward_threshold}
+      stampLabel={program.stamp_label || 'stamps'}
+      rewardDescription={program.reward_description}
+      returnPath={returnPath}
+    />
   )
 }
 
