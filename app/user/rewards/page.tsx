@@ -1,12 +1,18 @@
 import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getCityDisplayName } from '@/lib/utils/city-detection'
-import { getWalletPassCookie } from '@/lib/utils/wallet-session'
+import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserRewardsPage } from '@/components/user/user-rewards-page'
 
 export const dynamic = 'force-dynamic'
 
-export default async function RewardsPage() {
+interface RewardsPageProps {
+  searchParams: Promise<{
+    wallet_pass_id?: string
+  }>
+}
+
+export default async function RewardsPage({ searchParams }: RewardsPageProps) {
   let currentCity: string
   let cityDisplayName: string
   try {
@@ -23,7 +29,19 @@ export default async function RewardsPage() {
     )
   }
 
-  const walletPassId = await getWalletPassCookie()
+  const resolvedSearchParams = await searchParams
+  const urlWalletPassId = resolvedSearchParams.wallet_pass_id
+
+  let cookieWalletPassId: string | null = null
+  try {
+    cookieWalletPassId = await getWalletPassCookie()
+  } catch {}
+
+  const walletPassId = urlWalletPassId || cookieWalletPassId || null
+
+  if (urlWalletPassId && urlWalletPassId !== cookieWalletPassId) {
+    try { await setWalletPassCookie(urlWalletPassId) } catch {}
+  }
 
   if (!walletPassId) {
     return (
