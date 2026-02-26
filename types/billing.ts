@@ -208,6 +208,10 @@ export interface BusinessCRMData {
   last_updated: string
   has_pending_changes: boolean
   pending_changes_count: number
+
+  // Loyalty program info (admin CRM)
+  loyalty_program_status?: 'active' | 'paused' | null
+  loyalty_member_count?: number
 }
 
 // Helper functions

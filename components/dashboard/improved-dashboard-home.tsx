@@ -15,6 +15,7 @@ import { HowQwikkerWorksModal } from '@/components/dashboard/how-qwikker-works-m
 import { VerificationStatusWidget } from './VerificationStatusWidget'
 import { ClaimWelcomeModal } from './claim-welcome-modal'
 import { isFreeTier } from '@/lib/atlas/eligibility'
+import { LoyaltyCardPreview, toLoyaltyCardPreviewProps } from '@/components/loyalty/loyalty-card-preview'
 
 interface ImprovedDashboardHomeProps {
   profile?: {
@@ -104,6 +105,33 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
     clickThroughRate: number
     recentNotifications: Array<{ id: string; message: string; sentCount: number; createdAt: string }>
   } | null>(null)
+
+  // Loyalty program state for dashboard card (full program for card preview)
+  const [loyaltyProgram, setLoyaltyProgram] = useState<Record<string, any> | null>(null)
+
+  // Fetch loyalty program data for dashboard card
+  useEffect(() => {
+    async function fetchLoyalty() {
+      try {
+        const res = await fetch('/api/loyalty/program')
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.program) {
+          setLoyaltyProgram(data.program)
+          if (data.program.status === 'active') {
+            const summaryRes = await fetch('/api/loyalty/business-summary')
+            if (summaryRes.ok) {
+              const summaryData = await summaryRes.json()
+              setLoyaltyProgram(prev => prev ? { ...prev, member_count: summaryData.summary?.totalMembers || 0 } : prev)
+            }
+          }
+        }
+      } catch {
+        // Non-critical
+      }
+    }
+    fetchLoyalty()
+  }, [])
 
   // Show welcome modal on mount if needed
   useEffect(() => {
@@ -1524,35 +1552,70 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           )}
         </Card>
 
-        {/* Loyalty Cards Preview (Locked) */}
+        {/* Loyalty Cards */}
         <Card className="bg-slate-800/50 border-slate-700 relative overflow-hidden">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
               </svg>
-              Loyalty Card Preview
+              Loyalty
             </CardTitle>
           </CardHeader>
           <CardContent className={!isFeatureUnlocked('loyalty_cards') ? "blur-[8px] select-none pointer-events-none" : ""}>
-            <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-lg p-4 text-white">
-              <h4 className="font-bold">{businessName}</h4>
-              <p className="text-sm mt-1">Collect 10 stamps, get a free coffee!</p>
-              <div className="flex justify-center gap-2 mt-3">
-                {[...Array(10)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center text-xs ${
-                      i < 6 ? 'bg-white/90 text-red-500' : ''
-                    }`}
-                  >
-                    {i < 6 ? '✓' : ''}
-                  </div>
-                ))}
+            {isFeatureUnlocked('loyalty_cards') && (loyaltyProgram?.status === 'active' || loyaltyProgram?.status === 'paused') ? (
+              <div className="space-y-3">
+                <LoyaltyCardPreview
+                  {...toLoyaltyCardPreviewProps({ ...loyaltyProgram, business_name: businessName })}
+                />
+                {typeof loyaltyProgram.member_count === 'number' && (
+                  <p className="text-emerald-400 text-xs font-medium">
+                    {loyaltyProgram.member_count} {loyaltyProgram.member_count === 1 ? 'member' : 'members'}
+                  </p>
+                )}
+                <Button asChild variant="outline" size="sm" className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
+                  <Link href="/dashboard/loyalty">Manage Loyalty</Link>
+                </Button>
               </div>
-            </div>
+            ) : isFeatureUnlocked('loyalty_cards') && loyaltyProgram?.status === 'submitted' ? (
+              <div className="space-y-3">
+                <LoyaltyCardPreview
+                  {...toLoyaltyCardPreviewProps({ ...loyaltyProgram, business_name: businessName })}
+                />
+                <p className="text-amber-400 text-xs font-medium text-center">Under Review</p>
+                <Button asChild variant="outline" size="sm" className="w-full border-zinc-700 text-zinc-400 hover:bg-zinc-800">
+                  <Link href="/dashboard/loyalty">View Details</Link>
+                </Button>
+              </div>
+            ) : isFeatureUnlocked('loyalty_cards') ? (
+              <div className="space-y-3">
+                <div className="bg-zinc-900/40 border border-zinc-700/30 rounded-lg p-4 text-center">
+                  <p className="text-zinc-300 text-sm">Bring customers back with stamp rewards</p>
+                  <p className="text-zinc-500 text-xs mt-1">Set up your loyalty program in minutes.</p>
+                </div>
+                <Button asChild variant="outline" size="sm" className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
+                  <Link href="/dashboard/loyalty">Set Up Loyalty</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-r from-zinc-800 to-zinc-700 rounded-lg p-4">
+                <h4 className="font-bold text-white">{businessName}</h4>
+                <p className="text-sm mt-1 text-zinc-400">Collect stamps, earn rewards</p>
+                <div className="flex justify-center gap-2 mt-3">
+                  {[...Array(8)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-5 h-5 rounded-full border-2 border-zinc-600 flex items-center justify-center text-xs ${
+                        i < 5 ? 'bg-zinc-500 text-zinc-800' : ''
+                      }`}
+                    >
+                      {i < 5 ? '✓' : ''}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
-          {/* Only show lock overlay if loyalty_cards is not unlocked */}
           {!isFeatureUnlocked('loyalty_cards') && (
             <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
               <div className="text-center">

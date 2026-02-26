@@ -48,7 +48,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     if (entitlement.state === 'TRIAL_EXPIRED') return null // NO TIER!
     if (entitlement.state === 'TRIAL_ACTIVE') return 'trial'
     if (entitlement.state === 'PAID_ACTIVE' && entitlement.tierNameOrNull) {
-      return entitlement.tierNameOrNull as PlanTier
+      return entitlement.tierNameOrNull.toLowerCase() as PlanTier
     }
     
     return null // Default: no tier selected
@@ -394,7 +394,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         </div>
 
         {/* Current Tier Features */}
-        {selectedTier ? (
+        {selectedTier && tierDetails[selectedTier] ? (
           <div className={`p-4 rounded-lg border ${tierDetails[selectedTier].color} ${tierDetails[selectedTier].bgColor}`}>
             <h4 className={`font-medium mb-2 ${tierDetails[selectedTier].textColor}`}>
               {tierDetails[selectedTier].name} Features

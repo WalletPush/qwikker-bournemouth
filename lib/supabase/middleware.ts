@@ -61,7 +61,8 @@ export async function updateSession(request: NextRequest) {
     '/claim',       // Business claim flow (creates account after verification)
     '/welcome',     // Welcome page
     '/onboarding',  // Onboarding flow
-    '/wallet-pass'  // Wallet pass pages
+    '/wallet-pass', // Wallet pass pages
+    '/loyalty'      // Loyalty flows (earn, join, start) -- uses wallet_pass_id cookie
   ]
   
   // Check if current path matches any public path

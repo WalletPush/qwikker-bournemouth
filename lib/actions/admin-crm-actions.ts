@@ -228,6 +228,39 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
     
     console.log(`📊 Subscription Summary: ${subscriptionsByBusiness.size} businesses have subscriptions out of ${businesses.length} total`)
 
+    // Fetch loyalty program status + member counts
+    let loyaltyByBusiness = new Map<string, { status: string; member_count: number }>()
+    try {
+      const { data: loyaltyPrograms } = await supabaseAdmin
+        .from('loyalty_programs')
+        .select('id, business_id, status')
+        .in('business_id', businessIds)
+        .in('status', ['active', 'paused'])
+
+      if (loyaltyPrograms && loyaltyPrograms.length > 0) {
+        const programIds = loyaltyPrograms.map(p => p.id)
+        const { data: memberCounts } = await supabaseAdmin
+          .from('loyalty_memberships')
+          .select('program_id')
+          .in('program_id', programIds)
+          .eq('status', 'active')
+
+        const countMap = new Map<string, number>()
+        for (const m of memberCounts || []) {
+          countMap.set(m.program_id, (countMap.get(m.program_id) || 0) + 1)
+        }
+
+        for (const prog of loyaltyPrograms) {
+          loyaltyByBusiness.set(prog.business_id, {
+            status: prog.status,
+            member_count: countMap.get(prog.id) || 0,
+          })
+        }
+      }
+    } catch (error) {
+      console.log('🎟️ LOYALTY ERROR:', error)
+    }
+
     // Fetch pending changes count (business_changes table should exist)
     let pendingChangesByBusiness = new Map()
     try {
@@ -417,7 +450,10 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         
         last_updated: business.updated_at || business.created_at,
         has_pending_changes: pendingChangesCount > 0,
-        pending_changes_count: pendingChangesCount
+        pending_changes_count: pendingChangesCount,
+
+        loyalty_program_status: (loyaltyByBusiness.get(business.id)?.status as 'active' | 'paused') || null,
+        loyalty_member_count: loyaltyByBusiness.get(business.id)?.member_count ?? undefined,
       }
     })
 

@@ -11,7 +11,12 @@ export const metadata = {
   description: 'Join your local QWIKKER community and start discovering exclusive offers'
 }
 
-export default async function JoinPage() {
+interface JoinPageProps {
+  searchParams: Promise<{ returnTo?: string }>
+}
+
+export default async function JoinPage({ searchParams }: JoinPageProps) {
+  const { returnTo } = await searchParams
   try {
     // 🌍 Get city from hostname (server-side, secure)
     const headersList = await headers()
@@ -46,6 +51,7 @@ export default async function JoinPage() {
         city={city}
         displayName={cityConfig.display_name || city.charAt(0).toUpperCase() + city.slice(1)}
         currencySymbol={cityConfig.currency_symbol || '£'}
+        returnTo={returnTo}
       />
     )
   } catch (error) {

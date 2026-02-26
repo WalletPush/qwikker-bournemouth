@@ -12,14 +12,12 @@ export default async function LoyaltyPage() {
     redirect('/auth/login')
   }
 
-  // Get user profile data
   const { data: profile } = await supabase
     .from('business_profiles')
     .select('*')
     .eq('user_id', data.claims.sub)
     .single()
 
-  // Get subscription data (for tier access control)
   const { data: subscription } = await supabase
     .from('business_subscriptions')
     .select(`
@@ -31,20 +29,31 @@ export default async function LoyaltyPage() {
         features
       )
     `)
-    .eq('business_id', profile?.id) // ✅ FIX: Use business profile ID, not user ID
+    .eq('business_id', profile?.id)
     .single()
 
-  // Add subscription to profile
   const enrichedProfile = {
     ...profile,
-    subscription: subscription || null
+    subscription: subscription || null,
+  }
+
+  // Fetch loyalty program (may not exist yet)
+  let loyaltyProgram = null
+  if (profile?.id) {
+    const { data: program } = await supabase
+      .from('loyalty_programs')
+      .select('*')
+      .eq('business_id', profile.id)
+      .single()
+
+    loyaltyProgram = program
   }
 
   const actionItemsCount = calculateActionItemsCount(enrichedProfile)
 
   return (
     <DashboardLayout currentSection="loyalty" profile={enrichedProfile} actionItemsCount={actionItemsCount}>
-      <LoyaltyPageClient profile={enrichedProfile} />
+      <LoyaltyPageClient profile={enrichedProfile} program={loyaltyProgram} />
     </DashboardLayout>
   )
 }

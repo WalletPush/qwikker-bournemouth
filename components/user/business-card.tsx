@@ -283,8 +283,8 @@ export function BusinessCard({
                       )}
                     </div>
                     
-                    {/* Signal badges for offers/secret menu */}
-                    {(getOffersCount() > 0 || hasSecretMenu()) && (
+                    {/* Signal badges for offers/secret menu/loyalty */}
+                    {(getOffersCount() > 0 || hasSecretMenu() || business.hasLoyalty) && (
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {getOffersCount() > 0 && (
                           <span className="bg-[#00d083]/15 border border-[#00d083]/25 text-[#00d083] text-[10px] leading-none px-2 py-0.5 rounded-full font-semibold">
@@ -294,6 +294,11 @@ export function BusinessCard({
                         {hasSecretMenu() && (
                           <span className="bg-purple-500/15 border border-purple-500/25 text-purple-200 text-[10px] leading-none px-2 py-0.5 rounded-full font-semibold">
                             Secret Menu
+                          </span>
+                        )}
+                        {business.hasLoyalty && (
+                          <span className="bg-amber-500/15 border border-amber-500/25 text-amber-300 text-[10px] leading-none px-2 py-0.5 rounded-full font-semibold">
+                            Loyalty
                           </span>
                         )}
                       </div>

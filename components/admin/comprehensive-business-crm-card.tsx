@@ -1075,6 +1075,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 </div>
               )
             })()}
+
           </div>
         </div>
       </div>
@@ -1129,9 +1130,8 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap mt-2">
+                    <div className="flex items-center gap-2 flex-wrap mt-2">
                       <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${
-                        // ✅ LOCKDOWN: Use entitlement state colors
                         entitlement.state === 'TRIAL_EXPIRED' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
                         entitlement.state === 'TRIAL_ACTIVE' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
                         entitlement.state === 'PAID_ACTIVE' && entitlement.tierNameOrNull === 'Spotlight' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
@@ -1141,9 +1141,18 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                         entitlement.state === 'NO_SUB' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                         'bg-slate-700/50 text-slate-400 border border-slate-600/30'
                       }`}>
-                        {/* ✅ LOCKDOWN: Display from entitlement state ONLY */}
                         {entitlement.displayLabel}
                       </span>
+                      {business.loyalty_program_status === 'active' && (
+                        <span className="px-3 py-1 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          Loyalty{business.loyalty_member_count ? ` (${business.loyalty_member_count})` : ''}
+                        </span>
+                      )}
+                      {business.loyalty_program_status === 'paused' && (
+                        <span className="px-3 py-1 text-xs font-semibold rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          Loyalty Paused
+                        </span>
+                      )}
                     </div>
                     <p className="text-slate-400 text-sm mt-1">
                       Business Control Panel

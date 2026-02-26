@@ -9,6 +9,7 @@ interface WelcomePageContentProps {
   searchParams: {
     wallet_pass_id?: string
     name?: string
+    returnTo?: string
   }
 }
 
@@ -22,7 +23,7 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
   const [loadingComplete, setLoadingComplete] = useState(false)
   const router = useRouter()
 
-  const { wallet_pass_id } = searchParams
+  const { wallet_pass_id, returnTo: returnToParam } = searchParams
 
   const loadingSteps = [
     { 
@@ -151,11 +152,42 @@ export function WelcomePageContent({ searchParams }: WelcomePageContentProps) {
   }
 
   const handleAccessDashboard = () => {
+    // Validate returnTo: must start with /loyalty/ or /user/, no protocol
+    const isValidReturnTo = (url: string) =>
+      (url.startsWith('/loyalty/') || url.startsWith('/user/')) && !url.includes('//')
+
+    // Priority 1: returnTo query param (passed through install flow)
+    if (returnToParam && isValidReturnTo(returnToParam)) {
+      const separator = returnToParam.includes('?') ? '&' : '?'
+      const dest = wallet_pass_id
+        ? `${returnToParam}${separator}wallet_pass_id=${wallet_pass_id}`
+        : returnToParam
+      window.location.href = dest
+      return
+    }
+
+    // Priority 2: Cookie fallback (set by /loyalty/start before install)
+    const afterInstall = document.cookie
+      .split('; ')
+      .find(c => c.startsWith('qwikker_after_install='))
+      ?.split('=')
+      .slice(1)
+      .join('=')
+
+    if (afterInstall && isValidReturnTo(afterInstall)) {
+      document.cookie = 'qwikker_after_install=; max-age=0; path=/'
+      const separator = afterInstall.includes('?') ? '&' : '?'
+      const dest = wallet_pass_id
+        ? `${afterInstall}${separator}wallet_pass_id=${wallet_pass_id}`
+        : afterInstall
+      window.location.href = dest
+      return
+    }
+
+    // Priority 3: Default dashboard
     if (wallet_pass_id) {
-      // Use window.location.href for more reliable parameter preservation
       window.location.href = `/user/dashboard?wallet_pass_id=${wallet_pass_id}`
     } else {
-      // Fallback if no wallet_pass_id
       router.push('/user/dashboard')
     }
   }

@@ -1,233 +1,263 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ElegantModal } from '@/components/ui/elegant-modal'
+import { LoyaltySpecsForm } from '@/components/dashboard/loyalty-specs-form'
+import { LoyaltyStatsDashboard } from '@/components/dashboard/loyalty-stats-dashboard'
+import { CheckCircle2, Clock, Loader2, Pause, ArrowRight, Users, TrendingUp, Gift, Trophy } from 'lucide-react'
+import { LoyaltyCardPreview, toLoyaltyCardPreviewProps } from '@/components/loyalty/loyalty-card-preview'
+import type { LoyaltyProgram } from '@/lib/loyalty/loyalty-types'
 
 interface LoyaltyPageClientProps {
   profile: any
+  program: LoyaltyProgram | null
 }
 
-export function LoyaltyPageClient({ profile }: LoyaltyPageClientProps) {
-  const [showModal, setShowModal] = useState(true)
-  const [selectedFeature, setSelectedFeature] = useState<string | null>(null)
-  
-  // Check if feature is enabled (either through tier or manual override)
-  const hasAccess = profile?.features?.loyalty_cards === true || profile?.plan === 'spotlight' || profile?.plan === 'pro'
+export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyPageClientProps) {
+  const [program, setProgram] = useState<LoyaltyProgram | null>(initialProgram)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(true)
 
-  const features = [
-    {
-      id: 'custom-cards',
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-        </svg>
-      ),
-      title: 'Custom Loyalty Cards',
-      description: 'Design stunning digital loyalty cards that match your brand perfectly',
-      color: 'from-purple-500 to-pink-500'
-    },
-    {
-      id: 'landing-pages',
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      ),
-      title: 'AI Landing Page Builder',
-      description: 'Create beautiful landing pages with AI assistance in minutes',
-      color: 'from-blue-500 to-cyan-500'
-    },
-    {
-      id: 'built-in-pos',
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      title: 'Built-in POS System',
-      description: 'Manage loyalty programs without external software - everything in one place',
-      color: 'from-green-500 to-emerald-500'
-    },
-    {
-      id: 'fully-customizable',
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-        </svg>
-      ),
-      title: '100% Customizable',
-      description: 'Colors, fonts, layouts - make it yours with complete design freedom',
-      color: 'from-orange-500 to-red-500'
-    },
-    {
-      id: 'multi-use',
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-        </svg>
-      ),
-      title: 'Multi-Purpose',
-      description: 'Perfect for loyalty programs, events, birthday clubs, VIP memberships and more',
-      color: 'from-yellow-500 to-amber-500'
-    },
-    {
-      id: 'qr-integration',
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-        </svg>
-      ),
-      title: 'Integrated QR Codes',
-      description: 'Seamlessly works with your existing QR code system for easy redemption',
-      color: 'from-indigo-500 to-purple-500'
-    }
-  ]
+  const hasAccess =
+    profile?.features?.loyalty_cards === true ||
+    profile?.subscription?.subscription_tiers?.tier_name === 'spotlight' ||
+    profile?.plan === 'spotlight' ||
+    profile?.plan === 'pro'
 
-  const handleLaunchPortal = () => {
-    // TODO: Replace with actual loyalty portal URL
-    window.open('https://loyalty.qwikker.com', '_blank')
-  }
-
-  return (
-    <div className="space-y-8">
-      {/* Show upgrade modal for users without access */}
-      {!hasAccess && (
+  // No Spotlight access -- show upgrade prompt
+  if (!hasAccess) {
+    return (
+      <div className="space-y-8">
         <ElegantModal
-          isOpen={showModal}
-          onClose={() => {
-            window.location.href = '/dashboard'
-          }}
-          title="Loyalty Program"
+          isOpen={showUpgradeModal}
+          onClose={() => { window.location.href = '/dashboard' }}
+          title="Qwikker Loyalty"
           description="Create a digital loyalty program to build repeat customers and increase revenue."
           type="info"
           size="md"
           actions={[
             {
               label: 'Upgrade to Spotlight',
-              onClick: () => {
-                window.location.href = '/dashboard/settings'
-              },
+              onClick: () => { window.location.href = '/dashboard/settings' },
               variant: 'default',
-              className: 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold'
-            }
+              className: 'bg-emerald-600 hover:bg-emerald-700 text-white font-semibold',
+            },
           ]}
         >
           <div className="space-y-4">
-            <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-              <h4 className="font-medium text-purple-400 mb-3">Build Customer Loyalty</h4>
-              <div className="space-y-2 text-sm text-slate-300">
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>Custom loyalty cards & landing pages</span>
+            <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-lg">
+              <h4 className="font-medium text-emerald-400 mb-3 text-sm">What you get with Spotlight</h4>
+              <div className="space-y-2 text-sm text-zinc-400">
+                {[
+                  'Custom branded loyalty cards in Apple & Google Wallet',
+                  'QR-based earn system -- zero hardware needed',
+                  'Push notifications to loyalty members',
+                  'Real-time member analytics and stats',
+                  'Tap-to-redeem rewards -- no staff app required',
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-2">
+                    <div className="w-1 h-1 bg-emerald-500 rounded-full flex-shrink-0" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </ElegantModal>
+      </div>
+    )
+  }
+
+  const status = program?.status || 'none'
+
+  // No program or draft -- show the setup form
+  if (status === 'none' || status === 'draft') {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Qwikker Loyalty</h1>
+          <p className="text-zinc-400 mt-1 text-sm">
+            Set up your loyalty program in a few minutes. Your customers will love it.
+          </p>
+        </div>
+        <LoyaltySpecsForm
+          profile={profile}
+          existingProgram={program}
+          onProgramUpdate={setProgram}
+        />
+      </div>
+    )
+  }
+
+  const cardDisclaimer = 'This is how your card appears to users in the Qwikker app. Your Apple/Google Wallet pass design may differ slightly.'
+
+  // Submitted -- show under review state
+  if (status === 'submitted') {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Qwikker Loyalty</h1>
+          <p className="text-zinc-400 mt-1 text-sm">Your loyalty card is being set up.</p>
+        </div>
+        {program && (
+          <LoyaltyCardPreview
+            {...toLoyaltyCardPreviewProps({ ...program, business_name: profile?.business_name })}
+            disclaimer={cardDisclaimer}
+          />
+        )}
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="pt-6">
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/10">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>Built-in POS system - no external software needed</span>
+                <div>
+                  <p className="text-white font-medium">Specs submitted</p>
+                  <p className="text-zinc-500">Your loyalty card details have been received</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>AI-assisted design tools</span>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/10">
+                  <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>100% customizable for your brand</span>
+                <div>
+                  <p className="text-white font-medium">Building your card</p>
+                  <p className="text-zinc-500">Our team is creating your Apple & Google Wallet loyalty card</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-800">
+                  <Clock className="w-4 h-4 text-zinc-500" />
+                </div>
+                <div>
+                  <p className="text-zinc-400 font-medium">Going live</p>
+                  <p className="text-zinc-600">Usually within 24 hours</p>
                 </div>
               </div>
             </div>
-            <p className="text-xs text-slate-400 text-center">
-              Available on Spotlight • Perfect for events, loyalty, birthdays & more
-            </p>
-          </div>
-        </ElegantModal>
-      )}
-
-      {/* Header Section */}
-      <div className={!hasAccess && showModal ? "blur-[8px] select-none pointer-events-none" : ""}>
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2 text-center">Loyalty Portal</h1>
-          <p className="text-slate-400 text-center mb-6 max-w-2xl mx-auto">
-            Access the Qwikker Loyalty System to create custom loyalty programs, design branded cards, and manage rewards with our built-in POS.
-          </p>
-          
-          {/* Launch Button */}
-          <div className="text-center">
-            <Button
-              onClick={handleLaunchPortal}
-              className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-8 py-3 text-base font-semibold rounded-lg transition-all duration-300"
-            >
-              Launch Loyalty Portal
-            </Button>
-          </div>
-        </div>
-
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {features.map((feature) => (
-            <Card 
-              key={feature.id}
-              className="bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all duration-300 hover:scale-105 cursor-pointer group"
-              onClick={() => setSelectedFeature(feature.id)}
-            >
-              <CardHeader className="flex flex-col items-center text-center">
-                <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.color} p-4 mb-4 group-hover:scale-110 transition-transform duration-300 flex items-center justify-center`}>
-                  <div className="text-white">
-                    {feature.icon}
-                  </div>
-                </div>
-                <CardTitle className="text-white text-xl">{feature.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p className="text-slate-400 leading-relaxed">{feature.description}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Use Cases */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-white mb-6">Perfect For Any Occasion</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {[
-              'Loyalty Programs',
-              'Special Events',
-              'Birthday Clubs',
-              'VIP Memberships',
-              'Reward Systems'
-            ].map((label, index) => (
-              <div 
-                key={index}
-                className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center hover:border-slate-600 transition-all duration-300"
-              >
-                <p className="text-slate-300 font-medium">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Info Banner */}
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  External Portal Access
-                </h3>
-                <p className="text-slate-400 text-sm leading-relaxed">
-                  The Qwikker Loyalty System is a separate web application that gives you enterprise-grade tools with zero complexity. 
-                  Click the button above to access your loyalty portal and start building custom programs in minutes.
-                </p>
+            <div className="mt-8 p-4 bg-zinc-800/50 rounded-lg border border-zinc-700/50">
+              <p className="text-sm text-zinc-400">
+                While you wait, you can update your business profile, create offers, or explore other Qwikker features.
+              </p>
+              <div className="flex gap-3 mt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                  onClick={() => window.location.href = '/dashboard'}
+                >
+                  Back to Dashboard
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+    )
+  }
+
+  // Paused -- show paused state with resume option
+  if (status === 'paused') {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Qwikker Loyalty</h1>
+          <p className="text-zinc-400 mt-1 text-sm">Your loyalty program is currently paused.</p>
+        </div>
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10 flex-shrink-0">
+                <Pause className="w-5 h-5 text-amber-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-white font-medium">Program Paused</h3>
+                <p className="text-zinc-400 text-sm mt-1">
+                  Your customers can&apos;t earn or redeem while paused. Existing memberships are preserved.
+                </p>
+                <Button
+                  className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/loyalty/program/resume', { method: 'POST' })
+                      if (res.ok) {
+                        setProgram((prev) => prev ? { ...prev, status: 'active' } : prev)
+                      }
+                    } catch {}
+                  }}
+                >
+                  <ArrowRight className="w-4 h-4 mr-2" />
+                  Resume Program
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {program && (
+          <>
+            <LoyaltyCardPreview
+              {...toLoyaltyCardPreviewProps({ ...program, business_name: profile?.business_name })}
+              disclaimer={cardDisclaimer}
+            />
+            <LoyaltyStatsDashboard program={program} profile={profile} />
+          </>
+        )}
+      </div>
+    )
+  }
+
+  // Active -- show full dashboard
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-white">Qwikker Loyalty</h1>
+        <p className="text-zinc-400 mt-1 text-sm">
+          {program?.program_name || 'Your loyalty program'} is live.
+        </p>
+      </div>
+      {program && (
+        <>
+          {/* Card preview left, program info right */}
+          <div className="flex gap-5 items-start">
+            <LoyaltyCardPreview
+              {...toLoyaltyCardPreviewProps({ ...program, business_name: profile?.business_name })}
+              className="mx-0 shrink-0"
+            />
+            <div className="flex-1 min-w-0 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg px-3 py-3">
+                  <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-1">Reward</p>
+                  <p className="text-white text-sm font-semibold truncate">{program.reward_description}</p>
+                </div>
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg px-3 py-3">
+                  <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-1">Threshold</p>
+                  <p className="text-white text-lg font-semibold">{program.reward_threshold} <span className="text-sm font-normal text-zinc-400">{program.stamp_label?.toLowerCase()}</span></p>
+                </div>
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg px-3 py-3">
+                  <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-1">Type</p>
+                  <p className="text-white text-lg font-semibold capitalize">{program.type}</p>
+                </div>
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg px-3 py-3">
+                  <p className="text-zinc-500 text-[11px] uppercase tracking-wide mb-1">Earn Mode</p>
+                  <p className="text-white text-sm font-semibold capitalize">{program.earn_mode?.replace('_', ' ') || 'QR Scan'}</p>
+                </div>
+              </div>
+              <p className="text-[11px] text-zinc-500 leading-relaxed">
+                {cardDisclaimer}
+              </p>
+            </div>
+          </div>
+
+          <LoyaltyStatsDashboard
+            program={program}
+            profile={profile}
+            onProgramUpdate={setProgram}
+          />
+        </>
+      )}
     </div>
   )
 }

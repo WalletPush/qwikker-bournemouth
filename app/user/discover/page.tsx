@@ -128,6 +128,10 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
         is_in_free_trial,
         free_trial_end_date,
         status
+      ),
+      loyalty_programs!left(
+        id,
+        status
       )
     `)
     .in('status', ['approved', 'unclaimed', 'claimed_free']) // Show all discoverable businesses
@@ -240,6 +244,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       activeOffers: filterActiveOffers(business.business_offers || []).length, // Count only active (approved + non-expired)
       menuPreview: business.menu_preview || [], // Add menu preview for popular items
       hasSecretMenu, // Now properly checks for real secret menu data
+      hasLoyalty: (business as any).loyalty_programs?.some((lp: any) => lp.status === 'active') || false,
       // 🎯 TIER LOGIC: Free listings (unclaimed/claimed_free) have NO tier badge
       tier: (business.status === 'unclaimed' || business.status === 'claimed_free') 
         ? null // No tier badge for free listings

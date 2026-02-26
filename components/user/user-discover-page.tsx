@@ -121,6 +121,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
     openNow: false,
     hasOffers: false,
     hasSecretMenu: false,
+    hasLoyalty: false,
     closest: false,
     mySaved: false
   })
@@ -151,7 +152,7 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
   const [searchQuery, setSearchQuery] = useState<string>('')
   
   // Toggle quick filter
-  const toggleQuickFilter = (filter: 'openNow' | 'hasOffers' | 'hasSecretMenu') => {
+  const toggleQuickFilter = (filter: 'openNow' | 'hasOffers' | 'hasSecretMenu' | 'hasLoyalty' | 'closest' | 'mySaved') => {
     setQuickFilters(prev => ({
       ...prev,
       [filter]: !prev[filter]
@@ -327,6 +328,10 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
         || ((b as any).secret_menu_count && (b as any).secret_menu_count > 0)
       )
     }
+
+    if (quickFilters.hasLoyalty) {
+      filtered = filtered.filter(b => (b as any).hasLoyalty)
+    }
     
     if (quickFilters.mySaved) {
       filtered = filtered.filter(b => savedBusinesses.has(b.id))
@@ -486,6 +491,18 @@ export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, cu
             >
               {quickFilters.hasSecretMenu && <span className="text-xs">✓</span>}
               <span>Secret menu</span>
+            </button>
+
+            <button
+              onClick={() => toggleQuickFilter('hasLoyalty')}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                quickFilters.hasLoyalty
+                  ? 'bg-[#00d083] text-black font-semibold shadow-lg'
+                  : 'bg-slate-800/60 border border-slate-700 text-slate-200 hover:bg-slate-700'
+              }`}
+            >
+              {quickFilters.hasLoyalty && <span className="text-xs">✓</span>}
+              <span>Loyalty</span>
             </button>
             
             <button

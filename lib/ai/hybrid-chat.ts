@@ -548,6 +548,7 @@ HARD RULES (DO NOT BREAK):
 - ZERO RESULTS: Be honest. NEVER say "you're in luck" if you have nothing to show. Suggest a nearby alternative category or ask what else they'd like.
 - MATCH USER LANGUAGE: If the user asked for "bars", say "bars" in your response — never substitute with "dining options", "restaurants", or "places to eat". Mirror the user's terminology.
 - "ANY MORE?" HANDLING: If you showed all matches, say so. If you missed any, correct yourself immediately.
+- LOYALTY: If a business has "Loyalty:" in its context, mention it naturally when recommending (e.g., "They also have a stamp card — collect 10 for a free coffee"). If the user has progress (shown as [USER: X/Y stamps, Z to go]) and is within 3 stamps of a reward, proactively nudge: "You're only Z away from a free X there!" Never fabricate loyalty data.
 
 MULTI-PART QUERIES:
 When the user asks for more than one thing (e.g. "drinks then food", "cocktails AND spicy food", "brunch and shopping"):
@@ -1269,7 +1270,47 @@ export async function generateHybridAIResponse(
       })
     }
     
-    // Step 4: Build RICH context with KB content merged with DB data
+    // Step 4a: Fetch loyalty programs for context businesses (lean query)
+    const contextBusinessIds = sortedForContext.slice(0, 10).map(b => b.id).filter(Boolean)
+    const loyaltyByBusinessId = new Map<string, { program_name: string; reward_description: string; reward_threshold: number }>()
+    const userLoyaltyByBusinessId = new Map<string, { stamps_balance: number; stamps_remaining: number }>()
+
+    if (contextBusinessIds.length > 0) {
+      try {
+        const { data: loyaltyPrograms } = await supabase
+          .from('loyalty_programs')
+          .select('business_id, program_name, reward_description, reward_threshold')
+          .in('business_id', contextBusinessIds)
+          .eq('status', 'active')
+
+        for (const lp of loyaltyPrograms || []) {
+          loyaltyByBusinessId.set(lp.business_id, lp)
+        }
+
+        if (context.walletPassId && loyaltyByBusinessId.size > 0) {
+          const programBusinessIds = Array.from(loyaltyByBusinessId.keys())
+          const { data: memberships } = await supabase
+            .from('loyalty_memberships')
+            .select('program_id, stamps_balance, loyalty_programs!inner(business_id, reward_threshold)')
+            .eq('user_wallet_pass_id', context.walletPassId)
+            .eq('status', 'active')
+
+          for (const m of memberships || []) {
+            const prog = (m as any).loyalty_programs
+            if (prog?.business_id) {
+              userLoyaltyByBusinessId.set(prog.business_id, {
+                stamps_balance: m.stamps_balance,
+                stamps_remaining: prog.reward_threshold - m.stamps_balance,
+              })
+            }
+          }
+        }
+      } catch (e) {
+        console.log('⚠️ Loyalty context fetch failed (non-critical):', e)
+      }
+    }
+
+    // Step 4b: Build RICH context with KB content merged with DB data
     const businessContext = sortedForContext.length > 0
       ? sortedForContext.slice(0, 10).map((business, index) => {
           const offerCount = business.id ? businessOfferCounts[business.id] || 0 : 0
@@ -1326,9 +1367,20 @@ export async function generateHybridAIResponse(
             ratingLine = `\nRating: ${business.rating}★ from ${business.review_count} Google reviews`
           }
           
+          // Loyalty program context (only for active programs)
+          let loyaltyLine = ''
+          const loyaltyProg = loyaltyByBusinessId.get(business.id)
+          if (loyaltyProg) {
+            loyaltyLine = `\nLoyalty: Collect ${loyaltyProg.reward_threshold} stamps for ${loyaltyProg.reward_description}`
+            const userProgress = userLoyaltyByBusinessId.get(business.id)
+            if (userProgress) {
+              loyaltyLine += ` [USER: ${userProgress.stamps_balance}/${loyaltyProg.reward_threshold} stamps, ${userProgress.stamps_remaining} to go]`
+            }
+          }
+
           const businessSlug = getBusinessSlug(business)
           return `**${business.business_name}** [TIER: ${business.tierLabel}] [SLUG: ${businessSlug}]${ratingLine}
-Category: ${business.display_category || 'Not specified'}${hoursLine}${richContent}${offerText}`
+Category: ${business.display_category || 'Not specified'}${hoursLine}${loyaltyLine}${richContent}${offerText}`
         }).join('\n\n')
       : 'No businesses available in this city yet.'
     

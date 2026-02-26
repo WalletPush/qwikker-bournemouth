@@ -217,6 +217,17 @@ export default async function AdminPage() {
   
   // Fetch comprehensive CRM data
   const crmData = await getBusinessCRMData(currentCity)
+
+  // Fetch pending loyalty pass requests for this city
+  const { count: pendingLoyaltyCount, error: loyaltyQueueError } = await supabase
+    .from('loyalty_pass_requests')
+    .select('id, business_profiles!inner(city)', { count: 'exact', head: true })
+    .eq('status', 'submitted')
+    .eq('business_profiles.city', currentCity)
+
+  if (loyaltyQueueError) {
+    console.error('Error fetching pending loyalty count:', loyaltyQueueError)
+  }
   
   return (
     <AdminDashboard 
@@ -230,6 +241,7 @@ export default async function AdminPage() {
       pendingMenus={pendingMenus || []}
       pendingEvents={pendingEvents || []}
       walletPassesCount={walletPassesCount || 0}
+      pendingLoyaltyCount={pendingLoyaltyCount || 0}
     />
   )
 }

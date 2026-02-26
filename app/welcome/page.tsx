@@ -10,6 +10,7 @@ interface WelcomePageProps {
   searchParams: Promise<{
     wallet_pass_id?: string
     name?: string
+    returnTo?: string
   }>
 }
 

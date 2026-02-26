@@ -14,6 +14,7 @@ import { formatPrice } from '@/lib/utils/price-formatter'
 import { getHeroLine } from '@/lib/utils/business-labels'
 import { VibePromptSheet } from '@/components/user/vibe-prompt-sheet'
 import { saveItem, unsaveItem } from '@/lib/actions/user-saved-actions'
+import { BusinessLoyaltyPanel } from '@/components/loyalty/business-loyalty-panel'
 
 interface UserBusinessDetailPageProps {
   slug: string
@@ -604,6 +605,9 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
       <div className="min-h-[400px]">
         {activeTab === 'overview' && (
           <div className="space-y-6">
+            {/* Loyalty Rewards Panel */}
+            <BusinessLoyaltyPanel businessId={business.id} walletPassId={walletPassId} />
+
             {/* About Section */}
             <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader>

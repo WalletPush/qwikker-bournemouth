@@ -7,12 +7,14 @@ interface PassInstallerClientProps {
   city: string
   displayName: string
   currencySymbol: string
+  returnTo?: string
 }
 
 export function PassInstallerClient({ 
   city, 
   displayName,
-  currencySymbol
+  currencySymbol,
+  returnTo
 }: PassInstallerClientProps) {
   const [formData, setFormData] = useState({
     firstName: '',
@@ -86,8 +88,8 @@ export function PassInstallerClient({
       }, 1000)
       
       if (countdown === 1 && serialNumber) {
-        // Redirect to welcome page
-        window.location.href = `/welcome?wallet_pass_id=${serialNumber}&name=${encodeURIComponent(formData.firstName + ' ' + formData.lastName)}`
+        const welcomeUrl = `/welcome?wallet_pass_id=${serialNumber}&name=${encodeURIComponent(formData.firstName + ' ' + formData.lastName)}${returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ''}`
+        window.location.href = welcomeUrl
       }
       
       return () => clearTimeout(timer)
