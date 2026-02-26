@@ -51,6 +51,8 @@ export default async function LoyaltyStartPage({ params, searchParams }: StartPa
 
   // --- Authenticated user ---
   if (walletPassId) {
+    const wpParam = `wallet_pass_id=${encodeURIComponent(walletPassId)}`
+
     const { data: membership } = await serviceRole
       .from('loyalty_memberships')
       .select('id')
@@ -59,14 +61,14 @@ export default async function LoyaltyStartPage({ params, searchParams }: StartPa
       .single()
 
     if (!membership) {
-      redirect(`/loyalty/join/${publicId}`)
+      redirect(`/loyalty/join/${publicId}?${wpParam}`)
     }
 
     if (mode === 'earn' && token) {
-      redirect(`/loyalty/earn/${publicId}?t=${encodeURIComponent(token)}`)
+      redirect(`/loyalty/earn/${publicId}?t=${encodeURIComponent(token)}&${wpParam}`)
     }
 
-    redirect(`/user/rewards`)
+    redirect(`/user/rewards?${wpParam}`)
   }
 
   // --- Unauthenticated user ---

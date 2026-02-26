@@ -8,10 +8,12 @@ export const dynamic = 'force-dynamic'
 
 interface JoinPageProps {
   params: Promise<{ publicId: string }>
+  searchParams: Promise<{ wallet_pass_id?: string }>
 }
 
-export default async function JoinPage({ params }: JoinPageProps) {
+export default async function JoinPage({ params, searchParams }: JoinPageProps) {
   const { publicId } = await params
+  const { wallet_pass_id: urlWalletPassId } = await searchParams
 
   if (!publicId) {
     return <JoinError message="Invalid link." />
@@ -24,7 +26,7 @@ export default async function JoinPage({ params }: JoinPageProps) {
     return <JoinError message="Could not determine your location." />
   }
 
-  const walletPassId = await getWalletPassCookie()
+  const walletPassId = urlWalletPassId || await getWalletPassCookie()
 
   if (!walletPassId) {
     redirect(`/loyalty/start/${publicId}`)
