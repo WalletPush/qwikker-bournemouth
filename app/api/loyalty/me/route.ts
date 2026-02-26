@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
 
     const serviceRole = createServiceRoleClient()
 
-    // Step 1: Get memberships with program data (no nested inner join)
     const { data: memberships, error } = await serviceRole
       .from('loyalty_memberships')
       .select(`
@@ -30,7 +29,8 @@ export async function GET(request: NextRequest) {
         loyalty_programs(
           id, public_id, program_name, type, reward_threshold, reward_description,
           stamp_label, stamp_icon, status, primary_color,
-          walletpush_template_id, city, business_id
+          walletpush_template_id, city,
+          business_profiles(business_name, slug, logo)
         )
       `)
       .eq('user_wallet_pass_id', walletPassId)
@@ -38,65 +38,46 @@ export async function GET(request: NextRequest) {
       .order('last_active_at', { ascending: false })
 
     if (error) {
-      console.error('[loyalty/me] memberships query error:', error)
+      console.error('[loyalty/me] query error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     if (!memberships || memberships.length === 0) {
-      console.log('[loyalty/me] No memberships found for', walletPassId)
       return NextResponse.json({ memberships: [] })
     }
 
-    // Step 2: Filter by city and get business profiles
-    const validMemberships = memberships.filter((m: any) => {
-      const prog = m.loyalty_programs
-      return prog && prog.city === city
-    })
+    const enriched = (memberships as any[])
+      .filter((m) => m.loyalty_programs && m.loyalty_programs.city === city)
+      .map((m) => {
+        const program = m.loyalty_programs
+        const bp = program.business_profiles || {}
+        const balance = program.type === 'stamps' ? m.stamps_balance : m.points_balance
 
-    if (validMemberships.length === 0) {
-      console.log('[loyalty/me] No memberships in city', city, 'for', walletPassId)
-      return NextResponse.json({ memberships: [] })
-    }
-
-    const businessIds = [...new Set(validMemberships.map((m: any) => m.loyalty_programs.business_id))]
-
-    const { data: businesses } = await serviceRole
-      .from('business_profiles')
-      .select('id, business_name, slug, logo')
-      .in('id', businessIds)
-
-    const businessMap = new Map((businesses || []).map((b: any) => [b.id, b]))
-
-    const enriched = validMemberships.map((m: any) => {
-      const program = m.loyalty_programs
-      const business = businessMap.get(program.business_id) || { business_name: 'Unknown', slug: '', logo: null }
-      const balance = program.type === 'stamps' ? m.stamps_balance : m.points_balance
-
-      return {
-        ...m,
-        loyalty_programs: undefined,
-        program: {
-          public_id: program.public_id,
-          program_name: program.program_name,
-          type: program.type,
-          reward_threshold: program.reward_threshold,
-          reward_description: program.reward_description,
-          stamp_label: program.stamp_label,
-          stamp_icon: program.stamp_icon,
-          status: program.status,
-          primary_color: program.primary_color,
-          walletpush_template_id: program.walletpush_template_id,
-          business: {
-            business_name: business.business_name,
-            slug: business.slug,
-            logo: business.logo,
+        return {
+          ...m,
+          loyalty_programs: undefined,
+          program: {
+            public_id: program.public_id,
+            program_name: program.program_name,
+            type: program.type,
+            reward_threshold: program.reward_threshold,
+            reward_description: program.reward_description,
+            stamp_label: program.stamp_label,
+            stamp_icon: program.stamp_icon,
+            status: program.status,
+            primary_color: program.primary_color,
+            walletpush_template_id: program.walletpush_template_id,
+            business: {
+              business_name: bp.business_name || 'Unknown',
+              slug: bp.slug || '',
+              logo: bp.logo || null,
+            },
           },
-        },
-        progress: calculateProgress(balance, program.reward_threshold),
-        proximityMessage: getProximityMessage(balance, program.reward_threshold),
-        rewardAvailable: balance >= program.reward_threshold,
-      }
-    })
+          progress: calculateProgress(balance, program.reward_threshold),
+          proximityMessage: getProximityMessage(balance, program.reward_threshold),
+          rewardAvailable: balance >= program.reward_threshold,
+        }
+      })
 
     return NextResponse.json({ memberships: enriched })
   } catch (error) {
