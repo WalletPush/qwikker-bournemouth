@@ -77,16 +77,23 @@ export async function issueLoyaltyPass(
 
     const data = await response.json()
 
+    const serial = data.serialNumber || data.serial || data.id
+    const rawAppleUrl = data.appleUrl || data.apple_url || data.apple?.downloadUrl || ''
+    // Transform /api/pass-install/{serial} (web page) → /api/apple-pass/{serial}/download (direct .pkpass)
+    const appleUrl = rawAppleUrl.includes('/api/pass-install/')
+      ? rawAppleUrl.replace('/api/pass-install/', '/api/apple-pass/') + '/download'
+      : rawAppleUrl
+
     console.log('[WalletPush] issueLoyaltyPass response:', {
-      serial: data.serialNumber || data.serial || data.id,
-      hasApple: !!(data.appleUrl || data.apple_url || data.apple?.downloadUrl),
+      serial,
+      appleUrl,
+      rawAppleUrl,
       hasGoogle: !!(data.googleUrl || data.google_url || data.google?.saveUrl),
-      keys: Object.keys(data),
     })
 
     return {
-      serial: data.serialNumber || data.serial || data.id,
-      appleUrl: data.appleUrl || data.apple_url || data.apple?.downloadUrl,
+      serial,
+      appleUrl: appleUrl || undefined,
       googleUrl: data.googleUrl || data.google_url || data.google?.saveUrl,
     }
   } catch (error) {

@@ -33,7 +33,6 @@ interface Membership {
     walletpush_template_id: string | null
     business: {
       business_name: string
-      slug: string
       logo: string | null
     }
   }
@@ -260,15 +259,13 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
                     )}
 
                     <div className="flex items-center gap-3 pt-1">
-                      {p.business.slug && (
-                        <Link
-                          href={`/user/business/${p.business.slug}`}
-                          className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
-                        >
-                          View business
-                          <ExternalLink className="w-3 h-3" />
-                        </Link>
-                      )}
+                      <Link
+                        href="/user/discover"
+                        className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                      >
+                        View business
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
                     </div>
                   </div>
                 </motion.div>

@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
           id, public_id, program_name, type, reward_threshold, reward_description,
           stamp_label, stamp_icon, status, primary_color,
           walletpush_template_id, city,
-          business_profiles(business_name, slug, logo)
+          business_profiles(business_name, logo)
         )
       `)
       .eq('user_wallet_pass_id', walletPassId)
@@ -69,7 +69,6 @@ export async function GET(request: NextRequest) {
             walletpush_template_id: program.walletpush_template_id,
             business: {
               business_name: bp.business_name || 'Unknown',
-              slug: bp.slug || '',
               logo: bp.logo || null,
             },
           },
