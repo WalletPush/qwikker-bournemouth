@@ -2,21 +2,18 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
-const AFTER_INSTALL_COOKIE = 'qwikker_after_install'
-
 interface StartPageProps {
   params: Promise<{ publicId: string }>
-  searchParams: Promise<{ mode?: string; t?: string }>
+  searchParams: Promise<{ mode?: string; t?: string; wallet_pass_id?: string }>
 }
 
 export default async function LoyaltyStartPage({ params, searchParams }: StartPageProps) {
   const { publicId } = await params
-  const { mode, t: token } = await searchParams
+  const { mode, t: token, wallet_pass_id: urlWalletPassId } = await searchParams
 
   if (!publicId) {
     return <StartError message="Invalid link." />
@@ -50,7 +47,7 @@ export default async function LoyaltyStartPage({ params, searchParams }: StartPa
     return <StartError message="This loyalty program is not currently active." />
   }
 
-  const walletPassId = await getWalletPassCookie()
+  const walletPassId = urlWalletPassId || await getWalletPassCookie()
 
   // --- Authenticated user ---
   if (walletPassId) {
@@ -76,18 +73,6 @@ export default async function LoyaltyStartPage({ params, searchParams }: StartPa
   const returnTo = mode === 'earn' && token
     ? `/loyalty/earn/${publicId}?t=${encodeURIComponent(token)}`
     : `/loyalty/join/${publicId}`
-
-  // Set cookie fallback for post-install redirect
-  const cookieStore = await cookies()
-  cookieStore.set({
-    name: AFTER_INSTALL_COOKIE,
-    value: returnTo,
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 1800,
-    path: '/',
-  })
 
   const joinUrl = `/join?returnTo=${encodeURIComponent(returnTo)}`
   const businessName = bp.business_name || 'this business'
