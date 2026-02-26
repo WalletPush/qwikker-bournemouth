@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { StampGrid } from './stamp-grid'
 import { STAMP_ICONS } from '@/lib/loyalty/loyalty-utils'
 import type { StampIconKey } from '@/lib/loyalty/loyalty-utils'
-import { Loader2, CheckCircle2, Gift } from 'lucide-react'
+import { Loader2, CheckCircle2, Gift, RefreshCw } from 'lucide-react'
+import Link from 'next/link'
 
 interface JoinPageClientProps {
   publicId: string
@@ -45,6 +46,25 @@ export function JoinPageClient({ publicId, walletPassId, program, prefill }: Joi
   const [errorMessage, setErrorMessage] = useState('')
   const [walletUrls, setWalletUrls] = useState<{ appleUrl: string | null; googleUrl: string | null }>({ appleUrl: null, googleUrl: null })
   const [hasWalletPass, setHasWalletPass] = useState(false)
+  const [isRetrying, setIsRetrying] = useState(false)
+
+  const handleRetryPass = useCallback(async () => {
+    setIsRetrying(true)
+    try {
+      const res = await fetch('/api/loyalty/retry-pass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publicId, walletPassId }),
+      })
+      const data = await res.json()
+      if (data.appleUrl || data.googleUrl) {
+        setWalletUrls({ appleUrl: data.appleUrl, googleUrl: data.googleUrl })
+        setHasWalletPass(true)
+      }
+    } catch {} finally {
+      setIsRetrying(false)
+    }
+  }, [publicId, walletPassId])
 
   const stampIconName = STAMP_ICONS[program.stamp_icon as StampIconKey]?.icon || 'Stamp'
 
@@ -249,15 +269,36 @@ export function JoinPageClient({ publicId, walletPassId, program, prefill }: Joi
             )}
 
             {!hasWalletPass && (
-              <div className="bg-zinc-800/40 border border-zinc-700/50 rounded-xl p-4 text-center">
-                <p className="text-zinc-300 text-sm">
-                  Your digital loyalty card is being set up. You&apos;ll be notified when it&apos;s ready.
-                </p>
-                <p className="text-zinc-500 text-xs mt-2">
-                  In the meantime, you can start earning by scanning the QR at {program.business_name}.
-                </p>
+              <div className="space-y-3 w-full">
+                <div className="bg-zinc-800/40 border border-zinc-700/50 rounded-xl p-4 text-center">
+                  <p className="text-zinc-300 text-sm">
+                    Your digital loyalty card is being set up. You&apos;ll be notified when it&apos;s ready.
+                  </p>
+                  <p className="text-zinc-500 text-xs mt-2">
+                    In the meantime, you can start earning by scanning the QR at {program.business_name}.
+                  </p>
+                </div>
+                <button
+                  onClick={handleRetryPass}
+                  disabled={isRetrying}
+                  className="w-full flex items-center justify-center gap-2 h-10 text-zinc-400 hover:text-white text-sm border border-zinc-800 hover:border-zinc-700 rounded-xl transition-colors"
+                >
+                  {isRetrying ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  )}
+                  Didn&apos;t get your pass? Tap to retry
+                </button>
               </div>
             )}
+
+            <Link
+              href={`/user/rewards?wallet_pass_id=${encodeURIComponent(walletPassId)}`}
+              className="text-emerald-400 text-sm font-medium hover:text-emerald-300 transition-colors mt-2"
+            >
+              View my rewards
+            </Link>
           </motion.div>
         )}
 
@@ -278,6 +319,24 @@ export function JoinPageClient({ publicId, walletPassId, program, prefill }: Joi
                 You&apos;re already part of {program.business_name}&apos;s loyalty program. Scan the till QR to earn stamps.
               </p>
             </div>
+            <Link
+              href={`/user/rewards?wallet_pass_id=${encodeURIComponent(walletPassId)}`}
+              className="w-full flex items-center justify-center h-11 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl transition-colors"
+            >
+              View my rewards
+            </Link>
+            <button
+              onClick={handleRetryPass}
+              disabled={isRetrying}
+              className="flex items-center justify-center gap-2 text-zinc-500 hover:text-zinc-300 text-xs transition-colors"
+            >
+              {isRetrying ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <RefreshCw className="w-3 h-3" />
+              )}
+              Didn&apos;t get a wallet pass? Tap to retry
+            </button>
           </motion.div>
         )}
 

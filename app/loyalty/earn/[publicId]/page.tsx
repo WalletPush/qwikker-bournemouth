@@ -8,12 +8,12 @@ export const dynamic = 'force-dynamic'
 
 interface EarnPageProps {
   params: Promise<{ publicId: string }>
-  searchParams: Promise<{ t?: string }>
+  searchParams: Promise<{ t?: string; wallet_pass_id?: string }>
 }
 
 export default async function EarnPage({ params, searchParams }: EarnPageProps) {
   const { publicId } = await params
-  const { t: token } = await searchParams
+  const { t: token, wallet_pass_id: urlWalletPassId } = await searchParams
 
   if (!publicId) {
     return <EarnError message="Invalid link." />
@@ -30,7 +30,7 @@ export default async function EarnPage({ params, searchParams }: EarnPageProps) 
     return <EarnError message="Could not determine your location." />
   }
 
-  const walletPassId = await getWalletPassCookie()
+  const walletPassId = urlWalletPassId || await getWalletPassCookie()
 
   if (!walletPassId) {
     redirect(`/loyalty/start/${publicId}?mode=earn&t=${encodeURIComponent(token)}`)
