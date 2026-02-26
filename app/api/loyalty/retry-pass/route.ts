@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       .eq('city', city)
       .single()
 
-    if (!program || !hasWalletPushCredentials(program)) {
+    if (!program || !program.walletpush_template_id || !program.walletpush_api_key) {
       return NextResponse.json({ error: 'Program not found or no wallet credentials' }, { status: 404 })
     }
 
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     const initialFields = getLoyaltyPassFieldValues(program, membership, program.type)
 
     const result = await issueLoyaltyPass(
-      program,
+      program as any,
       {
         firstName: appUser?.first_name || 'Qwikker',
         lastName: appUser?.last_name || 'Member',

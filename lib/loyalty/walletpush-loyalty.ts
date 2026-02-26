@@ -54,6 +54,12 @@ export async function issueLoyaltyPass(
       Email: memberData.email,
     }
 
+    console.log('[WalletPush] issueLoyaltyPass request:', {
+      url,
+      templateId: program.walletpush_template_id,
+      fields: Object.keys(body),
+    })
+
     const response = await fetch(url, {
       method: 'POST',
       headers,
@@ -71,10 +77,17 @@ export async function issueLoyaltyPass(
 
     const data = await response.json()
 
+    console.log('[WalletPush] issueLoyaltyPass response:', {
+      serial: data.serialNumber || data.serial || data.id,
+      hasApple: !!(data.appleUrl || data.apple_url || data.apple?.downloadUrl),
+      hasGoogle: !!(data.googleUrl || data.google_url || data.google?.saveUrl),
+      keys: Object.keys(data),
+    })
+
     return {
       serial: data.serialNumber || data.serial || data.id,
-      appleUrl: data.appleUrl || data.apple_url,
-      googleUrl: data.googleUrl || data.google_url,
+      appleUrl: data.appleUrl || data.apple_url || data.apple?.downloadUrl,
+      googleUrl: data.googleUrl || data.google_url || data.google?.saveUrl,
     }
   } catch (error) {
     console.error('[WalletPush] issueLoyaltyPass error:', error)

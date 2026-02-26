@@ -90,16 +90,18 @@ export async function POST(request: NextRequest) {
         .is('date_of_birth', null)
     }
 
-    // Issue WalletPush loyalty pass if credentials exist
+    // Issue WalletPush loyalty pass if template + api key exist
     let walletpushSerial: string | null = null
     let appleUrl: string | undefined
     let googleUrl: string | undefined
 
-    if (hasWalletPushCredentials(program)) {
+    const canCreatePass = !!(program.walletpush_template_id && program.walletpush_api_key)
+
+    if (canCreatePass) {
       const initialFields = getLoyaltyPassFieldValues(program, membership, program.type)
 
       const result = await issueLoyaltyPass(
-        program,
+        program as any,
         {
           firstName: firstName || 'Qwikker',
           lastName: lastName || 'Member',
@@ -117,7 +119,11 @@ export async function POST(request: NextRequest) {
           .from('loyalty_memberships')
           .update({ walletpush_serial: result.serial })
           .eq('id', membership.id)
+      } else {
+        console.error('[loyalty/join] Pass creation returned null for program', program.public_id)
       }
+    } else {
+      console.log('[loyalty/join] Skipping pass creation: missing template_id or api_key')
     }
 
     return NextResponse.json({
