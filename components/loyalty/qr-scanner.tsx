@@ -207,9 +207,14 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
     const tick = () => {
       const diff = new Date(earnResult.nextEligibleAt!).getTime() - Date.now()
       if (diff <= 0) { setCountdown('Eligible now'); return }
-      const mins = Math.floor(diff / 60000)
+      const hours = Math.floor(diff / 3600000)
+      const mins = Math.floor((diff % 3600000) / 60000)
       const secs = Math.floor((diff % 60000) / 1000)
-      setCountdown(`${mins}m ${secs.toString().padStart(2, '0')}s`)
+      if (hours > 0) {
+        setCountdown(`${hours}h ${mins.toString().padStart(2, '0')}m`)
+      } else {
+        setCountdown(`${mins}m ${secs.toString().padStart(2, '0')}s`)
+      }
     }
     tick()
     const id = setInterval(tick, 1000)

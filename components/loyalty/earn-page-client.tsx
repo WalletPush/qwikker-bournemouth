@@ -103,9 +103,14 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
         setCountdown('Eligible now')
         return
       }
-      const mins = Math.floor(diff / 60000)
+      const hours = Math.floor(diff / 3600000)
+      const mins = Math.floor((diff % 3600000) / 60000)
       const secs = Math.floor((diff % 60000) / 1000)
-      setCountdown(`${mins}m ${secs.toString().padStart(2, '0')}s`)
+      if (hours > 0) {
+        setCountdown(`${hours}h ${mins.toString().padStart(2, '0')}m`)
+      } else {
+        setCountdown(`${mins}m ${secs.toString().padStart(2, '0')}s`)
+      }
     }
 
     tick()
