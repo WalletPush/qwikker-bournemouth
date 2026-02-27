@@ -26,6 +26,8 @@ interface JoinPageClientProps {
     earn_instructions: string | null
     logo_url: string | null
     business_name: string
+    max_earns_per_day: number
+    min_gap_minutes: number
   }
   prefill: {
     firstName: string
@@ -68,9 +70,9 @@ export function JoinPageClient({ publicId, walletPassId, program, prefill }: Joi
 
   const stampIconName = STAMP_ICONS[program.stamp_icon as StampIconKey]?.icon || 'Stamp'
 
-  const earnModeText = program.earn_mode === 'per_visit'
-    ? '1 stamp per visit'
-    : '1 stamp per purchase (min 30 min between stamps)'
+  const earnModeBase = program.earn_mode === 'per_visit' ? '1 stamp per visit' : '1 stamp per purchase'
+  const gapText = program.min_gap_minutes > 0 ? ` (min ${program.min_gap_minutes} min between stamps)` : ''
+  const earnModeText = `${earnModeBase}${gapText}`
 
   const handleJoin = useCallback(async () => {
     setState('joining')

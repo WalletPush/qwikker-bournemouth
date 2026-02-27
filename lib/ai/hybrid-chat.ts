@@ -17,6 +17,7 @@ import {
   generateStateContext 
 } from './conversation-state'
 import { createTenantAwareServerClient } from '@/lib/utils/tenant-security'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { isFreeTier, isAiEligibleTier, getTierPriority } from '@/lib/atlas/eligibility'
 import { getFranchiseApiKeys } from '@/lib/utils/franchise-api-keys'
 import { normalizeLocation, calculateDistance, isValidUUID } from '@/lib/utils/location'
@@ -1288,8 +1289,9 @@ export async function generateHybridAIResponse(
         }
 
         if (context.walletPassId && loyaltyByBusinessId.size > 0) {
-          const programBusinessIds = Array.from(loyaltyByBusinessId.keys())
-          const { data: memberships } = await supabase
+          // Use service role to bypass RLS -- wallet pass users have no Supabase auth session
+          const serviceRole = createServiceRoleClient()
+          const { data: memberships } = await serviceRole
             .from('loyalty_memberships')
             .select('program_id, stamps_balance, loyalty_programs!inner(business_id, reward_threshold)')
             .eq('user_wallet_pass_id', context.walletPassId)

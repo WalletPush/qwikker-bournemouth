@@ -79,6 +79,8 @@ export default async function JoinPage({ params, searchParams }: JoinPageProps) 
         earn_instructions: program.earn_instructions,
         logo_url: businessLogo,
         business_name: businessName,
+        max_earns_per_day: program.max_earns_per_day,
+        min_gap_minutes: program.min_gap_minutes,
       }}
       prefill={{
         firstName: appUser?.first_name || '',
