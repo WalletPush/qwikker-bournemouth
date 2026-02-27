@@ -21,6 +21,7 @@ interface EarnResult {
   rewardUnlocked: boolean
   proximityMessage: string | null
   nextEligibleAt: string | null
+  cooldownReason: string | null
   program: {
     business_name: string
     logo_url: string | null
@@ -93,9 +94,9 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
           rewardUnlocked: false,
           proximityMessage: null,
           nextEligibleAt: data.nextEligibleAt,
+          cooldownReason: data.error || null,
           program: data.program || { business_name: '', logo_url: null, program_name: '', reward_description: '', reward_threshold: 10, stamp_icon: 'stamp', stamp_label: 'stamps' },
         })
-        setErrorMessage(data.error || '')
         setState('cooldown')
         return
       }
@@ -117,6 +118,7 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
         rewardUnlocked: data.rewardUnlocked,
         proximityMessage: data.proximityMessage,
         nextEligibleAt: data.nextEligibleAt,
+        cooldownReason: null,
         program: data.program || { business_name: '', logo_url: null, program_name: '', reward_description: '', reward_threshold: 10, stamp_icon: 'stamp', stamp_label: 'stamps' },
       })
       setState(data.rewardUnlocked ? 'reward' : 'success')
@@ -360,7 +362,7 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
               <div className="text-center">
                 <p className="text-white text-lg font-semibold">Come back soon</p>
                 <p className="text-zinc-400 text-sm mt-1">
-                  {errorMessage || 'You\'ve already earned a stamp recently.'}
+                  {earnResult.cooldownReason || 'You\'ve already earned a stamp recently.'}
                 </p>
               </div>
               {countdown && (

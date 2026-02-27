@@ -142,9 +142,13 @@ export function canEarnNow(
     const now = new Date()
 
     if (now < nextEligible) {
+      const diffMs = nextEligible.getTime() - now.getTime()
+      const minsLeft = Math.ceil(diffMs / 60000)
       return {
         allowed: false,
-        reason: `Too soon since your last stamp. Try again in a few minutes.`,
+        reason: minsLeft > 60
+          ? `Too soon since your last stamp. Try again in about ${Math.ceil(minsLeft / 60)} hour${Math.ceil(minsLeft / 60) > 1 ? 's' : ''}.`
+          : `Too soon since your last stamp. Try again in ${minsLeft} minute${minsLeft !== 1 ? 's' : ''}.`,
         nextEligibleAt: nextEligible.toISOString(),
       }
     }
