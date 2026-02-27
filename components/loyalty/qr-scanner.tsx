@@ -157,31 +157,35 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
       }
 
       // Pure JS QR detection via jsQR -- works on every browser including iOS Safari
+      // Scale down to max 480px wide to keep CPU usage manageable on mobile
+      const SCAN_WIDTH = 480
       intervalId = setInterval(() => {
         if (!scanningRef.current || !videoRef.current || !canvasRef.current) return
         const video = videoRef.current
-        if (video.readyState < video.HAVE_ENOUGH_DATA) return
+        if (video.readyState < video.HAVE_ENOUGH_DATA || video.videoWidth === 0) return
+
+        const scale = Math.min(1, SCAN_WIDTH / video.videoWidth)
+        const w = Math.floor(video.videoWidth * scale)
+        const h = Math.floor(video.videoHeight * scale)
 
         const canvas = canvasRef.current
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        const ctx = canvas.getContext('2d')
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })
         if (!ctx) return
-        ctx.drawImage(video, 0, 0)
+        ctx.drawImage(video, 0, 0, w, h)
 
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert',
-        })
+        const imageData = ctx.getImageData(0, 0, w, h)
+        const code = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' })
 
-        if (code && scanningRef.current) {
+        if (code && code.data && scanningRef.current) {
           const parsed = parseEarnUrl(code.data)
           if (parsed) {
             scanningRef.current = false
             callEarnApi(parsed.publicId, parsed.token)
           }
         }
-      }, 200)
+      }, 250)
     }
 
     if (state === 'scanning') {
@@ -220,8 +224,8 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 bg-black/95 flex flex-col"
     >
-      {/* Hidden canvas for frame capture */}
-      <canvas ref={canvasRef} className="hidden" />
+      {/* Offscreen canvas for frame capture */}
+      <canvas ref={canvasRef} style={{ position: 'absolute', left: -9999, top: -9999, width: 0, height: 0 }} />
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
@@ -261,6 +265,11 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
                     />
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div className="w-48 h-48 border-2 border-emerald-400/50 rounded-xl" />
+                      <motion.div
+                        className="absolute w-48 h-0.5 bg-emerald-400/60"
+                        animate={{ y: [-90, 90] }}
+                        transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
+                      />
                     </div>
                   </div>
                   <p className="text-zinc-500 text-xs text-center">
