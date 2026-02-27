@@ -473,8 +473,9 @@ function buildSystemPromptV2(args: {
   currentTime?: string
   previousResponses?: string[]
   userName?: string
+  userLoyaltySummary?: string
 }): string {
-  const { cityDisplayName, userMessage, isBroadQuery, stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, previousResponses, userName } = args
+  const { cityDisplayName, userMessage, isBroadQuery, stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, previousResponses, userName, userLoyaltySummary } = args
 
   const convoFocus = state?.currentBusiness
     ? `FOCUS: You are currently discussing ${state.currentBusiness.name}. Stay on that unless the user asks to switch.`
@@ -572,7 +573,7 @@ ${convoFocus}
 
 AVAILABLE BUSINESSES (sorted by tier; qwikker_picks first):
 ${businessContext || 'No businesses available.'}
-
+${userLoyaltySummary || ''}
 ${cityContext ? `CITY INFO:\n${cityContext}\n` : ''}
 `.trim()
 }
@@ -1271,13 +1272,15 @@ export async function generateHybridAIResponse(
       })
     }
     
-    // Step 4a: Fetch loyalty programs for context businesses (lean query)
+    // Step 4a: Fetch loyalty programs for context businesses + ALL user memberships
     const contextBusinessIds = sortedForContext.slice(0, 10).map(b => b.id).filter(Boolean)
     const loyaltyByBusinessId = new Map<string, { program_name: string; reward_description: string; reward_threshold: number }>()
     const userLoyaltyByBusinessId = new Map<string, { stamps_balance: number; stamps_remaining: number }>()
+    let userLoyaltySummary = ''
 
-    if (contextBusinessIds.length > 0) {
-      try {
+    try {
+      // Fetch loyalty programs for context businesses (for non-member businesses in recommendations)
+      if (contextBusinessIds.length > 0) {
         const { data: loyaltyPrograms } = await supabase
           .from('loyalty_programs')
           .select('business_id, program_name, reward_description, reward_threshold')
@@ -1287,29 +1290,52 @@ export async function generateHybridAIResponse(
         for (const lp of loyaltyPrograms || []) {
           loyaltyByBusinessId.set(lp.business_id, lp)
         }
+      }
 
-        if (context.walletPassId && loyaltyByBusinessId.size > 0) {
-          // Use service role to bypass RLS -- wallet pass users have no Supabase auth session
-          const serviceRole = createServiceRoleClient()
-          const { data: memberships } = await serviceRole
-            .from('loyalty_memberships')
-            .select('program_id, stamps_balance, loyalty_programs!inner(business_id, reward_threshold)')
-            .eq('user_wallet_pass_id', context.walletPassId)
-            .eq('status', 'active')
+      // Fetch ALL user memberships regardless of context businesses
+      if (context.walletPassId) {
+        const serviceRole = createServiceRoleClient()
+        const { data: memberships } = await serviceRole
+          .from('loyalty_memberships')
+          .select(`
+            program_id, stamps_balance,
+            loyalty_programs!inner(
+              business_id, program_name, reward_description, reward_threshold,
+              business_profiles!inner(business_name)
+            )
+          `)
+          .eq('user_wallet_pass_id', context.walletPassId)
+          .eq('status', 'active')
 
-          for (const m of memberships || []) {
-            const prog = (m as any).loyalty_programs
-            if (prog?.business_id) {
-              userLoyaltyByBusinessId.set(prog.business_id, {
-                stamps_balance: m.stamps_balance,
-                stamps_remaining: prog.reward_threshold - m.stamps_balance,
+        const summaryLines: string[] = []
+
+        for (const m of memberships || []) {
+          const prog = (m as any).loyalty_programs
+          if (prog?.business_id) {
+            const remaining = prog.reward_threshold - m.stamps_balance
+            userLoyaltyByBusinessId.set(prog.business_id, {
+              stamps_balance: m.stamps_balance,
+              stamps_remaining: remaining,
+            })
+            // Also ensure this program is in the loyalty map for context building
+            if (!loyaltyByBusinessId.has(prog.business_id)) {
+              loyaltyByBusinessId.set(prog.business_id, {
+                program_name: prog.program_name,
+                reward_description: prog.reward_description,
+                reward_threshold: prog.reward_threshold,
               })
             }
+            const bizName = prog.business_profiles?.business_name || prog.program_name
+            summaryLines.push(`- ${bizName}: ${m.stamps_balance}/${prog.reward_threshold} stamps (${remaining} to go for ${prog.reward_description})`)
           }
         }
-      } catch (e) {
-        console.log('⚠️ Loyalty context fetch failed (non-critical):', e)
+
+        if (summaryLines.length > 0) {
+          userLoyaltySummary = `\nUSER LOYALTY PROGRESS:\n${summaryLines.join('\n')}\n`
+        }
       }
+    } catch (e) {
+      console.log('⚠️ Loyalty context fetch failed (non-critical):', e)
     }
 
     // Step 4b: Build RICH context with KB content merged with DB data
@@ -1454,7 +1480,8 @@ Category: ${business.display_category || 'Not specified'}${hoursLine}${loyaltyLi
       atlasAvailable,
       currentTime,
       previousResponses,
-      userName
+      userName,
+      userLoyaltySummary
     })
     
     if (process.env.NODE_ENV === 'development') console.log('[PROMPT] systemPrompt chars=', systemPrompt.length)
