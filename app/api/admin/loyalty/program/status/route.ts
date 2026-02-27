@@ -20,9 +20,9 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const { programId, status } = body
 
-    if (!programId || !['active', 'paused'].includes(status)) {
+    if (!programId || !['active', 'paused', 'ended'].includes(status)) {
       return NextResponse.json(
-        { error: 'programId and status (active|paused) are required' },
+        { error: 'programId and status (active|paused|ended) are required' },
         { status: 400 }
       )
     }
@@ -44,9 +44,14 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Not authorized for this city' }, { status: 403 })
     }
 
+    const updateData: Record<string, unknown> = { status, updated_at: new Date().toISOString() }
+    if (status === 'ended') {
+      updateData.ended_at = new Date().toISOString()
+    }
+
     const { error: updateError } = await serviceRole
       .from('loyalty_programs')
-      .update({ status, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', programId)
 
     if (updateError) {

@@ -27,7 +27,7 @@ export interface LoyaltyProgram {
   strip_image_url: string | null
   strip_image_description: string | null
   terms_and_conditions: string | null
-  status: 'draft' | 'submitted' | 'active' | 'paused'
+  status: 'draft' | 'submitted' | 'active' | 'paused' | 'ended'
   walletpush_template_id: string | null
   walletpush_api_key: string | null
   walletpush_pass_type_id: string | null
@@ -106,6 +106,7 @@ export interface LoyaltyPassRequest {
   business_id: string
   design_spec_json: DesignSpecJson
   status: 'submitted' | 'issued' | 'rejected'
+  request_type: 'new' | 'edit' | 'cancel'
   rejection_reason: string | null
   walletpush_template_id: string | null
   walletpush_api_key: string | null

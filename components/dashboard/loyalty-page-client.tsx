@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { ElegantModal } from '@/components/ui/elegant-modal'
 import { LoyaltySpecsForm } from '@/components/dashboard/loyalty-specs-form'
 import { LoyaltyStatsDashboard } from '@/components/dashboard/loyalty-stats-dashboard'
-import { CheckCircle2, Clock, Loader2, Pause, ArrowRight, Users, TrendingUp, Gift, Trophy } from 'lucide-react'
+import { CheckCircle2, Clock, Loader2, Pause, ArrowRight, Users, TrendingUp, Gift, Trophy, XCircle } from 'lucide-react'
 import { LoyaltyCardPreview, toLoyaltyCardPreviewProps } from '@/components/loyalty/loyalty-card-preview'
+import { LoyaltyProgramManagement } from '@/components/dashboard/loyalty-program-management'
 import type { LoyaltyProgram } from '@/lib/loyalty/loyalty-types'
 
 interface LoyaltyPageClientProps {
@@ -158,6 +159,43 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
     )
   }
 
+  // Ended -- program permanently ended
+  if (status === 'ended') {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Qwikker Loyalty</h1>
+          <p className="text-zinc-400 mt-1 text-sm">This loyalty program has ended.</p>
+        </div>
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-500/10 flex-shrink-0">
+                <XCircle className="w-5 h-5 text-red-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-white font-medium">Program Ended</h3>
+                <p className="text-zinc-400 text-sm mt-1">
+                  Your loyalty program has been permanently ended. Existing members&apos; wallet passes
+                  will remain on their phones but can no longer earn or redeem stamps.
+                </p>
+                <p className="text-zinc-500 text-xs mt-3">
+                  If you&apos;d like to start a new loyalty program, please contact your city admin.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        {program && (
+          <LoyaltyCardPreview
+            {...toLoyaltyCardPreviewProps({ ...program, business_name: profile?.business_name })}
+            disclaimer="This program has ended. The card is shown for reference only."
+          />
+        )}
+      </div>
+    )
+  }
+
   // Paused -- show paused state with resume option
   if (status === 'paused') {
     return (
@@ -203,6 +241,11 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
               disclaimer={cardDisclaimer}
             />
             <LoyaltyStatsDashboard program={program} profile={profile} />
+            <LoyaltyProgramManagement
+              program={program}
+              businessName={profile?.business_name || ''}
+              onProgramUpdate={setProgram}
+            />
           </>
         )}
       </div>
@@ -254,6 +297,12 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
           <LoyaltyStatsDashboard
             program={program}
             profile={profile}
+            onProgramUpdate={setProgram}
+          />
+
+          <LoyaltyProgramManagement
+            program={program}
+            businessName={profile?.business_name || ''}
             onProgramUpdate={setProgram}
           />
         </>

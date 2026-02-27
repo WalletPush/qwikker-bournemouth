@@ -246,21 +246,28 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
                     <CardTitle className="text-white text-base">
                       {business?.business_name || 'Unknown Business'}
                     </CardTitle>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {business?.city || city} &middot; Submitted {new Date(request.created_at).toLocaleDateString()}
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-slate-500">
+                        {business?.city || city} &middot; {new Date(request.created_at).toLocaleDateString()}
+                      </p>
+                      {(spec._change_description || (request as any).request_type === 'edit') && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-amber-500/20 text-amber-400 rounded">
+                          EDIT REQUEST
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <a
-                    href="https://www.walletpush.io/dashboard"
+                    href="https://loyalty.qwikker.com/business/pass-designer"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
                   >
                     <ExternalLink className="w-3 h-3" />
-                    Open WalletPush
+                    Open Pass Designer
                   </a>
                   <Button
                     variant="outline"
@@ -285,6 +292,19 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
                   business_name: business?.business_name,
                 })}
               />
+
+              {/* Edit request context */}
+              {spec._change_description && (
+                <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                  <p className="text-amber-400 text-xs font-medium mb-1">Change Request</p>
+                  <p className="text-slate-300 text-sm">{spec._change_description}</p>
+                  {spec._changed_fields?.length > 0 && (
+                    <p className="text-slate-500 text-xs mt-1">
+                      Fields: {spec._changed_fields.join(', ')}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Key specs grid */}
               <div className="grid grid-cols-3 gap-3 text-sm">
