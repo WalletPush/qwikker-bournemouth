@@ -76,6 +76,19 @@ export function RedemptionDisplay({
     setHoldProgress(0)
   }, [])
 
+  // Reset the WalletPush pass fields after display window expires
+  const resetPass = useCallback(async () => {
+    try {
+      await fetch('/api/loyalty/redemption/reset-pass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ membershipId, walletPassId }),
+      })
+    } catch {
+      // Non-critical: pass will reset on next earn event
+    }
+  }, [membershipId, walletPassId])
+
   // Live countdown + clock
   useEffect(() => {
     if (state !== 'live' || !expiresAt) return
@@ -86,6 +99,7 @@ export function RedemptionDisplay({
 
       if (diff <= 0) {
         setState('expired')
+        resetPass()
         return
       }
 
@@ -100,7 +114,7 @@ export function RedemptionDisplay({
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [state, expiresAt])
+  }, [state, expiresAt, resetPass])
 
   const todayStr = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
