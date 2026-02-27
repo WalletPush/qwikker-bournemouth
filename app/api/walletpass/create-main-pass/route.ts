@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
           wallet_pass_id: passSerialNumber,
           pass_type_identifier: passTypeId,
           first_name: firstName,
+          last_name: lastName,
           name: `${firstName} ${lastName}`,
           email: email.toLowerCase(),
           city: city?.toLowerCase() || 'bournemouth',

@@ -52,9 +52,16 @@ export default async function JoinPage({ params, searchParams }: JoinPageProps) 
   // Pre-fill user data from app_users
   const { data: appUser } = await serviceRole
     .from('app_users')
-    .select('first_name, last_name, email, date_of_birth')
+    .select('first_name, last_name, name, email, date_of_birth')
     .eq('wallet_pass_id', walletPassId)
     .single()
+
+  // Fallback: if last_name is null, extract from the combined name field
+  let prefillLastName = appUser?.last_name || ''
+  if (!prefillLastName && appUser?.name && appUser?.first_name) {
+    const remainder = appUser.name.replace(appUser.first_name, '').trim()
+    if (remainder) prefillLastName = remainder
+  }
 
   return (
     <JoinPageClient
@@ -75,7 +82,7 @@ export default async function JoinPage({ params, searchParams }: JoinPageProps) 
       }}
       prefill={{
         firstName: appUser?.first_name || '',
-        lastName: appUser?.last_name || '',
+        lastName: prefillLastName,
         email: appUser?.email || '',
         hasDob: !!appUser?.date_of_birth,
       }}
