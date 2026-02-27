@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Camera, Loader2, CheckCircle2, AlertTriangle, PartyPopper, Clock } from 'lucide-react'
+import { X, Loader2, AlertTriangle, PartyPopper, Clock } from 'lucide-react'
 import { StampGrid } from './stamp-grid'
 import { STAMP_ICONS } from '@/lib/loyalty/loyalty-utils'
 import type { StampIconKey } from '@/lib/loyalty/loyalty-utils'
@@ -31,10 +31,6 @@ interface EarnResult {
   }
 }
 
-/**
- * Parses a loyalty earn URL from a scanned QR code.
- * Expected format: https://{city}.qwikker.com/loyalty/start/{publicId}?mode=earn&t={token}
- */
 function parseEarnUrl(url: string): { publicId: string; token: string } | null {
   try {
     const parsed = new URL(url)
@@ -52,6 +48,7 @@ function parseEarnUrl(url: string): { publicId: string; token: string } | null {
 
 export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const scanningRef = useRef(true)
 
@@ -127,16 +124,46 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
     }
   }, [walletPassId, stopCamera])
 
-  // Start camera and scan loop
   useEffect(() => {
-    let animFrameId: number
+    let intervalId: ReturnType<typeof setInterval>
 
     async function startScanning() {
+      // Check BarcodeDetector support first
+      if (!('BarcodeDetector' in window)) {
+        setCameraError(
+          'Your browser doesn\'t support QR scanning. Use your phone\'s camera app to scan the QR code instead.'
+        )
+        return
+      }
+
+      let detector: any
+      try {
+        detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
+      } catch {
+        setCameraError('QR scanning is not available on this device.')
+        return
+      }
+
+      // Request camera with autofocus for close-up QR scanning
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          }
         })
         streamRef.current = stream
+
+        // Try to enable continuous autofocus if supported
+        const track = stream.getVideoTracks()[0]
+        const capabilities = track.getCapabilities?.() as any
+        if (capabilities?.focusMode?.includes?.('continuous')) {
+          try {
+            await (track as any).applyConstraints({ advanced: [{ focusMode: 'continuous' }] })
+          } catch { /* not critical */ }
+        }
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream
           await videoRef.current.play()
@@ -146,60 +173,32 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
         return
       }
 
-      const hasBarcodeDetector = 'BarcodeDetector' in window
-      let detector: any = null
-      if (hasBarcodeDetector) {
-        try {
-          detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
-        } catch {
-          detector = null
-        }
-      }
-
-      if (!detector) {
-        setCameraError(
-          'Your browser doesn\'t support QR scanning. Use your phone\'s camera app to scan the QR code instead.'
-        )
-        return
-      }
-
-      let lastScanTime = 0
-      const SCAN_INTERVAL = 300
-
-      const scan = async () => {
-        if (!scanningRef.current || !videoRef.current) return
+      // Scan via canvas (more reliable than passing video directly on iOS)
+      intervalId = setInterval(async () => {
+        if (!scanningRef.current || !videoRef.current || !canvasRef.current) return
         const video = videoRef.current
+        if (video.readyState < video.HAVE_ENOUGH_DATA) return
 
-        if (video.readyState < video.HAVE_ENOUGH_DATA) {
-          animFrameId = requestAnimationFrame(scan)
-          return
-        }
-
-        const now = Date.now()
-        if (now - lastScanTime < SCAN_INTERVAL) {
-          animFrameId = requestAnimationFrame(scan)
-          return
-        }
-        lastScanTime = now
+        const canvas = canvasRef.current
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        ctx.drawImage(video, 0, 0)
 
         try {
-          const barcodes = await detector.detect(video)
-          if (barcodes.length > 0) {
-            const raw = barcodes[0].rawValue
-            const parsed = parseEarnUrl(raw)
+          const barcodes = await detector.detect(canvas)
+          if (barcodes.length > 0 && scanningRef.current) {
+            const parsed = parseEarnUrl(barcodes[0].rawValue)
             if (parsed) {
+              scanningRef.current = false
               callEarnApi(parsed.publicId, parsed.token)
-              return
             }
           }
         } catch {
-          // Detection can throw on some frames, continue
+          // Some frames fail to detect, continue
         }
-
-        animFrameId = requestAnimationFrame(scan)
-      }
-
-      animFrameId = requestAnimationFrame(scan)
+      }, 250)
     }
 
     if (state === 'scanning') {
@@ -208,7 +207,7 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
     }
 
     return () => {
-      cancelAnimationFrame(animFrameId)
+      clearInterval(intervalId)
     }
   }, [state, callEarnApi])
 
@@ -238,6 +237,9 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 bg-black/95 flex flex-col"
     >
+      {/* Hidden canvas for frame capture */}
+      <canvas ref={canvasRef} className="hidden" />
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <p className="text-white font-semibold text-lg">
@@ -260,6 +262,9 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
                 <div className="text-center space-y-3 py-10">
                   <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto" />
                   <p className="text-zinc-300 text-sm">{cameraError}</p>
+                  <button onClick={handleClose} className="mt-4 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors">
+                    Close
+                  </button>
                 </div>
               ) : (
                 <>
@@ -268,15 +273,15 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
                       ref={videoRef}
                       playsInline
                       muted
+                      autoPlay
                       className="absolute inset-0 w-full h-full object-cover"
                     />
-                    {/* Scan guide overlay */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div className="w-48 h-48 border-2 border-emerald-400/50 rounded-xl" />
                     </div>
                   </div>
                   <p className="text-zinc-500 text-xs text-center">
-                    Point your camera at the loyalty QR code on the counter
+                    Point your camera at the earn QR code on the counter
                   </p>
                 </>
               )}
