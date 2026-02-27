@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { StampGrid } from './stamp-grid'
 import { STAMP_ICONS } from '@/lib/loyalty/loyalty-utils'
 import type { StampIconKey } from '@/lib/loyalty/loyalty-utils'
-import { Loader2, CheckCircle2, Gift, RefreshCw } from 'lucide-react'
+import { Loader2, CheckCircle2, Gift, RefreshCw, QrCode, ArrowRight, Smartphone } from 'lucide-react'
 import Link from 'next/link'
 
 interface JoinPageClientProps {
@@ -225,7 +225,7 @@ export function JoinPageClient({ publicId, walletPassId, program, prefill }: Joi
             key="success"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-sm w-full mt-8 flex flex-col items-center gap-5"
+            className="max-w-sm w-full mt-6 flex flex-col items-center gap-5"
           >
             <motion.div
               initial={{ scale: 0 }}
@@ -237,12 +237,62 @@ export function JoinPageClient({ publicId, walletPassId, program, prefill }: Joi
             </motion.div>
 
             <div className="text-center">
-              <p className="text-white text-xl font-semibold">You&apos;re in</p>
+              <p className="text-white text-xl font-semibold">Welcome to {program.business_name}</p>
               <p className="text-zinc-400 text-sm mt-1">
-                Scan the QR code at {program.business_name} to start earning {program.stamp_label.toLowerCase()}.
+                You&apos;ve joined the {program.program_name} loyalty program.
               </p>
             </div>
 
+            {/* Stamp card preview */}
+            <div className="w-full bg-zinc-800/40 border border-zinc-700/50 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Gift className="w-4 h-4 text-emerald-400 shrink-0" />
+                <p className="text-white text-sm font-medium">Your stamp card</p>
+              </div>
+              <StampGrid
+                stampIcon={stampIconName}
+                filled={0}
+                threshold={Math.min(program.reward_threshold, 12)}
+                size={22}
+                className="justify-center"
+              />
+              <p className="text-zinc-400 text-xs text-center">
+                Collect {program.reward_threshold} {program.stamp_label.toLowerCase()} to earn{' '}
+                <span className="text-emerald-400 font-medium">{program.reward_description}</span>
+              </p>
+            </div>
+
+            {/* How to earn */}
+            <div className="w-full bg-zinc-800/40 border border-zinc-700/50 rounded-xl p-4 space-y-3">
+              <p className="text-white text-sm font-medium">How to earn</p>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0 mt-0.5">
+                  <QrCode className="w-4 h-4 text-zinc-400" />
+                </div>
+                <div>
+                  <p className="text-zinc-300 text-sm">Scan the QR code at the till</p>
+                  <p className="text-zinc-500 text-xs mt-0.5">{earnModeText}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0 mt-0.5">
+                  <Smartphone className="w-4 h-4 text-zinc-400" />
+                </div>
+                <div>
+                  <p className="text-zinc-300 text-sm">Or use the in-app scanner</p>
+                  <p className="text-zinc-500 text-xs mt-0.5">
+                    Open your rewards page and tap &quot;Scan to Earn&quot;
+                  </p>
+                </div>
+              </div>
+              {program.earn_instructions && (
+                <p className="text-zinc-500 text-xs border-t border-zinc-700/50 pt-2 mt-1">
+                  {program.earn_instructions}
+                </p>
+              )}
+            </div>
+
+            {/* Wallet pass buttons */}
             {hasWalletPass && (walletUrls.appleUrl || walletUrls.googleUrl) && (
               <div className="flex flex-col gap-2 w-full">
                 {walletUrls.appleUrl && (
@@ -250,8 +300,9 @@ export function JoinPageClient({ publicId, walletPassId, program, prefill }: Joi
                     href={walletUrls.appleUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full h-11 bg-black border border-zinc-700 rounded-xl text-white text-sm font-medium hover:bg-zinc-900 transition-colors"
+                    className="flex items-center justify-center gap-2 w-full h-12 bg-black border border-zinc-700 rounded-xl text-white text-sm font-semibold hover:bg-zinc-900 transition-colors"
                   >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
                     Add to Apple Wallet
                   </a>
                 )}
@@ -260,7 +311,7 @@ export function JoinPageClient({ publicId, walletPassId, program, prefill }: Joi
                     href={walletUrls.googleUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full h-11 bg-white border border-zinc-200 rounded-xl text-black text-sm font-medium hover:bg-zinc-100 transition-colors"
+                    className="flex items-center justify-center gap-2 w-full h-12 bg-white border border-zinc-200 rounded-xl text-black text-sm font-semibold hover:bg-zinc-100 transition-colors"
                   >
                     Add to Google Wallet
                   </a>
@@ -272,10 +323,10 @@ export function JoinPageClient({ publicId, walletPassId, program, prefill }: Joi
               <div className="space-y-3 w-full">
                 <div className="bg-zinc-800/40 border border-zinc-700/50 rounded-xl p-4 text-center">
                   <p className="text-zinc-300 text-sm">
-                    Your digital loyalty card is being set up. You&apos;ll be notified when it&apos;s ready.
+                    Your wallet pass is being set up.
                   </p>
-                  <p className="text-zinc-500 text-xs mt-2">
-                    In the meantime, you can start earning by scanning the QR at {program.business_name}.
+                  <p className="text-zinc-500 text-xs mt-1">
+                    You can start earning right away by scanning the QR at {program.business_name}.
                   </p>
                 </div>
                 <button
@@ -293,11 +344,13 @@ export function JoinPageClient({ publicId, walletPassId, program, prefill }: Joi
               </div>
             )}
 
+            {/* View rewards CTA */}
             <Link
               href={`/user/rewards?wallet_pass_id=${encodeURIComponent(walletPassId)}`}
-              className="text-emerald-400 text-sm font-medium hover:text-emerald-300 transition-colors mt-2"
+              className="w-full flex items-center justify-center gap-2 h-11 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl transition-colors"
             >
               View my rewards
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
         )}
@@ -308,23 +361,66 @@ export function JoinPageClient({ publicId, walletPassId, program, prefill }: Joi
             key="already"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-sm w-full mt-8 flex flex-col items-center gap-5"
+            className="max-w-sm w-full mt-6 flex flex-col items-center gap-5"
           >
-            <div className="w-16 h-16 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
               <CheckCircle2 className="w-7 h-7 text-emerald-400" />
             </div>
+
             <div className="text-center">
-              <p className="text-white text-lg font-semibold">Already a member</p>
+              <p className="text-white text-xl font-semibold">You&apos;re already a member</p>
               <p className="text-zinc-400 text-sm mt-1">
-                You&apos;re already part of {program.business_name}&apos;s loyalty program. Scan the till QR to earn stamps.
+                You&apos;re part of {program.business_name}&apos;s {program.program_name}.
               </p>
             </div>
+
+            {/* Stamp card preview */}
+            <div className="w-full bg-zinc-800/40 border border-zinc-700/50 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Gift className="w-4 h-4 text-emerald-400 shrink-0" />
+                <p className="text-white text-sm font-medium">Your stamp card</p>
+              </div>
+              <StampGrid
+                stampIcon={stampIconName}
+                filled={0}
+                threshold={Math.min(program.reward_threshold, 12)}
+                size={22}
+                className="justify-center"
+              />
+              <p className="text-zinc-400 text-xs text-center">
+                Collect {program.reward_threshold} {program.stamp_label.toLowerCase()} to earn{' '}
+                <span className="text-emerald-400 font-medium">{program.reward_description}</span>
+              </p>
+            </div>
+
+            {/* How to earn */}
+            <div className="w-full bg-zinc-800/40 border border-zinc-700/50 rounded-xl p-4 space-y-3">
+              <p className="text-white text-sm font-medium">How to earn</p>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-zinc-700/50 flex items-center justify-center shrink-0 mt-0.5">
+                  <QrCode className="w-4 h-4 text-zinc-400" />
+                </div>
+                <div>
+                  <p className="text-zinc-300 text-sm">Scan the QR code at the till</p>
+                  <p className="text-zinc-500 text-xs mt-0.5">{earnModeText}</p>
+                </div>
+              </div>
+              {program.earn_instructions && (
+                <p className="text-zinc-500 text-xs border-t border-zinc-700/50 pt-2 mt-1">
+                  {program.earn_instructions}
+                </p>
+              )}
+            </div>
+
+            {/* Primary CTA */}
             <Link
               href={`/user/rewards?wallet_pass_id=${encodeURIComponent(walletPassId)}`}
-              className="w-full flex items-center justify-center h-11 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl transition-colors"
+              className="w-full flex items-center justify-center gap-2 h-11 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl transition-colors"
             >
               View my rewards
+              <ArrowRight className="w-4 h-4" />
             </Link>
+
             <button
               onClick={handleRetryPass}
               disabled={isRetrying}
