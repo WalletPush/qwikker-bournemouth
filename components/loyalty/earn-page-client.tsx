@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { StampGrid } from './stamp-grid'
 import { STAMP_ICONS } from '@/lib/loyalty/loyalty-utils'
 import type { StampIconKey } from '@/lib/loyalty/loyalty-utils'
-import { Loader2, Clock, PartyPopper, AlertTriangle } from 'lucide-react'
+import { Loader2, Clock, PartyPopper, AlertTriangle, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 
 interface EarnPageClientProps {
   publicId: string
@@ -192,6 +193,14 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
                 {program.earn_instructions}
               </p>
             )}
+
+            <Link
+              href={`/user/rewards?wallet_pass_id=${encodeURIComponent(walletPassId)}`}
+              className="mt-2 w-full flex items-center justify-center gap-2 h-11 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl transition-colors"
+            >
+              View my rewards
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </motion.div>
         )}
 
@@ -241,14 +250,13 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
               className="justify-center"
             />
 
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="text-zinc-400 text-sm text-center"
+            <Link
+              href={`/user/rewards?wallet_pass_id=${encodeURIComponent(walletPassId)}`}
+              className="mt-2 w-full flex items-center justify-center gap-2 h-11 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl transition-colors"
             >
-              Head to your Rewards page to reveal and redeem.
-            </motion.p>
+              Reveal & Redeem
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </motion.div>
         )}
 
@@ -290,6 +298,14 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
             <p className="text-zinc-600 text-xs">
               {balance} / {program.reward_threshold} {program.stamp_label.toLowerCase()}
             </p>
+
+            <Link
+              href={`/user/rewards?wallet_pass_id=${encodeURIComponent(walletPassId)}`}
+              className="mt-2 w-full flex items-center justify-center gap-2 h-11 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors"
+            >
+              View my rewards
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </motion.div>
         )}
 
@@ -309,6 +325,14 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
               <p className="text-white text-lg font-semibold">Couldn&apos;t earn</p>
               <p className="text-zinc-400 text-sm mt-1">{errorMessage}</p>
             </div>
+
+            <Link
+              href={`/user/rewards?wallet_pass_id=${encodeURIComponent(walletPassId)}`}
+              className="mt-2 w-full flex items-center justify-center gap-2 h-11 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors"
+            >
+              View my rewards
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </motion.div>
         )}
       </AnimatePresence>

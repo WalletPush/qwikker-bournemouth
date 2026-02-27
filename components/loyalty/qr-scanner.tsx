@@ -146,12 +146,25 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
         return
       }
 
-      // Use BarcodeDetector if available (Safari 17.2+, Chrome 83+)
       const hasBarcodeDetector = 'BarcodeDetector' in window
       let detector: any = null
       if (hasBarcodeDetector) {
-        detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
+        try {
+          detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
+        } catch {
+          detector = null
+        }
       }
+
+      if (!detector) {
+        setCameraError(
+          'Your browser doesn\'t support QR scanning. Use your phone\'s camera app to scan the QR code instead.'
+        )
+        return
+      }
+
+      let lastScanTime = 0
+      const SCAN_INTERVAL = 300
 
       const scan = async () => {
         if (!scanningRef.current || !videoRef.current) return
@@ -162,23 +175,25 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
           return
         }
 
+        const now = Date.now()
+        if (now - lastScanTime < SCAN_INTERVAL) {
+          animFrameId = requestAnimationFrame(scan)
+          return
+        }
+        lastScanTime = now
+
         try {
-          if (detector) {
-            const barcodes = await detector.detect(video)
-            if (barcodes.length > 0) {
-              const parsed = parseEarnUrl(barcodes[0].rawValue)
-              if (parsed) {
-                callEarnApi(parsed.publicId, parsed.token)
-                return
-              }
+          const barcodes = await detector.detect(video)
+          if (barcodes.length > 0) {
+            const raw = barcodes[0].rawValue
+            const parsed = parseEarnUrl(raw)
+            if (parsed) {
+              callEarnApi(parsed.publicId, parsed.token)
+              return
             }
-          } else {
-            // Fallback: draw to canvas and try to decode via a simple approach
-            // For browsers without BarcodeDetector, we redirect to the URL
-            // This is a graceful degradation - most modern mobile browsers support BarcodeDetector
           }
         } catch {
-          // Detection can throw on some frames, just continue
+          // Detection can throw on some frames, continue
         }
 
         animFrameId = requestAnimationFrame(scan)
