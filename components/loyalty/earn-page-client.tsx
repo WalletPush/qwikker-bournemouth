@@ -54,6 +54,7 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
         if (data.reason === 'cooldown') {
           setBalance(data.newBalance ?? 0)
           setNextEligibleAt(data.nextEligibleAt ?? null)
+          setErrorMessage(data.error || null)
           setState('cooldown')
           return
         }
@@ -65,6 +66,7 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
       if (data.success === false && data.reason === 'cooldown') {
         setBalance(data.newBalance ?? 0)
         setNextEligibleAt(data.nextEligibleAt ?? null)
+        setErrorMessage(data.error || null)
         setState('cooldown')
         return
       }
@@ -276,13 +278,13 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
             <div className="text-center">
               <p className="text-white text-lg font-semibold">Come back soon</p>
               <p className="text-zinc-400 text-sm mt-1">
-                You&apos;ve already earned a stamp recently.
+                {errorMessage || 'You\'ve already earned a stamp recently.'}
               </p>
             </div>
 
             {countdown && (
               <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-xl px-6 py-3 text-center">
-                <p className="text-zinc-500 text-xs uppercase tracking-wide mb-1">Next eligible in</p>
+                <p className="text-zinc-500 text-xs uppercase tracking-wide mb-1">You can scan again in</p>
                 <p className="text-white text-xl font-mono font-semibold">{countdown}</p>
               </div>
             )}

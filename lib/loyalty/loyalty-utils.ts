@@ -82,6 +82,29 @@ export function getTodayInTimezone(tz: string): string {
   return formatter.format(new Date())
 }
 
+/**
+ * Returns an ISO string for the next midnight in the given timezone.
+ * Works by reading the current hours/minutes in that TZ and computing
+ * how many ms remain until 00:00.
+ */
+function getMidnightInTimezone(tz: string): string {
+  const now = new Date()
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: tz,
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: false,
+  }).formatToParts(now)
+
+  const h = Number(parts.find(p => p.type === 'hour')?.value ?? 0)
+  const m = Number(parts.find(p => p.type === 'minute')?.value ?? 0)
+  const s = Number(parts.find(p => p.type === 'second')?.value ?? 0)
+
+  const secsUntilMidnight = (24 * 3600) - (h * 3600 + m * 60 + s)
+  return new Date(now.getTime() + secsUntilMidnight * 1000).toISOString()
+}
+
 // ─── Cooldown / Earn Eligibility ────────────────────────────────
 
 /**
@@ -101,9 +124,14 @@ export function canEarnNow(
   const effectiveTodayCount = isNewDay ? 0 : membership.earned_today_count
 
   if (effectiveTodayCount >= program.max_earns_per_day) {
+    // Approximate midnight in the program's timezone by getting
+    // the current local time there and computing time until 00:00
+    const nextEligibleAt = getMidnightInTimezone(program.timezone)
+
     return {
       allowed: false,
       reason: `You've reached your daily limit of ${program.max_earns_per_day} ${program.max_earns_per_day === 1 ? 'stamp' : 'stamps'} for today.`,
+      nextEligibleAt,
     }
   }
 

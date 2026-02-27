@@ -339,7 +339,10 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
                 step={1}
                 className="w-full"
               />
-              <p className="text-xs text-zinc-500">How many stamps can one person earn per day?</p>
+              <p className="text-xs text-zinc-500">
+                Customers can scan your QR code up to {form.max_earns_per_day} {form.max_earns_per_day === 1 ? 'time' : 'times'} per day.
+                Once they hit this limit, they&apos;ll see a &quot;come back tomorrow&quot; message with a countdown.
+              </p>
             </div>
 
             <div className="space-y-3">
@@ -354,7 +357,11 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
                 step={5}
                 className="w-full"
               />
-              <p className="text-xs text-zinc-500">Prevents gaming. Set to 0 for no gap.</p>
+              <p className="text-xs text-zinc-500">
+                {form.min_gap_minutes > 0
+                  ? `After earning a stamp, customers must wait ${form.min_gap_minutes} minutes before scanning again. This prevents multiple scans in one visit.`
+                  : 'No waiting time between scans. Customers can earn stamps back-to-back.'}
+              </p>
             </div>
           </CardContent>
         </Card>
