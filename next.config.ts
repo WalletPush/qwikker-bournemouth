@@ -31,8 +31,8 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb', // Increase from default 1MB to 10MB for file uploads
     },
   },
+  turbopack: {},
   webpack: (config: any) => {
-    // Handle Node.js modules for client-side
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,

@@ -132,62 +132,6 @@ export function FranchiseCRMSetup({ city, cityDisplayName }: FranchiseCRMSetupPr
         </CardContent>
       </Card>
 
-      {/* Webhook Configuration */}
-      <Card className="bg-slate-800 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-white">GoHighLevel Webhook Configuration</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Main Signup Webhook */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-slate-300 font-medium">Signup Webhook</h4>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => testWebhookConnection(config.ghl_webhook_url, 'signup')}
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
-              >
-                Test Connection
-              </Button>
-            </div>
-            <div className="bg-slate-900 rounded-lg p-3">
-              <code className="text-sm text-slate-300 break-all">
-                {config.ghl_webhook_url}
-              </code>
-            </div>
-            <p className="text-sm text-slate-400">
-              Used for new business signups. Triggers contact creation and notifications.
-            </p>
-          </div>
-
-          {/* Update Webhook */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-slate-300 font-medium">Update Webhook</h4>
-              {config.ghl_update_webhook_url && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => testWebhookConnection(config.ghl_update_webhook_url!, 'update')}
-                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                >
-                  Test Connection
-                </Button>
-              )}
-            </div>
-            <div className="bg-slate-900 rounded-lg p-3">
-              <code className="text-sm text-slate-300 break-all">
-                {config.ghl_update_webhook_url || 'Not configured - using main webhook'}
-              </code>
-            </div>
-            <p className="text-sm text-slate-400">
-              Used for contact updates. Should NOT trigger signup notifications.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Franchise Owner Info */}
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader>
@@ -232,15 +176,9 @@ export function FranchiseCRMSetup({ city, cityDisplayName }: FranchiseCRMSetupPr
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-slate-300">
-            You can override the default webhook URLs using environment variables:
+            You can override configuration using environment variables:
           </p>
           <div className="bg-slate-900 rounded-lg p-4 space-y-2">
-            <div className="text-sm text-slate-300">
-              <code>{city.toUpperCase()}_GHL_WEBHOOK_URL</code> - Main signup webhook
-            </div>
-            <div className="text-sm text-slate-300">
-              <code>{city.toUpperCase()}_GHL_UPDATE_WEBHOOK_URL</code> - Update webhook (optional)
-            </div>
             <div className="text-sm text-slate-300">
               <code>{city.toUpperCase()}_SLACK_WEBHOOK_URL</code> - Slack notifications (optional)
             </div>

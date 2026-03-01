@@ -33,20 +33,9 @@ interface FranchiseConfig {
   has_anthropic_api_key?: boolean
   has_google_places_api_key?: boolean
   
-  // CRM Integration (GHL)
-  ghl_webhook_url: string | null // Masked - Business CRM sync
-  ghl_pass_creation_webhook_url: string | null // Masked - User pass creation
-  ghl_update_webhook_url: string | null // Masked - Business updates (optional)
-  ghl_api_key: string | null // Masked
-  has_ghl_webhook_url?: boolean
-  has_ghl_pass_creation_webhook_url?: boolean
-  has_ghl_update_webhook_url?: boolean
-  has_ghl_api_key?: boolean
-  
   // Mobile Wallet (WalletPush)
   walletpush_api_key: string | null // Masked
   walletpush_template_id: string
-  walletpush_endpoint_url: string
   has_walletpush_api_key?: boolean
   
   // Notifications (Slack)
@@ -153,7 +142,6 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
     openai: false,
     anthropic: false,
     googlePlaces: false,
-    ghl: false,
     walletpush: false,
     stripe_publishable: false,
     stripe_secret: false
@@ -223,16 +211,9 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
             openai_api_key: '',
             anthropic_api_key: '',
             
-            // CRM
-            ghl_webhook_url: `https://services.leadconnectorhq.com/hooks/${city.toLowerCase()}/qwikker-business`,
-            ghl_pass_creation_webhook_url: `https://services.leadconnectorhq.com/hooks/${city.toLowerCase()}/qwikker-pass`,
-            ghl_update_webhook_url: `https://services.leadconnectorhq.com/hooks/${city.toLowerCase()}/qwikker-updates`,
-            ghl_api_key: '',
-            
             // Wallet
             walletpush_api_key: '',
             walletpush_template_id: '',
-            walletpush_endpoint_url: `https://app.walletpush.io/api/hl-${city.toLowerCase()}`,
             
             // Notifications
             slack_webhook_url: '',
@@ -390,19 +371,8 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
   }
 
   const isStep4Valid = () => {
-    // REQUIRED: GHL webhooks + WalletPush credentials
     if (!config) return false
     
-    // GHL Webhooks (both required)
-    const hasPassWebhook = config.ghl_pass_creation_webhook_url && 
-                          config.ghl_pass_creation_webhook_url.trim() !== '' && 
-                          !config.ghl_pass_creation_webhook_url.includes('••••')
-    
-    const hasBusinessWebhook = config.ghl_webhook_url && 
-                               config.ghl_webhook_url.trim() !== '' && 
-                               !config.ghl_webhook_url.includes('••••')
-    
-    // WalletPush (all 3 fields required)
     const hasWalletPushApiKey = config.walletpush_api_key && 
                                 config.walletpush_api_key.trim() !== '' && 
                                 !config.walletpush_api_key.includes('••••')
@@ -410,10 +380,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
     const hasWalletPushTemplateId = config.walletpush_template_id && 
                                     config.walletpush_template_id.trim() !== ''
     
-    const hasWalletPushEndpoint = config.walletpush_endpoint_url && 
-                                  config.walletpush_endpoint_url.trim() !== ''
-    
-    return hasPassWebhook && hasBusinessWebhook && hasWalletPushApiKey && hasWalletPushTemplateId && hasWalletPushEndpoint
+    return hasWalletPushApiKey && hasWalletPushTemplateId
   }
 
   const canGoToNextStep = () => {
@@ -434,7 +401,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
       return '⚠️  Please complete franchise details (name, timezone, phone) before continuing'
     }
     if (activeStep === 4 && !isStep4Valid()) {
-      return '⚠️  All integrations required: GHL webhooks (2) + WalletPush credentials (3)'
+      return '⚠️  WalletPush credentials required (API Key + Template ID)'
     }
     // Step 3 is optional - can configure incrementally
     return ''
@@ -1158,7 +1125,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                 </div>
                 <div>
                   <CardTitle className="text-white text-2xl">Platform Integrations</CardTitle>
-                  <p className="text-slate-400 text-sm mt-1">Connect CRM, payments, notifications & more</p>
+                  <p className="text-slate-400 text-sm mt-1">Connect wallet passes, payments, notifications & more</p>
                 </div>
               </div>
                 
@@ -1178,82 +1145,6 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
               </CardHeader>
               <CardContent className="space-y-8">
                 
-                {/* GoHighLevel (CRM) */}
-                <div className="border-2 border-slate-700/50 rounded-xl p-6 hover:border-slate-600 transition-colors bg-slate-800/30">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                      GHL
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-white font-bold text-lg">GoHighLevel (CRM)</h3>
-                      <p className="text-slate-400 text-sm">Automatically add new businesses to your CRM</p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 mb-4">
-                    <p className="text-slate-300 text-xs">
-                      <span className="font-medium">What gets synced:</span> Business signups, profile updates - all automatically
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    {/* PASS CREATION WEBHOOK - NEW & REQUIRED */}
-                    <div className="border border-slate-700 bg-slate-800/50 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-5 h-5 bg-slate-700 rounded flex items-center justify-center">
-                          <span className="text-slate-400 text-[10px] font-semibold">*</span>
-                        </div>
-                        <Label className="text-white text-sm font-medium mb-0">
-                          Pass Creation Webhook URL
-                        </Label>
-                        <span className="px-2 py-0.5 text-[10px] bg-slate-700/50 text-slate-400 rounded font-medium border border-slate-600">
-                          REQUIRED
-                        </span>
-                      </div>
-                      <Input
-                        value={config.ghl_pass_creation_webhook_url || ''}
-                        onChange={(e) => setConfig({...config, ghl_pass_creation_webhook_url: e.target.value})}
-                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm mb-2"
-                        placeholder="https://services.leadconnectorhq.com/hooks/.../webhook-trigger/..."
-                        required
-                      />
-                      <p className="text-xs text-slate-300">
-                        <strong>User Flow:</strong> Triggered when users install wallet passes via /join form
-                      </p>
-                      <p className="text-xs text-[#00d083] mt-1">
-                        ✓ This is critical - users cannot install passes without this configured
-                      </p>
-                    </div>
-                    
-                    <div className="border border-slate-700 bg-slate-800/50 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-5 h-5 bg-slate-700 rounded flex items-center justify-center">
-                          <span className="text-slate-400 text-[10px] font-semibold">*</span>
-                        </div>
-                        <Label className="text-white text-sm font-medium mb-0">
-                          GHL Webhook URL
-                        </Label>
-                        <span className="px-2 py-0.5 text-[10px] bg-slate-700/50 text-slate-400 rounded font-medium border border-slate-600">
-                          REQUIRED
-                        </span>
-                      </div>
-                      <Input
-                        value={config.ghl_webhook_url || ''}
-                        onChange={(e) => setConfig({...config, ghl_webhook_url: e.target.value})}
-                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm mb-2"
-                        placeholder="https://services.leadconnectorhq.com/hooks/..."
-                        required
-                      />
-                      <p className="text-xs text-slate-300">
-                        <strong>What gets synced:</strong> New business signups and profile updates
-                      </p>
-                      <p className="text-xs text-[#00d083] mt-1">
-                        ✓ Create a Workflow in GHL → Set trigger to "Webhook" → Copy the URL here
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 {/* WalletPush (Mobile Passes) */}
                 <div className="border-2 border-slate-700/50 rounded-xl p-6 hover:border-slate-600 transition-colors bg-slate-800/30">
                   <div className="flex items-center gap-3 mb-4">
@@ -1266,12 +1157,12 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       <h3 className="text-white font-bold text-lg">WalletPush (Mobile Passes)</h3>
                     </div>
                     <a 
-                      href="https://walletpush.io" 
+                      href="https://loyalty.qwikker.com" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
                     >
-                      Learn More →
+                      Open WalletPush →
                     </a>
                   </div>
 
@@ -1332,31 +1223,11 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                         value={config.walletpush_template_id || ''}
                         onChange={(e) => setConfig({...config, walletpush_template_id: e.target.value})}
                         className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg"
-                        placeholder="4844561051942912"
+                        placeholder="d9110746-50d3-46b9-8799-a2b7f22ec939"
                         required
                       />
                     </div>
 
-                    <div className="border border-slate-700 bg-slate-800/50 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-5 h-5 bg-slate-700 rounded flex items-center justify-center">
-                          <span className="text-slate-400 text-[10px] font-semibold">*</span>
-                        </div>
-                        <Label className="text-white text-sm font-medium mb-0">
-                          Endpoint URL
-                        </Label>
-                        <span className="px-2 py-0.5 text-[10px] bg-slate-700/50 text-slate-400 rounded font-medium border border-slate-600">
-                          REQUIRED
-                        </span>
-                      </div>
-                      <Input
-                        value={config.walletpush_endpoint_url || ''}
-                        onChange={(e) => setConfig({...config, walletpush_endpoint_url: e.target.value})}
-                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm"
-                        placeholder="https://app.walletpush.io/api/hl-endpoint/..."
-                        required
-                      />
-                    </div>
                   </div>
                 </div>
 
@@ -1874,7 +1745,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     <div className="w-1.5 h-1.5 bg-slate-500 rounded-full mt-2 flex-shrink-0" />
                     <div>
                       <p className="font-medium text-slate-300">Integrations</p>
-                      <p className="text-slate-500 text-xs">CRM, wallet, notifications, payments</p>
+                      <p className="text-slate-500 text-xs">Wallet passes, notifications, payments</p>
                     </div>
                   </div>
                 </div>

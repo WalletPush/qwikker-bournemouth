@@ -772,6 +772,11 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       phone: pin.phone,
       isPaid: pin.business_tier === 'paid',
       isUnclaimed: pin.business_tier === 'unclaimed',
+      hasLoyalty: pin.hasLoyalty || false,
+      loyaltyReward: pin.loyaltyReward,
+      loyaltyThreshold: pin.loyaltyThreshold,
+      userStamps: pin.userStamps,
+      userStampsRemaining: pin.userStampsRemaining,
       reason: pin.reason,
       reasonMeta: pin.reasonMeta
     })).filter((b: any) => b.latitude && b.longitude)

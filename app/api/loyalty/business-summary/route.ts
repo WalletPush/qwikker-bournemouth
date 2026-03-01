@@ -30,7 +30,7 @@ export async function GET() {
 
     const { data: program } = await supabase
       .from('loyalty_programs')
-      .select('id, reward_threshold')
+      .select('id, reward_threshold, estimated_reward_value')
       .eq('business_id', business.id)
       .single()
 
@@ -48,6 +48,7 @@ export async function GET() {
       membersResult,
       visitsResult,
       redemptionsResult,
+      totalRedemptionsResult,
       nearRewardResult,
       flaggedResult,
       totalEarnsResult,
@@ -69,6 +70,10 @@ export async function GET() {
         .eq('business_id', business.id)
         .gte('consumed_at', monthStartIso),
       serviceRole
+        .from('loyalty_redemptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('business_id', business.id),
+      serviceRole
         .from('loyalty_memberships')
         .select('id', { count: 'exact', head: true })
         .eq('program_id', program.id)
@@ -89,14 +94,17 @@ export async function GET() {
     const activeMembers = membersResult.count ?? 0
     const visitsThisMonth = visitsResult.count ?? 0
     const rewardsRedeemedThisMonth = redemptionsResult.count ?? 0
+    const totalRedemptions = totalRedemptionsResult.count ?? 0
     const totalValidEarns = totalEarnsResult.count ?? 0
+    const rewardValue = program.estimated_reward_value > 0 ? program.estimated_reward_value : DEFAULT_AVG_REWARD_VALUE
 
     return NextResponse.json({
       summary: {
         activeMembers,
         visitsThisMonth,
         rewardsRedeemedThisMonth,
-        estimatedValueGivenAway: rewardsRedeemedThisMonth * DEFAULT_AVG_REWARD_VALUE,
+        totalRedemptions,
+        estimatedValueGivenAway: totalRedemptions * rewardValue,
         avgVisitsPerMember: activeMembers > 0
           ? Math.round((totalValidEarns / activeMembers) * 10) / 10
           : 0,

@@ -60,6 +60,7 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
     type: existingProgram?.type || 'stamps',
     reward_threshold: existingProgram?.reward_threshold || 10,
     reward_description: existingProgram?.reward_description || '',
+    estimated_reward_value: existingProgram?.estimated_reward_value || 0,
     stamp_label: existingProgram?.stamp_label || 'Stamps',
     earn_mode: existingProgram?.earn_mode || 'per_visit',
     stamp_icon: existingProgram?.stamp_icon || 'stamp',
@@ -75,6 +76,7 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
     timezone: existingProgram?.timezone || 'Europe/London',
     max_earns_per_day: existingProgram?.max_earns_per_day || 1,
     min_gap_minutes: existingProgram?.min_gap_minutes ?? 30,
+    estimated_reward_value: existingProgram?.estimated_reward_value || 0,
   })
 
   const updateField = useCallback(<K extends keyof LoyaltyProgramFormData>(
@@ -287,6 +289,25 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
                 className="bg-zinc-800/50 border-zinc-700 text-white"
                 placeholder="e.g., Free Coffee, 20% Off Next Visit"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-zinc-300">Estimated reward value</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-zinc-400 text-sm">&pound;</span>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={form.estimated_reward_value || ''}
+                  onChange={(e) => updateField('estimated_reward_value', parseFloat(e.target.value) || 0)}
+                  className="bg-zinc-800/50 border-zinc-700 text-white w-32"
+                  placeholder="0.00"
+                />
+              </div>
+              <p className="text-xs text-zinc-500">
+                How much is this reward worth? (e.g. £8.50 for a cocktail, £3.50 for a coffee). Used to calculate your ROI on the stats dashboard.
+              </p>
             </div>
 
             <div className="space-y-2">

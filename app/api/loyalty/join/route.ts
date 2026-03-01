@@ -100,6 +100,9 @@ export async function POST(request: NextRequest) {
     if (canCreatePass) {
       const initialFields = getLoyaltyPassFieldValues(program, membership, program.type)
 
+      const earnUrl = `https://${city}.qwikker.com/loyalty/earn/${publicId}?wallet_pass_id=${walletPassId}`
+      initialFields.Earn_Url = earnUrl
+
       const result = await issueLoyaltyPass(
         program as any,
         {

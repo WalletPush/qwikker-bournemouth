@@ -166,7 +166,7 @@ export function LoyaltyStatsDashboard({ program, profile, onProgramUpdate }: Loy
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard icon={Users} label="Members" value={summary.activeMembers} />
               <StatCard icon={TrendingUp} label="Visits This Month" value={summary.visitsThisMonth} />
-              <StatCard icon={Gift} label="Rewards Redeemed" value={summary.rewardsRedeemedThisMonth} />
+              <StatCard icon={Gift} label="Rewards Redeemed" value={summary.totalRedemptions} />
               <StatCard icon={Trophy} label="Near Reward" value={summary.membersNearReward} />
             </div>
           )}
@@ -387,14 +387,14 @@ export function LoyaltyStatsDashboard({ program, profile, onProgramUpdate }: Loy
           {summary && (
             <div className="grid grid-cols-3 gap-4">
               <div className="p-4 bg-zinc-900/50 rounded-lg border border-zinc-800 text-center">
-                <p className="text-2xl font-semibold text-white">{summary.rewardsRedeemedThisMonth}</p>
-                <p className="text-xs text-zinc-500 mt-1">Rewards this month</p>
+                <p className="text-2xl font-semibold text-white">{summary.totalRedemptions}</p>
+                <p className="text-xs text-zinc-500 mt-1">Total redeemed ({summary.rewardsRedeemedThisMonth} this month)</p>
               </div>
               <div className="p-4 bg-zinc-900/50 rounded-lg border border-zinc-800 text-center">
                 <p className="text-2xl font-semibold text-white">
                   &pound;{summary.estimatedValueGivenAway.toFixed(0)}
                 </p>
-                <p className="text-xs text-zinc-500 mt-1">Est. value given</p>
+                <p className="text-xs text-zinc-500 mt-1">Value given away</p>
               </div>
               <div className="p-4 bg-zinc-900/50 rounded-lg border border-zinc-800 text-center">
                 <p className="text-2xl font-semibold text-white">{summary.visitsThisMonth}</p>

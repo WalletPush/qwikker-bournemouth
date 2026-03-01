@@ -15,6 +15,7 @@ export interface LoyaltyProgram {
   type: 'stamps' | 'points'
   reward_threshold: number
   reward_description: string
+  estimated_reward_value: number
   stamp_label: string
   earn_mode: 'per_visit' | 'per_transaction'
   stamp_icon: string
@@ -37,6 +38,7 @@ export interface LoyaltyProgram {
   timezone: string
   max_earns_per_day: number
   min_gap_minutes: number
+  estimated_reward_value: number
   birthday_bonus_enabled: boolean
   birthday_bonus_reward: string | null
   birthday_bonus_valid_days: number
@@ -195,6 +197,7 @@ export interface BusinessLoyaltySummary {
   activeMembers: number
   visitsThisMonth: number
   rewardsRedeemedThisMonth: number
+  totalRedemptions: number
   estimatedValueGivenAway: number
   avgVisitsPerMember: number
   membersNearReward: number
@@ -208,6 +211,7 @@ export interface LoyaltyProgramFormData {
   type: 'stamps' | 'points'
   reward_threshold: number
   reward_description: string
+  estimated_reward_value: number
   stamp_label: string
   earn_mode: 'per_visit' | 'per_transaction'
   stamp_icon: string
@@ -223,6 +227,7 @@ export interface LoyaltyProgramFormData {
   timezone: string
   max_earns_per_day: number
   min_gap_minutes: number
+  estimated_reward_value: number
 }
 
 /** Enriched membership with program details (for user rewards page) */

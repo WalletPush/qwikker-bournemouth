@@ -131,6 +131,11 @@ interface ChatResponse {
     phone?: string
     website_url?: string
     google_place_id?: string
+    hasLoyalty?: boolean
+    loyaltyReward?: string
+    loyaltyThreshold?: number
+    userStamps?: number
+    userStampsRemaining?: number
     reason?: {
       type: string
       label: string
@@ -550,7 +555,12 @@ HARD RULES (DO NOT BREAK):
 - ZERO RESULTS: Be honest. NEVER say "you're in luck" if you have nothing to show. Suggest a nearby alternative category or ask what else they'd like.
 - MATCH USER LANGUAGE: If the user asked for "bars", say "bars" in your response — never substitute with "dining options", "restaurants", or "places to eat". Mirror the user's terminology.
 - "ANY MORE?" HANDLING: If you showed all matches, say so. If you missed any, correct yourself immediately.
-- LOYALTY: If a business has "Loyalty:" in its context, mention it naturally when recommending (e.g., "They also have a stamp card — collect 10 for a free coffee"). If the user has progress (shown as [USER: X/Y stamps, Z to go]) and is within 3 stamps of a reward, proactively nudge: "You're only Z away from a free X there!" Never fabricate loyalty data.
+- LOYALTY (IMPORTANT — READ CAREFULLY):
+  1. USER HAS LOYALTY PROGRESS: If USER LOYALTY PROGRESS section exists below, ALWAYS open with a brief loyalty update when the user asks broad discovery questions ("where should I go", "what's good tonight", "any recommendations"). Example: "You're 2 stamps away from a free cocktail at Ember & Oak — might be worth popping in!"
+  2. PRIORITIZE LOYALTY BUSINESSES: When recommending, list businesses where the user has active loyalty progress FIRST (especially if close to a reward). These are the most relevant because the user already goes there.
+  3. MENTION LOYALTY AS INCENTIVE: For Spotlight businesses with a loyalty program that the user is NOT a member of, mention it as a reason to visit: "They've got a loyalty card too — collect X for Y."
+  4. NEAR-REWARD NUDGE: If the user is within 3 stamps of a reward, make it prominent — don't bury it. "You're SO close to a free X at Y!"
+  5. NEVER fabricate loyalty data. Only reference what's in the data.
 
 MULTI-PART QUERIES:
 When the user asks for more than one thing (e.g. "drinks then food", "cocktails AND spicy food", "brunch and shopping"):
@@ -1326,7 +1336,10 @@ export async function generateHybridAIResponse(
               })
             }
             const bizName = prog.business_profiles?.business_name || prog.program_name
-            summaryLines.push(`- ${bizName}: ${m.stamps_balance}/${prog.reward_threshold} stamps (${remaining} to go for ${prog.reward_description})`)
+            const nearReward = remaining <= 3 && remaining > 0
+            const rewardReady = remaining <= 0
+            const statusTag = rewardReady ? ' ⭐ REWARD READY!' : nearReward ? ' 🔥 ALMOST THERE!' : ''
+            summaryLines.push(`- ${bizName}: ${m.stamps_balance}/${prog.reward_threshold} stamps (${remaining} to go for ${prog.reward_description})${statusTag}`)
           }
         }
 
@@ -2528,6 +2541,9 @@ Present this information clearly and offer further help.`
             businessTier = 'claimed_free'
           }
           
+          const loyaltyProg = loyaltyByBusinessId.get(b.id)
+          const userProgress = userLoyaltyByBusinessId.get(b.id)
+
           mapPins.push({
             id: b.id,
             business_name: b.business_name,
@@ -2540,15 +2556,20 @@ Present this information clearly and offer further help.`
             phone: b.phone,
             website_url: b.website_url,
             google_place_id: b.google_place_id,
+            hasLoyalty: !!loyaltyProg,
+            loyaltyReward: loyaltyProg?.reward_description,
+            loyaltyThreshold: loyaltyProg?.reward_threshold,
+            userStamps: userProgress?.stamps_balance,
+            userStampsRemaining: userProgress?.stamps_remaining,
             reason: getReasonTag(
               b,
               detectedIntent,
               businessRelevanceScores.get(b.id) || 0,
               context.userLocation,
               isBrowseModeForReasons,
-              allBusinessesForRanking // ✅ Pass all businesses for relative ranking
+              allBusinessesForRanking
             ),
-            reasonMeta: safeGetReasonMeta(b, context.userLocation) // ✅ Always present
+            reasonMeta: safeGetReasonMeta(b, context.userLocation)
           })
           addedIds.add(b.id)
         }

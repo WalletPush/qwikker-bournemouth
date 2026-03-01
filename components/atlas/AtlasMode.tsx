@@ -57,6 +57,11 @@ export interface Business {
   business_tier?: string // ✅ For determining pin color
   isPaid?: boolean // ✅ For cyan pins (paid/trial businesses)
   isUnclaimed?: boolean // ✅ For grey pins (unclaimed businesses)
+  hasLoyalty?: boolean
+  loyaltyReward?: string
+  loyaltyThreshold?: number
+  userStamps?: number
+  userStampsRemaining?: number
   reason?: {
     type: string
     label: string
@@ -1073,6 +1078,19 @@ export function AtlasMode({
       }
     }
     
+    // Loyalty progress
+    if (business.hasLoyalty) {
+      if (business.userStampsRemaining != null && business.userStampsRemaining <= 0) {
+        parts.push('🎁 Reward ready!')
+      } else if (business.userStampsRemaining != null && business.userStampsRemaining <= 3) {
+        parts.push(`🎯 ${business.userStampsRemaining} stamps to reward`)
+      } else if (business.userStamps != null && business.loyaltyThreshold) {
+        parts.push(`💳 ${business.userStamps}/${business.loyaltyThreshold} stamps`)
+      } else {
+        parts.push('💳 Loyalty card')
+      }
+    }
+
     // Fallback if no reason data
     if (parts.length === 0) {
       parts.push(`${business.business_name} — ${business.rating}★`)
@@ -1302,7 +1320,8 @@ export function AtlasMode({
             rating: business.rating,
             category: business.display_category || 'Business',
             isPaid: business.isPaid !== undefined ? business.isPaid : isPaid,
-            isUnclaimed: business.isUnclaimed !== undefined ? business.isUnclaimed : isUnclaimed
+            isUnclaimed: business.isUnclaimed !== undefined ? business.isUnclaimed : isUnclaimed,
+            hasLoyalty: !!business.hasLoyalty
           },
           geometry: {
             type: 'Point' as const,

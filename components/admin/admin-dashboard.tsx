@@ -11,7 +11,6 @@ import { BusinessCRMData } from '@/types/billing'
 import { useElegantModal } from '@/components/ui/elegant-modal'
 import { ComprehensiveAdminAnalytics } from './comprehensive-admin-analytics'
 import { ContactsTab } from './contacts-tab'
-import { SyncHealthOverview } from './sync-health-overview'
 import { InitialAvatar } from '@/components/admin/initial-avatar'
 import { AiEligibleConfirmationModal } from '@/components/admin/ai-eligible-confirmation-modal'
 import { Button } from '@/components/ui/button'
@@ -548,7 +547,7 @@ ${result.results.map(r => `${r.success ? '✅' : '❌'} ${r.type}: ${r.business}
           const isOnTrial = sub?.is_in_free_trial === true
           matchesTier = !isOnTrial && (business.status === 'unclaimed' || business.status === 'claimed_free' || sub?.tier_name === 'free')
         } else if (filterTier === 'synced') {
-          matchesTier = !!crm?.last_ghl_sync
+          matchesTier = !!crm?.last_crm_sync
         } else {
           matchesTier = sub?.tier_name === filterTier
         }
@@ -1795,7 +1794,7 @@ Qwikker Admin Team`
                         <p className="text-2xl font-bold text-white">
                           {allLiveBusinesses.filter(b => {
                             const crm = crmData.find(c => c.id === b.id)
-                            return crm?.last_ghl_sync
+                            return crm?.last_crm_sync
                           }).length}
                         </p>
                       </div>
@@ -1908,7 +1907,7 @@ Qwikker Admin Team`
                   {activeTab === 'knowledge' && 'AI knowledge base management for businesses and city information'}
                   {activeTab === 'analytics' && `Performance metrics and user analytics for ${cityDisplayName}`}
                   {activeTab === 'pricing' && `Customize pricing cards, currency, and billing settings for ${cityDisplayName}`}
-                  {activeTab === 'contacts' && `CRM contact management with GHL sync for ${cityDisplayName}`}
+                  {activeTab === 'contacts' && `CRM contact management for ${cityDisplayName}`}
                   {activeTab === 'contact-centre' && `Manage messages and tasks with businesses in ${cityDisplayName}`}
                   {activeTab === 'loyalty-queue' && `Review and activate loyalty programs for businesses in ${cityDisplayName}`}
                   {activeTab === 'import' && 'Auto-populate your city with businesses from Google Places API'}
@@ -1919,12 +1918,6 @@ Qwikker Admin Team`
               </div>
             )}
 
-            {/* Sync Health Overview - Only show on contacts tab */}
-            {activeTab === 'contacts' && (
-              <div className="mb-6">
-                <SyncHealthOverview />
-              </div>
-            )}
 
             {/* 🔍 SEARCH & FILTER - ONLY show on Live Listings tab (has enhanced version in header)
                 REMOVED from: overview, pending, updates, incomplete, expired, rejected
@@ -2026,7 +2019,7 @@ Qwikker Admin Team`
                         approved_at: business.approved_at,
                         created_at: business.created_at,
                         updated_at: business.updated_at,
-                        last_ghl_sync: null,
+                        last_crm_sync: null,
                         last_crm_sync: null,
                         crm_sync_status: 'pending',
                         admin_notes: business.admin_notes,

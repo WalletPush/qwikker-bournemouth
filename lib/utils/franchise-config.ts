@@ -8,14 +8,9 @@ export interface FranchiseConfig {
   display_name: string
   subdomain: string
   
-  // GHL Integration
-  ghl_webhook_url: string
-  ghl_update_webhook_url?: string
-  
   // WalletPush Integration
   walletpush_api_key?: string
   walletpush_template_id?: string
-  walletpush_endpoint_url?: string
   
   // Slack Integration
   slack_webhook_url?: string
@@ -95,7 +90,6 @@ export async function getWalletPushCredentials(city: string) {
   return {
     apiKey: config?.walletpush_api_key || process.env.MOBILE_WALLET_APP_KEY,
     templateId: config?.walletpush_template_id || process.env.MOBILE_WALLET_TEMPLATE_ID,
-    endpointUrl: config?.walletpush_endpoint_url || process.env.WALLETPUSH_HL_ENDPOINT,
     city: city,
     franchiseName: config?.display_name || city
   }

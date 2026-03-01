@@ -9,8 +9,6 @@ interface FranchiseFormData {
   city: string
   display_name: string
   subdomain: string
-  ghl_webhook_url: string
-  ghl_update_webhook_url: string
   slack_webhook_url: string
   slack_channel: string
   owner_name: string
@@ -32,8 +30,6 @@ export function FranchiseSetupForm() {
     city: '',
     display_name: '',
     subdomain: '',
-    ghl_webhook_url: '',
-    ghl_update_webhook_url: '',
     slack_webhook_url: '',
     slack_channel: '',
     owner_name: '',
@@ -117,7 +113,7 @@ export function FranchiseSetupForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.city || !formData.ghl_webhook_url || !formData.owner_name || !formData.owner_email) {
+    if (!formData.city || !formData.owner_name || !formData.owner_email) {
       showError('Validation Error', 'Please fill in all required fields')
       return
     }
@@ -143,8 +139,6 @@ export function FranchiseSetupForm() {
           city: '',
           display_name: '',
           subdomain: '',
-          ghl_webhook_url: '',
-          ghl_update_webhook_url: '',
           slack_webhook_url: '',
           slack_channel: '',
           owner_name: '',
@@ -249,59 +243,6 @@ export function FranchiseSetupForm() {
                     <option key={tz} value={tz}>{tz}</option>
                   ))}
                 </select>
-              </div>
-            </div>
-
-            {/* CRM Integration */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white">GoHighLevel Integration</h3>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Main Webhook URL * <span className="text-red-400">Required</span>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={formData.ghl_webhook_url}
-                    onChange={(e) => handleInputChange('ghl_webhook_url', e.target.value)}
-                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-[#00d083]"
-                    placeholder="https://services.leadconnectorhq.com/hooks/..."
-                    required
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => testWebhook(formData.ghl_webhook_url, 'signup')}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Test
-                  </Button>
-                </div>
-                <p className="text-sm text-slate-400 mt-1">Used for new business signups</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Update Webhook URL (Optional)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={formData.ghl_update_webhook_url}
-                    onChange={(e) => handleInputChange('ghl_update_webhook_url', e.target.value)}
-                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-[#00d083]"
-                    placeholder="https://services.leadconnectorhq.com/hooks/..."
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => testWebhook(formData.ghl_update_webhook_url, 'update')}
-                    className="bg-blue-600 hover:bg-blue-700"
-                    disabled={!formData.ghl_update_webhook_url}
-                  >
-                    Test
-                  </Button>
-                </div>
-                <p className="text-sm text-slate-400 mt-1">Used for contact updates (recommended separate webhook)</p>
               </div>
             </div>
 

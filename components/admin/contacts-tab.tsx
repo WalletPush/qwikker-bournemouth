@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { SyncStatusBadge } from './sync-status-badge'
 import { useElegantModal } from '@/components/ui/elegant-modal'
 
 interface Contact {
@@ -22,8 +21,6 @@ interface Contact {
   status: 'incomplete' | 'pending_review' | 'approved' | 'rejected'
   created_at: string
   updated_at: string
-  last_ghl_sync: string | null
-  ghl_contact_id: string | null
   website?: string
   instagram?: string
   facebook?: string
@@ -45,7 +42,6 @@ export function ContactsTab({ city, cityDisplayName }: ContactsTabProps) {
   const [filterStatus, setFilterStatus] = useState('all')
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [syncingContacts, setSyncingContacts] = useState<Set<string>>(new Set())
   const [isUpdating, setIsUpdating] = useState(false)
   
   const { showSuccess, showError, showConfirm, ModalComponent } = useElegantModal()
@@ -78,112 +74,6 @@ export function ContactsTab({ city, cityDisplayName }: ContactsTabProps) {
     
     return matchesSearch && matchesStatus
   })
-
-  const syncContactWithGHL = async (contactId: string) => {
-    setSyncingContacts(prev => new Set([...prev, contactId]))
-    
-    try {
-      const response = await fetch('/api/admin/contacts/sync-ghl', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contactId })
-      })
-      
-      if (response.ok) {
-        showSuccess('Sync Complete', 'Contact successfully synced with GHL')
-        await fetchContacts() // Refresh to show updated sync status
-      } else {
-        const error = await response.json()
-        showError('Sync Failed', error.error || 'Failed to sync contact with GHL')
-      }
-    } catch (error) {
-      showError('Sync Error', 'An unexpected error occurred during sync')
-    } finally {
-      setSyncingContacts(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(contactId)
-        return newSet
-      })
-    }
-  }
-
-  const bulkSyncWithGHL = async () => {
-    const confirmed = await showConfirm(
-      'Bulk Sync Confirmation',
-      `Sync all ${filteredContacts.length} contacts with GHL? This may take a few minutes.`
-    )
-    
-    if (!confirmed) return
-
-    try {
-      const response = await fetch('/api/admin/contacts/bulk-sync-ghl', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          contactIds: filteredContacts.map(c => c.id),
-          city 
-        })
-      })
-      
-      if (response.ok) {
-        const result = await response.json()
-        showSuccess('Bulk Sync Complete', `Successfully synced ${result.synced} contacts with GHL`)
-        await fetchContacts()
-      } else {
-        const error = await response.json()
-        showError('Bulk Sync Failed', error.error || 'Failed to sync contacts with GHL')
-      }
-    } catch (error) {
-      showError('Bulk Sync Error', 'An unexpected error occurred during bulk sync')
-    }
-  }
-
-  // 🧪 TEST FUNCTION - Remove after debugging
-  const testApiCall = async () => {
-    try {
-      console.log('🧪 Testing API call...')
-      
-      const testResponse = await fetch('/api/test-contact-update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ test: 'frontend-data' })
-      })
-      
-      const testResult = await testResponse.json()
-      console.log('🧪 Test result:', testResult)
-      
-      const realResponse = await fetch('/api/admin/contacts/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          contactId: "247e9c1c-da54-4067-b7c7-c10b52a0d822", 
-          updates: { first_name: "FRONTEND", last_name: "TEST" } 
-        })
-      })
-      
-      const realResult = await realResponse.json()
-      console.log('🧪 Real API result:', realResult)
-      
-      // Test the simple API too
-      const simpleResponse = await fetch('/api/admin/contacts/simple-update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          contactId: "247e9c1c-da54-4067-b7c7-c10b52a0d822", 
-          updates: { first_name: "SIMPLE", last_name: "FRONTEND" } 
-        })
-      })
-      
-      const simpleResult = await simpleResponse.json()
-      console.log('🧪 Simple API result:', simpleResult)
-      
-      showSuccess('Test Complete', 'Check console for results')
-      
-    } catch (error) {
-      console.error('🧪 Test failed:', error)
-      showError('Test Failed', 'Check console for details')
-    }
-  }
 
   const updateContact = async (contactId: string, updates: Partial<Contact>) => {
     // Prevent double-clicking/double submissions
@@ -254,7 +144,7 @@ export function ContactsTab({ city, cityDisplayName }: ContactsTabProps) {
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
             </svg>
-            <span class="font-medium">Contact Updated & Synced to GHL</span>
+            <span class="font-medium">Contact Updated</span>
           </div>
         `
         document.body.appendChild(toast)
@@ -316,30 +206,10 @@ export function ContactsTab({ city, cityDisplayName }: ContactsTabProps) {
             📞 {cityDisplayName} Contacts
           </h2>
           <p className="text-slate-400">
-            Manage business contacts with GHL sync • {filteredContacts.length} contacts
+            Manage business contacts • {filteredContacts.length} contacts
           </p>
         </div>
         
-        <div className="flex gap-3">
-          {/* 🧪 TEMPORARY TEST BUTTON */}
-          <Button
-            onClick={testApiCall}
-            className="bg-yellow-600 hover:bg-yellow-700 text-white"
-          >
-            🧪 Test API
-          </Button>
-          
-          <Button
-            onClick={bulkSyncWithGHL}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-            disabled={filteredContacts.length === 0}
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Sync All with GHL
-          </Button>
-        </div>
       </div>
 
       {/* Search and Filter */}
@@ -398,11 +268,6 @@ export function ContactsTab({ city, cityDisplayName }: ContactsTabProps) {
                       <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(contact.status)}`}>
                         {contact.status.replace('_', ' ').toUpperCase()}
                       </span>
-                      {contact.ghl_contact_id && (
-                        <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-300 rounded-full border border-blue-500/30">
-                          GHL Synced
-                        </span>
-                      )}
                     </div>
 
                     {/* Contact Info */}
@@ -435,24 +300,8 @@ export function ContactsTab({ city, cityDisplayName }: ContactsTabProps) {
                     <div className="flex flex-wrap gap-4 text-xs text-slate-400">
                       <span>Created: {formatDate(contact.created_at)}</span>
                       <span>Updated: {formatDate(contact.updated_at)}</span>
-                      {contact.last_ghl_sync && (
-                        <span>Last GHL Sync: {formatDate(contact.last_ghl_sync)}</span>
-                      )}
                     </div>
 
-                    {/* Sync Status */}
-                    <div className="mt-2">
-                      <SyncStatusBadge
-                        businessId={contact.id}
-                        businessName={contact.business_name || 'Unknown Business'}
-                        ghlStatus={'synced'}
-                        lastSync={contact.last_ghl_sync}
-                        errors={[]}
-                        onForceSync={async (businessId) => {
-                          await syncContactWithGHL(businessId)
-                        }}
-                      />
-                    </div>
                   </div>
 
                   {/* Actions */}
@@ -472,21 +321,6 @@ export function ContactsTab({ city, cityDisplayName }: ContactsTabProps) {
                       Edit
                     </Button>
                     
-                    <Button
-                      size="sm"
-                      onClick={() => syncContactWithGHL(contact.id)}
-                      disabled={syncingContacts.has(contact.id)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      {syncingContacts.has(contact.id) ? (
-                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-1" />
-                      ) : (
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                      )}
-                      {syncingContacts.has(contact.id) ? 'Syncing...' : 'Sync GHL'}
-                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -552,7 +386,7 @@ function ContactEditModal({
       <div className="bg-slate-800 rounded-2xl border border-slate-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-slate-700">
           <h3 className="text-xl font-bold text-white">Edit Contact</h3>
-          <p className="text-slate-400">Changes will be synced to GHL automatically</p>
+          <p className="text-slate-400">Update contact details</p>
         </div>
         
         <div className="p-6 space-y-4">
@@ -617,7 +451,7 @@ function ContactEditModal({
               onChange={(e) => setFormData({ ...formData, admin_notes: e.target.value })}
               rows={3}
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-[#00d083] resize-none"
-              placeholder="Internal notes (not synced to GHL)"
+              placeholder="Internal notes"
             />
           </div>
         </div>
@@ -634,7 +468,7 @@ function ContactEditModal({
             disabled={isUpdating}
             className="bg-[#00d083] hover:bg-[#00b86f] text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isUpdating ? 'Updating...' : 'Save & Sync to GHL'}
+            {isUpdating ? 'Updating...' : 'Save Changes'}
           </Button>
         </div>
       </div>

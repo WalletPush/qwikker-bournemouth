@@ -126,7 +126,22 @@ export const getBusinessPinLayers = (): CircleLayerSpecification[] => {
     }
   }
 
-  return [glow, pin]
+  const loyaltyRing: CircleLayerSpecification = {
+    id: 'business-pins-loyalty',
+    type: 'circle',
+    source: 'businesses',
+    filter: ['all', ['!', ['has', 'point_count']], ['==', ['get', 'hasLoyalty'], true]],
+    paint: {
+      'circle-radius': 13,
+      'circle-color': 'transparent',
+      'circle-opacity': 0,
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#f59e0b',
+      'circle-stroke-opacity': 0.8
+    }
+  }
+
+  return [glow, loyaltyRing, pin]
 }
 
 // 🚨 REMOVED: Arrival pulse layer

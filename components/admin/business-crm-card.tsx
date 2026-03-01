@@ -102,7 +102,7 @@ export function BusinessCRMCard({ business, onApprove, onInspect, adminEmail, cl
   // CRM data based on Julie's Sports Bar - Mix of real data and realistic projections
   const contactHistory = [
     { id: 1, type: 'approval', date: '2024-09-23', duration: '2 min', notes: 'Business approved by bournemouth admin', outcome: 'positive' },
-    { id: 2, type: 'sync', date: '2024-09-23', subject: 'GoHighLevel sync completed', status: 'success' },
+    { id: 2, type: 'sync', date: '2024-09-23', subject: 'Profile sync completed', status: 'success' },
     { id: 3, type: 'knowledge', date: '2024-09-23', notes: 'Basic knowledge added for Julie\'s Sports Bar', outcome: 'positive' },
     { id: 4, type: 'signup', date: '2024-09-20', notes: 'Initial business registration', outcome: 'positive' },
   ]
@@ -117,7 +117,7 @@ export function BusinessCRMCard({ business, onApprove, onInspect, adminEmail, cl
   const activityFeed = [
     { id: 1, type: 'status_change', message: `${business.business_name} approved`, timestamp: '2024-09-23 10:30', user: 'bournemouth' },
     { id: 2, type: 'knowledge_added', message: 'Basic knowledge added', timestamp: '2024-09-23 10:30', user: 'System' },
-    { id: 3, type: 'sync_completed', message: 'GoHighLevel sync completed', timestamp: '2024-09-23 10:29', user: 'System' },
+    { id: 3, type: 'sync_completed', message: 'Profile sync completed', timestamp: '2024-09-23 10:29', user: 'System' },
     { id: 4, type: 'registration', message: 'Business profile created', timestamp: business.created_at || '2024-09-20 14:20', user: 'Business' },
   ]
 
@@ -127,7 +127,7 @@ export function BusinessCRMCard({ business, onApprove, onInspect, adminEmail, cl
     walletPasses: 0, // No passes created yet
     offers: business.business_offers?.filter(offer => offer.status === 'approved')?.length || 0,
     secretItems: business.secret_menu_items?.length || 0,
-    lastActive: business.last_ghl_sync || business.updated_at || business.created_at,
+    lastActive: business.updated_at || business.created_at,
     status: business.status,
     trialDays: business.trial_days_remaining || 0
   }
@@ -324,97 +324,6 @@ export function BusinessCRMCard({ business, onApprove, onInspect, adminEmail, cl
                   </span>
                 )}
                 
-                {/* Sync Status Badge */}
-                <SyncStatusBadge
-                  businessId={business.id}
-                  businessName={business.business_name}
-                  ghlStatus={'synced'}
-                  lastSync={business.last_ghl_sync || undefined}
-                  errors={[]}
-                  onForceSync={async (businessId) => {
-                    try {
-                      const response = await fetch('/api/admin/sync/force-sync', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ businessId })
-                      })
-                      
-                      const result = await response.json()
-                      
-                      if (result.success) {
-                        // Show success toast
-                        const toast = document.createElement('div')
-                        toast.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full'
-                        toast.innerHTML = `
-                          <div class="flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            <span class="font-medium">Force Sync Successful</span>
-                          </div>
-                        `
-                        document.body.appendChild(toast)
-                        
-                        // Animate in
-                        setTimeout(() => toast.classList.remove('translate-x-full'), 100)
-                        
-                        // Remove after 3 seconds
-                        setTimeout(() => {
-                          toast.classList.add('translate-x-full')
-                          setTimeout(() => document.body.removeChild(toast), 300)
-                        }, 3000)
-                        
-                        // Refresh the page to show updated sync status
-                        setTimeout(() => window.location.reload(), 1000)
-                      } else {
-                        // Show error toast
-                        const toast = document.createElement('div')
-                        toast.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full'
-                        toast.innerHTML = `
-                          <div class="flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                            <span class="font-medium">Sync Failed: ${result.error}</span>
-                          </div>
-                        `
-                        document.body.appendChild(toast)
-                        
-                        // Animate in
-                        setTimeout(() => toast.classList.remove('translate-x-full'), 100)
-                        
-                        // Remove after 5 seconds
-                        setTimeout(() => {
-                          toast.classList.add('translate-x-full')
-                          setTimeout(() => document.body.removeChild(toast), 300)
-                        }, 5000)
-                      }
-                    } catch (error) {
-                      console.error('Force sync error:', error)
-                      // Show error toast
-                      const toast = document.createElement('div')
-                      toast.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full'
-                      toast.innerHTML = `
-                        <div class="flex items-center gap-2">
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                          </svg>
-                          <span class="font-medium">Network Error - Check Console</span>
-                        </div>
-                      `
-                      document.body.appendChild(toast)
-                      
-                      // Animate in
-                      setTimeout(() => toast.classList.remove('translate-x-full'), 100)
-                      
-                      // Remove after 5 seconds
-                      setTimeout(() => {
-                        toast.classList.add('translate-x-full')
-                        setTimeout(() => document.body.removeChild(toast), 300)
-                      }, 5000)
-                    }
-                  }}
-                />
                 
                 {business.loyalty_program_status === 'active' && (
                   <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-600 text-white">
@@ -736,9 +645,9 @@ export function BusinessCRMCard({ business, onApprove, onInspect, adminEmail, cl
                         <span className="text-white text-sm">{business.business_category || 'Not set'}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-sm">Last Sync:</span>
+                        <span className="text-slate-400 text-sm">Last Updated:</span>
                         <span className="text-white text-sm">
-                          {business.last_ghl_sync ? new Date(business.last_ghl_sync).toLocaleDateString() : 'Never'}
+                          {business.updated_at ? new Date(business.updated_at).toLocaleDateString() : 'Never'}
                         </span>
                       </div>
                     </CardContent>

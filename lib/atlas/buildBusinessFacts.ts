@@ -129,7 +129,18 @@ export function buildBusinessFacts(
     chips.push({ icon: '🏷', label: 'Qwikker Pick', priority: 5 })
   }
 
-  // 6. Offers/events flags (only if hydration data confirms)
+  // 6. Loyalty badge (with user progress if available)
+  if (business.hasLoyalty) {
+    if (business.userStampsRemaining != null && business.userStampsRemaining <= 3 && business.userStampsRemaining > 0) {
+      chips.push({ icon: '🎯', label: `${business.userStampsRemaining} away from free reward!`, priority: 1.5 })
+    } else if (business.userStamps != null && business.userStamps > 0) {
+      chips.push({ icon: '🎟', label: `${business.userStamps}/${business.loyaltyThreshold} stamps`, priority: 5 })
+    } else {
+      chips.push({ icon: '🎟', label: 'Loyalty card available', priority: 5.5 })
+    }
+  }
+
+  // 7. Offers/events flags (only if hydration data confirms)
   if (hydratedData?.has_offers) {
     chips.push({ icon: '🎫', label: 'Offers available', priority: 6 })
   }

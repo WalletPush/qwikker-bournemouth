@@ -47,22 +47,9 @@ function sanitizeConfigForClient(data: any) {
     resend_from_email: data.resend_from_email,
     resend_from_name: data.resend_from_name,
     walletpush_template_id: data.walletpush_template_id,
-    walletpush_endpoint_url: data.walletpush_endpoint_url,
     slack_channel: data.slack_channel,
     
     // 🔒 SECRETS: Return masked values + "has_*" flags
-    ghl_webhook_url: maskSecret(data.ghl_webhook_url),
-    has_ghl_webhook_url: !!data.ghl_webhook_url,
-    
-    ghl_pass_creation_webhook_url: maskSecret(data.ghl_pass_creation_webhook_url),
-    has_ghl_pass_creation_webhook_url: !!data.ghl_pass_creation_webhook_url,
-    
-    ghl_update_webhook_url: maskSecret(data.ghl_update_webhook_url),
-    has_ghl_update_webhook_url: !!data.ghl_update_webhook_url,
-    
-    ghl_api_key: maskSecret(data.ghl_api_key),
-    has_ghl_api_key: !!data.ghl_api_key,
-    
     walletpush_api_key: maskSecret(data.walletpush_api_key),
     has_walletpush_api_key: !!data.walletpush_api_key,
     
@@ -266,29 +253,9 @@ export async function POST(request: NextRequest) {
     if (config.resend_from_email !== undefined && config.resend_from_email !== '') updates.resend_from_email = config.resend_from_email
     if (config.resend_from_name !== undefined && config.resend_from_name !== '') updates.resend_from_name = config.resend_from_name
     if (config.walletpush_template_id !== undefined && config.walletpush_template_id !== '') updates.walletpush_template_id = config.walletpush_template_id
-    if (config.walletpush_endpoint_url !== undefined && config.walletpush_endpoint_url !== '') updates.walletpush_endpoint_url = config.walletpush_endpoint_url
     if (config.slack_channel !== undefined && config.slack_channel !== '') updates.slack_channel = config.slack_channel
 
     // 🔒 SECRET fields: only update if value is real (not masked, not empty)
-    // CRITICAL: ghl_webhook_url is NOT NULL in DB, must handle carefully
-    if (config.ghl_webhook_url !== undefined) {
-      const webhookValue = config.ghl_webhook_url
-      
-      // If it's a real new URL (not masked, not empty, not placeholder)
-      if (webhookValue && 
-          webhookValue.trim() !== '' && 
-          !webhookValue.includes('••••') &&
-          !webhookValue.includes('PLACEHOLDER')) {
-        updates.ghl_webhook_url = webhookValue
-      }
-      // If it's masked or placeholder, DON'T include in updates (keep existing value)
-      // If it's explicitly null or empty, DON'T include in updates (keep existing value)
-      // This prevents violating NOT NULL constraint
-    }
-    
-    addIfPresent('ghl_pass_creation_webhook_url', config.ghl_pass_creation_webhook_url)
-    addIfPresent('ghl_update_webhook_url', config.ghl_update_webhook_url)
-    addIfPresent('ghl_api_key', config.ghl_api_key)
     addIfPresent('walletpush_api_key', config.walletpush_api_key)
     addIfPresent('slack_webhook_url', config.slack_webhook_url)
     addIfPresent('stripe_webhook_secret', config.stripe_webhook_secret)
