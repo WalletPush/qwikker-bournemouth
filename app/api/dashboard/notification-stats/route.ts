@@ -60,6 +60,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Query: Check if business has an active loyalty program
+    const { count: loyaltyCount } = await adminClient
+      .from('loyalty_programs')
+      .select('*', { count: 'exact', head: true })
+      .eq('business_id', profile.id)
+      .eq('status', 'active')
+
+    const hasLoyaltyProgram = (loyaltyCount ?? 0) > 0
+
     // Query 2: Count notifications sent in last 30 days
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
@@ -185,6 +194,7 @@ export async function GET(request: NextRequest) {
       eligiblePasses: eligiblePasses || 0,
       sentCount,
       clickThroughRate,
+      hasLoyaltyProgram,
       stats: {
         totalSent,
         totalClicked

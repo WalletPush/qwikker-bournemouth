@@ -58,6 +58,7 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
     sentCount: 0,
     clickThroughRate: 0
   })
+  const [hasLoyaltyProgram, setHasLoyaltyProgram] = useState(false)
   const [recentNotifications, setRecentNotifications] = useState<RecentNotification[]>([])
   const [showAllNotifs, setShowAllNotifs] = useState(false)
   const [statsLoading, setStatsLoading] = useState(true)
@@ -93,6 +94,7 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
         sentCount: data.sentCount || 0,
         clickThroughRate: data.clickThroughRate || 0
       })
+      setHasLoyaltyProgram(data.hasLoyaltyProgram ?? false)
       setRecentNotifications(data.recentNotifications || [])
     } catch (err: any) {
       console.error('Error fetching notification stats:', err)
@@ -363,6 +365,13 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
                 >
                   <option value="all">All Eligible Passes in City</option>
                   <option value="claimed">Users Who've Claimed Offers</option>
+                  {hasLoyaltyProgram && (
+                    <>
+                      <option value="loyalty_members">Loyalty Card Members</option>
+                      <option value="loyalty_near_reward">Loyalty -- Near Reward</option>
+                      <option value="loyalty_inactive">Loyalty -- Inactive (14+ days)</option>
+                    </>
+                  )}
                 </select>
               </div>
               <div>
@@ -376,6 +385,9 @@ export function NotificationsPageClient({ profile }: NotificationsPageClientProp
                   <option value="secret-menu">Secret Menu</option>
                   <option value="events">Events Page</option>
                   <option value="chat">Start Chat</option>
+                  {hasLoyaltyProgram && (
+                    <option value="loyalty">Loyalty / Rewards</option>
+                  )}
                   <option value="business">Business Page</option>
                 </select>
               </div>

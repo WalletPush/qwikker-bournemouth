@@ -236,6 +236,55 @@ export async function POST(request: NextRequest) {
         seen.add(u.wallet_pass_id)
         return true
       })
+    } else if (audienceType === 'loyalty_members' || audienceType === 'loyalty_near_reward' || audienceType === 'loyalty_inactive') {
+      // Loyalty-based audiences: join loyalty_memberships → loyalty_programs → app_users
+      const { data: program } = await supabaseAdmin
+        .from('loyalty_programs')
+        .select('id, reward_threshold')
+        .eq('business_id', businessId)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (!program) {
+        return NextResponse.json({
+          error: 'No active loyalty program found for this business',
+          audienceType
+        }, { status: 400 })
+      }
+
+      let membershipsQuery = supabaseAdmin
+        .from('loyalty_memberships')
+        .select('user_wallet_pass_id, stamps_balance, last_earned_at')
+        .eq('program_id', program.id)
+        .eq('status', 'active')
+
+      if (audienceType === 'loyalty_near_reward') {
+        const nearThreshold = Math.max(program.reward_threshold - 2, 0)
+        membershipsQuery = membershipsQuery
+          .gte('stamps_balance', nearThreshold)
+          .lt('stamps_balance', program.reward_threshold)
+      } else if (audienceType === 'loyalty_inactive') {
+        const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+        membershipsQuery = membershipsQuery
+          .lt('last_earned_at', fourteenDaysAgo)
+          .gt('stamps_balance', 0)
+      }
+
+      const { data: memberships } = await membershipsQuery
+
+      if (memberships && memberships.length > 0) {
+        const walletPassIds = memberships.map(m => m.user_wallet_pass_id)
+
+        const { data: users } = await supabaseAdmin
+          .from('app_users')
+          .select('wallet_pass_id, pass_type_identifier, first_name, name, city')
+          .in('wallet_pass_id', walletPassIds)
+          .eq('city', businessCity)
+          .eq('wallet_pass_status', 'active')
+          .eq('marketing_push_consent', true)
+
+        targetUsers = users || []
+      }
     }
 
     if (targetUsers.length === 0) {
@@ -260,8 +309,9 @@ export async function POST(request: NextRequest) {
       destinationUrl = `https://${businessCity}.qwikker.com/user/events`
     } else if (destType === 'chat') {
       destinationUrl = `https://${businessCity}.qwikker.com/user/chat`
+    } else if (destType === 'loyalty') {
+      destinationUrl = `https://${businessCity}.qwikker.com/user/rewards`
     } else if (destType === 'business') {
-      // Open business modal on discover page
       destinationUrl = `https://${businessCity}.qwikker.com/user/discover?business=${businessSlug}`
     } else {
       // Default fallback
