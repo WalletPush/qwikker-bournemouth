@@ -488,7 +488,7 @@ function buildSystemPromptV2(args: {
 
   // Temporal context: current time for "open now" / "tonight" awareness
   const temporalBlock = currentTime
-    ? `\nCURRENT TIME: ${currentTime}\nWhen listing results, mention open/closed status if hours are available. List open businesses first, but ALWAYS still include closed businesses — just note they are currently closed. Never skip a relevant business just because it is closed. If hours are missing, do not guess — just omit status.\n`
+    ? `\nCURRENT TIME: ${currentTime}\nWhen listing results, mention open/closed status if hours are available. List open businesses first, but ALWAYS still include closed businesses — just note they are currently closed. Never skip a relevant business just because it is closed. If hours are missing, do not guess — just omit status. When a business is closed right now, don't lead with the negative — frame it positively: "worth checking out tomorrow" or "opens at 9am" rather than "however, they're closed today".\n`
     : ''
 
   // Variety context: avoid repeating exact openers
@@ -546,7 +546,13 @@ HARD RULES (DO NOT BREAK):
   ❌ DO NOT say "I don't have menu details" when Featured Menu Items are listed
 - SHOW ALL UPFRONT: If you have 2+ relevant matches, mention ALL in your FIRST answer. Never drip-feed.
 - NO HALLUCINATIONS: Never invent dishes, vibe, amenities, hours, or offers. Only mention specifics from AVAILABLE BUSINESSES.
-- 🚨 ZERO-DATA BUSINESSES: If a business has NO menu items, NO KB content, NO offers — ONLY mention: name (with link), category, rating + review count, distance. DO NOT add what they are "known for", "specialize in", or "offer". DO NOT infer from business name or category.
+- 🚨 NEVER RECOMMEND COMMERCIAL BUSINESSES NOT IN YOUR DATA: You MUST ONLY recommend businesses (restaurants, bars, cafes, shops, hotels, activity centres, spas, salons, etc.) that appear in AVAILABLE BUSINESSES above. NEVER name a commercial business from your own knowledge that isn't listed.
+  However, you CAN mention public places and landmarks: parks, gardens, beaches, piers, promenades, town squares, public museums, galleries, libraries, harbours, train stations, and other council/public infrastructure. These are not businesses.
+  If the user asks about a category you don't have businesses for (e.g. "kids activities"), mention relevant public places if you know them and suggest an alternative category you DO have businesses for.
+  NEVER draw attention to the limitations of your data. Do NOT say things like "outside of the listed cafes", "I don't have that on Qwikker yet", "suggestions outside of my database", or anything that highlights gaps. Just naturally pivot to what you CAN help with.
+- 🚨 ZERO-DATA BUSINESSES: If a business has NO menu items, NO KB content, NO offers — ONLY mention: name (with link), category, rating + review count. DO NOT add what they are "known for", "specialize in", or "offer". DO NOT infer from business name or category. NEVER write a trailing incomplete sentence like "is a lovely spot, ." — if you have nothing specific to say, just state the name, category, and rating.
+- 🚨 CHECK YOUR DATA BEFORE SAYING "I DON'T KNOW": Before telling a user you don't have opening hours, menus, or other info, CHECK the AVAILABLE BUSINESSES data above. If Hours: is listed for a business, USE IT. Never claim you don't have data that is right there in your context. If a user asks "is X open tomorrow?" and you have the hours, answer the question.
+- 📋 HOURS QUERIES: When a user asks "what are the hours?" or "when is X open?", show the FULL weekly schedule from the data — not just today's or tomorrow's. Present it clearly (e.g. "Mon-Fri: 9am-5pm, Sat: 10am-4pm, Sun: Closed"). Only show a single day if the user specifically asked about that day (e.g. "are they open on Sunday?").
 - GOOGLE REVIEWS: Numeric rating + review_count only. Never quote or paraphrase review text.
 - OFFERS: DB-authoritative only. If an offer is not in current data, it does not exist.
 - TIERS: If there are relevant Qwikker Picks for the user's request, list them first. Never force a Qwikker Pick that doesn't match the request — relevance always wins over tier.
@@ -571,7 +577,7 @@ When the user asks for more than one thing (e.g. "drinks then food", "cocktails 
 TONE:
 - Be conversational and warm for planning/discovery queries ("date night", "any good bars", "somewhere cosy")
 - Be factual and direct for information queries ("what time does X close", "do they have parking", "is there an offer")
-- BANNED PHRASES: "Love that plan", "Say no more", "you're in luck", "absolute gem", "hidden gem", "people are obsessed", "you won't regret it", "I've got you covered"
+- BANNED PHRASES: "Love that plan", "Say no more", "you're in luck", "absolute gem", "hidden gem", "people are obsessed", "you won't regret it", "I've got you covered", "outside of the listed", "not on Qwikker yet", "outside of my database", "however, they're closed"
 - ALLOWED: Natural reactions like "Oooh nice", "Right then", "Good shout" are fine — just don't use them if they don't fit the context (e.g. don't say "Love that plan" when the user didn't make a plan)
 - NEVER use fire emoji 🔥 in business descriptions
 - Max 2 exclamation marks per response
@@ -584,7 +590,7 @@ ${convoFocus}
 AVAILABLE BUSINESSES (sorted by tier; qwikker_picks first):
 ${businessContext || 'No businesses available.'}
 ${userLoyaltySummary || ''}
-${cityContext ? `CITY INFO:\n${cityContext}\n` : ''}
+${cityContext ? `CITY & LOCAL KNOWLEDGE (verified, use this FIRST before your own knowledge):\n${cityContext}\n\nIMPORTANT: When answering questions about transport, parking, areas, or practical tips, use the CITY & LOCAL KNOWLEDGE above as your primary source. You may add general context (e.g. weather, geography) but NEVER name any specific business, attraction, venue, museum, activity centre, or commercial establishment that is not in AVAILABLE BUSINESSES above. If you don't have relevant businesses for what they're asking, say so honestly.\n` : ''}
 `.trim()
 }
 
@@ -787,7 +793,7 @@ export async function generateHybridAIResponse(
         matchCount: searchLimit,
         matchThreshold: 0.5  // Lower threshold to catch more relevant results (0.7 was too strict)
       })
-      cityResults = await searchCityKnowledge(userMessage, city, { matchCount: 6 })
+      cityResults = await searchCityKnowledge(userMessage, city, { matchCount: 6, matchThreshold: 0.4 })
     }
     
     // 🎯 Fetch offer counts for businesses to enrich context (DEDUPED)
@@ -1092,26 +1098,26 @@ export async function generateHybridAIResponse(
     // Step 2: Score ALL businesses for relevance
     // Semantic search may have found evidence even if intent detector found nothing
     console.log(`🎯 Scoring all businesses for intent: "${intentTerms || 'semantic-only'}"`)
-    
-    // Score Tier 1
+      
+      // Score Tier 1
     tier1.forEach(b => {
-      const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
-      businessRelevanceScores.set(b.id, score)
-    })
-    
-    // Score Tier 2
+        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
+        businessRelevanceScores.set(b.id, score)
+      })
+      
+      // Score Tier 2
     tier2.forEach(b => {
-      const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
-      businessRelevanceScores.set(b.id, score)
-    })
-    
-    // Score Tier 3
+        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
+        businessRelevanceScores.set(b.id, score)
+      })
+      
+      // Score Tier 3
     tier3.forEach(b => {
-      const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
-      businessRelevanceScores.set(b.id, score)
-    })
-    
-    console.log(`🎯 Scored ${businessRelevanceScores.size} businesses (${Array.from(businessRelevanceScores.values()).filter(s => s > 0).length} relevant)`)
+        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
+        businessRelevanceScores.set(b.id, score)
+      })
+      
+      console.log(`🎯 Scored ${businessRelevanceScores.size} businesses (${Array.from(businessRelevanceScores.values()).filter(s => s > 0).length} relevant)`)
     
     if (process.env.NODE_ENV === 'development') {
       const top = Array.from(businessRelevanceScores.entries())
@@ -1166,7 +1172,7 @@ export async function generateHybridAIResponse(
       ? INJECT_MIN  // Strong category matches exist -- exclude weak semantic noise
       : CONTEXT_MIN // No strong matches -- accept everything > 0
     
-    const relevantBusinesses = allBusinessesForContext.filter(b => 
+      const relevantBusinesses = allBusinessesForContext.filter(b => 
       (b.relevanceScore || 0) >= contextThreshold
     )
     
@@ -1176,8 +1182,8 @@ export async function generateHybridAIResponse(
     } else if (detectedIntent.hasIntent) {
       // User asked for something specific but we found nothing
       console.log(`⚠️ Zero relevant results for specific query. AI will explain none found.`)
-      sortedForContext = []
-    } else {
+        sortedForContext = []
+      } else {
       // Browse mode / no intent - show all
       console.log(`📊 No specific intent - showing all ${allBusinessesForContext.length} businesses`)
       sortedForContext = allBusinessesForContext
@@ -1255,15 +1261,15 @@ export async function generateHybridAIResponse(
     
     if (isFoodDrinkIntent) {
       const nonFoodCategories = [
-        'barber', 'barbershop', 'hair salon', 'salon', 'hairdresser',
-        'dentist', 'dental', 'doctor', 'medical', 'clinic',
-        'car wash', 'auto', 'garage', 'mechanic',
-        'gym', 'fitness', 'yoga studio',
-        'bank', 'atm', 'finance'
-      ]
-      
-      sortedForContext = sortedForContext.filter(b => {
-        const category = (b.display_category || b.system_category || b.google_primary_type || '').toLowerCase()
+      'barber', 'barbershop', 'hair salon', 'salon', 'hairdresser',
+      'dentist', 'dental', 'doctor', 'medical', 'clinic',
+      'car wash', 'auto', 'garage', 'mechanic',
+      'gym', 'fitness', 'yoga studio',
+      'bank', 'atm', 'finance'
+    ]
+    
+    sortedForContext = sortedForContext.filter(b => {
+      const category = (b.display_category || b.system_category || b.google_primary_type || '').toLowerCase()
         const isWrong = nonFoodCategories.some(wrong => category.includes(wrong))
         if (isWrong) {
           console.log(`🚨 FILTERED: ${b.business_name} (${category}) — not relevant for food/drink query`)
@@ -1573,18 +1579,18 @@ Present this information clearly and offer further help.`
     
     // 🎯 STEP 6: Call appropriate model (skip if fact mode already generated response)
     if (!aiResponse) {
-      console.log(`\n🤖 CALLING ${modelToUse.toUpperCase()} for query: "${userMessage}"`)
-      console.log(`📊 Conversation depth: ${conversationHistory.length} messages`)
-      console.log(`🎯 State: ${stateContext}`)
-      
-      const completion = await openai.chat.completions.create({
-        model: modelToUse,
-        messages,
-        temperature: 0.8,
-        max_tokens: 500,
-        presence_penalty: 0.6,
-        frequency_penalty: 0.3
-      })
+    console.log(`\n🤖 CALLING ${modelToUse.toUpperCase()} for query: "${userMessage}"`)
+    console.log(`📊 Conversation depth: ${conversationHistory.length} messages`)
+    console.log(`🎯 State: ${stateContext}`)
+    
+    const completion = await openai.chat.completions.create({
+      model: modelToUse,
+      messages,
+      temperature: 0.8,
+      max_tokens: 500,
+      presence_penalty: 0.6,
+      frequency_penalty: 0.3
+    })
 
       aiResponse = completion.choices[0]?.message?.content || ''
     }
@@ -2454,27 +2460,27 @@ Present this information clearly and offer further help.`
               const businessSlug = getBusinessSlug(b)
               
               fallbackText += `**[${b.business_name}](/user/business/${businessSlug})**`
-              
-              if (b.display_category) {
-                fallbackText += ` — ${b.display_category}`
-              }
-              
-              if (b.rating && b.review_count) {
+            
+            if (b.display_category) {
+              fallbackText += ` — ${b.display_category}`
+            }
+            
+            if (b.rating && b.review_count) {
                 fallbackText += ` (${b.rating}★ from ${b.review_count} reviews)`
               }
               
-              if (b.latitude && b.longitude && context.userLocation) {
-                const distanceText = getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
-                if (distanceText) {
+            if (b.latitude && b.longitude && context.userLocation) {
+              const distanceText = getDistanceInfo(b.latitude, b.longitude, context.userLocation.latitude, context.userLocation.longitude)
+              if (distanceText) {
                   fallbackText = appendSentence(fallbackText, distanceText.charAt(0).toUpperCase() + distanceText.slice(1))
                 }
               }
-              
-              fallbackText += `\n\n`
-            })
             
-            fallbackText += `_Ratings and reviews provided by Google_`
-            
+            fallbackText += `\n\n`
+          })
+          
+          fallbackText += `_Ratings and reviews provided by Google_`
+          
             aiResponse = aiResponse.trimEnd() + '\n\n' + fallbackText.trim()
           }
         }

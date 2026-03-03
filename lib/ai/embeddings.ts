@@ -222,7 +222,8 @@ export async function storeKnowledgeWithEmbedding({
   metadata = {},
   sourceUrl,
   fileUrl,
-  tags = []
+  tags = [],
+  status = 'active'
 }: {
   city: string
   businessId?: string | null
@@ -233,6 +234,7 @@ export async function storeKnowledgeWithEmbedding({
   sourceUrl?: string
   fileUrl?: string
   tags?: string[]
+  status?: 'active' | 'draft' | 'processing'
 }) {
   const supabase = createServiceRoleClient()
 
@@ -259,7 +261,7 @@ export async function storeKnowledgeWithEmbedding({
         metadata,
         tags,
         embedding,
-        status: 'active'
+        status
       })
       .select()
       .single()

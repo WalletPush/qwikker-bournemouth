@@ -62,12 +62,84 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log(`✅ Found ${businesses?.length || 0} AI-eligible businesses (Tier 1: Paid/Trial)`)
+    const viewBusinesses = businesses || []
+    console.log(`📊 View returned ${viewBusinesses.length} businesses`)
+
+    // The view excludes free_tier, so fetch claimed free businesses separately
+    let claimedFreeQuery = supabase
+      .from('business_profiles')
+      .select('*')
+      .eq('business_tier', 'free_tier')
+      .not('owner_user_id', 'is', null)
+
+    if (city) {
+      claimedFreeQuery = claimedFreeQuery.eq('city', city)
+    }
+
+    const { data: claimedFree } = await claimedFreeQuery
+    const claimedFreeList = claimedFree || []
+    console.log(`📊 Found ${claimedFreeList.length} claimed free businesses`)
+
+    // Merge and deduplicate
+    const seen = new Set<string>()
+    const merged: any[] = []
+    for (const b of [...viewBusinesses, ...claimedFreeList]) {
+      if (!seen.has(b.id)) {
+        seen.add(b.id)
+        merged.push(b)
+      }
+    }
+
+    // Filter 1: drop incomplete listings
+    const EXCLUDED_STATUSES = ['incomplete', 'pending', 'rejected', 'deleted']
+    const afterStatusFilter = merged.filter(
+      (b: any) => !b.status || !EXCLUDED_STATUSES.includes(b.status)
+    )
+
+    // Filter 2: exclude businesses with expired trial subscriptions
+    // (business_tier can be 'featured' while the subscription is actually an expired trial)
+    const businessIds = afterStatusFilter.map((b: any) => b.id)
+    const expiredTrialIds = new Set<string>()
+
+    if (businessIds.length > 0) {
+      const { data: subs } = await supabase
+        .from('business_subscriptions')
+        .select('business_id, status, free_trial_end_date, is_in_free_trial')
+        .in('business_id', businessIds)
+
+      if (subs) {
+        for (const sub of subs) {
+          if (sub.is_in_free_trial === true) {
+            const isExpired =
+              sub.status === 'cancelled' ||
+              (sub.free_trial_end_date && new Date(sub.free_trial_end_date) < new Date())
+
+            if (isExpired) {
+              expiredTrialIds.add(sub.business_id)
+            }
+          }
+        }
+      }
+    }
+
+    const eligible = afterStatusFilter.filter(
+      (b: any) => !expiredTrialIds.has(b.id)
+    )
+
+    eligible.sort((a: any, b: any) =>
+      (a.business_name || '').localeCompare(b.business_name || '')
+    )
+
+    console.log(
+      `✅ ${eligible.length} eligible (from ${merged.length} merged, ` +
+      `${merged.length - afterStatusFilter.length} incomplete removed, ` +
+      `${expiredTrialIds.size} expired trials removed)`
+    )
 
     return NextResponse.json({
       success: true,
-      businesses: businesses || [],
-      count: businesses?.length || 0
+      businesses: eligible,
+      count: eligible.length
     })
   } catch (error: any) {
     console.error('❌ Unexpected error in ai-eligible API:', error)

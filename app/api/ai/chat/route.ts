@@ -70,6 +70,32 @@ function generateSlugFromName(name: string): string {
 }
 
 /**
+ * Helper: Auto-inject links for bold business names the AI forgot to link.
+ * Builds a name→slug map from all known businesses and replaces **Name** with **[Name](/user/business/slug)**.
+ */
+function autoInjectBusinessLinks(text: string, businesses: Array<{ business_name?: string; name?: string; slug?: string; id?: string }>): string {
+  if (!text || !businesses || businesses.length === 0) return text
+
+  const nameToSlug = new Map<string, string>()
+  for (const b of businesses) {
+    const name = b.business_name || b.name || ''
+    if (!name) continue
+    const slug = b.slug || generateSlugFromName(name)
+    nameToSlug.set(name.toLowerCase(), slug)
+  }
+
+  // Find bold text that is NOT already linked: **Name** but not **[Name](...)** 
+  return text.replace(/\*\*([^[*]+?)\*\*/g, (match, name) => {
+    const trimmed = name.trim()
+    const slug = nameToSlug.get(trimmed.toLowerCase())
+    if (slug) {
+      return `**[${trimmed}](/user/business/${slug})**`
+    }
+    return match
+  })
+}
+
+/**
  * Helper: Force each business link to start a new paragraph
  * MECHANICAL FIX: Handles both linked and unlinked bold business names
  */
@@ -315,8 +341,31 @@ export async function POST(request: NextRequest) {
       console.log(`   hasAtlasPins (2+ with coords): ${hasAtlasPins}`)
     }
     
+    // Detect specific name queries: "is there a X called/named Y" or "do you have Y"
+    // If the user is looking for a specific business by name, only show Atlas if results match
+    const specificNameMatch = message.match(/\b(?:called|named|know of|have|find)\s+['"]?([A-Z0-9][\w\s'&-]{1,30})['"]?\s*\??$/i)
+      || message.match(/^(?:is there|do you have|know of)\s+(?:a|an|any)\s+\w+\s+(?:called|named)\s+['"]?(.+?)['"]?\s*\??$/i)
+    const isSpecificNameQuery = !!specificNameMatch
+
+    let nameMatchSuppressed = false
+    if (isSpecificNameQuery && specificNameMatch) {
+      const searchedName = specificNameMatch[1].trim().toLowerCase()
+      const allResults = [...(result.businessCarousel || []), ...(result.mapPins || [])]
+      const hasNameMatch = allResults.some((b: any) =>
+        (b.name || b.business_name || '').toLowerCase().includes(searchedName) ||
+        searchedName.includes((b.name || b.business_name || '').toLowerCase())
+      )
+      if (!hasNameMatch) {
+        nameMatchSuppressed = true
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🗺️ ATLAS CTA SUPPRESSED: User asked for "${searchedName}" but no results match that name`)
+        }
+      }
+    }
+
     // Show Atlas CTA only if the ACTUAL shown results have 2+ valid coords
-    const showAtlasCta = atlasAvailable && hasActualBusinessResults && (hasAtlasCarousel || hasAtlasPins)
+    // AND this isn't a specific name query with no matching results
+    const showAtlasCta = atlasAvailable && hasActualBusinessResults && (hasAtlasCarousel || hasAtlasPins) && !nameMatchSuppressed
     
     // 🔧 POST-PROCESS: Remove Atlas mentions from AI response if model mentioned it but UI won't show CTA
     // CRITICAL: Use showAtlasCta (final UI truth), not atlasAvailable (prompt hint)
@@ -468,6 +517,60 @@ export async function POST(request: NextRequest) {
         // Fall back to history only if no match in current message
         resolvedSlug = inferSelectedBusinessSlugFromHistory(message, conversationHistory || [])
         matchedBy = resolvedSlug ? 'history_fallback' : 'none'
+      }
+
+      // 🔍 FALLBACK: If no match from candidates or history, try direct DB lookup by name
+      // This handles fresh conversations where user asks about a specific business
+      if (!resolvedSlug && matchedBy !== 'ambiguous') {
+        console.log(`🔍 [DB LOOKUP] Attempting direct name search for: "${message}" (city: ${city})`)
+        try {
+          const { createServiceRoleClient: createSR } = await import('@/lib/supabase/server')
+          const supabase = createSR()
+          // Extract likely business name from query by removing stop words
+          const stopWords = ['what', 'is', 'are', 'the', 'a', 'an', 'open', 'hours', 'time', 'does', 'do',
+            'when', 'where', 'how', 'can', 'i', 'get', 'to', 'about', 'tell', 'me', 'more',
+            'info', 'information', 'close', 'closing', 'opening', 'for', 'of', 'at', 'in', 'on']
+          const nameTokens = message.toLowerCase()
+            .replace(/[^\w\s]/g, ' ')
+            .split(/\s+/)
+            .filter(t => t.length >= 3 && !stopWords.includes(t))
+          
+          console.log(`🔍 [DB LOOKUP] Name tokens: [${nameTokens.join(', ')}]`)
+          if (nameTokens.length > 0) {
+            const searchTerm = nameTokens.join(' ')
+            console.log(`🔍 [DB LOOKUP] Searching for: "${searchTerm}"`)
+
+            const { data: dbMatches, error: dbErr } = await supabase
+              .from('business_profiles')
+              .select('id, business_name')
+              .eq('city', city)
+              .ilike('business_name', `%${searchTerm}%`)
+              .limit(3)
+
+            console.log(`🔍 [DB LOOKUP] Results: ${dbMatches?.length ?? 0} matches${dbErr ? `, ERROR: ${dbErr.message}` : ''}${dbMatches?.length ? ` — ${dbMatches.map((b: any) => b.business_name).join(', ')}` : ''}`)
+
+            if (dbMatches && dbMatches.length === 1) {
+              resolvedSlug = generateSlugFromName(dbMatches[0].business_name)
+              matchedBy = 'db_name_lookup'
+              console.log(`🔍 [DB LOOKUP] Found "${dbMatches[0].business_name}" via name search: "${searchTerm}"`)
+            } else if (dbMatches && dbMatches.length > 1) {
+              // Try exact-ish match: check if any name starts with or closely matches the search
+              const exact = dbMatches.find(b => 
+                b.business_name.toLowerCase().includes(searchTerm) || 
+                searchTerm.includes(b.business_name.toLowerCase().replace(/[^\w\s]/g, '').trim())
+              )
+              if (exact) {
+                resolvedSlug = generateSlugFromName(exact.business_name)
+                matchedBy = 'db_name_lookup'
+                console.log(`🔍 [DB LOOKUP] Resolved "${exact.business_name}" from ${dbMatches.length} candidates`)
+              } else {
+                console.log(`⚠️ [DB LOOKUP] Ambiguous: ${dbMatches.map(b => b.business_name).join(', ')}`)
+              }
+            }
+          }
+        } catch (err) {
+          console.error('[DB LOOKUP] Error:', err)
+        }
       }
     }
 
@@ -644,13 +747,13 @@ export async function POST(request: NextRequest) {
               facts.push(`**Category:** ${biz.display_category}`)
             }
           } else {
-            // Just business name for specific queries
-            facts.push(`**${biz.business_name}**`)
+            // Business name with link for specific queries
+            facts.push(`**[${biz.business_name}](/user/business/${slug})**`)
             facts.push('') // blank line
           }
           
           // Opening hours - NO EMOJI (always show if available, or if specifically asked)
-          const wantsFullHours = /\b(full hours|all hours|weekly hours|hours for the week|hours during the week|week hours|hours this week|opening hours for the week|weekly schedule|complete hours|entire schedule)\b/i.test(message)
+          const wantsFullHours = /\b(full hours|all hours|weekly hours|hours for the week|hours during the week|week hours|hours this week|opening hours for the week|weekly schedule|complete hours|entire schedule|what time|what are the hours|when.*open|opening hours)\b/i.test(message)
           
           if ((biz.business_hours_structured && asksHoursOnly) || wantsFullHours) {
             if (wantsFullHours) {
@@ -746,8 +849,8 @@ export async function POST(request: NextRequest) {
             response: detailFactsBlock,
             intent: 'unknown',
             needsLocation: false,
-            showAtlasCta: hasCoords,
-            businessCarousel: [], // Always empty in detail mode
+            showAtlasCta: false,
+            businessCarousel: [],
             eventCards: [],
             mapPins: hasCoords ? [{
               id: biz.id,
@@ -837,6 +940,13 @@ export async function POST(request: NextRequest) {
       finalResponse = finalResponse.trimEnd() + '\n\nTap **Explore on Atlas** below to take a guided tour of these spots on the map!'
     }
 
+    // 🔗 AUTO-LINK: Inject links for bold business names the AI forgot to link
+    const allKnownBusinesses = [
+      ...(result.businessCarousel || []),
+      ...(result.mapPins || []).map((p: any) => ({ business_name: p.name, slug: p.slug, id: p.id })),
+    ]
+    finalResponse = autoInjectBusinessLinks(finalResponse, allKnownBusinesses)
+
     // 🎯 FINAL FORMATTING: Force business paragraphs (MUST BE LAST STEP)
     // This runs AFTER all text mutations (Atlas stripping, etc.)
     finalResponse = forceNewParagraphPerBusinessLink(finalResponse)
@@ -916,7 +1026,7 @@ export async function POST(request: NextRequest) {
       quickReplies,
       hasBusinessResults: result.hasBusinessResults,
       businessCarousel: result.businessCarousel,
-      mapPins: result.mapPins, // ✅ ATLAS: All businesses for map (paid + unclaimed)
+      mapPins: nameMatchSuppressed ? [] : result.mapPins, // ✅ ATLAS: Clear pins if name query didn't match
       queryCategories: result.queryCategories || [], // ✅ ATLAS: For filtering businesses by query
       queryKeywords: result.queryKeywords || [], // ✅ ATLAS: For filtering businesses by query
       walletActions: result.walletActions,

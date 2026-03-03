@@ -32,7 +32,7 @@ function formatStructuredHoursForAI(hoursStructured: Record<string, unknown>): s
 
 export async function POST(request: NextRequest) {
   try {
-    const { city } = await request.json()
+    const { city, business_id } = await request.json()
     
     if (!city) {
       return NextResponse.json({ 
@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient()
     
-    // Get all approved businesses for the city
-    const { data: businesses, error } = await supabase
+    // Get approved businesses -- single business if business_id provided, otherwise all in city
+    let businessQuery = supabase
       .from('business_profiles')
       .select(`
         id, business_name, business_description, business_tagline,
@@ -58,7 +58,14 @@ export async function POST(request: NextRequest) {
         )
       `)
       .eq('city', city.toLowerCase())
-      .eq('status', 'approved')
+
+    if (business_id) {
+      businessQuery = businessQuery.eq('id', business_id)
+    } else {
+      businessQuery = businessQuery.eq('status', 'approved')
+    }
+
+    const { data: businesses, error } = await businessQuery
 
     if (error) {
       console.error('❌ Error fetching businesses:', error)
@@ -77,29 +84,54 @@ export async function POST(request: NextRequest) {
     }
 
     let processed = 0
+    let deleted = 0
     let errors = 0
     const results = []
 
     for (const business of businesses) {
       try {
-        // 🔍 CHECK FOR EXISTING ENTRIES: Prevent duplicates
-        const { data: existingEntries, error: checkError } = await supabase
-          .from('knowledge_base')
-          .select('id, title')
-          .eq('business_id', business.id)
-          .eq('city', business.city)
+        // When refreshing a specific business, remove old auto-generated entries first
+        if (business_id) {
+          const { data: oldEntries } = await supabase
+            .from('knowledge_base')
+            .select('id')
+            .eq('business_id', business.id)
+            .eq('city', business.city)
+            .eq('status', 'active')
+            .contains('tags', ['auto_generated'])
 
-        if (checkError) {
-          console.error(`❌ Error checking existing entries for ${business.business_name}:`, checkError)
-          errors++
-          results.push({ type: 'check_error', business: business.business_name, success: false, error: checkError.message })
-          continue
-        }
+          if (oldEntries && oldEntries.length > 0) {
+            const { error: delError } = await supabase
+              .from('knowledge_base')
+              .delete()
+              .in('id', oldEntries.map(e => e.id))
 
-        if (existingEntries && existingEntries.length > 0) {
-          console.log(`⏭️ Skipping ${business.business_name} - already has ${existingEntries.length} knowledge entries`)
-          results.push({ type: 'skipped', business: business.business_name, success: true, reason: 'Already exists' })
-          continue
+            if (!delError) {
+              deleted += oldEntries.length
+              console.log(`🗑️ Deleted ${oldEntries.length} old auto-generated entries for ${business.business_name}`)
+            }
+          }
+        } else {
+          // City-wide: skip businesses that already have active entries
+          const { data: existingEntries, error: checkError } = await supabase
+            .from('knowledge_base')
+            .select('id, title')
+            .eq('business_id', business.id)
+            .eq('city', business.city)
+            .eq('status', 'active')
+
+          if (checkError) {
+            console.error(`❌ Error checking existing entries for ${business.business_name}:`, checkError)
+            errors++
+            results.push({ type: 'check_error', business: business.business_name, success: false, error: checkError.message })
+            continue
+          }
+
+          if (existingEntries && existingEntries.length > 0) {
+            console.log(`⏭️ Skipping ${business.business_name} - already has ${existingEntries.length} knowledge entries`)
+            results.push({ type: 'skipped', business: business.business_name, success: true, reason: 'Already exists' })
+            continue
+          }
         }
 
         // 1. Create main business info knowledge entry
@@ -128,7 +160,7 @@ Opening Hours: ${formatStructuredHoursForAI(business.business_hours_structured) 
             hasMenu: business.menu_preview && business.menu_preview.length > 0,
             hasOffers: business.business_offers && business.business_offers.length > 0
           },
-          tags: ['business', 'profile', business.business_category?.toLowerCase(), business.business_type?.toLowerCase()].filter(Boolean)
+          tags: ['auto_generated', 'business', 'profile', business.business_category?.toLowerCase(), business.business_type?.toLowerCase()].filter(Boolean)
         })
 
         if (businessResult.success) {
@@ -164,7 +196,7 @@ Categories available: ${[...new Set(business.menu_preview.map(item => item.categ
               itemCount: business.menu_preview.length,
               categories: [...new Set(business.menu_preview.map(item => item.category).filter(Boolean))]
             },
-            tags: ['menu', 'food', business.business_category?.toLowerCase()].filter(Boolean)
+            tags: ['auto_generated', 'menu', 'food', business.business_category?.toLowerCase()].filter(Boolean)
           })
 
           if (menuResult.success) {
@@ -204,7 +236,7 @@ ${activeOffers.map(offer => `
                 offerCount: activeOffers.length,
                 offerTypes: [...new Set(activeOffers.map(offer => offer.offer_type))]
               },
-              tags: ['offers', 'deals', 'discounts', business.business_category?.toLowerCase()].filter(Boolean)
+              tags: ['auto_generated', 'offers', 'deals', 'discounts', business.business_category?.toLowerCase()].filter(Boolean)
             })
 
             if (offerResult.success) {
@@ -224,14 +256,17 @@ ${activeOffers.map(offer => `
       }
     }
 
-    console.log(`✅ Auto-populated knowledge base for ${city}: ${processed} entries created, ${errors} errors`)
+    console.log(`✅ Auto-populated knowledge base for ${city}: ${processed} created, ${deleted} replaced, ${errors} errors`)
 
     return NextResponse.json({
       success: true,
-      message: `Successfully processed ${businesses.length} businesses in ${city}`,
+      message: business_id
+        ? `Refreshed knowledge for ${businesses[0]?.business_name || 'business'}: ${processed} entries created`
+        : `Successfully processed ${businesses.length} businesses in ${city}`,
       stats: {
         businessesProcessed: businesses.length,
         knowledgeEntriesCreated: processed,
+        oldEntriesReplaced: deleted,
         errors: errors
       },
       results: results

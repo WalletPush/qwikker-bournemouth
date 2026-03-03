@@ -270,33 +270,6 @@ export async function getKnowledgeEnhancementSuggestions(businessId: string) {
   }
 }
 
-/**
- * Create a web scrape knowledge entry
- */
-export async function createWebScrapeKnowledge(
-  businessId: string | null,
-  city: string,
-  url: string,
-  title: string,
-  adminId: string
-) {
-  // This will be implemented when we build the web scraping functionality
-  return { success: false, error: 'Web scraping not yet implemented' }
-}
-
-/**
- * Create a PDF document knowledge entry
- */
-export async function createPdfKnowledge(
-  businessId: string | null,
-  city: string,
-  file: File,
-  title: string,
-  adminId: string
-) {
-  // This will be implemented when we build the PDF processing functionality
-  return { success: false, error: 'PDF processing not yet implemented' }
-}
 
 /**
  * Create an event knowledge entry
