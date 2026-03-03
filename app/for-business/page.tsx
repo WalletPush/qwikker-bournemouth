@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { BusinessCitiesSection } from '@/components/marketing/business-cities-section'
+import { LoyaltyScrollSection } from '@/components/marketing/loyalty-scroll-section'
 
 export const metadata = {
   title: 'For Business | QWIKKER',
@@ -181,6 +182,14 @@ export default async function ForBusinessPage() {
             {
               title: 'Real-time customer insights',
               desc: 'See what people are asking for — and when.'
+            },
+            {
+              title: 'Qwikker Loyalty',
+              desc: 'Custom branded loyalty cards in Apple & Google Wallet. Bring customers back — again and again.'
+            },
+            {
+              title: 'Push notifications to pass holders',
+              desc: 'Message customers directly on their phone — targeted by audience, with click tracking built in.'
             }
           ].map((item) => (
             <div
@@ -202,6 +211,9 @@ export default async function ForBusinessPage() {
           Managed from a simple dashboard. Updated instantly.
         </p>
       </section>
+
+      {/* Qwikker Loyalty scroll reveal */}
+      <LoyaltyScrollSection />
 
       {/* How customers find you */}
       <section className="max-w-5xl mx-auto px-6 pt-48 pb-48 border-t border-white/10">
