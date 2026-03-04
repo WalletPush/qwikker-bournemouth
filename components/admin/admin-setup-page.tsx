@@ -36,6 +36,7 @@ interface FranchiseConfig {
   // Mobile Wallet (WalletPush)
   walletpush_api_key: string | null // Masked
   walletpush_template_id: string
+  walletpush_dashboard_url: string
   has_walletpush_api_key?: boolean
   
   // Notifications (Slack)
@@ -214,6 +215,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
             // Wallet
             walletpush_api_key: '',
             walletpush_template_id: '',
+            walletpush_dashboard_url: '',
             
             // Notifications
             slack_webhook_url: '',
@@ -682,14 +684,147 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     value={config.timezone || ''}
                     onChange={(e) => setConfig({...config, timezone: e.target.value})}
                   >
-                    <option value="Europe/London">Europe/London (GMT/BST)</option>
-                    <option value="America/Toronto">America/Toronto (EST/EDT)</option>
-                    <option value="America/Vancouver">America/Vancouver (PST/PDT)</option>
-                    <option value="America/New_York">America/New_York (EST/EDT)</option>
-                    <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
-                    <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
-                    <option value="Europe/Paris">Europe/Paris (CET/CEST)</option>
-                    <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                    <optgroup label="Africa">
+                      <option value="Africa/Abidjan">Africa/Abidjan (GMT)</option>
+                      <option value="Africa/Accra">Africa/Accra (GMT)</option>
+                      <option value="Africa/Addis_Ababa">Africa/Addis_Ababa (EAT)</option>
+                      <option value="Africa/Algiers">Africa/Algiers (CET)</option>
+                      <option value="Africa/Cairo">Africa/Cairo (EET)</option>
+                      <option value="Africa/Casablanca">Africa/Casablanca (WET)</option>
+                      <option value="Africa/Dar_es_Salaam">Africa/Dar_es_Salaam (EAT)</option>
+                      <option value="Africa/Johannesburg">Africa/Johannesburg (SAST)</option>
+                      <option value="Africa/Kampala">Africa/Kampala (EAT)</option>
+                      <option value="Africa/Khartoum">Africa/Khartoum (CAT)</option>
+                      <option value="Africa/Kinshasa">Africa/Kinshasa (WAT)</option>
+                      <option value="Africa/Lagos">Africa/Lagos (WAT)</option>
+                      <option value="Africa/Maputo">Africa/Maputo (CAT)</option>
+                      <option value="Africa/Nairobi">Africa/Nairobi (EAT)</option>
+                      <option value="Africa/Tunis">Africa/Tunis (CET)</option>
+                    </optgroup>
+                    <optgroup label="Americas">
+                      <option value="America/Anchorage">America/Anchorage (AKST/AKDT)</option>
+                      <option value="America/Argentina/Buenos_Aires">America/Argentina/Buenos_Aires (ART)</option>
+                      <option value="America/Bogota">America/Bogota (COT)</option>
+                      <option value="America/Caracas">America/Caracas (VET)</option>
+                      <option value="America/Chicago">America/Chicago (CST/CDT)</option>
+                      <option value="America/Costa_Rica">America/Costa_Rica (CST)</option>
+                      <option value="America/Denver">America/Denver (MST/MDT)</option>
+                      <option value="America/Edmonton">America/Edmonton (MST/MDT)</option>
+                      <option value="America/Guatemala">America/Guatemala (CST)</option>
+                      <option value="America/Halifax">America/Halifax (AST/ADT)</option>
+                      <option value="America/Havana">America/Havana (CST/CDT)</option>
+                      <option value="America/Jamaica">America/Jamaica (EST)</option>
+                      <option value="America/Lima">America/Lima (PET)</option>
+                      <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+                      <option value="America/Manaus">America/Manaus (AMT)</option>
+                      <option value="America/Mexico_City">America/Mexico_City (CST/CDT)</option>
+                      <option value="America/Montevideo">America/Montevideo (UYT)</option>
+                      <option value="America/New_York">America/New_York (EST/EDT)</option>
+                      <option value="America/Panama">America/Panama (EST)</option>
+                      <option value="America/Phoenix">America/Phoenix (MST)</option>
+                      <option value="America/Santiago">America/Santiago (CLT/CLST)</option>
+                      <option value="America/Sao_Paulo">America/Sao_Paulo (BRT)</option>
+                      <option value="America/St_Johns">America/St_Johns (NST/NDT)</option>
+                      <option value="America/Toronto">America/Toronto (EST/EDT)</option>
+                      <option value="America/Vancouver">America/Vancouver (PST/PDT)</option>
+                      <option value="America/Winnipeg">America/Winnipeg (CST/CDT)</option>
+                    </optgroup>
+                    <optgroup label="Asia">
+                      <option value="Asia/Almaty">Asia/Almaty (ALMT)</option>
+                      <option value="Asia/Amman">Asia/Amman (EET/EEST)</option>
+                      <option value="Asia/Baghdad">Asia/Baghdad (AST)</option>
+                      <option value="Asia/Bahrain">Asia/Bahrain (AST)</option>
+                      <option value="Asia/Baku">Asia/Baku (AZT)</option>
+                      <option value="Asia/Bangkok">Asia/Bangkok (ICT)</option>
+                      <option value="Asia/Beirut">Asia/Beirut (EET/EEST)</option>
+                      <option value="Asia/Colombo">Asia/Colombo (IST)</option>
+                      <option value="Asia/Dhaka">Asia/Dhaka (BST)</option>
+                      <option value="Asia/Dubai">Asia/Dubai (GST)</option>
+                      <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (ICT)</option>
+                      <option value="Asia/Hong_Kong">Asia/Hong_Kong (HKT)</option>
+                      <option value="Asia/Istanbul">Asia/Istanbul (TRT)</option>
+                      <option value="Asia/Jakarta">Asia/Jakarta (WIB)</option>
+                      <option value="Asia/Jerusalem">Asia/Jerusalem (IST/IDT)</option>
+                      <option value="Asia/Kabul">Asia/Kabul (AFT)</option>
+                      <option value="Asia/Karachi">Asia/Karachi (PKT)</option>
+                      <option value="Asia/Kathmandu">Asia/Kathmandu (NPT)</option>
+                      <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                      <option value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (MYT)</option>
+                      <option value="Asia/Kuwait">Asia/Kuwait (AST)</option>
+                      <option value="Asia/Makassar">Asia/Makassar (WITA)</option>
+                      <option value="Asia/Manila">Asia/Manila (PHT)</option>
+                      <option value="Asia/Muscat">Asia/Muscat (GST)</option>
+                      <option value="Asia/Novosibirsk">Asia/Novosibirsk (NOVT)</option>
+                      <option value="Asia/Phnom_Penh">Asia/Phnom_Penh (ICT)</option>
+                      <option value="Asia/Qatar">Asia/Qatar (AST)</option>
+                      <option value="Asia/Riyadh">Asia/Riyadh (AST)</option>
+                      <option value="Asia/Seoul">Asia/Seoul (KST)</option>
+                      <option value="Asia/Shanghai">Asia/Shanghai (CST)</option>
+                      <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+                      <option value="Asia/Taipei">Asia/Taipei (CST)</option>
+                      <option value="Asia/Tashkent">Asia/Tashkent (UZT)</option>
+                      <option value="Asia/Tbilisi">Asia/Tbilisi (GET)</option>
+                      <option value="Asia/Tehran">Asia/Tehran (IRST/IRDT)</option>
+                      <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                      <option value="Asia/Vladivostok">Asia/Vladivostok (VLAT)</option>
+                      <option value="Asia/Yangon">Asia/Yangon (MMT)</option>
+                      <option value="Asia/Yekaterinburg">Asia/Yekaterinburg (YEKT)</option>
+                    </optgroup>
+                    <optgroup label="Atlantic">
+                      <option value="Atlantic/Azores">Atlantic/Azores (AZOT/AZOST)</option>
+                      <option value="Atlantic/Cape_Verde">Atlantic/Cape_Verde (CVT)</option>
+                      <option value="Atlantic/Reykjavik">Atlantic/Reykjavik (GMT)</option>
+                    </optgroup>
+                    <optgroup label="Australia">
+                      <option value="Australia/Adelaide">Australia/Adelaide (ACST/ACDT)</option>
+                      <option value="Australia/Brisbane">Australia/Brisbane (AEST)</option>
+                      <option value="Australia/Darwin">Australia/Darwin (ACST)</option>
+                      <option value="Australia/Hobart">Australia/Hobart (AEST/AEDT)</option>
+                      <option value="Australia/Melbourne">Australia/Melbourne (AEST/AEDT)</option>
+                      <option value="Australia/Perth">Australia/Perth (AWST)</option>
+                      <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
+                    </optgroup>
+                    <optgroup label="Europe">
+                      <option value="Europe/Amsterdam">Europe/Amsterdam (CET/CEST)</option>
+                      <option value="Europe/Athens">Europe/Athens (EET/EEST)</option>
+                      <option value="Europe/Belgrade">Europe/Belgrade (CET/CEST)</option>
+                      <option value="Europe/Berlin">Europe/Berlin (CET/CEST)</option>
+                      <option value="Europe/Brussels">Europe/Brussels (CET/CEST)</option>
+                      <option value="Europe/Bucharest">Europe/Bucharest (EET/EEST)</option>
+                      <option value="Europe/Budapest">Europe/Budapest (CET/CEST)</option>
+                      <option value="Europe/Copenhagen">Europe/Copenhagen (CET/CEST)</option>
+                      <option value="Europe/Dublin">Europe/Dublin (GMT/IST)</option>
+                      <option value="Europe/Helsinki">Europe/Helsinki (EET/EEST)</option>
+                      <option value="Europe/Kiev">Europe/Kiev (EET/EEST)</option>
+                      <option value="Europe/Lisbon">Europe/Lisbon (WET/WEST)</option>
+                      <option value="Europe/London">Europe/London (GMT/BST)</option>
+                      <option value="Europe/Madrid">Europe/Madrid (CET/CEST)</option>
+                      <option value="Europe/Moscow">Europe/Moscow (MSK)</option>
+                      <option value="Europe/Oslo">Europe/Oslo (CET/CEST)</option>
+                      <option value="Europe/Paris">Europe/Paris (CET/CEST)</option>
+                      <option value="Europe/Prague">Europe/Prague (CET/CEST)</option>
+                      <option value="Europe/Rome">Europe/Rome (CET/CEST)</option>
+                      <option value="Europe/Stockholm">Europe/Stockholm (CET/CEST)</option>
+                      <option value="Europe/Vienna">Europe/Vienna (CET/CEST)</option>
+                      <option value="Europe/Warsaw">Europe/Warsaw (CET/CEST)</option>
+                      <option value="Europe/Zurich">Europe/Zurich (CET/CEST)</option>
+                    </optgroup>
+                    <optgroup label="Indian Ocean">
+                      <option value="Indian/Maldives">Indian/Maldives (MVT)</option>
+                      <option value="Indian/Mauritius">Indian/Mauritius (MUT)</option>
+                    </optgroup>
+                    <optgroup label="Pacific">
+                      <option value="Pacific/Auckland">Pacific/Auckland (NZST/NZDT)</option>
+                      <option value="Pacific/Fiji">Pacific/Fiji (FJT)</option>
+                      <option value="Pacific/Guam">Pacific/Guam (ChST)</option>
+                      <option value="Pacific/Honolulu">Pacific/Honolulu (HST)</option>
+                      <option value="Pacific/Port_Moresby">Pacific/Port_Moresby (PGT)</option>
+                      <option value="Pacific/Samoa">Pacific/Samoa (SST)</option>
+                      <option value="Pacific/Tongatapu">Pacific/Tongatapu (TOT)</option>
+                    </optgroup>
+                    <optgroup label="Other">
+                      <option value="UTC">UTC</option>
+                    </optgroup>
                   </select>
                 </div>
               </div>
@@ -1156,14 +1291,20 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     <div className="flex-1">
                       <h3 className="text-white font-bold text-lg">WalletPush (Mobile Passes)</h3>
                     </div>
-                    <a 
-                      href="https://loyalty.qwikker.com" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-                    >
-                      Open WalletPush →
-                    </a>
+                    {config.walletpush_dashboard_url ? (
+                      <a 
+                        href={config.walletpush_dashboard_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Open WalletPush →
+                      </a>
+                    ) : (
+                      <span className="px-4 py-2 bg-slate-700 text-slate-500 rounded-lg text-sm font-medium cursor-not-allowed">
+                        Enter URL below →
+                      </span>
+                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -1226,6 +1367,29 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                         placeholder="d9110746-50d3-46b9-8799-a2b7f22ec939"
                         required
                       />
+                    </div>
+
+                    <div className="border border-slate-700 bg-slate-800/50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-5 h-5 bg-slate-700 rounded flex items-center justify-center">
+                          <span className="text-slate-400 text-[10px] font-semibold">*</span>
+                        </div>
+                        <Label className="text-white text-sm font-medium mb-0">
+                          WalletPush URL
+                        </Label>
+                        <span className="px-2 py-0.5 text-[10px] bg-slate-700/50 text-slate-400 rounded font-medium border border-slate-600">
+                          REQUIRED
+                        </span>
+                      </div>
+                      <Input
+                        value={config.walletpush_dashboard_url || ''}
+                        onChange={(e) => setConfig({...config, walletpush_dashboard_url: e.target.value})}
+                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg"
+                        placeholder="https://loyalty.qwikker.com"
+                      />
+                      <p className="text-slate-500 text-xs mt-2">
+                        The base URL of your WalletPush instance. Used for the &quot;Open WalletPush&quot; button and all API calls.
+                      </p>
                     </div>
 
                   </div>

@@ -16,7 +16,6 @@
  */
 
 import {
-  getWalletPushBaseUrl,
   getWalletPushAuthHeader,
   getWalletPushCreateUrl,
   getWalletPushFieldUrl,
@@ -38,12 +37,12 @@ interface IssueLoyaltyPassResult {
  * Returns the serial number and download URLs, or null on failure.
  */
 export async function issueLoyaltyPass(
-  program: { walletpush_template_id: string; walletpush_api_key: string },
+  program: { walletpush_template_id: string; walletpush_api_key: string; walletpush_dashboard_url?: string },
   memberData: { firstName: string; lastName: string; email: string },
   initialFields: Record<string, string>
 ): Promise<IssueLoyaltyPassResult | null> {
   try {
-    const url = getWalletPushCreateUrl(program.walletpush_template_id)
+    const url = getWalletPushCreateUrl(program.walletpush_template_id, program.walletpush_dashboard_url)
     const headers = getWalletPushAuthHeader(program.walletpush_api_key)
 
     // Field names must exactly match template placeholders.
@@ -110,14 +109,14 @@ export async function issueLoyaltyPass(
  * to avoid duplicate APNs pushes.
  */
 export async function updateLoyaltyPassField(
-  program: { walletpush_api_key: string; walletpush_pass_type_id: string },
+  program: { walletpush_api_key: string; walletpush_pass_type_id: string; walletpush_dashboard_url?: string },
   serial: string,
   fieldName: string,
   value: string,
   push: boolean = false
 ): Promise<boolean> {
   try {
-    const url = getWalletPushFieldUrl(program.walletpush_pass_type_id, serial, fieldName)
+    const url = getWalletPushFieldUrl(program.walletpush_pass_type_id, serial, fieldName, program.walletpush_dashboard_url)
     const headers = getWalletPushAuthHeader(program.walletpush_api_key)
 
     const response = await fetch(url, {

@@ -25,6 +25,7 @@ import { AdminSetupPage } from './admin-setup-page'
 import { EventPreviewCard } from '@/components/ui/event-preview-card'
 import { AdminContactCentreClient } from './admin-contact-centre-client'
 import { AdminLoyaltyQueue } from './admin-loyalty-queue'
+import { DeleteBusinessModal } from '@/components/admin/delete-business-modal'
 
 interface Business {
   id: string
@@ -400,9 +401,31 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   // Menu processing state
   const [processingMenuId, setProcessingMenuId] = useState<string | null>(null)
   
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; business: Business | null }>({ open: false, business: null })
+
+  const handleDeleteBusiness = async () => {
+    if (!deleteModal.business) return
+    try {
+      const response = await fetch('/api/admin/delete-business', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: deleteModal.business.id })
+      })
+      if (response.ok) {
+        setBusinessList(prev => prev.filter(b => b.id !== deleteModal.business!.id))
+        setDeleteModal({ open: false, business: null })
+      } else {
+        const data = await response.json().catch(() => ({}))
+        alert(`Failed to delete: ${data.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Delete failed:', error)
+      alert('Failed to delete business. Please try again.')
+    }
+  }
+
   const { showSuccess, showError, showConfirm, ModalComponent } = useElegantModal()
-  
-  
+
   // Function to update tab and URL
   const updateActiveTab = (newTab: 'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-test' | 'pricing' | 'setup') => {
     setActiveTab(newTab)
@@ -1235,6 +1258,15 @@ Qwikker Admin Team`
                     Call
                   </button>
                 )}
+                <button
+                  onClick={() => setDeleteModal({ open: true, business })}
+                  className="bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border border-red-600/30"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete
+                </button>
               </div>
             </>
           )}
@@ -3600,6 +3632,18 @@ Qwikker Admin Team`
         selectedCount={selectedBusinessIds.size}
         isLoading={isUpdatingAiEligible}
       />
+
+      {/* Delete Business Modal (for incomplete listings) */}
+      {deleteModal.business && (
+        <DeleteBusinessModal
+          isOpen={deleteModal.open}
+          onClose={() => setDeleteModal({ open: false, business: null })}
+          onConfirm={handleDeleteBusiness}
+          businessName={deleteModal.business.business_name}
+          businessId={deleteModal.business.id}
+          variant="incomplete"
+        />
+      )}
     </div>
   )
 }

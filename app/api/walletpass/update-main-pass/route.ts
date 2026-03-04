@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
     
     const credentials = await getWalletPushCredentials(userCity)
     const appKey = credentials.apiKey
+    const walletpushDashboardUrl = credentials.dashboardUrl
 
     if (!appKey) {
       console.error('❌ Missing WalletPush API key for update-main-pass request')
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
     
     // Two PUT calls: update Current_Offer (pass content) + Last_Message (triggers push)
     
-    const offerUrl = getWalletPushFieldUrl(passTypeId, serialNumber, WALLET_PASS_FIELDS.CURRENT_OFFER)
+    const offerUrl = getWalletPushFieldUrl(passTypeId, serialNumber, WALLET_PASS_FIELDS.CURRENT_OFFER, walletpushDashboardUrl)
     
     const offerResponse = await fetch(offerUrl, {
       method: 'PUT',
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
     const offerResult = await offerResponse.json()
     
     const pushMessage = `🎉 Congratulations ${firstName}! You have redeemed: ${currentOffer || 'your offer'}!`
-    const messageUrl = getWalletPushFieldUrl(passTypeId, serialNumber, WALLET_PASS_FIELDS.LAST_MESSAGE)
+    const messageUrl = getWalletPushFieldUrl(passTypeId, serialNumber, WALLET_PASS_FIELDS.LAST_MESSAGE, walletpushDashboardUrl)
 
     const messageResponse = await fetch(messageUrl, {
       method: 'PUT',

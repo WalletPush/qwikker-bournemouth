@@ -76,13 +76,15 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [walletpushDashboardUrl, setWalletpushDashboardUrl] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
       try {
-        const [queueRes, programsRes] = await Promise.all([
+        const [queueRes, programsRes, setupRes] = await Promise.all([
           fetch('/api/admin/loyalty/queue'),
           fetch('/api/admin/loyalty/programs'),
+          fetch('/api/admin/setup'),
         ])
         if (queueRes.ok) {
           const data = await queueRes.json()
@@ -91,6 +93,10 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
         if (programsRes.ok) {
           const data = await programsRes.json()
           setActivePrograms(data.programs || [])
+        }
+        if (setupRes.ok) {
+          const data = await setupRes.json()
+          setWalletpushDashboardUrl(data.config?.walletpush_dashboard_url || null)
         }
       } catch (err) {
         console.error('Failed to load loyalty data:', err)
@@ -260,15 +266,22 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <a
-                    href="https://loyalty.qwikker.com/business/pass-designer"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                    Open Pass Designer
-                  </a>
+                  {walletpushDashboardUrl ? (
+                    <a
+                      href={`${walletpushDashboardUrl}/business/pass-designer`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Open Pass Designer
+                    </a>
+                  ) : (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 text-slate-500 text-xs font-medium rounded-lg border border-slate-700 cursor-not-allowed">
+                      <ExternalLink className="w-3 h-3" />
+                      No WalletPush URL
+                    </span>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"

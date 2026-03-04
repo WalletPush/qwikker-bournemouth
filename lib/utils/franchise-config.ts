@@ -11,6 +11,7 @@ export interface FranchiseConfig {
   // WalletPush Integration
   walletpush_api_key?: string
   walletpush_template_id?: string
+  walletpush_dashboard_url?: string
   
   // Slack Integration
   slack_webhook_url?: string
@@ -90,6 +91,7 @@ export async function getWalletPushCredentials(city: string) {
   return {
     apiKey: config?.walletpush_api_key || process.env.MOBILE_WALLET_APP_KEY,
     templateId: config?.walletpush_template_id || process.env.MOBILE_WALLET_TEMPLATE_ID,
+    dashboardUrl: config?.walletpush_dashboard_url || undefined,
     city: city,
     franchiseName: config?.display_name || city
   }

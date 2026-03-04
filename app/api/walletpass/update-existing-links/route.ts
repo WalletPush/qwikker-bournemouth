@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
     const serialNumber = userWalletPassId
     
     const credentials = await getWalletPushCredentials(city)
+    const walletpushDashboardUrl = credentials.dashboardUrl
     if (!credentials.apiKey) {
       console.error(`❌ Missing WalletPush API key for ${city}`)
       return NextResponse.json({ error: 'WalletPush credentials not configured' }, { status: 500 })
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
     console.log(`📡 Updating ${updates.length} fields for user: ${user.name}`)
     
     for (const update of updates) {
-      const updateUrl = getWalletPushFieldUrl(passTypeId, serialNumber, update.field)
+      const updateUrl = getWalletPushFieldUrl(passTypeId, serialNumber, update.field, walletpushDashboardUrl)
       
       console.log(`🔄 Updating ${update.field}:`, update.value)
       

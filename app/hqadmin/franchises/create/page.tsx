@@ -413,39 +413,79 @@ export default function CreateFranchisePage() {
                 <optgroup label="🌏 Asia-Pacific">
                   <option value="Asia/Tokyo">Asia/Tokyo (JST, GMT+9)</option>
                   <option value="Asia/Seoul">Asia/Seoul (KST, GMT+9)</option>
+                  <option value="Asia/Vladivostok">Asia/Vladivostok (VLAT, GMT+10)</option>
                   <option value="Asia/Shanghai">Asia/Shanghai (CST, GMT+8)</option>
                   <option value="Asia/Hong_Kong">Asia/Hong_Kong (HKT, GMT+8)</option>
                   <option value="Asia/Taipei">Asia/Taipei (CST, GMT+8)</option>
                   <option value="Asia/Singapore">Asia/Singapore (SGT, GMT+8)</option>
                   <option value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (MYT, GMT+8)</option>
                   <option value="Asia/Manila">Asia/Manila (PHT, GMT+8)</option>
+                  <option value="Asia/Makassar">Asia/Makassar (WITA, GMT+8)</option>
                   <option value="Asia/Bangkok">Asia/Bangkok (ICT, GMT+7)</option>
                   <option value="Asia/Jakarta">Asia/Jakarta (WIB, GMT+7)</option>
                   <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (ICT, GMT+7)</option>
+                  <option value="Asia/Phnom_Penh">Asia/Phnom_Penh (ICT, GMT+7)</option>
+                  <option value="Asia/Yangon">Asia/Yangon (MMT, GMT+6:30)</option>
+                  <option value="Asia/Dhaka">Asia/Dhaka (BST, GMT+6)</option>
+                  <option value="Asia/Almaty">Asia/Almaty (ALMT, GMT+6)</option>
+                  <option value="Asia/Tashkent">Asia/Tashkent (UZT, GMT+5)</option>
+                  <option value="Asia/Karachi">Asia/Karachi (PKT, GMT+5)</option>
                   <option value="Asia/Kolkata">Asia/Kolkata (IST, GMT+5:30)</option>
+                  <option value="Asia/Colombo">Asia/Colombo (IST, GMT+5:30)</option>
+                  <option value="Asia/Kathmandu">Asia/Kathmandu (NPT, GMT+5:45)</option>
                   <option value="Asia/Dubai">Asia/Dubai (GST, GMT+4)</option>
+                  <option value="Asia/Muscat">Asia/Muscat (GST, GMT+4)</option>
+                  <option value="Asia/Baku">Asia/Baku (AZT, GMT+4)</option>
+                  <option value="Asia/Tbilisi">Asia/Tbilisi (GET, GMT+4)</option>
+                  <option value="Asia/Kabul">Asia/Kabul (AFT, GMT+4:30)</option>
+                  <option value="Asia/Tehran">Asia/Tehran (IRST, GMT+3:30)</option>
                   <option value="Asia/Qatar">Asia/Qatar (AST, GMT+3)</option>
                   <option value="Asia/Riyadh">Asia/Riyadh (AST, GMT+3)</option>
+                  <option value="Asia/Kuwait">Asia/Kuwait (AST, GMT+3)</option>
+                  <option value="Asia/Bahrain">Asia/Bahrain (AST, GMT+3)</option>
+                  <option value="Asia/Baghdad">Asia/Baghdad (AST, GMT+3)</option>
+                  <option value="Asia/Beirut">Asia/Beirut (EET, GMT+2)</option>
+                  <option value="Asia/Amman">Asia/Amman (EET, GMT+2)</option>
                   <option value="Asia/Jerusalem">Asia/Jerusalem (IST, GMT+2)</option>
+                  <option value="Asia/Istanbul">Asia/Istanbul (TRT, GMT+3)</option>
+                  <option value="Asia/Yekaterinburg">Asia/Yekaterinburg (YEKT, GMT+5)</option>
+                  <option value="Asia/Novosibirsk">Asia/Novosibirsk (NOVT, GMT+7)</option>
                 </optgroup>
                 
                 {/* Oceania */}
                 <optgroup label="🦘 Oceania">
-                  <option value="Australia/Sydney">Australia/Sydney (AEDT, GMT+11)</option>
-                  <option value="Australia/Melbourne">Australia/Melbourne (AEDT, GMT+11)</option>
-                  <option value="Australia/Brisbane">Australia/Brisbane (AEST, GMT+10)</option>
-                  <option value="Australia/Perth">Australia/Perth (AWST, GMT+8)</option>
-                  <option value="Australia/Adelaide">Australia/Adelaide (ACDT, GMT+10:30)</option>
-                  <option value="Pacific/Auckland">Pacific/Auckland (NZDT, GMT+13)</option>
+                  <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
+                  <option value="Australia/Melbourne">Australia/Melbourne (AEST/AEDT)</option>
+                  <option value="Australia/Brisbane">Australia/Brisbane (AEST)</option>
+                  <option value="Australia/Perth">Australia/Perth (AWST)</option>
+                  <option value="Australia/Adelaide">Australia/Adelaide (ACST/ACDT)</option>
+                  <option value="Australia/Darwin">Australia/Darwin (ACST)</option>
+                  <option value="Australia/Hobart">Australia/Hobart (AEST/AEDT)</option>
+                  <option value="Pacific/Auckland">Pacific/Auckland (NZST/NZDT)</option>
+                  <option value="Pacific/Fiji">Pacific/Fiji (FJT)</option>
+                  <option value="Pacific/Guam">Pacific/Guam (ChST)</option>
+                  <option value="Pacific/Honolulu">Pacific/Honolulu (HST)</option>
+                  <option value="Pacific/Port_Moresby">Pacific/Port_Moresby (PGT)</option>
+                  <option value="Pacific/Tongatapu">Pacific/Tongatapu (TOT)</option>
+                  <option value="Pacific/Samoa">Pacific/Samoa (SST)</option>
                 </optgroup>
                 
                 {/* Africa */}
                 <optgroup label="🦁 Africa">
-                  <option value="Africa/Cairo">Africa/Cairo (EET, GMT+2)</option>
-                  <option value="Africa/Johannesburg">Africa/Johannesburg (SAST, GMT+2)</option>
-                  <option value="Africa/Nairobi">Africa/Nairobi (EAT, GMT+3)</option>
-                  <option value="Africa/Lagos">Africa/Lagos (WAT, GMT+1)</option>
-                  <option value="Africa/Casablanca">Africa/Casablanca (WET, GMT+1)</option>
+                  <option value="Africa/Cairo">Africa/Cairo (EET)</option>
+                  <option value="Africa/Johannesburg">Africa/Johannesburg (SAST)</option>
+                  <option value="Africa/Nairobi">Africa/Nairobi (EAT)</option>
+                  <option value="Africa/Lagos">Africa/Lagos (WAT)</option>
+                  <option value="Africa/Casablanca">Africa/Casablanca (WET)</option>
+                  <option value="Africa/Accra">Africa/Accra (GMT)</option>
+                  <option value="Africa/Addis_Ababa">Africa/Addis_Ababa (EAT)</option>
+                  <option value="Africa/Algiers">Africa/Algiers (CET)</option>
+                  <option value="Africa/Dar_es_Salaam">Africa/Dar_es_Salaam (EAT)</option>
+                  <option value="Africa/Kampala">Africa/Kampala (EAT)</option>
+                  <option value="Africa/Khartoum">Africa/Khartoum (CAT)</option>
+                  <option value="Africa/Kinshasa">Africa/Kinshasa (WAT)</option>
+                  <option value="Africa/Maputo">Africa/Maputo (CAT)</option>
+                  <option value="Africa/Tunis">Africa/Tunis (CET)</option>
                 </optgroup>
               </select>
             </div>

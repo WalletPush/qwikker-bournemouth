@@ -123,7 +123,7 @@ export async function getEnhancedWalletPushAnalytics(city: string): Promise<Enha
     try {
       const credentials = await getWalletPushCredentials(city)
       if (credentials.apiKey && credentials.templateId) {
-        const response = await fetch(getWalletPushAnalyticsUrl(credentials.templateId), {
+        const response = await fetch(getWalletPushAnalyticsUrl(credentials.templateId, credentials.dashboardUrl), {
           headers: getWalletPushAuthHeader(credentials.apiKey)
         })
         

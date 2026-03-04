@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     const credentials = await getWalletPushCredentials(city || 'bournemouth')
     const MOBILE_WALLET_APP_KEY = credentials.apiKey
     const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
+    const walletpushDashboardUrl = credentials.dashboardUrl
     
     if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID) {
       console.error(`❌ Missing WalletPush credentials for ${city}`)
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Create main user wallet pass
-    const createUrl = getWalletPushCreateUrl(MOBILE_WALLET_TEMPLATE_ID)
+    const createUrl = getWalletPushCreateUrl(MOBILE_WALLET_TEMPLATE_ID, walletpushDashboardUrl)
     
     // Get the request host to build dynamic URLs
     const host = request.headers.get('host') || 'qwikker.com'
@@ -239,7 +240,7 @@ async function updatePassLinksAsync(
 
   for (const update of linkUpdates) {
     try {
-      const url = getWalletPushFieldUrl(passTypeId, serialNumber, update.field)
+      const url = getWalletPushFieldUrl(passTypeId, serialNumber, update.field, walletpushDashboardUrl)
       const res = await fetch(url, {
         method: 'PUT',
         headers: getWalletPushAuthHeader(apiKey),

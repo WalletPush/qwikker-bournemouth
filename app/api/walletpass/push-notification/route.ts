@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
 
     // 5. GET WALLETPUSH CREDENTIALS
     const credentials = await getWalletPushCredentials(businessCity)
+    const walletpushDashboardUrl = credentials.dashboardUrl
     
     if (!credentials.apiKey) {
       console.error('❌ Missing WalletPush API key for city:', businessCity)
@@ -446,7 +447,7 @@ export async function POST(request: NextRequest) {
             const messageWithLink = `${personalizedMessage}\n\nTap: ${trackingUrl}`
 
             const passTypeId = user.pass_type_identifier || 'pass.come.globalwalletpush'
-            const messageUrl = getWalletPushFieldUrl(passTypeId, user.wallet_pass_id, WALLET_PASS_FIELDS.LAST_MESSAGE)
+            const messageUrl = getWalletPushFieldUrl(passTypeId, user.wallet_pass_id, WALLET_PASS_FIELDS.LAST_MESSAGE, walletpushDashboardUrl)
 
             const walletPushResponse = await fetch(messageUrl, {
               method: 'PUT',

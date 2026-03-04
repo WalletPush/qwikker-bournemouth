@@ -22,6 +22,7 @@ export async function getWalletPushAnalytics(city: string = 'bournemouth'): Prom
     const credentials = await getWalletPushCredentials(city)
     const MOBILE_WALLET_APP_KEY = credentials.apiKey
     const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
+    const walletpushDashboardUrl = credentials.dashboardUrl
     
     if (!MOBILE_WALLET_APP_KEY || !MOBILE_WALLET_TEMPLATE_ID) {
       console.warn(`Missing WalletPush credentials for analytics (${city}):`, {
@@ -66,7 +67,7 @@ export async function getWalletPushAnalytics(city: string = 'bournemouth'): Prom
     
     const data = await response.json()
     
-    const activityUrl = getWalletPushActivityUrl(MOBILE_WALLET_TEMPLATE_ID)
+    const activityUrl = getWalletPushActivityUrl(MOBILE_WALLET_TEMPLATE_ID, walletpushDashboardUrl)
     
     const activityResponse = await fetch(activityUrl, {
       method: 'GET',

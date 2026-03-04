@@ -5,10 +5,20 @@
  * Base URL and auth format live here so changes propagate everywhere.
  */
 
-const WALLETPUSH_BASE_URL = 'https://loyalty.qwikker.com/api/external/v1'
+const DEFAULT_WALLETPUSH_BASE_URL = 'https://loyalty.qwikker.com/api/external/v1'
 
-export function getWalletPushBaseUrl(): string {
-  return process.env.WALLETPUSH_BASE_URL || WALLETPUSH_BASE_URL
+/**
+ * Resolves the WalletPush API base URL.
+ * Priority: dashboardUrl param -> WALLETPUSH_BASE_URL env var -> hardcoded default.
+ * When a dashboard URL is provided (e.g. "https://loyalty-bali.qwikker.com"),
+ * it appends "/api/external/v1" to form the API base.
+ */
+export function getWalletPushBaseUrl(dashboardUrl?: string): string {
+  if (dashboardUrl) {
+    const cleaned = dashboardUrl.replace(/\/+$/, '')
+    return `${cleaned}/api/external/v1`
+  }
+  return process.env.WALLETPUSH_BASE_URL || DEFAULT_WALLETPUSH_BASE_URL
 }
 
 export function getWalletPushAuthHeader(apiKey: string): Record<string, string> {
@@ -18,20 +28,20 @@ export function getWalletPushAuthHeader(apiKey: string): Record<string, string> 
   }
 }
 
-export function getWalletPushCreateUrl(templateId: string): string {
-  return `${getWalletPushBaseUrl()}/templates/${templateId}/pass`
+export function getWalletPushCreateUrl(templateId: string, dashboardUrl?: string): string {
+  return `${getWalletPushBaseUrl(dashboardUrl)}/templates/${templateId}/pass`
 }
 
-export function getWalletPushFieldUrl(passTypeId: string, serialNumber: string, fieldName: string): string {
-  return `${getWalletPushBaseUrl()}/passes/${passTypeId}/${serialNumber}/values/${fieldName}`
+export function getWalletPushFieldUrl(passTypeId: string, serialNumber: string, fieldName: string, dashboardUrl?: string): string {
+  return `${getWalletPushBaseUrl(dashboardUrl)}/passes/${passTypeId}/${serialNumber}/values/${fieldName}`
 }
 
-export function getWalletPushAnalyticsUrl(templateId: string): string {
-  return `${getWalletPushBaseUrl()}/templates/${templateId}/analytics`
+export function getWalletPushAnalyticsUrl(templateId: string, dashboardUrl?: string): string {
+  return `${getWalletPushBaseUrl(dashboardUrl)}/templates/${templateId}/analytics`
 }
 
-export function getWalletPushActivityUrl(templateId: string): string {
-  return `${getWalletPushBaseUrl()}/templates/${templateId}/activity`
+export function getWalletPushActivityUrl(templateId: string, dashboardUrl?: string): string {
+  return `${getWalletPushBaseUrl(dashboardUrl)}/templates/${templateId}/activity`
 }
 
 /**

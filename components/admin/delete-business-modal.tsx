@@ -19,6 +19,7 @@ interface DeleteBusinessModalProps {
   onConfirm: () => Promise<void>
   businessName: string
   businessId: string
+  variant?: 'default' | 'incomplete'
 }
 
 export function DeleteBusinessModal({
@@ -26,7 +27,8 @@ export function DeleteBusinessModal({
   onClose,
   onConfirm,
   businessName,
-  businessId
+  businessId,
+  variant = 'default'
 }: DeleteBusinessModalProps) {
   const [confirmText, setConfirmText] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
@@ -78,19 +80,42 @@ export function DeleteBusinessModal({
             <div className="text-xs text-slate-400 font-mono">ID: {businessId}</div>
           </div>
 
+          {/* Incomplete-specific suggestion */}
+          {variant === 'incomplete' && (
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-2">
+              <div className="font-semibold text-amber-400 flex items-center gap-2">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Consider sending a reminder first
+              </div>
+              <p className="text-sm text-amber-200/80">
+                This business hasn&apos;t finished their profile yet. It might be worth sending a completion reminder before deleting — they may just need a nudge.
+              </p>
+            </div>
+          )}
+
           {/* Warning Section */}
           <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg space-y-2">
             <div className="font-semibold text-red-400 flex items-center gap-2">
               <Trash2 className="h-4 w-4" />
               This action cannot be undone!
             </div>
-            <ul className="text-sm text-red-300 space-y-1 ml-6 list-disc">
-              <li>All business data will be permanently deleted</li>
-              <li>Subscription records will be removed</li>
-              <li>Offers, menus, and media will be deleted</li>
-              <li>Analytics data will be lost</li>
-              <li>Business owner will lose access immediately</li>
-            </ul>
+            {variant === 'incomplete' ? (
+              <ul className="text-sm text-red-300 space-y-1 ml-6 list-disc">
+                <li>The incomplete profile and all submitted data will be permanently deleted</li>
+                <li>The business owner will lose access to their dashboard</li>
+                <li>A notification email will be sent to the business owner with a link to re-sign up</li>
+              </ul>
+            ) : (
+              <ul className="text-sm text-red-300 space-y-1 ml-6 list-disc">
+                <li>All business data will be permanently deleted</li>
+                <li>Subscription records will be removed</li>
+                <li>Offers, menus, and media will be deleted</li>
+                <li>Analytics data will be lost</li>
+                <li>Business owner will lose access immediately</li>
+              </ul>
+            )}
           </div>
 
           {/* Confirmation Input */}

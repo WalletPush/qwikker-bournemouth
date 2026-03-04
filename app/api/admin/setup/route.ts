@@ -47,6 +47,7 @@ function sanitizeConfigForClient(data: any) {
     resend_from_email: data.resend_from_email,
     resend_from_name: data.resend_from_name,
     walletpush_template_id: data.walletpush_template_id,
+    walletpush_dashboard_url: data.walletpush_dashboard_url,
     slack_channel: data.slack_channel,
     
     // 🔒 SECRETS: Return masked values + "has_*" flags
