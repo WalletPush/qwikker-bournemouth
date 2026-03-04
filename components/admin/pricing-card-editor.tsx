@@ -18,6 +18,46 @@ interface PricingCard {
   color_scheme: 'slate' | 'blue' | 'gold'
 }
 
+function formatPrice(value: number, currency?: string): string {
+  if (value === 0) return '0'
+  const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND', 'IDR', 'CLP', 'PYG', 'UGX', 'RWF', 'XOF', 'XAF', 'KHR', 'LAK', 'MMK']
+  const isZeroDecimal = currency && zeroDecimalCurrencies.includes(currency.toUpperCase())
+  if (isZeroDecimal || Number.isInteger(value)) {
+    return Math.round(value).toLocaleString('en-US')
+  }
+  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function parsePrice(input: string): number {
+  const cleaned = input.replace(/[^0-9.\-]/g, '')
+  return parseFloat(cleaned) || 0
+}
+
+function PriceInput({ value, currency, onChange }: { value: number; currency: string; onChange: (val: number) => void }) {
+  const [displayText, setDisplayText] = useState(value ? String(value) : '')
+
+  useEffect(() => {
+    const currentParsed = parsePrice(displayText)
+    if (currentParsed !== value) {
+      setDisplayText(value ? String(value) : '')
+    }
+  }, [value])
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      value={displayText}
+      onChange={(e) => {
+        setDisplayText(e.target.value)
+        onChange(parsePrice(e.target.value))
+      }}
+      className="bg-slate-700 border-slate-600 text-white"
+      placeholder="e.g. 200,000"
+    />
+  )
+}
+
 interface PricingCards {
   free: PricingCard
   starter: PricingCard
@@ -352,9 +392,8 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
               ) : (
                 <>
                   {/* Paid tiers - show monthly and annual pricing */}
-                  {/* EXACT pricing display from business dashboard */}
                   <div className="text-3xl font-bold text-white mb-2">
-                    {config.currency_symbol}{card.price}
+                    {config.currency_symbol}{formatPrice(card.price, config.currency)}
                     <span className="text-lg font-normal text-gray-400">/month</span>
                   </div>
                   
@@ -362,7 +401,7 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
                   {showDiscountPricing ? (
                     <div className="text-center">
                       <div className="text-lg font-semibold text-green-400">
-                        {config.currency_symbol}{Math.round(card.annual_price * discountMultiplier)}/year
+                        {config.currency_symbol}{formatPrice(Math.round(card.annual_price * discountMultiplier), config.currency)}/year
                       </div>
                       <div className="text-xs text-green-300 mt-1">
                         2 months free + {config.founding_member_discount}% founding member discount
@@ -371,7 +410,7 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
                   ) : (
                     <div className="text-center">
                       <div className="text-sm text-gray-400">
-                        {config.currency_symbol}{card.annual_price}/year
+                        {config.currency_symbol}{formatPrice(card.annual_price, config.currency)}/year
                       </div>
                       <div className="text-xs text-blue-400 mt-1">2 months free</div>
                     </div>
@@ -704,24 +743,20 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <Label className="text-slate-300">Monthly Price</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={config.pricing_cards[selectedCard].price || ''}
-                onChange={(e) => updateCard(selectedCard, 'price', parseFloat(e.target.value) || 0)}
-                className="bg-slate-700 border-slate-600 text-white"
+              <Label className="text-slate-300">Monthly Price ({config.currency_symbol})</Label>
+              <PriceInput
+                value={config.pricing_cards[selectedCard].price}
+                currency={config.currency}
+                onChange={(val) => updateCard(selectedCard, 'price', val)}
               />
             </div>
             
             <div>
-              <Label className="text-slate-300">Annual Price</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={config.pricing_cards[selectedCard].annual_price || ''}
-                onChange={(e) => updateCard(selectedCard, 'annual_price', parseFloat(e.target.value) || 0)}
-                className="bg-slate-700 border-slate-600 text-white"
+              <Label className="text-slate-300">Annual Price ({config.currency_symbol})</Label>
+              <PriceInput
+                value={config.pricing_cards[selectedCard].annual_price}
+                currency={config.currency}
+                onChange={(val) => updateCard(selectedCard, 'annual_price', val)}
               />
             </div>
             

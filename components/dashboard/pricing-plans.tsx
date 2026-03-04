@@ -12,6 +12,7 @@ interface PricingPlansProps {
 }
 
 interface DynamicPricing {
+  currency: string
   currency_symbol: string
   starter_price: number
   featured_price: number
@@ -38,6 +39,16 @@ interface DynamicPricing {
   founding_member_description: string
 }
 
+function formatPrice(value: number, currency?: string): string {
+  if (value === 0) return '0'
+  const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND', 'IDR', 'CLP', 'PYG', 'UGX', 'RWF', 'XOF', 'XAF', 'KHR', 'LAK', 'MMK']
+  const isZeroDecimal = currency && zeroDecimalCurrencies.includes(currency.toUpperCase())
+  if (isZeroDecimal || Number.isInteger(value)) {
+    return Math.round(value).toLocaleString('en-US')
+  }
+  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false, profile }: PricingPlansProps) {
   const [dynamicPricing, setDynamicPricing] = useState<DynamicPricing | null>(null)
   const [city, setCity] = useState<string>('bournemouth')
@@ -60,6 +71,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
           if (data.success && data.config.pricing_cards) {
             const cards = data.config.pricing_cards
             const pricing = {
+              currency: data.config.currency || 'GBP',
               currency_symbol: data.config.currency_symbol || '£',
               starter_price: cards.starter?.price || 29,
               featured_price: cards.featured?.price || 59,
@@ -90,8 +102,8 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
           }
         } else {
           console.log('❌ Pricing API failed:', response.status)
-          // Set fallback pricing if API fails
           setDynamicPricing({
+            currency: 'GBP',
             currency_symbol: '£',
             starter_price: 29,
             featured_price: 59,
@@ -99,7 +111,6 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
             starter_yearly: 290,
             featured_yearly: 590,
             spotlight_yearly: 890,
-            // Fallback text fields
             starter_title: 'Starter',
             featured_title: 'Featured',
             spotlight_title: 'Spotlight',
@@ -120,8 +131,8 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
         }
       } catch (error) {
         console.log('❌ Pricing API error:', error)
-        // Set fallback pricing if API fails
         setDynamicPricing({
+          currency: 'GBP',
           currency_symbol: '£',
           starter_price: 29,
           featured_price: 59,
@@ -129,7 +140,6 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
           starter_yearly: 290,
           featured_yearly: 590,
           spotlight_yearly: 890,
-          // Fallback text fields
           starter_title: 'Starter',
           featured_title: 'Featured',
           spotlight_title: 'Spotlight',
@@ -329,7 +339,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
                 ) : (
                   <>
                     <div className="text-3xl font-bold text-white mb-2">
-                      {dynamicPricing?.currency_symbol || '£'}{plan.price}
+                      {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.price, dynamicPricing?.currency)}
                       <span className="text-lg font-normal text-gray-400">/month</span>
                     </div>
                     
@@ -337,7 +347,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
                     {showDiscountPricing ? (
                       <div className="text-center">
                         <div className="text-lg font-semibold text-green-400">
-                          {dynamicPricing?.currency_symbol || '£'}{plan.yearlyDiscount}/year
+                          {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.yearlyDiscount, dynamicPricing?.currency)}/year
                         </div>
                         <div className="text-xs text-green-300 mt-1">
                           2 months free + {dynamicPricing?.founding_member_discount || 20}% founding member discount
@@ -346,7 +356,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
                     ) : (
                       <div className="text-center">
                         <div className="text-sm text-gray-400">
-                          {dynamicPricing?.currency_symbol || '£'}{plan.yearlyPrice}/year
+                          {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.yearlyPrice, dynamicPricing?.currency)}/year
                         </div>
                         <div className="text-xs text-blue-400 mt-1">2 months free</div>
                       </div>
