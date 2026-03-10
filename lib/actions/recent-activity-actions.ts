@@ -19,9 +19,9 @@ export async function getRecentBusinessActivity(franchiseCity?: string): Promise
   const activity: ActivityItem[] = []
 
   try {
-    // Get recently joined businesses (last 7 days) - FRANCHISE FILTERED + ELIGIBILITY FILTERED
+    // Get recently joined businesses (last 30 days) - FRANCHISE FILTERED + ELIGIBILITY FILTERED
     const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 30)
     
     let query = supabase
       .from('business_profiles')
@@ -175,30 +175,24 @@ export async function getRecentBusinessActivity(franchiseCity?: string): Promise
       .not('additional_notes', 'is', null)
       .gte('updated_at', sevenDaysAgo.toISOString())
       .order('updated_at', { ascending: false })
-      .limit(10) // Fetch more to account for expired trials
+      .limit(10)
     
-    // 🔒 SECURITY: Filter by franchise if provided
     if (franchiseCity) {
       secretQuery = secretQuery.eq('city', franchiseCity)
     }
     
     const { data: secretMenuBusinesses } = await secretQuery
     
-    // ✅ CRITICAL: Filter out expired trial businesses
     const activeSecretMenuBusinesses = (secretMenuBusinesses || []).filter(business => {
       if (!business.business_subscriptions || !Array.isArray(business.business_subscriptions) || business.business_subscriptions.length === 0) {
-        return true // No subscription = legacy/unclaimed (show)
+        return true
       }
-      
       const sub = business.business_subscriptions[0]
-      if (!sub.is_in_free_trial) return true // Paid customer (show)
-      
+      if (!sub.is_in_free_trial) return true
       if (sub.free_trial_end_date) {
         const endDate = new Date(sub.free_trial_end_date)
-        const now = new Date()
-        return endDate >= now // Only show if trial NOT expired
+        return endDate >= new Date()
       }
-      
       return true
     })
 

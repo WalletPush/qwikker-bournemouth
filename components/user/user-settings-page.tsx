@@ -33,16 +33,57 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
   const [citiesLoading, setCitiesLoading] = useState(false)
 
   const [preferences, setPreferences] = useState({
-    categories: ['Restaurant', 'Cafe', 'Bar'],
+    categories: [] as string[],
     days: ['Friday', 'Saturday', 'Sunday'],
     radius: '3 miles',
     priceRange: 'All'
   })
+  const [prefSaving, setPrefSaving] = useState(false)
 
-  // Fetch current consent status on mount
+  // Fetch current consent status and preferences on mount
   useEffect(() => {
     fetchConsent()
+    loadPreferences()
   }, [])
+
+  const loadPreferences = async () => {
+    const passId = currentUser?.wallet_pass_id
+    if (!passId) return
+    try {
+      const res = await fetch(`/api/user/preferences?walletPassId=${passId}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.preferred_categories?.length > 0) {
+          setPreferences(prev => ({ ...prev, categories: data.preferred_categories }))
+        }
+        if (data.preferred_radius_miles) {
+          const miles = data.preferred_radius_miles
+          const label = miles === 1 ? '1 mile' : `${miles} miles`
+          setPreferences(prev => ({ ...prev, radius: label }))
+        }
+      }
+    } catch { /* safe to ignore */ }
+  }
+
+  const savePreferences = async (updated: { categories?: string[]; radius?: string }) => {
+    const passId = currentUser?.wallet_pass_id
+    if (!passId) return
+    setPrefSaving(true)
+    try {
+      const body: Record<string, unknown> = { walletPassId: passId }
+      if (updated.categories) body.preferred_categories = updated.categories
+      if (updated.radius) {
+        const match = updated.radius.match(/(\d+)/)
+        if (match) body.preferred_radius_miles = parseInt(match[1], 10)
+      }
+      await fetch('/api/user/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    } catch { /* safe to ignore */ }
+    setPrefSaving(false)
+  }
 
   const fetchConsent = async () => {
     try {
@@ -256,12 +297,11 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
                 <button
                   key={category}
                   onClick={() => {
-                    setPreferences(prev => ({
-                      ...prev,
-                      categories: prev.categories.includes(category)
-                        ? prev.categories.filter(c => c !== category)
-                        : [...prev.categories, category]
-                    }))
+                    const updated = preferences.categories.includes(category)
+                      ? preferences.categories.filter(c => c !== category)
+                      : [...preferences.categories, category]
+                    setPreferences(prev => ({ ...prev, categories: updated }))
+                    savePreferences({ categories: updated })
                   }}
                   className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
                     preferences.categories.includes(category)
@@ -307,7 +347,10 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
               {['1 mile', '3 miles', '5 miles', '10 miles'].map((radius) => (
                 <button
                   key={radius}
-                  onClick={() => setPreferences(prev => ({ ...prev, radius }))}
+                  onClick={() => {
+                    setPreferences(prev => ({ ...prev, radius }))
+                    savePreferences({ radius })
+                  }}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     preferences.radius === radius
                       ? 'bg-[#00d083] text-black'
@@ -319,6 +362,9 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
               ))}
             </div>
           </div>
+          {prefSaving && (
+            <p className="text-xs text-slate-500">Saving...</p>
+          )}
         </CardContent>
       </Card>
 
