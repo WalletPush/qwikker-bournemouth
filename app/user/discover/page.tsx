@@ -122,6 +122,8 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
         offer_type,
         offer_value,
         offer_image,
+        offer_start_date,
+        offer_end_date,
         status
       ),
       business_subscriptions!business_subscriptions_business_id_fkey(

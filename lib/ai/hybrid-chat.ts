@@ -561,12 +561,14 @@ HARD RULES (DO NOT BREAK):
 - ZERO RESULTS: Be honest. NEVER say "you're in luck" if you have nothing to show. Suggest a nearby alternative category or ask what else they'd like.
 - MATCH USER LANGUAGE: If the user asked for "bars", say "bars" in your response — never substitute with "dining options", "restaurants", or "places to eat". Mirror the user's terminology.
 - "ANY MORE?" HANDLING: If you showed all matches, say so. If you missed any, correct yourself immediately.
-- LOYALTY (IMPORTANT — READ CAREFULLY):
-  1. USER HAS LOYALTY PROGRESS: If USER LOYALTY PROGRESS section exists below, ALWAYS open with a brief loyalty update when the user asks broad discovery questions ("where should I go", "what's good tonight", "any recommendations"). Example: "You're 2 stamps away from a free cocktail at Ember & Oak — might be worth popping in!"
-  2. PRIORITIZE LOYALTY BUSINESSES: When recommending, list businesses where the user has active loyalty progress FIRST (especially if close to a reward). These are the most relevant because the user already goes there.
-  3. MENTION LOYALTY AS INCENTIVE: For Spotlight businesses with a loyalty program that the user is NOT a member of, mention it as a reason to visit: "They've got a loyalty card too — collect X for Y."
-  4. NEAR-REWARD NUDGE: If the user is within 3 stamps of a reward, make it prominent — don't bury it. "You're SO close to a free X at Y!"
-  5. NEVER fabricate loyalty data. Only reference what's in the data.
+- LOYALTY (CRITICAL — READ CAREFULLY):
+  1. NEVER fabricate loyalty stamp counts, stamp progress, or reward proximity. Only cite data that appears in the structured [USER: X/Y stamps] tag within a business entry.
+  2. If a USER LOYALTY PROGRESS section exists below, you may open broad discovery responses with a brief loyalty nudge for businesses where the user has progress.
+  3. If NO USER LOYALTY PROGRESS section exists below, NEVER mention stamp counts, "stamps away", or reward progress. You may mention that a business has a loyalty program if it shows "Loyalty:" in its context — but ONLY as a general incentive (e.g. "They have a loyalty card you can join").
+  4. PRIORITIZE LOYALTY BUSINESSES: When recommending, list businesses where the user has active loyalty progress FIRST (especially if close to a reward).
+  5. NEAR-REWARD NUDGE: If the user is within 3 stamps of a reward (shown as [USER: X/Y stamps]), make it prominent.
+- OFFERS (CRITICAL — READ CAREFULLY):
+  Only mention offers for businesses that have [Has X offers available] in their context line. If a business does NOT have this tag, they have NO current valid offers — do NOT reference any offers from KB descriptions, even if the text mentions past promotions.
 
 MULTI-PART QUERIES:
 When the user asks for more than one thing (e.g. "drinks then food", "cocktails AND spicy food", "brunch and shopping"):
@@ -1054,9 +1056,28 @@ export async function generateHybridAIResponse(
       }
       
       // For each business, concatenate ALL relevant KB content
+      const now = new Date()
       for (const [businessId, kbEntries] of kbByBusiness.entries()) {
         // Filter out archived/inactive entries (if status field exists)
-        const activeEntries = kbEntries.filter(kb => !kb.status || kb.status === 'active')
+        const activeEntries = kbEntries.filter(kb => {
+          if (kb.status && kb.status !== 'active') return false
+
+          // Filter expired offer entries by checking content for "Valid until:" or "Valid: ... to ..."
+          const content = (kb.content || '') as string
+          if (content.startsWith('OFFER:')) {
+            const validUntilMatch = content.match(/Valid until:\s*(.+)/i)
+            const validRangeMatch = content.match(/Valid:\s*.+\s+to\s+(.+)/i)
+            const endDateStr = validUntilMatch?.[1]?.trim() || validRangeMatch?.[1]?.trim()
+            if (endDateStr) {
+              const endDate = new Date(endDateStr)
+              if (!isNaN(endDate.getTime()) && endDate < now) {
+                console.log(`🚫 Filtering expired KB offer: ${kb.title} (expired ${endDateStr})`)
+                return false
+              }
+            }
+          }
+          return true
+        })
         
         if (activeEntries.length === 0) continue
         
@@ -1414,14 +1435,16 @@ export async function generateHybridAIResponse(
             ratingLine = `\nRating: ${business.rating}★ from ${business.review_count} Google reviews`
           }
           
-          // Loyalty program context (only for active programs)
+          // Loyalty program context — program existence is public, user progress requires validated wallet pass
           let loyaltyLine = ''
           const loyaltyProg = loyaltyByBusinessId.get(business.id)
           if (loyaltyProg) {
             loyaltyLine = `\nLoyalty: Collect ${loyaltyProg.reward_threshold} stamps for ${loyaltyProg.reward_description}`
-            const userProgress = userLoyaltyByBusinessId.get(business.id)
-            if (userProgress) {
-              loyaltyLine += ` [USER: ${userProgress.stamps_balance}/${loyaltyProg.reward_threshold} stamps, ${userProgress.stamps_remaining} to go]`
+            if (context.walletPassId) {
+              const userProgress = userLoyaltyByBusinessId.get(business.id)
+              if (userProgress) {
+                loyaltyLine += ` [USER: ${userProgress.stamps_balance}/${loyaltyProg.reward_threshold} stamps, ${userProgress.stamps_remaining} to go]`
+              }
             }
           }
 

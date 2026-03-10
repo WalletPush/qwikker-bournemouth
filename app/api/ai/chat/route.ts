@@ -249,14 +249,18 @@ export async function POST(request: NextRequest) {
     console.log(`🤖 AI Chat request for city: ${city}`)
 
     // Validate user if wallet pass ID provided
+    // CRITICAL: Only pass walletPassId to AI context if validation succeeds
+    // Prevents anonymous/stale sessions from leaking other users' loyalty data
     let userName = 'there'
+    let validatedWalletPassId: string | undefined = undefined
     if (walletPassId) {
       const { user, isValid } = await getValidatedUser(walletPassId)
       if (isValid && user) {
         userName = user.name || 'there'
+        validatedWalletPassId = walletPassId
         console.log(`✅ Validated user: ${userName}`)
       } else {
-        console.warn(`⚠️ Invalid wallet pass ID in AI chat: ${walletPassId}`)
+        console.warn(`⚠️ Invalid wallet pass ID in AI chat — not passing to AI context: ${walletPassId}`)
       }
     }
     
@@ -278,7 +282,7 @@ export async function POST(request: NextRequest) {
     const result = await generateHybridAIResponse(message, {
       city,
       userName,
-      walletPassId,
+      walletPassId: validatedWalletPassId,
       userLocation: hasUserLocation ? {
         latitude: userLocation.lat,
         longitude: userLocation.lng

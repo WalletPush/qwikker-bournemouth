@@ -87,7 +87,7 @@ export default async function ChatPage({
       cityDisplayName={cityDisplayName}
     >
       <UserChatPage 
-        currentUser={{ ...currentUser, wallet_pass_id: userId }}
+        currentUser={currentUser ? { ...currentUser, wallet_pass_id: userId } : undefined}
         currentCity={currentCity}
         cityDisplayName={cityDisplayName}
       />
