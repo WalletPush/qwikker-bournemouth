@@ -56,7 +56,19 @@ export default async function SocialWizardRoute() {
 
   return (
     <DashboardLayout currentSection="social-wizard" profile={profile} actionItemsCount={actionItemsCount}>
-      <SocialWizardPageClient profile={profile} />
+      <div className="max-w-2xl mx-auto py-16 px-4 text-center">
+        <div className="w-16 h-16 mx-auto mb-6 bg-slate-800 rounded-full flex items-center justify-center">
+          <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-bold text-white mb-3">Social Wizard</h1>
+        <p className="text-slate-400 mb-2">Coming Soon</p>
+        <p className="text-slate-500 text-sm max-w-md mx-auto">
+          AI-powered social content generation is being rebuilt from the ground up. 
+          Create branded posts for Instagram, Facebook, and more — all matched to your business.
+        </p>
+      </div>
     </DashboardLayout>
   )
 }

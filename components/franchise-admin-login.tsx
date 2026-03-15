@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import type { FranchiseCity } from '@/lib/utils/client-city-detection'
 
 interface FranchiseAdminLoginProps {
@@ -15,6 +15,8 @@ export default function FranchiseAdminLogin({ city, cityDisplayName }: Franchise
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isPasswordReset = searchParams.get('message') === 'password-reset'
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -92,11 +94,16 @@ export default function FranchiseAdminLogin({ city, cityDisplayName }: Franchise
           <h1 className="text-2xl font-bold text-white mb-2">Admin Access</h1>
           <p className="text-slate-400">{cityDisplayName} Franchise Dashboard</p>
           <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-900/50 text-red-300 border border-red-800">
-            🔒 Admin Only - Authorized Personnel
+            Admin Only — Authorized Personnel
           </div>
         </div>
         
         <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-xl p-6">
+          {isPasswordReset && (
+            <div className="mb-4 p-3 text-sm text-green-300 bg-green-900/30 border border-green-800 rounded-md">
+              Password reset successfully. Sign in with your new password.
+            </div>
+          )}
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="admin-username" className="block text-slate-200 font-medium">
@@ -155,10 +162,19 @@ export default function FranchiseAdminLogin({ city, cityDisplayName }: Franchise
           </form>
         </div>
         
+        {/* Forgot Password */}
+        <div className="text-center mt-6">
+          <a
+            href="/admin/forgot-password"
+            className="text-sm text-slate-400 hover:text-white transition-colors underline-offset-4 hover:underline"
+          >
+            Forgot your password?
+          </a>
+        </div>
+
         {/* Footer */}
-        <div className="text-center mt-8 text-slate-500 text-sm">
-          <p>⚠️ This is a restricted administrative interface</p>
-          <p>Unauthorized access is prohibited</p>
+        <div className="text-center mt-6 text-slate-500 text-sm">
+          <p>This is a restricted administrative interface</p>
         </div>
       </div>
     </div>

@@ -256,6 +256,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Notify the business (fire-and-forget)
+    if (program.business_id) {
+      const businessName = (program as any).business_profiles?.business_name || 'your business'
+      import('@/lib/actions/business-notification-actions').then(({ createBusinessNotification }) => {
+        const title = rewardUnlocked ? 'Reward unlocked' : 'Stamp earned'
+        const message = rewardUnlocked
+          ? `A customer unlocked "${program.reward_description}"`
+          : `A customer earned stamp ${newBalance}/${program.reward_threshold}`
+        createBusinessNotification({
+          businessId: program.business_id,
+          type: 'stamp_earn',
+          title,
+          message,
+          metadata: { newBalance, threshold: program.reward_threshold, rewardUnlocked },
+        }).catch(() => {})
+      })
+    }
+
     // 13. Build response
     const proximityMessage = rewardUnlocked
       ? null

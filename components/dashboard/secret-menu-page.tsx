@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { addSecretMenuItem, deleteSecretMenuItem } from '@/lib/actions/business-actions'
 import { Profile } from '@/types/profiles'
+import { getMaxSecretMenuItems } from '@/lib/utils/tier-limits'
 
 interface SecretMenuItem {
   id: string
@@ -148,9 +149,7 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
     }
   }
 
-  // Plan limits
-  const isFreeTrial = profile.plan === 'starter'
-  const secretMenuLimit = isFreeTrial ? 3 : profile.plan === 'spotlight' ? 10 : 999
+  const secretMenuLimit = getMaxSecretMenuItems(profile.status === 'claimed_free' ? 'claimed_free' : (profile.plan || 'starter'))
   const currentItemCount = secretMenuItems.length
 
   return (
@@ -198,9 +197,9 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
           <p className="text-sm text-gray-400">
             {currentItemCount} of {secretMenuLimit} secret items
           </p>
-          {isFreeTrial && (
+          {secretMenuLimit === 0 && (
             <p className="text-xs text-yellow-400">
-              Free Trial: {secretMenuLimit} items maximum
+              Upgrade your plan to unlock secret menu items
             </p>
           )}
         </div>
@@ -331,6 +330,7 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
                     className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
                     placeholder="e.g., The Founder's Special, Hidden Gem Latte"
                     required
+                    maxLength={60}
                   />
                   <p className="text-xs text-gray-400 mt-1">
                     Give your secret item an intriguing name that customers will remember
@@ -345,6 +345,7 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     className="flex w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-white placeholder:text-gray-400 focus:border-[#00d083] focus:ring-[3px] focus:ring-[#00d083]/20 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 min-h-[100px] resize-none"
                     placeholder="Describe what makes this item special, its ingredients, or why it's exclusive..."
+                    maxLength={200}
                   />
                   <p className="text-xs text-gray-400 mt-1">
                     Help customers understand what makes this item unique and worth trying
@@ -435,7 +436,7 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
       )}
 
       {/* Plan Upgrade Notice */}
-      {isFreeTrial && currentItemCount >= secretMenuLimit && (
+      {currentItemCount >= secretMenuLimit && (
         <Card className="bg-slate-800/50 border-slate-700">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -447,8 +448,8 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
               <div className="flex-1">
                 <h3 className="font-semibold text-white mb-1">Secret Menu Limit Reached</h3>
                 <p className="text-sm text-gray-400">
-                  You've reached the maximum of {secretMenuLimit} secret items for the Free Trial plan. 
-                  Upgrade to Spotlight for up to 10 items or Pro for unlimited secret menu items.
+                  You've reached the maximum of {secretMenuLimit} secret items for your plan. 
+                  Upgrade to unlock more secret menu items.
                 </p>
               </div>
               <Button

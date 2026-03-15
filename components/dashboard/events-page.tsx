@@ -18,6 +18,7 @@ import {
   BusinessEvent
 } from '@/lib/actions/event-actions'
 import { Calendar, Clock, MapPin, Users, ExternalLink, Plus, Pencil, Trash2, X, XCircle, Eye } from 'lucide-react'
+import { getMaxEvents } from '@/lib/utils/tier-limits'
 
 const EVENT_TYPE_OPTIONS = [
   { value: 'live_music', label: 'Live Music' },
@@ -43,12 +44,27 @@ const RECURRENCE_OPTIONS = [
   { value: 'last_saturday', label: 'Last Saturday of Month' },
 ]
 
+const TIME_OPTIONS = (() => {
+  const options: { value: string; label: string }[] = []
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const value = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+      const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+      const ampm = h < 12 ? 'AM' : 'PM'
+      const label = `${hour12}:${m.toString().padStart(2, '0')} ${ampm}`
+      options.push({ value, label })
+    }
+  }
+  return options
+})()
+
 interface EventsPageProps {
   businessId: string
   businessName: string
+  plan?: string
 }
 
-export function EventsPage({ businessId, businessName }: EventsPageProps) {
+export function EventsPage({ businessId, businessName, plan = 'starter' }: EventsPageProps) {
   const router = useRouter()
   const [events, setEvents] = useState<BusinessEvent[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -60,6 +76,7 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
   
   const { showConfirm, ModalComponent } = useElegantModal()
   const formRef = useRef<HTMLDivElement>(null)
+  const eventLimit = getMaxEvents(plan)
 
   const [formData, setFormData] = useState({
     event_name: '',
@@ -397,15 +414,18 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
           <h2 className="text-2xl font-bold text-white">Events Management</h2>
           <p className="text-slate-400 mt-1">
             Create and manage events for {businessName}
+            {eventLimit < 999 && (
+              <span className="ml-2 text-xs text-slate-500">({events.length} of {eventLimit} events)</span>
+            )}
           </p>
         </div>
         <Button
           onClick={startCreateEvent}
-          disabled={isLoading}
+          disabled={isLoading || events.length >= eventLimit}
           className="bg-[#00d083] hover:bg-[#00b86f] text-white"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Create Event
+          {events.length >= eventLimit ? 'Limit Reached' : 'Create Event'}
         </Button>
       </div>
 
@@ -453,6 +473,7 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
                       onChange={(e) => handleInputChange('event_name', e.target.value)}
                       placeholder="e.g., Live Jazz Night"
                       required
+                      maxLength={80}
                       className="bg-slate-700/50 border-slate-600 text-white"
                     />
                   </div>
@@ -494,6 +515,7 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
                     onChange={(e) => handleInputChange('event_description', e.target.value)}
                     placeholder="Detailed description of your event..."
                     required
+                    maxLength={1000}
                     rows={4}
                     className="bg-slate-700/50 border-slate-600 text-white"
                   />
@@ -523,24 +545,32 @@ export function EventsPage({ businessId, businessName }: EventsPageProps) {
 
                   <div>
                     <Label htmlFor="event_start_time" className="text-slate-300">Start Time</Label>
-                    <Input
+                    <select
                       id="event_start_time"
-                      type="time"
                       value={formData.event_start_time}
                       onChange={(e) => handleInputChange('event_start_time', e.target.value)}
-                      className="bg-slate-700/50 border-slate-600 text-white"
-                    />
+                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white text-sm"
+                    >
+                      <option value="">Select time...</option>
+                      {TIME_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
                     <Label htmlFor="event_end_time" className="text-slate-300">End Time</Label>
-                    <Input
+                    <select
                       id="event_end_time"
-                      type="time"
                       value={formData.event_end_time}
                       onChange={(e) => handleInputChange('event_end_time', e.target.value)}
-                      className="bg-slate-700/50 border-slate-600 text-white"
-                    />
+                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white text-sm"
+                    >
+                      <option value="">Select time...</option>
+                      {TIME_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

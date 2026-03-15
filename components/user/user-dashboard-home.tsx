@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -774,30 +774,72 @@ function NavigationCards({
     { href: '/user/badges', label: 'Badges', count: badgeCount, sub: 'earned', color: 'yellow', gradient: 'from-yellow-500/30 to-amber-500/30', border: 'border-yellow-500/30', card: 'from-yellow-500/10 to-yellow-500/5 border-yellow-500/20 hover:border-yellow-500/40', text: 'text-yellow-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /> },
   ]
 
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [showRightFade, setShowRightFade] = useState(true)
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const maxScroll = el.scrollWidth - el.clientWidth
+    const progress = maxScroll > 0 ? el.scrollLeft / maxScroll : 0
+    setActiveIndex(progress > 0.4 ? 1 : 0)
+    setShowRightFade(el.scrollLeft + el.clientWidth < el.scrollWidth - 8)
+  }, [])
+
+  const scrollToCard = useCallback((idx: number) => {
+    const el = scrollRef.current
+    if (!el) return
+    const cardWidth = 128 + 12
+    el.scrollTo({ left: idx * cardWidth, behavior: 'smooth' })
+  }, [])
+
   return (
     <>
-      {/* Mobile: horizontal scroll */}
-      <div
-        className="sm:hidden -mx-4 flex overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hidden"
-        style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain' }}
-      >
-        <div className="flex gap-4 px-4">
-          {cards.map(c => (
-            <Link key={c.label} href={getNavUrl(c.href)} className="snap-start shrink-0 w-32">
-              <Card className={`bg-gradient-to-br ${c.card} transition-colors duration-200 cursor-pointer`}>
-                <CardContent className="p-5 text-center">
-                  <div className={`w-14 h-14 bg-gradient-to-br ${c.gradient} rounded-xl mx-auto mb-3 flex items-center justify-center border ${c.border}`}>
-                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      {c.icon}
-                    </svg>
-                  </div>
-                  <h3 className="font-semibold text-slate-100 text-sm mb-1">{c.label}</h3>
-                  <p className={`${c.text} font-bold text-2xl`}>{c.count}</p>
-                  <p className="text-xs text-slate-400">{c.sub}</p>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+      {/* Mobile: horizontal scroll with indicators */}
+      <div className="sm:hidden">
+        <div className="relative">
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="-mx-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hidden"
+            style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain', scrollPaddingInlineStart: '1rem' }}
+          >
+            <div className="flex gap-3 px-4">
+              {cards.map(c => (
+                <Link key={c.label} href={getNavUrl(c.href)} className="snap-start shrink-0 w-32">
+                  <Card className={`bg-gradient-to-br ${c.card} transition-colors duration-200 cursor-pointer`}>
+                    <CardContent className="p-5 text-center">
+                      <div className={`w-14 h-14 bg-gradient-to-br ${c.gradient} rounded-xl mx-auto mb-3 flex items-center justify-center border ${c.border}`}>
+                        <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {c.icon}
+                        </svg>
+                      </div>
+                      <h3 className="font-semibold text-slate-100 text-sm mb-1">{c.label}</h3>
+                      <p className={`${c.text} font-bold text-2xl`}>{c.count}</p>
+                      <p className="text-xs text-slate-400">{c.sub}</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+          {showRightFade && (
+            <div className="absolute top-0 right-0 bottom-2 w-8 bg-gradient-to-l from-slate-900 to-transparent pointer-events-none" />
+          )}
+        </div>
+        <div className="flex justify-center gap-1.5 pt-3">
+          {[0, 1].map(i => {
+            const isActive = (activeIndex === i)
+            return (
+              <div
+                key={i}
+                className={`rounded-full transition-all duration-300 ${
+                  isActive ? 'w-4 h-1.5 bg-white/90' : 'w-1.5 h-1.5 bg-slate-600'
+                }`}
+              />
+            )
+          })}
         </div>
       </div>
 

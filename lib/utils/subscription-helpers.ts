@@ -162,19 +162,8 @@ function getTierDisplayName(tier: string): string {
   return names[tier] || 'Starter'
 }
 
-/**
- * Get max offers for a tier
- */
-function getMaxOffers(tier: string): number {
-  const limits: Record<string, number> = {
-    'free': 1,
-    'starter': 3,
-    'featured': 5,
-    'spotlight': 10,
-    'pro': 10
-  }
-  return limits[tier] || 3
-}
+// Re-export tier limit functions from the standalone module (safe for client components)
+export { getMaxOffers, getMaxSecretMenuItems, getMaxEvents } from '@/lib/utils/tier-limits'
 
 /**
  * Upgrade business to Spotlight tier

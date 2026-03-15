@@ -156,7 +156,7 @@ export function ElegantModal({
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-white mb-1">{title}</h3>
                 {description && (
-                  <p className="text-slate-300 text-sm">{description}</p>
+                  <p className="text-slate-300 text-sm whitespace-pre-line">{description}</p>
                 )}
               </div>
               {showCloseButton && (

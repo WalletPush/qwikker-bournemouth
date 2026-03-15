@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { createOffer, deleteBusinessOffer, deleteLegacyOffer } from '@/lib/actions/business-actions'
 import { useElegantModal } from '@/components/ui/elegant-modal'
 import { Profile, OFFER_TYPE_OPTIONS, OFFER_CLAIM_AMOUNT_OPTIONS } from '@/types/profiles'
+import { getMaxOffers } from '@/lib/utils/tier-limits'
 
 interface OffersPageProps {
   profile: Profile
@@ -302,18 +303,7 @@ export function OffersPage({ profile }: OffersPageProps) {
   // Legacy offer system removed - now using business_offers table only
   // const hasLegacyOffer = profile.offer_name && profile.offer_name.trim() !== ''
 
-  // Plan limits based on business tier (updated to match database)
-  const getOfferLimit = (plan: string) => {
-    switch (plan) {
-      case 'starter': return 3      // Starter businesses: 3 offers
-      case 'featured': return 5     // Featured businesses: 5 offers  
-      case 'spotlight': return 25   // Spotlight businesses: 25 offers
-      default: return 3             // Default to starter limit
-    }
-  }
-  
-  // ✅ CRITICAL: claimed_free businesses get 1 offer limit
-  const offerLimit = profile.status === 'claimed_free' ? 1 : getOfferLimit(profile.plan || 'starter')
+  const offerLimit = getMaxOffers(profile.status === 'claimed_free' ? 'claimed_free' : (profile.plan || 'starter'))
   const isStarterTier = profile.plan === 'starter'
   const isClaimedFree = profile.status === 'claimed_free'
 
@@ -892,6 +882,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                       }`}
                     placeholder="e.g., Student Discount, Happy Hour Special"
                     required
+                    maxLength={80}
                       readOnly={isEditMode}
                       disabled={isEditMode}
                   />
@@ -937,6 +928,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                         }`}
                       placeholder="e.g., 20% off, Buy 1 Get 1 Free"
                       required
+                      maxLength={80}
                         readOnly={isEditMode}
                         disabled={isEditMode}
                     />
@@ -1110,6 +1102,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                     onChange={(e) => handleInputChange('offerDescription', e.target.value)}
                     className="w-full bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 rounded-lg p-4 min-h-[100px] resize-vertical transition-all duration-200 placeholder:text-slate-500 shadow-sm"
                     required
+                    maxLength={300}
                     placeholder="e.g., A midweek fire-led dining experience at Ember & Oak, featuring a curated sharing menu cooked over open flames."
                   />
                   <p className="text-slate-400 text-xs mt-2">
@@ -1140,6 +1133,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                     onChange={(e) => handleInputChange('offerTerms', e.target.value)}
                     className="w-full bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 rounded-lg p-4 min-h-[120px] resize-vertical transition-all duration-200 placeholder:text-slate-500 shadow-sm"
                     required
+                    maxLength={1000}
                     placeholder="Enter any terms and conditions, restrictions, or limitations...
 
 Examples:

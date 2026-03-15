@@ -26,6 +26,7 @@ import { EventPreviewCard } from '@/components/ui/event-preview-card'
 import { AdminContactCentreClient } from './admin-contact-centre-client'
 import { AdminLoyaltyQueue } from './admin-loyalty-queue'
 import { DeleteBusinessModal } from '@/components/admin/delete-business-modal'
+import { BusinessCard } from '@/components/user/business-card'
 
 interface Business {
   id: string
@@ -83,6 +84,9 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   })
 
   // No redirects - all tabs stay in dashboard
+
+  // Live Listings view mode: CRM (default admin table) vs User (discover-style cards)
+  const [liveViewMode, setLiveViewMode] = useState<'crm' | 'user'>('crm')
 
   // Real claims data from database (will be loaded via API)
   const [mockClaims, setMockClaims] = useState([])
@@ -551,6 +555,75 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
     const hours = date.getHours().toString().padStart(2, '0')
     const minutes = date.getMinutes().toString().padStart(2, '0')
     return `${day}/${month}/${year}, ${hours}:${minutes}`
+  }
+
+  // Maps a CRM record (or legacy Business) to the shape BusinessCard expects
+  const toUserCardProps = (business: any) => {
+    const crm = crmData.find(c => c.id === business.id)
+    const src = crm || business
+    const offers = (src.business_offers || [])
+      .filter((o: any) => o.status === 'approved')
+      .map((o: any) => ({
+        id: o.id,
+        title: o.offer_name,
+        type: o.offer_type,
+        value: o.offer_value,
+        image: o.offer_image,
+      }))
+
+    const slug = (src.business_name || '')
+      .toLowerCase()
+      .replace(/['']/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || src.id
+
+    return {
+      id: src.id,
+      name: src.business_name,
+      category: src.display_category || src.business_category || src.business_type || 'Other',
+      system_category: src.system_category,
+      display_category: src.display_category,
+      google_primary_type: src.google_primary_type,
+      business_category: src.business_category,
+      location: src.business_town,
+      address: src.business_address,
+      town: src.business_town,
+      tagline: src.business_tagline || '',
+      description: src.business_description || '',
+      phone: src.phone || '',
+      hours: src.business_hours || '',
+      business_hours_structured: src.business_hours_structured || null,
+      images: src.business_images && src.business_images.length > 0
+        ? src.business_images
+        : [src.logo || '/placeholder-business.jpg'],
+      logo: src.logo || '/placeholder-logo.jpg',
+      slug,
+      offers,
+      plan: (src.status === 'unclaimed' || src.status === 'claimed_free')
+        ? null
+        : (src.plan || crm?.tier || 'starter'),
+      rating: src.rating || 4.5,
+      reviewCount: src.review_count || 0,
+      tags: [
+        src.display_category || src.business_category,
+        src.business_type,
+        src.business_town,
+      ].filter(Boolean),
+      activeOffers: offers.length,
+      hasSecretMenu: Array.isArray(src.secret_menu_items) && src.secret_menu_items.length > 0,
+      hasLoyalty: src.loyalty_program_status === 'active',
+      tier: (src.status === 'unclaimed' || src.status === 'claimed_free')
+        ? null
+        : src.plan === 'spotlight'
+          ? 'qwikker_picks'
+          : src.plan === 'featured'
+            ? 'featured'
+            : 'recommended',
+      website: src.website_url || src.website || null,
+      status: src.status,
+      google_place_id: src.google_place_id,
+      placeholder_variant: src.placeholder_variant,
+    }
   }
 
   const handleApproval = async (businessId: string, action: 'approve' | 'reject' | 'restore') => {
@@ -1541,18 +1614,46 @@ Qwikker Admin Team`
             {/* Header - Enhanced for Live Listings */}
             {activeTab === 'live' ? (
               <div className="mb-8">
-                {/* Title Section - Centered */}
+                {/* Title Section with View Toggle */}
                 <div className="flex flex-col items-center justify-center mb-6 text-center">
                   <h2 className="text-4xl font-bold text-white mb-2">
                     Live Listings
                   </h2>
-                  <p className="text-slate-400 text-lg">
+                  <p className="text-slate-400 text-lg mb-4">
                     View and manage your live listings
                   </p>
+                  <div className="inline-flex items-center gap-1 p-1 bg-slate-800/60 border border-slate-700/50 rounded-lg">
+                    <button
+                      onClick={() => setLiveViewMode('crm')}
+                      className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                        liveViewMode === 'crm'
+                          ? 'bg-slate-700 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                        CRM View
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setLiveViewMode('user')}
+                      className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                        liveViewMode === 'user'
+                          ? 'bg-slate-700 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        User View
+                      </span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Stats Overview Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
                   {/* Total Active */}
                   <button
                     onClick={() => setFilterTier('all')}
@@ -1712,30 +1813,6 @@ Qwikker Admin Team`
                     </div>
                   </button>
 
-                  {/* Synced to CRM */}
-                  <button
-                    onClick={() => setFilterTier('synced')}
-                    className={`w-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border rounded-xl p-4 hover:bg-slate-700/50 transition-all cursor-pointer ${
-                      filterTier === 'synced' ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-slate-700/50 hover:border-emerald-500/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-slate-400 text-xs font-medium">Synced</p>
-                        <p className="text-2xl font-bold text-white">
-                          {allLiveBusinesses.filter(b => {
-                            const crm = crmData.find(c => c.id === b.id)
-                            return crm?.last_crm_sync
-                          }).length}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
                 </div>
 
                 {/* Search & Filter Bar */}
@@ -1894,9 +1971,9 @@ Qwikker Admin Team`
               )}
 
               {activeTab === 'live' && (
-                <div className="grid lg:grid-cols-2 gap-6">
+                <>
                   {allLiveBusinesses.length === 0 ? (
-                    <div className="text-center py-12 col-span-full">
+                    <div className="text-center py-12">
                       <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1905,132 +1982,139 @@ Qwikker Admin Team`
                       <h3 className="text-xl font-semibold text-white mb-2">No live listings</h3>
                       <p className="text-slate-400">No businesses are currently live on the platform.</p>
                     </div>
+                  ) : liveViewMode === 'user' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {liveBusinesses.map((business) => (
+                        <BusinessCard
+                          key={business.id}
+                          business={toUserCardProps(business)}
+                          showDistance={false}
+                        />
+                      ))}
+                    </div>
                   ) : (
-                    liveBusinesses.map((business) => {
-                      // Use CRM data which already has correct subscription + trial info
-                      const crmRecord = crmData.find(crm => crm.id === business.id)
-                      
-                      // If we have CRM data, use it directly (it has correct subscription data from admin-crm-actions)
-                      if (crmRecord) {
+                    <div className="grid lg:grid-cols-2 gap-6">
+                      {liveBusinesses.map((business) => {
+                        const crmRecord = crmData.find(crm => crm.id === business.id)
+                        
+                        if (crmRecord) {
+                          return (
+                            <ComprehensiveBusinessCRMCard
+                              key={business.id}
+                              business={crmRecord}
+                              onApprove={handleApproval}
+                              onInspect={(business) => {
+                                const fullBusinessData = allBusinesses.find(b => b.id === business.id)
+                                if (fullBusinessData) {
+                                  setSelectedBusiness(fullBusinessData)
+                                  setInspectionModalOpen(true)
+                                }
+                              }}
+                            />
+                          )
+                        }
+                        
+                        const crmBusiness = {
+                          id: business.id,
+                          business_name: business.business_name || 'Unnamed Business',
+                          first_name: business.first_name,
+                          last_name: business.last_name,
+                          business_category: business.business_category || 'Uncategorized',
+                          business_type: business.business_type,
+                          business_address: business.business_address || '',
+                          business_town: business.business_town || '',
+                          business_postcode: business.business_postcode || '',
+                          email: business.email || '',
+                          phone: business.phone || '',
+                          logo: business.logo || '',
+                          business_tagline: business.business_tagline || '',
+                          business_description: business.business_description || '',
+                          business_hours: business.business_hours || '',
+                          business_hours_structured: business.business_hours_structured || null,
+                          website_url: business.website_url || '',
+                          website: business.website_url || '',
+                          instagram_handle: business.instagram_handle || '',
+                          facebook_url: business.facebook_url || '',
+                          status: business.status as 'incomplete' | 'pending_review' | 'approved' | 'rejected',
+                          approved_at: business.approved_at,
+                          created_at: business.created_at,
+                          updated_at: business.updated_at,
+                          last_crm_sync: null,
+                          last_crm_sync: null,
+                          crm_sync_status: 'pending',
+                          admin_notes: business.admin_notes,
+                          google_primary_type: business.google_primary_type || null,
+                          latitude: business.latitude || null,
+                          longitude: business.longitude || null,
+                          subscription: null,
+                          tier: null,
+                          recent_payments: [],
+                          menu_url: business.menu_url,
+                          business_images: business.business_images as string[] | null,
+                          business_menus: null,
+                          offer_name: business.offer_name,
+                          offer_type: business.offer_type,
+                          offer_image: business.offer_image,
+                          offer_start_date: business.offer_start_date,
+                          offer_end_date: business.offer_end_date,
+                          offer_terms: business.offer_terms,
+                          business_offers: business.business_offers || [],
+                          secret_menu_items: [],
+                          trial_days_remaining: null,
+                          trial_status: 'not_applicable' as const,
+                          billing_starts_date: null,
+                          last_updated: business.updated_at || business.created_at,
+                          has_pending_changes: false,
+                          pending_changes_count: 0,
+                          plan: business.plan || 'starter',
+                          features: business.features || { social_wizard: false, loyalty_cards: false, analytics: false, push_notifications: false }
+                        }
+                        
                         return (
                           <ComprehensiveBusinessCRMCard
                             key={business.id}
-                            business={crmRecord}
+                            business={crmBusiness}
                             onApprove={handleApproval}
                             onInspect={(business) => {
-                              // Find the original business data from allBusinesses to get complete info
-                              const fullBusinessData = allBusinesses.find(b => b.id === business.id)
-                              if (fullBusinessData) {
-                                setSelectedBusiness(fullBusinessData)
-                                setInspectionModalOpen(true)
+                              const originalBusiness = allBusinesses.find(b => b.id === business.id)
+                              const legacyBusiness = {
+                                id: business.id,
+                                user_id: originalBusiness?.user_id || '',
+                                business_name: business.business_name,
+                                email: business.email,
+                                first_name: originalBusiness?.first_name || '',
+                                last_name: originalBusiness?.last_name || '',
+                                business_type: originalBusiness?.business_type || '',
+                                business_category: business.business_category,
+                                business_town: business.business_town,
+                                business_address: business.business_address,
+                                business_postcode: business.business_postcode,
+                                phone: business.phone,
+                                logo: originalBusiness?.logo || '',
+                                business_tagline: originalBusiness?.business_tagline || '',
+                                business_description: originalBusiness?.business_description || '',
+                                business_hours: originalBusiness?.business_hours || '',
+                                business_hours_structured: originalBusiness?.business_hours_structured || null,
+                                offer_name: business.offer_name || '',
+                                offer_type: business.offer_type || '',
+                                offer_value: originalBusiness?.offer_value || '',
+                                offer_terms: originalBusiness?.offer_terms || '',
+                                menu_url: business.menu_url || '',
+                                business_images: business.business_images || [],
+                                menu_preview: originalBusiness?.menu_preview || '',
+                                additional_notes: business.secret_menu_items ? JSON.stringify({ secret_menu_items: business.secret_menu_items }) : '',
+                                status: business.status,
+                                created_at: originalBusiness?.created_at || '',
+                                updated_at: business.last_updated
                               }
+                              setInspectionModal({ open: true, business: legacyBusiness })
                             }}
                           />
                         )
-                      }
-                      
-                      // Fallback: Convert business data to CRM format (shouldn't happen for live businesses)
-                      const crmBusiness = {
-                        id: business.id,
-                        business_name: business.business_name || 'Unnamed Business',
-                        first_name: business.first_name,
-                        last_name: business.last_name,
-                        business_category: business.business_category || 'Uncategorized',
-                        business_type: business.business_type,
-                        business_address: business.business_address || '',
-                        business_town: business.business_town || '',
-                        business_postcode: business.business_postcode || '',
-                        email: business.email || '',
-                        phone: business.phone || '',
-                        logo: business.logo || '',
-                        business_tagline: business.business_tagline || '',
-                        business_description: business.business_description || '',
-                        business_hours: business.business_hours || '',
-                        business_hours_structured: business.business_hours_structured || null,
-                        website_url: business.website_url || '',
-                        website: business.website_url || '',
-                        instagram_handle: business.instagram_handle || '',
-                        facebook_url: business.facebook_url || '',
-                        status: business.status as 'incomplete' | 'pending_review' | 'approved' | 'rejected',
-                        approved_at: business.approved_at,
-                        created_at: business.created_at,
-                        updated_at: business.updated_at,
-                        last_crm_sync: null,
-                        last_crm_sync: null,
-                        crm_sync_status: 'pending',
-                        admin_notes: business.admin_notes,
-                        google_primary_type: business.google_primary_type || null,
-                        latitude: business.latitude || null,
-                        longitude: business.longitude || null,
-                        subscription: null,
-                        tier: null,
-                        recent_payments: [],
-                        menu_url: business.menu_url,
-                        business_images: business.business_images as string[] | null,
-                        business_menus: null,
-                        offer_name: business.offer_name,
-                        offer_type: business.offer_type,
-                        offer_image: business.offer_image,
-                        offer_start_date: business.offer_start_date,
-                        offer_end_date: business.offer_end_date,
-                        offer_terms: business.offer_terms,
-                        business_offers: business.business_offers || [],
-                        secret_menu_items: [],
-                        trial_days_remaining: null,
-                        trial_status: 'not_applicable' as const,
-                        billing_starts_date: null,
-                        last_updated: business.updated_at || business.created_at,
-                        has_pending_changes: false,
-                        pending_changes_count: 0,
-                        plan: business.plan || 'starter',
-                        features: business.features || { social_wizard: false, loyalty_cards: false, analytics: false, push_notifications: false }
-                      }
-                      
-                      return (
-                        <ComprehensiveBusinessCRMCard
-                          key={business.id}
-                          business={crmBusiness}
-                          onApprove={handleApproval}
-                          onInspect={(business) => {
-                            // Find the original business data from allBusinesses to get complete info
-                            const originalBusiness = allBusinesses.find(b => b.id === business.id)
-                            const legacyBusiness = {
-                              id: business.id,
-                              user_id: originalBusiness?.user_id || '',
-                              business_name: business.business_name,
-                              email: business.email,
-                              first_name: originalBusiness?.first_name || '',
-                              last_name: originalBusiness?.last_name || '',
-                              business_type: originalBusiness?.business_type || '',
-                              business_category: business.business_category,
-                              business_town: business.business_town,
-                              business_address: business.business_address,
-                              business_postcode: business.business_postcode,
-                              phone: business.phone,
-                              logo: originalBusiness?.logo || '',
-                              business_tagline: originalBusiness?.business_tagline || '',
-                              business_description: originalBusiness?.business_description || '',
-                              business_hours: originalBusiness?.business_hours || '',
-                              business_hours_structured: originalBusiness?.business_hours_structured || null,
-                              offer_name: business.offer_name || '',
-                              offer_type: business.offer_type || '',
-                              offer_value: originalBusiness?.offer_value || '',
-                              offer_terms: originalBusiness?.offer_terms || '',
-                              menu_url: business.menu_url || '',
-                              business_images: business.business_images || [],
-                              menu_preview: originalBusiness?.menu_preview || '',
-                              additional_notes: business.secret_menu_items ? JSON.stringify({ secret_menu_items: business.secret_menu_items }) : '',
-                              status: business.status,
-                              created_at: originalBusiness?.created_at || '',
-                              updated_at: business.last_updated
-                            }
-                            setInspectionModal({ open: true, business: legacyBusiness })
-                          }}
-                        />
-                      )
-                    })
+                      })}
+                    </div>
                   )}
-                </div>
+                </>
               )}
 
               {activeTab === 'unclaimed' && (
@@ -2613,7 +2697,7 @@ Qwikker Admin Team`
                                       <button
                                         onClick={async () => {
                                           const confirmed = await showConfirm(
-                                            `Approve "${event.event_name}" and add to Knowledge Base?\\n\\nThis will:\\n• Make it visible on user event discovery page\\n• Add to AI chat knowledge base\\n• Allow users to query about this event`
+                                            `Approve "${event.event_name}" and add to Knowledge Base?\n\nThis will:\n• Make it visible on user event discovery page\n• Add to AI chat knowledge base\n• Allow users to query about this event`
                                           )
                                           
                                           if (!confirmed) return

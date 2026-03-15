@@ -44,7 +44,7 @@ export default async function Events() {
 
   return (
     <DashboardLayout currentSection="events" profile={profile}>
-      <EventsPage businessId={profile.id} businessName={profile.business_name} />
+      <EventsPage businessId={profile.id} businessName={profile.business_name} plan={profile.plan || 'starter'} />
     </DashboardLayout>
   )
 }

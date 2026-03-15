@@ -105,12 +105,9 @@ export async function POST(request: NextRequest) {
 
       const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
       const cityDisplayName = franchiseConfig.display_name || business.city
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `https://${business.city}.qwikker.com`
+      const baseUrl = `https://${business.city.toLowerCase()}.qwikker.com`
       
-      // Use Cloudinary URL for logo (publicly accessible in emails)
-      // TODO: Replace with your actual Cloudinary logo URL once uploaded
-      const logoUrl = process.env.CLOUDINARY_LOGO_URL || 
-                      `https://res.cloudinary.com/demo/image/upload/v1/qwikker-logo.svg` // Placeholder - replace with your actual Cloudinary URL
+      const logoUrl = process.env.CLOUDINARY_LOGO_URL || 'https://res.cloudinary.com/dsh32kke7/image/upload/f_png,q_auto,w_320/v1768348190/Qwikker_Logo_web_lbql19.svg'
 
       const resendResponse = await resend.emails.send({
         from: `${fromName} <${franchiseConfig.resend_from_email}>`,

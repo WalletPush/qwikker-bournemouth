@@ -92,6 +92,18 @@ export async function claimOffer(data: {
     }
     
     console.log('✅ Claim stored successfully:', claimRecord)
+
+    // Notify the business
+    if (realBusinessId) {
+      import('@/lib/actions/business-notification-actions').then(({ createBusinessNotification }) => {
+        createBusinessNotification({
+          businessId: realBusinessId,
+          type: 'offer_claim',
+          title: 'Offer claimed',
+          message: `Someone claimed "${data.offerTitle}"`,
+        }).catch(() => {})
+      })
+    }
     
     // 🎫 CRITICAL: Trigger GHL "Redemption Made" workflow
     if (data.visitorWalletPassId) {

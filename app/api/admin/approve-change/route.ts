@@ -4,6 +4,15 @@ import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { sendContactUpdateToGoHighLevel } from '@/lib/integrations'
+import { getMaxOffers, getMaxSecretMenuItems } from '@/lib/utils/subscription-helpers'
+import { sendFranchiseEmail, getFranchiseBaseUrl } from '@/lib/email/send-franchise-email'
+import {
+  createOfferApprovalEmail,
+  createEventApprovalEmail,
+  createSecretMenuApprovalEmail,
+  createImageApprovalEmail,
+  createChangeRejectionEmail,
+} from '@/lib/email/templates/business-notifications'
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,6 +72,8 @@ export async function POST(request: NextRequest) {
           id,
           business_name,
           city,
+          email,
+          first_name,
           offer_name,
           offer_type,
           offer_value,
@@ -123,18 +134,9 @@ export async function POST(request: NextRequest) {
         // ✅ FIX: Use business's plan, not user's plan!
         const businessPlan = currentBusiness?.plan || 'starter'
         
-        // ✅ CRITICAL: claimed_free businesses get 1 offer limit regardless of plan
         const isClaimedFree = currentBusiness?.status === 'claimed_free'
-        
-        // Check tier limits (updated to match database function)
-        let maxOffers = 3 // Default starter
-        if (isClaimedFree) {
-          maxOffers = 1
-        } else if (businessPlan === 'featured') {
-          maxOffers = 5
-        } else if (businessPlan === 'spotlight') {
-          maxOffers = 25
-        }
+        const tier = isClaimedFree ? 'claimed_free' : businessPlan
+        const maxOffers = getMaxOffers(tier)
         
         console.log(`📊 Offer Limit Check:`, {
           business: currentBusiness?.business_name,
@@ -199,30 +201,28 @@ export async function POST(request: NextRequest) {
           console.error('⚠️ Knowledge base sync error (non-critical):', kbError)
         }
         
-        // 📧 SEND EMAIL NOTIFICATION: Offer approved
-        try {
-          const { sendOfferApprovalNotification } = await import('@/lib/notifications/email-notifications')
-          
-          if (change.business?.email) {
-            // Use deployment URL (Vercel preview) until custom domains are live
-            const deploymentUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://qwikkerdashboard-theta.vercel.app'
-            const emailResult = await sendOfferApprovalNotification({
+        // 📧 SEND EMAIL NOTIFICATION: Offer approved (franchise-aware)
+        if (change.business?.email) {
+          try {
+            const city = change.business.city || requestCity
+            const baseUrl = getFranchiseBaseUrl(city)
+            const template = createOfferApprovalEmail({
               firstName: change.business.first_name || 'Business Owner',
               businessName: change.business.business_name || 'Your Business',
               offerName: change.change_data.offer_name,
               offerValue: change.change_data.offer_value,
-              city: change.business.city || 'bournemouth',
-              dashboardUrl: `${deploymentUrl}/dashboard`
+              city,
+              dashboardUrl: `${baseUrl}/dashboard`
             })
-            
+            const emailResult = await sendFranchiseEmail({ city, to: change.business.email, template })
             if (emailResult.success) {
               console.log(`📧 Offer approval email sent to ${change.business.email}`)
             } else {
               console.error(`❌ Failed to send offer approval email: ${emailResult.error}`)
             }
+          } catch (error) {
+            console.error('⚠️ Offer approval email error (non-critical):', error)
           }
-        } catch (error) {
-          console.error('⚠️ Offer approval email error (non-critical):', error)
         }
         
         // Update business_profiles with the FIRST offer for backward compatibility
@@ -307,7 +307,7 @@ export async function POST(request: NextRequest) {
         // For secret menu, we need to append to existing additional_notes
         const { data: currentProfile } = await supabaseAdmin
           .from('business_profiles')
-          .select('additional_notes')
+          .select('additional_notes, plan, status')
           .eq('id', change.business_id)
           .single()
         
@@ -321,6 +321,17 @@ export async function POST(request: NextRequest) {
         }
         
         const secretMenuItems = (existingNotes as Record<string, unknown>).secret_menu_items as unknown[] || []
+
+        // Enforce tier-based secret menu limits
+        const smTier = currentProfile?.status === 'claimed_free' ? 'claimed_free' : (currentProfile?.plan || 'starter')
+        const maxSecretMenuItems = getMaxSecretMenuItems(smTier)
+        if (secretMenuItems.length >= maxSecretMenuItems) {
+          return NextResponse.json(
+            { error: `Secret menu limit reached for this business plan (${maxSecretMenuItems} items). Business needs to upgrade.` },
+            { status: 400 }
+          )
+        }
+
         // Stamp approval metadata onto the item before storing
         const approvedItem = {
           ...change.change_data,
@@ -400,6 +411,19 @@ export async function POST(request: NextRequest) {
       }
       
       console.log(`✅ Change ${changeId} approved by ${admin.username} - ${change.change_type} for ${change.business?.business_name}`)
+
+      // In-app notification for the business
+      if (change.business_id) {
+        const { createBusinessNotification } = await import('@/lib/actions/business-notification-actions')
+        const changeLabel = change.change_type.replace(/_/g, ' ')
+        await createBusinessNotification({
+          businessId: change.business_id,
+          type: 'change_approved',
+          title: `${changeLabel.charAt(0).toUpperCase() + changeLabel.slice(1)} approved`,
+          message: `Your ${changeLabel} submission has been approved and is now live`,
+          metadata: { changeId, changeType: change.change_type },
+        })
+      }
       
       // 📚 ADD SECRET MENU TO KNOWLEDGE BASE (after status is approved!)
       if (change.change_type === 'secret_menu') {
@@ -417,6 +441,63 @@ export async function POST(request: NextRequest) {
         } catch (kbError) {
           console.error('⚠️ Knowledge base sync error (non-critical):', kbError)
           console.error('⚠️ Stack trace:', (kbError as Error).stack)
+        }
+      }
+
+      // 📧 SEND APPROVAL EMAILS for non-offer change types (franchise-aware)
+      // (offer new already sends its own email above)
+      if (change.business?.email && change.change_type !== 'offer') {
+        try {
+          const city = change.business.city || requestCity
+          const baseUrl = getFranchiseBaseUrl(city)
+          const biz = change.business
+          let template
+
+          if (change.change_type === 'offer_update') {
+            template = createOfferApprovalEmail({
+              firstName: biz.first_name || 'Business Owner',
+              businessName: biz.business_name || 'Your Business',
+              offerName: change.change_data?.offer_name || 'Your offer',
+              offerValue: change.change_data?.offer_value || 'Updated',
+              city,
+              dashboardUrl: `${baseUrl}/dashboard`
+            })
+          } else if (change.change_type === 'secret_menu') {
+            template = createSecretMenuApprovalEmail({
+              firstName: biz.first_name || 'Business Owner',
+              businessName: biz.business_name || 'Your Business',
+              itemName: change.change_data?.item_name || change.change_data?.name || 'Secret menu item',
+              city,
+              dashboardUrl: `${baseUrl}/dashboard`
+            })
+          } else if (change.change_type === 'logo' || change.change_type === 'business_images') {
+            template = createImageApprovalEmail({
+              firstName: biz.first_name || 'Business Owner',
+              businessName: biz.business_name || 'Your Business',
+              imageType: change.change_type === 'logo' ? 'logo' : 'business images',
+              city,
+              dashboardUrl: `${baseUrl}/dashboard`
+            })
+          } else if (change.change_type === 'menu_url') {
+            template = createImageApprovalEmail({
+              firstName: biz.first_name || 'Business Owner',
+              businessName: biz.business_name || 'Your Business',
+              imageType: 'menu',
+              city,
+              dashboardUrl: `${baseUrl}/dashboard`
+            })
+          }
+
+          if (template) {
+            const emailResult = await sendFranchiseEmail({ city, to: biz.email, template })
+            if (emailResult.success) {
+              console.log(`📧 ${change.change_type} approval email sent to ${biz.email}`)
+            } else {
+              console.error(`❌ Failed to send ${change.change_type} approval email: ${emailResult.error}`)
+            }
+          }
+        } catch (error) {
+          console.error(`⚠️ ${change.change_type} approval email error (non-critical):`, error)
         }
       }
       
@@ -514,6 +595,56 @@ export async function POST(request: NextRequest) {
       }
       
       console.log(`❌ Change ${changeId} rejected by ${admin.username} - ${change.change_type} for ${change.business?.business_name}`)
+
+      // In-app notification for the business
+      if (change.business_id) {
+        const { createBusinessNotification } = await import('@/lib/actions/business-notification-actions')
+        const changeLabel = change.change_type.replace(/_/g, ' ')
+        const changeName = change.change_data?.offer_name || change.change_data?.item_name || change.change_data?.name || change.change_data?.event_name || undefined
+        await createBusinessNotification({
+          businessId: change.business_id,
+          type: 'change_rejected',
+          title: `${changeLabel.charAt(0).toUpperCase() + changeLabel.slice(1)} not approved`,
+          message: changeName ? `Your ${changeLabel} "${changeName}" was not approved` : `Your ${changeLabel} submission was not approved`,
+          metadata: { changeId, changeType: change.change_type, reason: change.rejection_reason || null },
+        })
+      }
+
+      // 📧 SEND REJECTION EMAIL (franchise-aware)
+      if (change.business?.email) {
+        try {
+          const city = change.business.city || requestCity
+          const baseUrl = getFranchiseBaseUrl(city)
+          const biz = change.business
+
+          const changeName =
+            change.change_data?.offer_name ||
+            change.change_data?.item_name ||
+            change.change_data?.name ||
+            change.change_data?.event_name ||
+            undefined
+
+          const template = createChangeRejectionEmail({
+            firstName: biz.first_name || 'Business Owner',
+            businessName: biz.business_name || 'Your Business',
+            changeType: change.change_type.replace(/_/g, ' '),
+            changeName,
+            rejectionReason: change.rejection_reason || undefined,
+            city,
+            dashboardUrl: `${baseUrl}/dashboard`,
+            supportEmail: `support@qwikker.com`
+          })
+
+          const emailResult = await sendFranchiseEmail({ city, to: biz.email, template })
+          if (emailResult.success) {
+            console.log(`📧 Rejection email sent to ${biz.email}`)
+          } else {
+            console.error(`❌ Failed to send rejection email: ${emailResult.error}`)
+          }
+        } catch (error) {
+          console.error('⚠️ Rejection email error (non-critical):', error)
+        }
+      }
     } else {
       return NextResponse.json(
         { error: 'Invalid action' },

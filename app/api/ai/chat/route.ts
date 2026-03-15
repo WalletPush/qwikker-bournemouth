@@ -291,7 +291,29 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       console.error('❌ AI response generation failed:', result.error)
-      
+
+      // Detect OpenAI quota exhaustion and alert city admin (throttled to once per hour)
+      const isQuotaError = result.error?.includes('insufficient_quota') || result.error?.includes('exceeded your current quota')
+      if (isQuotaError) {
+        try {
+          const now = Date.now()
+          const lastAlert = (globalThis as any).__quotaAlertTs || 0
+          if (now - lastAlert > 60 * 60 * 1000) {
+            (globalThis as any).__quotaAlertTs = now
+            const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
+            await sendCitySlackNotification({
+              title: 'OpenAI API Quota Exhausted',
+              message: `The OpenAI API key has hit its spending limit. AI chat and knowledge base search are DOWN for all users.\n\nFix: top up credits or raise the spend cap at https://platform.openai.com/settings/organization/billing`,
+              city,
+              type: 'error'
+            })
+            console.error('🚨 Slack alert sent: OpenAI quota exhausted')
+          }
+        } catch (slackErr) {
+          console.error('⚠️ Failed to send quota Slack alert:', slackErr)
+        }
+      }
+
       // If the error is about missing API key or empty knowledge base, show growth message
       const isConfigurationError = result.error?.includes('not configured') || result.error?.includes('knowledge base')
       

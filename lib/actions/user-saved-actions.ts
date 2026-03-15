@@ -90,12 +90,23 @@ export async function saveItem(
       })
 
     if (error) {
-      // If it's a unique constraint violation, item is already saved (not an error)
       if (error.code === '23505') {
         return { success: true }
       }
       console.error('Error saving item:', error)
       return { success: false, error: error.message }
+    }
+
+    // Notify the business when someone saves it (fire-and-forget)
+    if (itemType === 'business' && itemId) {
+      import('@/lib/actions/business-notification-actions').then(({ createBusinessNotification }) => {
+        createBusinessNotification({
+          businessId: itemId,
+          type: 'business_save',
+          title: 'Business saved',
+          message: 'Someone saved your business to their favourites',
+        }).catch(() => {})
+      })
     }
 
     return { success: true }

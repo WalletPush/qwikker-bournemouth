@@ -76,19 +76,20 @@ export default async function SocialWizardPage() {
     )
   }
 
-  const tier = business.plan || 'starter'
-
-  // Tier gate: Starter users see locked view
-  if (!canAccessSocialWizard(tier)) {
-    return <StarterLockedView businessName={business.business_name} />
-  }
-
-  // Featured/Spotlight: show full wizard
   return (
-    <SocialWizardShell
-      businessId={business.id}
-      businessName={business.business_name}
-      tier={tier}
-    />
+    <div className="flex h-screen items-center justify-center bg-neutral-950 text-white">
+      <div className="text-center max-w-md px-4">
+        <div className="w-16 h-16 mx-auto mb-6 bg-slate-800 rounded-full flex items-center justify-center">
+          <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-bold mb-3">Social Wizard</h1>
+        <p className="text-slate-400 mb-2">Coming Soon</p>
+        <p className="text-slate-500 text-sm">
+          AI-powered social content generation is being rebuilt from the ground up.
+        </p>
+      </div>
+    </div>
   )
 }

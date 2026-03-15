@@ -115,6 +115,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       plan,
       status,
       google_place_id,
+      website_url,
       placeholder_variant,
       business_offers!left(
         id,
@@ -257,6 +258,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
           : business.plan === 'featured' 
             ? 'featured' 
             : 'recommended',
+      website: business.website_url || null,
       status: business.status, // Pass status for conditional rendering
       google_place_id: business.google_place_id, // For placeholder hash
       placeholder_variant: business.placeholder_variant // Admin override

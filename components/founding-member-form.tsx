@@ -744,6 +744,7 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
                       id="offerName"
                       placeholder="New Customer Welcome Offer"
                       className="bg-[#0a0a0a] border-gray-600 focus:border-[#00d083]"
+                      maxLength={80}
                       {...form.register('offerName')}
                     />
                   </div>
@@ -770,6 +771,7 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
                         id="offerValue"
                         placeholder="20% or £10 or BOGO"
                         className={inputClassName}
+                        maxLength={80}
                         {...form.register('offerValue')}
                       />
                     </div>
@@ -801,6 +803,7 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
                       rows={3}
                       placeholder="Valid for new customers only. Cannot be combined with other offers. Valid ID required..."
                       className={`w-full px-3 py-2 ${selectClassName} resize-vertical`}
+                      maxLength={1000}
                       {...form.register('terms')}
                     />
                     <p className="text-gray-500 text-sm">Clear terms help avoid confusion and disputes</p>

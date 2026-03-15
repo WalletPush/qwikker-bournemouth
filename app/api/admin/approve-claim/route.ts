@@ -4,6 +4,8 @@ import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { getSystemCategoryFromDisplayLabel, isValidSystemCategory } from '@/lib/constants/system-categories'
+import { sendFranchiseEmail, getFranchiseBaseUrl } from '@/lib/email/send-franchise-email'
+import { createChangeRejectionEmail } from '@/lib/email/templates/business-notifications'
 
 export async function POST(request: NextRequest) {
   try {
@@ -263,9 +265,7 @@ export async function POST(request: NextRequest) {
           const baseUrl = `https://${citySubdomain}.qwikker.com`
           const loginUrl = `${baseUrl}/auth/login`
           
-          // Use Cloudinary URL for logo (publicly accessible in emails)
-          const logoUrl = process.env.CLOUDINARY_LOGO_URL || 
-                          `https://res.cloudinary.com/demo/image/upload/v1/qwikker-logo.svg` // Placeholder - replace with your actual Cloudinary URL
+          const logoUrl = process.env.CLOUDINARY_LOGO_URL || 'https://res.cloudinary.com/dsh32kke7/image/upload/f_png,q_auto,w_320/v1768348190/Qwikker_Logo_web_lbql19.svg'
 
           await resend.emails.send({
             from: `${fromName} <${franchiseConfig.resend_from_email}>`,
@@ -386,6 +386,18 @@ export async function POST(request: NextRequest) {
 
       console.log(`Claim approved: ${claim.business.business_name} by admin ${admin.username}`)
 
+      // In-app notification
+      if (claim.business_id) {
+        const { createBusinessNotification } = await import('@/lib/actions/business-notification-actions')
+        await createBusinessNotification({
+          businessId: claim.business_id,
+          type: 'change_approved',
+          title: 'Business claim approved',
+          message: `Your claim for ${claim.business.business_name} has been approved. Welcome to Qwikker.`,
+          metadata: { claimId },
+        })
+      }
+
       return NextResponse.json({
         success: true,
         message: 'Claim approved! Business is now visible in AI chat and Discover'
@@ -425,6 +437,27 @@ export async function POST(request: NextRequest) {
       }
 
       console.log(`Claim denied: ${claim.business.business_name} by admin ${admin.username}`)
+
+      // Send denial email to the claimer
+      if (claim.business_email) {
+        try {
+          const city = claim.business.city || 'bournemouth'
+          const baseUrl = getFranchiseBaseUrl(city)
+          const template = createChangeRejectionEmail({
+            firstName: claim.first_name || 'there',
+            businessName: claim.business.business_name || 'Your Business',
+            changeType: 'business claim',
+            rejectionReason: 'Your claim could not be verified at this time. If you believe this is an error, please contact support.',
+            city,
+            dashboardUrl: `${baseUrl}/claim`,
+            supportEmail: 'support@qwikker.com'
+          })
+          await sendFranchiseEmail({ city, to: claim.business_email, template })
+          console.log(`📧 Claim denial email sent to ${claim.business_email}`)
+        } catch (emailError) {
+          console.error('Claim denial email failed (non-critical):', emailError)
+        }
+      }
 
       return NextResponse.json({
         success: true,

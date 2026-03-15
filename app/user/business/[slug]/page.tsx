@@ -114,6 +114,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       latitude,
       longitude,
       google_primary_type,
+      website_url,
       google_place_id,
       auto_imported,
       business_offers!left(
@@ -236,6 +237,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       // ✅ Google review snippets NOT fetched for business detail page
       // Chat handles verbatim snippets for Tier 3 fallback (unclaimed) only
       vibes: vibesMap.get(business.id) || null, // 💚 Qwikker Vibes stats
+      website: business.website_url || null,
       google_primary_type: business.google_primary_type,
       google_place_id: business.google_place_id,
       auto_imported: business.auto_imported,

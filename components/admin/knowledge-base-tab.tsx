@@ -793,6 +793,7 @@ export function KnowledgeBaseTab({ city, cityDisplayName, adminId }: KnowledgeBa
                   placeholder="e.g. Bournemouth Food Festival"
                   value={eventName}
                   onChange={(e) => setEventName(e.target.value)}
+                  maxLength={80}
                   className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-purple-400 focus:ring-1 focus:ring-purple-400"
                 />
               </div>
@@ -866,6 +867,7 @@ export function KnowledgeBaseTab({ city, cityDisplayName, adminId }: KnowledgeBa
                 value={eventDescription}
                 onChange={(e) => setEventDescription(e.target.value)}
                 rows={3}
+                maxLength={1000}
                 className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-purple-400 focus:ring-1 focus:ring-purple-400 resize-none"
               />
             </div>

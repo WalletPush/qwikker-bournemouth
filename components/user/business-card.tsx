@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { BusinessCardImage } from '@/components/ui/business-card-image'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
@@ -113,7 +112,7 @@ export function BusinessCard({
   }
   
   const cardContent = (
-    <div className="relative">
+    <div className="relative h-full">
       {/* Tier badge - half on/half off card (MOBILE ONLY) - OUTSIDE card to avoid clipping */}
       {(business.plan === 'spotlight' || business.plan === 'featured') && (
         <div className="absolute -top-2 right-3 z-[1] sm:hidden">
@@ -130,7 +129,7 @@ export function BusinessCard({
         </div>
       )}
       
-      <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer sm:py-6 p-0 ${className}`}>
+      <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer sm:py-6 p-0 h-full ${className}`}>
         
         {/* MOBILE LAYOUT: Thumbnail-left (horizontal layout) */}
         <div className="sm:hidden">
@@ -410,6 +409,32 @@ export function BusinessCard({
           </div>
         )}
 
+        {/* Save/Favourite Heart - Desktop only, top-left of image */}
+        {onToggleSave && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onToggleSave()
+            }}
+            className={`absolute top-2 left-2 sm:top-3 sm:left-3 z-[2] w-8 h-8 flex items-center justify-center rounded-full backdrop-blur-sm transition-all ${
+              isSaved
+                ? 'bg-pink-500/90 hover:bg-pink-600/90'
+                : 'bg-slate-800/70 hover:bg-slate-700/80'
+            }`}
+          >
+            <svg
+              className="w-4 h-4 text-white"
+              fill={isSaved ? 'currentColor' : 'none'}
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </button>
+        )}
+
         {/* Distance Badge - Show for ALL businesses */}
         {showDistance && business.distance && (
           <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 z-[1]">
@@ -587,8 +612,27 @@ export function BusinessCard({
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
-            <span className="text-sm">{business.phone}</span>
+            <span className="text-sm">Call</span>
           </div>
+        )}
+
+        {/* Website - Hidden on mobile */}
+        {business.website && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              const url = business.website.startsWith('http') ? business.website : `https://${business.website}`
+              window.open(url, '_blank', 'noopener,noreferrer')
+            }}
+            className="hidden sm:flex items-center gap-2 text-slate-400 hover:text-[#00d083] transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+            </svg>
+            <span className="text-sm">Visit website</span>
+          </button>
         )}
 
         {/* Hours - Hidden on mobile */}
@@ -619,7 +663,7 @@ export function BusinessCard({
         })()}
 
         {/* Special Features */}
-        <div className="flex items-center justify-between">
+        {(business.hasSecretMenu || business.activeOffers > 0) && (
           <div className="flex flex-wrap gap-2">
             {business.hasSecretMenu && (
               <span className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 text-xs px-2 py-1 rounded-full">
@@ -632,34 +676,7 @@ export function BusinessCard({
               </span>
             )}
           </div>
-          
-          {/* Save Button */}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              if (onToggleSave) {
-                onToggleSave()
-              }
-            }}
-            className={`p-2 transition-all ${
-              isSaved 
-                ? 'bg-pink-500/20 border-pink-500 text-pink-300 hover:bg-pink-500/30' 
-                : 'border-slate-600 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            <svg 
-              className="w-4 h-4" 
-              fill={isSaved ? 'currentColor' : 'none'} 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-          </Button>
-        </div>
+        )}
       </CardContent>
       </div>
       {/* End Desktop Layout */}

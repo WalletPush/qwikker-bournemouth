@@ -137,6 +137,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Notify the business (fire-and-forget)
+    if (program.business_id) {
+      import('@/lib/actions/business-notification-actions').then(({ createBusinessNotification }) => {
+        createBusinessNotification({
+          businessId: program.business_id,
+          type: 'redemption',
+          title: 'Reward redeemed',
+          message: `A customer redeemed "${program.reward_description}"`,
+          metadata: { redemptionId: redemption.id, rewardDescription: program.reward_description },
+        }).catch(() => {})
+      })
+    }
+
     return NextResponse.json({
       redemptionId: redemption.id,
       rewardDescription: program.reward_description,

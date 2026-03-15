@@ -129,6 +129,19 @@ export async function POST(request: NextRequest) {
       console.log('[loyalty/join] Skipping pass creation: missing template_id or api_key')
     }
 
+    // Notify the business (fire-and-forget)
+    if (program.business_id) {
+      import('@/lib/actions/business-notification-actions').then(({ createBusinessNotification }) => {
+        createBusinessNotification({
+          businessId: program.business_id,
+          type: 'loyalty_join',
+          title: 'New loyalty member',
+          message: `${firstName || 'Someone'} joined your loyalty program`,
+          metadata: { membershipId: membership.id, firstName, walletPassId },
+        }).catch(() => {})
+      })
+    }
+
     return NextResponse.json({
       success: true,
       membershipId: membership.id,

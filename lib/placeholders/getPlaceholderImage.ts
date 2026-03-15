@@ -67,9 +67,29 @@ function imageCount(category: string): number {
   return IMAGE_COUNTS[category] ?? 0
 }
 
+const CATEGORY_FALLBACKS: Record<string, string[]> = {
+  fast_food: ['restaurant', 'cafe'],
+  takeaway: ['restaurant', 'cafe'],
+  entertainment: ['bar', 'pub'],
+  venue: ['bar', 'pub'],
+  fitness: ['wellness'],
+  sports: ['wellness'],
+  hotel: ['restaurant', 'cafe'],
+  retail: ['cafe', 'bakery'],
+  professional: ['cafe'],
+  other: ['restaurant', 'cafe', 'bar'],
+  default: ['restaurant', 'cafe', 'bar'],
+}
+
 function resolveCategory(systemCategory: string): string {
-  const count = imageCount(systemCategory)
-  return count > 0 ? systemCategory : 'default'
+  if (imageCount(systemCategory) > 0) return systemCategory
+
+  const fallbacks = CATEGORY_FALLBACKS[systemCategory] || []
+  for (const fb of fallbacks) {
+    if (imageCount(fb) > 0) return fb
+  }
+
+  return 'default'
 }
 
 export function getPlaceholderUrl(systemCategory: string, businessId: string): string {

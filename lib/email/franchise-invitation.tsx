@@ -23,8 +23,7 @@ export function FranchiseInvitationEmail({
   subdomain
 }: FranchiseInvitationEmailProps): string {
   // Use Cloudinary URL for logo (publicly accessible in emails)
-  const logoUrl = process.env.CLOUDINARY_LOGO_URL || 
-                  'https://res.cloudinary.com/demo/image/upload/v1/qwikker-logo.svg' // Placeholder
+  const logoUrl = process.env.CLOUDINARY_LOGO_URL || 'https://res.cloudinary.com/dsh32kke7/image/upload/f_png,q_auto,w_320/v1768348190/Qwikker_Logo_web_lbql19.svg'
   
   return `
 <!DOCTYPE html>

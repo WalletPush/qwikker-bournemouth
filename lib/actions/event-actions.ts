@@ -3,6 +3,8 @@
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { syncEventToKnowledgeBase, archiveEventInKnowledgeBase } from '@/lib/ai/embeddings'
+import { sendFranchiseEmail, getFranchiseBaseUrl } from '@/lib/email/send-franchise-email'
+import { createEventApprovalEmail, createChangeRejectionEmail } from '@/lib/email/templates/business-notifications'
 
 export interface BusinessEvent {
   id: string
@@ -131,7 +133,7 @@ export async function createEvent(input: CreateEventInput): Promise<{
     // Verify user owns this business
     const { data: profile, error: profileError } = await supabase
       .from('business_profiles')
-      .select('id, user_id')
+      .select('id, user_id, plan, status')
       .eq('id', input.business_id)
       .single()
 
@@ -142,6 +144,20 @@ export async function createEvent(input: CreateEventInput): Promise<{
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || user.id !== profile.user_id) {
       return { success: false, error: 'Unauthorized' }
+    }
+
+    // Enforce tier-based event limits
+    const { getMaxEvents } = await import('@/lib/utils/subscription-helpers')
+    const tier = profile.status === 'claimed_free' ? 'claimed_free' : (profile.plan || 'starter')
+    const maxEvents = getMaxEvents(tier)
+    const { count: existingCount } = await supabase
+      .from('business_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', input.business_id)
+      .in('status', ['pending', 'approved', 'active'])
+
+    if ((existingCount ?? 0) >= maxEvents) {
+      return { success: false, error: `Event limit reached for your plan (${maxEvents} events). Upgrade to create more.` }
     }
 
     // Create the event
@@ -442,8 +458,48 @@ export async function approveEvent(eventId: string): Promise<{
 
     if (!syncResult.success) {
       console.error('⚠️ Knowledge base sync failed, but event was approved:', syncResult.error)
-      // Don't fail the whole operation, just warn
-      // The event is still approved in the database
+    }
+
+    // 📧 Send event approval email (franchise-aware)
+    try {
+      const approvedEvent = data[0]
+      const { data: biz } = await supabase
+        .from('business_profiles')
+        .select('email, first_name, business_name, city')
+        .eq('id', approvedEvent.business_id)
+        .single()
+
+      if (biz?.email) {
+        const city = biz.city || 'bournemouth'
+        const baseUrl = getFranchiseBaseUrl(city)
+        const template = createEventApprovalEmail({
+          firstName: biz.first_name || 'Business Owner',
+          businessName: biz.business_name || 'Your Business',
+          eventName: approvedEvent.event_name,
+          city,
+          dashboardUrl: `${baseUrl}/dashboard/events`
+        })
+        const emailResult = await sendFranchiseEmail({ city, to: biz.email, template })
+        if (emailResult.success) {
+          console.log(`📧 Event approval email sent to ${biz.email}`)
+        } else {
+          console.error(`❌ Failed to send event approval email: ${emailResult.error}`)
+        }
+      }
+    } catch (emailError) {
+      console.error('⚠️ Event approval email error (non-critical):', emailError)
+    }
+
+    // In-app notification
+    if (approvedEvent?.business_id) {
+      const { createBusinessNotification } = await import('@/lib/actions/business-notification-actions')
+      await createBusinessNotification({
+        businessId: approvedEvent.business_id,
+        type: 'change_approved',
+        title: 'Event approved',
+        message: `Your event "${approvedEvent.event_name}" has been approved and is now live`,
+        metadata: { eventId, eventName: approvedEvent.event_name },
+      })
     }
 
     console.log('🎉 Event approval complete!')
@@ -471,6 +527,13 @@ export async function rejectEvent(
     // Use service role client for admin actions (bypasses RLS)
     const supabase = createServiceRoleClient()
 
+    // Fetch event details before rejecting (need business_id + event_name for email)
+    const { data: eventData } = await supabase
+      .from('business_events')
+      .select('business_id, event_name')
+      .eq('id', eventId)
+      .single()
+
     // Reject the event
     const { error } = await supabase
       .from('business_events')
@@ -487,8 +550,54 @@ export async function rejectEvent(
 
     revalidatePath('/admin')
 
-    // Archive in knowledge base if it was previously approved (prevent it from appearing in chat)
+    // Archive in knowledge base if it was previously approved
     await archiveEventInKnowledgeBase(eventId)
+
+    // 📧 Send event rejection email (franchise-aware)
+    if (eventData) {
+      try {
+        const { data: biz } = await supabase
+          .from('business_profiles')
+          .select('email, first_name, business_name, city')
+          .eq('id', eventData.business_id)
+          .single()
+
+        if (biz?.email) {
+          const city = biz.city || 'bournemouth'
+          const baseUrl = getFranchiseBaseUrl(city)
+          const template = createChangeRejectionEmail({
+            firstName: biz.first_name || 'Business Owner',
+            businessName: biz.business_name || 'Your Business',
+            changeType: 'event',
+            changeName: eventData.event_name,
+            rejectionReason,
+            city,
+            dashboardUrl: `${baseUrl}/dashboard/events`,
+            supportEmail: 'support@qwikker.com'
+          })
+          const emailResult = await sendFranchiseEmail({ city, to: biz.email, template })
+          if (emailResult.success) {
+            console.log(`📧 Event rejection email sent to ${biz.email}`)
+          } else {
+            console.error(`❌ Failed to send event rejection email: ${emailResult.error}`)
+          }
+        }
+      } catch (emailError) {
+        console.error('⚠️ Event rejection email error (non-critical):', emailError)
+      }
+
+      // In-app notification
+      if (eventData.business_id) {
+        const { createBusinessNotification } = await import('@/lib/actions/business-notification-actions')
+        await createBusinessNotification({
+          businessId: eventData.business_id,
+          type: 'change_rejected',
+          title: 'Event not approved',
+          message: `Your event "${eventData.event_name}" was not approved`,
+          metadata: { eventId, eventName: eventData.event_name, reason: rejectionReason },
+        })
+      }
+    }
 
     return { success: true }
   } catch (error) {
