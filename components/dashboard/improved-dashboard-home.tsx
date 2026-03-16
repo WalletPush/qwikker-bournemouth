@@ -57,10 +57,10 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
     founding_member_description: string
   } | null>(null)
   const [analyticsData, setAnalyticsData] = useState<{
-    totalVisits: number
+    totalProfileViews: number
     totalClaims: number
-    totalQRScans: number
-  }>({ totalVisits: 0, totalClaims: 0, totalQRScans: 0 })
+    totalSaves: number
+  }>({ totalProfileViews: 0, totalClaims: 0, totalSaves: 0 })
   const supabase = createClientComponentClient()
   
   // Modal states
@@ -153,9 +153,9 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         const data = await getBusinessAnalytics(profile.id)
         
         setAnalyticsData({
-          totalVisits: data.totalVisits,
+          totalProfileViews: data.totalProfileViews,
           totalClaims: data.totalOfferClaims,
-          totalQRScans: data.totalQRScans
+          totalSaves: data.totalSaves
         })
       } catch (error) {
         console.error('Error fetching analytics:', error)
@@ -1461,28 +1461,23 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className={!isFeatureUnlocked('analytics') ? "blur-[8px] select-none pointer-events-none" : ""}>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-[#00d083]">{analyticsData.totalVisits}</p>
-                <p className="text-xs text-gray-400">Views This Month</p>
+                <p className="text-2xl font-bold text-[#00d083]">{analyticsData.totalProfileViews}</p>
+                <p className="text-xs text-gray-400">Profile Views</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-[#00d083]">{analyticsData.totalClaims}</p>
                 <p className="text-xs text-gray-400">Offers Claimed</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-[#00d083]">{analyticsData.totalQRScans}</p>
-                <p className="text-xs text-gray-400">QR Code Scans</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-[#00d083]">
-                  {analyticsData.totalVisits > 0 
-                    ? ((analyticsData.totalClaims / analyticsData.totalVisits) * 100).toFixed(1) 
-                    : '0'}%
-                </p>
-                <p className="text-xs text-gray-400">Conversion Rate</p>
+                <p className="text-2xl font-bold text-[#00d083]">{analyticsData.totalSaves}</p>
+                <p className="text-xs text-gray-400">Saves</p>
               </div>
             </div>
+            <Button asChild size="sm" variant="outline" className="w-full border-slate-600 text-slate-300 hover:bg-slate-700">
+              <Link href="/dashboard/analytics">View Analytics</Link>
+            </Button>
           </CardContent>
           {/* Only show lock overlay if analytics is not unlocked */}
           {!isFeatureUnlocked('analytics') && (

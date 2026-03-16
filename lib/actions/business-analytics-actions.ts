@@ -3,41 +3,41 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export interface BusinessAnalytics {
-  // Visit Analytics
-  totalVisits: number
-  uniqueVisitors: number
-  registeredVisitors: number
-  anonymousVisitors: number
-  visitTrend: number // percentage change from previous period
-  
+  // Profile View Analytics (page views of business detail page)
+  totalProfileViews: number
+  uniqueViewers: number
+  registeredViewers: number
+  anonymousViewers: number
+  viewTrend: number
+
   // Offer Analytics
   totalOfferClaims: number
   activeOffers: number
-  claimTrend: number // percentage change
+  claimTrend: number
   topOffers: Array<{
     id: string
     offerName: string
     claims: number
     value: string
   }>
-  
-  // QR Code Analytics
-  totalQRScans: number
-  qrScanTrend: number
-  topQRCodes: Array<{
-    id: string
-    name: string
-    scans: number
-  }>
-  
-  // Conversion Metrics
-  conversionRate: number // visits to offer claims
-  avgVisitsPerUser: number
-  
+
+  // Saves
+  totalSaves: number
+  saveTrend: number
+
+  // Loyalty (null if business has no loyalty program)
+  loyaltyMembers: number | null
+  loyaltyStampEarns: number | null
+  loyaltyRedemptions: number | null
+
+  // Vibes
+  totalVibes: number
+  positiveVibePercent: number | null
+
   // Time-based data for charts
-  dailyVisits: Array<{
+  dailyData: Array<{
     date: string
-    visits: number
+    views: number
     claims: number
   }>
 }
@@ -54,40 +54,19 @@ export interface ActivityEvent {
 export async function getBusinessActivityData(businessId: string): Promise<{
   recentVisits: number
   recentClaims: number
-  recentQRScans: number
   recentActivity: ActivityEvent[]
 }> {
   try {
     const supabase = createServiceRoleClient()
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     
-    // Get recent visits (last 7 days) with wallet_pass_id for name lookups
-    const { data: visits } = await supabase
-      .from('user_business_visits')
-      .select('id, visit_date, wallet_pass_id')
-      .eq('business_id', businessId)
-      .gte('visit_date', sevenDaysAgo.toISOString())
-      .order('visit_date', { ascending: false })
-      .limit(20)
-    
-    // Get recent claims (last 7 days) with wallet_pass_id and offer details
-    const { data: claims } = await supabase
-      .from('user_offer_claims')
-      .select('id, claimed_at, wallet_pass_id, offer_title, business_id')
-      .eq('business_id', businessId)
-      .gte('claimed_at', sevenDaysAgo.toISOString())
-      .order('claimed_at', { ascending: false })
-      .limit(20)
-    
-    // Get recent QR scans (last 7 days)
-    const { data: qrScans } = await supabase
-      .from('qr_code_scans')
-      .select(`
-        id,
-        qr_codes!inner(business_id)
-      `)
-      .eq('qr_codes.business_id', businessId)
-      .gte('scanned_at', sevenDaysAgo.toISOString())
+    const [
+      { data: visits },
+      { data: claims },
+    ] = await Promise.all([
+      supabase.from('user_business_visits').select('id, visit_date, wallet_pass_id').eq('business_id', businessId).gte('visit_date', sevenDaysAgo.toISOString()).order('visit_date', { ascending: false }).limit(20),
+      supabase.from('user_offer_claims').select('id, claimed_at, wallet_pass_id, offer_title').eq('business_id', businessId).gte('claimed_at', sevenDaysAgo.toISOString()).order('claimed_at', { ascending: false }).limit(20),
+    ])
     
     // Collect all wallet_pass_ids to batch-lookup names
     const walletPassIds = new Set<string>()
@@ -138,15 +117,13 @@ export async function getBusinessActivityData(businessId: string): Promise<{
     return {
       recentVisits: visits?.length || 0,
       recentClaims: claims?.length || 0,
-      recentQRScans: qrScans?.length || 0,
       recentActivity: recentActivity.slice(0, 15),
     }
   } catch (error) {
-    console.error('❌ Error fetching business activity:', error)
+    console.error('Error fetching business activity:', error)
     return {
       recentVisits: 0,
       recentClaims: 0,
-      recentQRScans: 0,
       recentActivity: [],
     }
   }
@@ -158,229 +135,162 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
     const now = new Date()
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
-    
-    // 1. VISIT ANALYTICS
-    const { data: visits, error: visitsError } = await supabase
-      .from('user_business_visits')
-      .select('*')
-      .eq('business_id', businessId)
-      .gte('visit_date', thirtyDaysAgo.toISOString())
-    
-    const { data: previousVisits } = await supabase
-      .from('user_business_visits')
-      .select('*')
-      .eq('business_id', businessId)
-      .gte('visit_date', sixtyDaysAgo.toISOString())
-      .lt('visit_date', thirtyDaysAgo.toISOString())
-    
-    const totalVisits = visits?.length || 0
-    const previousTotalVisits = previousVisits?.length || 0
-    const visitTrend = previousTotalVisits > 0 
-      ? ((totalVisits - previousTotalVisits) / previousTotalVisits) * 100 
-      : totalVisits > 0 ? 100 : 0 // If we have visits but no previous visits, show 100% growth
-    
-    // Count unique visitors (only those with user_id or wallet_pass_id)
-    const uniqueVisitors = new Set(
-      visits?.map(v => v.user_id || v.wallet_pass_id).filter(Boolean)
-    ).size
-    
-    // Count registered visitors (those with user_id or wallet_pass_id)
-    const registeredVisitors = visits?.filter(v => v.user_id || v.wallet_pass_id).length || 0
-    
-    // Anonymous visitors are those WITHOUT user_id or wallet_pass_id
-    const anonymousVisitors = visits?.filter(v => !v.user_id && !v.wallet_pass_id).length || 0
-    
-    // 2. OFFER ANALYTICS
-    const { data: claims } = await supabase
-      .from('user_offer_claims')
-      .select(`
-        *,
-        business_offers!inner(
-          business_id,
-          offer_name,
-          offer_value
-        )
-      `)
-      .eq('business_offers.business_id', businessId)
-      .gte('claimed_at', thirtyDaysAgo.toISOString())
-    
-    const { data: previousClaims } = await supabase
-      .from('user_offer_claims')
-      .select(`
-        *,
-        business_offers!inner(business_id)
-      `)
-      .eq('business_offers.business_id', businessId)
-      .gte('claimed_at', sixtyDaysAgo.toISOString())
-      .lt('claimed_at', thirtyDaysAgo.toISOString())
-    
+
+    // 1. PROFILE VIEW ANALYTICS (page views of business detail page)
+    const [
+      { data: views },
+      { data: previousViews },
+    ] = await Promise.all([
+      supabase.from('user_business_visits').select('*').eq('business_id', businessId).gte('visit_date', thirtyDaysAgo.toISOString()),
+      supabase.from('user_business_visits').select('id').eq('business_id', businessId).gte('visit_date', sixtyDaysAgo.toISOString()).lt('visit_date', thirtyDaysAgo.toISOString()),
+    ])
+
+    const totalProfileViews = views?.length || 0
+    const previousTotal = previousViews?.length || 0
+    const viewTrend = previousTotal > 0
+      ? ((totalProfileViews - previousTotal) / previousTotal) * 100
+      : totalProfileViews > 0 ? 100 : 0
+
+    const uniqueViewers = new Set(views?.map(v => v.user_id || v.wallet_pass_id).filter(Boolean)).size
+    const registeredViewers = views?.filter(v => v.user_id || v.wallet_pass_id).length || 0
+    const anonymousViewers = views?.filter(v => !v.user_id && !v.wallet_pass_id).length || 0
+
+    // 2. OFFER ANALYTICS (user_offer_claims has business_id directly — no join needed)
+    const [
+      { data: claims },
+      { data: previousClaims },
+      { data: activeOffersData },
+    ] = await Promise.all([
+      supabase.from('user_offer_claims').select('id, offer_id, offer_name, offer_title, offer_value, claimed_at').eq('business_id', businessId).gte('claimed_at', thirtyDaysAgo.toISOString()),
+      supabase.from('user_offer_claims').select('id').eq('business_id', businessId).gte('claimed_at', sixtyDaysAgo.toISOString()).lt('claimed_at', thirtyDaysAgo.toISOString()),
+      supabase.from('business_offers').select('id').eq('business_id', businessId).eq('status', 'approved'),
+    ])
+
     const totalOfferClaims = claims?.length || 0
-    const previousTotalClaims = previousClaims?.length || 0
-    const claimTrend = previousTotalClaims > 0
-      ? ((totalOfferClaims - previousTotalClaims) / previousTotalClaims) * 100
+    const claimTrend = (previousClaims?.length || 0) > 0
+      ? ((totalOfferClaims - (previousClaims?.length || 0)) / (previousClaims?.length || 1)) * 100
       : 0
-    
-    // Count active offers
-    const { data: activeOffersData } = await supabase
-      .from('business_offers')
-      .select('id')
-      .eq('business_id', businessId)
-      .eq('status', 'approved')
-    
-    const activeOffers = activeOffersData?.length || 0
-    
-    // Top performing offers
-    const offerClaimCounts: Record<string, { name: string, value: string, count: number }> = {}
+
+    const offerClaimCounts: Record<string, { name: string; value: string; count: number }> = {}
     claims?.forEach(claim => {
-      const offerId = claim.offer_id
+      const offerId = claim.offer_id || claim.id
       if (!offerClaimCounts[offerId]) {
-        offerClaimCounts[offerId] = {
-          name: claim.business_offers?.offer_name || 'Unknown Offer',
-          value: claim.business_offers?.offer_value || '',
-          count: 0
-        }
+        offerClaimCounts[offerId] = { name: claim.offer_title || claim.offer_name || 'Unknown Offer', value: claim.offer_value || '', count: 0 }
       }
       offerClaimCounts[offerId].count++
     })
-    
     const topOffers = Object.entries(offerClaimCounts)
-      .map(([id, data]) => ({
-        id,
-        offerName: data.name,
-        claims: data.count,
-        value: data.value
-      }))
+      .map(([id, data]) => ({ id, offerName: data.name, claims: data.count, value: data.value }))
       .sort((a, b) => b.claims - a.claims)
       .slice(0, 5)
-    
-    // 3. QR CODE ANALYTICS
-    const { data: qrScans } = await supabase
-      .from('qr_code_scans')
-      .select(`
-        *,
-        qr_codes!inner(business_id, qr_name)
-      `)
-      .eq('qr_codes.business_id', businessId)
-      .gte('scanned_at', thirtyDaysAgo.toISOString())
-    
-    const { data: previousQRScans } = await supabase
-      .from('qr_code_scans')
-      .select(`
-        *,
-        qr_codes!inner(business_id)
-      `)
-      .eq('qr_codes.business_id', businessId)
-      .gte('scanned_at', sixtyDaysAgo.toISOString())
-      .lt('scanned_at', thirtyDaysAgo.toISOString())
-    
-    const totalQRScans = qrScans?.length || 0
-    const previousTotalQRScans = previousQRScans?.length || 0
-    const qrScanTrend = previousTotalQRScans > 0
-      ? ((totalQRScans - previousTotalQRScans) / previousTotalQRScans) * 100
+
+    // 3. SAVES
+    const [
+      { count: savesCount },
+      { count: previousSavesCount },
+    ] = await Promise.all([
+      supabase.from('user_saved_items').select('*', { count: 'exact', head: true }).eq('item_type', 'business').eq('item_id', businessId).gte('saved_at', thirtyDaysAgo.toISOString()),
+      supabase.from('user_saved_items').select('*', { count: 'exact', head: true }).eq('item_type', 'business').eq('item_id', businessId).gte('saved_at', sixtyDaysAgo.toISOString()).lt('saved_at', thirtyDaysAgo.toISOString()),
+    ])
+    const totalSaves = savesCount || 0
+    const saveTrend = (previousSavesCount || 0) > 0
+      ? ((totalSaves - (previousSavesCount || 0)) / (previousSavesCount || 1)) * 100
       : 0
-    
-    // Top QR codes
-    const qrScanCounts: Record<string, { name: string, count: number }> = {}
-    qrScans?.forEach(scan => {
-      const qrId = scan.qr_code_id
-      if (!qrScanCounts[qrId]) {
-        qrScanCounts[qrId] = {
-          name: scan.qr_codes?.qr_name || 'Unknown QR',
-          count: 0
-        }
-      }
-      qrScanCounts[qrId].count++
-    })
-    
-    const topQRCodes = Object.entries(qrScanCounts)
-      .map(([id, data]) => ({
-        id,
-        name: data.name,
-        scans: data.count
-      }))
-      .sort((a, b) => b.scans - a.scans)
-      .slice(0, 5)
-    
-    // 4. CONVERSION METRICS
-    const conversionRate = totalVisits > 0 
-      ? (totalOfferClaims / totalVisits) * 100 
-      : 0
-    
-    const avgVisitsPerUser = uniqueVisitors > 0 
-      ? totalVisits / uniqueVisitors 
-      : 0
-    
-    // 5. DAILY VISIT/CLAIM DATA (last 30 days)
-    const dailyData: Record<string, { visits: number, claims: number }> = {}
-    
-    // Initialize all dates
-    for (let i = 0; i < 30; i++) {
-      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
-      const dateKey = date.toISOString().split('T')[0]
-      dailyData[dateKey] = { visits: 0, claims: 0 }
+
+    // 4. LOYALTY (only if business has a loyalty program)
+    let loyaltyMembers: number | null = null
+    let loyaltyStampEarns: number | null = null
+    let loyaltyRedemptions: number | null = null
+
+    const { data: loyaltyProgram } = await supabase
+      .from('loyalty_programs')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('status', 'active')
+      .single()
+
+    if (loyaltyProgram) {
+      const [
+        { count: membersCount },
+        { count: earnsCount },
+        { count: redemptionsCount },
+      ] = await Promise.all([
+        supabase.from('loyalty_memberships').select('*', { count: 'exact', head: true }).eq('program_id', loyaltyProgram.id).eq('status', 'active'),
+        supabase.from('loyalty_earn_events').select('*', { count: 'exact', head: true }).eq('business_id', businessId).eq('valid', true).gte('earned_at', thirtyDaysAgo.toISOString()),
+        supabase.from('loyalty_redemptions').select('*', { count: 'exact', head: true }).eq('business_id', businessId).gte('consumed_at', thirtyDaysAgo.toISOString()),
+      ])
+      loyaltyMembers = membersCount || 0
+      loyaltyStampEarns = earnsCount || 0
+      loyaltyRedemptions = redemptionsCount || 0
     }
-    
-    // Count visits per day
-    visits?.forEach(visit => {
-      const dateKey = visit.visit_date.split('T')[0]
-      if (dailyData[dateKey]) {
-        dailyData[dateKey].visits++
-      }
-    })
-    
-    // Count claims per day
-    claims?.forEach(claim => {
-      const dateKey = claim.claimed_at.split('T')[0]
-      if (dailyData[dateKey]) {
-        dailyData[dateKey].claims++
-      }
-    })
-    
-    const dailyVisits = Object.entries(dailyData)
-      .map(([date, data]) => ({
-        date,
-        visits: data.visits,
-        claims: data.claims
-      }))
+
+    // 5. VIBES
+    const { data: vibeRows } = await supabase
+      .from('qwikker_vibes')
+      .select('vibe_rating')
+      .eq('business_id', businessId)
+
+    const totalVibes = vibeRows?.length || 0
+    const positiveVibePercent = totalVibes >= 5
+      ? Math.round(((vibeRows?.filter(v => v.vibe_rating === 'loved_it' || v.vibe_rating === 'it_was_good').length || 0) / totalVibes) * 100)
+      : null
+
+    // 6. DAILY DATA (last 30 days)
+    // Supabase returns timestamptz as "2026-01-27 02:07:50.473+00" (space, not T)
+    const toDateKey = (ts: string) => new Date(ts).toISOString().split('T')[0]
+
+    const dailyBuckets: Record<string, { views: number; claims: number }> = {}
+    for (let i = 0; i < 30; i++) {
+      const dateKey = new Date(now.getTime() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      dailyBuckets[dateKey] = { views: 0, claims: 0 }
+    }
+    views?.forEach(v => { const k = toDateKey(v.visit_date); if (dailyBuckets[k]) dailyBuckets[k].views++ })
+    claims?.forEach(c => { const k = toDateKey(c.claimed_at); if (dailyBuckets[k]) dailyBuckets[k].claims++ })
+
+    const dailyData = Object.entries(dailyBuckets)
+      .map(([date, d]) => ({ date, views: d.views, claims: d.claims }))
       .sort((a, b) => a.date.localeCompare(b.date))
-    
+
     return {
-      totalVisits,
-      uniqueVisitors,
-      registeredVisitors,
-      anonymousVisitors,
-      visitTrend,
+      totalProfileViews,
+      uniqueViewers,
+      registeredViewers,
+      anonymousViewers,
+      viewTrend,
       totalOfferClaims,
-      activeOffers,
+      activeOffers: activeOffersData?.length || 0,
       claimTrend,
       topOffers,
-      totalQRScans,
-      qrScanTrend,
-      topQRCodes,
-      conversionRate,
-      avgVisitsPerUser,
-      dailyVisits
+      totalSaves,
+      saveTrend,
+      loyaltyMembers,
+      loyaltyStampEarns,
+      loyaltyRedemptions,
+      totalVibes,
+      positiveVibePercent,
+      dailyData,
     }
-    
+
   } catch (error) {
-    console.error('❌ Error fetching business analytics:', error)
-    // Return empty analytics on error
+    console.error('Error fetching business analytics:', error)
     return {
-      totalVisits: 0,
-      uniqueVisitors: 0,
-      registeredVisitors: 0,
-      anonymousVisitors: 0,
-      visitTrend: 0,
+      totalProfileViews: 0,
+      uniqueViewers: 0,
+      registeredViewers: 0,
+      anonymousViewers: 0,
+      viewTrend: 0,
       totalOfferClaims: 0,
       activeOffers: 0,
       claimTrend: 0,
       topOffers: [],
-      totalQRScans: 0,
-      qrScanTrend: 0,
-      topQRCodes: [],
-      conversionRate: 0,
-      avgVisitsPerUser: 0,
-      dailyVisits: []
+      totalSaves: 0,
+      saveTrend: 0,
+      loyaltyMembers: null,
+      loyaltyStampEarns: null,
+      loyaltyRedemptions: null,
+      totalVibes: 0,
+      positiveVibePercent: null,
+      dailyData: [],
     }
   }
 }

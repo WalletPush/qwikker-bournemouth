@@ -432,7 +432,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
         'Offer performance: total views, claims, redemptions, and conversion rate',
         'Audience breakdown: new vs returning users, locations, device types',
         'Trends & comparisons: day/week/month charts and offer-to-offer comparisons',
-        'Export & QR tracking: download CSVs; track scans from in-venue QR stands'
+        'Export & tracking: download CSVs; monitor performance over time'
       ],
       disclaimer: 'Available on Spotlight. Data is anonymized & privacy-friendly.'
     },
