@@ -81,7 +81,7 @@ const CATEGORY_FALLBACKS: Record<string, string[]> = {
   default: ['restaurant', 'cafe', 'bar'],
 }
 
-function resolveCategory(systemCategory: string): string {
+export function resolveCategory(systemCategory: string): string {
   if (imageCount(systemCategory) > 0) return systemCategory
 
   const fallbacks = CATEGORY_FALLBACKS[systemCategory] || []
@@ -125,6 +125,38 @@ export function getPlaceholderVariation(systemCategory: string, businessId: stri
     imgClass,
     overlayClass: tint ?? null,
   }
+}
+
+/**
+ * Same as getPlaceholderVariation but respects an admin-selected variant override.
+ * When variantOverride is provided and not null, the image index is forced to that
+ * value instead of being hashed from businessId.
+ */
+export function getPlaceholderVariationWithOverride(
+  systemCategory: string,
+  businessId: string,
+  variantOverride?: number | null,
+): { url: string; imgClass: string; overlayClass: string | null } {
+  if (variantOverride == null) {
+    return getPlaceholderVariation(systemCategory, businessId)
+  }
+
+  const category = resolveCategory(systemCategory)
+  const count = imageCount(category)
+  const idx = count <= 1 ? 0 : variantOverride % count
+  const url = `/placeholders/${category}/${idx.toString().padStart(2, '0')}.webp`
+
+  const cropIdx = stableHash(businessId + ':crop') % CROP_VARIANTS.length
+  const colorIdx = stableHash(businessId + ':color') % COLOR_FILTERS.length
+  const tintIdx = stableHash(businessId + ':tint') % TINT_OVERLAYS.length
+
+  const crop = CROP_VARIANTS[cropIdx]
+  const color = COLOR_FILTERS[colorIdx]
+  const tint = TINT_OVERLAYS[tintIdx]
+
+  const imgClass = ['object-cover w-full h-full', crop, color].filter(Boolean).join(' ')
+
+  return { url, imgClass, overlayClass: tint ?? null }
 }
 
 export function getImageCountForCategory(systemCategory: string): number {

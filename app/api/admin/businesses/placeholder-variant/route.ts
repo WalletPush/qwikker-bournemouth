@@ -5,13 +5,11 @@ import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
 /**
  * Admin-only API route to update placeholder_variant for a business
  * 
- * Simple system: variants 0, 1, 2 (corresponding to 00.webp, 01.webp, 02.webp)
- * 
  * Safety rules:
  * - Only admins can access
  * - Only unclaimed businesses can have placeholder overrides
  * - Franchise-scoped (admin can only modify businesses in their city)
- * - Variant must be 0, 1, or 2
+ * - Variant must be an integer 0-10 (DB constraint)
  */
 export async function POST(req: Request) {
   try {
@@ -25,10 +23,9 @@ export async function POST(req: Request) {
       )
     }
 
-    // Validate variant is 0, 1, or 2
-    if (![0, 1, 2].includes(placeholderVariant)) {
+    if (typeof placeholderVariant !== 'number' || !Number.isInteger(placeholderVariant) || placeholderVariant < 0 || placeholderVariant > 10) {
       return NextResponse.json(
-        { error: 'placeholderVariant must be 0, 1, or 2' },
+        { error: 'placeholderVariant must be an integer between 0 and 10' },
         { status: 400 }
       )
     }

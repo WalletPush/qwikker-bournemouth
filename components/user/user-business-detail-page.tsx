@@ -41,34 +41,11 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
   const [walkingTime, setWalkingTime] = useState<number | null>(null)
   const hasTrackedVisit = useRef(false)
   
-  // 💚 Vibe Prompt State
+  // 💚 Vibe Prompt State (triggered by post-visit actions only)
   const [showVibePrompt, setShowVibePrompt] = useState(false)
-  const [vibePromptDelay, setVibePromptDelay] = useState<NodeJS.Timeout | null>(null)
-  
+
   // 💾 Saved Businesses State
   const [isSaved, setIsSaved] = useState(false)
-  
-  // 💚 Trigger vibe prompt after engagement (with delay)
-  const triggerVibePrompt = () => {
-    if (!walletPassId) {
-      console.log('⚠️ Cannot show vibe prompt - no wallet pass ID')
-    } else {
-      console.log('💚 Vibe prompt triggered! Will show in 1 second...')
-    }
-    
-    // Clear any existing delay
-    if (vibePromptDelay) {
-      clearTimeout(vibePromptDelay)
-    }
-    
-    // Show prompt after 1 second (reduced for better UX)
-    const timeout = setTimeout(() => {
-      console.log('💚 Showing vibe prompt now!', { hasWalletPass: !!walletPassId })
-      setShowVibePrompt(true)
-    }, 1000)
-    
-    setVibePromptDelay(timeout)
-  }
   
   // 💾 Save/Unsave Business (Does NOT trigger vibe - saving ≠ visiting)
   const handleSaveToggle = async () => {
@@ -118,15 +95,6 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
     // Saving is just bookmarking for later, not actual engagement
     // Vibes should only be triggered after real actions: directions, call, offer claim
   }
-  
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (vibePromptDelay) {
-        clearTimeout(vibePromptDelay)
-      }
-    }
-  }, [vibePromptDelay])
   
   // Find business by slug in the combined businesses list FIRST
   const business = businesses.find(b => b.slug === slug)
@@ -304,11 +272,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
       setTimeout(() => {
         document.body.removeChild(modalOverlay)
         
-        // 💚 Trigger vibe prompt after claiming offer
-        triggerVibePrompt()
-        
-        // Note: Not reloading page to allow vibe prompt to show
-        // The UI is already updated via state
+        // UI is already updated via state
       }, 300)
     }
     
@@ -491,14 +455,22 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Button className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold">
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          Book Now
-        </Button>
-        
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {business.booking_url && (
+          <Button
+            className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold"
+            onClick={() => {
+              const url = business.booking_url.startsWith('http') ? business.booking_url : `https://${business.booking_url}`
+              window.open(url, '_blank', 'noopener,noreferrer')
+            }}
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Book Now
+          </Button>
+        )}
+
         <Button 
           variant="outline" 
           className="border-slate-600 text-slate-300 hover:bg-slate-700"
@@ -525,8 +497,6 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
               }
             }
             
-            // 💚 Trigger vibe prompt after directions
-            triggerVibePrompt()
           }}
         >
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -542,9 +512,6 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
           onClick={() => {
             if (business.phone) {
               window.location.href = `tel:${business.phone}`
-              
-              // 💚 Trigger vibe prompt after call
-              triggerVibePrompt()
             } else {
               alert('Phone number not available for this business')
             }

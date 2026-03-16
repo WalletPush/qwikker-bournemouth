@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { getPlaceholderVariation, getFallbackPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
+import { getPlaceholderVariationWithOverride, getFallbackPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
 import { optimizeCloudinaryUrl, getBusinessImageSizes } from '@/lib/utils/optimize-image-url'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 
@@ -8,6 +8,7 @@ interface BusinessCardImageProps {
   businessId: string
   systemCategory: SystemCategory
   heroImage?: string | null
+  placeholderVariant?: number | null
   showUnclaimedBadge?: boolean
   className?: string
   onBadgeHover?: (isHovering: boolean) => void
@@ -19,6 +20,7 @@ export function BusinessCardImage({
   businessId,
   systemCategory,
   heroImage,
+  placeholderVariant,
   showUnclaimedBadge = true,
   className = '',
   onBadgeHover,
@@ -46,7 +48,8 @@ export function BusinessCardImage({
   }
 
   // Unclaimed businesses: deterministic placeholder with visual variation
-  const { url, imgClass, overlayClass } = getPlaceholderVariation(systemCategory, businessId)
+  // When placeholderVariant is set by admin, it overrides the hash-based selection
+  const { url, imgClass, overlayClass } = getPlaceholderVariationWithOverride(systemCategory, businessId, placeholderVariant)
   
   return (
     <div className={`relative ${className} overflow-hidden`}>

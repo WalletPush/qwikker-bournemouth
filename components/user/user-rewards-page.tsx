@@ -118,6 +118,7 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
         rewardDescription={redeemingMembership.program.reward_description}
         businessName={redeemingMembership.program.business.business_name}
         businessLogo={redeemingMembership.program.business.logo}
+        redeemInstructions={redeemingMembership.program.redeem_instructions}
         onClose={() => {
           setRedeemingMembership(null)
           // Refetch memberships to get updated balance

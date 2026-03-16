@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         loyalty_programs(
           id, public_id, program_name, type, reward_threshold, reward_description,
           stamp_label, stamp_icon, status, primary_color,
-          walletpush_template_id, city,
+          redeem_instructions, walletpush_template_id, city,
           business_profiles(business_name, logo)
         )
       `)
@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
             stamp_icon: program.stamp_icon,
             status: program.status,
             primary_color: program.primary_color,
+            redeem_instructions: program.redeem_instructions || null,
             walletpush_template_id: program.walletpush_template_id,
             business: {
               business_name: bp.business_name || 'Unknown',

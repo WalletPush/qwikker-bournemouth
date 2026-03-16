@@ -66,13 +66,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { changes, changeDescription } = body as {
-      changes: Partial<DesignSpecJson>
+    const { changes = {}, changeDescription } = body as {
+      changes?: Partial<DesignSpecJson>
       changeDescription: string
     }
 
-    if (!changes || Object.keys(changes).length === 0) {
-      return NextResponse.json({ error: 'No changes specified' }, { status: 400 })
+    if ((!changes || Object.keys(changes).length === 0) && !changeDescription?.trim()) {
+      return NextResponse.json({ error: 'Please describe what you want to change' }, { status: 400 })
     }
 
     // Build the proposed design spec (current values merged with changes)

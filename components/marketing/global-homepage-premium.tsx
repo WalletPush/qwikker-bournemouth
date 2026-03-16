@@ -170,6 +170,14 @@ export function GlobalHomepagePremium({ cities }: { cities: LiveCity[] }) {
   const [mounted, setMounted] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  // City vote form state
+  const [cityVoteCity, setCityVoteCity] = useState('')
+  const [cityVoteEmail, setCityVoteEmail] = useState('')
+  const [cityVoteName, setCityVoteName] = useState('')
+  const [cityVoteSubmitted, setCityVoteSubmitted] = useState(false)
+  const [cityVoteLoading, setCityVoteLoading] = useState(false)
+  const [cityVoteError, setCityVoteError] = useState<string | null>(null)
+
   useEffect(() => {
     setMounted(true)
   }, [cities])
@@ -880,19 +888,100 @@ export function GlobalHomepagePremium({ cities }: { cities: LiveCity[] }) {
 
       {/* Request City */}
       <SectionShell variant="soft">
-        <section className="max-w-3xl mx-auto px-6 pt-40 pb-40 border-t border-white/10 text-center">
-          <h2 className="text-3xl lg:text-4xl font-semibold text-white mb-6">
-            Request your city
-          </h2>
-          <p className="text-neutral-400 text-base mb-10 leading-relaxed max-w-xl mx-auto">
-            Cities launch individually. If yours isn&apos;t live yet, let us know.
-          </p>
-          <a
-            href="mailto:hello@qwikker.com?subject=City Request"
-            className="inline-block px-8 py-4 bg-[#00d083] hover:bg-[#00b86f] text-black text-base font-medium rounded-xl transition-colors"
-          >
-            Request your city
-          </a>
+        <section className="max-w-3xl mx-auto px-6 pt-40 pb-40 border-t border-white/10">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl lg:text-4xl font-semibold text-white mb-6">
+              Vote for your city
+            </h2>
+            <p className="text-neutral-400 text-base leading-relaxed max-w-xl mx-auto">
+              Cities launch individually based on demand. Tell us where you are and we&apos;ll let you know when we go live.
+            </p>
+          </div>
+
+          {cityVoteSubmitted ? (
+            <div className="text-center py-8">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#00d083]/10 mb-4">
+                <svg className="w-7 h-7 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-white text-lg font-medium mb-2">Vote registered</p>
+              <p className="text-neutral-400 text-sm">We&apos;ll email you when Qwikker launches in your area.</p>
+            </div>
+          ) : (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                setCityVoteError(null)
+                setCityVoteLoading(true)
+                try {
+                  const res = await fetch('/api/city-request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      cityName: cityVoteCity,
+                      email: cityVoteEmail,
+                      name: cityVoteName || undefined,
+                    }),
+                  })
+                  const data = await res.json()
+                  if (res.ok && data.success) {
+                    setCityVoteSubmitted(true)
+                  } else {
+                    setCityVoteError(data.error || 'Something went wrong. Try again.')
+                  }
+                } catch {
+                  setCityVoteError('Something went wrong. Try again.')
+                } finally {
+                  setCityVoteLoading(false)
+                }
+              }}
+              className="max-w-md mx-auto space-y-4"
+            >
+              <div>
+                <input
+                  type="text"
+                  placeholder="Your city"
+                  required
+                  maxLength={100}
+                  value={cityVoteCity}
+                  onChange={(e) => setCityVoteCity(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#00d083]/50 focus:border-[#00d083]/50 transition-colors"
+                />
+              </div>
+              <div>
+                <input
+                  type="email"
+                  placeholder="Email address"
+                  required
+                  maxLength={255}
+                  value={cityVoteEmail}
+                  onChange={(e) => setCityVoteEmail(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#00d083]/50 focus:border-[#00d083]/50 transition-colors"
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  placeholder="Name (optional)"
+                  maxLength={100}
+                  value={cityVoteName}
+                  onChange={(e) => setCityVoteName(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#00d083]/50 focus:border-[#00d083]/50 transition-colors"
+                />
+              </div>
+              {cityVoteError && (
+                <p className="text-red-400 text-sm">{cityVoteError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={cityVoteLoading}
+                className="w-full px-8 py-4 bg-[#00d083] hover:bg-[#00b86f] disabled:opacity-50 disabled:cursor-not-allowed text-black text-base font-medium rounded-xl transition-colors"
+              >
+                {cityVoteLoading ? 'Submitting...' : 'Vote for your city'}
+              </button>
+            </form>
+          )}
         </section>
       </SectionShell>
 

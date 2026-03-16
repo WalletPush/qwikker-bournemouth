@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useRef } from 'react'
-import { getPlaceholderUrl, getImageCountForCategory } from '@/lib/placeholders/getPlaceholderImage'
+import { getPlaceholderUrl, getImageCountForCategory, resolveCategory } from '@/lib/placeholders/getPlaceholderImage'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -45,8 +45,9 @@ export function PlaceholderSelector({
 
   // Preview URL
   const previewUrl = useMemo(() => {
+    const resolved = resolveCategory(systemCategory)
     const variantStr = selectedVariant.toString().padStart(2, '0')
-    return `/placeholders/${systemCategory}/${variantStr}.webp`
+    return `/placeholders/${resolved}/${variantStr}.webp`
   }, [systemCategory, selectedVariant])
 
   async function handleSave() {

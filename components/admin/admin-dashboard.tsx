@@ -27,6 +27,9 @@ import { AdminContactCentreClient } from './admin-contact-centre-client'
 import { AdminLoyaltyQueue } from './admin-loyalty-queue'
 import { DeleteBusinessModal } from '@/components/admin/delete-business-modal'
 import { BusinessCard } from '@/components/user/business-card'
+import { AdminBusinessPreview } from './admin-business-preview'
+import { PlaceholderSelector } from './placeholder-selector'
+import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
 
 interface Business {
   id: string
@@ -87,6 +90,13 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
 
   // Live Listings view mode: CRM (default admin table) vs User (discover-style cards)
   const [liveViewMode, setLiveViewMode] = useState<'crm' | 'user'>('crm')
+
+  // Admin preview modal (user view click-through)
+  const [previewBusiness, setPreviewBusiness] = useState<any>(null)
+  // Placeholder selector modal (change image for unclaimed businesses)
+  const [placeholderBusiness, setPlaceholderBusiness] = useState<any>(null)
+  // Local overrides for placeholder variants (updated after admin saves, without needing a full page refresh)
+  const [placeholderOverrides, setPlaceholderOverrides] = useState<Record<string, number>>({})
 
   // Real claims data from database (will be loaded via API)
   const [mockClaims, setMockClaims] = useState([])
@@ -622,7 +632,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       website: src.website_url || src.website || null,
       status: src.status,
       google_place_id: src.google_place_id,
-      placeholder_variant: src.placeholder_variant,
+      placeholder_variant: placeholderOverrides[src.id] ?? src.placeholder_variant,
     }
   }
 
@@ -1984,13 +1994,37 @@ Qwikker Admin Team`
                     </div>
                   ) : liveViewMode === 'user' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {liveBusinesses.map((business) => (
-                        <BusinessCard
-                          key={business.id}
-                          business={toUserCardProps(business)}
-                          showDistance={false}
-                        />
-                      ))}
+                      {liveBusinesses.map((business) => {
+                        const cardProps = toUserCardProps(business)
+                        const isUnclaimed = business.status === 'unclaimed' || (crmData.find(c => c.id === business.id)?.status === 'unclaimed')
+                        return (
+                          <BusinessCard
+                            key={business.id}
+                            business={cardProps}
+                            showDistance={false}
+                            onClick={() => setPreviewBusiness(cardProps)}
+                            adminOverlay={isUnclaimed ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  setPlaceholderBusiness({
+                                    id: business.id,
+                                    name: business.business_name || cardProps.name,
+                                    status: business.status || 'unclaimed',
+                                    systemCategory: resolveSystemCategory(cardProps),
+                                    placeholderVariant: placeholderOverrides[business.id] ?? cardProps.placeholder_variant ?? null,
+                                  })
+                                }}
+                                className="px-2 py-1 text-[10px] font-medium bg-slate-800/90 hover:bg-slate-700 backdrop-blur-sm text-white rounded-md border border-slate-600/50 transition-colors"
+                              >
+                                Change image
+                              </button>
+                            ) : undefined}
+                          />
+                        )
+                      })}
                     </div>
                   ) : (
                     <div className="grid lg:grid-cols-2 gap-6">
@@ -3727,6 +3761,55 @@ Qwikker Admin Team`
           businessId={deleteModal.business.id}
           variant="incomplete"
         />
+      )}
+
+      {/* Admin Business Preview Modal (user view detail) */}
+      {previewBusiness && (
+        <AdminBusinessPreview
+          business={previewBusiness}
+          onClose={() => setPreviewBusiness(null)}
+        />
+      )}
+
+      {/* Placeholder Selector Modal (change image for unclaimed businesses) */}
+      {placeholderBusiness && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="relative w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto rounded-xl bg-slate-900 border border-slate-700 shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h3 className="text-sm font-semibold text-white">Change placeholder image</h3>
+              <button
+                onClick={() => setPlaceholderBusiness(null)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-4">
+              <PlaceholderSelector
+                businessId={placeholderBusiness.id}
+                businessName={placeholderBusiness.name}
+                status={placeholderBusiness.status}
+                systemCategory={placeholderBusiness.systemCategory}
+                placeholderVariant={placeholderBusiness.placeholderVariant}
+                onSave={async (variant: number) => {
+                  try {
+                    const res = await fetch('/api/admin/businesses/placeholder-variant', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ businessId: placeholderBusiness.id, placeholderVariant: variant }),
+                    })
+                    if (res.ok) {
+                      setPlaceholderOverrides(prev => ({ ...prev, [placeholderBusiness.id]: variant }))
+                      setPlaceholderBusiness(null)
+                    }
+                  } catch (err) {
+                    console.error('Failed to update placeholder variant:', err)
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

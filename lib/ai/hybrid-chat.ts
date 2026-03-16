@@ -1448,8 +1448,16 @@ export async function generateHybridAIResponse(
             }
           }
 
+          // Qwikker Vibes sentiment
+          let vibesLine = ''
+          const vibeStats = vibesMap.get(business.id)
+          if (vibeStats && vibeStats.total_vibes >= 5) {
+            const positivePercent = Math.round(((vibeStats.loved_it + vibeStats.it_was_good) / vibeStats.total_vibes) * 100)
+            vibesLine = `\nQwikker Vibes: ${positivePercent}% positive from ${vibeStats.total_vibes} users`
+          }
+
           const businessSlug = getBusinessSlug(business)
-          return `**${business.business_name}** [TIER: ${business.tierLabel}] [SLUG: ${businessSlug}]${ratingLine}
+          return `**${business.business_name}** [TIER: ${business.tierLabel}] [SLUG: ${businessSlug}]${ratingLine}${vibesLine}
 Category: ${business.display_category || 'Not specified'}${hoursLine}${loyaltyLine}${richContent}${offerText}`
         }).join('\n\n')
       : 'No businesses available in this city yet.'

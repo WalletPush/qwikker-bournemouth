@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { BusinessCardImage } from '@/components/ui/business-card-image'
+import { getPlaceholderVariationWithOverride } from '@/lib/placeholders/getPlaceholderImage'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
@@ -19,6 +20,7 @@ interface BusinessCardProps {
   className?: string
   isSaved?: boolean
   onToggleSave?: () => void
+  adminOverlay?: React.ReactNode
 }
 
 export function BusinessCard({ 
@@ -28,7 +30,8 @@ export function BusinessCard({
   showDistance = true,
   className = '',
   isSaved = false,
-  onToggleSave
+  onToggleSave,
+  adminOverlay
 }: BusinessCardProps) {
   const [showTooltip, setShowTooltip] = useState(false)
   const systemCategory = resolveSystemCategory(business)
@@ -139,7 +142,7 @@ export function BusinessCard({
               <img 
                 src={business.images && business.images.length > 0 && business.images[0] !== '/placeholder-business.jpg' 
                   ? business.images[0] 
-                  : `/placeholders/${systemCategory}/00.webp`}
+                  : getPlaceholderVariationWithOverride(systemCategory, business.id, business.placeholder_variant).url}
                 alt={business.name}
                 style={{ 
                   display: 'block',
@@ -348,6 +351,7 @@ export function BusinessCard({
                 businessName={business.name}
                 businessId={business.id}
                 systemCategory={systemCategory}
+                placeholderVariant={business.placeholder_variant}
                 showUnclaimedBadge={true}
                 className="h-full w-full"
                 onBadgeHover={(isHovering) => setShowTooltip(isHovering)}
@@ -375,6 +379,7 @@ export function BusinessCard({
                 businessName={business.name}
                 businessId={business.id}
                 systemCategory={systemCategory}
+                placeholderVariant={business.placeholder_variant}
                 showUnclaimedBadge={false}
                 className="h-full w-full"
               />
@@ -433,6 +438,13 @@ export function BusinessCard({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
           </button>
+        )}
+
+        {/* Admin overlay (e.g. "Change image" button) - top-left, only when no save heart */}
+        {!onToggleSave && adminOverlay && (
+          <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-[2]">
+            {adminOverlay}
+          </div>
         )}
 
         {/* Distance Badge - Show for ALL businesses */}

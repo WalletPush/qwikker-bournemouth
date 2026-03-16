@@ -111,8 +111,9 @@ export interface BusinessCRMData {
   last_name: string | null
   business_category: string
   business_type: string | null
-  system_category: string | null // For placeholder image logic
-  placeholder_variant: number | null // Admin-selected placeholder variant (0, 1, 2)
+  system_category: string | null
+  display_category: string | null
+  placeholder_variant: number | null
   business_address: string
   business_town: string
   business_postcode: string
