@@ -62,6 +62,7 @@ export default async function EarnPage({ params, searchParams }: EarnPageProps) 
       token={token}
       walletPassId={walletPassId}
       program={{
+        business_id: program.business_id,
         program_name: program.program_name,
         reward_description: program.reward_description,
         reward_threshold: program.reward_threshold,

@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
-import { uploadToCloudinary, sendToGoHighLevel } from '@/lib/integrations-secure'
+import { uploadToCloudinary } from '@/lib/integrations-secure'
 import { createOrUpdateProfile } from '@/lib/actions/profile-actions'
 
 // Form validation schema
@@ -224,23 +224,6 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
       if (!result.success) {
         throw new Error(result.error || 'Signup failed')
       }
-
-      // Send to external services (non-blocking)
-      const externalData = {
-        ...data,
-        logo_url: result.profile?.logo || '',
-        menuservice_url: '', // Will be handled in server action
-        offer_image_url: result.profile?.offer_image || '',
-        phone: normalizePhoneNumber(data.phone),
-      }
-
-      // Send to franchise-specific GHL (server-side notifications handled in signup-actions.ts)
-      sendToGoHighLevel(externalData, result.profile?.city).then(() => {
-        console.log('✅ GHL webhook successful for:', result.profile?.city)
-      }).catch(err => {
-        console.error('❌ GHL webhook failed for:', result.profile?.city, err)
-        // Don't block the user flow, but log the error
-      })
 
       // Handle redirect based on auto-login result
       if (result.redirectTo) {

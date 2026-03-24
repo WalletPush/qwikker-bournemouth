@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2 } from 'lucide-react'
+import { VibePromptSheet } from '@/components/user/vibe-prompt-sheet'
 
 interface RedemptionDisplayProps {
   membershipId: string
   walletPassId: string
+  businessId: string
   rewardDescription: string
   businessName: string
   businessLogo?: string | null
@@ -21,6 +23,7 @@ const DISPLAY_WINDOW_MS = 10 * 60 * 1000
 export function RedemptionDisplay({
   membershipId,
   walletPassId,
+  businessId,
   rewardDescription,
   businessName,
   businessLogo,
@@ -34,6 +37,7 @@ export function RedemptionDisplay({
   const [errorMsg, setErrorMsg] = useState('')
   const holdTimer = useRef<NodeJS.Timeout | null>(null)
   const [holdProgress, setHoldProgress] = useState(0)
+  const [showVibePrompt, setShowVibePrompt] = useState(false)
 
   const consume = useCallback(async () => {
     setState('consuming')
@@ -238,6 +242,14 @@ export function RedemptionDisplay({
     )
   }
 
+  // Show vibe prompt shortly after entering expired state
+  useEffect(() => {
+    if (state === 'expired') {
+      const timer = setTimeout(() => setShowVibePrompt(true), 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [state])
+
   // Expired
   if (state === 'expired') {
     return (
@@ -256,6 +268,15 @@ export function RedemptionDisplay({
             Back to Rewards
           </button>
         </div>
+
+        {showVibePrompt && (
+          <VibePromptSheet
+            businessId={businessId}
+            businessName={businessName}
+            walletPassId={walletPassId}
+            onClose={() => setShowVibePrompt(false)}
+          />
+        )}
       </div>
     )
   }

@@ -53,7 +53,7 @@ export default function AddToWalletButton({
     try {
       // Check if user has a wallet pass first
       if (!userWalletPassId || userWalletPassId === 'guest') {
-        throw new Error('You need to sign up through the GHL form first to get your Qwikker wallet pass');
+        throw new Error('You need to sign up first to get your Qwikker wallet pass');
       }
 
       // UPDATE MAIN WALLET PASS with the new offer

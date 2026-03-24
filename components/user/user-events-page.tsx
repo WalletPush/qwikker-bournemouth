@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Calendar, Clock, MapPin, Users, ExternalLink, Heart, Bookmark } from 'lucide-react'
+import { saveItem, unsaveItem, getUserSavedItems } from '@/lib/actions/user-saved-actions'
 
 interface UserEventsPageProps {
   events?: any[]
@@ -27,18 +28,30 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
   const [interestedEvents, setInterestedEvents] = useState<Set<string>>(new Set())
   const [heroEventId, setHeroEventId] = useState<string | null>(null)
   
-  // Load from localStorage after component mounts
+  // Load saved/interested events — DB takes priority when walletPassId exists, localStorage for anonymous
   useEffect(() => {
     const userId = walletPassId || 'anonymous-user'
-    
-    const savedEventsData = localStorage.getItem(`qwikker-saved-events-${userId}`)
-    const interestedEventsData = localStorage.getItem(`qwikker-interested-events-${userId}`)
-    
-    if (savedEventsData) {
-      setSavedEvents(new Set(JSON.parse(savedEventsData)))
-    }
-    if (interestedEventsData) {
-      setInterestedEvents(new Set(JSON.parse(interestedEventsData)))
+
+    if (walletPassId) {
+      getUserSavedItems(walletPassId).then(result => {
+        if (result.success && result.items) {
+          const dbSaved = new Set(
+            result.items.filter(i => i.item_type === 'event').map(i => i.item_id)
+          )
+          setSavedEvents(dbSaved)
+          // Sync to localStorage so it stays consistent
+          localStorage.setItem(`qwikker-saved-events-${userId}`, JSON.stringify([...dbSaved]))
+        }
+      }).catch(() => {
+        // DB unavailable — fall back to localStorage
+        const savedEventsData = localStorage.getItem(`qwikker-saved-events-${userId}`)
+        if (savedEventsData) setSavedEvents(new Set(JSON.parse(savedEventsData)))
+      })
+    } else {
+      const savedEventsData = localStorage.getItem(`qwikker-saved-events-${userId}`)
+      const interestedEventsData = localStorage.getItem(`qwikker-interested-events-${userId}`)
+      if (savedEventsData) setSavedEvents(new Set(JSON.parse(savedEventsData)))
+      if (interestedEventsData) setInterestedEvents(new Set(JSON.parse(interestedEventsData)))
     }
   }, [walletPassId])
 
@@ -85,18 +98,27 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
     { id: 'free', label: 'Free Events', count: upcomingEvents.filter(e => e.price_info?.toLowerCase().includes('free')).length },
   ]
 
-  const toggleSaved = (eventId: string) => {
+  const toggleSaved = (eventId: string, eventName?: string) => {
     const userId = walletPassId || 'anonymous-user'
-    
+
     setSavedEvents(prev => {
       const newSaved = new Set(prev)
-      if (newSaved.has(eventId)) {
-        newSaved.delete(eventId)
-      } else {
+      const isSaving = !newSaved.has(eventId)
+      if (isSaving) {
         newSaved.add(eventId)
+      } else {
+        newSaved.delete(eventId)
       }
       if (typeof window !== 'undefined') {
         localStorage.setItem(`qwikker-saved-events-${userId}`, JSON.stringify([...newSaved]))
+      }
+      // Persist to DB fire-and-forget (only when logged in via wallet pass)
+      if (walletPassId) {
+        if (isSaving) {
+          saveItem(walletPassId, 'event', eventId, eventName).catch(() => {})
+        } else {
+          unsaveItem(walletPassId, 'event', eventId).catch(() => {})
+        }
       }
       return newSaved
     })
@@ -104,7 +126,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
 
   const toggleInterested = (eventId: string) => {
     const userId = walletPassId || 'anonymous-user'
-    
+
     setInterestedEvents(prev => {
       const newInterested = new Set(prev)
       if (newInterested.has(eventId)) {
@@ -216,7 +238,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
       {/* Hero Card Modal - Full Screen Overlay */}
       {heroEvent && (
         <div 
-          className="fixed inset-0 bg-black/80 z-50 overflow-y-auto backdrop-blur-sm"
+          className="fixed inset-0 bg-black/80 z-50 overflow-y-auto backdrop-blur-sm lg:pl-64"
           onClick={handleCloseHeroCard}
         >
           <div className="min-h-screen px-4 py-8">
@@ -367,7 +389,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                     onClick={() => toggleInterested(heroEvent.id)}
                     className={`flex-1 min-w-[200px] ${
                       interestedEvents.has(heroEvent.id)
-                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600'
+                        ? 'bg-emerald-500 hover:bg-emerald-600'
                         : 'bg-slate-700 hover:bg-slate-600'
                     }`}
                   >
@@ -395,7 +417,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                   )}
 
                   <Button
-                    onClick={() => toggleSaved(heroEvent.id)}
+                    onClick={() => toggleSaved(heroEvent.id, heroEvent.event_name)}
                     variant="outline"
                     className={`border-slate-600 ${
                       savedEvents.has(heroEvent.id)
@@ -623,7 +645,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          toggleSaved(event.id)
+                          toggleSaved(event.id, event.event_name)
                         }}
                         className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
                           savedEvents.has(event.id)
@@ -724,7 +746,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                       size="sm"
                       className={`flex-1 ${
                         interestedEvents.has(event.id)
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500'
+                          ? 'bg-emerald-500 hover:bg-emerald-600'
                           : 'border-slate-700 text-slate-300 hover:bg-slate-800'
                       }`}
                     >

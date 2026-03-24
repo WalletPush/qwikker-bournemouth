@@ -220,3 +220,21 @@ export async function extractCityFromRequest(req: { headers: Headers } | Request
   }
   return getCityFromRequest(req.headers)
 }
+
+/**
+ * Resolve the current tenant city, for use as a fallback when entity.city is null.
+ * Pass a Request object (API routes) or omit it (server actions -- uses next/headers).
+ */
+export async function getRequestCityFallback(request?: Request): Promise<string> {
+  try {
+    const host = request
+      ? (request.headers.get('host') || '')
+      : await import('next/headers').then(async (m) => {
+          const h = await m.headers()
+          return h.get('host') || ''
+        })
+    return await getCityFromHostname(host, { allowUnsafeFallbacks: true })
+  } catch {
+    return 'bournemouth'
+  }
+}

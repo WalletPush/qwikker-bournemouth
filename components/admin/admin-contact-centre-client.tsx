@@ -149,6 +149,15 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
   const [bugReportLinkedThreadId, setBugReportLinkedThreadId] = useState('')
   const [submittingBugReport, setSubmittingBugReport] = useState(false)
 
+  // ─── View mode (business threads vs user requests) ───────────
+  const [viewMode, setViewMode] = useState<'business' | 'user_requests'>('business')
+  const [userRequests, setUserRequests] = useState<Array<{
+    id: string; wallet_pass_id: string; city: string; subject: string
+    category: string; message: string; status: string
+    admin_notes: string | null; resolved_at: string | null; created_at: string
+  }>>([])
+  const [loadingUserRequests, setLoadingUserRequests] = useState(false)
+
   // ─── New task state ───────────────────────────────────────────
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [taskTitle, setTaskTitle] = useState('')
@@ -184,6 +193,25 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
     const interval = setInterval(fetchThreads, 30_000)
     return () => clearInterval(interval)
   }, [fetchThreads])
+
+  // ─── Fetch user support requests ────────────────────────────
+  const fetchUserRequests = useCallback(async () => {
+    setLoadingUserRequests(true)
+    try {
+      const res = await fetch(`/api/admin/user-support?city=${encodeURIComponent(city)}`)
+      if (!res.ok) throw new Error('Failed')
+      const data = await res.json()
+      setUserRequests(data.requests || [])
+    } catch (err) {
+      console.error('Error fetching user requests:', err)
+    } finally {
+      setLoadingUserRequests(false)
+    }
+  }, [city])
+
+  useEffect(() => {
+    if (viewMode === 'user_requests') fetchUserRequests()
+  }, [viewMode, fetchUserRequests])
 
   // ─── Fetch thread detail + messages ───────────────────────────
   const openThread = useCallback(async (threadId: string) => {
@@ -422,6 +450,30 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
             {threads.filter(t => t.unreadCount > 0).length} unread
           </Badge>
         </div>
+        {/* View toggle: Business Threads / User Requests */}
+        <div className="flex rounded-lg bg-slate-800 p-0.5">
+          <button
+            onClick={() => setViewMode('business')}
+            className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              viewMode === 'business'
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Business Threads
+          </button>
+          <button
+            onClick={() => setViewMode('user_requests')}
+            className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              viewMode === 'user_requests'
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            User Requests
+          </button>
+        </div>
+        {viewMode === 'business' && (
         <div className="flex items-center gap-2">
           <Button
             size="sm"
@@ -440,6 +492,7 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
             Message HQ
           </Button>
         </div>
+        )}
       </div>
 
       {/* Scrollable content area */}
@@ -749,8 +802,8 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
           </div>
         )}
 
-        {/* Search + filters + thread list (hidden when a form is open) */}
-        {!showBugReportForm && !showEscalateForm && (<>
+        {/* Search + filters + thread list (business threads only) */}
+        {!showBugReportForm && !showEscalateForm && viewMode === 'business' && (<>
         <Input
           placeholder="Search by business name..."
           value={searchQuery}
@@ -871,6 +924,62 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
           ))
         )}
         </>)}
+
+        {/* ─── User Requests list ─────────────────────────────── */}
+        {viewMode === 'user_requests' && (
+          loadingUserRequests ? (
+            <div className="p-4 text-center text-slate-500">Loading user requests...</div>
+          ) : userRequests.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-slate-400 text-sm">No user requests yet</p>
+              <p className="text-slate-500 text-xs mt-1">Help requests from app users will appear here</p>
+            </div>
+          ) : (
+            userRequests.map(req => (
+              <div
+                key={req.id}
+                className={`p-4 border-b border-slate-800/50 space-y-2 ${
+                  req.status === 'open' ? 'bg-slate-800/30' : ''
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{req.subject}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {req.category.replace('_', ' ')} · {formatTimeAgo(req.created_at)}
+                    </p>
+                  </div>
+                  <Badge className={`text-[10px] py-0 ${getStatusColor(req.status)}`}>
+                    {req.status}
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-300 whitespace-pre-wrap">{req.message}</p>
+                <div className="flex items-center gap-2 pt-1">
+                  {req.status === 'open' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-[10px] h-6 border-green-500/30 text-green-400 hover:bg-green-500/10"
+                      onClick={async () => {
+                        await fetch('/api/admin/user-support', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ id: req.id, status: 'resolved' }),
+                        })
+                        fetchUserRequests()
+                      }}
+                    >
+                      Mark Resolved
+                    </Button>
+                  )}
+                  <span className="text-[10px] text-slate-600 truncate">
+                    Pass: {req.wallet_pass_id.slice(0, 12)}...
+                  </span>
+                </div>
+              </div>
+            ))
+          )
+        )}
         </div>
       </div>
     </div>

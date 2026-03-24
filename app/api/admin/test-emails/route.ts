@@ -1,21 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { getAdminById } from '@/lib/utils/admin-auth'
-import { sendFranchiseEmail, getFranchiseBaseUrl } from '@/lib/email/send-franchise-email'
+import { sendFranchiseEmail, getFranchiseBaseUrl, getFranchiseSupportEmail } from '@/lib/email/send-franchise-email'
 import {
+  createBusinessWelcomeEmail,
+  createBusinessSubmittedEmail,
+  createBusinessApprovalEmail,
+  createBusinessRejectionEmail,
   createOfferApprovalEmail,
+  createMenuApprovalEmail,
   createEventApprovalEmail,
   createSecretMenuApprovalEmail,
   createImageApprovalEmail,
   createChangeRejectionEmail,
-  createBusinessApprovalEmail,
 } from '@/lib/email/templates/business-notifications'
+import { createCityLiveEmail } from '@/lib/email/templates/city-request-notifications'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /**
  * POST /api/admin/test-emails
- * Sends one of each email type to the provided recipientEmail.
+ * Sends one of every email template to the provided recipientEmail.
  * Protected by admin auth. Uses Bournemouth franchise config.
  * Adds a 1.5s delay between sends to avoid Resend rate limits.
  */
@@ -46,21 +51,52 @@ export async function POST(request: NextRequest) {
 
     const city = 'bournemouth'
     const dashboardUrl = getFranchiseBaseUrl(city)
+    const supportEmail = await getFranchiseSupportEmail(city)
     const results: Record<string, { success: boolean; error?: string }> = {}
 
     const templates = [
       {
-        key: 'business_approval',
+        key: '1_business_welcome',
+        template: createBusinessWelcomeEmail({
+          firstName: 'Test User',
+          businessName: 'Test Restaurant',
+          city,
+          dashboardUrl: `${dashboardUrl}/dashboard`,
+          supportEmail,
+        }),
+      },
+      {
+        key: '2_business_submitted',
+        template: createBusinessSubmittedEmail({
+          firstName: 'Test User',
+          businessName: 'Test Restaurant',
+          city,
+          supportEmail,
+        }),
+      },
+      {
+        key: '3_business_approval',
         template: createBusinessApprovalEmail({
           firstName: 'Test User',
           businessName: 'Test Restaurant',
           city,
           dashboardUrl: `${dashboardUrl}/dashboard`,
-          supportEmail: 'support@qwikker.com',
+          supportEmail,
         }),
       },
       {
-        key: 'offer_approval',
+        key: '4_business_rejection',
+        template: createBusinessRejectionEmail({
+          firstName: 'Test User',
+          businessName: 'Test Restaurant',
+          rejectionReason:
+            'Your business description needs more detail. Please include your cuisine type, seating capacity, and any unique features.',
+          city,
+          supportEmail,
+        }),
+      },
+      {
+        key: '5_offer_approval',
         template: createOfferApprovalEmail({
           firstName: 'Test User',
           businessName: 'Test Restaurant',
@@ -71,7 +107,18 @@ export async function POST(request: NextRequest) {
         }),
       },
       {
-        key: 'event_approval',
+        key: '6_menu_approval',
+        template: createMenuApprovalEmail({
+          firstName: 'Test User',
+          businessName: 'Test Restaurant',
+          menuName: 'Spring Menu 2026',
+          menuType: 'food',
+          city,
+          dashboardUrl: `${dashboardUrl}/dashboard`,
+        }),
+      },
+      {
+        key: '7_event_approval',
         template: createEventApprovalEmail({
           firstName: 'Test User',
           businessName: 'Test Restaurant',
@@ -81,7 +128,7 @@ export async function POST(request: NextRequest) {
         }),
       },
       {
-        key: 'secret_menu_approval',
+        key: '8_secret_menu_approval',
         template: createSecretMenuApprovalEmail({
           firstName: 'Test User',
           businessName: 'Test Restaurant',
@@ -91,7 +138,7 @@ export async function POST(request: NextRequest) {
         }),
       },
       {
-        key: 'image_approval',
+        key: '9_image_approval',
         template: createImageApprovalEmail({
           firstName: 'Test User',
           businessName: 'Test Restaurant',
@@ -101,7 +148,7 @@ export async function POST(request: NextRequest) {
         }),
       },
       {
-        key: 'change_rejection',
+        key: '10_change_rejection',
         template: createChangeRejectionEmail({
           firstName: 'Test User',
           businessName: 'Test Restaurant',
@@ -111,10 +158,19 @@ export async function POST(request: NextRequest) {
             'The offer description is too vague. Please add specific terms and conditions, and ensure the value is realistic.',
           city,
           dashboardUrl: `${dashboardUrl}/dashboard`,
-          supportEmail: 'support@qwikker.com',
+          supportEmail,
+        }),
+      },
+      {
+        key: '11_city_live',
+        template: createCityLiveEmail({
+          cityName: 'Bournemouth',
+          cityUrl: 'https://bournemouth.qwikker.com',
         }),
       },
     ]
+
+    const total = templates.length
 
     for (const { key, template } of templates) {
       results[key] = await sendFranchiseEmail({ city, to: recipientEmail, template })
@@ -127,8 +183,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: allSucceeded,
       message: allSucceeded
-        ? `All 6 test emails sent to ${recipientEmail}`
-        : `${6 - failedCount}/6 emails sent. ${failedCount} failed.`,
+        ? `All ${total} test emails sent to ${recipientEmail}`
+        : `${total - failedCount}/${total} emails sent. ${failedCount} failed.`,
       results,
     })
   } catch (error) {

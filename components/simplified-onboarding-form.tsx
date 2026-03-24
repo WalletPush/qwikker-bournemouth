@@ -265,33 +265,6 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
         throw new Error(result.error || 'Signup failed')
       }
 
-      // Send to external services (non-blocking) - CRITICAL FOR GHL CONTACT CREATION
-      const { sendToGoHighLevel } = await import('@/lib/integrations-secure')
-      
-      const normalizePhoneNumber = (phone: string): string => {
-        const cleaned = phone.trim()
-        if (cleaned.startsWith('0')) {
-          return '+44' + cleaned.slice(1)
-        }
-        return cleaned
-      }
-      
-      const externalData = {
-        ...fullFormData,
-        logo_url: result.profile?.logo || '',
-        menuservice_url: '', // Will be handled in server action
-        offer_image_url: result.profile?.offer_image || '',
-        phone: normalizePhoneNumber(data.phone),
-      }
-
-      // Send to franchise-specific GHL (server-side notifications handled in signup-actions.ts)
-      sendToGoHighLevel(externalData, result.profile?.city).then(() => {
-        console.log('✅ GHL webhook successful for:', result.profile?.city)
-      }).catch(err => {
-        console.error('❌ GHL webhook failed for:', result.profile?.city, err)
-        // Don't block the user flow, but log the error
-      })
-
       // Handle redirect based on auto-login result
       if (result.redirectTo) {
         console.log('🚀 Redirecting to:', result.redirectTo)

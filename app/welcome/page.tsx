@@ -1,9 +1,18 @@
 import { Suspense } from 'react'
+import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { WelcomePageContent } from '@/components/welcome/welcome-page-content'
+import { getCityFromHostname, getCityDisplayName } from '@/lib/utils/city-detection'
 
-export const metadata = {
-  title: 'Welcome to Qwikker - Start Saving Today!',
-  description: 'Welcome to Qwikker! Discover exclusive offers, secret menus, and amazing local businesses in Bournemouth.',
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers()
+  const host = headersList.get('host') || ''
+  const city = await getCityFromHostname(host, { allowUnsafeFallbacks: true })
+  const cityName = getCityDisplayName(city)
+  return {
+    title: 'Welcome to Qwikker - Start Saving Today!',
+    description: `Welcome to Qwikker! Discover exclusive offers, secret menus, and amazing local businesses in ${cityName}.`,
+  }
 }
 
 interface WelcomePageProps {

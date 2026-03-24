@@ -13,13 +13,14 @@ import type { ClaimBusiness } from '@/types/claim'
 import { getDisplayName, getDisplayAddress, getDisplayCategory, getDisplayType, getDisplayDescription, getDisplayReviewCount } from '@/types/claim'
 import { getPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
+import { getCityFromHostnameClient } from '@/lib/utils/client-city-detection'
 
 // Mock businesses for testing (dev/preview only)
 const MOCK_BUSINESSES: ClaimBusiness[] = [
   {
     id: 'larder-house',
     name: 'The Larder House',
-    address: '123 Old Christchurch Rd, Bournemouth',
+    address: '123 Old Christchurch Rd',
     category: 'Restaurant',
     rating: 4.6,
     reviewCount: 847,
@@ -29,7 +30,7 @@ const MOCK_BUSINESSES: ClaimBusiness[] = [
   {
     id: 'joes-barber',
     name: "Joe's Barber Shop",
-    address: '456 High Street, Bournemouth',
+    address: '456 High Street',
     category: 'Barber',
     rating: 4.8,
     reviewCount: 203,
@@ -39,7 +40,7 @@ const MOCK_BUSINESSES: ClaimBusiness[] = [
   {
     id: 'coffee-lab',
     name: 'The Coffee Lab',
-    address: '789 Commercial Rd, Bournemouth',
+    address: '789 Commercial Rd',
     category: 'Cafe',
     rating: 4.7,
     reviewCount: 512,
@@ -79,8 +80,8 @@ export default function ClaimPage() {
         if (cityData.success) {
           setCity(cityData.city)
         } else {
-          console.warn('Failed to detect city, using fallback')
-          setCity('bournemouth')
+          console.warn('Failed to detect city, using hostname fallback')
+          setCity(getCityFromHostnameClient(window.location.hostname))
         }
         
         // Fetch franchise capabilities
@@ -91,8 +92,8 @@ export default function ClaimPage() {
         }
       } catch (error) {
         console.error('Error fetching city/capabilities:', error)
-        setCity('bournemouth')
-        setSmsOptInAvailable(false) // Fail safely: no SMS
+        setCity(getCityFromHostnameClient(window.location.hostname))
+        setSmsOptInAvailable(false)
       } finally {
         setCityLoading(false)
       }
@@ -316,6 +317,14 @@ export default function ClaimPage() {
         }
         if (editedBusinessData.heroImage) {
           formData.append('heroImage', editedBusinessData.heroImage)
+        }
+
+        // Add booking preference data
+        if (editedBusinessData.booking_preference) {
+          formData.append('editedBookingPreference', editedBusinessData.booking_preference)
+        }
+        if (editedBusinessData.booking_url) {
+          formData.append('editedBookingUrl', editedBusinessData.booking_url)
         }
       }
 

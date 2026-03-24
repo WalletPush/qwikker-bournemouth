@@ -84,8 +84,7 @@ export const getUserLocationLayers = () => {
 
 /**
  * Business pin layers (circle-based, works on all devices)
- * ✅ Cyan for paid/trial businesses
- * ✅ Grey for unclaimed businesses
+ * Green for paid/claimed, grey for unclaimed
  */
 export const getBusinessPinLayers = (): CircleLayerSpecification[] => {
   const glow: CircleLayerSpecification = {
@@ -94,15 +93,15 @@ export const getBusinessPinLayers = (): CircleLayerSpecification[] => {
     source: 'businesses',
     filter: ['!', ['has', 'point_count']],
     paint: {
-      'circle-radius': 16,
+      'circle-radius': 18,
       'circle-color': [
         'case',
-        ['==', ['get', 'isPaid'], true], NEON_CYAN,
+        ['==', ['get', 'isPaid'], true], QWIKKER_GREEN,
         ['==', ['get', 'isUnclaimed'], true], '#6b7280',
-        NEON_CYAN
+        QWIKKER_GREEN
       ],
-      'circle-opacity': 0.25,
-      'circle-blur': 0.6
+      'circle-opacity': 0.35,
+      'circle-blur': 0.7
     }
   }
 
@@ -115,9 +114,9 @@ export const getBusinessPinLayers = (): CircleLayerSpecification[] => {
       'circle-radius': 8,
       'circle-color': [
         'case',
-        ['==', ['get', 'isPaid'], true], NEON_CYAN,
+        ['==', ['get', 'isPaid'], true], QWIKKER_GREEN,
         ['==', ['get', 'isUnclaimed'], true], '#6b7280',
-        NEON_CYAN
+        QWIKKER_GREEN
       ],
       'circle-opacity': 1,
       'circle-stroke-width': 2.5,
@@ -153,21 +152,20 @@ export const getBusinessPinLayers = (): CircleLayerSpecification[] => {
  * Shows elegant neon ring + count when businesses are clustered
  */
 export const getClusterLayers = () => {
-  // Cluster circle (subtle neon cyan glow)
   const clusterCircle: CircleLayerSpecification = {
     id: 'business-clusters',
     type: 'circle',
     source: 'businesses',
     filter: ['has', 'point_count'],
     paint: {
-      'circle-color': NEON_CYAN,
+      'circle-color': QWIKKER_GREEN,
       'circle-opacity': 0.6,
       'circle-radius': [
         'step',
         ['get', 'point_count'],
-        20,  // radius for 2-9 points
-        10, 25,  // radius for 10-99 points
-        100, 30  // radius for 100+ points
+        20,
+        10, 25,
+        100, 30
       ],
       'circle-blur': 0.5,
       'circle-stroke-width': 2,
@@ -176,7 +174,6 @@ export const getClusterLayers = () => {
     }
   }
 
-  // Cluster count label
   const clusterCount: SymbolLayerSpecification = {
     id: 'business-cluster-count',
     type: 'symbol',
@@ -189,7 +186,7 @@ export const getClusterLayers = () => {
     },
     paint: {
       'text-color': '#ffffff',
-      'text-halo-color': NEON_CYAN,
+      'text-halo-color': QWIKKER_GREEN,
       'text-halo-width': 2
     }
   }
@@ -356,6 +353,7 @@ export const getRouteLayers = () => {
   }
 
   // Animated dash overlay (marching ants effect)
+  // dasharray values are multiples of line-width, so [4, 8] stays proportional at all zooms
   const dashOverlay: LineLayerSpecification = {
     id: 'route-dash',
     type: 'line',
@@ -366,18 +364,54 @@ export const getRouteLayers = () => {
         'interpolate',
         ['linear'],
         ['zoom'],
-        10, 2,
-        14, 3,
-        18, 4
+        10, 1.5,
+        14, 2,
+        18, 3
       ],
-      'line-dasharray': [2, 4],
-      'line-opacity': 0.6
+      'line-dasharray': [4, 8],
+      'line-opacity': 0.7
     },
     layout: {
-      'line-cap': 'round',
+      'line-cap': 'butt',
       'line-join': 'round'
     }
   }
 
   return [glow, mainLine, dashOverlay]
+}
+
+/**
+ * Ambient pin layers -- faint dots for all businesses in the viewport.
+ * These sit below the search-result pins to give a "city alive" feel.
+ */
+export const getAmbientPinLayers = (): CircleLayerSpecification[] => {
+  const ambientGlow: CircleLayerSpecification = {
+    id: 'ambient-pins-glow',
+    type: 'circle',
+    source: 'ambient-businesses',
+    filter: ['!', ['has', 'point_count']],
+    paint: {
+      'circle-radius': 5,
+      'circle-color': QWIKKER_GREEN,
+      'circle-opacity': 0.12,
+      'circle-blur': 0.8
+    }
+  }
+
+  const ambientDot: CircleLayerSpecification = {
+    id: 'ambient-pins',
+    type: 'circle',
+    source: 'ambient-businesses',
+    filter: ['!', ['has', 'point_count']],
+    paint: {
+      'circle-radius': 2.5,
+      'circle-color': QWIKKER_GREEN,
+      'circle-opacity': 0.3,
+      'circle-stroke-width': 0,
+      'circle-stroke-color': QWIKKER_GREEN,
+      'circle-stroke-opacity': 0
+    }
+  }
+
+  return [ambientGlow, ambientDot]
 }

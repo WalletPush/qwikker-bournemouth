@@ -41,6 +41,7 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const [badgeCount, setBadgeCount] = useState(0)
   const [savedItemsCount, setSavedItemsCount] = useState(0)
+  const [secretsUnlockedCount, setSecretsUnlockedCount] = useState(0)
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
   const [availablePrograms, setAvailablePrograms] = useState<DiscoverProgram[]>([])
 
@@ -62,6 +63,12 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
           const tracker = getBadgeTracker(walletPassId)
           const progress = tracker.getBadgeProgress()
           setBadgeCount(progress.filter((b: any) => b.earned).length)
+        } catch { /* safe to ignore */ }
+
+        try {
+          const userId = walletPassId || 'anonymous-user'
+          const saved = localStorage.getItem(`qwikker-unlocked-secrets-${userId}`)
+          if (saved) setSecretsUnlockedCount(JSON.parse(saved).length)
         } catch { /* safe to ignore */ }
       }
 
@@ -232,6 +239,7 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
         businessCount={stats.totalBusinesses}
         offerCount={stats.totalOffers}
         secretMenuCount={stats.totalSecretMenus}
+        secretsUnlockedCount={secretsUnlockedCount}
         savedItemsCount={savedItemsCount}
         badgeCount={badgeCount}
         getNavUrl={getNavUrl}
@@ -754,6 +762,7 @@ function NavigationCards({
   businessCount,
   offerCount,
   secretMenuCount,
+  secretsUnlockedCount,
   savedItemsCount,
   badgeCount,
   getNavUrl,
@@ -761,16 +770,17 @@ function NavigationCards({
   businessCount: number
   offerCount: number
   secretMenuCount: number
+  secretsUnlockedCount: number
   savedItemsCount: number
   badgeCount: number
   getNavUrl: (href: string) => string
 }) {
   const cards = [
     { href: '/user/discover', label: 'Discover', count: businessCount, sub: 'places', color: 'emerald', gradient: 'from-emerald-500/30 to-teal-500/30', border: 'border-emerald-500/30', card: 'from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40', text: 'text-emerald-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /> },
-    { href: '/user/offers', label: 'Offers', count: offerCount, sub: 'deals', color: 'orange', gradient: 'from-orange-500/30 to-amber-500/30', border: 'border-orange-500/30', card: 'from-orange-500/10 to-orange-500/5 border-orange-500/20 hover:border-orange-500/40', text: 'text-orange-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /> },
-    { href: '/user/secret-menu', label: 'Secrets', count: secretMenuCount, sub: 'hidden', color: 'purple', gradient: 'from-purple-500/30 to-pink-500/30', border: 'border-purple-500/30', card: 'from-purple-500/10 to-purple-500/5 border-purple-500/20 hover:border-purple-500/40', text: 'text-purple-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /> },
+    { href: '/user/offers', label: 'Offers', count: offerCount, sub: 'available', color: 'orange', gradient: 'from-orange-500/30 to-amber-500/30', border: 'border-orange-500/30', card: 'from-orange-500/10 to-orange-500/5 border-orange-500/20 hover:border-orange-500/40', text: 'text-orange-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /> },
+    { href: '/user/secret-menu', label: 'Secrets', count: `${secretsUnlockedCount} / ${secretMenuCount}`, sub: 'unlocked', color: 'purple', gradient: 'from-purple-500/30 to-pink-500/30', border: 'border-purple-500/30', card: 'from-purple-500/10 to-purple-500/5 border-purple-500/20 hover:border-purple-500/40', text: 'text-purple-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /> },
     { href: '/user/events', label: 'Events', count: 0, sub: 'upcoming', color: 'blue', gradient: 'from-blue-500/30 to-cyan-500/30', border: 'border-blue-500/30', card: 'from-blue-500/10 to-blue-500/5 border-blue-500/20 hover:border-blue-500/40', text: 'text-blue-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /> },
-    { href: '/user/saved', label: 'Saved', count: savedItemsCount, sub: 'places', color: 'pink', gradient: 'from-pink-500/30 to-rose-500/30', border: 'border-pink-500/30', card: 'from-pink-500/10 to-pink-500/5 border-pink-500/20 hover:border-pink-500/40', text: 'text-pink-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /> },
+    { href: '/user/saved', label: 'Saved', count: savedItemsCount, sub: 'saved', color: 'pink', gradient: 'from-pink-500/30 to-rose-500/30', border: 'border-pink-500/30', card: 'from-pink-500/10 to-pink-500/5 border-pink-500/20 hover:border-pink-500/40', text: 'text-pink-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /> },
     { href: '/user/badges', label: 'Badges', count: badgeCount, sub: 'earned', color: 'yellow', gradient: 'from-yellow-500/30 to-amber-500/30', border: 'border-yellow-500/30', card: 'from-yellow-500/10 to-yellow-500/5 border-yellow-500/20 hover:border-yellow-500/40', text: 'text-yellow-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /> },
   ]
 

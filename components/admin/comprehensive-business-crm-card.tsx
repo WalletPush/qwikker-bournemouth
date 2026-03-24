@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { SyncStatusBadge } from './sync-status-badge'
 import { 
   BusinessCRMData, 
   formatCurrency, 
@@ -333,7 +332,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     if (business.status === 'approved' && !business.last_ghl_sync) {
       tasks.push({
         id: taskId++,
-        title: 'Complete GoHighLevel sync',
+        title: 'Complete CRM sync',
         due: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         priority: 'medium',
         completed: false,
@@ -460,12 +459,12 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
       })
     }
     
-    // GHL sync (only if last_ghl_sync exists AND claimed)
+    // CRM sync (only if last_ghl_sync exists AND claimed)
     if (business.last_ghl_sync && isClaimed) {
       events.push({
         id: eventId++,
         type: 'sync_completed',
-        message: 'GoHighLevel sync completed',
+        message: 'CRM sync completed',
         timestamp: business.last_ghl_sync,
         user: 'System'
       })

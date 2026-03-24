@@ -16,7 +16,9 @@ export async function GET(request: NextRequest) {
     const photoName = searchParams.get('photoName')
     const placeId = searchParams.get('placeId')
     const maxWidth = parseInt(searchParams.get('maxWidth') || '600')
-    const city = searchParams.get('city') || 'bournemouth'
+    const { getRequestCityFallback } = await import('@/lib/utils/city-detection')
+    const requestCity = await getRequestCityFallback(request)
+    const city = searchParams.get('city') || requestCity
 
     if (!photoName && !placeId) {
       return NextResponse.json({

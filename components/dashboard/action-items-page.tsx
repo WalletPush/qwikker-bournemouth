@@ -149,10 +149,10 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
 
   if (!profile?.business_description) {
     requiredTodos.push({ 
-      title: 'Add your business description', 
+      title: 'Add your business description',
       href: '/dashboard/profile#business-info',
       priority: 'REQUIRED',
-      description: 'Required for customers to discover you and understand what you offer.',
+      description: 'Our AI uses this to recommend you to customers. Tell your story -- the more detail, the better your matches.',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
@@ -163,10 +163,10 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
 
   if (!profile?.business_tagline) {
     requiredTodos.push({ 
-      title: 'Add your business tagline', 
+      title: 'Add your business tagline',
       href: '/dashboard/profile#business-info',
       priority: 'REQUIRED',
-      description: 'A catchy tagline that appears on your business card.',
+      description: 'A one-liner that appears on your business card and in search results.',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
@@ -359,6 +359,20 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        </svg>
+      )
+    })
+  }
+
+  if (!profile?.booking_preference) {
+    optionalTodos.push({
+      title: 'Set up online booking',
+      href: '/dashboard/business#booking',
+      priority: 'RECOMMENDED',
+      description: 'Let customers book directly from your listing. Supports booking links or phone.',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       )
     })

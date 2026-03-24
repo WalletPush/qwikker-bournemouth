@@ -65,6 +65,17 @@ async function getFranchiseResendConfig(city: string): Promise<FranchiseResendCo
   }
 }
 
+const DEFAULT_SUPPORT_EMAIL = 'hello@qwikker.com'
+
+/**
+ * Returns the franchise-specific support/contact email for use in email body copy.
+ * Falls back to the global default when no franchise config exists.
+ */
+export async function getFranchiseSupportEmail(city: string): Promise<string> {
+  const config = await getFranchiseResendConfig(city)
+  return config?.resend_from_email || DEFAULT_SUPPORT_EMAIL
+}
+
 export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promise<{
   success: boolean
   messageId?: string

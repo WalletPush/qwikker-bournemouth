@@ -3,9 +3,8 @@ import { cookies } from 'next/headers'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
-import { sendContactUpdateToGoHighLevel } from '@/lib/integrations'
 import { getMaxOffers, getMaxSecretMenuItems } from '@/lib/utils/subscription-helpers'
-import { sendFranchiseEmail, getFranchiseBaseUrl } from '@/lib/email/send-franchise-email'
+import { sendFranchiseEmail, getFranchiseBaseUrl, getFranchiseSupportEmail } from '@/lib/email/send-franchise-email'
 import {
   createOfferApprovalEmail,
   createEventApprovalEmail,
@@ -501,80 +500,6 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      // 📞 SYNC APPROVALS TO GHL (offers and files, skip secret menu items)
-      if (change.change_type === 'offer' || change.change_type === 'logo' || change.change_type === 'menu_url' || change.change_type === 'business_images') {
-        try {
-          // Get the updated business profile for GHL sync
-          const { data: updatedBusiness } = await supabaseAdmin
-            .from('business_profiles')
-            .select('*')
-            .eq('id', change.business_id)
-            .single()
-          
-          if (updatedBusiness) {
-            const ghlData = {
-              // Personal info
-              firstName: updatedBusiness.first_name || '',
-              lastName: updatedBusiness.last_name || '',
-              email: updatedBusiness.email || '',
-              phone: updatedBusiness.phone || '',
-              
-              // Business info
-              businessName: updatedBusiness.business_name || '',
-              businessType: updatedBusiness.business_type || '',
-              businessCategory: updatedBusiness.business_category || '',
-              businessAddress: updatedBusiness.business_address || '',
-              town: updatedBusiness.business_town || '',
-              postcode: updatedBusiness.business_postcode || '',
-              
-              // Optional fields
-              website: updatedBusiness.website || '',
-              instagram: updatedBusiness.instagram || '',
-              facebook: updatedBusiness.facebook || '',
-              
-              // File URLs
-              logo_url: updatedBusiness.logo || '',
-              menu_url: updatedBusiness.menu_url || '',
-              offer_image_url: updatedBusiness.offer_image || '',
-              
-              // 🎯 NEWLY APPROVED OFFER DATA
-              offerName: updatedBusiness.offer_name || '',
-              offerType: updatedBusiness.offer_type || '',
-              offerValue: updatedBusiness.offer_value || '',
-              offerClaimAmount: updatedBusiness.offer_claim_amount || '',
-              offerTerms: updatedBusiness.offer_terms || '',
-              offerStartDate: updatedBusiness.offer_start_date || '',
-              offerEndDate: updatedBusiness.offer_end_date || '',
-              
-              // Sync metadata
-              contactSync: true,
-              syncType: `${change.change_type}_approval`,
-              isUpdate: true,
-              updateSource: 'admin_change_approval',
-              adminAction: `approve_${change.change_type}`,
-              adminName: admin.username,
-              changeId: changeId,
-              qwikkerContactId: updatedBusiness.id,
-              city: updatedBusiness.city,
-              updatedAt: new Date().toISOString()
-            }
-            
-            await sendContactUpdateToGoHighLevel(ghlData, updatedBusiness.city)
-            console.log(`📞 Approved ${change.change_type} synced to ${updatedBusiness.city} GHL: ${updatedBusiness.business_name}`)
-            
-            // ✅ UPDATE last_ghl_sync timestamp
-            await supabaseAdmin
-              .from('business_profiles')
-              .update({ last_ghl_sync: new Date().toISOString() })
-              .eq('id', change.business_id)
-          }
-          
-        } catch (ghlError) {
-          console.error(`⚠️ GHL sync failed after ${change.change_type} approval (non-critical):`, ghlError)
-          // Don't fail the approval if GHL sync fails
-        }
-      }
-      
     } else if (action === 'reject') {
       // Mark the change as rejected
       const { error: rejectError } = await supabaseAdmin
@@ -632,7 +557,7 @@ export async function POST(request: NextRequest) {
             rejectionReason: change.rejection_reason || undefined,
             city,
             dashboardUrl: `${baseUrl}/dashboard`,
-            supportEmail: `support@qwikker.com`
+            supportEmail: await getFranchiseSupportEmail(city)
           })
 
           const emailResult = await sendFranchiseEmail({ city, to: biz.email, template })

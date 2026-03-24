@@ -8,7 +8,6 @@ import { validateBusinessProfile } from '@/lib/utils/business-validation'
 import { getSystemCategoryFromDisplayLabel, SYSTEM_CATEGORIES, isValidSystemCategory } from '@/lib/constants/system-categories'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-// import { sendWelcomeEmail } from '@/lib/email/send-welcome-email' // Disabled until domain verification
 
 interface SignupData {
   // Personal info
@@ -323,6 +322,24 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       console.error('⚠️ Slack notification error (non-critical):', error)
     }
 
+    // 📧 SEND WELCOME EMAIL (non-blocking)
+    try {
+      const { sendBusinessWelcomeNotification } = await import('@/lib/notifications/email-notifications')
+      const { getFranchiseSupportEmail, getFranchiseBaseUrl } = await import('@/lib/email/send-franchise-email')
+      const supportEmail = await getFranchiseSupportEmail(locationInfo.city)
+      const dashboardUrl = `${getFranchiseBaseUrl(locationInfo.city)}/dashboard`
+
+      sendBusinessWelcomeNotification(formData.email, {
+        firstName: formData.firstName,
+        businessName: formData.businessName,
+        city: locationInfo.city,
+        dashboardUrl,
+        supportEmail,
+      }).catch(err => console.error('⚠️ Welcome email error (non-critical):', err))
+    } catch (error) {
+      console.error('⚠️ Welcome email import error (non-critical):', error)
+    }
+
     // 5. Track referral if provided
     if (referralCode) {
       try {
@@ -333,16 +350,6 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       }
     }
 
-           // Send welcome email (disabled until domain verification)
-           // sendWelcomeEmail({
-           //   firstName: formData.firstName,
-           //   lastName: formData.lastName,
-           //   email: formData.email,
-           //   businessName: formData.businessName,
-           //   profile: profile
-           // }).catch(error => {
-           //   console.error('Welcome email failed (non-blocking):', error)
-           // })
     
     // 7. Auto-login the user after successful signup
     try {

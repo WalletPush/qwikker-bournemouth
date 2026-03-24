@@ -1,9 +1,17 @@
 import { redirect } from 'next/navigation'
 import type { Metadata } from "next"
+import { headers } from 'next/headers'
+import { getCityFromHostname, getCityDisplayName } from '@/lib/utils/city-detection'
 
-export const metadata: Metadata = {
-  title: "QWIKKER - User Dashboard",
-  description: "Discover amazing local businesses, exclusive offers, and secret menus in Bournemouth",
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers()
+  const host = headersList.get('host') || ''
+  const city = await getCityFromHostname(host, { allowUnsafeFallbacks: true })
+  const cityName = getCityDisplayName(city)
+  return {
+    title: "QWIKKER - User Dashboard",
+    description: `Discover amazing local businesses, exclusive offers, and secret menus in ${cityName}`,
+  }
 }
 
 interface UserPageProps {

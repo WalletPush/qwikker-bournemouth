@@ -91,9 +91,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
       }
     }
     
-    // NOTE: We do NOT trigger vibe prompt here
-    // Saving is just bookmarking for later, not actual engagement
-    // Vibes should only be triggered after real actions: directions, call, offer claim
+    // Saving is bookmarking -- vibes are triggered post-visit (stamp/redeem) or via the CTA
   }
   
   // Find business by slug in the combined businesses list FIRST
@@ -456,18 +454,46 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
 
       {/* Action Buttons */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {business.booking_url && (
+        {/* Book Now — only shown when business has configured a booking method */}
+        {business.booking_preference && business.booking_preference !== 'none' && (
           <Button
             className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold"
             onClick={() => {
-              const url = business.booking_url.startsWith('http') ? business.booking_url : `https://${business.booking_url}`
-              window.open(url, '_blank', 'noopener,noreferrer')
+              // Fire-and-forget booking click event
+              if (trackingData?.businessId) {
+                fetch('/api/user/track-click', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    businessId: trackingData.businessId,
+                    eventType: 'booking_click',
+                    walletPassId: walletPassId || trackingData.visitorWalletPassId || null,
+                  }),
+                }).catch(() => {/* non-critical, swallow silently */})
+              }
+              if (business.booking_preference === 'phone' && business.phone) {
+                window.location.href = `tel:${business.phone}`
+              } else if (business.booking_url) {
+                const url = business.booking_url.startsWith('http') ? business.booking_url : `https://${business.booking_url}`
+                window.open(url, '_blank', 'noopener,noreferrer')
+              }
             }}
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            Book Now
+            {business.booking_preference === 'phone' ? (
+              <>
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                Book by Phone
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Book Now
+              </>
+            )}
           </Button>
         )}
 
@@ -1053,66 +1079,96 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
               </Card>
             )}
 
-            {/* Block B: Qwikker Vibes (💚 Experience Signals) */}
+            {/* Block B: Qwikker Vibes (Experience Signals + Share CTA) */}
             {business.vibes ? (
               <Card className="bg-slate-800/50 border-slate-700 border-l-4 border-l-[#00d083]">
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold text-slate-100 mb-3 flex items-center gap-2">
-                    <span>💚</span>
+                    <span className="text-[#00d083]">♥</span>
                     <span>Qwikker Vibes</span>
                   </h3>
                   {business.vibes.total_vibes === 0 ? (
-                    <p className="text-slate-400 text-sm">
-                      Be the first to share your vibe for this place
-                    </p>
+                    <div>
+                      <p className="text-slate-400 text-sm mb-3">
+                        No vibes yet. Been here before?
+                      </p>
+                      {walletPassId && (
+                        <button
+                          onClick={() => setShowVibePrompt(true)}
+                          className="text-sm font-medium text-[#00d083] hover:text-[#00d083]/80 transition-colors"
+                        >
+                          Share your vibe
+                        </button>
+                      )}
+                    </div>
                   ) : business.vibes.total_vibes >= 1 && business.vibes.total_vibes <= 4 ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-300 text-sm">
-                        {business.vibes.total_vibes} {business.vibes.total_vibes === 1 ? 'vibe' : 'vibes'} from Qwikker users
-                      </span>
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-slate-300 text-sm">
+                          {business.vibes.total_vibes} {business.vibes.total_vibes === 1 ? 'vibe' : 'vibes'} from Qwikker users
+                        </span>
+                      </div>
+                      {walletPassId && (
+                        <button
+                          onClick={() => setShowVibePrompt(true)}
+                          className="text-sm font-medium text-[#00d083] hover:text-[#00d083]/80 transition-colors"
+                        >
+                          Share your vibe
+                        </button>
+                      )}
                     </div>
                   ) : (
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <div className="text-3xl font-bold text-[#00d083]">
-                          {business.vibes.positive_percentage}%
+                    <div>
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <div className="text-3xl font-bold text-[#00d083]">
+                            {business.vibes.positive_percentage}%
+                          </div>
+                          <div className="text-slate-400 text-sm mt-1">
+                            positive ({business.vibes.total_vibes} {business.vibes.total_vibes === 1 ? 'vibe' : 'vibes'})
+                          </div>
                         </div>
-                        <div className="text-slate-400 text-sm mt-1">
-                          positive ({business.vibes.total_vibes} {business.vibes.total_vibes === 1 ? 'vibe' : 'vibes'})
+                        <div className="flex-1 space-y-1.5">
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-slate-400 w-24">♥ Loved it</span>
+                            <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-[#00d083]" 
+                                style={{ width: `${(business.vibes.loved_it_count / business.vibes.total_vibes) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-slate-400 w-8 text-right">{business.vibes.loved_it_count}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-slate-400 w-24">✓ It was good</span>
+                            <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-emerald-600" 
+                                style={{ width: `${(business.vibes.it_was_good_count / business.vibes.total_vibes) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-slate-400 w-8 text-right">{business.vibes.it_was_good_count}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-slate-400 w-24">-- Not for me</span>
+                            <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-slate-500" 
+                                style={{ width: `${(business.vibes.not_for_me_count / business.vibes.total_vibes) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-slate-400 w-8 text-right">{business.vibes.not_for_me_count}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex-1 space-y-1.5">
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-slate-400 w-24">♥ Loved it</span>
-                          <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-[#00d083]" 
-                              style={{ width: `${(business.vibes.loved_it_count / business.vibes.total_vibes) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-slate-400 w-8 text-right">{business.vibes.loved_it_count}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-slate-400 w-24">✓ It was good</span>
-                          <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-emerald-600" 
-                              style={{ width: `${(business.vibes.it_was_good_count / business.vibes.total_vibes) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-slate-400 w-8 text-right">{business.vibes.it_was_good_count}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-slate-400 w-24">— Not for me</span>
-                          <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-slate-500" 
-                              style={{ width: `${(business.vibes.not_for_me_count / business.vibes.total_vibes) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-slate-400 w-8 text-right">{business.vibes.not_for_me_count}</span>
-                        </div>
-                      </div>
+                      {walletPassId && (
+                        <button
+                          onClick={() => setShowVibePrompt(true)}
+                          className="mt-4 text-sm font-medium text-[#00d083] hover:text-[#00d083]/80 transition-colors"
+                        >
+                          Share your vibe
+                        </button>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -1143,9 +1199,17 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                     </svg>
                     <h3 className="text-xl font-semibold text-slate-100 mb-2">What People Think</h3>
-                    <p className="text-slate-400">
+                    <p className="text-slate-400 mb-3">
                       Be the first to share your experience with this business
                     </p>
+                    {walletPassId && (
+                      <button
+                        onClick={() => setShowVibePrompt(true)}
+                        className="text-sm font-medium text-[#00d083] hover:text-[#00d083]/80 transition-colors"
+                      >
+                        Share your vibe
+                      </button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1159,12 +1223,10 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
         <VibePromptSheet
           businessId={business.id}
           businessName={business.name}
-          vibeUserKey={walletPassId}
           walletPassId={walletPassId}
           onClose={() => setShowVibePrompt(false)}
           onVibeSubmitted={(vibeRating) => {
             console.log(`💚 Vibe submitted: ${vibeRating} for ${business.name}`)
-            // TODO: Refetch vibes data to update display
           }}
         />
       )}

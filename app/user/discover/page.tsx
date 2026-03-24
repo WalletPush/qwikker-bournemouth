@@ -236,14 +236,14 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       plan: (business.status === 'unclaimed' || business.status === 'claimed_free') 
         ? null // No plan = no badge
         : (business.plan || 'starter'),
-      rating: business.rating || 4.5,
-      reviewCount: business.review_count || Math.floor(Math.random() * 50) + 10,
+      rating: business.rating ?? null,
+      reviewCount: business.review_count ?? null,
       tags: [
         business.display_category || business.business_category, // Use new field with fallback
         business.business_type,
         business.business_town
       ].filter(Boolean),
-      distance: (Math.random() * 2 + 0.1).toFixed(1), // Random distance for demo
+      distance: null,
       activeOffers: filterActiveOffers(business.business_offers || []).length, // Count only active (approved + non-expired)
       menuPreview: business.menu_preview || [], // Add menu preview for popular items
       hasSecretMenu, // Now properly checks for real secret menu data

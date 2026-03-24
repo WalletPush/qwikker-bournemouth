@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { X } from 'lucide-react'
 
 interface BottomSheetProps {
   isOpen: boolean
@@ -89,6 +90,14 @@ export function BottomSheet({
           touchAction: 'none'
         }}
       >
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 border border-white/10 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+          aria-label="Close card"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
         {/* Drag Handle */}
         <div
           className="py-3 cursor-grab active:cursor-grabbing"

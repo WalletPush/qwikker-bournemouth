@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       await sendCitySlackNotification({
         title: `New Menu Submitted: ${businessProfile.business_name}`,
         message: `${businessProfile.business_name} has uploaded a new ${menuType} menu "${menuName}" for admin approval.`,
-        city: businessProfile.city || 'bournemouth',
+        city: businessProfile.city || (await (await import('@/lib/utils/city-detection')).getRequestCityFallback(request)),
         type: 'business_signup',
         data: { 
           businessName: businessProfile.business_name, 

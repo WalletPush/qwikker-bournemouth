@@ -9,6 +9,7 @@ import {
   type AtlasResponse 
 } from '@/lib/ai/prompts/atlas'
 import { hasValidCoords } from '@/lib/atlas/eligibility'
+import { getBusinessVibeStats } from '@/lib/utils/vibes'
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -24,6 +25,7 @@ const SEARCH_SYNONYMS: Record<string, string[]> = {
   'cafes': ['cafe', 'café', 'coffee', 'bakery', 'tea'],
   'drinks': ['bar', 'pub', 'cocktail', 'wine', 'brewery'],
   'family': ['family', 'kid', 'children', 'play', 'pizza'],
+  'family friendly': ['family', 'kid', 'children', 'play', 'pizza', 'restaurant'],
   'cocktails': ['cocktail', 'bar', 'lounge', 'mixology'],
   'nightlife': ['bar', 'pub', 'nightclub', 'club', 'lounge', 'cocktail'],
   'things to do': ['entertainment', 'activity', 'attraction', 'museum', 'theatre', 'cinema'],
@@ -34,6 +36,29 @@ const SEARCH_SYNONYMS: Record<string, string[]> = {
   'japanese': ['japanese', 'sushi', 'ramen', 'izakaya'],
   'mexican': ['mexican', 'taco', 'burrito', 'cantina'],
   'thai': ['thai', 'pad thai', 'satay'],
+  'brunch': ['brunch', 'breakfast', 'cafe', 'café', 'pancake', 'eggs'],
+  'breakfast': ['breakfast', 'brunch', 'cafe', 'café', 'bakery', 'eggs'],
+  'wings': ['wings', 'chicken', 'grill', 'bar', 'pub', 'american'],
+  'steak': ['steak', 'steakhouse', 'grill', 'meat', 'dining'],
+  'vegan': ['vegan', 'vegetarian', 'plant', 'healthy', 'salad'],
+  'outdoor seating': ['outdoor', 'terrace', 'garden', 'patio', 'al fresco'],
+  'live music': ['live music', 'music', 'gig', 'concert', 'entertainment', 'bar', 'pub'],
+  'pet friendly': ['pet', 'dog', 'dog friendly', 'pub', 'cafe'],
+  'date night': ['date', 'romantic', 'cocktail', 'wine', 'restaurant', 'lounge', 'bistro'],
+  'cheap eats': ['cheap', 'budget', 'takeaway', 'fast food', 'kebab', 'pizza'],
+  'late night': ['late night', 'nightclub', 'bar', 'pub', 'nightlife', 'lounge'],
+  'tapas': ['tapas', 'spanish', 'small plates', 'sharing', 'mediterranean'],
+  'craft beer': ['craft beer', 'brewery', 'ale', 'pub', 'beer', 'taproom'],
+  'wine bar': ['wine', 'wine bar', 'bar', 'lounge', 'bistro'],
+  'rooftop': ['rooftop', 'terrace', 'outdoor', 'bar', 'lounge'],
+  'takeaway': ['takeaway', 'delivery', 'fast food', 'pizza', 'kebab', 'chinese'],
+  'delivery': ['delivery', 'takeaway', 'fast food', 'pizza', 'chinese', 'indian'],
+  'happy hour': ['happy hour', 'bar', 'pub', 'cocktail', 'drinks', 'lounge'],
+  'dessert': ['dessert', 'ice cream', 'bakery', 'cake', 'sweet', 'waffle'],
+  'seafood': ['seafood', 'fish', 'oyster', 'lobster', 'prawn', 'coastal'],
+  'burger': ['burger', 'american', 'grill', 'fast food', 'diner'],
+  'pizza': ['pizza', 'italian', 'takeaway', 'fast food'],
+  'healthy': ['healthy', 'salad', 'vegan', 'juice', 'smoothie', 'bowl'],
 }
 
 /**
@@ -55,7 +80,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { message, userLocation, viewport } = await request.json()
+    const { message, userLocation, viewport, userId } = await request.json()
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
@@ -170,13 +195,68 @@ export async function POST(request: NextRequest) {
     // Respect maxResults -- never dump all at once
     const businesses = allResults.slice(0, maxResults)
     const businessIds = businesses.map(b => b.id)
+
+    // Enrich with loyalty data
+    if (businessIds.length > 0) {
+      const [loyaltyRes, membershipRes] = await Promise.all([
+        supabase
+          .from('loyalty_programs')
+          .select('business_id, reward_name, stamps_required')
+          .in('business_id', businessIds)
+          .eq('is_active', true),
+        userId
+          ? supabase
+              .from('loyalty_memberships')
+              .select('business_id, current_stamps')
+              .in('business_id', businessIds)
+              .eq('user_id', userId)
+          : Promise.resolve({ data: null }),
+      ])
+
+      const loyaltyMap = new Map<string, { reward: string; threshold: number }>()
+      for (const lp of loyaltyRes.data || []) {
+        loyaltyMap.set(lp.business_id, { reward: lp.reward_name, threshold: lp.stamps_required })
+      }
+
+      const membershipMap = new Map<string, number>()
+      for (const m of (membershipRes.data || [])) {
+        membershipMap.set(m.business_id, m.current_stamps || 0)
+      }
+
+      for (const biz of businesses) {
+        const lp = loyaltyMap.get(biz.id)
+        if (lp) {
+          biz.hasLoyalty = true
+          biz.loyaltyReward = lp.reward
+          biz.loyaltyThreshold = lp.threshold
+          const stamps = membershipMap.get(biz.id)
+          if (stamps !== undefined) {
+            biz.userStamps = stamps
+            biz.userStampsRemaining = Math.max(0, lp.threshold - stamps)
+          }
+        }
+      }
+    }
     
     console.log(`🗺️ Atlas: Returning ${businesses.length} businesses:`, businesses.map(b => ({
       name: b.business_name,
       tier: b.business_tier,
       rating: b.rating,
-      category: b.display_category
+      category: b.display_category,
+      hasLoyalty: !!b.hasLoyalty
     })))
+
+    // Batch-fetch vibe stats for all businesses
+    const vibeStatsMap = new Map<string, { positive_percentage: number; total_vibes: number }>()
+    const vibeResults = await Promise.all(
+      businesses.map(b => getBusinessVibeStats(b.id))
+    )
+    businesses.forEach((b, i) => {
+      const stats = vibeResults[i]
+      if (stats && stats.total_vibes >= 5) {
+        vibeStatsMap.set(b.id, { positive_percentage: stats.positive_percentage, total_vibes: stats.total_vibes })
+      }
+    })
 
     // Call OpenAI for summary
     const systemPrompt = ATLAS_SYSTEM_PROMPT.replace('{CITY}', city)
@@ -184,9 +264,16 @@ export async function POST(request: NextRequest) {
     const userPrompt = `User query: "${message}"
 
 Found ${businesses.length} businesses:
-${businesses.map((b, i) => `${i + 1}. ${b.business_name} (${b.display_category || 'Business'}, ${b.rating}★)`).join('\n')}
+${businesses.map((b, i) => {
+  const parts = [`${i + 1}. ${b.business_name} (${b.display_category || 'Business'}, ${b.rating}★)`]
+  if (b.hasLoyalty) parts.push('has loyalty card')
+  if (b.business_tagline) parts.push(`"${b.business_tagline}"`)
+  const vibes = vibeStatsMap.get(b.id)
+  if (vibes) parts.push(`${vibes.positive_percentage}% positive vibes (${vibes.total_vibes} users)`)
+  return parts.join(' — ')
+}).join('\n')}
 
-Generate a SHORT, helpful summary.`
+Write a summary that names specific businesses and tells the user something useful about them relative to their query.`
 
     try {
       const completion = await openai.chat.completions.create({
@@ -211,6 +298,7 @@ Generate a SHORT, helpful summary.`
         return NextResponse.json({
           summary: parsedResponse.summary,
           businessIds,
+          businesses,
           primaryBusinessId: businessIds[0] || null,
           ui: parsedResponse.ui
         } satisfies AtlasResponse)
@@ -219,6 +307,7 @@ Generate a SHORT, helpful summary.`
       return NextResponse.json({
         summary: parsedResponse.summary || `Found ${businesses.length} places.`,
         businessIds,
+        businesses,
         primaryBusinessId: businessIds[0] || null,
         ui: { focus: 'pins' as const, autoDismissMs: 4200 }
       } satisfies AtlasResponse)
@@ -230,6 +319,7 @@ Generate a SHORT, helpful summary.`
       return NextResponse.json({
         summary: `Found ${businesses.length} ${message} spots. Check out ${firstBusiness.business_name}!`,
         businessIds,
+        businesses,
         primaryBusinessId: businessIds[0] || null,
         ui: { focus: 'pins', autoDismissMs: 5000 }
       } as AtlasResponse)

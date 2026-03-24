@@ -7,12 +7,14 @@ import { STAMP_ICONS } from '@/lib/loyalty/loyalty-utils'
 import type { StampIconKey } from '@/lib/loyalty/loyalty-utils'
 import { Loader2, Clock, PartyPopper, AlertTriangle, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { VibePromptSheet } from '@/components/user/vibe-prompt-sheet'
 
 interface EarnPageClientProps {
   publicId: string
   token: string
   walletPassId: string
   program: {
+    business_id: string
     program_name: string
     reward_description: string
     reward_threshold: number
@@ -35,6 +37,7 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
   const [nextEligibleAt, setNextEligibleAt] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [countdown, setCountdown] = useState('')
+  const [showVibePrompt, setShowVibePrompt] = useState(false)
   const hasFired = useRef(false)
 
   const stampIconName = STAMP_ICONS[program.stamp_icon as StampIconKey]?.icon || 'Stamp'
@@ -80,6 +83,9 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
       } else {
         setState('success')
       }
+
+      // Show vibe prompt after a short delay on successful stamp
+      setTimeout(() => setShowVibePrompt(true), 3000)
     } catch {
       setErrorMessage('Connection failed. Please try again.')
       setState('error')
@@ -343,6 +349,15 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showVibePrompt && (state === 'success' || state === 'reward') && (
+        <VibePromptSheet
+          businessId={program.business_id}
+          businessName={program.business_name}
+          walletPassId={walletPassId}
+          onClose={() => setShowVibePrompt(false)}
+        />
+      )}
     </div>
   )
 }

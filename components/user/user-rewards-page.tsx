@@ -22,6 +22,7 @@ interface Membership {
   walletpush_serial: string | null
   program: {
     public_id: string
+    business_id: string
     program_name: string
     type: string
     reward_threshold: number
@@ -115,6 +116,7 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
       <RedemptionDisplay
         membershipId={redeemingMembership.id}
         walletPassId={walletPassId}
+        businessId={redeemingMembership.program.business_id}
         rewardDescription={redeemingMembership.program.reward_description}
         businessName={redeemingMembership.program.business.business_name}
         businessLogo={redeemingMembership.program.business.logo}

@@ -8,7 +8,9 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const city = searchParams.get('city') || 'bournemouth'
+    const { getRequestCityFallback } = await import('@/lib/utils/city-detection')
+    const requestCity = await getRequestCityFallback(request)
+    const city = searchParams.get('city') || requestCity
 
     const supabase = createServiceRoleClient()
 

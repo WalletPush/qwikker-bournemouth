@@ -1,14 +1,100 @@
 import { sendEmail, sendEmailWithRetry } from '../email/email-service'
 import { 
+  createBusinessWelcomeEmail,
+  createBusinessSubmittedEmail,
   createBusinessApprovalEmail,
   createOfferApprovalEmail, 
   createMenuApprovalEmail,
   createBusinessRejectionEmail,
+  BusinessWelcomeEmailData,
+  BusinessSubmittedEmailData,
   BusinessApprovalEmailData,
   OfferApprovalEmailData,
   MenuApprovalEmailData,
   BusinessRejectionEmailData
 } from '../email/templates/business-notifications'
+
+/**
+ * Send welcome email immediately after business registration
+ */
+export async function sendBusinessWelcomeNotification(
+  email: string,
+  data: BusinessWelcomeEmailData
+): Promise<{
+  success: boolean
+  messageId?: string
+  error?: string
+}> {
+  try {
+    console.log(`📧 Sending business welcome email to ${data.firstName} (${email})`)
+
+    const template = createBusinessWelcomeEmail(data)
+
+    const result = await sendEmailWithRetry({
+      to: email,
+      template,
+      tags: [
+        { name: 'category', value: 'business_welcome' },
+        { name: 'city', value: data.city },
+      ]
+    })
+
+    if (result.success) {
+      console.log(`✅ Business welcome email sent: ${result.messageId}`)
+    } else {
+      console.error(`❌ Failed to send business welcome email: ${result.error}`)
+    }
+
+    return result
+  } catch (error) {
+    console.error('❌ Error sending business welcome email:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+/**
+ * Send confirmation email when a business submits for review
+ */
+export async function sendBusinessSubmittedNotification(
+  email: string,
+  data: BusinessSubmittedEmailData
+): Promise<{
+  success: boolean
+  messageId?: string
+  error?: string
+}> {
+  try {
+    console.log(`📧 Sending business submitted email to ${data.firstName} (${email})`)
+
+    const template = createBusinessSubmittedEmail(data)
+
+    const result = await sendEmailWithRetry({
+      to: email,
+      template,
+      tags: [
+        { name: 'category', value: 'business_submitted' },
+        { name: 'city', value: data.city },
+      ]
+    })
+
+    if (result.success) {
+      console.log(`✅ Business submitted email sent: ${result.messageId}`)
+    } else {
+      console.error(`❌ Failed to send business submitted email: ${result.error}`)
+    }
+
+    return result
+  } catch (error) {
+    console.error('❌ Error sending business submitted email:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
 
 /**
  * Send business approval notification email

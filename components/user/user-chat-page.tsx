@@ -375,6 +375,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
 
       console.log('📦 AI Response Data:', {
         hasResponse: !!data.response,
+        responsePreview: data.response?.substring(0, 100),
         intent: data.intent,
         needsLocation: data.needsLocation,
         showAtlasCta: data.showAtlasCta,
@@ -584,7 +585,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
 
   const handleAddToWallet = async (offerId: string, offerName: string, businessName: string) => {
     if (!currentUser?.wallet_pass_id) {
-      alert('You need to sign up through the GHL form first to get your Qwikker wallet pass')
+      alert('You need to sign up first to get your Qwikker wallet pass')
       return
     }
 
@@ -834,64 +835,40 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         }
       `}</style>
       
-      {/* Header */}
-      <div className="mb-6 text-center relative">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <div className="relative">
-            <div className="p-3 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-full">
-              <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.847a4.5 4.5 0 003.09 3.09L15.75 12l-2.847.813a4.5 4.5 0 00-3.09 3.091zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-              </svg>
-            </div>
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full animate-pulse"></div>
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#00d083] via-blue-400 to-purple-400 bg-clip-text text-transparent">
-              AI Companion
-            </h1>
-            <p className="text-slate-400 text-sm">Your local {cityDisplayName} guide</p>
-          </div>
-        </div>
-        
-        {/* Header Actions */}
-        <div className="absolute top-0 right-0 flex items-center gap-2">
-          {/* Atlas Button - Always visible if enabled */}
-          {atlasEnabled && (
-            <button
-              onClick={() => {
-                setAtlasEverOpened(true)
-                setView('atlas')
-                if (userLocation === null) {
-                  requestPermission()
-                }
-              }}
-              className="p-2 text-[#00d083] hover:bg-[#00d083]/10 rounded-lg transition-all duration-200 opacity-80 hover:opacity-100 flex items-center gap-1.5"
-              title="Open Atlas (map discovery)"
-            >
-              <Map className="w-4 h-4" />
-              <span className="text-xs font-medium hidden sm:inline">Atlas</span>
-            </button>
-          )}
-          
-          {/* Clear Chat Button - Only show if there are multiple messages */}
-          {messages.length > 1 && (
-            <button
-              onClick={handleClearChat}
-              className="p-2 text-slate-500 hover:text-slate-300 transition-colors duration-200 opacity-60 hover:opacity-100"
-              title="Start new conversation"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-          )}
-        </div>
+      {/* Toolbar -- Atlas + clear chat */}
+      <div className="flex items-center justify-end gap-1 px-1 mb-2">
+        {atlasEnabled && (
+          <button
+            onClick={() => {
+              setAtlasEverOpened(true)
+              setView('atlas')
+              if (userLocation === null) {
+                requestPermission()
+              }
+            }}
+            className="p-2 text-[#00d083] hover:bg-[#00d083]/10 rounded-lg transition-colors flex items-center gap-1.5"
+            title="Open Atlas"
+          >
+            <Map className="w-4 h-4" />
+            <span className="text-xs font-medium hidden sm:inline">Atlas</span>
+          </button>
+        )}
+        {messages.length > 1 && (
+          <button
+            onClick={handleClearChat}
+            className="p-2 text-slate-500 hover:text-slate-300 transition-colors"
+            title="New conversation"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        )}
       </div>
 
-      {/* Chat Container with Rounded Edges */}
-      <div className="flex-1 flex flex-col bg-gradient-to-br from-slate-800/50 to-slate-700/30 rounded-3xl border border-slate-600/50 shadow-2xl overflow-hidden backdrop-blur-sm">
+      {/* Chat Messages */}
+      <div className="flex-1 flex flex-col overflow-hidden rounded-2xl border border-slate-800/60">
         
-        {/* Chat Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
           {processedMessages.map((message, messageIndex) => {
             // Only stream NEW messages (added after page load)
@@ -906,10 +883,10 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
               <div className={`max-w-[85%] sm:max-w-[75%] ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
                 
                 {/* Message Bubble */}
-                <div className={`rounded-2xl px-4 py-3 shadow-lg ${
+                <div className={`rounded-2xl px-4 py-3 ${
                   message.type === 'user' 
-                    ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black shadow-[#00d083]/20' 
-                    : 'bg-gradient-to-r from-slate-700/90 to-slate-600/90 text-slate-100 border border-slate-600/50'
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-[#00d083]/20 text-slate-100 border border-[#00d083]/30'
                 }`}>
                   {message.type === 'ai' ? (
                     <div
@@ -1033,19 +1010,8 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                   </div>
                 )}
 
-                {/* Event Carousel */}
-                {(() => {
-                  console.log(`🎨 RENDER CHECK for message ${message.id}:`, {
-                    hasEventCards: !!message.eventCards,
-                    eventCardsLength: message.eventCards?.length || 0,
-                    eventCards: message.eventCards,
-                    willRender: message.eventCards && message.eventCards.length > 0
-                  })
-                  return null
-                })()}
-                
-                {/* Event Cards */}
-                {message.eventCards && message.eventCards.length > 0 && (
+                {/* Event Cards -- shown after text finishes streaming */}
+                {message.eventCards && message.eventCards.length > 0 && streamingComplete.has(message.id) && (
                   <div className="mt-3 -mx-2 sm:mx-0">
                     <EventCarousel 
                       events={message.eventCards}
@@ -1084,17 +1050,16 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
             )
           })}
           
-          {/* Enhanced Typing Indicator */}
           {isTyping && (
             <div className="flex justify-start animate-fade-in">
-              <div className="bg-gradient-to-r from-slate-700/90 to-slate-600/90 border border-slate-600/50 rounded-2xl px-4 py-3 shadow-lg animate-pulse">
+              <div className="bg-slate-800/80 border border-slate-700/50 rounded-2xl px-4 py-3">
                 <div className="flex items-center space-x-3">
                   <div className="flex space-x-1">
-                    <div className="w-2.5 h-2.5 bg-gradient-to-r from-[#00d083] to-[#00b86f] rounded-full animate-bounce shadow-lg shadow-[#00d083]/50"></div>
-                    <div className="w-2.5 h-2.5 bg-gradient-to-r from-blue-400 to-blue-500 rounded-full animate-bounce shadow-lg shadow-blue-400/50" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2.5 h-2.5 bg-gradient-to-r from-purple-400 to-purple-500 rounded-full animate-bounce shadow-lg shadow-purple-400/50" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-[#00d083] rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                    <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                   </div>
-                  <span className="text-[#00d083] text-sm font-medium">Qwikker is thinking...</span>
+                  <span className="text-slate-400 text-sm">Thinking...</span>
                 </div>
               </div>
             </div>
@@ -1104,74 +1069,38 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         </div>
 
         {/* Input Area */}
-        <div className="p-4 border-t border-slate-600/50 bg-gradient-to-r from-slate-800/50 to-slate-700/50">
-            <div className="flex gap-3 bg-slate-800/50 rounded-2xl p-2 border border-slate-600/50 focus-within:border-[#00d083]/50 transition-all duration-300 focus-within:shadow-lg focus-within:shadow-[#00d083]/10">
+        <div className="p-3 border-t border-slate-800/60">
+          <div className="flex gap-2 items-end">
             <div className="flex-1">
               <textarea
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="Ask me about restaurants, deals, menus, or anything local..."
-                className="w-full bg-transparent px-4 py-3 text-slate-100 placeholder-slate-400 focus:outline-none text-sm resize-none min-h-[44px] max-h-32"
-                  disabled={isTyping}
+                placeholder="Ask about restaurants, deals, menus..."
+                className="w-full bg-slate-800/50 border border-slate-700/40 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#00d083]/40 text-sm resize-none min-h-[44px] max-h-32 transition-colors"
+                disabled={isTyping}
                 rows={1}
-                style={{
-                  height: 'auto',
-                  minHeight: '44px'
-                }}
+                style={{ height: 'auto', minHeight: '44px' }}
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement
                   target.style.height = 'auto'
                   target.style.height = Math.min(target.scrollHeight, 128) + 'px'
                 }}
               />
-              </div>
-              <Button 
-                onClick={() => handleSendMessage(inputValue)}
-                disabled={!inputValue.trim() || isTyping}
-              className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-4 py-3 rounded-xl font-semibold transition-colors duration-300 disabled:opacity-50 self-end"
-              >
-                {isTyping ? (
-                    <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                )}
-              </Button>
             </div>
-            
-          {/* Status Bar */}
-          <div className="flex items-center justify-between mt-3 text-xs text-slate-500">
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1">
-                <kbd className="bg-slate-700/50 px-2 py-1 rounded text-slate-400 border border-slate-600/50">Enter</kbd>
-                to send
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                Qwikker Online
-              </span>
-            </div>
-            
-            {/* Report Issue Button */}
-            <button
-              onClick={() => {
-                // You can implement this to open a modal, send to support, etc.
-                const email = 'support@qwikker.com'
-                const subject = 'AI Chat Issue Report'
-                const body = `Hi Qwikker team,\n\nI'd like to report an issue with the AI chat:\n\n[Please describe the issue here]\n\nUser: ${currentUser?.name || 'Anonymous'}\nTime: ${new Date().toISOString()}\n\nThanks!`
-                window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`)
-              }}
-              className="flex items-center gap-1 text-slate-500 hover:text-slate-400 transition-colors duration-200 opacity-60 hover:opacity-100"
-              title="Report an issue with the AI chat"
+            <Button 
+              onClick={() => handleSendMessage(inputValue)}
+              disabled={!inputValue.trim() || isTyping}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50"
             >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-              <span className="text-xs">Report issue</span>
-            </button>
+              {isTyping ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              )}
+            </Button>
           </div>
         </div>
         

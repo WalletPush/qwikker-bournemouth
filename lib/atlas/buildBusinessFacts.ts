@@ -1,5 +1,6 @@
 import type { Business } from '@/components/atlas/AtlasMode'
 import type { Coordinates } from '@/lib/location/useUserLocation'
+import { parseStructuredBusinessHours } from '@/lib/utils/business-hours'
 
 export interface FactChip {
   icon: string
@@ -10,7 +11,6 @@ export interface FactChip {
 interface BuildFactsOptions {
   userLocation?: Coordinates | null
   transportMode?: 'walking' | 'driving' | 'either'
-  now?: Date
   hydratedData?: any
   isMobile?: boolean
 }
@@ -39,37 +39,28 @@ function haversineDistance(a: Coordinates, b: { latitude: number; longitude: num
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))
 }
 
-function parseOpenStatus(hydrated: any, now: Date): { isOpen: boolean; closesAt: string | null } | null {
-  if (!hydrated?.opening_hours) return null
+/**
+ * Parse open/closed status from hydrated business data.
+ * Supports Supabase structured format: { monday: { open, close, closed }, ... }
+ */
+function parseOpenStatus(hydrated: any): { isOpen: boolean; label: string } | null {
+  const hours = hydrated?.opening_hours
+  if (!hours) return null
 
   try {
-    const hours = typeof hydrated.opening_hours === 'string'
-      ? JSON.parse(hydrated.opening_hours)
-      : hydrated.opening_hours
+    const parsed = typeof hours === 'string' ? JSON.parse(hours) : hours
+    if (!parsed || typeof parsed !== 'object') return null
 
-    if (!hours || !Array.isArray(hours.periods)) return null
+    const result = parseStructuredBusinessHours(parsed)
 
-    const dayIndex = now.getDay()
-    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+    if (result.displayText === 'Hours not available') return null
 
-    for (const period of hours.periods) {
-      if (period.open?.day === dayIndex) {
-        const openMin = (period.open.hours || 0) * 60 + (period.open.minutes || 0)
-        const closeMin = period.close
-          ? (period.close.hours || 0) * 60 + (period.close.minutes || 0)
-          : 24 * 60
-
-        if (currentMinutes >= openMin && currentMinutes < closeMin) {
-          const closeHour = period.close?.hours
-          const closeMinute = period.close?.minutes
-          const closesAt = closeHour != null
-            ? `${String(closeHour).padStart(2, '0')}:${String(closeMinute || 0).padStart(2, '0')}`
-            : null
-          return { isOpen: true, closesAt }
-        }
-      }
+    return {
+      isOpen: result.isOpen,
+      label: result.isOpen
+        ? result.nextChange ? `Open · ${result.nextChange}` : 'Open now'
+        : result.nextChange ? `Closed · ${result.nextChange}` : 'Closed'
     }
-    return { isOpen: false, closesAt: null }
   } catch {
     return null
   }
@@ -82,7 +73,6 @@ export function buildBusinessFacts(
   const {
     userLocation,
     transportMode = 'walking',
-    now = new Date(),
     hydratedData,
     isMobile = false
   } = options
@@ -90,16 +80,9 @@ export function buildBusinessFacts(
   const chips: FactChip[] = []
 
   // 1. Open/Closed status
-  const openStatus = parseOpenStatus(hydratedData, now)
+  const openStatus = parseOpenStatus(hydratedData)
   if (openStatus) {
-    if (openStatus.isOpen) {
-      const label = openStatus.closesAt ? `Open · Closes ${openStatus.closesAt}` : 'Open now'
-      chips.push({ icon: '🕒', label, priority: 1 })
-    } else {
-      chips.push({ icon: '🕒', label: 'Closed', priority: 1 })
-    }
-  } else if (hydratedData) {
-    chips.push({ icon: '🕒', label: 'Hours not listed', priority: 5 })
+    chips.push({ icon: '🕒', label: openStatus.label, priority: 1 })
   }
 
   // 2. Distance + walk time (only if user location available)
@@ -143,6 +126,11 @@ export function buildBusinessFacts(
   // 7. Offers/events flags (only if hydration data confirms)
   if (hydratedData?.has_offers) {
     chips.push({ icon: '🎫', label: 'Offers available', priority: 6 })
+  }
+
+  // 8. Qwikker Vibes (only if 5+ vibes from hydration)
+  if (hydratedData?.vibes?.total_vibes >= 5) {
+    chips.push({ icon: '💚', label: `${hydratedData.vibes.positive_percentage}% positive`, priority: 5.5 })
   }
 
   // Sort by priority and cap

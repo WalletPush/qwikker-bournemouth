@@ -41,6 +41,8 @@ interface ConfirmBusinessDetailsProps {
     heroImage?: File
     sms_opt_in?: boolean
     phone_e164?: string
+    booking_preference?: string
+    booking_url?: string
   }) => void
   onBack: () => void
 }
@@ -64,6 +66,10 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
   // SMS opt-in state (only relevant if smsOptInAvailable)
   const [smsOptIn, setSmsOptIn] = useState(false)
   const [phoneE164, setPhoneE164] = useState('')
+
+  // Booking preference state
+  const [bookingPreference, setBookingPreference] = useState('')
+  const [bookingUrl, setBookingUrl] = useState('')
   
   // Image upload state
   const [logoFile, setLogoFile] = useState<File | null>(null)
@@ -157,6 +163,11 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
     if (tagline && tagline.length > 80) {
       newErrors.tagline = 'Tagline must be 80 characters or less'
     }
+
+    // Booking URL validation
+    if (bookingPreference === 'url' && bookingUrl && !bookingUrl.startsWith('http')) {
+      newErrors.bookingUrl = 'Booking URL must start with http:// or https://'
+    }
     
     // SMS opt-in validation
     if (smsOptIn && smsOptInAvailable) {
@@ -201,7 +212,9 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
       heroImage: heroImageFile || undefined,
       // Include SMS opt-in data only if available and opted in
       sms_opt_in: smsOptInAvailable && smsOptIn,
-      phone_e164: (smsOptInAvailable && smsOptIn) ? phoneE164.trim() : undefined
+      phone_e164: (smsOptInAvailable && smsOptIn) ? phoneE164.trim() : undefined,
+      booking_preference: bookingPreference || undefined,
+      booking_url: bookingPreference === 'url' ? bookingUrl.trim() : undefined
     })
   }
 
@@ -556,6 +569,61 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
               <p className="text-xs text-muted-foreground">
                 {description.length}/500 characters (optional)
               </p>
+            </div>
+
+            {/* Booking Preference */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">How do customers book with you?</Label>
+              <p className="text-sm text-muted-foreground">Optional — you can set this up later from your dashboard.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { value: 'url', label: 'Online booking link' },
+                  { value: 'phone', label: 'Phone or email' },
+                  { value: 'none', label: "We don't take bookings" },
+                ].map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setBookingPreference(option.value)}
+                    className={`p-3 rounded-lg border text-sm text-left transition-colors ${
+                      bookingPreference === option.value
+                        ? 'border-primary bg-primary/10 font-medium'
+                        : 'border-slate-300 dark:border-slate-700 text-muted-foreground hover:border-slate-400'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              {bookingPreference === 'url' && (
+                <div className="space-y-2" id="bookingUrl">
+                  <Label htmlFor="bookingUrl">Booking Link</Label>
+                  <Input
+                    id="bookingUrl"
+                    type="url"
+                    value={bookingUrl}
+                    onChange={(e) => {
+                      setBookingUrl(e.target.value)
+                      if (errors.bookingUrl) setErrors({ ...errors, bookingUrl: '' })
+                    }}
+                    placeholder="https://book.yoursystem.com/yourvenue"
+                    className={errors.bookingUrl ? 'border-destructive' : ''}
+                  />
+                  {errors.bookingUrl && (
+                    <p className="text-sm text-destructive">{errors.bookingUrl}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    OpenTable, Resy, DesignMyNight, or any booking page URL
+                  </p>
+                </div>
+              )}
+
+              {bookingPreference === 'phone' && (
+                <p className="text-sm text-muted-foreground">
+                  Your contact phone number from above will be used as the booking method.
+                </p>
+              )}
             </div>
 
             {/* SMS Opt-in (only shown if franchise has verified SMS) */}

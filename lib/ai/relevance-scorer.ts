@@ -85,44 +85,35 @@ export function scoreBusinessRelevance(
   }
   
   // 🔥 ARCHITECTURAL RULE: EVIDENCE BEATS INTENT. ALWAYS.
-  // 
-  // Semantic search scanned the KB for the ACTUAL user query ("ribs", "vegan burger", etc.)
-  // If it found a match, that IS the relevance score. Don't re-filter through categories!
-  //
-  // Example:
-  // - User: "any good ribs?"
-  // - Semantic search: Found "ribs" in David's PDF menu → similarity 0.87
-  // - Intent detector: "ribs = american food" → category = "american"
-  // - ❌ OLD: Search KB for "american" → 0 (even though we found ribs!)
-  // - ✅ NEW: Semantic found it → USE THAT SCORE
-  //
-  // Why? Because:
-  // - Ribs could be American, Chinese, Korean, BBQ...
-  // - Semantic search ALREADY found the evidence
-  // - Categories are for decoration, not truth filtering
-  //
-  // 🚨 SEMANTIC THRESHOLD: 0.70 (balanced)
-  // - Catches real matches (Ember & Oak with cocktails)
-  // - Combined with Tier 2/3 evidence gate to prevent spam
-  // - Single threshold, no keyword hacks
-  if (kbSimilarityScore && kbSimilarityScore > 0.70) {
-    // Scale 0.70-1.0 similarity to 1-5 relevance score
-    // Formula: map [0.70, 1.0] → [1, 5]
-    // Linear interpolation: score = 1 + (similarity - 0.70) / 0.30 * 4
-    const normalized = (kbSimilarityScore - 0.70) / 0.30 // 0.0 to 1.0
-    const scaledScore = 1 + (normalized * 4) // 1.0 to 5.0
-    const finalScore = Math.round(Math.min(Math.max(scaledScore, 1), 5) * 10) / 10
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`📊 Relevance: ${business.business_name} = ${finalScore} (semantic:${kbSimilarityScore.toFixed(2)})`)
-    }
-    
-    return finalScore
+  // Exception: priority queries (kids, family, vegan, etc.) benefit from BOTH paths.
+  // A business with "Kids Desserts" in its KB should score higher than one that's
+  // merely semantically close. So for priority queries we run keyword scoring too
+  // and take the MAX of both scores.
+  
+  // Calculate semantic score (if above threshold)
+  let semanticScore = 0
+  if (kbSimilarityScore && kbSimilarityScore > 0.65) {
+    const normalized = (kbSimilarityScore - 0.65) / 0.35
+    semanticScore = Math.round(Math.min(Math.max(1 + (normalized * 4), 1), 5) * 10) / 10
   }
   
-  // Fallback: Only use keyword/category matching if semantic search didn't find anything
+  // Check if this is a priority query that benefits from keyword-based KB matching
+  const priorityTerms = ['kids', 'children', 'family', 'vegan', 'vegetarian', 'gluten', 'outdoor', 'patio', 'dog', 'pet', 'indoor']
+  const hasPriorityIntent = intent.hasIntent && intent.keywords.some(kw => 
+    priorityTerms.some(p => kw.toLowerCase().includes(p))
+  )
+  
+  // For non-priority queries with a semantic score, return it directly
+  if (semanticScore > 0 && !hasPriorityIntent) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 Relevance: ${business.business_name} = ${semanticScore} (semantic:${kbSimilarityScore?.toFixed(2)})`)
+    }
+    return semanticScore
+  }
+  
+  // No semantic match and no intent -- nothing to score
   if (!intent.hasIntent) {
-    return 0
+    return semanticScore // 0 if no semantic match
   }
   
   let score = 0
@@ -238,17 +229,21 @@ export function scoreBusinessRelevance(
     }
   }
   
-  // Debug logging in dev (only for keyword-based scoring path)
+  // For priority queries, take the MAX of keyword and semantic scores.
+  // This ensures businesses with "kids" in their KB score 4+ even if their
+  // semantic similarity was moderate (0.65-0.75).
+  const finalScore = Math.max(score, semanticScore)
+  
   if (process.env.NODE_ENV === 'development' && intent.hasIntent) {
-    if (score > 0) {
-      console.log(`📊 Relevance: ${business.business_name} = ${score} (${reasons.join(', ')})`)
+    if (finalScore > 0) {
+      const parts = reasons.length > 0 ? reasons.join(', ') : `semantic:${kbSimilarityScore?.toFixed(2)}`
+      console.log(`📊 Relevance: ${business.business_name} = ${finalScore} (${parts}${semanticScore > 0 && score > 0 ? `, max of keyword:${score} / semantic:${semanticScore}` : ''})`)
     } else if (kb && kb.length > 50) {
-      // Business has KB content but scored 0 - debug why
       console.log(`📊 Relevance: ${business.business_name} = 0 (has KB but no match for "${intent.keywords.join(', ')}")`)
     }
   }
   
-  return score
+  return finalScore
 }
 
 /**

@@ -4,7 +4,6 @@ import { createTenantAwareClient } from '@/lib/utils/tenant-security'
 import { categoryLabel } from '@/lib/utils/category-helpers'
 
 export const dynamic = 'force-dynamic'
-import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { trackBusinessVisit } from '@/lib/actions/business-visit-actions'
 import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
@@ -115,6 +114,8 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       longitude,
       google_primary_type,
       website_url,
+      booking_url,
+      booking_preference,
       google_place_id,
       auto_imported,
       business_offers!left(
@@ -232,12 +233,14 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       plan: (business.status === 'unclaimed' || business.status === 'claimed_free') 
         ? null // No plan = no badge
         : (business.plan || 'starter'),
-      rating: business.rating || 4.5,
-      reviewCount: business.review_count || Math.floor(Math.random() * 50) + 10,
+      rating: business.rating ?? null,
+      reviewCount: business.review_count ?? null,
       // ✅ Google review snippets NOT fetched for business detail page
       // Chat handles verbatim snippets for Tier 3 fallback (unclaimed) only
       vibes: vibesMap.get(business.id) || null, // 💚 Qwikker Vibes stats
       website: business.website_url || null,
+      booking_url: business.booking_url || null,
+      booking_preference: business.booking_preference || null,
       google_primary_type: business.google_primary_type,
       google_place_id: business.google_place_id,
       auto_imported: business.auto_imported,
@@ -273,8 +276,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
     }
   })
   
-  // Combine real and mock businesses
-  const allBusinesses = [...realBusinesses, ...mockBusinesses]
+  const allBusinesses = realBusinesses
   
   // Find the specific business being viewed
   const viewedBusiness = allBusinesses.find(business => business.slug === slug)

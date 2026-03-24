@@ -10,7 +10,6 @@ import { BusinessCRMData } from '@/types/billing'
 import { useElegantModal } from '@/components/ui/elegant-modal'
 import { AdminAnalytics } from './admin-analytics'
 import { ContactsTab } from './contacts-tab'
-import { SyncHealthOverview } from './sync-health-overview'
 import { ComprehensiveQRManagement } from './comprehensive-qr-management'
 import { InitialAvatar } from '@/components/admin/initial-avatar'
 
@@ -366,12 +365,6 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
             </p>
           </div>
 
-          {/* Sync Health Overview - Only show on contacts tab */}
-          {activeTab === 'contacts' && (
-            <div className="mb-6">
-              <SyncHealthOverview />
-            </div>
-          )}
 
           {/* Content */}
           <div className="space-y-6">

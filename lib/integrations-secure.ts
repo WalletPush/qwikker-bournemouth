@@ -31,53 +31,22 @@ export async function uploadToCloudinary(file: File, folder = "qwikker_uploads")
 }
 
 /**
- * SECURE: Send data to GoHighLevel webhook (franchise-aware)
- * Uses server-side API to keep credentials secure
+ * @deprecated GHL integration retired (0.19). No-op kept for caller compatibility.
  */
 export async function sendToGoHighLevel(formData: any, city?: string): Promise<void> {
-  const response = await fetch('/api/internal/ghl-send', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ formData, city })
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-    throw new Error(`GoHighLevel webhook failed: ${errorData.error || response.statusText}`)
-  }
-
-  const result = await response.json()
-  console.log('✅ GHL webhook sent successfully:', result.message)
+  return
 }
 
 /**
- * SECURE: Send contact update to GoHighLevel using franchise-specific webhooks
- * Uses server-side API to keep credentials secure
+ * @deprecated GHL integration retired (0.19). No-op kept for caller compatibility.
  */
 export async function sendContactUpdateToGoHighLevel(formData: any, city?: string): Promise<void> {
-  const response = await fetch('/api/internal/ghl-update', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ formData, city })
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-    throw new Error(`GoHighLevel contact update failed: ${errorData.error || response.statusText}`)
-  }
-
-  const result = await response.json()
-  console.log('✅ GHL contact update sent successfully:', result.message)
+  return
 }
 
 /**
- * Legacy function for backward compatibility - redirects to sendContactUpdateToGoHighLevel
- * @deprecated Use sendContactUpdateToGoHighLevel instead
+ * @deprecated GHL integration retired (0.19). No-op kept for caller compatibility.
  */
 export async function updateContactInGoHighLevel(formData: any, city?: string): Promise<void> {
-  return sendContactUpdateToGoHighLevel(formData, city)
+  return
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveRequestCity } from '@/lib/utils/tenant-city'
 import { hasValidCoords } from '@/lib/atlas/eligibility'
+import { getBusinessVibeStats } from '@/lib/utils/vibes'
 
 /**
  * GET /api/atlas/search
@@ -68,12 +69,57 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const url = new URL(request.url)
     const rawQuery = url.searchParams.get('q')?.trim() || ''
-    // ✅ Clean search: remove punctuation that breaks ILIKE matching
     const query = rawQuery.replace(/[?!.,;:'"()]/g, '').trim()
     const limitParam = url.searchParams.get('limit')
     const limit = limitParam ? parseInt(limitParam, 10) : (config.atlas_max_results ?? 12)
     const idsParam = url.searchParams.get('ids')?.trim() || ''
-    
+
+    // Viewport bounds mode: return businesses within visible map area
+    const swLat = url.searchParams.get('sw_lat')
+    const swLng = url.searchParams.get('sw_lng')
+    const neLat = url.searchParams.get('ne_lat')
+    const neLng = url.searchParams.get('ne_lng')
+
+    if (swLat && swLng && neLat && neLng) {
+      const [tier1Res, tier2Res, tier3Res] = await Promise.all([
+        supabase.from('business_profiles_chat_eligible').select('*').eq('city', city)
+          .gte('latitude', parseFloat(swLat)).lte('latitude', parseFloat(neLat))
+          .gte('longitude', parseFloat(swLng)).lte('longitude', parseFloat(neLng)),
+        supabase.from('business_profiles_lite_eligible').select('*').eq('city', city)
+          .gte('latitude', parseFloat(swLat)).lte('latitude', parseFloat(neLat))
+          .gte('longitude', parseFloat(swLng)).lte('longitude', parseFloat(neLng)),
+        supabase.from('business_profiles_ai_fallback_pool').select('*').eq('city', city)
+          .gte('latitude', parseFloat(swLat)).lte('latitude', parseFloat(neLat))
+          .gte('longitude', parseFloat(swLng)).lte('longitude', parseFloat(neLng)),
+      ])
+
+      const seen = new Map<string, any>()
+      const tagAndMerge = (rows: any[], tier: string) => {
+        for (const b of rows) {
+          if (!seen.has(b.id) && hasValidCoords(b.latitude, b.longitude)) {
+            seen.set(b.id, { ...b, business_tier: tier })
+          }
+        }
+      }
+      tagAndMerge(tier1Res.data || [], 'paid')
+      tagAndMerge(tier2Res.data || [], 'claimed_free')
+      tagAndMerge(tier3Res.data || [], 'unclaimed')
+
+      const areaResults = Array.from(seen.values())
+        .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+        .slice(0, Math.min(limit, 50))
+
+      if (isDev) {
+        console.debug(`[Atlas Search] Viewport query: ${areaResults.length} results in bounds`)
+      }
+
+      return NextResponse.json({
+        ok: true,
+        results: areaResults,
+        meta: { city, mode: 'viewport', count: areaResults.length }
+      })
+    }
+
     // Hydration mode: fetch enriched fields for specific business IDs
     if (idsParam) {
       const ids = idsParam.split(',').filter(Boolean).slice(0, 25)
@@ -91,11 +137,14 @@ export async function GET(request: NextRequest) {
           rating,
           review_count,
           business_tagline,
+          system_category,
           display_category,
           business_address,
           google_place_id,
           website_url,
           phone,
+          business_images,
+          placeholder_variant,
           business_tier,
           business_hours_structured
         `)
@@ -107,20 +156,31 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ ok: false, error: 'Hydration failed' }, { status: 500 })
       }
       
-      // Build enriched map with offer/event counts
+      // Build enriched map with offer counts + vibe stats
       const enrichedMap: Record<string, any> = {}
-      for (const biz of (hydrated || [])) {
-        const { count: offersCount } = await supabase
-          .from('business_offers')
-          .select('*', { count: 'exact', head: true })
-          .eq('business_id', biz.id)
-          .eq('is_active', true)
+      const bizList = hydrated || []
+      const [offerResults, vibeResults] = await Promise.all([
+        Promise.all(bizList.map(biz =>
+          supabase
+            .from('business_offers')
+            .select('*', { count: 'exact', head: true })
+            .eq('business_id', biz.id)
+            .eq('is_active', true)
+        )),
+        Promise.all(bizList.map(biz => getBusinessVibeStats(biz.id)))
+      ])
+      
+      for (let i = 0; i < bizList.length; i++) {
+        const biz = bizList[i]
+        const offersCount = offerResults[i].count || 0
+        const vibeStats = vibeResults[i]
         
         enrichedMap[biz.id] = {
           ...biz,
           opening_hours: biz.business_hours_structured || null,
-          has_offers: (offersCount || 0) > 0,
-          offers_count: offersCount || 0,
+          has_offers: offersCount > 0,
+          offers_count: offersCount,
+          vibes: vibeStats && vibeStats.total_vibes >= 5 ? vibeStats : null,
         }
       }
       

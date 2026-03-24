@@ -39,6 +39,8 @@ export async function POST(request: NextRequest) {
     const editedDescription = formData.get('editedDescription') as string
     const editedTagline = formData.get('editedTagline') as string
     const editedHours = formData.get('editedHours') as string
+    const editedBookingPreference = formData.get('editedBookingPreference') as string
+    const editedBookingUrl = formData.get('editedBookingUrl') as string
     
     // Extract image files
     const logoFile = formData.get('logo') as File | null
@@ -335,9 +337,11 @@ export async function POST(request: NextRequest) {
         edited_description: editedDescription || null,
         edited_tagline: editedTagline || null,
         edited_hours: editedHours || null,
+        edited_booking_preference: editedBookingPreference || null,
+        edited_booking_url: editedBookingUrl || null,
         logo_upload: logoUrl,
         hero_image_upload: heroImageUrl,
-        data_edited: !!(editedBusinessName || editedAddress || editedPhone || editedWebsite || editedCategory || editedType || editedDescription || editedTagline || editedHours)
+        data_edited: !!(editedBusinessName || editedAddress || editedPhone || editedWebsite || editedCategory || editedType || editedDescription || editedTagline || editedHours || editedBookingPreference)
       })
       .select()
       .single()
@@ -492,13 +496,14 @@ export async function POST(request: NextRequest) {
       const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
       
       // 🔒 SECURITY: Use city-specific subdomain for admin link
-      const citySubdomain = (business.city || 'bournemouth').toLowerCase()
+      const requestCity = await getCityFromHostname(request.headers.get('host') || '', { allowUnsafeFallbacks: true })
+      const citySubdomain = (business.city || requestCity).toLowerCase()
       const adminUrl = `https://${citySubdomain}.qwikker.com/admin?tab=claims`
       
       await sendCitySlackNotification({
         title: `✅ New Claim Request: ${business.business_name}`,
         message: `${firstName} ${lastName} has claimed ${business.business_name}!\n\n**Claimer Details:**\n• Name: ${firstName} ${lastName}\n• Email: ${email}\n• Website: ${website || 'Not provided'}\n• Verification: Email verified\n\n🔗 Review claim: ${adminUrl}`,
-        city: business.city || 'bournemouth',
+        city: business.city || requestCity,
         type: 'business_signup',
         data: { businessName: business.business_name, claimerName: `${firstName} ${lastName}` }
       })

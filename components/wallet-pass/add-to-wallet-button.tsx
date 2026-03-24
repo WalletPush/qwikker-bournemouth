@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { getClientCityFallback } from '@/lib/utils/client-city-detection'
 
 interface AddToWalletButtonProps {
   className?: string
@@ -14,8 +15,9 @@ export function AddToWalletButton({
   className = '', 
   size = 'default', 
   variant = 'default',
-  city = 'bournemouth' 
+  city: cityProp 
 }: AddToWalletButtonProps) {
+  const city = cityProp || getClientCityFallback()
   const [isLoading, setIsLoading] = useState(false)
 
   const handleAddToWallet = async () => {

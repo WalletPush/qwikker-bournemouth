@@ -159,7 +159,7 @@ export default async function PendingApprovalPage() {
                 <div>
                   <p className="font-medium">Admin Review</p>
                   <p className="text-muted-foreground">
-                    Our Bournemouth team will verify your business ownership
+                    Our local team will verify your business ownership
                   </p>
                 </div>
               </li>

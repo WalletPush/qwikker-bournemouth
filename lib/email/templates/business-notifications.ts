@@ -37,6 +37,21 @@ function wrapInLayout(content: string, city: string): string {
 // Interfaces
 // ---------------------------------------------------------------------------
 
+export interface BusinessWelcomeEmailData {
+  firstName: string
+  businessName: string
+  city: string
+  dashboardUrl: string
+  supportEmail: string
+}
+
+export interface BusinessSubmittedEmailData {
+  firstName: string
+  businessName: string
+  city: string
+  supportEmail: string
+}
+
 export interface BusinessApprovalEmailData {
   firstName: string
   businessName: string
@@ -109,6 +124,71 @@ export interface ChangeRejectionEmailData {
 // ---------------------------------------------------------------------------
 // Templates — all inline styles for email client compatibility
 // ---------------------------------------------------------------------------
+
+export function createBusinessWelcomeEmail(data: BusinessWelcomeEmailData): EmailTemplate {
+  const subject = `Welcome to QWIKKER, ${data.firstName}`
+
+  const html = wrapInLayout(`
+    <div style="padding:36px 30px;">
+      <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Welcome to QWIKKER.</h2>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Thanks for registering <strong style="color:#fff;">${data.businessName}</strong>. Your dashboard is ready and waiting.</p>
+
+      <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:24px 0;">
+        <h3 style="margin:0 0 12px;font-size:15px;color:#ffffff;">Before you go live, complete these:</h3>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:6px 0;font-size:14px;color:#ccc;">Upload your logo</td><td style="text-align:right;color:#666;font-size:14px;">Required</td></tr>
+          <tr><td style="padding:6px 0;font-size:14px;color:#ccc;">Add a business photo</td><td style="text-align:right;color:#666;font-size:14px;">Required</td></tr>
+          <tr><td style="padding:6px 0;font-size:14px;color:#ccc;">Write a description</td><td style="text-align:right;color:#666;font-size:14px;">Required</td></tr>
+          <tr><td style="padding:6px 0;font-size:14px;color:#ccc;">Set your opening hours</td><td style="text-align:right;color:#666;font-size:14px;">Required</td></tr>
+          <tr><td style="padding:6px 0;font-size:14px;color:#ccc;">Add a tagline</td><td style="text-align:right;color:#666;font-size:14px;">Required</td></tr>
+        </table>
+      </div>
+
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Once your profile is complete, hit <strong style="color:#fff;">Submit for Review</strong> and our team will check everything within 24 hours.</p>
+
+      <div style="margin:24px 0 8px;">
+        <a href="${data.dashboardUrl}" style="display:inline-block;background:#00d083;color:#000000;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;">Open Your Dashboard</a>
+      </div>
+
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:24px 0 16px;">Questions? Reach out at <a href="mailto:${data.supportEmail}" style="color:#00d083;">${data.supportEmail}</a>.</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
+    </div>`, data.city)
+
+  const text = `Welcome to QWIKKER, ${data.firstName}\n\nThanks for registering ${data.businessName}. Your dashboard is ready.\n\nBefore you go live, complete your profile: logo, photo, description, hours, and tagline. Then hit Submit for Review.\n\nDashboard: ${data.dashboardUrl}\n\nQuestions? ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
+
+  return { subject, html, text }
+}
+
+export function createBusinessSubmittedEmail(data: BusinessSubmittedEmailData): EmailTemplate {
+  const subject = `${data.businessName} is under review`
+
+  const html = wrapInLayout(`
+    <div style="padding:36px 30px;">
+      <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">We're on it.</h2>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;"><strong style="color:#fff;">${data.businessName}</strong> has been submitted for review. Our team will check your listing and get back to you within 24 hours.</p>
+
+      <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:24px 0;text-align:center;">
+        <p style="margin:0 0 4px;font-size:14px;color:#999;text-transform:uppercase;letter-spacing:0.5px;">Status</p>
+        <h3 style="margin:0;font-size:17px;color:#f59e0b;">Under Review</h3>
+      </div>
+
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 12px;">What happens next:</p>
+      <ul style="padding-left:20px;margin:0 0 16px;">
+        <li style="font-size:14px;line-height:1.8;color:#ccc;">We verify your business details</li>
+        <li style="font-size:14px;line-height:1.8;color:#ccc;">If anything needs updating, we'll let you know</li>
+        <li style="font-size:14px;line-height:1.8;color:#ccc;">Once approved, you'll be live and discoverable by customers</li>
+      </ul>
+
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Questions? <a href="mailto:${data.supportEmail}" style="color:#00d083;">${data.supportEmail}</a></p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
+    </div>`, data.city)
+
+  const text = `${data.businessName} is under review\n\nHi ${data.firstName},\n\n${data.businessName} has been submitted for review. Our team will check your listing within 24 hours.\n\nWe'll email you when it's approved.\n\nQuestions? ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
+
+  return { subject, html, text }
+}
 
 export function createBusinessApprovalEmail(data: BusinessApprovalEmailData): EmailTemplate {
   const subject = `${data.businessName} is now live on QWIKKER`

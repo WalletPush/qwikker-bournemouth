@@ -46,9 +46,9 @@ export default async function FranchiseConfigPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-400">GHL Webhook:</p>
+                  <p className="text-slate-400">CRM Webhook (legacy):</p>
                   <p className="text-white font-mono text-xs">
-                    {config.ghl_webhook_url || 'Not configured'}
+                    {config.ghl_webhook_url || 'Retired'}
                   </p>
                 </div>
                 <div>

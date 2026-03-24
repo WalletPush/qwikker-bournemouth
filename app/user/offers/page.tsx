@@ -181,7 +181,7 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
                       offer.business_profiles?.business_type || 
                       'Other',
     businessLogo: offer.business_profiles?.logo,
-    businessRating: offer.business_profiles?.rating || 4.5,
+    businessRating: offer.business_profiles?.rating ?? null,
     businessTier: offer.business_profiles?.plan, // Add plan/tier for badges
     title: offer.offer_name,
     description: offer.offer_description || offer.offer_terms || `${offer.offer_type} offer from ${offer.business_profiles?.business_name}`,

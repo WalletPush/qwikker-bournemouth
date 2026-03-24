@@ -1,6 +1,6 @@
 'use client'
 
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { X, MessageCircle } from 'lucide-react'
 
 interface AtlasHudBubbleProps {
@@ -11,7 +11,7 @@ interface AtlasHudBubbleProps {
   onMoreDetails: () => void
 }
 
-const bubbleVariants = {
+const bubbleVariants: Variants = {
   hidden: { 
     opacity: 0, 
     y: 10, 
@@ -25,7 +25,7 @@ const bubbleVariants = {
     filter: 'blur(0px)',
     transition: { 
       duration: 0.26, 
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as const,
       delay: 0.12 // 120ms delay after map begins moving
     }
   },

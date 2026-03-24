@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { getClientCityFallback } from '@/lib/utils/client-city-detection'
 
 interface ImprovedWalletInstallerProps {
   firstName: string
@@ -17,8 +18,9 @@ export function ImprovedWalletInstaller({
   firstName, 
   lastName, 
   email, 
-  city = 'bournemouth' 
+  city: cityProp 
 }: ImprovedWalletInstallerProps) {
+  const city = cityProp || getClientCityFallback()
   const [step, setStep] = useState<'consent' | 'ready' | 'creating' | 'downloading' | 'installing' | 'success' | 'error' | 'second-chance'>('consent')
   const [errorMessage, setErrorMessage] = useState('')
   const [passUrl, setPassUrl] = useState('')

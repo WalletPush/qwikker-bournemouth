@@ -2,8 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { sendFileUpdateToGoHighLevel, sendBusinessUpdateNotification } from '@/lib/integrations'
-import { categoryDisplayLabel } from '@/lib/utils/category-helpers'
+import { getRequestCityFallback } from '@/lib/utils/city-detection'
 import { ImageTransform } from '@/types/profiles'
 
 export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu' | 'offer' | 'business_images', fileUrl: string) {
@@ -122,7 +121,7 @@ export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu
       await sendCitySlackNotification({
         title: `New ${fileTypeLabels[fileType]} Submitted: ${profile.business_name}`,
         message: `${profile.business_name} has uploaded a new ${fileTypeLabels[fileType].toLowerCase()} for admin approval.`,
-        city: profile.city || 'bournemouth',
+        city: profile.city || await getRequestCityFallback(),
         type: 'business_signup',
         data: { 
           businessName: profile.business_name, 
@@ -223,40 +222,6 @@ async function backupToSupabaseStorage(file: File, folder: string, publicId: str
   }
   
   console.log(`File backed up to Supabase Storage: ${filePath}`)
-}
-
-async function syncFileUpdateWithGHL(profileData: any, fileType: 'logo' | 'menu' | 'offer', fileUrl: string) {
-  // Prepare GHL data structure matching the onboarding form format
-  const ghlData = {
-    // Basic profile info
-    firstName: profileData.first_name || '',
-    lastName: profileData.last_name || '',
-    email: profileData.email || '',
-    phone: profileData.phone || '',
-    businessName: profileData.business_name || '',
-    businessType: profileData.business_type || '',
-    businessCategory: categoryDisplayLabel(profileData),
-    town: profileData.business_town || '',
-    postcode: profileData.business_postcode || '',
-    
-    // File URLs - update the specific file that was uploaded
-    logo_url: fileType === 'logo' ? fileUrl : profileData.logo || '',
-    menuservice_url: fileType === 'menu' ? fileUrl : profileData.menu_url || '',
-    offer_image_url: fileType === 'offer' ? fileUrl : profileData.offer_image || '',
-    
-    // Offer data if available
-    offerName: profileData.offer_name || '',
-    offerType: profileData.offer_type || '',
-    offerValue: profileData.offer_value || '',
-    
-    // Additional context
-    updateType: 'file_upload',
-    updatedField: fileType,
-    updatedAt: new Date().toISOString()
-  }
-
-  // Send to GHL using the file update function (won't trigger signup notifications)
-  await sendFileUpdateToGoHighLevel(ghlData)
 }
 
 // Delete a specific business image

@@ -1,6 +1,7 @@
 'use server'
 
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getRequestCityFallback } from '@/lib/utils/city-detection'
 
 /**
  * Claim an offer for a user
@@ -134,7 +135,7 @@ export async function claimOffer(data: {
         
         // Submit the "Redeem Offers" form to trigger GHL "Redemption Made" workflow
         // Get user's city to use correct redemption form
-        const userCity = user?.city || 'bournemouth'
+        const userCity = user?.city || await getRequestCityFallback()
         const REDEEM_OFFERS_FORM_URL = `https://${userCity}.qwikker.com/offer-redemption`
         
         // Prepare form data for submission - start with minimal fields

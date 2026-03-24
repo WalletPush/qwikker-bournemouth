@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendBusinessUpdateNotification } from '@/lib/integrations'
 import { revalidatePath } from 'next/cache'
+import { getRequestCityFallback } from '@/lib/utils/city-detection'
 
 /**
  * Add a secret menu item - now submits for admin approval instead of going live immediately
@@ -48,16 +49,17 @@ export async function addSecretMenuItem(userId: string, itemData: {
   }
 
   // 📢 SEND SLACK NOTIFICATION: Secret menu item submitted
+  const fallbackCity = await getRequestCityFallback()
   try {
     console.log(`📢 [SECRET MENU] Attempting to send Slack notification for: ${itemData.itemName}`)
-    console.log(`📢 [SECRET MENU] Business: ${profile.business_name}, City: ${profile.city || 'bournemouth'}`)
+    console.log(`📢 [SECRET MENU] Business: ${profile.business_name}, City: ${profile.city || fallbackCity}`)
     
     const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
     
     const notificationResult = await sendCitySlackNotification({
       title: `🤫 New Secret Menu Item: ${itemData.itemName}`,
-      message: `${profile.business_name} has submitted a new secret menu item for admin approval.\n\n**Item Details:**\n• Name: ${itemData.itemName}\n• Description: ${itemData.description || 'Not provided'}\n• Price: ${itemData.price || 'Not provided'}\n\n🔗 View in admin: https://${(profile.city || 'bournemouth').toLowerCase()}.qwikker.com/admin?tab=updates`,
-      city: profile.city || 'bournemouth',
+      message: `${profile.business_name} has submitted a new secret menu item for admin approval.\n\n**Item Details:**\n• Name: ${itemData.itemName}\n• Description: ${itemData.description || 'Not provided'}\n• Price: ${itemData.price || 'Not provided'}\n\n🔗 View in admin: https://${(profile.city || fallbackCity).toLowerCase()}.qwikker.com/admin?tab=updates`,
+      city: profile.city || fallbackCity,
       type: 'offer_created',
       data: { businessName: profile.business_name, itemName: itemData.itemName, changeId: changeRecord.id }
     })
@@ -140,16 +142,17 @@ export async function createOffer(userId: string, offerData: {
   }
 
   // 📢 SEND SLACK NOTIFICATION: Offer submitted for approval
+  const fallbackCity = await getRequestCityFallback()
   try {
     console.log(`📢 [OFFER] Attempting to send Slack notification for: ${offerData.offerName}`)
-    console.log(`📢 [OFFER] Business: ${profile.business_name}, City: ${profile.city || 'bournemouth'}`)
+    console.log(`📢 [OFFER] Business: ${profile.business_name}, City: ${profile.city || fallbackCity}`)
     
     const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
     
     const notificationResult = await sendCitySlackNotification({
       title: `💰 New Offer Submitted: ${offerData.offerName}`,
-      message: `${profile.business_name} has submitted a new offer for admin approval.\n\n**Offer Details:**\n• Value: ${offerData.offerValue}\n• Type: ${offerData.offerType}\n• Claims: ${offerData.offerClaimAmount}\n\n🔗 View in admin: https://${(profile.city || 'bournemouth').toLowerCase()}.qwikker.com/admin?tab=updates`,
-      city: profile.city || 'bournemouth',
+      message: `${profile.business_name} has submitted a new offer for admin approval.\n\n**Offer Details:**\n• Value: ${offerData.offerValue}\n• Type: ${offerData.offerType}\n• Claims: ${offerData.offerClaimAmount}\n\n🔗 View in admin: https://${(profile.city || fallbackCity).toLowerCase()}.qwikker.com/admin?tab=updates`,
+      city: profile.city || fallbackCity,
       type: 'offer_created',
       data: { businessName: profile.business_name, offerName: offerData.offerName, changeId: changeRecord.id }
     })
@@ -258,13 +261,14 @@ export async function updateOffer(userId: string, offerId: string, offerData: {
     }
 
     // 📢 SEND SLACK NOTIFICATION: Offer update submitted
+    const fallbackCity = await getRequestCityFallback()
     try {
       const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
       
       await sendCitySlackNotification({
         title: `Offer Update Submitted: ${existingOffer.offer_name}`,
         message: `${profile.business_name} has submitted updates to their offer "${existingOffer.offer_name}" for admin approval.`,
-        city: profile.city || 'bournemouth',
+        city: profile.city || fallbackCity,
         type: 'offer_updated',
         data: { businessName: profile.business_name, offerName: existingOffer.offer_name, offerId }
       })
@@ -290,7 +294,7 @@ export async function updateOffer(userId: string, offerId: string, offerData: {
 }
 
 /**
- * Update business information with automatic GHL sync and notifications
+ * Update business information with notifications
  * IMPORTANT: If email is being changed, also updates auth.users email
  */
 export async function updateBusinessInfo(userId: string, updates: any) {
@@ -324,11 +328,9 @@ export async function updateBusinessInfo(userId: string, updates: any) {
     console.log('✅ Auth email updated successfully - user can now log in with:', updates.email)
   }
 
-  // Update the profile with timestamp (skip GHL sync fields if they don't exist)
   const updateData = {
     ...updates,
     updated_at: new Date().toISOString()
-    // Note: last_ghl_sync field might not exist yet in database
   }
 
   const { data: profile, error } = await supabaseAdmin
@@ -340,86 +342,6 @@ export async function updateBusinessInfo(userId: string, updates: any) {
 
   if (error) {
     return { success: false, error: error.message }
-  }
-
-  // 🔥 ALWAYS SYNC TO GHL FOR CONTACT UPDATES
-  try {
-    const { sendContactUpdateToGoHighLevel } = await import('@/lib/integrations')
-    
-    // Prepare GHL data with updated information
-    const ghlData = {
-      // Personal info
-      firstName: profile.first_name || '',
-      lastName: profile.last_name || '',
-      email: profile.email || '',
-      phone: profile.phone || '',
-      
-      // Business info
-      businessName: profile.business_name || '',
-      businessType: profile.business_type || '',
-      businessCategory: profile.display_category || profile.system_category || '',
-      businessAddress: profile.business_address || '',
-      town: profile.business_town || '',
-      postcode: profile.business_postcode || '',
-      
-      // Optional fields
-      website: profile.website_url || '',
-      instagram: profile.instagram_handle || '',
-      facebook: profile.facebook_url || '',
-      
-      // File URLs
-      logo_url: profile.logo || '',
-      menu_url: profile.menu_url || '',
-      offer_image_url: profile.offer_image || '',
-      
-      // Offer data
-      offerName: profile.offer_name || '',
-      offerType: profile.offer_type || '',
-      offerValue: profile.offer_value || '',
-      offerTerms: profile.offer_terms || '',
-      offerStartDate: profile.offer_start_date || '',
-      offerEndDate: profile.offer_end_date || '',
-      
-      // Additional data
-      referralSource: profile.referral_source || '',
-      goals: profile.goals || '',
-      notes: profile.additional_notes || '',
-      
-      // Update metadata
-      contactSync: true,
-      syncType: 'business_dashboard_update',
-      updatedAt: new Date().toISOString(),
-      qwikkerContactId: profile.id,
-      city: profile.city,
-      status: profile.status,
-      
-      // Track what fields were updated
-      updatedFields: Object.keys(updates),
-      isUpdate: true,
-      updateSource: 'business_dashboard'
-    }
-    
-    await sendContactUpdateToGoHighLevel(ghlData, profile.city)
-    
-    // Update sync status after successful GHL sync
-    try {
-      await supabaseAdmin
-        .from('business_profiles')
-        .update({ 
-          last_ghl_sync: new Date().toISOString(),
-          last_crm_sync: new Date().toISOString(),
-          crm_sync_status: 'synced'
-        })
-        .eq('user_id', userId)
-    } catch (syncError) {
-      console.warn('⚠️ Could not update sync status:', syncError)
-    }
-    
-    console.log(`✅ Business info updated and synced to ${profile.city} GHL: ${profile.business_name}`)
-    
-  } catch (ghlError) {
-    console.error('GHL sync failed after business update:', ghlError)
-    // Don't fail the request, but log the error
   }
 
   // Only send Slack notification if:
@@ -863,13 +785,14 @@ export async function submitBusinessForReview(userId: string) {
     }
 
     // 📢 SEND SLACK NOTIFICATION: Business submitted for review
+    const fallbackCity = await getRequestCityFallback()
     try {
       const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
       
       await sendCitySlackNotification({
         title: `🎉 New Business Submitted: ${profile.business_name}`,
         message: `${profile.business_name} has completed onboarding and submitted their listing for review!\n\n**Business Details:**\n• Owner: ${profile.first_name} ${profile.last_name}\n• Type: ${profile.business_type}\n• Location: ${profile.business_town}, ${profile.business_postcode}\n• Email: ${profile.email}\n• Phone: ${profile.phone}`,
-        city: profile.city || 'bournemouth',
+        city: profile.city || fallbackCity,
         type: 'business_signup',
         data: { 
           businessName: profile.business_name,
@@ -881,7 +804,23 @@ export async function submitBusinessForReview(userId: string) {
       console.log(`📢 Slack notification sent for business submission: ${profile.business_name}`)
     } catch (notificationError) {
       console.error('⚠️ Slack notification error (non-critical):', notificationError)
-      // Don't fail the whole operation if notification fails
+    }
+
+    // 📧 SEND "UNDER REVIEW" EMAIL (non-blocking)
+    try {
+      const { sendBusinessSubmittedNotification } = await import('@/lib/notifications/email-notifications')
+      const { getFranchiseSupportEmail } = await import('@/lib/email/send-franchise-email')
+      const city = profile.city || fallbackCity
+      const supportEmail = await getFranchiseSupportEmail(city)
+
+      sendBusinessSubmittedNotification(profile.email, {
+        firstName: profile.first_name || 'there',
+        businessName: profile.business_name,
+        city,
+        supportEmail,
+      }).catch(err => console.error('⚠️ Submitted email error (non-critical):', err))
+    } catch (error) {
+      console.error('⚠️ Submitted email import error (non-critical):', error)
     }
 
     console.log('🔧 SERVER ACTION: SUCCESS! Business status updated to pending_review')

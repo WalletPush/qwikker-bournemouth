@@ -7,29 +7,21 @@ import { Button } from '@/components/ui/button'
 interface VibePromptSheetProps {
   businessId: string
   businessName: string
-  vibeUserKey: string
   walletPassId: string
   onClose: () => void
   onVibeSubmitted?: (vibeRating: 'loved_it' | 'it_was_good' | 'not_for_me') => void
 }
 
 /**
- * 💚 Vibe Prompt Bottom Sheet
+ * Vibe Prompt Bottom Sheet
  * 
- * Appears after user engagement (Directions/Call/Offer save).
- * Premium design with 3 text-led choices (no tacky emojis).
- * 
- * @param businessId - UUID of the business
- * @param businessName - Name of the business (for display)
- * @param vibeUserKey - Stable user key (persists across reinstalls)
- * @param walletPassId - Wallet pass ID for validation
- * @param onClose - Callback when sheet is closed
- * @param onVibeSubmitted - Callback when vibe is submitted
+ * Shown after post-visit actions (stamp earned, reward redeemed) or via
+ * the "Share your vibe" CTA on the business detail page.
+ * Premium design with 3 text-led choices.
  */
 export function VibePromptSheet({
   businessId,
   businessName,
-  vibeUserKey,
   walletPassId,
   onClose,
   onVibeSubmitted
@@ -57,7 +49,7 @@ export function VibePromptSheet({
         body: JSON.stringify({
           businessId,
           vibeRating,
-          vibeUserKey,
+          vibeUserKey: walletPassId,
           walletPassId
         })
       })

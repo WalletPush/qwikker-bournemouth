@@ -391,7 +391,9 @@ export async function POST(request: NextRequest) {
 
     // Show Atlas CTA only if the ACTUAL shown results have 2+ valid coords
     // AND this isn't a specific name query with no matching results
-    const showAtlasCta = atlasAvailable && hasActualBusinessResults && (hasAtlasCarousel || hasAtlasPins) && !nameMatchSuppressed
+    // AND this isn't a pure event query (no relevant business results to explore)
+    const isEventOnlyQuery = intent === 'events' && (result.eventCards?.length || 0) > 0
+    const showAtlasCta = atlasAvailable && hasActualBusinessResults && (hasAtlasCarousel || hasAtlasPins) && !nameMatchSuppressed && !isEventOnlyQuery
     
     // 🔧 POST-PROCESS: Remove Atlas mentions from AI response if model mentioned it but UI won't show CTA
     // CRITICAL: Use showAtlasCta (final UI truth), not atlasAvailable (prompt hint)
@@ -907,40 +909,18 @@ export async function POST(request: NextRequest) {
     }
     
     if (!showAtlasCta && finalResponse) {
-      // Remove map-related phrases (be aggressive - catch generic phrasing)
-      const mapPhrases = [
-        /Want to explore.*?Qwikker Atlas.*?👇/gi,
-        /Want to check out.*?Qwikker Atlas.*?👇/gi,
-        /Curious where.*?Qwikker Atlas.*?👇/gi,
-        /Jump into Qwikker Atlas.*?👇/gi,
-        /explore.*?on Qwikker Atlas.*?👇/gi,
-        /check out.*?on Qwikker Atlas.*?👇/gi,
-        /see.*?on Qwikker Atlas.*?👇/gi,
-        /view.*?on Qwikker Atlas.*?👇/gi,
-        /Just tap below.*?👇/gi,
-        /Tap below.*?👇/gi,
-        /Show me on Qwikker Atlas/gi,
-        // Generic map phrasing (when model doesn't use "Atlas" keyword)
-        /The map below helps you compare\.?/gi,
-        /Want to see how these are spaced out\?/gi,
-        /the map view makes it easy/gi,
-        /map.*helps you compare/gi,
-        /spaced out.*map/gi
-      ]
-      
-      mapPhrases.forEach(pattern => {
-        finalResponse = finalResponse.replace(pattern, '')
-      })
-      
-      // Clean up ONLY excessive whitespace, preserve paragraph breaks
+      // Strip ANY sentence containing "Atlas" or map references (robust catch-all)
+      const beforeStrip = finalResponse
       finalResponse = finalResponse
-        .replace(/  +/g, ' ') // Multiple spaces → single space
-        .replace(/\?\s+\?/g, '?') // Fix double question marks
-        .replace(/\n{4,}/g, '\n\n') // Collapse 4+ newlines to 2 (preserve paragraph breaks!)
+        .replace(/[^.!?\n]*\b[Aa]tlas\b[^.!?\n]*[.!?]?\s*/g, '')
+        .replace(/[^.!?\n]*\bmap below\b[^.!?\n]*[.!?]?\s*/g, '')
+        .replace(/[^.!?\n]*\bmap view\b[^.!?\n]*[.!?]?\s*/g, '')
+        .replace(/  +/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
         .trim()
       
-      if (process.env.NODE_ENV === 'development' && finalResponse !== result.response) {
-        console.log('🔧 Stripped Atlas mentions from response (showAtlasCta=false)')
+      if (process.env.NODE_ENV === 'development' && finalResponse !== beforeStrip) {
+        console.log('🔧 Stripped Atlas/map mentions from response (showAtlasCta=false)')
       }
     }
     
@@ -967,11 +947,28 @@ export async function POST(request: NextRequest) {
     }
 
     // 🔗 AUTO-LINK: Inject links for bold business names the AI forgot to link
+    // contextBusinesses = every business sent to the AI prompt (guaranteed superset of carousel/mapPins)
     const allKnownBusinesses = [
       ...(result.businessCarousel || []),
       ...(result.mapPins || []).map((p: any) => ({ business_name: p.name, slug: p.slug, id: p.id })),
+      ...(result.contextBusinesses || []),
     ]
     finalResponse = autoInjectBusinessLinks(finalResponse, allKnownBusinesses)
+
+    // 🚨 HALLUCINATION GUARD: Strip bold from non-linked names (likely hallucinated businesses)
+    // Runs AFTER autoInjectBusinessLinks so all known Qwikker businesses are already **[Name](link)** format
+    // The [^[*] pattern excludes '[', so linked names won't match -- only plain **Bold Text** remains
+    finalResponse = finalResponse.replace(/\*\*([^[*]+?)\*\*/g, (match, inner) => {
+      const trimmed = inner.trim()
+      if (/Explore on Atlas|Qwikker Pick/i.test(trimmed)) return match
+      if (/^[A-Z]/.test(trimmed) && trimmed.length >= 3) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`⚠️ [HALLUCINATION GUARD] Stripped bold from non-linked name: "${trimmed}"`)
+        }
+        return trimmed
+      }
+      return match
+    })
 
     // 🎯 FINAL FORMATTING: Force business paragraphs (MUST BE LAST STEP)
     // This runs AFTER all text mutations (Atlas stripping, etc.)

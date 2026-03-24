@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { ComingSoonPage } from '@/components/coming-soon/coming-soon-page'
+import { getCityFromHostname } from '@/lib/utils/city-detection'
 
 interface ComingSoonPageProps {
   searchParams: {
@@ -14,7 +15,10 @@ interface ComingSoonPageProps {
 export default async function ComingSoonRoute({ searchParams }: ComingSoonPageProps) {
   const supabase = createServerComponentClient({ cookies })
   const qrCode = searchParams.qr
-  const city = searchParams.city || 'bournemouth'
+  const headersList = await headers()
+  const host = headersList.get('host') || ''
+  const resolvedCity = await getCityFromHostname(host, { allowUnsafeFallbacks: true })
+  const city = searchParams.city || resolvedCity
   const qrType = searchParams.type
 
   // Look up QR code details if provided

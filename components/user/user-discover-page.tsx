@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { mockBusinesses } from '@/lib/mock-data/user-mock-data'
 import { BusinessCard } from '@/components/user/business-card'
 import { SYSTEM_CATEGORY_LABEL, SystemCategory, SYSTEM_CATEGORIES } from '@/lib/constants/system-categories'
+import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
 import { useSidebar } from '@/components/user/user-dashboard-layout'
 
 interface Business {
@@ -28,8 +28,8 @@ interface Business {
     image?: string
   }>
   plan: string
-  rating: number
-  reviewCount: number
+  rating: number | null
+  reviewCount: number | null
   tags: string[]
 }
 
@@ -40,7 +40,9 @@ interface UserDiscoverPageProps {
   cityDisplayName?: string
 }
 
-export function UserDiscoverPage({ businesses = mockBusinesses, walletPassId, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserDiscoverPageProps) {
+export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: currentCityProp, cityDisplayName: cityDisplayNameProp }: UserDiscoverPageProps) {
+  const currentCity = currentCityProp || getClientCityFallback()
+  const cityDisplayName = cityDisplayNameProp || getClientCityDisplayName(currentCity)
   // Geolocation state
   const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null)
   const [locationStatus, setLocationStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt')

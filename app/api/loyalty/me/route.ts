@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         loyalty_programs(
-          id, public_id, program_name, type, reward_threshold, reward_description,
+          id, public_id, business_id, program_name, type, reward_threshold, reward_description,
           stamp_label, stamp_icon, status, primary_color,
           redeem_instructions, walletpush_template_id, city,
           business_profiles(business_name, logo)
@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
           loyalty_programs: undefined,
           program: {
             public_id: program.public_id,
+            business_id: program.business_id,
             program_name: program.program_name,
             type: program.type,
             reward_threshold: program.reward_threshold,

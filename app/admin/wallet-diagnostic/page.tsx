@@ -140,9 +140,9 @@ export default async function WalletDiagnosticPage() {
                       <p className="text-white">{user.tier || 'explorer'} - Level {user.level || 1}</p>
                     </div>
                     <div>
-                      <span className="text-slate-500">GHL Contact ID:</span>
+                      <span className="text-slate-500">Legacy CRM ID:</span>
                       <p className="text-white font-mono text-xs">
-                        {user.ghl_contact_id || '❌ Missing'}
+                        {user.ghl_contact_id || 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -203,9 +203,6 @@ export default async function WalletDiagnosticPage() {
                         {user.wallet_pass_status !== 'active' && (
                           <li>• Pass status is "{user.wallet_pass_status}" instead of "active"</li>
                         )}
-                        {!user.ghl_contact_id && (
-                          <li>• GHL Contact ID missing - user might not be synced with GHL</li>
-                        )}
                       </ul>
                     </div>
                   )}
@@ -242,8 +239,8 @@ export default async function WalletDiagnosticPage() {
             <div>
               <h4 className="font-semibold text-white mb-2">2. Status is "Pending"</h4>
               <p className="text-slate-400">
-                The GHL webhook is creating users with <code>wallet_pass_status: 'pending'</code>. 
-                Check <code>/app/api/ghl-webhook/user-creation/route.ts</code> and ensure it sets <code>wallet_pass_status: 'active'</code>.
+                Users might be created with <code>wallet_pass_status: 'pending'</code>.
+                Ensure the user creation flow sets <code>wallet_pass_status: 'active'</code>.
               </p>
             </div>
 

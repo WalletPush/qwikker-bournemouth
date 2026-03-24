@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { headers, cookies } from 'next/headers'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
+import { ImpersonationBanner } from '@/components/admin/impersonation-banner'
 import { getCityFromRequest, getCityDisplayName } from '@/lib/utils/city-detection'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { getBusinessCRMData } from '@/lib/actions/admin-crm-actions'
@@ -229,19 +230,30 @@ export default async function AdminPage() {
     console.error('Error fetching pending loyalty count:', loyaltyQueueError)
   }
   
+  const isImpersonating = !!adminSession.hq_impersonating
+
   return (
-    <AdminDashboard 
-      businesses={allBusinesses || []} 
-      crmData={crmData}
-      adminEmail={admin.email || admin.username} 
-      city={currentCity}
-      cityDisplayName={getCityDisplayName(currentCity)}
-      pendingChangesCount={pendingChangesCount || 0}
-      pendingChanges={pendingChanges || []}
-      pendingMenus={pendingMenus || []}
-      pendingEvents={pendingEvents || []}
-      walletPassesCount={walletPassesCount || 0}
-      pendingLoyaltyCount={pendingLoyaltyCount || 0}
-    />
+    <>
+      {isImpersonating && (
+        <ImpersonationBanner
+          adminUsername={adminSession.username}
+          city={adminSession.city}
+          hqEmail={adminSession.hq_user_email || 'HQ Admin'}
+        />
+      )}
+      <AdminDashboard 
+        businesses={allBusinesses || []} 
+        crmData={crmData}
+        adminEmail={admin.email || admin.username} 
+        city={currentCity}
+        cityDisplayName={getCityDisplayName(currentCity)}
+        pendingChangesCount={pendingChangesCount || 0}
+        pendingChanges={pendingChanges || []}
+        pendingMenus={pendingMenus || []}
+        pendingEvents={pendingEvents || []}
+        walletPassesCount={walletPassesCount || 0}
+        pendingLoyaltyCount={pendingLoyaltyCount || 0}
+      />
+    </>
   )
 }

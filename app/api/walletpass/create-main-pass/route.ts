@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🎫 Creating main wallet pass for user')
     
-    const { firstName, lastName, email, city, marketingPushConsent, marketingEmailConsent } = await request.json()
+    const { firstName, lastName, email, city: bodyCity, marketingPushConsent, marketingEmailConsent } = await request.json()
     
     if (!firstName || !lastName || !email) {
       return NextResponse.json(
@@ -15,8 +15,12 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    const { getRequestCityFallback } = await import('@/lib/utils/city-detection')
+    const requestCity = await getRequestCityFallback(request)
+    const city = bodyCity || requestCity
+    
     // 🎯 DYNAMIC: Get city-specific WalletPush credentials
-    const credentials = await getWalletPushCredentials(city || 'bournemouth')
+    const credentials = await getWalletPushCredentials(city)
     const MOBILE_WALLET_APP_KEY = credentials.apiKey
     const MOBILE_WALLET_TEMPLATE_ID = credentials.templateId
     const walletpushDashboardUrl = credentials.dashboardUrl
@@ -42,7 +46,7 @@ export async function POST(request: NextRequest) {
     const baseUrl = `${protocol}://${host}`
     
     // Get city-specific subdomain for URLs
-    const citySubdomain = city?.toLowerCase() || 'bournemouth'
+    const citySubdomain = city.toLowerCase()
     const cityBaseUrl = host.includes('localhost') 
       ? baseUrl // localhost:3000 for dev
       : `https://${citySubdomain}.qwikker.com` // Production subdomains
@@ -117,7 +121,7 @@ export async function POST(request: NextRequest) {
           last_name: lastName,
           name: `${firstName} ${lastName}`,
           email: email.toLowerCase(),
-          city: city?.toLowerCase() || 'bournemouth',
+          city: city.toLowerCase(),
           wallet_pass_status: 'active',
           marketing_push_consent: marketingPushConsent ?? false,
           email_marketing_consent: marketingEmailConsent ?? false,

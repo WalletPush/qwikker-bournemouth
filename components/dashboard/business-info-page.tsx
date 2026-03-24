@@ -38,6 +38,8 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
     website_url: profile.website_url || '',
     instagram_handle: profile.instagram_handle || '',
     facebook_url: profile.facebook_url || '',
+    booking_url: profile.booking_url || '',
+    booking_preference: profile.booking_preference || '',
   })
 
   const [businessHours, setBusinessHours] = useState<BusinessHoursStructured | null>(
@@ -106,6 +108,8 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
         website_url: formData.website_url,
         instagram_handle: formData.instagram_handle,
         facebook_url: formData.facebook_url,
+        booking_url: formData.booking_url || null,
+        booking_preference: formData.booking_preference || null,
       }
       
       const result = await updateBusinessInfo(profile.user_id, basicInfoData)
@@ -315,10 +319,10 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
                 value={formData.business_tagline}
                 onChange={(e) => handleInputChange('business_tagline', e.target.value)}
                 className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
-                placeholder="Your catchy one-liner (e.g., 'Best coffee in Bournemouth')"
+                placeholder="What you're known for in one line"
                 maxLength={50}
               />
-              <p className="text-xs text-gray-400 mt-1">Short tagline that appears on your business card</p>
+              <p className="text-xs text-gray-400 mt-1">Appears on your business card and in search results</p>
             </div>
 
             <div>
@@ -328,11 +332,11 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
                 value={formData.business_description}
                 onChange={(e) => handleInputChange('business_description', e.target.value)}
                 className="w-full bg-slate-900 text-white border border-slate-600 focus:border-[#00d083] rounded-md p-3 min-h-[100px] resize-y"
-                placeholder="Describe your business, atmosphere, what makes you special, and what customers can expect..."
+                placeholder="Tell your story -- who you are, what you do, and why people love coming here..."
                 maxLength={500}
               />
               <p className="text-xs text-gray-400 mt-1">
-                Required for customers to discover you • {formData.business_description.length}/500 characters
+                Our AI uses this to recommend you to the right customers • {formData.business_description.length}/500 characters
               </p>
             </div>
           </CardContent>
@@ -440,6 +444,63 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
           </CardContent>
         </Card>
 
+        {/* Booking */}
+        <Card id="booking" className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Booking
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-white">How do customers book with you?</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+                {[
+                  { value: 'url', label: 'Online booking link' },
+                  { value: 'phone', label: 'Phone or email' },
+                  { value: 'none', label: "We don't take bookings" },
+                ].map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleInputChange('booking_preference', option.value)}
+                    className={`p-3 rounded-lg border text-sm text-left transition-colors ${
+                      formData.booking_preference === option.value
+                        ? 'border-[#00d083] bg-[#00d083]/10 text-white'
+                        : 'border-slate-600 text-slate-400 hover:border-slate-500'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {formData.booking_preference === 'url' && (
+              <div>
+                <Label htmlFor="booking_url" className="text-white">Booking Link</Label>
+                <Input
+                  id="booking_url"
+                  value={formData.booking_url}
+                  onChange={(e) => handleInputChange('booking_url', e.target.value)}
+                  className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
+                  placeholder="https://book.yoursystem.com/yourvenue"
+                />
+                <p className="text-xs text-gray-400 mt-1">OpenTable, Resy, DesignMyNight, or any booking page URL</p>
+              </div>
+            )}
+
+            {formData.booking_preference === 'phone' && (
+              <p className="text-sm text-slate-400">
+                Your contact phone number and email from the business details above will be used as the booking method.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Featured Menu Items */}
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
@@ -452,7 +513,7 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-400 mb-4">
-              <span className="text-green-400 font-medium">RECOMMENDED:</span> Add 3-5 of your most popular services/items. These will be displayed on your business card to attract customers.
+              <span className="text-green-400 font-medium">RECOMMENDED:</span> Add 3-5 of your most popular items. These appear on your profile and help customers know what to expect.
             </p>
             
             {menuItems.map((item, index) => (

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { AdminLogoutButton } from '@/components/admin-logout-button'
+import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
 
 interface AdminToolsLayoutProps {
   children: React.ReactNode
@@ -11,7 +12,9 @@ interface AdminToolsLayoutProps {
   cityDisplayName?: string
 }
 
-export function AdminToolsLayout({ children, city = 'bournemouth', cityDisplayName = 'Bournemouth' }: AdminToolsLayoutProps) {
+export function AdminToolsLayout({ children, city: cityProp, cityDisplayName: cityDisplayNameProp }: AdminToolsLayoutProps) {
+  const city = cityProp || getClientCityFallback()
+  const cityDisplayName = cityDisplayNameProp || getClientCityDisplayName(city)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
 

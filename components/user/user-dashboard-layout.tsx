@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react'
+import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
 import Link from 'next/link'
 
 interface UserDashboardLayoutProps {
@@ -87,7 +88,9 @@ const navItems: NavItem[] = [
   },
 ]
 
-export function UserDashboardLayout({ children, currentSection, currentUser, walletPassId, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserDashboardLayoutProps) {
+export function UserDashboardLayout({ children, currentSection, currentUser, walletPassId, currentCity: currentCityProp, cityDisplayName: cityDisplayNameProp }: UserDashboardLayoutProps) {
+  const currentCity = currentCityProp || getClientCityFallback()
+  const cityDisplayName = cityDisplayNameProp || getClientCityDisplayName(currentCity)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifBadge, setNotifBadge] = useState(0)
   
@@ -255,14 +258,20 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
                 </svg>
               </button>
               {/* Page title */}
-              <div className="hidden lg:block">
-                <h1 className="text-lg font-semibold text-slate-100 capitalize">
-                  {currentSection === 'secret-menu' ? 'Secret Menu Club' : 
-                   currentSection === 'badges' ? 'Achievements' :
-                   currentSection === 'chat' ? 'AI Companion' :
-                   currentSection}
-                </h1>
-              </div>
+              {currentSection === 'chat' ? (
+                <div className="flex items-center gap-2 ml-3 lg:ml-0">
+                  <img src="/qwikker-logo-web.svg" alt="Qwikker" width={100} height={24} className="h-5 w-auto" />
+                  <span className="text-sm text-slate-400 font-medium">Companion</span>
+                </div>
+              ) : (
+                <div className="hidden lg:block">
+                  <h1 className="text-lg font-semibold text-slate-100 capitalize">
+                    {currentSection === 'secret-menu' ? 'Secret Menu Club' : 
+                     currentSection === 'badges' ? 'Achievements' :
+                     currentSection}
+                  </h1>
+                </div>
+              )}
             </div>
 
             {/* Right side - Location and city switcher */}

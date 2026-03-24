@@ -245,3 +245,14 @@ export function getCityDisplayName(city: string): string {
 export async function preloadFranchiseCities(): Promise<void> {
   await getValidFranchises()
 }
+
+/**
+ * Synchronous client-side city fallback for component prop defaults.
+ * Extracts city from hostname when the server doesn't pass a city prop.
+ */
+export function getClientCityFallback(): string {
+  if (typeof window !== 'undefined') {
+    return getCityFromHostnameClient(window.location.hostname)
+  }
+  return 'bournemouth'
+}

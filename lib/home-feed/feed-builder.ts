@@ -306,7 +306,7 @@ async function fetchUserInteractions(supabase: any, walletPassId: string): Promi
       supabase
         .from('qwikker_vibes')
         .select('business_id')
-        .eq('wallet_pass_id', walletPassId)
+        .eq('vibe_user_key', walletPassId)
         .eq('vibe_rating', 'loved_it'),
       supabase
         .from('user_saved_items')

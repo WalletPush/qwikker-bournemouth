@@ -73,7 +73,8 @@ export async function POST(req: NextRequest) {
       .single()
 
     const tier = business?.plan || 'starter'
-    const city = business?.city || 'bournemouth'
+    const { getRequestCityFallback } = await import('@/lib/utils/city-detection')
+    const city = business?.city || await getRequestCityFallback(req)
     const limits = getSocialWizardLimits(tier)
 
     if (!limits.campaignPacks) {

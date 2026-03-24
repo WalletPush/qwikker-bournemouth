@@ -4,7 +4,7 @@ import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { getSystemCategoryFromDisplayLabel, isValidSystemCategory } from '@/lib/constants/system-categories'
-import { sendFranchiseEmail, getFranchiseBaseUrl } from '@/lib/email/send-franchise-email'
+import { sendFranchiseEmail, getFranchiseBaseUrl, getFranchiseSupportEmail } from '@/lib/email/send-franchise-email'
 import { createChangeRejectionEmail } from '@/lib/email/templates/business-notifications'
 
 export async function POST(request: NextRequest) {
@@ -173,6 +173,8 @@ export async function POST(request: NextRequest) {
         if (claim.edited_description) businessUpdate.business_description = claim.edited_description
         if (claim.edited_tagline) businessUpdate.business_tagline = claim.edited_tagline
         if (claim.edited_hours) businessUpdate.business_hours = claim.edited_hours
+        if (claim.edited_booking_preference) businessUpdate.booking_preference = claim.edited_booking_preference
+        if (claim.edited_booking_url) businessUpdate.booking_url = claim.edited_booking_url
       }
       
       // Always apply hero image if uploaded (not dependent on data_edited flag)
@@ -441,7 +443,9 @@ export async function POST(request: NextRequest) {
       // Send denial email to the claimer
       if (claim.business_email) {
         try {
-          const city = claim.business.city || 'bournemouth'
+          const { getRequestCityFallback } = await import('@/lib/utils/city-detection')
+          const requestCity = await getRequestCityFallback(request)
+          const city = claim.business.city || requestCity
           const baseUrl = getFranchiseBaseUrl(city)
           const template = createChangeRejectionEmail({
             firstName: claim.first_name || 'there',
@@ -450,7 +454,7 @@ export async function POST(request: NextRequest) {
             rejectionReason: 'Your claim could not be verified at this time. If you believe this is an error, please contact support.',
             city,
             dashboardUrl: `${baseUrl}/claim`,
-            supportEmail: 'support@qwikker.com'
+            supportEmail: await getFranchiseSupportEmail(city)
           })
           await sendFranchiseEmail({ city, to: claim.business_email, template })
           console.log(`📧 Claim denial email sent to ${claim.business_email}`)

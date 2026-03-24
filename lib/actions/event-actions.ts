@@ -3,7 +3,8 @@
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { syncEventToKnowledgeBase, archiveEventInKnowledgeBase } from '@/lib/ai/embeddings'
-import { sendFranchiseEmail, getFranchiseBaseUrl } from '@/lib/email/send-franchise-email'
+import { sendFranchiseEmail, getFranchiseBaseUrl, getFranchiseSupportEmail } from '@/lib/email/send-franchise-email'
+import { getRequestCityFallback } from '@/lib/utils/city-detection'
 import { createEventApprovalEmail, createChangeRejectionEmail } from '@/lib/email/templates/business-notifications'
 
 export interface BusinessEvent {
@@ -191,7 +192,7 @@ export async function createEvent(input: CreateEventInput): Promise<{
         await sendCitySlackNotification({
           title: `📅 New Event Created: ${input.event_name}`,
           message: `${businessProfile.business_name} has created a new event!\n\n**Event Details:**\n• Type: ${input.event_type}\n• Date: ${input.event_date}\n• Time: ${input.event_start_time || 'Not specified'}\n• Description: ${input.event_description}`,
-          city: businessProfile.city || 'bournemouth',
+          city: businessProfile.city || await getRequestCityFallback(),
           type: 'offer_created', // Reusing this type since there's no event-specific type
           data: { 
             businessName: businessProfile.business_name, 
@@ -470,7 +471,7 @@ export async function approveEvent(eventId: string): Promise<{
         .single()
 
       if (biz?.email) {
-        const city = biz.city || 'bournemouth'
+        const city = biz.city || await getRequestCityFallback()
         const baseUrl = getFranchiseBaseUrl(city)
         const template = createEventApprovalEmail({
           firstName: biz.first_name || 'Business Owner',
@@ -563,7 +564,7 @@ export async function rejectEvent(
           .single()
 
         if (biz?.email) {
-          const city = biz.city || 'bournemouth'
+          const city = biz.city || await getRequestCityFallback()
           const baseUrl = getFranchiseBaseUrl(city)
           const template = createChangeRejectionEmail({
             firstName: biz.first_name || 'Business Owner',
@@ -573,7 +574,7 @@ export async function rejectEvent(
             rejectionReason,
             city,
             dashboardUrl: `${baseUrl}/dashboard/events`,
-            supportEmail: 'support@qwikker.com'
+            supportEmail: await getFranchiseSupportEmail(city)
           })
           const emailResult = await sendFranchiseEmail({ city, to: biz.email, template })
           if (emailResult.success) {

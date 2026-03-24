@@ -9,6 +9,7 @@ import { useElegantModal } from '@/components/ui/elegant-modal'
 import { AiCompanionCard } from '@/components/ui/ai-companion-card'
 import { useSearchParams } from 'next/navigation'
 import { getBadgeTracker } from '@/lib/utils/simple-badge-tracker'
+import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
 
 interface RealSecretMenu {
   businessId: string
@@ -40,7 +41,9 @@ interface UserSecretMenuPageProps {
   cityDisplayName?: string
 }
 
-export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserSecretMenuPageProps) {
+export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, currentCity: currentCityProp, cityDisplayName: cityDisplayNameProp }: UserSecretMenuPageProps) {
+  const currentCity = currentCityProp || getClientCityFallback()
+  const cityDisplayName = cityDisplayNameProp || getClientCityDisplayName(currentCity)
   
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { UserHelpDialog } from '@/components/user/user-help-dialog'
+import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
 interface UserSettingsPageProps {
   currentUser?: {
     id: string
@@ -21,12 +23,15 @@ interface UserSettingsPageProps {
   }
 }
 
-export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth', stats }: UserSettingsPageProps) {
+export function UserSettingsPage({ currentUser, currentCity: currentCityProp, cityDisplayName: cityDisplayNameProp, stats }: UserSettingsPageProps) {
+  const currentCity = currentCityProp || getClientCityFallback()
+  const cityDisplayName = cityDisplayNameProp || getClientCityDisplayName(currentCity)
   // Marketing consent state
   const [pushConsent, setPushConsent] = useState(false)
   const [emailConsent, setEmailConsent] = useState(false)
   const [consentLoading, setConsentLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const [liveCities, setLiveCities] = useState<Array<{ city: string; display_name: string; subdomain: string; status: string; country_name: string }>>([])
   const [showCities, setShowCities] = useState(false)
@@ -34,9 +39,7 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
 
   const [preferences, setPreferences] = useState({
     categories: [] as string[],
-    days: ['Friday', 'Saturday', 'Sunday'],
     radius: '3 miles',
-    priceRange: 'All'
   })
   const [prefSaving, setPrefSaving] = useState(false)
 
@@ -316,32 +319,6 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
           </div>
 
           <div>
-            <p className="text-white font-medium mb-3">Preferred Days</p>
-            <div className="flex flex-wrap gap-2">
-              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
-                <button
-                  key={day}
-                  onClick={() => {
-                    setPreferences(prev => ({
-                      ...prev,
-                      days: prev.days.includes(day)
-                        ? prev.days.filter(d => d !== day)
-                        : [...prev.days, day]
-                    }))
-                  }}
-                  className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
-                    preferences.days.includes(day)
-                      ? 'bg-[#00d083] text-black'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                  }`}
-                >
-                  {day.slice(0, 3)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
             <p className="text-white font-medium mb-3">Search Radius</p>
             <div className="flex gap-2">
               {['1 mile', '3 miles', '5 miles', '10 miles'].map((radius) => (
@@ -484,20 +461,20 @@ export function UserSettingsPage({ currentUser, currentCity = 'bournemouth', cit
           <Button
             variant="outline"
             className="w-full justify-start border-slate-500 text-slate-300 hover:bg-slate-700"
-            onClick={() => window.open('mailto:hello@qwikker.com?subject=Help Request', '_blank')}
+            onClick={() => setHelpOpen(true)}
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             Help & Support
           </Button>
-          
-          <Button variant="outline" className="w-full justify-start border-red-500/50 text-red-400 hover:bg-red-500/10">
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Sign Out
-          </Button>
+
+          <UserHelpDialog
+            open={helpOpen}
+            onOpenChange={setHelpOpen}
+            walletPassId={currentUser?.wallet_pass_id}
+            city={currentCity}
+          />
         </CardContent>
       </Card>
     </div>

@@ -1,14 +1,13 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendContactUpdateToGoHighLevel } from '@/lib/integrations'
 import { revalidatePath } from 'next/cache'
 
 /**
  * 🔥 SEAMLESS UPDATE SYSTEM - NO BREAKS ALLOWED!
  * 
  * This system ensures EVERY update flows through ALL systems:
- * Business Dashboard → Supabase → GHL → Admin Dashboard → User Dashboard
+ * Business Dashboard → Supabase → Admin Dashboard → User Dashboard
  */
 
 export interface UpdateResult {
@@ -16,6 +15,7 @@ export interface UpdateResult {
   message: string
   data?: any
   errors?: string[]
+  /** @deprecated GHL retired — always false */
   ghlSyncSuccess?: boolean
 }
 
@@ -28,14 +28,12 @@ export async function updateContactEverywhere(
   source: 'business' | 'admin' = 'admin'
 ): Promise<UpdateResult> {
   const errors: string[] = []
-  let ghlSyncSuccess = false
-  
   try {
     console.log(`🔄 Starting seamless contact update from ${source}:`, { contactId, updates })
     
     const supabaseAdmin = createAdminClient()
     
-    // 1. 🎯 UPDATE SUPABASE FIRST (only with fields that exist in the current schema)
+    // 1. 🎯 UPDATE SUPABASE (only with fields that exist in the current schema)
     const safeUpdates = {
       // Core contact fields that definitely exist
       ...(updates.first_name !== undefined && { first_name: updates.first_name }),
@@ -68,65 +66,7 @@ export async function updateContactEverywhere(
     
     console.log(`✅ Supabase updated: ${updatedContact.business_name}`)
     
-    // 2. 🎯 SYNC TO GHL IMMEDIATELY
-    try {
-      const ghlData = {
-        firstName: updatedContact.first_name || '',
-        lastName: updatedContact.last_name || '',
-        email: updatedContact.email || '',
-        phone: updatedContact.phone || '',
-        businessName: updatedContact.business_name || '',
-        businessType: updatedContact.business_type || '',
-        businessCategory: updatedContact.business_category || '',
-        businessAddress: updatedContact.business_address || '',
-        town: updatedContact.business_town || '',
-        postcode: updatedContact.business_postcode || '',
-        // Optional social media fields - only include if they exist in DB
-        ...(updatedContact.website && { website: updatedContact.website }),
-        ...(updatedContact.instagram && { instagram: updatedContact.instagram }),
-        ...(updatedContact.facebook && { facebook: updatedContact.facebook }),
-        ...(updatedContact.referral_source && { referralSource: updatedContact.referral_source }),
-        ...(updatedContact.goals && { goals: updatedContact.goals }),
-        notes: updatedContact.additional_notes || '',
-        
-        // Update metadata
-        contactSync: true,
-        syncType: `${source}_contact_update`,
-        updatedAt: new Date().toISOString(),
-        qwikkerContactId: updatedContact.id,
-        city: updatedContact.city,
-        status: updatedContact.status,
-        updatedFields: Object.keys(updates),
-        isUpdate: true,
-        updateSource: source
-      }
-      
-      await sendContactUpdateToGoHighLevel(ghlData, updatedContact.city)
-      ghlSyncSuccess = true
-      
-      // Update sync timestamps after successful sync
-      try {
-        await supabaseAdmin
-          .from('business_profiles')
-          .update({ 
-            last_ghl_sync: new Date().toISOString(),
-            last_crm_sync: new Date().toISOString(),
-            crm_sync_status: 'synced'
-          })
-          .eq('id', contactId)
-      } catch (syncUpdateError) {
-        console.warn('⚠️ Could not update sync timestamps:', syncUpdateError)
-        // Continue anyway - the main sync was successful
-      }
-      
-      console.log(`✅ GHL synced: ${updatedContact.business_name}`)
-      
-    } catch (ghlError) {
-      console.error('❌ GHL sync failed:', ghlError)
-      errors.push(`GHL sync failed: ${ghlError instanceof Error ? ghlError.message : 'Unknown error'}`)
-    }
-    
-    // 3. 🎯 REFRESH ALL AFFECTED PAGES
+    // 2. 🎯 REFRESH ALL AFFECTED PAGES
     try {
       const pathsToRefresh = [
         '/admin',
@@ -151,14 +91,14 @@ export async function updateContactEverywhere(
     // 4. 🎯 RETURN SUCCESS WITH FULL DATA
     return {
       success: true,
-      message: `Contact updated successfully${ghlSyncSuccess ? ' and synced to GHL' : ' (GHL sync failed)'}`,
+      message: 'Contact updated successfully',
       data: {
         contact: updatedContact,
         updatedFields: Object.keys(updates),
         source,
         timestamp: new Date().toISOString()
       },
-      ghlSyncSuccess,
+      ghlSyncSuccess: false,
       errors: errors.length > 0 ? errors : undefined
     }
     

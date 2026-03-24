@@ -147,6 +147,7 @@ interface ChatResponse {
       ratingBadge: string | null
     }
   }>
+  contextBusinesses?: Array<{ business_name: string; id: string }> // Businesses sent to AI context (for link injection fallback)
   queryCategories?: string[] // ✅ ATLAS: Categories detected in query (for filtering businesses)
   queryKeywords?: string[] // ✅ ATLAS: Keywords detected in query (for filtering businesses)
   metadata?: {
@@ -479,8 +480,9 @@ function buildSystemPromptV2(args: {
   previousResponses?: string[]
   userName?: string
   userLoyaltySummary?: string
+  eventContext?: string
 }): string {
-  const { cityDisplayName, userMessage, isBroadQuery, stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, previousResponses, userName, userLoyaltySummary } = args
+  const { cityDisplayName, userMessage, isBroadQuery, stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, previousResponses, userName, userLoyaltySummary, eventContext } = args
 
   const convoFocus = state?.currentBusiness
     ? `FOCUS: You are currently discussing ${state.currentBusiness.name}. Stay on that unless the user asks to switch.`
@@ -544,12 +546,11 @@ HARD RULES (DO NOT BREAK):
   ✅ CHECK for "Featured Menu Items:" in AVAILABLE BUSINESSES
   ✅ If present: list 3-5 items with names and prices
   ❌ DO NOT say "I don't have menu details" when Featured Menu Items are listed
-- SHOW ALL UPFRONT: If you have 2+ relevant matches, mention ALL in your FIRST answer. Never drip-feed.
+- SHOW ALL UPFRONT: If you have 2+ relevant matches, mention ALL in your FIRST answer. Never drip-feed. If AVAILABLE BUSINESSES contains ANY businesses, you MUST recommend from them — never claim you have no recommendations when businesses are listed in your context.
 - NO HALLUCINATIONS: Never invent dishes, vibe, amenities, hours, or offers. Only mention specifics from AVAILABLE BUSINESSES.
-- 🚨 NEVER RECOMMEND COMMERCIAL BUSINESSES NOT IN YOUR DATA: You MUST ONLY recommend businesses (restaurants, bars, cafes, shops, hotels, activity centres, spas, salons, etc.) that appear in AVAILABLE BUSINESSES above. NEVER name a commercial business from your own knowledge that isn't listed.
-  However, you CAN mention public places and landmarks: parks, gardens, beaches, piers, promenades, town squares, public museums, galleries, libraries, harbours, train stations, and other council/public infrastructure. These are not businesses.
-  If the user asks about a category you don't have businesses for (e.g. "kids activities"), mention relevant public places if you know them and suggest an alternative category you DO have businesses for.
-  NEVER draw attention to the limitations of your data. Do NOT say things like "outside of the listed cafes", "I don't have that on Qwikker yet", "suggestions outside of my database", or anything that highlights gaps. Just naturally pivot to what you CAN help with.
+- 🚨 ABSOLUTE RULE — QWIKKER BUSINESSES ONLY: You MUST ONLY mention businesses, venues, attractions, or commercial establishments that appear in AVAILABLE BUSINESSES above. If a place charges admission, sells products, or is a registered business, it MUST be in AVAILABLE BUSINESSES or you MUST NOT mention it. This includes but is not limited to: cinemas, bowling alleys, aquariums, theme parks, soft play centres, swimming pools, museums with paid admission, escape rooms, trampoline parks, and any chain brand (e.g. ODEON, Oceanarium, Adventure Wonderland). NEVER bold a name that is not a linked Qwikker business.
+  The ONLY non-business places you may reference are free public outdoor spaces: parks, beaches, piers, promenades, and town squares.
+  BEFORE saying you don't have recommendations, CHECK every business in AVAILABLE BUSINESSES for relevant features in their KB/menu data. A restaurant with a kids menu IS a valid answer for "things to do with kids." A bar with outdoor seating IS relevant for "patio drinks." Only say you have no recommendations when genuinely no business in your context has relevant data for the query.
 - 🚨 ZERO-DATA BUSINESSES: If a business has NO menu items, NO KB content, NO offers — ONLY mention: name (with link), category, rating + review count. DO NOT add what they are "known for", "specialize in", or "offer". DO NOT infer from business name or category. NEVER write a trailing incomplete sentence like "is a lovely spot, ." — if you have nothing specific to say, just state the name, category, and rating.
 - 🚨 CHECK YOUR DATA BEFORE SAYING "I DON'T KNOW": Before telling a user you don't have opening hours, menus, or other info, CHECK the AVAILABLE BUSINESSES data above. If Hours: is listed for a business, USE IT. Never claim you don't have data that is right there in your context. If a user asks "is X open tomorrow?" and you have the hours, answer the question.
 - 📋 HOURS QUERIES: When a user asks "what are the hours?" or "when is X open?", show the FULL weekly schedule from the data — not just today's or tomorrow's. Present it clearly (e.g. "Mon-Fri: 9am-5pm, Sat: 10am-4pm, Sun: Closed"). Only show a single day if the user specifically asked about that day (e.g. "are they open on Sunday?").
@@ -558,6 +559,7 @@ HARD RULES (DO NOT BREAK):
 - TIERS: If there are relevant Qwikker Picks for the user's request, list them first. Never force a Qwikker Pick that doesn't match the request — relevance always wins over tier.
 - "QWIKKER PICKS": Only use this label if EVERY business you mentioned is [TIER: qwikker_picks].
 - ATLAS: ${atlasAvailable ? 'When listing 2+ businesses, end your response with a short line like: "Tap **Explore on Atlas** below to take a guided tour of these spots on the map!" — use natural wording but always mention the Atlas button.' : 'DO NOT mention map views or Atlas — the map is not available for these businesses.'}
+- 📅 BOOKING CTA: When recommending a business that has a "Book online:" or "Book by phone:" line in its data, include a brief booking nudge at the end of that business's paragraph. Use category-appropriate phrasing (e.g. "Reserve a table" for restaurants, "Book an appointment" for barbers/salons, or just "Book online" if unsure). If it is a URL: "[Reserve a table](URL)" or "[Book an appointment](URL)". If phone: "Call to book: PHONE". One line max. NOTE: This is for BUSINESS reservations only — do NOT confuse with event ticket links.
 - ZERO RESULTS: Be honest. NEVER say "you're in luck" if you have nothing to show. Suggest a nearby alternative category or ask what else they'd like.
 - MATCH USER LANGUAGE: If the user asked for "bars", say "bars" in your response — never substitute with "dining options", "restaurants", or "places to eat". Mirror the user's terminology.
 - "ANY MORE?" HANDLING: If you showed all matches, say so. If you missed any, correct yourself immediately.
@@ -593,6 +595,7 @@ AVAILABLE BUSINESSES (sorted by tier; qwikker_picks first):
 ${businessContext || 'No businesses available.'}
 ${userLoyaltySummary || ''}
 ${cityContext ? `CITY & LOCAL KNOWLEDGE (verified, use this FIRST before your own knowledge):\n${cityContext}\n\nIMPORTANT: When answering questions about transport, parking, areas, or practical tips, use the CITY & LOCAL KNOWLEDGE above as your primary source. You may add general context (e.g. weather, geography) but NEVER name any specific business, attraction, venue, museum, activity centre, or commercial establishment that is not in AVAILABLE BUSINESSES above. If you don't have relevant businesses for what they're asking, say so honestly.\n` : ''}
+${eventContext || ''}
 `.trim()
 }
 
@@ -636,6 +639,10 @@ export async function generateHybridAIResponse(
     const openai = new OpenAI({
       apiKey: franchiseKeys.openai_api_key,
     })
+    
+    // Vibes map -- declared early so it's available in all code paths;
+    // populated later in the browse-fill path (Step 2)
+    let vibesMap = new Map<string, any>()
     
   // 🔍 EARLY EXIT: Handle hidden business detail command
   // ✅ SAFETY: Only match if entire message is exactly the command (prevent accidental triggers)
@@ -1448,17 +1455,22 @@ export async function generateHybridAIResponse(
             }
           }
 
-          // Qwikker Vibes sentiment
           let vibesLine = ''
           const vibeStats = vibesMap.get(business.id)
           if (vibeStats && vibeStats.total_vibes >= 5) {
-            const positivePercent = Math.round(((vibeStats.loved_it + vibeStats.it_was_good) / vibeStats.total_vibes) * 100)
-            vibesLine = `\nQwikker Vibes: ${positivePercent}% positive from ${vibeStats.total_vibes} users`
+            vibesLine = `\nQwikker Vibes: ${vibeStats.positive_percentage}% positive from ${vibeStats.total_vibes} users`
+          }
+
+          let bookingLine = ''
+          if (business.booking_url) {
+            bookingLine = `\nBook online: ${business.booking_url}`
+          } else if (business.booking_preference === 'phone' && business.phone) {
+            bookingLine = `\nBook by phone: ${business.phone}`
           }
 
           const businessSlug = getBusinessSlug(business)
           return `**${business.business_name}** [TIER: ${business.tierLabel}] [SLUG: ${businessSlug}]${ratingLine}${vibesLine}
-Category: ${business.display_category || 'Not specified'}${hoursLine}${loyaltyLine}${richContent}${offerText}`
+Category: ${business.display_category || 'Not specified'}${hoursLine}${loyaltyLine}${bookingLine}${richContent}${offerText}`
         }).join('\n\n')
       : 'No businesses available in this city yet.'
     
@@ -1519,6 +1531,124 @@ Category: ${business.display_category || 'Not specified'}${hoursLine}${loyaltyLi
       .slice(-2)
       .map(m => m.content)
     
+    // 🎯 PRE-AI EVENT FETCH: Detect event intent and fetch events BEFORE the AI call
+    // so the AI knows about upcoming events and can reference them naturally
+    let eventCards: ChatResponse['eventCards'] = []
+    let eventContext = ''
+
+    const eventIntentPatterns = /\b(any events|events?\s+(?:near|in|at|this|happening|on|coming|soon)|what(?:'?s| is)\s+(?:on|happening)|things to do|concerts?|gigs?|live music|upcoming events?|events?\s+tonight|events?\s+this weekend|show me events?|happening\s+(?:soon|tonight|this|near))\b/i
+    const currentMessageWantsEvents = eventIntentPatterns.test(userMessage)
+    const isNonEventContext = /\b(menu|mains|food|lunch|dinner|breakfast|dish|meal|eat|burger|steak|offer|deal|discount|promo|restaurant|bar|cafe|pub)\b/i.test(userMessage)
+    const recentUserMessages = conversationHistory.slice(-4).filter(m => m.role === 'user').map(m => m.content).join(' ')
+    const userPreviouslyAskedEvents = eventIntentPatterns.test(recentUserMessages)
+    const showingInterest = /\b(yes|yeah|yep|sure|sounds good|tell me more|show me the event|pull up the event)\b/i.test(userMessage)
+    const shouldFetchEvents = (currentMessageWantsEvents && !isNonEventContext) || (userPreviouslyAskedEvents && showingInterest && !isNonEventContext)
+
+    console.log(`🎉 EVENT QUERY CHECK:`, {
+      userMessage,
+      currentMessageWantsEvents,
+      userPreviouslyAskedEvents,
+      showingInterest,
+      shouldFetchEvents
+    })
+
+    if (shouldFetchEvents) {
+      try {
+        console.log(`🎉 FETCHING EVENT CARDS - User wants event details for ${city}`)
+
+        const recentMessages = conversationHistory.slice(-4).map(m => m.content).join(' ')
+        const tastingMentioned = /tasting experience|tasting event|tasting night|cocktail tasting/i.test(recentMessages)
+        const jazzMentioned = /jazz night|live jazz|jazz event/i.test(recentMessages)
+
+        const allRelevantText = `${userMessage} ${recentMessages}`
+        const dateMatch = allRelevantText.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(?:december|dec|november|nov|january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|october|oct)\b/i)
+
+        let specificDate: string | null = null
+        if (dateMatch) {
+          const day = parseInt(dateMatch[1])
+          const monthStr = dateMatch[0].match(/(december|dec|november|nov|january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|october|oct)/i)?.[1].toLowerCase()
+          const monthMap: Record<string, number> = {
+            'january': 0, 'jan': 0, 'february': 1, 'feb': 1, 'march': 2, 'mar': 2,
+            'april': 3, 'apr': 3, 'may': 4, 'june': 5, 'jun': 5,
+            'july': 6, 'jul': 6, 'august': 7, 'aug': 7, 'september': 8, 'sep': 8,
+            'october': 9, 'oct': 9, 'november': 10, 'nov': 10, 'december': 11, 'dec': 11
+          }
+          if (monthStr && monthMap[monthStr] !== undefined) {
+            const year = new Date().getFullYear()
+            const date = new Date(year, monthMap[monthStr], day)
+            specificDate = date.toISOString().split('T')[0]
+            console.log(`📅 Detected specific date in message: ${specificDate} (${dateMatch[0]})`)
+          }
+        }
+
+        let query = supabase
+          .from('business_events')
+          .select(`
+            id,
+            event_name,
+            event_description,
+            event_type,
+            event_date,
+            event_start_time,
+            event_end_time,
+            custom_location_name,
+            booking_url,
+            event_image,
+            business_id,
+            business_profiles!inner(business_name, city)
+          `)
+          .eq('status', 'approved')
+          .eq('business_profiles.city', city)
+          .gte('event_date', new Date().toISOString().split('T')[0])
+          .order('event_date', { ascending: true })
+
+        if (specificDate) {
+          query = query.eq('event_date', specificDate)
+        } else if (tastingMentioned) {
+          query = query.ilike('event_name', '%tasting%')
+        } else if (jazzMentioned) {
+          query = query.ilike('event_name', '%jazz%')
+        } else {
+          query = query.limit(3)
+        }
+
+        const { data: events, error } = await query
+
+        if (!error && events && events.length > 0) {
+          eventCards = events.map(event => ({
+            id: event.id,
+            title: event.event_name?.trim() || 'Untitled Event',
+            description: event.event_description || 'No description',
+            event_type: event.event_type || 'Other',
+            start_date: event.event_date,
+            start_time: event.event_start_time || null,
+            end_date: null,
+            end_time: event.event_end_time || null,
+            location: event.custom_location_name || event.business_profiles?.business_name || 'TBA',
+            ticket_url: event.booking_url || null,
+            image_url: event.event_image || null,
+            business_name: event.business_profiles?.business_name || 'Unknown Business',
+            business_id: event.business_id
+          }))
+
+          // Build context string so the AI knows what events are available
+          eventContext = `UPCOMING EVENTS IN ${cityDisplayName}:\n` + eventCards.map(e => {
+            const datePart = e.start_date ? new Date(e.start_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : ''
+            const timePart = e.start_time ? ` at ${e.start_time}` : ''
+            return `- "${e.title}" at ${e.business_name} (${datePart}${timePart})`
+          }).join('\n') + `\nEvent cards will be displayed in the UI alongside your response. Reference these events naturally and enthusiastically. Do NOT say you don't have event information.`
+
+          console.log(`✅ Pre-fetched ${eventCards.length} event cards for AI context`)
+        } else if (error) {
+          console.error('❌ Error fetching events:', error)
+        } else {
+          console.log('ℹ️ No upcoming events found')
+        }
+      } catch (error) {
+        console.error('❌ Error fetching event cards:', error)
+      }
+    }
+
     const systemPrompt = buildSystemPromptV2({ 
       cityDisplayName, 
       userMessage, 
@@ -1531,7 +1661,8 @@ Category: ${business.display_category || 'Not specified'}${hoursLine}${loyaltyLi
       currentTime,
       previousResponses,
       userName,
-      userLoyaltySummary
+      userLoyaltySummary,
+      eventContext
     })
     
     if (process.env.NODE_ENV === 'development') console.log('[PROMPT] systemPrompt chars=', systemPrompt.length)
@@ -1655,150 +1786,7 @@ Present this information clearly and offer further help.`
     // This code path only runs for non-offer queries
     let walletActions: ChatResponse['walletActions'] = []
     
-    // 🎯 STEP 9: Fetch event cards if user is asking about events OR conversation contains events
-    let eventCards: ChatResponse['eventCards'] = []
-    
-    // Check current message - but EXCLUDE food/menu context
-    const isFoodContext = /\b(menu|mains|food|lunch|dinner|breakfast|dish|meal|eat|burger|fries|steak|ribeye|sauce|toppings|patty|cheese)\b/i.test(userMessage)
-    const currentMessageMentionsEvents = !isFoodContext && /\b(event|show|concert|gig|happening|what'?s on|things to do|this weekend|tonight)\b/i.test(userMessage)
-    
-    // Check if events were discussed in recent conversation (more specific patterns)
-    const recentConversation = conversationHistory.slice(-4).map(m => m.content).join(' ')
-    const conversationMentionsEvents = /\b(event card|show me the event|concert|gig|happening tonight|what's on tonight|tasting experience|tasting event|jazz night|live music)\b/i.test(recentConversation)
-    
-    // Check if user is showing interest (yes, yeah, sure, etc) after events were mentioned
-    // BUT exclude if they're asking about offers/deals
-    const isAskingAboutOffer = /\b(offer|deal|discount|promo)\b/i.test(userMessage)
-    const showingInterest = !isAskingAboutOffer && /\b(yes|yeah|yep|sure|sounds good|go on|interested|tell me more|show me the event|pull up)\b/i.test(userMessage)
-    
-    const shouldFetchEvents = currentMessageMentionsEvents || (conversationMentionsEvents && showingInterest && !isFoodContext && !isAskingAboutOffer)
-    
-    console.log(`🎉 EVENT QUERY CHECK:`, {
-      userMessage,
-      currentMessageMentionsEvents,
-      conversationMentionsEvents,
-      showingInterest,
-      shouldFetchEvents
-    })
-    
-    if (shouldFetchEvents) {
-      try {
-        const supabase = await createTenantAwareServerClient(city)
-        
-        console.log(`🎉 FETCHING EVENT CARDS - User wants event details for ${city}`)
-        
-        // Check LAST 4 messages for specific event name (more context)
-        const recentMessages = conversationHistory.slice(-4).map(m => m.content).join(' ')
-        const tastingMentioned = /tasting experience|tasting event|tasting night|cocktail tasting/i.test(recentMessages)
-        const jazzMentioned = /jazz night|live jazz|jazz event/i.test(recentMessages)
-        
-        // 🆕 Check for date mentions in the CURRENT user message and AI response
-        const allRelevantText = `${userMessage} ${aiResponse} ${recentMessages}`
-        const dateMatch = allRelevantText.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(?:december|dec|november|nov|january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|october|oct)\b/i)
-        
-        let specificDate: string | null = null
-        if (dateMatch) {
-          // Parse the date from the match
-          const day = parseInt(dateMatch[1])
-          const monthStr = dateMatch[0].match(/(december|dec|november|nov|january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|october|oct)/i)?.[1].toLowerCase()
-          
-          const monthMap: Record<string, number> = {
-            'january': 0, 'jan': 0, 'february': 1, 'feb': 1, 'march': 2, 'mar': 2,
-            'april': 3, 'apr': 3, 'may': 4, 'june': 5, 'jun': 5,
-            'july': 6, 'jul': 6, 'august': 7, 'aug': 7, 'september': 8, 'sep': 8,
-            'october': 9, 'oct': 9, 'november': 10, 'nov': 10, 'december': 11, 'dec': 11
-          }
-          
-          if (monthStr && monthMap[monthStr] !== undefined) {
-            const year = new Date().getFullYear()
-            const date = new Date(year, monthMap[monthStr], day)
-            specificDate = date.toISOString().split('T')[0]
-            console.log(`📅 Detected specific date in message: ${specificDate} (${dateMatch[0]})`)
-          }
-        }
-        
-        console.log(`🔍 Event detection in last 4 messages:`)
-        console.log(`   - Tasting mentioned: ${tastingMentioned}`)
-        console.log(`   - Jazz mentioned: ${jazzMentioned}`)
-        console.log(`   - Specific date detected: ${specificDate}`)
-        console.log(`   - Recent messages:`, conversationHistory.slice(-4).map(m => m.content.substring(0, 50)))
-        
-        let query = supabase
-          .from('business_events')
-          .select(`
-            id,
-            event_name,
-            event_description,
-            event_type,
-            event_date,
-            event_start_time,
-            event_end_time,
-            custom_location_name,
-            booking_url,
-            event_image,
-            business_id,
-            business_profiles!inner(business_name, city)
-          `)
-          .eq('status', 'approved')
-          .eq('business_profiles.city', city)
-          .gte('event_date', new Date().toISOString().split('T')[0])
-          .order('event_date', { ascending: true })
-        
-        // 🎯 PRIORITY 1: Filter by specific date if mentioned
-        if (specificDate) {
-          query = query.eq('event_date', specificDate)
-          console.log(`🎯 Filtering for events on: ${specificDate}`)
-        }
-        // 🎯 PRIORITY 2: Filter by specific event type if mentioned
-        else if (tastingMentioned) {
-          query = query.ilike('event_name', '%tasting%')
-          console.log(`🎯 Filtering for: Tasting Experience`)
-        } else if (jazzMentioned) {
-          query = query.ilike('event_name', '%jazz%')
-          console.log(`🎯 Filtering for: Jazz Night`)
-        } else {
-          // Default: show only next upcoming event (not all 5)
-          query = query.limit(1)
-          console.log(`🎯 No specific mention - showing only next upcoming event`)
-        }
-        
-        const { data: events, error } = await query
-        
-        console.log(`🔍 Query result: ${events?.length || 0} events found, error:`, error)
-        
-        console.log('🔍 Raw events data:', JSON.stringify(events, null, 2))
-        
-        if (!error && events && events.length > 0) {
-          eventCards = events.map(event => {
-            console.log('🔄 Mapping event:', event.event_name)
-            return {
-              id: event.id,
-              title: event.event_name?.trim() || 'Untitled Event',
-              description: event.event_description || 'No description',
-              event_type: event.event_type || 'Other',
-              start_date: event.event_date,
-              start_time: event.event_start_time || null,
-              end_date: null, // Not in schema
-              end_time: event.event_end_time || null,
-              location: event.custom_location_name || event.business_profiles?.business_name || 'TBA',
-              ticket_url: event.booking_url || null,
-              image_url: event.event_image || null,
-              business_name: event.business_profiles?.business_name || 'Unknown Business',
-              business_id: event.business_id
-            }
-          })
-          
-          console.log(`✅ Successfully mapped ${eventCards.length} event cards`)
-          console.log('📦 Event cards data:', JSON.stringify(eventCards, null, 2))
-        } else if (error) {
-          console.error('❌ Error fetching events:', error)
-        } else {
-          console.log('ℹ️ No upcoming events found')
-        }
-      } catch (error) {
-        console.error('❌ Error fetching event cards:', error)
-      }
-    }
+    // Event cards were already fetched in the pre-AI step above
     
     console.log(`✅ Response generated (${aiResponse.length} chars) using ${modelToUse}`)
     
@@ -1856,14 +1844,14 @@ Present this information clearly and offer further help.`
       
       // STEP 2: Fetch offers/vibes for all businesses
       
-      // 💚 Fetch Qwikker Vibes for all businesses (for chat context + within-tier ranking)
-      const vibesMap = new Map()
-      if (businesses && businesses.length > 0) {
+      // 💚 Fetch Qwikker Vibes for ALL businesses across all tiers (not just tier1)
+      vibesMap = new Map()
+      const allBusinessesForVibes = Array.from(businessById.values())
+      if (allBusinessesForVibes.length > 0) {
         await Promise.all(
-          businesses.map(async (business) => {
+          allBusinessesForVibes.map(async (business) => {
             const vibes = await getBusinessVibeStats(business.id)
             if (vibes && vibes.total_vibes >= 5) {
-              // Only include businesses with 5+ vibes (statistically significant)
               vibesMap.set(business.id, vibes)
             }
           })
@@ -2669,6 +2657,7 @@ Present this information clearly and offer further help.`
       walletActions,
       eventCards,
       mapPins, // ✅ ATLAS: ALL businesses for map (paid cyan + unclaimed grey)
+      contextBusinesses: sortedForContext.map(b => ({ business_name: b.business_name, id: b.id })),
       queryCategories: detectedIntent.categories, // ✅ ATLAS: For filtering businesses by query
       queryKeywords: detectedIntent.keywords, // ✅ ATLAS: For filtering businesses by query
       modelUsed: modelToUse,
@@ -2731,6 +2720,8 @@ async function generateBusinessDetailResponse(
   
   console.log(`✅ Found business: ${business.business_name}`)
   
+  const vibeStats = await getBusinessVibeStats(businessId)
+
   // Build detail context
   const detailLines = [
     `Business: ${business.business_name}`,
@@ -2738,6 +2729,8 @@ async function generateBusinessDetailResponse(
     business.business_tagline ? `Tagline: ${business.business_tagline}` : null,
     business.rating && business.review_count ? 
       `Rating: ${business.rating}★ from ${business.review_count} Google reviews` : null,
+    vibeStats && vibeStats.total_vibes >= 5 ?
+      `Qwikker Vibes: ${vibeStats.positive_percentage}% positive from ${vibeStats.total_vibes} users` : null,
     business.business_address ? `Location: ${business.business_address}` : null,
     business.phone ? `Phone: ${business.phone}` : null,
     business.website_url ? `Website: ${business.website_url}` : null,

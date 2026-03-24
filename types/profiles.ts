@@ -76,6 +76,10 @@ export interface Profile {
   website_url: string | null;
   instagram_handle: string | null;
   facebook_url: string | null;
+
+  // Booking
+  booking_url: string | null;
+  booking_preference: string | null; // 'url' | 'phone' | 'none'
   logo: string | null; // URL to uploaded logo
   menu_url: string | null; // URL to uploaded menu/price list PDF
   
@@ -236,6 +240,8 @@ export interface CreateProfileRequest {
   website_url?: string;
   instagram_handle?: string;
   facebook_url?: string;
+  booking_url?: string;
+  booking_preference?: string;
   offer_name?: string;
   offer_type?: OfferType;
   offer_value?: string;

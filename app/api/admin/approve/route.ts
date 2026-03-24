@@ -4,7 +4,6 @@ import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { addBasicBusinessKnowledge } from '@/lib/actions/knowledge-base-actions'
-import { sendContactUpdateToGoHighLevel } from '@/lib/integrations'
 import { sendBusinessApprovedNotification, getUsersForBusinessNotifications, sendNewOfferNotification } from '@/lib/notifications/business-notifications'
 
 export async function POST(request: NextRequest) {
@@ -137,7 +136,9 @@ export async function POST(request: NextRequest) {
         // Notify users about new business (if has offers)
         // 🔒 GUARD: Only notify users if this is a real claimed business (not auto-imported unclaimed)
         if (data.offer_name && data.offer_value && !isUnclaimedImport) {
-          const userIds = await getUsersForBusinessNotifications(data.city || 'bournemouth', data.business_type)
+          const { getRequestCityFallback } = await import('@/lib/utils/city-detection')
+          const fallbackCity = await getRequestCityFallback(request)
+          const userIds = await getUsersForBusinessNotifications(data.city || fallbackCity, data.business_type)
           if (userIds.length > 0) {
             await sendNewOfferNotification(
               userIds,
@@ -166,12 +167,14 @@ export async function POST(request: NextRequest) {
         // Use deployment URL (Vercel preview) until custom domains are live
         const deploymentUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://qwikkerdashboard-theta.vercel.app'
         if (data.email && data.business_name && !isUnclaimedImport) {
+          const { getFranchiseSupportEmail } = await import('@/lib/email/send-franchise-email')
+          const supportEmail = await getFranchiseSupportEmail(requestCity)
           const emailResult = await sendBusinessApprovalNotification({
             firstName: data.first_name || 'Business Owner',
             businessName: data.business_name,
             city: requestCity,
             dashboardUrl: `${deploymentUrl}/dashboard`,
-            supportEmail: process.env.SUPPORT_EMAIL || 'support@qwikker.com'
+            supportEmail,
           })
           
           if (emailResult.success) {
@@ -210,12 +213,14 @@ export async function POST(request: NextRequest) {
         const { sendBusinessRejectionNotification } = await import('@/lib/notifications/email-notifications')
         
         if (data.email && data.business_name) {
+          const { getFranchiseSupportEmail } = await import('@/lib/email/send-franchise-email')
+          const supportEmail = await getFranchiseSupportEmail(requestCity)
           const emailResult = await sendBusinessRejectionNotification({
             firstName: data.first_name || 'Business Owner',
             businessName: data.business_name,
             rejectionReason: data.admin_notes || 'Please review and update your business information.',
             city: requestCity,
-            supportEmail: process.env.SUPPORT_EMAIL || 'support@qwikker.com'
+            supportEmail,
           })
           
           if (emailResult.success) {
@@ -227,70 +232,6 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error('⚠️ Email notification error (non-critical):', error)
       }
-    }
-    
-    // 📞 SYNC STATUS CHANGES TO GHL (for all actions)
-    try {
-      const ghlData = {
-        // Personal info
-        firstName: data.first_name || '',
-        lastName: data.last_name || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        
-        // Business info
-        businessName: data.business_name || '',
-        businessType: data.business_type || '',
-        businessCategory: data.business_category || '',
-        businessAddress: data.business_address || '',
-        town: data.business_town || '',
-        postcode: data.business_postcode || '',
-        
-        // Optional fields
-        website: data.website || '',
-        instagram: data.instagram || '',
-        facebook: data.facebook || '',
-        
-        // File URLs
-        logo_url: data.logo || '',
-        menu_url: data.menu_url || '',
-        
-        // Offer data (if exists)
-        offerName: data.offer_name || '',
-        offerType: data.offer_type || '',
-        offerValue: data.offer_value || '',
-        offerTerms: data.offer_terms || '',
-        offerStartDate: data.offer_start_date || '',
-        offerEndDate: data.offer_end_date || '',
-        
-        // Status and metadata
-        status: newStatus,
-        approvedAt: data.approved_at,
-        city: data.city,
-        qwikkerContactId: data.id,
-        
-        // Sync metadata
-        contactSync: true,
-        syncType: `business_${action}`,
-        isUpdate: true,
-        updateSource: 'admin_approval',
-        adminAction: action,
-        adminName: admin.username,
-        updatedAt: new Date().toISOString()
-      }
-      
-      await sendContactUpdateToGoHighLevel(ghlData, data.city)
-      console.log(`📞 Business ${action} synced to ${data.city} GHL: ${data.business_name}`)
-      
-      // ✅ UPDATE last_ghl_sync timestamp
-      await supabaseAdmin
-        .from('business_profiles')
-        .update({ last_ghl_sync: new Date().toISOString() })
-        .eq('id', businessId)
-      
-    } catch (ghlError) {
-      console.error(`⚠️ GHL sync failed after business ${action} (non-critical):`, ghlError)
-      // Don't fail the approval if GHL sync fails
     }
     
     return NextResponse.json({

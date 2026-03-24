@@ -10,7 +10,6 @@ import { BusinessCRMData } from '@/types/billing'
 import { useElegantModal } from '@/components/ui/elegant-modal'
 import { AdminAnalytics } from './admin-analytics'
 import { ContactsTab } from './contacts-tab'
-import { SyncHealthOverview } from './sync-health-overview'
 import { InitialAvatar } from '@/components/admin/initial-avatar'
 import { DeleteBusinessModal } from '@/components/admin/delete-business-modal'
 
@@ -947,12 +946,6 @@ Qwikker Admin Team`
               </p>
             </div>
 
-            {/* Sync Health Overview - Only show on contacts tab */}
-            {activeTab === 'contacts' && (
-              <div className="mb-6">
-                <SyncHealthOverview />
-              </div>
-            )}
 
             {/* 🔍 MINIMAL SEARCH */}
             {activeTab !== 'knowledge' && activeTab !== 'analytics' && activeTab !== 'contacts' && (

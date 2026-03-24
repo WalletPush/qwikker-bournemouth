@@ -14,10 +14,11 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import type { Map as MapboxMap, LngLatLike, MapboxGeoJSONFeature } from 'mapbox-gl'
-import Head from 'next/head'
+import 'mapbox-gl/dist/mapbox-gl.css'
 import { AtlasOverlay } from './AtlasOverlay'
+import { AtlasMapMiniCard } from './AtlasMapMiniCard'
+import { AtlasMobileDetailCard } from './AtlasMobileDetailCard'
 import { AtlasHudBubble } from './AtlasHudBubble'
-import { ChatContextStrip } from './ChatContextStrip'
 import { AtlasIntroOverlay } from './AtlasIntroOverlay'
 import { AtlasVibeSetup } from './AtlasVibeSetup'
 import { BottomSheet } from './BottomSheet'
@@ -29,16 +30,14 @@ import type { LocationStatus } from '@/lib/location/useUserLocation'
 import type { AtlasResponse } from '@/lib/ai/prompts/atlas'
 import { buildBusinessFacts } from '@/lib/atlas/buildBusinessFacts'
 import {
-  getUserLocationLayers,
   getBusinessPinLayers,
-  // getArrivalPulseLayer, // 🚨 REMOVED: Mapbox doesn't support feature-state in filters
   getClusterLayers,
   getActiveBusinessLayers,
   getRouteLayers,
+  getAmbientPinLayers,
   buildArcRoute,
   QWIKKER_GREEN,
   QWIKKER_GREEN_BRIGHT,
-  NEON_CYAN
 } from '@/lib/atlas/atlas-styles'
 
 export interface Business {
@@ -49,14 +48,18 @@ export interface Business {
   rating: number
   review_count: number
   business_tagline?: string
+  system_category?: string
   display_category?: string
   business_address?: string
   google_place_id?: string
   website_url?: string
   phone?: string
-  business_tier?: string // ✅ For determining pin color
-  isPaid?: boolean // ✅ For cyan pins (paid/trial businesses)
-  isUnclaimed?: boolean // ✅ For grey pins (unclaimed businesses)
+  business_images?: string[]
+  placeholder_variant?: number | null
+  slug?: string
+  business_tier?: string
+  isPaid?: boolean
+  isUnclaimed?: boolean
   hasLoyalty?: boolean
   loyaltyReward?: string
   loyaltyThreshold?: number
@@ -121,6 +124,7 @@ export function AtlasMode({
   isActive = true,
   onTellMeMore
 }: AtlasModeProps) {
+  const desktopRailWidth = '18rem'
   // #region agent log - server-visible debug helper
   const dlog = useCallback((tag: string, data: Record<string, unknown>) => {
     console.log(`[Atlas] ${tag}`, data)
@@ -157,13 +161,13 @@ export function AtlasMode({
   
   // ✨ Mobile detection and bottom sheet
   const isMobile = useMobile()
-  const [showMobileSheet, setShowMobileSheet] = useState(false)
   
   // ✨ Tour-end decision helper
   const [showTourEndHelper, setShowTourEndHelper] = useState(false)
   
   // Tour mode state
   const [tourActive, setTourActive] = useState(false)
+  const [showTourPrompt, setShowTourPrompt] = useState(false)
   const tourTimerRef = useRef<NodeJS.Timeout | null>(null)
   
   // Track if event handlers are attached (prevent duplicates)
@@ -182,6 +186,7 @@ export function AtlasMode({
   // HUD bubble state
   const [hudVisible, setHudVisible] = useState(false)
   const [hudSummary, setHudSummary] = useState('')
+  const [lastSearchSummary, setLastSearchSummary] = useState<string | null>(null)
   const [hudPrimaryBusinessName, setHudPrimaryBusinessName] = useState<string | null>(null)
   const hudDismissTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [lastAtlasQuery, setLastAtlasQuery] = useState<string | null>(null)
@@ -324,16 +329,7 @@ export function AtlasMode({
     statusTimerRef.current = setTimeout(() => setStatusMessage(null), durationMs)
   }, [])
   
-  const handleSearchThisArea = useCallback(() => {
-    if (!map.current) return
-    const center = map.current.getCenter()
-    setShowSearchThisArea(false)
-    showStatus('Searching this area...')
-    trackEvent({ eventType: 'atlas_area_search' })
-    if (vibeSearchRef.current) {
-      vibeSearchRef.current(`places near ${center.lat.toFixed(4)},${center.lng.toFixed(4)}`)
-    }
-  }, [showStatus, trackEvent])
+  const handleSearchThisAreaRef = useRef<(() => void) | null>(null)
   
   const selectedBusinessFactChips = useMemo(() => {
     if (!selectedBusiness) return []
@@ -345,7 +341,13 @@ export function AtlasMode({
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBusiness?.id, userLocation, isMobile, hydratedVersion])
-  
+
+  const displaySelectedBusiness = useMemo(() => {
+    if (!selectedBusiness) return null
+    const hydrated = hydratedDataRef.current.get(selectedBusiness.id)
+    return hydrated ? { ...selectedBusiness, ...hydrated } : selectedBusiness
+  }, [selectedBusiness, hydratedVersion])
+
   // ✅ SHIP-SAFE: Show friendly message when filters result in 0 places
   useEffect(() => {
     const hasActiveFilters = activeFilters.openNow || activeFilters.maxDistance !== null
@@ -468,14 +470,32 @@ export function AtlasMode({
   }, [])
   
   // Initialize Mapbox map
+  // Retries via isActive dep: when Atlas becomes visible, re-check if map needs creating
   useEffect(() => {
-    if (!mapContainer.current || map.current || !config.mapboxPublicToken) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Atlas] Map init check:', {
+        hasContainer: !!mapContainer.current,
+        hasExistingMap: !!map.current,
+        hasToken: !!config.mapboxPublicToken,
+        isActive
+      })
+    }
+    if (!config.mapboxPublicToken) {
       if (process.env.NODE_ENV === 'development') {
-        if (!config.mapboxPublicToken) {
-          console.error('[Atlas] No Mapbox token provided')
-        }
+        console.error('[Atlas] No Mapbox token provided')
       }
       return
+    }
+    if (map.current) return
+    if (!mapContainer.current) {
+      // Container not yet in DOM -- retry shortly
+      const retryTimer = setTimeout(() => {
+        if (!map.current && mapContainer.current && config.mapboxPublicToken) {
+          console.log('[Atlas] Retrying map init (container now available)')
+          setMapLoaded(prev => prev) // force re-run via state identity
+        }
+      }, 200)
+      return () => clearTimeout(retryTimer)
     }
     
     const initMap = async () => {
@@ -493,7 +513,7 @@ export function AtlasMode({
         
         const mapInstance = new mapboxgl.Map({
           container: mapContainer.current!,
-          style: config.styleUrl || 'mapbox://styles/mapbox/dark-v11',
+          style: config.styleUrl || 'mapbox://styles/mapbox/navigation-night-v1',
           center: [center.lng, center.lat],
           zoom: config.defaultZoom,
           pitch: performanceMode.enabled ? performanceMode.pitch : config.pitch,
@@ -558,6 +578,7 @@ export function AtlasMode({
       mapReadyRef.current = false
       if (userMarkerRef.current) {
         userMarkerRef.current.remove()
+        userMarkerRef.current = null
       }
       if (map.current) {
         map.current.remove()
@@ -573,11 +594,29 @@ export function AtlasMode({
     performanceMode.enabled,
     performanceMode.pitch,
     performanceMode.fog,
-    playSound
-    // ✅ CRITICAL FIX: Remove center.lat/center.lng dependencies
-    // Map should ONLY initialize ONCE on mount, never recreate
-    // Center changes should use flyTo, not recreate the map
+    playSound,
+    isActive
   ])
+
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+
+    const resizeMap = () => {
+      requestAnimationFrame(() => {
+        map.current?.resize()
+        requestAnimationFrame(() => {
+          map.current?.resize()
+        })
+      })
+    }
+
+    resizeMap()
+    window.addEventListener('resize', resizeMap)
+
+    return () => {
+      window.removeEventListener('resize', resizeMap)
+    }
+  }, [mapLoaded, isMobile, showVibeSetup, selectedBusiness?.id])
   
   // Pending flyTo request (queue if map not loaded yet)
   const pendingFlyToRef = useRef<{ coords: Coordinates; zoom: number } | null>(null)
@@ -591,36 +630,30 @@ export function AtlasMode({
   // User location marker ref (HTML marker for 3D pin)
   const userMarkerRef = useRef<any>(null)
   
-  // User location marker management (3D PIN STYLE) - always on top!
+  // User location marker management -- HTML pin + canvas glow layers
   const addUserLocationMarker = useCallback(async (coords: Coordinates) => {
     if (!map.current || !mapReadyRef.current) {
       console.log('[Atlas] ⚠️ Cannot add marker: mapReady=', mapReadyRef.current, '-- queuing')
       pendingUserMarkerRef.current = coords
       return
     }
-    
-    // If marker exists, just update position (don't re-create to avoid "floating")
+
+    // Update or create the HTML marker (pin only, no circle/glow)
     if (userMarkerRef.current) {
-      // #region agent log
-      console.log('[Atlas] 📍 Updating existing user marker position:', coords.lat.toFixed(5), coords.lng.toFixed(5))
-      // #endregion
       userMarkerRef.current.setLngLat([coords.lng, coords.lat])
       return
     }
-    
+
     try {
       const mapboxglModule = await import('mapbox-gl')
       const mapboxgl = mapboxglModule.default
-      
-      console.log('[Atlas] 📍 Creating 3D pin marker at:', coords)
-      
-      // Create 3D pin element (z-index: 2 to render above the vignette overlay at z-1)
+
       const el = document.createElement('div')
       el.className = 'user-location-3d-pin'
       el.style.cssText = 'width: 40px; height: 60px; cursor: pointer; position: relative; z-index: 2;'
       el.innerHTML = `
-        <div class="pin-container" style="position: relative; width: 100%; height: 100%; animation: pinDrop 0.6s ease-out;">
-          <div class="pin-head" style="
+        <div style="position: relative; width: 100%; height: 100%;">
+          <div style="
             position: absolute;
             top: 0;
             left: 50%;
@@ -632,7 +665,7 @@ export function AtlasMode({
             box-shadow: 0 3px 6px rgba(0, 208, 131, 0.4), inset -2px -2px 4px rgba(0, 0, 0, 0.2), inset 2px 2px 4px rgba(255, 255, 255, 0.3);
             border: 2px solid rgba(255, 255, 255, 0.9);
           ">
-            <div class="pin-dot" style="
+            <div style="
               position: absolute;
               top: 50%;
               left: 50%;
@@ -643,7 +676,7 @@ export function AtlasMode({
               border-radius: 50%;
             "></div>
           </div>
-          <div class="pin-shadow" style="
+          <div style="
             position: absolute;
             bottom: 0;
             left: 50%;
@@ -655,22 +688,20 @@ export function AtlasMode({
           "></div>
         </div>
       `
-      
-      userMarkerRef.current = new mapboxgl.Marker({ 
+
+      userMarkerRef.current = new mapboxgl.Marker({
         element: el,
         anchor: 'bottom'
       })
         .setLngLat([coords.lng, coords.lat])
         .addTo(map.current)
-      
-      // Force the Mapbox marker wrapper to sit above all overlays (vignette, etc.)
+
       const markerWrapper = userMarkerRef.current.getElement()
       if (markerWrapper) {
         markerWrapper.style.zIndex = '10'
       }
-      
+
       console.log('[Atlas] ✅ 3D pin marker created and added to map!')
-      
     } catch (error) {
       console.error('[Atlas] ❌ Failed to add user location marker:', error)
     }
@@ -903,27 +934,35 @@ export function AtlasMode({
       const fadeDuration = 1500
       
       const animateFade = (now: number) => {
-        if (!mapRef || !mapRef.getSource('route')) return
+        try {
+          if (!mapRef || !mapRef.getSource('route')) return
+        } catch { return }
         const progress = Math.min((now - fadeStart) / fadeDuration, 1)
         const opacity = progress * progress // ease-in
         
-        if (mapRef.getLayer('route-glow')) {
-          mapRef.setPaintProperty('route-glow', 'line-opacity', opacity * 0.4)
-        }
-        if (mapRef.getLayer('route-line')) {
-          mapRef.setPaintProperty('route-line', 'line-opacity', opacity)
-        }
+        try {
+          if (mapRef.getLayer('route-glow')) {
+            mapRef.setPaintProperty('route-glow', 'line-opacity', opacity * 0.4)
+          }
+          if (mapRef.getLayer('route-line')) {
+            mapRef.setPaintProperty('route-line', 'line-opacity', opacity)
+          }
+        } catch { /* style transitioning */ }
         
         if (progress < 1) {
           routeAnimationRef.current = requestAnimationFrame(animateFade)
-        } else if (mapRef.getLayer('route-dash')) {
+        } else {
           // Start marching ants after fade completes
           let dashOffset = 0
           const animateDash = () => {
-            if (!mapRef || !mapRef.getLayer('route-dash')) return
-            dashOffset += 0.15
-            mapRef.setPaintProperty('route-dash', 'line-dasharray', [2, 4 + (dashOffset % 6)])
-            routeAnimationRef.current = requestAnimationFrame(animateDash)
+            try {
+              if (!mapRef || !mapRef.getLayer('route-dash')) return
+              dashOffset += 0.15
+              mapRef.setPaintProperty('route-dash', 'line-dasharray', [4, 8 + (dashOffset % 6)])
+              routeAnimationRef.current = requestAnimationFrame(animateDash)
+            } catch {
+              // Style transitioning, stop animation
+            }
           }
           routeAnimationRef.current = requestAnimationFrame(animateDash)
         }
@@ -1114,15 +1153,14 @@ export function AtlasMode({
     
     console.log(`🎬 Starting tour of ${tourBusinesses.length} businesses`)
     
+    setShowTourPrompt(false)
     setShowTourEndHelper(false)
     setTourActive(true)
     setSelectedBusinessIndex(0)
     setSelectedBusiness(tourBusinesses[0])
     
-    // ✨ Mobile: Open bottom sheet, Desktop: Show HUD
-    if (isMobile) {
-      setShowMobileSheet(true)
-    } else {
+    // Desktop: show a brief start message in the rail summary area
+    if (!isMobile) {
       // ✨ Tour intro message (brief, then show first stop)
       const tourIntro = `Starting your tour of ${tourBusinesses.length} ${tourBusinesses.length === 1 ? 'place' : 'places'}...`
       setHudSummary(tourIntro)
@@ -1223,51 +1261,31 @@ export function AtlasMode({
   // ⬅️➡️ MANUAL NAVIGATION: Go to next/previous business
   const goToNextBusiness = useCallback(() => {
     if (businesses.length === 0) return
-    
-    // Stop tour if active
-    if (tourActive) {
-      stopTour()
-    }
-    
+
     const nextIndex = (selectedBusinessIndex + 1) % businesses.length
     const nextBusiness = businesses[nextIndex]
-    
+
     setSelectedBusinessIndex(nextIndex)
     setSelectedBusiness(nextBusiness)
     flyToBusiness(nextBusiness)
     updateActiveBusinessMarker(nextBusiness)
-    
-    // ✅ UPDATE HUD with new business info
-    setHudSummary(generateBusinessHudMessage(nextBusiness))
-    setHudPrimaryBusinessName(null)
-    setHudVisible(true)
-    
-    console.log(`⏭️ Next business: ${nextBusiness.business_name} (${nextIndex + 1}/${businesses.length})`)
-  }, [businesses, selectedBusinessIndex, tourActive, stopTour, flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
-  
+
+    console.log(`Next business: ${nextBusiness.business_name} (${nextIndex + 1}/${businesses.length})`)
+  }, [businesses, selectedBusinessIndex, flyToBusiness, updateActiveBusinessMarker, isMobile])
+
   const goToPreviousBusiness = useCallback(() => {
     if (businesses.length === 0) return
-    
-    // Stop tour if active
-    if (tourActive) {
-      stopTour()
-    }
-    
+
     const prevIndex = selectedBusinessIndex === 0 ? businesses.length - 1 : selectedBusinessIndex - 1
     const prevBusiness = businesses[prevIndex]
-    
+
     setSelectedBusinessIndex(prevIndex)
     setSelectedBusiness(prevBusiness)
     flyToBusiness(prevBusiness)
     updateActiveBusinessMarker(prevBusiness)
-    
-    // ✅ UPDATE HUD with new business info
-    setHudSummary(generateBusinessHudMessage(prevBusiness))
-    setHudPrimaryBusinessName(null)
-    setHudVisible(true)
-    
-    console.log(`⏮️ Previous business: ${prevBusiness.business_name} (${prevIndex + 1}/${businesses.length})`)
-  }, [businesses, selectedBusinessIndex, tourActive, stopTour, flyToBusiness, updateActiveBusinessMarker, generateBusinessHudMessage])
+
+    console.log(`Previous business: ${prevBusiness.business_name} (${prevIndex + 1}/${businesses.length})`)
+  }, [businesses, selectedBusinessIndex, flyToBusiness, updateActiveBusinessMarker, isMobile])
   
   // Cleanup tour timer on unmount
   useEffect(() => {
@@ -1292,7 +1310,13 @@ export function AtlasMode({
     // loaded() can return false mid-flight (loading tiles) which blocked pin creation.
     
     try {
-      if (!map.current.getStyle()) {
+      let styleReady = false
+      try {
+        styleReady = !!map.current.getStyle()
+      } catch {
+        // getStyle() can throw during transitions
+      }
+      if (!styleReady) {
         dlog('⏳ styleNotReady', { retrying: true })
         setTimeout(() => addBusinessMarkers(businesses), 100)
         return
@@ -1338,14 +1362,19 @@ export function AtlasMode({
       console.log('[Atlas] 🔧 Processing', features.length, 'features')
       console.log(`[Atlas] 📊 Pin tier breakdown: ${paidCount} paid (cyan), ${claimedFreeCount} claimed-free, ${unclaimedCount} unclaimed (grey)`)
       
-      // ✅ MVP-CRITICAL FIX: Update existing source via setData() instead of removing/re-adding
-      // This makes filters and pin updates work correctly
-      const existingSource = map.current.getSource('businesses') as any
+      // Update existing source via setData() instead of removing/re-adding
+      let existingSource: any = null
+      try {
+        existingSource = map.current.getSource('businesses')
+      } catch { /* style not ready */ }
       
       if (existingSource) {
-        // Source exists → update data, but verify layers still exist
-        const pinsLayerExists = !!map.current.getLayer('business-pins')
-        const clustersLayerExists = !!map.current.getLayer('business-clusters')
+        let pinsLayerExists = false
+        let clustersLayerExists = false
+        try {
+          pinsLayerExists = !!map.current.getLayer('business-pins')
+          clustersLayerExists = !!map.current.getLayer('business-clusters')
+        } catch { /* style transitioning */ }
         dlog('🔄 sourceExists', { pinsLayerExists, clustersLayerExists, featureCount: features.length })
         
         existingSource.setData({
@@ -1470,15 +1499,7 @@ export function AtlasMode({
               updateActiveBusinessMarker(business)
               flyToBusiness(business)
               
-              // ✨ Mobile: Show bottom sheet instead of HUD
-              if (isMobile) {
-                setShowMobileSheet(true)
-              } else {
-                // Desktop: Show HUD
-                setHudSummary(generateBusinessHudMessage(business))
-                setHudPrimaryBusinessName(null)
-                setHudVisible(true)
-              }
+              // Desktop: don't show HUD on pin click -- the rail + mini-card already have the info
             }
           }
           
@@ -1629,26 +1650,15 @@ export function AtlasMode({
       console.log('[Atlas] 🗺️ Current center:', map.current.getCenter())
       console.log('[Atlas] 🗺️ Current zoom:', map.current.getZoom())
       
-      // Helper function to start tour after flying to business
-      const startTourIfMultiple = () => {
-        // Select first business as active
+      // Show pins and prompt user to take a tour (opt-in, not auto-start)
+      const showPinsAndPrompt = () => {
         setSelectedBusiness(first)
         setSelectedBusinessIndex(0)
         updateActiveBusinessMarker(first)
-        
-        // 🎬 AUTO-START TOUR: If multiple businesses from chat, start tour after a delay
-        // ✅ PREVENT LOOP: Don't schedule if tour already active or timeout already set
-        if (incomingBusinesses.length > 1 && !tourActive && !tourTimerRef.current) {
-          console.log(`[Atlas] 🎬 Will auto-start tour in 2s (${incomingBusinesses.length} businesses from chat)`)
-          const tourTimeout = setTimeout(() => {
-            console.log('[Atlas] 🎬 Tour timeout fired! Calling startTour...')
-            startTour(incomingBusinesses) // Pass businesses explicitly
-          }, 2000) // Start tour 2s after arriving from chat
-          
-          // Store timeout for cleanup
-          tourTimerRef.current = tourTimeout
-        } else if (tourActive || tourTimerRef.current) {
-          console.log('[Atlas] ⏭️ Skipping tour schedule - already active or scheduled')
+
+        if (incomingBusinesses.length > 1 && !tourActive) {
+          console.log(`[Atlas] 🎬 Showing 'Take a tour' prompt (${incomingBusinesses.length} businesses)`)
+          setShowTourPrompt(true)
         }
       }
       
@@ -1668,7 +1678,7 @@ export function AtlasMode({
             })
             map.current.triggerRepaint()
             console.log('[Atlas] ✅ flyTo executed after idle')
-            startTourIfMultiple()
+            showPinsAndPrompt()
           }
         })
         // Safety fallback: if idle doesn't fire in 3s, force jumpTo
@@ -1678,7 +1688,7 @@ export function AtlasMode({
             map.current.jumpTo({ center: [first.longitude, first.latitude], zoom: 14 })
             map.current.resize()
             map.current.triggerRepaint()
-            startTourIfMultiple()
+            showPinsAndPrompt()
           }
         }, 3000)
         // Clear safety timeout if idle fires first
@@ -1705,9 +1715,9 @@ export function AtlasMode({
         } catch (e) { /* last resort failed */ }
       }
       
-      startTourIfMultiple()
+      showPinsAndPrompt()
     }
-  }, [mapLoaded, incomingBusinesses, addBusinessMarkers, updateActiveBusinessMarker, startTour])
+  }, [mapLoaded, incomingBusinesses, addBusinessMarkers, updateActiveBusinessMarker])
   
   // Recenter to user location (BULLETPROOF - stop + resize + flyTo)
   const handleRecenterToUser = useCallback(() => {
@@ -1812,6 +1822,7 @@ export function AtlasMode({
     // New search - clear filters, reset tour state, and run query
     setActiveFilters({ openNow: false, maxDistance: null })
     setShowTourEndHelper(false)
+    setShowTourPrompt(false)
     stopTour()
     setSearching(true)
     showStatus('Finding places...')
@@ -1832,7 +1843,8 @@ export function AtlasMode({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: query,
-          userLocation: userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null
+          userLocation: userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null,
+          userId: userId || null
         })
       })
       
@@ -1845,73 +1857,62 @@ export function AtlasMode({
       setLastAtlasQuery(query)
       setLastAtlasBusinessIds(atlasResponse.businessIds ?? [])
       
-      if (atlasResponse.businessIds?.length > 0) {
-        console.log('[Atlas Search] ✅ Found', atlasResponse.businessIds.length, 'business IDs')
-        
-        // Hydrate: fetch full business data by IDs (avoids re-searching with mismatched terms)
-        const idsToFetch = atlasResponse.businessIds.slice(
-          0, performanceMode.enabled ? performanceMode.maxMarkers : config.maxResults
-        )
-        console.log('[Atlas Search] 📡 Hydrating', idsToFetch.length, 'business IDs...')
-        const detailsResponse = await fetch(`/api/atlas/search?ids=${idsToFetch.join(',')}`)
-        const detailsData = await detailsResponse.json()
-        console.log('[Atlas Search] 📦 Hydration response:', detailsData)
-        
-        if (detailsData.ok && detailsData.results) {
-          const filteredResults = detailsData.results as Business[]
-          console.log('[Atlas Search] 📊 Hydrated results:', filteredResults.length)
-          console.log('[Atlas Search] 📊 Business names:', filteredResults.map((b: Business) => b.business_name))
-          
-          setBusinesses(filteredResults)
-          setBaseBusinesses(filteredResults)
-          await addBusinessMarkers(filteredResults)
-          
-          if (filteredResults.length > 0) {
-            setSelectedBusinessIndex(0)
-            const firstBusiness = filteredResults[0]
-            setSelectedBusiness(firstBusiness)
-            await updateActiveBusinessMarker(firstBusiness)
-            flyToBusiness(firstBusiness)
-            
-            if (filteredResults.length > 1) {
-              console.log('[Atlas Search] 🎬 Will start tour in', dismissMs + 500, 'ms')
-              setTimeout(() => {
-                startTour(filteredResults)
-              }, dismissMs + 500)
-            }
-          }
-          
-          let primaryBusinessName: string | null = null
-          if (atlasResponse.primaryBusinessId) {
-            const primaryBusiness = filteredResults.find((b: Business) => 
-              b.id === atlasResponse.primaryBusinessId
-            )
-            primaryBusinessName = primaryBusiness?.business_name || null
-          }
-          
-          setHudSummary(atlasResponse.summary || 'Found places nearby.')
-          setHudPrimaryBusinessName(primaryBusinessName)
-          
-          setTimeout(() => {
-            setHudVisible(true)
-            
-            hudDismissTimerRef.current = setTimeout(() => {
-              setHudVisible(false)
-            }, dismissMs)
-          }, 120)
-          
-          trackEvent({
-            eventType: 'atlas_search_performed',
-            query,
-            resultsCount: filteredResults.length,
-            performanceMode: performanceMode.enabled
-          })
-        } else {
-          console.error('[Atlas Search] ❌ Search API returned no results or error:', detailsData)
+      // Use inline business data from query response (eliminates second API call)
+      const inlineBusinesses = (atlasResponse.businesses || []) as Business[]
+      const maxCount = performanceMode.enabled ? performanceMode.maxMarkers : config.maxResults
+      const filteredResults = inlineBusinesses.slice(0, maxCount)
+
+      if (filteredResults.length > 0) {
+        console.log('[Atlas Search] ✅ Using inline businesses:', filteredResults.length)
+        console.log('[Atlas Search] 📊 Business names:', filteredResults.map((b: Business) => b.business_name))
+
+        setBusinesses(filteredResults)
+        setBaseBusinesses(filteredResults)
+        await addBusinessMarkers(filteredResults)
+
+        setSelectedBusinessIndex(0)
+        const firstBusiness = filteredResults[0]
+        setSelectedBusiness(firstBusiness)
+        await updateActiveBusinessMarker(firstBusiness)
+        flyToBusiness(firstBusiness)
+
+        if (filteredResults.length > 1) {
+          console.log('[Atlas Search] 🎬 Showing tour prompt for', filteredResults.length, 'results')
+          setShowTourPrompt(true)
         }
+
+        let primaryBusinessName: string | null = null
+        if (atlasResponse.primaryBusinessId) {
+          const primaryBusiness = filteredResults.find((b: Business) =>
+            b.id === atlasResponse.primaryBusinessId
+          )
+          primaryBusinessName = primaryBusiness?.business_name || null
+        }
+
+        const summary = atlasResponse.summary || 'Found places nearby.'
+        setHudSummary(summary)
+        setLastSearchSummary(summary)
+        setHudPrimaryBusinessName(primaryBusinessName)
+
+        setTimeout(() => {
+          setHudVisible(true)
+
+          hudDismissTimerRef.current = setTimeout(() => {
+            setHudVisible(false)
+          }, dismissMs)
+        }, 120)
+
+        trackEvent({
+          eventType: 'atlas_search_performed',
+          query,
+          resultsCount: filteredResults.length,
+          performanceMode: performanceMode.enabled
+        })
       } else {
         console.log('[Atlas Search] ⚠️ No business IDs returned from query')
-        setHudSummary(atlasResponse.summary || 'No results found.')
+        const summary = atlasResponse.summary || 'No results found.'
+        setHudSummary(summary)
+        setLastSearchSummary(null)
         setHudPrimaryBusinessName(null)
         
         setTimeout(() => {
@@ -1943,30 +1944,82 @@ export function AtlasMode({
   // Bridge refs to callbacks (avoids declaration-order issues)
   vibeSearchRef.current = handleSearch
   addBusinessMarkersRef.current = addBusinessMarkers
+
+  // "Search this area" handler -- defined here to access addBusinessMarkers & updateActiveBusinessMarker
+  handleSearchThisAreaRef.current = () => {
+    if (!map.current) return
+    const bounds = map.current.getBounds()
+    if (!bounds) return
+    setShowSearchThisArea(false)
+    setShowTourPrompt(false)
+    showStatus('Searching this area...')
+
+    const sw = bounds.getSouthWest()
+    const ne = bounds.getNorthEast()
+    const fetchAreaBusinesses = async () => {
+      try {
+        setSearching(true)
+        const response = await fetch(`/api/atlas/search?sw_lat=${sw.lat}&sw_lng=${sw.lng}&ne_lat=${ne.lat}&ne_lng=${ne.lng}`)
+        const data = await response.json()
+
+        if (data.ok && data.results && data.results.length > 0) {
+          const results = data.results as Business[]
+          setBusinesses(results)
+          setBaseBusinesses(results)
+          await addBusinessMarkers(results)
+
+          setSelectedBusinessIndex(0)
+          setSelectedBusiness(results[0])
+          await updateActiveBusinessMarker(results[0])
+
+          setHudSummary(`Found ${results.length} places in this area`)
+          setHudPrimaryBusinessName(null)
+          setHudVisible(true)
+          hudDismissTimerRef.current = setTimeout(() => setHudVisible(false), 4000)
+
+          if (results.length > 1) {
+            setShowTourPrompt(true)
+          }
+        } else {
+          setHudSummary('No places found in this area')
+          setHudPrimaryBusinessName(null)
+          setHudVisible(true)
+          hudDismissTimerRef.current = setTimeout(() => setHudVisible(false), 3000)
+        }
+      } catch (error) {
+        console.error('[Atlas] Area search failed:', error)
+      } finally {
+        setSearching(false)
+      }
+    }
+    fetchAreaBusinesses()
+  }
   
-  // Auto-run initial query when Atlas opens with chat context (run once only)
-  // ✅ CRITICAL: SKIP this if businesses were passed from chat - we already have the data!
+  // Auto-run initial query when Atlas opens (run once only)
+  // Priority: 1) incoming businesses from chat  2) initialQuery from chat  3) fallback discovery
   useEffect(() => {
-    if (!mapLoaded || !initialQuery || ranInitialQueryRef.current) return
-    
-    // If businesses were passed from chat, don't run a new search
+    if (!mapLoaded || ranInitialQueryRef.current) return
+
+    // Already have businesses from chat -- skip any query
     if (incomingBusinessesCount > 0) {
       console.log('[Atlas] ⏭️ Skipping initial query (businesses already provided from chat)')
       ranInitialQueryRef.current = true
       onInitialQueryConsumed?.()
       return
     }
-    
+
     ranInitialQueryRef.current = true
-    
-    if (process.env.NODE_ENV === 'development') {
+
+    if (initialQuery) {
       console.log('[Atlas] Running initial query from chat:', initialQuery)
+      handleSearch(initialQuery)
+      onInitialQueryConsumed?.()
+    } else {
+      // No chat context -- show category pills for user to pick
+      console.log('[Atlas] No chat context, showing discovery pills')
     }
-    
-    handleSearch(initialQuery)
-    onInitialQueryConsumed?.()
   }, [mapLoaded, initialQuery, handleSearch, onInitialQueryConsumed, incomingBusinessesCount])
-  
+
   // Force resize on mount to handle container sizing edge cases
   useEffect(() => {
     if (!mapLoaded || !map.current) return
@@ -1981,6 +2034,81 @@ export function AtlasMode({
         }
       }
     })
+  }, [mapLoaded])
+
+  // Load ambient pins (faint dots for all businesses in the city)
+  useEffect(() => {
+    if (!mapLoaded || !map.current) return
+    const mapRef = map.current
+
+    const loadAmbientPins = async () => {
+      try {
+        const bounds = mapRef.getBounds()
+        if (!bounds) return
+
+        const sw = bounds.getSouthWest()
+        const ne = bounds.getNorthEast()
+        const params = new URLSearchParams({
+          sw_lat: sw.lat.toString(),
+          sw_lng: sw.lng.toString(),
+          ne_lat: ne.lat.toString(),
+          ne_lng: ne.lng.toString(),
+        })
+
+        const res = await fetch(`/api/atlas/search?${params}`)
+        if (!res.ok) return
+        const data = await res.json()
+        const allBusinesses: any[] = data.results || data.businesses || []
+
+        if (allBusinesses.length === 0) return
+
+        const features = allBusinesses
+          .filter((b: any) => b.latitude && b.longitude)
+          .map((b: any) => ({
+            type: 'Feature' as const,
+            properties: { id: b.id },
+            geometry: {
+              type: 'Point' as const,
+              coordinates: [b.longitude, b.latitude],
+            },
+          }))
+
+        if (!mapRef.getStyle()) return
+
+        if (mapRef.getSource('ambient-businesses')) {
+          const src = mapRef.getSource('ambient-businesses') as any
+          src.setData({ type: 'FeatureCollection', features })
+        } else {
+          mapRef.addSource('ambient-businesses', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features },
+          })
+
+          const ambientLayers = getAmbientPinLayers()
+          ambientLayers.forEach((layer) => {
+            try {
+              // Add ambient layers below the main business pins
+              const businessGlow = mapRef.getLayer('business-pins-glow')
+              if (businessGlow) {
+                mapRef.addLayer(layer, 'business-pins-glow')
+              } else {
+                mapRef.addLayer(layer)
+              }
+            } catch {
+              try { mapRef.addLayer(layer) } catch { /* already exists */ }
+            }
+          })
+        }
+
+        console.log(`[Atlas] Ambient pins loaded: ${features.length}`)
+      } catch (err) {
+        console.error('[Atlas] Failed to load ambient pins:', err)
+      }
+    }
+
+    // Small delay to let the initial search layer settle first
+    const timer = setTimeout(loadAmbientPins, 1500)
+    return () => clearTimeout(timer)
   }, [mapLoaded])
   
   // Pause/resume when Atlas becomes inactive/active
@@ -2059,17 +2187,54 @@ export function AtlasMode({
   
   return (
     <>
-      {/* Mapbox CSS - Must be in head */}
-      <Head>
-        <link
-          href="https://api.mapbox.com/mapbox-gl-js/v3.18.0/mapbox-gl.css"
-          rel="stylesheet"
-        />
-      </Head>
-      
-      <div className="atlas-container fixed inset-0 z-50 bg-black">
+      <div className="atlas-container fixed inset-0 z-50 bg-black lg:flex">
+        {!isMobile && (
+          <div
+            className="hidden h-full shrink-0 overflow-hidden lg:block"
+            style={{ width: desktopRailWidth }}
+          >
+            <AtlasOverlay
+              onClose={handleClose}
+              onSearch={handleSearch}
+              searching={searching}
+              selectedBusiness={displaySelectedBusiness}
+              city={city}
+              lastUserQuery={lastUserQuery}
+              lastAIResponse={lastAIResponse}
+              hudSummary={hudVisible ? hudSummary : undefined}
+              visibleBusinessCount={visibleBusinesses.length}
+              showSearchThisArea={showSearchThisArea}
+              onSearchThisArea={() => handleSearchThisAreaRef.current?.()}
+              showTourPrompt={showTourPrompt}
+              onStartTour={() => {
+                setShowTourPrompt(false)
+                startTour()
+              }}
+              tourActive={tourActive}
+              totalBusinesses={businesses.length}
+              currentBusinessIndex={selectedBusinessIndex}
+              onNextBusiness={goToNextBusiness}
+              onPreviousBusiness={goToPreviousBusiness}
+              onStopTour={stopTour}
+              factChips={selectedBusinessFactChips}
+              onIntentChipTap={(chip) => handleSearch(chip)}
+              onTellMeMore={displaySelectedBusiness && onTellMeMore ? () => {
+                onTellMeMore(`Tell me more about ${displaySelectedBusiness.business_name}`, displaySelectedBusiness.id)
+              } : undefined}
+            />
+          </div>
+        )}
+
+        <div
+          className="relative h-full min-w-0"
+          style={!isMobile ? { width: `calc(100vw - ${desktopRailWidth})` } : undefined}
+        >
         {/* Map Container - Explicit height and width for Mapbox */}
-        <div ref={mapContainer} className="absolute inset-0 w-full h-full" style={{ minHeight: '100vh' }} />
+        <div
+          ref={mapContainer}
+          className="absolute inset-0 h-full w-full"
+          style={{ minHeight: '100vh' }}
+        />
         
         {/* VIGNETTE OVERLAY - Subtle edge darkening */}
         <div 
@@ -2236,8 +2401,8 @@ export function AtlasMode({
         </>
       )}
       
-      {/* HUD Bubble (ephemeral AI response) - DESKTOP ONLY */}
-      {!isMobile && (
+      {/* HUD Bubble (ephemeral AI response) - MOBILE ONLY */}
+      {isMobile && (
         <AtlasHudBubble
           visible={hudVisible}
           summary={hudSummary}
@@ -2247,34 +2412,23 @@ export function AtlasMode({
         />
       )}
       
-      {/* Overlay UI - DESKTOP ONLY (mobile uses bottom sheet + input) */}
-      {!isMobile && (
-        <AtlasOverlay
-          onClose={handleClose}
-          onSearch={handleSearch}
-          searching={searching}
-          selectedBusiness={selectedBusiness}
+      {!isMobile && displaySelectedBusiness && (
+        <AtlasMapMiniCard
+          selectedBusiness={displaySelectedBusiness}
           userLocation={userLocation}
-          tourActive={tourActive}
-          totalBusinesses={businesses.length}
+          factChips={selectedBusinessFactChips}
           currentBusinessIndex={selectedBusinessIndex}
+          totalBusinesses={businesses.length}
+          tourActive={tourActive}
           onNextBusiness={goToNextBusiness}
           onPreviousBusiness={goToPreviousBusiness}
           onStopTour={stopTour}
-          factChips={selectedBusinessFactChips}
-          onIntentChipTap={(chip) => handleSearch(chip)}
-          isSaved={selectedBusiness ? savedBusinessIds.has(selectedBusiness.id) : false}
-          onToggleSave={selectedBusiness ? () => handleToggleSave(selectedBusiness.id) : undefined}
-          onTellMeMore={selectedBusiness && onTellMeMore ? () => {
-            onTellMeMore(`Tell me more about ${selectedBusiness.business_name}`, selectedBusiness.id)
+          onClearSelection={() => setSelectedBusiness(null)}
+          isSaved={savedBusinessIds.has(displaySelectedBusiness.id)}
+          onToggleSave={() => handleToggleSave(displaySelectedBusiness.id)}
+          onTellMeMore={onTellMeMore ? () => {
+            onTellMeMore(`Tell me more about ${displaySelectedBusiness.business_name}`, displaySelectedBusiness.id)
           } : undefined}
-          onBusinessSelected={(businessId) => {
-            trackEvent({
-              eventType: 'atlas_business_selected',
-              businessId,
-              performanceMode: performanceMode.enabled
-            })
-          }}
           onDirectionsClicked={(businessId) => {
             trackEvent({
               eventType: 'atlas_directions_clicked',
@@ -2282,14 +2436,6 @@ export function AtlasMode({
               performanceMode: performanceMode.enabled
             })
           }}
-        />
-      )}
-      
-      {/* Chat Context Strip - Desktop only (mobile has bottom input) */}
-      {!isMobile && mapLoaded && (lastUserQuery || lastAIResponse) && (
-        <ChatContextStrip
-          userQuery={lastUserQuery}
-          aiResponse={lastAIResponse}
         />
       )}
       
@@ -2303,48 +2449,59 @@ export function AtlasMode({
         </div>
       )}
       
-      {/* Empty State -- only show briefly, not when HUD is visible */}
+      {/* Discovery pills -- shown on cold open or when no results */}
       {mapLoaded && !searching && baseBusinesses.length === 0 && !showVibeSetup && !hudVisible && !emptyStateDismissed && (
-        <div className={`absolute ${isMobile ? 'bottom-24' : 'bottom-28'} left-1/2 -translate-x-1/2 z-20 w-full max-w-sm px-4`}>
-          <div className="relative bg-black/70 backdrop-blur-lg rounded-2xl px-5 py-4 border border-white/10">
+        <div className={`absolute ${isMobile ? 'bottom-24' : 'bottom-28'} left-1/2 -translate-x-1/2 z-20 w-full max-w-md px-4`}>
+          <div className="relative bg-black/70 backdrop-blur-lg rounded-2xl px-5 py-5 border border-white/10">
             <button
               onClick={() => setEmptyStateDismissed(true)}
-              className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+              className="absolute top-2.5 right-2.5 w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
               aria-label="Dismiss"
             >
               <svg className="w-3.5 h-3.5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <p className="text-white/70 text-sm text-center mb-3 pr-4">
-              {!userLocation
-                ? 'Try searching for something specific'
-                : 'No places matched — try a different search'
-              }
+            <p className="text-white/50 text-xs uppercase tracking-wide text-center mb-3 pr-4">
+              Explore {city || 'nearby'}
             </p>
-            <div className="flex gap-2 justify-center">
-              <button
-                onClick={() => handleSearch('restaurants')}
-                className="px-4 py-2 bg-[#00d083]/20 border border-[#00d083]/30 rounded-full text-[#00d083] text-sm hover:bg-[#00d083]/30 transition-colors"
-              >
-                Restaurants
-              </button>
-              <button
-                onClick={() => handleSearch('bars and pubs')}
-                className="px-4 py-2 bg-[#00d083]/20 border border-[#00d083]/30 rounded-full text-[#00d083] text-sm hover:bg-[#00d083]/30 transition-colors"
-              >
-                Bars
-              </button>
-              <button
-                onClick={() => handleSearch('cafes')}
-                className="px-4 py-2 bg-[#00d083]/20 border border-[#00d083]/30 rounded-full text-[#00d083] text-sm hover:bg-[#00d083]/30 transition-colors"
-              >
-                Cafes
-              </button>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {[
+                { label: 'Restaurants', query: 'restaurants' },
+                { label: 'Bars', query: 'bars and pubs' },
+                { label: 'Cafes', query: 'cafes' },
+                { label: 'Nightlife', query: 'nightlife' },
+                { label: 'Date night', query: 'date night' },
+                { label: 'Takeaway', query: 'takeaway' },
+              ].map(({ label, query }) => (
+                <button
+                  key={query}
+                  onClick={() => {
+                    setEmptyStateDismissed(true)
+                    handleSearch(query)
+                  }}
+                  className="px-4 py-2 bg-white/5 border border-white/15 rounded-full text-white/80 text-sm hover:bg-[#00d083]/20 hover:border-[#00d083]/30 hover:text-[#00d083] transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       )}
       
-      {/* "Search this area" removed -- not needed for MVP */}
+      {/* "Search this area" button -- appears when user pans >1.5km from result center */}
+      {isMobile && showSearchThisArea && !tourActive && !searching && (
+        <div className={`absolute ${isMobile ? 'top-32' : 'top-44'} left-1/2 -translate-x-1/2 z-20 pointer-events-auto`}>
+          <button
+            onClick={() => handleSearchThisAreaRef.current?.()}
+            className="px-4 py-2 rounded-full bg-slate-800/90 backdrop-blur-md border border-slate-600/50 text-slate-200 text-sm font-medium shadow-lg hover:bg-slate-700/90 transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            Search this area
+          </button>
+        </div>
+      )}
       
       {/* Status Breadcrumb Pill (transient) -- centered, above bottom UI */}
       {statusMessage && (
@@ -2356,7 +2513,7 @@ export function AtlasMode({
       )}
       
       {/* ATLAS STATUS PILL - Bottom left, raised above mobile input bar */}
-      {mapLoaded && (
+      {mapLoaded && isMobile && (
         <div className={`absolute ${isMobile ? 'bottom-20' : 'bottom-6'} left-4 z-10 pointer-events-none`}>
           <div className="px-3 py-2 rounded-full bg-black/60 backdrop-blur-md border border-[#00d083]/30 shadow-lg">
             <div className="flex items-center gap-2">
@@ -2370,7 +2527,7 @@ export function AtlasMode({
       )}
       
       {/* Pin Legend (?) button -- positioned below mobile top bar to avoid overlap */}
-      {mapLoaded && (
+      {mapLoaded && isMobile && (
         <div className={`absolute ${isMobile ? 'top-16 right-4' : 'top-6 right-6'} z-20`}>
           <button
             onClick={() => {
@@ -2388,7 +2545,7 @@ export function AtlasMode({
               <h4 className="text-sm font-semibold text-white mb-3">Map pins</h4>
               <div className="space-y-2.5 text-xs text-white/70">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#00f0ff]" />
+                  <div className="w-3 h-3 rounded-full bg-[#00d083]" />
                   <span>Highlighted = Qwikker Pick</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -2424,6 +2581,24 @@ export function AtlasMode({
         </div>
       )}
       
+      {/* "Take a tour" prompt -- opt-in, not auto-start */}
+      {isMobile && showTourPrompt && !tourActive && businesses.length > 1 && (
+        <div className={`absolute ${isMobile ? 'top-44' : 'top-56'} left-1/2 -translate-x-1/2 z-20 pointer-events-auto`}>
+          <button
+            onClick={() => {
+              setShowTourPrompt(false)
+              startTour()
+            }}
+            className="px-5 py-2.5 rounded-full bg-[#00d083] hover:bg-[#00ff9d] text-black text-sm font-semibold shadow-lg border border-white/20 transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            Take a tour ({businesses.length} places)
+          </button>
+        </div>
+      )}
+
       {/* RECENTER TO USER BUTTON - Positioned to avoid overlap with tour controls on mobile */}
       {mapLoaded && userLocation && (
         <div className={`absolute ${isMobile && tourActive ? 'bottom-64' : 'bottom-32'} ${isMobile ? 'right-4' : 'right-6'} z-20`}>
@@ -2461,145 +2636,45 @@ export function AtlasMode({
         </div>
       )}
       
-      {/* ✨ MOBILE TOUR CONTROLS - Floating buttons when tour is active (z-[55] to sit above bottom sheet z-50) */}
-      {isMobile && tourActive && visibleBusinesses.length > 1 && (
-        <div className="absolute top-1/2 -translate-y-1/2 right-3 z-[55] flex flex-col gap-3">
-          <button
-            onClick={goToPreviousBusiness}
-            className="w-14 h-14 rounded-full bg-black/80 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-lg"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          
-          <button
-            onClick={stopTour}
-            className="w-14 h-14 rounded-full bg-red-500/90 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-lg"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          
-          <button
-            onClick={goToNextBusiness}
-            className="w-14 h-14 rounded-full bg-black/80 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-lg"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          
-          {/* Tour counter pill */}
-          <div className="px-3 py-2 rounded-full bg-[#00d083]/90 backdrop-blur-md text-white text-xs font-semibold text-center">
-            {selectedBusinessIndex + 1} of {visibleBusinesses.length}
-          </div>
-        </div>
-      )}
-      
+      {/* MOBILE NAV CONTROLS - Show for any multi-result with a selected business */}
       {/* ✨ MOBILE BOTTOM SHEET - Replaces overlay on mobile */}
       {isMobile && (
         <BottomSheet
-          isOpen={showMobileSheet && !!selectedBusiness}
-          onClose={() => setShowMobileSheet(false)}
-          snapPoints={[0.45, 0.7, 0.95]}
+          isOpen={!!selectedBusiness}
+          onClose={() => setSelectedBusiness(null)}
+          snapPoints={[0.32, 0.55, 0.82]}
           initialSnap={0}
         >
-          {selectedBusiness && (
-            <div className="space-y-4">
-              {/* Tour indicator */}
-              {tourActive && (
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#00d083]/20 border border-[#00d083]/40">
-                  <span className="text-[#00d083] text-sm font-medium">
-                    Stop {selectedBusinessIndex + 1} of {visibleBusinesses.length}
-                  </span>
-                </div>
-              )}
-              
-              <h2 className="text-xl font-bold text-white">
-                {selectedBusiness.business_name}
-              </h2>
-              
-              {/* Fact Chips (mobile) */}
-              {selectedBusinessFactChips.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {selectedBusinessFactChips.map((chip, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg text-xs text-white/70"
-                    >
-                      <span>{chip.icon}</span>
-                      <span>{chip.label}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-              
-              {/* Trust cue */}
-              {selectedBusiness.isUnclaimed && (
-                <p className="text-xs text-white/30">Imported from Google</p>
-              )}
-              
-              {selectedBusiness.business_address && (
-                <p className="text-white/60 text-sm">{selectedBusiness.business_address}</p>
-              )}
-              
-              {/* Reason Tag */}
-              {selectedBusiness.reason && (
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#00d083]/20 border border-[#00d083]/40">
-                  <span className="text-[#00d083] text-sm font-medium">{selectedBusiness.reason.label}</span>
-                </div>
-              )}
-              
-              {/* Actions */}
-              <div className="flex gap-3 pt-4">
-                {onTellMeMore ? (
-                  <button
-                    onClick={() => onTellMeMore(`Tell me more about ${selectedBusiness.business_name}`, selectedBusiness.id)}
-                    className="flex-1 px-4 py-3 rounded-xl bg-[#00d083] hover:bg-[#00ff9d] transition-colors text-white font-semibold"
-                  >
-                    Tell me more
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleHudMoreDetails}
-                    className="flex-1 px-4 py-3 rounded-xl bg-[#00d083] hover:bg-[#00ff9d] transition-colors text-white font-semibold"
-                  >
-                    More Details
-                  </button>
-                )}
-                <button
-                  onClick={() => handleToggleSave(selectedBusiness.id)}
-                  className={`p-3 rounded-xl transition-colors ${
-                    savedBusinessIds.has(selectedBusiness.id)
-                      ? 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-400'
-                      : 'bg-white/10 hover:bg-white/20 text-white'
-                  }`}
-                >
-                  ★
-                </button>
-                <button
-                  onClick={() => {
-                    if (selectedBusiness.latitude && selectedBusiness.longitude) {
-                      window.open(
-                        `https://www.google.com/maps/dir/?api=1&destination=${selectedBusiness.latitude},${selectedBusiness.longitude}`,
-                        '_blank'
-                      )
-                    }
-                  }}
-                  className="flex-1 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white font-semibold"
-                >
-                  Directions
-                </button>
-              </div>
-            </div>
+          {displaySelectedBusiness && (
+            <AtlasMobileDetailCard
+              business={displaySelectedBusiness}
+              factChips={selectedBusinessFactChips}
+              businessesCount={businesses.length}
+              selectedBusinessIndex={selectedBusinessIndex}
+              tourActive={tourActive}
+              isSaved={savedBusinessIds.has(displaySelectedBusiness.id)}
+              onPreviousBusiness={goToPreviousBusiness}
+              onNextBusiness={goToNextBusiness}
+              onStopTour={stopTour}
+              onTellMeMore={onTellMeMore ? () => {
+                onTellMeMore(`Tell me more about ${displaySelectedBusiness.business_name}`, displaySelectedBusiness.id)
+              } : handleHudMoreDetails}
+              onToggleSave={() => handleToggleSave(displaySelectedBusiness.id)}
+              onOpenDirections={() => {
+                if (displaySelectedBusiness.latitude && displaySelectedBusiness.longitude) {
+                  window.open(
+                    `https://www.google.com/maps/dir/?api=1&destination=${displaySelectedBusiness.latitude},${displaySelectedBusiness.longitude}`,
+                    '_blank'
+                  )
+                }
+              }}
+            />
           )}
         </BottomSheet>
       )}
       
       {/* ✨ MOBILE BOTTOM INPUT - Quick Atlas search on mobile */}
-      {isMobile && mapLoaded && !showMobileSheet && (
+      {isMobile && mapLoaded && !selectedBusiness && (
         <div className="fixed bottom-0 left-0 right-0 z-30 safe-area-bottom">
           <div className="bg-black/95 backdrop-blur-xl border-t border-white/10 px-4 py-3 pb-6">
             <input
@@ -2619,8 +2694,8 @@ export function AtlasMode({
           </div>
         </div>
       )}
-      
-    </div>
+      </div>
+      </div>
     </>
   )
 }

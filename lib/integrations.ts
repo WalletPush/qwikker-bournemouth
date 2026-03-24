@@ -1,6 +1,4 @@
 // Integration utilities for external services
-import { getCityFromRequest } from './utils/city-detection'
-import { getFranchiseCRMConfig, getFranchiseCRMConfigSync, hasCRMConfig } from './utils/franchise-crm-config'
 
 /**
  * Upload file to Cloudinary
@@ -56,116 +54,24 @@ export async function deleteFromCloudinary(publicId: string): Promise<{ success:
 }
 
 /**
- * Send data to GoHighLevel webhook (franchise-aware)
- * Automatically detects city and uses appropriate franchise CRM
+ * @deprecated GHL integration retired (0.19). This is a no-op kept for caller compatibility.
  */
 export async function sendToGoHighLevel(formData: any, city?: string): Promise<void> {
-  // Detect city if not provided
-  let targetCity = city
-  if (!targetCity && typeof window === 'undefined') {
-    // Server-side: try to get from request headers or form data
-    targetCity = formData.city || 'bournemouth'
-  }
-  if (!targetCity) {
-    targetCity = 'bournemouth' // fallback
-  }
-  
-  const crmConfig = getFranchiseCRMConfigSync(targetCity as any)
-  
-  if (!hasCRMConfig(targetCity as any)) {
-    console.warn(`⚠️ No valid CRM config for ${targetCity} - using Bournemouth fallback`)
-  }
-  
-  const webhookUrl = crmConfig.ghl_webhook_url
-  
-  // Add franchise metadata
-  const franchiseFormData = {
-    ...formData,
-    franchise_city: targetCity,
-    franchise_owner: crmConfig.franchise_owner,
-    timezone: crmConfig.timezone
-  }
-  
-  console.log(`📞 Sending to ${crmConfig.displayName} GHL:`, webhookUrl)
-  
-  const response = await fetch(webhookUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(franchiseFormData)
-  })
-
-  if (!response.ok) {
-    throw new Error(`GoHighLevel webhook failed for ${crmConfig.displayName}: ${response.statusText}`)
-  }
+  return
 }
 
 /**
- * Send contact update to GoHighLevel using franchise-specific webhooks
- * This function handles both file updates and contact information changes
- * 
- * Each franchise can have their own update webhook or use the main one
+ * @deprecated GHL integration retired (0.19). This is a no-op kept for caller compatibility.
  */
 export async function sendContactUpdateToGoHighLevel(formData: any, city?: string): Promise<void> {
-  // Detect city if not provided
-  let targetCity = city
-  if (!targetCity && typeof window === 'undefined') {
-    // Server-side: try to get from request headers or form data
-    targetCity = formData.city || 'bournemouth'
-  }
-  if (!targetCity) {
-    targetCity = 'bournemouth' // fallback
-  }
-  
-  const crmConfig = getFranchiseCRMConfigSync(targetCity as any)
-  
-  // Use update webhook if available, otherwise use main webhook
-  const updateWebhookUrl = crmConfig.ghl_update_webhook_url || crmConfig.ghl_webhook_url
-  
-  if (!updateWebhookUrl) {
-    console.error(`❌ No GHL webhook configured for ${crmConfig.displayName}`)
-    throw new Error(`No GHL webhook configured for ${crmConfig.displayName}`)
-  }
-  
-  // Add franchise metadata and update flags
-  const updateData = {
-    ...formData,
-    isContactUpdate: true,
-    updateType: formData.updateType || 'contact_update',
-    skipSignupNotification: true,
-    franchise_city: targetCity,
-    franchise_owner: crmConfig.franchise_owner,
-    timezone: crmConfig.timezone,
-    // This flag can be used in GHL to filter out signup notifications
-  }
-  
-  console.log(`🔄 Updating contact in ${crmConfig.displayName} GHL:`, updateWebhookUrl)
-  
-  const response = await fetch(updateWebhookUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(updateData)
-  })
-
-  if (!response.ok) {
-    throw new Error(`GoHighLevel contact update webhook failed for ${crmConfig.displayName}: ${response.statusText}`)
-  }
-  
-  console.log(`✅ Contact updated successfully in ${crmConfig.displayName} GHL`)
+  return
 }
 
 /**
- * Legacy function for backward compatibility - redirects to sendContactUpdateToGoHighLevel
- * @deprecated Use sendContactUpdateToGoHighLevel instead
+ * @deprecated GHL integration retired (0.19). This is a no-op kept for caller compatibility.
  */
 export async function sendFileUpdateToGoHighLevel(formData: any): Promise<void> {
-  return sendContactUpdateToGoHighLevel({
-    ...formData,
-    updateType: 'file_upload'
-  })
+  return
 }
 
 /**

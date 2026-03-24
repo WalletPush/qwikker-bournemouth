@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
 import Link from 'next/link'
 
 interface UserDashboardLayoutProps {
@@ -70,7 +71,9 @@ const navItems: NavItem[] = [
   }
 ]
 
-export function UserDashboardLayoutMobile({ children, currentSection, currentUser, walletPassId, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserDashboardLayoutProps) {
+export function UserDashboardLayoutMobile({ children, currentSection, currentUser, walletPassId, currentCity: currentCityProp, cityDisplayName: cityDisplayNameProp }: UserDashboardLayoutProps) {
+  const currentCity = currentCityProp || getClientCityFallback()
+  const cityDisplayName = cityDisplayNameProp || getClientCityDisplayName(currentCity)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
   // Helper function to append wallet_pass_id to navigation URLs

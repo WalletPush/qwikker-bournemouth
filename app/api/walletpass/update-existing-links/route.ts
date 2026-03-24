@@ -28,7 +28,9 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
     
-    const city = user.city || 'bournemouth'
+    const { getRequestCityFallback } = await import('@/lib/utils/city-detection')
+    const requestCity = await getRequestCityFallback(request)
+    const city = user.city || requestCity
     const passTypeId = user.pass_type_identifier || 'pass.come.globalwalletpush'
     const serialNumber = userWalletPassId
     

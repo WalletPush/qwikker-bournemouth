@@ -227,6 +227,13 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
           value={analytics.totalVibes.toLocaleString()}
           subtitle={analytics.positiveVibePercent !== null ? `${analytics.positiveVibePercent}% positive` : 'Not enough data yet'}
         />
+        {analytics.bookingClicks > 0 && (
+          <StatCard
+            title="Booking Clicks"
+            value={analytics.bookingClicks.toLocaleString()}
+            subtitle="Tapped Book Now in last 30 days"
+          />
+        )}
       </div>
 
       {/* Loyalty Stats (only if business has loyalty) */}

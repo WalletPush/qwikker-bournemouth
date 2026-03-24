@@ -67,6 +67,7 @@ export default function FranchiseDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [updating, setUpdating] = useState(false)
+  const [impersonating, setImpersonating] = useState(false)
 
   const franchiseId = params.id as string
 
@@ -111,6 +112,24 @@ export default function FranchiseDetailPage() {
       alert(`Failed to update status: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
       setUpdating(false)
+    }
+  }
+
+  const handleImpersonate = async (adminId: string, adminName: string) => {
+    if (!confirm(`Impersonate ${adminName}? You will be logged in as this franchise admin.`)) return
+    setImpersonating(true)
+    try {
+      const res = await fetch('/api/hq/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminId }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Impersonation failed')
+      window.location.href = result.redirectUrl
+    } catch (err) {
+      alert(`Failed to impersonate: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      setImpersonating(false)
     }
   }
 
@@ -260,20 +279,28 @@ export default function FranchiseDetailPage() {
             </a>
           </div>
 
-          {/* Impersonate (future feature) */}
+          {/* Impersonate */}
           <div className="flex items-center justify-between py-3">
             <div>
               <div className="text-sm font-medium text-white">Impersonate Admin</div>
               <div className="text-xs text-neutral-500 mt-0.5">
-                Log in as franchise admin (coming soon)
+                {admins.length > 0
+                  ? `Log in as a franchise admin for ${franchise.city}`
+                  : 'No admins to impersonate'}
               </div>
             </div>
-            <button
-              disabled
-              className="px-3 py-1.5 text-sm border border-neutral-700 text-neutral-600 rounded opacity-50 cursor-not-allowed"
-            >
-              Impersonate
-            </button>
+            {admins.length > 0 && (
+              <button
+                onClick={() => {
+                  const activeAdmin = admins.find(a => a.is_active) || admins[0]
+                  handleImpersonate(activeAdmin.id, activeAdmin.full_name || activeAdmin.username)
+                }}
+                disabled={impersonating}
+                className="px-3 py-1.5 text-sm border border-amber-600 text-amber-400 rounded hover:bg-amber-600/10 disabled:opacity-50"
+              >
+                {impersonating ? 'Connecting...' : 'Impersonate'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -341,7 +368,7 @@ export default function FranchiseDetailPage() {
             {admins.map(admin => (
               <div key={admin.id} className="flex items-center justify-between py-3 px-4 bg-neutral-800/50 rounded-lg border border-neutral-700/50">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                     <div className="text-sm font-medium text-white">
                       {admin.full_name}
                     </div>
@@ -361,6 +388,15 @@ export default function FranchiseDetailPage() {
                     {admin.last_login && ` · Last login ${new Date(admin.last_login).toLocaleString()}`}
                   </div>
                 </div>
+                {admin.is_active && (
+                  <button
+                    onClick={() => handleImpersonate(admin.id, admin.full_name || admin.username)}
+                    disabled={impersonating}
+                    className="px-2.5 py-1 text-xs border border-amber-600/50 text-amber-400 rounded hover:bg-amber-600/10 disabled:opacity-50 flex-shrink-0"
+                  >
+                    Impersonate
+                  </button>
+                )}
               </div>
             ))}
           </div>

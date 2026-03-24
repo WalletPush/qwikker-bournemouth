@@ -73,7 +73,8 @@ export async function POST(req: NextRequest) {
       .eq('id', business_id)
       .single()
 
-    const city = business?.city || 'bournemouth'
+    const { getRequestCityFallback } = await import('@/lib/utils/city-detection')
+    const city = business?.city || await getRequestCityFallback(req)
     
     // Get franchise API keys
     const franchiseKeys = await getFranchiseApiKeys(city)

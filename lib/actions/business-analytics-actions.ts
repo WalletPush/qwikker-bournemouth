@@ -30,6 +30,9 @@ export interface BusinessAnalytics {
   loyaltyStampEarns: number | null
   loyaltyRedemptions: number | null
 
+  // Booking
+  bookingClicks: number
+
   // Vibes
   totalVibes: number
   positiveVibePercent: number | null
@@ -136,13 +139,15 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
 
-    // 1. PROFILE VIEW ANALYTICS (page views of business detail page)
+    // 1. PROFILE VIEW ANALYTICS (page views only — excludes booking_click events)
     const [
       { data: views },
       { data: previousViews },
+      { count: bookingClicksCount },
     ] = await Promise.all([
-      supabase.from('user_business_visits').select('*').eq('business_id', businessId).gte('visit_date', thirtyDaysAgo.toISOString()),
-      supabase.from('user_business_visits').select('id').eq('business_id', businessId).gte('visit_date', sixtyDaysAgo.toISOString()).lt('visit_date', thirtyDaysAgo.toISOString()),
+      supabase.from('user_business_visits').select('*').eq('business_id', businessId).eq('event_type', 'visit').gte('visit_date', thirtyDaysAgo.toISOString()),
+      supabase.from('user_business_visits').select('id').eq('business_id', businessId).eq('event_type', 'visit').gte('visit_date', sixtyDaysAgo.toISOString()).lt('visit_date', thirtyDaysAgo.toISOString()),
+      supabase.from('user_business_visits').select('*', { count: 'exact', head: true }).eq('business_id', businessId).eq('event_type', 'booking_click').gte('visit_date', thirtyDaysAgo.toISOString()),
     ])
 
     const totalProfileViews = views?.length || 0
@@ -235,7 +240,7 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
       ? Math.round(((vibeRows?.filter(v => v.vibe_rating === 'loved_it' || v.vibe_rating === 'it_was_good').length || 0) / totalVibes) * 100)
       : null
 
-    // 6. DAILY DATA (last 30 days)
+    // 7. DAILY DATA (last 30 days)
     // Supabase returns timestamptz as "2026-01-27 02:07:50.473+00" (space, not T)
     const toDateKey = (ts: string) => new Date(ts).toISOString().split('T')[0]
 
@@ -263,6 +268,7 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
       topOffers,
       totalSaves,
       saveTrend,
+      bookingClicks: bookingClicksCount || 0,
       loyaltyMembers,
       loyaltyStampEarns,
       loyaltyRedemptions,
@@ -285,6 +291,7 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
       topOffers: [],
       totalSaves: 0,
       saveTrend: 0,
+      bookingClicks: 0,
       loyaltyMembers: null,
       loyaltyStampEarns: null,
       loyaltyRedemptions: null,

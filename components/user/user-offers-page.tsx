@@ -9,6 +9,7 @@ import Link from 'next/link'
 import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { useSearchParams } from 'next/navigation'
 import { SYSTEM_CATEGORY_LABEL } from '@/lib/constants/system-categories'
+import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
 
 interface UserOffersPageProps {
   realOffers?: any[]
@@ -17,7 +18,9 @@ interface UserOffersPageProps {
   cityDisplayName?: string
 }
 
-export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId, currentCity = 'bournemouth', cityDisplayName = 'Bournemouth' }: UserOffersPageProps) {
+export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId, currentCity: currentCityProp, cityDisplayName: cityDisplayNameProp }: UserOffersPageProps) {
+  const currentCity = currentCityProp || getClientCityFallback()
+  const cityDisplayName = cityDisplayNameProp || getClientCityDisplayName(currentCity)
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showAllCategories, setShowAllCategories] = useState(false) // NEW: Show More toggle
@@ -549,7 +552,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     const businessName = offer.businessName || 'Unknown Business'
     const businessSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-')
     const businessImage = offer.image || '/placeholder-business.jpg'
-    const businessRating = offer.businessRating || 4.5
+    const businessRating = offer.businessRating ?? null
     
     // Generate badge based on offer type
     const getBadgeText = () => {
