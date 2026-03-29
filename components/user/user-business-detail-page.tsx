@@ -999,7 +999,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
               businessOffers.map((offer) => (
                 <Card key={offer.id} className="bg-gradient-to-br from-orange-900/20 to-amber-900/20 border-orange-700/30">
                   <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-slate-100 mb-2">{offer.title}</h3>
                         <p className="text-slate-300 mb-3">{offer.description}</p>
@@ -1008,7 +1008,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                           <p className="text-sm text-slate-400"><strong>Valid until:</strong> {offer.expiryDate}</p>
                         </div>
                       </div>
-                      <div className="ml-6 space-y-3 w-[160px] flex-shrink-0">
+                      <div className="space-y-3 w-full sm:w-[160px] sm:flex-shrink-0">
                         <button 
                           onClick={() => claimOffer(offer.id, offer.title, business.name)}
                           className="w-full h-11 px-4 py-2 bg-[#00d083] text-black font-semibold rounded-lg text-sm hover:opacity-80 cursor-pointer"

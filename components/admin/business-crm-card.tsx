@@ -398,7 +398,7 @@ export function BusinessCRMCard({ business, onApprove, onInspect, adminEmail, cl
 
       {/* Quick Info Bar */}
       <div className="bg-slate-700/30 px-6 py-3 border-b border-slate-600">
-        <div className="grid grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
             <span className="text-slate-400 font-medium">Type:</span>
             <span className="ml-2 text-white">

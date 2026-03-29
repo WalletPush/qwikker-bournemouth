@@ -3,15 +3,22 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { PricingPlans } from './pricing-plans'
 import { FoundingMemberBanner } from './founding-member-banner'
 
 interface SettingsPageProps {
   profile?: any
+  isInFreeTrial?: boolean
+  stripeSubscriptionId?: string | null
 }
 
-export function SettingsPage({ profile }: SettingsPageProps) {
+export function SettingsPage({ profile, isInFreeTrial: isInFreeTrialProp = false, stripeSubscriptionId }: SettingsPageProps) {
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(0)
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [cancelResult, setCancelResult] = useState<{ success: boolean; accessUntil?: string; error?: string } | null>(null)
 
   useEffect(() => {
     if (profile?.created_at) {
@@ -28,9 +35,8 @@ export function SettingsPage({ profile }: SettingsPageProps) {
     }
   }, [profile])
 
-  // 🔒 CRITICAL: Check if claimed_free status
   const plan = profile?.status === 'claimed_free' ? 'free' : (profile?.plan || 'starter')
-  const isFreeTrial = plan === 'featured' && trialDaysLeft > 0
+  const isFreeTrial = isInFreeTrialProp && trialDaysLeft > 0
   const planName = profile?.status === 'claimed_free' ? 'Free Listing' :
                   isFreeTrial ? 'Featured (Free Trial)' : 
                   plan === 'starter' ? 'Starter' : 
@@ -50,14 +56,36 @@ export function SettingsPage({ profile }: SettingsPageProps) {
           <h3 className="text-lg font-semibold text-white mb-2">Current Plan</h3>
           <p className="text-2xl font-bold text-[#00d083] mb-2">{planName}</p>
           {isFreeTrial && (
-            <div className="space-y-2">
-              <p className="text-sm text-gray-400">Trial expires in {trialDaysLeft} days</p>
-              {/* Dynamic Founding Member Banner - controlled by admin */}
+            <p className="text-sm text-gray-400">Trial expires in {trialDaysLeft} days</p>
+          )}
           <FoundingMemberBanner 
             profile={profile}
             trialDaysLeft={trialDaysLeft}
           />
-            </div>
+          {profile?.stripe_customer_id && !isFreeTrial && (
+            <Button
+              variant="outline"
+              className="mt-4 border-slate-600 text-slate-300 hover:bg-slate-700"
+              disabled={portalLoading}
+              onClick={async () => {
+                setPortalLoading(true)
+                try {
+                  const res = await fetch('/api/stripe/create-portal-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ businessId: profile.id }),
+                  })
+                  const data = await res.json()
+                  if (data.url) window.location.href = data.url
+                } catch {
+                  // silently fail
+                } finally {
+                  setPortalLoading(false)
+                }
+              }}
+            >
+              {portalLoading ? 'Opening...' : 'Manage Billing'}
+            </Button>
           )}
         </CardContent>
       </Card>
@@ -69,6 +97,9 @@ export function SettingsPage({ profile }: SettingsPageProps) {
           currentPlan={plan}
           isFoundingMember={profile?.is_founder || false}
           profile={profile}
+          businessId={profile?.id}
+          isInFreeTrial={isFreeTrial}
+          stripeSubscriptionId={stripeSubscriptionId}
         />
       </div>
 
@@ -128,15 +159,134 @@ export function SettingsPage({ profile }: SettingsPageProps) {
               Change Password
             </Button>
             
-            <Button variant="outline" className="w-full justify-start border-red-600 text-red-400 hover:bg-red-900/20">
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Cancel Subscription
-            </Button>
+            {stripeSubscriptionId && (
+              <Button
+                variant="outline"
+                className="w-full justify-start border-red-600/50 text-red-400 hover:bg-red-900/20"
+                onClick={() => { setCancelResult(null); setShowCancelDialog(true) }}
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Cancel Subscription
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Cancel Subscription Confirmation Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={(open) => { if (!open) setShowCancelDialog(false) }}>
+        <DialogContent className="bg-slate-900 border-slate-700/80 text-white p-0 gap-0 overflow-hidden" style={{ width: '380px', maxWidth: '380px' }}>
+          {cancelResult?.success ? (
+            <div className="px-6 py-8 text-center space-y-3">
+              <div className="w-10 h-10 rounded-full bg-slate-700/60 flex items-center justify-center mx-auto">
+                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-[15px] font-semibold text-white">Subscription cancelled</p>
+                <p className="text-[13px] text-slate-400 mt-1.5 leading-relaxed">
+                  You still have access until{' '}
+                  <span className="text-white font-medium">
+                    {cancelResult.accessUntil
+                      ? new Date(cancelResult.accessUntil).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                      : 'the end of your billing period'}
+                  </span>.
+                  After that, your plan will revert to Free Listing.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="bg-slate-700 hover:bg-slate-600 text-white h-9 px-5 mt-2"
+                onClick={() => { setShowCancelDialog(false); window.location.reload() }}
+              >
+                Got it
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="px-6 pt-6 pb-4">
+                <DialogHeader className="space-y-1.5">
+                  <DialogTitle className="text-[15px] font-semibold text-white">Cancel your subscription?</DialogTitle>
+                  <DialogDescription className="text-[13px] text-slate-400 leading-relaxed">
+                    Are you sure? Here&apos;s what happens:
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+
+              <div className="px-6 pb-4 space-y-4">
+                <div className="rounded-lg border border-slate-700/60 bg-slate-800/40">
+                  <ul className="divide-y divide-slate-700/40 text-[13px]">
+                    <li className="flex items-start gap-3 px-4 py-3">
+                      <svg className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-slate-300">You keep full access until the end of your current billing period</span>
+                    </li>
+                    <li className="flex items-start gap-3 px-4 py-3">
+                      <svg className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-slate-300">After that, your listing reverts to the free tier</span>
+                    </li>
+                    <li className="flex items-start gap-3 px-4 py-3">
+                      <svg className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span className="text-slate-300">You can resubscribe at any time</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {cancelResult?.error && (
+                  <p className="text-xs text-red-400">{cancelResult.error}</p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-700/40 bg-slate-800/20">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowCancelDialog(false)}
+                  className="text-slate-400 hover:text-white hover:bg-slate-700/50 h-9 px-4"
+                >
+                  Keep my plan
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={cancelLoading}
+                  className="bg-red-600 hover:bg-red-700 text-white h-9 px-5 font-medium"
+                  onClick={async () => {
+                    setCancelLoading(true)
+                    setCancelResult(null)
+                    try {
+                      const res = await fetch('/api/stripe/cancel-subscription', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ businessId: profile?.id }),
+                      })
+                      const data = await res.json()
+                      if (res.ok) {
+                        setCancelResult({ success: true, accessUntil: data.accessUntil })
+                      } else {
+                        setCancelResult({ success: false, error: data.error || 'Something went wrong.' })
+                      }
+                    } catch {
+                      setCancelResult({ success: false, error: 'Failed to connect. Please try again.' })
+                    } finally {
+                      setCancelLoading(false)
+                    }
+                  }}
+                >
+                  {cancelLoading ? 'Cancelling...' : 'Cancel subscription'}
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Notification Settings */}
       <Card className="bg-slate-800/50 border-slate-700">

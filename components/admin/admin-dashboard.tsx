@@ -1371,7 +1371,11 @@ Qwikker Admin Team`
       {/* Sidebar */}
       <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 z-50 flex flex-col ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 lg:max-w-none`}>
+      } lg:translate-x-0 lg:max-w-none`}
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}>
         
         {/* Logo - Fixed at top */}
         <div className="flex-shrink-0 p-6 border-b border-slate-700/50">
@@ -1565,7 +1569,10 @@ Qwikker Admin Team`
       {/* Main content */}
       <div className="lg:ml-80">
         {/* Top header */}
-        <header className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-4">
+        <header className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-4"
+        style={{
+          paddingTop: `calc(env(safe-area-inset-top) + 1rem)`,
+        }}>
           <div className="flex items-center justify-between">
             {/* Left side - Mobile menu button */}
             <div className="flex items-center">
@@ -3604,7 +3611,7 @@ Qwikker Admin Team`
 
                             {/* Actions - Only show for pending claims */}
                             {claim.status === 'pending' && (
-                              <div className="grid grid-cols-4 gap-2 mt-4">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
                                 <button
                                   onClick={() => handleApproveClaim(claim.id)}
                                   disabled={processingClaim === claim.id}

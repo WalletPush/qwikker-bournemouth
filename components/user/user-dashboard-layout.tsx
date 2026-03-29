@@ -93,29 +93,34 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
   const cityDisplayName = cityDisplayNameProp || getClientCityDisplayName(currentCity)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifBadge, setNotifBadge] = useState(0)
-  
-  // Save wallet_pass_id to localStorage for persistence across navigation
+
+  // Resolved wallet pass ID — starts null to match server render, then hydrates client-side
+  const [resolvedPassId, setResolvedPassId] = useState<string | null>(null)
+
   useEffect(() => {
-    if (walletPassId && typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('qwikker-wallet-pass-id', walletPassId)
-      } catch (e) {
-        // Ignore localStorage errors
-      }
+    let id = walletPassId || null
+
+    if (!id) {
+      const urlParams = new URLSearchParams(window.location.search)
+      id = urlParams.get('wallet_pass_id')
+    }
+
+    if (!id) {
+      try { id = localStorage.getItem('qwikker-wallet-pass-id') } catch {}
+    }
+
+    if (id) {
+      setResolvedPassId(id)
+      try { localStorage.setItem('qwikker-wallet-pass-id', id) } catch {}
     }
   }, [walletPassId])
 
   // Fetch unread notification count for sidebar badge
   const fetchUnreadCount = useCallback(async () => {
-    const wpId = walletPassId || (typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search).get('wallet_pass_id')
-        || localStorage.getItem('qwikker-wallet-pass-id')
-      : null)
-
-    if (!wpId) return
+    if (!resolvedPassId) return
 
     try {
-      const res = await fetch(`/api/user/notifications?countOnly=true&wallet_pass_id=${wpId}`)
+      const res = await fetch(`/api/user/notifications?countOnly=true&wallet_pass_id=${resolvedPassId}`)
       if (res.ok) {
         const data = await res.json()
         setNotifBadge(data.unreadCount || 0)
@@ -123,40 +128,17 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
     } catch {
       // Silently fail - badge is non-critical
     }
-  }, [walletPassId])
+  }, [resolvedPassId])
 
   useEffect(() => {
     fetchUnreadCount()
-    // Refresh badge every 60 seconds
     const interval = setInterval(fetchUnreadCount, 60_000)
     return () => clearInterval(interval)
   }, [fetchUnreadCount])
 
-  // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
-    // Try multiple sources for wallet_pass_id
-    let activeWalletPassId = walletPassId
-    
-    // Fallback 1: Check URL parameters
-    if (!activeWalletPassId && typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search)
-      activeWalletPassId = urlParams.get('wallet_pass_id')
-    }
-    
-    // Fallback 2: Check localStorage
-    if (!activeWalletPassId && typeof window !== 'undefined') {
-      try {
-        activeWalletPassId = localStorage.getItem('qwikker-wallet-pass-id')
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-    }
-    
-    if (!activeWalletPassId) {
-      return href
-    }
-    
-    return `${href}?wallet_pass_id=${activeWalletPassId}`
+    if (!resolvedPassId) return href
+    return `${href}?wallet_pass_id=${resolvedPassId}`
   }
 
   return (

@@ -941,7 +941,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           <div className={`h-1 w-full bg-gradient-to-r ${getTierAccentGradient(business)} rounded-full mb-6 opacity-80`} />
 
           {/* Stats Grid - Centered Icons & Text */}
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {/* Tier */}
             <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-4 py-5 rounded-xl border border-purple-500/20 flex flex-col items-center justify-center text-center">
               <svg className="w-4 h-4 text-purple-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1081,7 +1081,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
 
       {/* CRM Control Panel Modal - STUNNING POPUP! */}
       {isExpanded && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-12 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 animate-in fade-in duration-200">
           {/* Backdrop Blur - More Transparent */}
           <div 
             className="absolute inset-0 bg-black/70 backdrop-blur-xl"

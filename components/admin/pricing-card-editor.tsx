@@ -364,12 +364,11 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
         onClick={() => setSelectedCard(tier)}
       >
         <Card className={`relative bg-slate-800/50 border transition-colors duration-300 flex flex-col h-full ${
-          tier === 'featured' ? 'border-blue-500/50' : 
+          card.popular ? 'border-blue-500/50' : 
           tier === 'spotlight' ? 'border-yellow-500/50' : 
           'border-slate-700'
         }`}>
-          {/* Popular Badge - EXACTLY like business dashboard */}
-          {tier === 'featured' && (
+          {card.popular && (
             <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
               <div className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
                 Most Popular
@@ -475,7 +474,7 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
         <CardHeader>
           <CardTitle className="text-white">Currency & Tax Settings</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-4 gap-4">
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <Label className="text-slate-300">Currency</Label>
             <select 
@@ -683,12 +682,14 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
               {/* Preview of the banner */}
               <div className="mt-4">
                 <Label className="text-slate-300 mb-2 block">Banner Preview:</Label>
-                <div className="bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border border-yellow-500/30 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-yellow-400">🌟</span>
-                    <span className="font-semibold text-yellow-400">{config.founding_member_title}</span>
+                <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-lg p-4">
+                  <div className="flex items-center gap-2 justify-center mb-1.5">
+                    <svg className="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="font-semibold text-emerald-400">{config.founding_member_title}</span>
                   </div>
-                  <p className="text-sm text-slate-300">
+                  <p className="text-sm text-slate-300 text-center">
                     {config.founding_member_description.replace(/\d+%/, `${config.founding_member_discount}%`)}
                   </p>
                 </div>
@@ -741,7 +742,7 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <Label className="text-slate-300">Monthly Price ({config.currency_symbol})</Label>
               <PriceInput

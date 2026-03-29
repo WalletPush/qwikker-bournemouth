@@ -167,7 +167,7 @@ export function AdminAnalytics({ city }: { city: string }) {
           </CardHeader>
           {expandedSections.qwikkerMarketing && (
             <CardContent className="pt-0">
-              <div className="grid grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-white">156</div>
                   <div className="text-slate-400 text-xs">Last 7 Days</div>
@@ -230,7 +230,7 @@ export function AdminAnalytics({ city }: { city: string }) {
           </CardHeader>
           {expandedSections.staticBusiness && (
             <CardContent className="pt-0">
-              <div className="grid grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-white">298</div>
                   <div className="text-slate-400 text-xs">Last 7 Days</div>
@@ -316,7 +316,7 @@ export function AdminAnalytics({ city }: { city: string }) {
                 </select>
               </div>
 
-              <div className="grid grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-white">445</div>
                   <div className="text-slate-400 text-xs">Last 7 Days</div>

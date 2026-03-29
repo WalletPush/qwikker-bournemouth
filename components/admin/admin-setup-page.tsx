@@ -995,13 +995,12 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                         <Label className="text-slate-300 text-sm mb-2 block">From Email Address</Label>
                         <Input
                           type="email"
-                          value={config.resend_from_email || ''}
-                          onChange={(e) => setConfig({...config, resend_from_email: e.target.value})}
-                          className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg"
-                          placeholder={`no-reply@${config.subdomain || 'yourcity'}.qwikker.com`}
+                          value={`no-reply@${config.subdomain || config.city || 'yourcity'}.qwikker.com`}
+                          readOnly
+                          className="bg-slate-700/80 border-slate-600 text-slate-400 h-11 rounded-lg cursor-not-allowed"
                         />
                         <p className="text-xs text-slate-400 mt-1">
-                          Use <span className="font-mono text-slate-300">no-reply@{config.subdomain || 'yourcity'}.qwikker.com</span> once verified (You can use <span className="font-mono text-slate-300">onboarding@resend.dev</span> temporarily for testing)
+                          Auto-generated from your subdomain. Reply-to: <span className="font-mono text-slate-300">hello@{config.subdomain || config.city || 'yourcity'}.qwikker.com</span>
                         </p>
                       </div>
                     </div>

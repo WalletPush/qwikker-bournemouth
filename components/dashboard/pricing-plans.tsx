@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { useState, useEffect } from 'react'
 import { getCityFromHostnameClient } from '@/lib/utils/client-city-detection'
 
@@ -9,6 +10,9 @@ interface PricingPlansProps {
   currentPlan?: string
   isFoundingMember?: boolean
   profile?: any
+  businessId?: string
+  isInFreeTrial?: boolean
+  stripeSubscriptionId?: string | null
 }
 
 interface DynamicPricing {
@@ -33,6 +37,9 @@ interface DynamicPricing {
   starter_features: string[]
   featured_features: string[]
   spotlight_features: string[]
+  starter_popular: boolean
+  featured_popular: boolean
+  spotlight_popular: boolean
   founding_member_enabled: boolean
   founding_member_discount: number
   founding_member_title: string
@@ -49,9 +56,25 @@ function formatPrice(value: number, currency?: string): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false, profile }: PricingPlansProps) {
+export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false, profile, businessId, isInFreeTrial: isInFreeTrialProp = false, stripeSubscriptionId }: PricingPlansProps) {
   const [dynamicPricing, setDynamicPricing] = useState<DynamicPricing | null>(null)
   const [city, setCity] = useState<string>('bournemouth')
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
+  const [pendingChange, setPendingChange] = useState<{
+    planId: string
+    planName: string
+    price: number
+    currentPrice: number
+    currentPlanName: string
+    cycle: 'monthly' | 'annual'
+    isUpgrade: boolean
+  } | null>(null)
+  const [successResult, setSuccessResult] = useState<{
+    planName: string
+    isUpgrade: boolean
+  } | null>(null)
 
   useEffect(() => {
     // Detect city and fetch dynamic pricing
@@ -92,6 +115,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
               starter_features: cards.starter?.features || [],
               featured_features: cards.featured?.features || [],
               spotlight_features: cards.spotlight?.features || [],
+              starter_popular: cards.starter?.popular || false,
+              featured_popular: cards.featured?.popular ?? true,
+              spotlight_popular: cards.spotlight?.popular || false,
               founding_member_enabled: data.config.founding_member_enabled ?? true,
               founding_member_discount: data.config.founding_member_discount || 20,
               founding_member_title: data.config.founding_member_title || 'Founding Member Benefit',
@@ -123,10 +149,13 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
             starter_features: ['Basic features', 'Email support'],
             featured_features: ['All Starter features', 'Priority support', 'Advanced analytics'],
             spotlight_features: ['All Featured features', 'White-label options', 'Custom integrations'],
+            starter_popular: false,
+            featured_popular: true,
+            spotlight_popular: false,
             founding_member_enabled: true,
             founding_member_discount: 20,
-            founding_member_title: 'Founding Member Benefit',
-            founding_member_description: '20% off for life on 12-month plans if you upgrade to a paid plan before your trial expires. This discount locks in your rate permanently.'
+            founding_member_title: 'Founding Member Offer',
+            founding_member_description: '20% off yearly plans for life as a founding member. Choose an annual plan to lock in this rate permanently.'
           })
         }
       } catch (error) {
@@ -152,35 +181,28 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
           starter_features: ['Basic features', 'Email support'],
           featured_features: ['All Starter features', 'Priority support', 'Advanced analytics'],
           spotlight_features: ['All Featured features', 'White-label options', 'Custom integrations'],
+          starter_popular: false,
+          featured_popular: true,
+          spotlight_popular: false,
           founding_member_enabled: true,
           founding_member_discount: 20,
-          founding_member_title: 'Founding Member Benefit',
-          founding_member_description: '20% off for life on 12-month plans if you upgrade to a paid plan before your trial expires. This discount locks in your rate permanently.'
+          founding_member_title: 'Founding Member Offer',
+          founding_member_description: '20% off yearly plans for life as a founding member. Choose an annual plan to lock in this rate permanently.'
         })
       }
     }
     
     loadDynamicPricing()
   }, [])
-  // Check if user is in free trial OR claimed_free status
-  const isInFreeTrial = profile?.plan === 'featured' && profile?.created_at
+  const isInFreeTrial = isInFreeTrialProp
   const isClaimedFree = profile?.status === 'claimed_free'
-  const trialDaysLeft = isInFreeTrial ? (() => {
-    const createdDate = new Date(profile.created_at)
-    const now = new Date()
-    const diffTime = now.getTime() - createdDate.getTime()
-    const daysSinceSignup = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-    return Math.max(0, 90 - daysSinceSignup)
-  })() : 0
   
-  // Show discount pricing if:
-  // 1. User is in free trial with founding member status, OR
-  // 2. User has claimed_free status (all claimed free get founding member benefit)
-  const showDiscountPricing = (isInFreeTrial && trialDaysLeft > 0 && isFoundingMember && dynamicPricing?.founding_member_enabled) || 
-                               (isClaimedFree && dynamicPricing?.founding_member_enabled)
+  // Show founding member discount when admin has it enabled (visible to ALL businesses)
+  const foundingMemberActive = dynamicPricing?.founding_member_enabled === true
   
-  // Calculate discount multiplier from admin settings
-  // IMPORTANT: Check for null/undefined, not falsy (0% is a valid discount!)
+  // Discount only applies to annual plans
+  const showDiscountPricing = foundingMemberActive && billingCycle === 'annual'
+  
   const discountMultiplier = dynamicPricing?.founding_member_discount != null 
     ? (100 - dynamicPricing.founding_member_discount) / 100 
     : 0.8
@@ -220,6 +242,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
       price: dynamicPricing?.starter_price || 29,
       yearlyPrice: dynamicPricing?.starter_yearly || 290,
       yearlyDiscount: Math.round((dynamicPricing?.starter_yearly || 290) * discountMultiplier),
+      popular: dynamicPricing?.starter_popular || false,
       icon: (
         <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -242,7 +265,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
       price: dynamicPricing?.featured_price || 59,
       yearlyPrice: dynamicPricing?.featured_yearly || 590,
       yearlyDiscount: Math.round((dynamicPricing?.featured_yearly || 590) * discountMultiplier),
-      popular: true,
+      popular: dynamicPricing?.featured_popular ?? true,
       icon: (
         <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
@@ -265,6 +288,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
       price: dynamicPricing?.spotlight_price || 89,
       yearlyPrice: dynamicPricing?.spotlight_yearly || 890,
       yearlyDiscount: Math.round((dynamicPricing?.spotlight_yearly || 890) * discountMultiplier),
+      popular: dynamicPricing?.spotlight_popular || false,
       premium: true,
       icon: (
         <svg className="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,8 +306,151 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
     }
   ]
 
+  function handleUpgrade(planId: string) {
+    if (!businessId) {
+      setCheckoutError('Unable to identify your business. Please try again.')
+      return
+    }
+
+    setCheckoutError(null)
+
+    // For in-place updates (existing subscription), show confirmation dialog first
+    if (stripeSubscriptionId) {
+      const targetPlan = plans.find(p => p.id === planId)
+      const currentPlanObj = plans.find(p => p.id === currentPlan)
+      if (!targetPlan) return
+
+      const tierOrder = ['free', 'starter', 'featured', 'spotlight']
+      const isUpgrade = tierOrder.indexOf(planId) > tierOrder.indexOf(currentPlan)
+
+      let price: number
+      let curPrice: number
+      if (billingCycle === 'annual') {
+        price = showDiscountPricing ? targetPlan.yearlyDiscount : targetPlan.yearlyPrice
+        curPrice = showDiscountPricing && currentPlanObj ? currentPlanObj.yearlyDiscount : (currentPlanObj?.yearlyPrice || 0)
+      } else {
+        price = targetPlan.price
+        curPrice = currentPlanObj?.price || 0
+      }
+
+      setPendingChange({
+        planId,
+        planName: targetPlan.name,
+        price,
+        currentPrice: curPrice,
+        currentPlanName: currentPlanObj?.name || currentPlan,
+        cycle: billingCycle,
+        isUpgrade,
+      })
+      return
+    }
+
+    // First-time purchases go to Stripe Checkout (has built-in confirmation)
+    executeCheckout(planId)
+  }
+
+  async function confirmPlanChange() {
+    if (!pendingChange || !businessId) return
+
+    const { planId, planName, isUpgrade } = pendingChange
+    setPendingChange(null)
+    setCheckoutLoading(planId)
+
+    try {
+      const response = await fetch('/api/stripe/update-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId,
+          tierName: planId,
+          billingCycle,
+          applyFoundingDiscount: foundingMemberActive && billingCycle === 'annual',
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setCheckoutError(data.error || 'Something went wrong. Please try again.')
+        return
+      }
+
+      setSuccessResult({ planName, isUpgrade })
+    } catch (err) {
+      setCheckoutError('Failed to connect to payment service. Please try again.')
+    } finally {
+      setCheckoutLoading(null)
+    }
+  }
+
+  async function executeCheckout(planId: string) {
+    setCheckoutLoading(planId)
+
+    try {
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId,
+          tierName: planId,
+          billingCycle,
+          applyFoundingDiscount: foundingMemberActive && billingCycle === 'annual',
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setCheckoutError(data.error || 'Something went wrong. Please try again.')
+        return
+      }
+
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (err) {
+      setCheckoutError('Failed to connect to payment service. Please try again.')
+    } finally {
+      setCheckoutLoading(null)
+    }
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+    <div className="space-y-6">
+      {/* Billing Cycle Toggle */}
+      <div className="flex items-center justify-center gap-3">
+        <button
+          onClick={() => setBillingCycle('monthly')}
+          className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+            billingCycle === 'monthly'
+              ? 'bg-white text-slate-900 shadow-md'
+              : 'bg-slate-700/50 text-slate-400 hover:text-white'
+          }`}
+        >
+          Monthly
+        </button>
+        <button
+          onClick={() => setBillingCycle('annual')}
+          className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
+            billingCycle === 'annual'
+              ? 'bg-white text-slate-900 shadow-md'
+              : 'bg-slate-700/50 text-slate-400 hover:text-white'
+          }`}
+        >
+          Annual
+          <span className={`text-xs px-2 py-0.5 rounded-full ${
+            billingCycle === 'annual' 
+              ? 'bg-green-100 text-green-700' 
+              : 'bg-green-500/20 text-green-400'
+          }`}>
+            {foundingMemberActive 
+              ? `Save ${dynamicPricing?.founding_member_discount || 20}% + 2 months free`
+              : '2 months free'}
+          </span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
       {plans.map((plan) => {
         const isCurrentPlan = currentPlan === plan.id || (currentPlan === 'free' && profile?.status === 'claimed_free' && plan.id === 'free')
         const isFreeTrialFeatured = isInFreeTrial && plan.id === 'featured'
@@ -336,31 +503,31 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
                     Free
                     <span className="text-lg font-normal text-slate-500">/forever</span>
                   </div>
+                ) : billingCycle === 'monthly' ? (
+                  <div className="text-3xl font-bold text-white mb-2">
+                    {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.price, dynamicPricing?.currency)}
+                    <span className="text-lg font-normal text-gray-400">/month</span>
+                  </div>
+                ) : showDiscountPricing ? (
+                  <>
+                    <div className="text-3xl font-bold text-green-400 mb-1">
+                      {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.yearlyDiscount, dynamicPricing?.currency)}
+                      <span className="text-lg font-normal text-green-400/70">/year</span>
+                    </div>
+                    <div className="text-sm text-slate-500 line-through">
+                      {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.yearlyPrice, dynamicPricing?.currency)}/year
+                    </div>
+                    <div className="text-xs text-green-300 mt-1">
+                      {dynamicPricing?.founding_member_discount || 20}% founding member discount locked in forever
+                    </div>
+                  </>
                 ) : (
                   <>
-                    <div className="text-3xl font-bold text-white mb-2">
-                      {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.price, dynamicPricing?.currency)}
-                      <span className="text-lg font-normal text-gray-400">/month</span>
+                    <div className="text-3xl font-bold text-white mb-1">
+                      {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.yearlyPrice, dynamicPricing?.currency)}
+                      <span className="text-lg font-normal text-gray-400">/year</span>
                     </div>
-                    
-                    {/* Clean Yearly Pricing */}
-                    {showDiscountPricing ? (
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-green-400">
-                          {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.yearlyDiscount, dynamicPricing?.currency)}/year
-                        </div>
-                        <div className="text-xs text-green-300 mt-1">
-                          2 months free + {dynamicPricing?.founding_member_discount || 20}% founding member discount
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <div className="text-sm text-gray-400">
-                          {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.yearlyPrice, dynamicPricing?.currency)}/year
-                        </div>
-                        <div className="text-xs text-blue-400 mt-1">2 months free</div>
-                      </div>
-                    )}
+                    <div className="text-xs text-blue-400 mt-1">2 months free vs monthly</div>
                   </>
                 )}
               </div>
@@ -392,8 +559,11 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
                 })}
               </div>
 
-              {/* Beautiful Action Button */}
-              <div className="mt-auto">
+              {/* Action Button */}
+              <div className="mt-auto space-y-2">
+                {checkoutError && checkoutLoading === null && plan.id !== 'free' && (
+                  <p className="text-xs text-red-400 text-center">{checkoutError}</p>
+                )}
                 {isFreeListingCard ? (
                   <Button 
                     className="w-full bg-slate-600 hover:bg-slate-700 text-white cursor-not-allowed h-12 font-semibold rounded-lg"
@@ -410,27 +580,23 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
                   </Button>
                 ) : isFreeTrialFeatured ? (
                   <Button 
-                    onClick={() => {
-                      console.log('Converting free trial to paid Featured plan')
-                      window.location.href = '/dashboard/settings?upgrade=featured'
-                    }}
+                    onClick={() => handleUpgrade('featured')}
+                    disabled={checkoutLoading === 'featured'}
                     className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold h-12 rounded-lg shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
                   >
-                    Switch to Paid Plan
+                    {checkoutLoading === 'featured' ? 'Redirecting to payment...' : 'Switch to Paid Plan'}
                   </Button>
                 ) : (
                   <Button 
-                    onClick={() => {
-                      console.log(`Upgrading to ${plan.name} plan`)
-                      window.location.href = `/dashboard/settings?upgrade=${plan.id}`
-                    }}
+                    onClick={() => handleUpgrade(plan.id)}
+                    disabled={checkoutLoading === plan.id}
                     className={`w-full font-semibold h-12 text-white rounded-lg shadow-lg transition-all duration-200 ${
                       plan.id === 'starter' ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:shadow-green-500/25' :
                       plan.id === 'featured' ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 hover:shadow-blue-500/25' :
                       'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 hover:shadow-yellow-500/25'
                     }`}
                   >
-                    {plan.cta}
+                    {checkoutLoading === plan.id ? 'Processing...' : plan.cta}
                   </Button>
                 )}
               </div>
@@ -438,6 +604,116 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
           </Card>
         )
       })}
+      </div>
+
+      {/* Plan Change Confirmation Dialog */}
+      <Dialog open={!!pendingChange} onOpenChange={(open) => { if (!open) setPendingChange(null) }}>
+        <DialogContent className="bg-slate-900 border-slate-700/80 text-white p-0 gap-0 overflow-hidden" style={{ width: '380px', maxWidth: '380px' }}>
+          <div className="px-6 pt-6 pb-4">
+            <DialogHeader className="space-y-1.5">
+              <DialogTitle className="text-[15px] font-semibold text-white">
+                {pendingChange?.isUpgrade ? 'Confirm Upgrade' : 'Confirm Plan Change'}
+              </DialogTitle>
+              <DialogDescription className="text-[13px] text-slate-400 leading-relaxed">
+                This change takes effect straight away.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          {pendingChange && (
+            <div className="px-6 pb-4 space-y-4">
+              <div className="rounded-lg border border-slate-700/60 bg-slate-800/40 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider text-slate-500 mb-0.5">Current plan</p>
+                    <p className="text-sm font-medium text-slate-300">{pendingChange.currentPlanName}</p>
+                  </div>
+                  <p className="text-sm text-slate-400">
+                    {dynamicPricing?.currency_symbol || '£'}{formatPrice(pendingChange.currentPrice, dynamicPricing?.currency)}<span className="text-xs text-slate-500">/{pendingChange.cycle === 'annual' ? 'yr' : 'mo'}</span>
+                  </p>
+                </div>
+
+                <div className="border-t border-slate-700/40" />
+
+                <div className="flex items-center justify-between px-4 py-3 bg-slate-800/60">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider text-slate-500 mb-0.5">New plan</p>
+                    <p className="text-sm font-semibold text-white">{pendingChange.planName}</p>
+                  </div>
+                  <p className="text-sm font-semibold text-white">
+                    {dynamicPricing?.currency_symbol || '£'}{formatPrice(pendingChange.price, dynamicPricing?.currency)}<span className="text-xs font-normal text-slate-400">/{pendingChange.cycle === 'annual' ? 'yr' : 'mo'}</span>
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-[12px] text-slate-500 leading-relaxed">
+                {pendingChange.isUpgrade
+                  ? "You'll only pay the difference for the time left on your current billing period."
+                  : "You'll receive a credit for the remaining time on your current plan, applied to your next bill."}
+              </p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-700/40 bg-slate-800/20">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPendingChange(null)}
+              className="text-slate-400 hover:text-white hover:bg-slate-700/50 h-9 px-4"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={confirmPlanChange}
+              disabled={checkoutLoading !== null}
+              className={`h-9 px-5 font-medium ${pendingChange?.isUpgrade
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {checkoutLoading ? 'Processing...' : pendingChange?.isUpgrade ? 'Confirm Upgrade' : 'Confirm Change'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Plan Change Success Dialog */}
+      <Dialog open={!!successResult} onOpenChange={(open) => { if (!open) window.location.reload() }}>
+        <DialogContent className="bg-slate-900 border-slate-700/80 text-white p-0 gap-0 overflow-hidden" style={{ width: '380px', maxWidth: '380px' }}>
+          <div className="px-6 py-8 text-center space-y-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto ${
+              successResult?.isUpgrade ? 'bg-green-500/15' : 'bg-blue-500/15'
+            }`}>
+              <svg className={`w-5 h-5 ${successResult?.isUpgrade ? 'text-green-400' : 'text-blue-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[15px] font-semibold text-white">
+                {successResult?.isUpgrade ? 'Plan upgraded' : 'Plan changed'}
+              </p>
+              <p className="text-[13px] text-slate-400 mt-1.5 leading-relaxed">
+                You&apos;re now on the <span className="text-white font-medium">{successResult?.planName}</span> plan.
+                {successResult?.isUpgrade
+                  ? ' Your new features are available immediately.'
+                  : ' Your billing will update at the next cycle.'}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className={`h-9 px-5 mt-2 ${
+                successResult?.isUpgrade
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+              onClick={() => window.location.reload()}
+            >
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1461,7 +1461,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className={!isFeatureUnlocked('analytics') ? "blur-[8px] select-none pointer-events-none" : ""}>
-            <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-[#00d083]">{analyticsData.totalProfileViews}</p>
                 <p className="text-xs text-gray-400">Profile Views</p>
@@ -1523,7 +1523,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
 
                 {/* Real stats row */}
                 {pushStats && (
-                  <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
                     <div className="bg-slate-700/30 rounded-lg p-2">
                       <p className="text-lg font-bold text-white">{pushStats.eligiblePasses}</p>
                       <p className="text-[10px] text-slate-500">Eligible</p>

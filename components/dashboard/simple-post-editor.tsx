@@ -45,7 +45,7 @@ export function SimplePostEditor({
   return (
     <div className="space-y-6">
       {/* Preview */}
-      <div className="flex justify-center">
+      <div className="flex justify-center overflow-hidden max-w-full">
         <div
           ref={postRef}
           className="relative w-[1080px] h-[1080px] overflow-hidden bg-black"

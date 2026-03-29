@@ -492,7 +492,7 @@ export function ComprehensiveAdminAnalytics({ city }: { city: string }) {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="grid grid-cols-6 gap-4 text-sm">
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-4 text-sm">
                         <div>
                           <div className="text-blue-400 font-semibold">{business.total_visits}</div>
                           <div className="text-slate-400 text-xs">Visits</div>

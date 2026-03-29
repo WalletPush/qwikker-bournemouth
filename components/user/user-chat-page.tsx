@@ -107,6 +107,9 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const chatWrapperRef = useRef<HTMLDivElement>(null)
+  const [chatHeight, setChatHeight] = useState<string>('80dvh')
   
   // ✅ MVP-CRITICAL: messagesRef to prevent race conditions on fast interactions
   const messagesRef = useRef<ChatMessage[]>([])
@@ -209,6 +212,19 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   // Session storage keys for chat memory
   const chatSessionKey = `qwikker-chat-session-${currentUser?.wallet_pass_id || 'guest'}`
   const chatStreamCountKey = `qwikker-chat-stream-count-${currentUser?.wallet_pass_id || 'guest'}`
+
+  // Measure exact position and fill to bottom of viewport
+  useEffect(() => {
+    const el = chatWrapperRef.current
+    if (!el) return
+    const update = () => {
+      const top = el.getBoundingClientRect().top
+      setChatHeight(`calc(100dvh - ${Math.round(top)}px)`)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [view])
 
   // ✅ SMART SCROLL: Scroll when NEW messages arrive, but not during streaming
   const scrollToBottom = () => {
@@ -705,6 +721,32 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       }
     })
 
+    // Auto-link phone numbers (UK and international formats)
+    processedContent = processedContent.replace(
+      /(?<!href="|">)(\+?[\d\s\-()]{10,})(?=\s|$|<|,|\.|\n)/g,
+      (match) => {
+        const trimmed = match.trim()
+        const digits = trimmed.replace(/[\s\-()]/g, '')
+        if (digits.length < 10 || digits.length > 15) return match
+        return `<a href="tel:${digits}" class="text-[#00d083] hover:text-[#00b86f] underline">${trimmed}</a>`
+      }
+    )
+
+    // Auto-link URLs that aren't already inside href="" or <a> tags
+    processedContent = processedContent.replace(
+      /(?<!href="|">)(https?:\/\/[^\s<,"]+)/g,
+      (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-[#00d083] hover:text-[#00b86f] underline">${url}</a>`
+    )
+
+    // Auto-link addresses (lines starting with "Address:")
+    processedContent = processedContent.replace(
+      /Address:\s*(.+?)(?=\n|<br|$)/gi,
+      (match, addr) => {
+        const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(addr.trim())}`
+        return `Address: <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" class="text-[#00d083] hover:text-[#00b86f] underline">${addr.trim()}</a>`
+      }
+    )
+
     return processedContent
   }
 
@@ -717,6 +759,20 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         : message.content
     }))
   }, [messages])
+
+  // Push messages to bottom of scroll area (iMessage style)
+  useEffect(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    const recalc = () => {
+      const gap = el.clientHeight - el.scrollHeight + parseInt(el.style.paddingTop || '0')
+      el.style.paddingTop = gap > 0 ? `${gap}px` : '16px'
+    }
+    recalc()
+    const ro = new ResizeObserver(recalc)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [processedMessages.length])
 
   // Handle business name clicks
   const handleBusinessClick = (businessName: string) => {
@@ -817,7 +873,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       
       {/* CHAT MODE: Regular chat interface */}
       {view === 'chat' && (
-    <div className="flex flex-col h-[calc(100vh-8rem)] max-w-4xl mx-auto">
+    <div ref={chatWrapperRef} className="flex flex-col max-w-4xl mx-auto" style={{ height: chatHeight }}>
       <style jsx>{`
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(10px); }
@@ -869,7 +925,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       {/* Chat Messages */}
       <div className="flex-1 flex flex-col overflow-hidden rounded-2xl border border-slate-800/60">
         
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
           {processedMessages.map((message, messageIndex) => {
             // Only stream NEW messages (added after page load)
             // Messages loaded from sessionStorage should NOT re-stream
