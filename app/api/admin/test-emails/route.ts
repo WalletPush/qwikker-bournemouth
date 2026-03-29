@@ -15,6 +15,7 @@ import {
   createChangeRejectionEmail,
 } from '@/lib/email/templates/business-notifications'
 import { createCityLiveEmail } from '@/lib/email/templates/city-request-notifications'
+import { createConsumerWelcomeEmail } from '@/lib/email/templates/consumer-notifications'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -162,7 +163,18 @@ export async function POST(request: NextRequest) {
         }),
       },
       {
-        key: '11_city_live',
+        key: '11_consumer_welcome',
+        template: createConsumerWelcomeEmail({
+          firstName: 'Test User',
+          city,
+          dashboardUrl: `${dashboardUrl}/user/dashboard?wallet_pass_id=TEST-PASS-123`,
+          chatUrl: `${dashboardUrl}/user/chat?wallet_pass_id=TEST-PASS-123`,
+          offersUrl: `${dashboardUrl}/user/offers?wallet_pass_id=TEST-PASS-123`,
+          supportEmail,
+        }),
+      },
+      {
+        key: '12_city_live',
         template: createCityLiveEmail({
           cityName: 'Bournemouth',
           cityUrl: 'https://bournemouth.qwikker.com',

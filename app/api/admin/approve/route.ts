@@ -191,15 +191,18 @@ export async function POST(request: NextRequest) {
 
       // 📢 SEND SLACK NOTIFICATION: Business approved
       try {
-        const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
-        
-        await sendCitySlackNotification({
+        const { sendCitySlackNotification, sendHQSlackNotification } = await import('@/lib/utils/dynamic-notifications')
+
+        const slackPayload = {
           title: `Business Approved: ${data.business_name}`,
           message: `${data.business_name} has been approved by ${admin.username || 'Admin'} and is now live on the platform.`,
           city: requestCity,
-          type: 'business_signup',
+          type: 'business_signup' as const,
           data: { businessName: data.business_name, businessType: data.business_type }
-        })
+        }
+
+        await sendCitySlackNotification(slackPayload)
+        sendHQSlackNotification(slackPayload).catch(() => {})
         
         console.log(`📢 Slack notification sent for business approval: ${data.business_name}`)
       } catch (error) {

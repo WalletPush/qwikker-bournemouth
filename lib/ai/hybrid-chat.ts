@@ -1123,6 +1123,22 @@ export async function generateHybridAIResponse(
       console.log(`🔍 KB similarity scores:`, Array.from(kbScoreById.entries()).map(([id, score]) => `${id.substring(0, 8)}: ${score.toFixed(2)}`).join(', '))
     }
     
+    // Step 1b: Fetch Qwikker Vibes for all businesses (needed before context is built)
+    const allBusinessIdsForVibes = [...tier1, ...tier2, ...tier3].map(b => b.id)
+    if (allBusinessIdsForVibes.length > 0) {
+      await Promise.all(
+        allBusinessIdsForVibes.map(async (id) => {
+          const vibes = await getBusinessVibeStats(id)
+          if (vibes && vibes.total_vibes >= 5) {
+            vibesMap.set(id, vibes)
+          }
+        })
+      )
+      if (vibesMap.size > 0) {
+        console.log(`💚 Vibes loaded for ${vibesMap.size} businesses (5+ each)`)
+      }
+    }
+
     // Step 2: Score ALL businesses for relevance
     // Semantic search may have found evidence even if intent detector found nothing
     console.log(`🎯 Scoring all businesses for intent: "${intentTerms || 'semantic-only'}"`)
@@ -1458,7 +1474,7 @@ export async function generateHybridAIResponse(
           let vibesLine = ''
           const vibeStats = vibesMap.get(business.id)
           if (vibeStats && vibeStats.total_vibes >= 5) {
-            vibesLine = `\nQwikker Vibes: ${vibeStats.positive_percentage}% positive from ${vibeStats.total_vibes} users`
+            vibesLine = `\n💚 Qwikker Vibes 💚 ${vibeStats.positive_percentage}% positive from ${vibeStats.total_vibes} users`
           }
 
           let bookingLine = ''
@@ -1842,22 +1858,7 @@ Present this information clearly and offer further help.`
       
       console.log(`💼 Total businesses after merge: ${Array.from(businessById.values()).length} (${kbScoreById.size} had KB content)`)
       
-      // STEP 2: Fetch offers/vibes for all businesses
-      
-      // 💚 Fetch Qwikker Vibes for ALL businesses across all tiers (not just tier1)
-      vibesMap = new Map()
-      const allBusinessesForVibes = Array.from(businessById.values())
-      if (allBusinessesForVibes.length > 0) {
-        await Promise.all(
-          allBusinessesForVibes.map(async (business) => {
-            const vibes = await getBusinessVibeStats(business.id)
-            if (vibes && vibes.total_vibes >= 5) {
-              vibesMap.set(business.id, vibes)
-            }
-          })
-        )
-        console.log(`💚 Found vibes for ${vibesMap.size} businesses (5+ vibes each)`)
-      }
+      // vibesMap already populated in Step 1b above — reuse it here
       
       // 🎯 THREE-TIER CHAT SYSTEM: Browse Fill + Intent Relevance Gating
       // TIER 1: Paid/Trial (already queried above via business_profiles_chat_eligible)

@@ -29,8 +29,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to submit' }, { status: 500 })
     }
 
-    // Fire-and-forget Slack notification to city admin channel
+    // Fire-and-forget Slack notifications
     notifyCitySlack(city, subject, category, message, data.id).catch(() => {})
+    notifyHQSlack(city, subject, category, message).catch(() => {})
 
     return NextResponse.json({ success: true, id: data.id })
   } catch (error) {
@@ -83,4 +84,21 @@ async function notifyCitySlack(
   } catch (error) {
     console.error('Slack notification failed for user support:', error)
   }
+}
+
+async function notifyHQSlack(city: string, subject: string, category: string, message: string) {
+  const { sendHQSlackNotification } = await import('@/lib/utils/dynamic-notifications')
+  const categoryLabel = {
+    general: 'General question',
+    business_issue: 'Issue with a business',
+    pass_problem: 'Problem with my pass',
+    feedback: 'Feedback / suggestion',
+  }[category] || category
+
+  await sendHQSlackNotification({
+    title: `🙋 User Support: ${subject}`,
+    message: `*Category:* ${categoryLabel}\n*City:* ${city}\n\n> ${message.slice(0, 200)}${message.length > 200 ? '...' : ''}`,
+    city,
+    type: 'user_support',
+  })
 }

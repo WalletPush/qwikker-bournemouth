@@ -28,6 +28,7 @@ export function PassInstallerClient({
   const [deviceType, setDeviceType] = useState<'desktop' | 'iphone' | 'android'>('desktop')
   const [showQR, setShowQR] = useState(false)
   const [passUrl, setPassUrl] = useState<string | null>(null)
+  const [googleWalletUrl, setGoogleWalletUrl] = useState<string | null>(null)
   const [serialNumber, setSerialNumber] = useState<string | null>(null)
   
   // Marketing consent state
@@ -153,22 +154,27 @@ export function PassInstallerClient({
         throw new Error(data.error || 'Failed to create pass')
       }
 
-      // Success! passUrl is now a direct .pkpass download URL
       const finalPassUrl = data.passUrl
+      const gWalletUrl = data.googleWalletUrl || null
 
       setPassUrl(finalPassUrl)
+      setGoogleWalletUrl(gWalletUrl)
       setSerialNumber(data.serialNumber)
       setSuccess(true)
       setLoading(false)
-      
-      // Trigger .pkpass download without navigating away from the page.
-      // Using a temporary link keeps React alive so the countdown works.
-      const link = document.createElement('a')
-      link.href = finalPassUrl
-      link.style.display = 'none'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+
+      // Android + Google Wallet URL available → open native Google Wallet
+      if (deviceType === 'android' && gWalletUrl) {
+        window.location.href = gWalletUrl
+      } else {
+        // iOS / fallback: trigger .pkpass download without navigating away
+        const link = document.createElement('a')
+        link.href = finalPassUrl
+        link.style.display = 'none'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
 
     } catch (err: any) {
       console.error('Pass creation error:', err)
@@ -229,29 +235,12 @@ export function PassInstallerClient({
               
               {deviceType === 'android' && (
                 <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-lg p-4">
-                  <p className="text-neutral-400 text-xs mb-3">
+                  <p className="text-neutral-400 text-xs mb-1">
                     You're on Android.
                   </p>
-                  <p className="text-neutral-300 text-sm mb-3">
-                    To get your pass, follow these steps:
+                  <p className="text-neutral-300 text-sm">
+                    Complete the form below and your pass will be added to Google Wallet.
                   </p>
-                  <ol className="text-left text-xs text-neutral-400 space-y-2 mb-4 pl-4">
-                    <li>1. Download WalletPasses app below</li>
-                    <li>2. Complete the form</li>
-                    <li>3. Install your pass</li>
-                  </ol>
-                  <a
-                    href="https://play.google.com/store/apps/details?id=io.walletpasses.android&hl=en"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block hover:opacity-80 transition-opacity"
-                  >
-                    <img
-                      src="https://walletpush.s3.us-east-1.amazonaws.com/walletpush/google-play-badge-logo-png-transparent.png"
-                      alt="Get it on Google Play"
-                      className="w-40 mx-auto"
-                    />
-                  </a>
                 </div>
               )}
               
@@ -480,9 +469,9 @@ export function PassInstallerClient({
                   Add the pass to your wallet, then continue to your dashboard.
                 </p>
                 
-                {passUrl && (
+                {(passUrl || googleWalletUrl) && (
                   <a
-                    href={passUrl}
+                    href={(deviceType === 'android' && googleWalletUrl) ? googleWalletUrl : (passUrl || '#')}
                     className="block w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-sm transition-colors mb-3"
                   >
                     Didn&apos;t get the pass? Tap here to install

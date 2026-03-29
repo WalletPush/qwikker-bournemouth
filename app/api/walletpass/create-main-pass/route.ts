@@ -90,6 +90,8 @@ export async function POST(request: NextRequest) {
     
     const result = await response.json()
     
+    console.log('🎫 Full WalletPush API response:', JSON.stringify(result, null, 2))
+    
     // New WalletPush returns { success, serialNumber, passTypeIdentifier, apple: { downloadUrl }, google: { saveUrl } }
     // apple.downloadUrl is /api/pass-install/{serial} which is a web page with its own redirect.
     // We need the direct .pkpass download: /api/apple-pass/{serial}/download
@@ -100,11 +102,14 @@ export async function POST(request: NextRequest) {
     const passSerialNumber = result.serialNumber
     const passTypeId = result.passTypeIdentifier || 'pass.come.globalwalletpush'
     
+    const googleWalletUrl = result.google?.saveUrl || result.google?.shortUrl || null
+
     if (passUrl && passSerialNumber) {
       console.log('✅ Main wallet pass created:', {
         user: `${firstName} ${lastName}`,
         serialNumber: passSerialNumber,
         passUrl: passUrl,
+        googleWalletUrl: googleWalletUrl || 'N/A',
         passTypeIdentifier: passTypeId
       })
       
@@ -191,10 +196,39 @@ export async function POST(request: NextRequest) {
       updatePassLinksAsync(
         MOBILE_WALLET_APP_KEY, passTypeId, passSerialNumber, cityBaseUrl
       ).catch(err => console.warn('⚠️ Non-critical: pass link update failed:', err))
-      
+
+      // 📧 SEND CONSUMER WELCOME EMAIL (non-blocking)
+      if (email && marketingEmailConsent !== false) {
+        try {
+          const { createConsumerWelcomeEmail } = await import('@/lib/email/templates/consumer-notifications')
+          const { sendFranchiseEmail, getFranchiseSupportEmail } = await import('@/lib/email/send-franchise-email')
+          const supportEmail = await getFranchiseSupportEmail(city)
+
+          const dashboardUrl = `${cityBaseUrl}/user/dashboard?wallet_pass_id=${passSerialNumber}`
+          const chatUrl = `${cityBaseUrl}/user/chat?wallet_pass_id=${passSerialNumber}`
+          const offersUrl = `${cityBaseUrl}/user/offers?wallet_pass_id=${passSerialNumber}`
+
+          const template = createConsumerWelcomeEmail({
+            firstName,
+            city,
+            dashboardUrl,
+            chatUrl,
+            offersUrl,
+            supportEmail,
+          })
+
+          sendFranchiseEmail({ city, to: email, template }).catch(err =>
+            console.error('⚠️ Consumer welcome email error (non-critical):', err)
+          )
+        } catch (emailErr) {
+          console.error('⚠️ Consumer welcome email import error (non-critical):', emailErr)
+        }
+      }
+
       return NextResponse.json({ 
         success: true, 
         passUrl: passUrl,
+        googleWalletUrl,
         serialNumber: passSerialNumber,
         passTypeIdentifier: passTypeId,
         message: 'Main wallet pass created successfully'

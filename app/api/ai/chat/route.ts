@@ -55,10 +55,8 @@ function inferSelectedBusinessSlugFromHistory(
     if (tokens.some(t => msg.includes(t))) return slug
   }
 
-  // If exactly one unique slug was mentioned recently, assume that's the selected business
-  const unique = Array.from(new Set(mentioned.map(m => m.slug)))
-  if (unique.length === 1) return unique[0]
-
+  // Only return a match if we had actual evidence (name or token match above).
+  // Do NOT blindly assume the last-mentioned business — the user might be asking about a different one.
   return null
 }
 
@@ -774,6 +772,15 @@ export async function POST(request: NextRequest) {
             if (biz.display_category) {
               facts.push(`**Category:** ${biz.display_category}`)
             }
+
+            // Qwikker Vibes
+            try {
+              const { getBusinessVibeStats } = await import('@/lib/utils/vibes')
+              const vibeStats = await getBusinessVibeStats(biz.id)
+              if (vibeStats && vibeStats.total_vibes >= 5) {
+                facts.push(`**💚 Qwikker Vibes 💚** ${vibeStats.positive_percentage}% positive (${vibeStats.total_vibes} vibes)`)
+              }
+            } catch {}
           } else {
             // Business name with link for specific queries
             facts.push(`**[${biz.business_name}](/user/business/${slug})**`)

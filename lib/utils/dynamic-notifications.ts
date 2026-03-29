@@ -6,7 +6,7 @@ export interface NotificationData {
   title: string
   message: string
   city: string
-  type: 'business_signup' | 'offer_created' | 'user_signup' | 'error' | 'info'
+  type: 'business_signup' | 'offer_created' | 'user_signup' | 'error' | 'info' | string
   data?: Record<string, unknown>
 }
 
@@ -94,6 +94,45 @@ export async function sendCitySlackNotification(notification: NotificationData) 
   } catch (error) {
     console.error(`❌ [SLACK] Error sending notification to ${notification.city}:`, error)
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+/**
+ * Send a notification to the HQ Slack channel.
+ * Uses HQ_SLACK_WEBHOOK_URL env var. Silently no-ops when not configured.
+ * Always fire-and-forget — never block the caller.
+ */
+export async function sendHQSlackNotification(notification: Omit<NotificationData, 'data'> & { data?: Record<string, unknown> }) {
+  const webhookUrl = process.env.HQ_SLACK_WEBHOOK_URL
+  if (!webhookUrl) return
+
+  try {
+    const cityLabel = notification.city.charAt(0).toUpperCase() + notification.city.slice(1)
+
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        blocks: [
+          {
+            type: 'header',
+            text: { type: 'plain_text', text: `🏢 HQ — ${cityLabel}`, emoji: true }
+          },
+          {
+            type: 'section',
+            text: { type: 'mrkdwn', text: `*${notification.title}*\n${notification.message}` }
+          },
+          {
+            type: 'context',
+            elements: [
+              { type: 'mrkdwn', text: `City: ${notification.city} | Type: ${notification.type} | ${new Date().toLocaleString()}` }
+            ]
+          }
+        ]
+      })
+    })
+  } catch (err) {
+    console.error('HQ Slack notification failed (non-critical):', err)
   }
 }
 

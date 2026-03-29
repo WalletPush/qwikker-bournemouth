@@ -787,19 +787,22 @@ export async function submitBusinessForReview(userId: string) {
     // 📢 SEND SLACK NOTIFICATION: Business submitted for review
     const fallbackCity = await getRequestCityFallback()
     try {
-      const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
-      
-      await sendCitySlackNotification({
+      const { sendCitySlackNotification, sendHQSlackNotification } = await import('@/lib/utils/dynamic-notifications')
+
+      const slackPayload = {
         title: `🎉 New Business Submitted: ${profile.business_name}`,
         message: `${profile.business_name} has completed onboarding and submitted their listing for review!\n\n**Business Details:**\n• Owner: ${profile.first_name} ${profile.last_name}\n• Type: ${profile.business_type}\n• Location: ${profile.business_town}, ${profile.business_postcode}\n• Email: ${profile.email}\n• Phone: ${profile.phone}`,
         city: profile.city || fallbackCity,
-        type: 'business_signup',
+        type: 'business_signup' as const,
         data: { 
           businessName: profile.business_name,
           ownerName: `${profile.first_name} ${profile.last_name}`,
           email: profile.email
         }
-      })
+      }
+
+      await sendCitySlackNotification(slackPayload)
+      sendHQSlackNotification(slackPayload).catch(() => {})
       
       console.log(`📢 Slack notification sent for business submission: ${profile.business_name}`)
     } catch (notificationError) {

@@ -24,6 +24,7 @@ export function ImprovedWalletInstaller({
   const [step, setStep] = useState<'consent' | 'ready' | 'creating' | 'downloading' | 'installing' | 'success' | 'error' | 'second-chance'>('consent')
   const [errorMessage, setErrorMessage] = useState('')
   const [passUrl, setPassUrl] = useState('')
+  const [googleWalletUrl, setGoogleWalletUrl] = useState('')
   const [countdown, setCountdown] = useState(0)
   const [serialNumber, setSerialNumber] = useState('')
   
@@ -109,10 +110,10 @@ export function ImprovedWalletInstaller({
       }
 
       setPassUrl(result.passUrl)
+      setGoogleWalletUrl(result.googleWalletUrl || '')
       setSerialNumber(result.serialNumber)
       setStep('downloading')
 
-      // For international/slow connections, add extra delay
       const downloadDelay = deviceInfo.isInternational ? 5000 : 3000
       setCountdown(downloadDelay / 1000)
 
@@ -122,8 +123,12 @@ export function ImprovedWalletInstaller({
           if (prev <= 1) {
             clearInterval(timer)
             setStep('installing')
-            // Trigger download
-            window.location.href = result.passUrl
+            // Android + Google Wallet URL → open native Google Wallet
+            if (deviceInfo.isAndroid && result.googleWalletUrl) {
+              window.location.href = result.googleWalletUrl
+            } else {
+              window.location.href = result.passUrl
+            }
             return 0
           }
           return prev - 1
@@ -346,15 +351,25 @@ export function ImprovedWalletInstaller({
               </svg>
             </div>
             <p className="text-gray-300">
-              {deviceInfo.isIOS ? 'Tap "Add" in the top right corner' : 'Opening wallet pass...'}
+              {deviceInfo.isIOS
+                ? 'Tap "Add" in the top right corner'
+                : deviceInfo.isAndroid && googleWalletUrl
+                  ? 'Adding to Google Wallet...'
+                  : 'Opening wallet pass...'}
             </p>
             <Button
-              onClick={handleManualDownload}
+              onClick={() => {
+                if (deviceInfo.isAndroid && googleWalletUrl) {
+                  window.open(googleWalletUrl, '_blank')
+                } else {
+                  handleManualDownload()
+                }
+              }}
               variant="outline"
               size="sm"
               className="text-[#00d083] border-[#00d083]"
             >
-              Manual Download
+              {deviceInfo.isAndroid && googleWalletUrl ? 'Open Google Wallet' : 'Manual Download'}
             </Button>
           </div>
         )}

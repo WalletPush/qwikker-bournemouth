@@ -33,6 +33,10 @@ export async function POST(request: NextRequest) {
         tax_rate: config.tax_rate,
         tax_name: config.tax_name,
         pricing_cards: config.pricing_cards,
+        founding_member_enabled: config.founding_member_enabled,
+        founding_member_discount: config.founding_member_discount,
+        founding_member_title: config.founding_member_title,
+        founding_member_description: config.founding_member_description,
         updated_at: new Date().toISOString()
       })
       .eq('city', city)

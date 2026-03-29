@@ -493,20 +493,22 @@ export async function POST(request: NextRequest) {
 
     // 9. Send Slack notification to admin
     try {
-      const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
+      const { sendCitySlackNotification, sendHQSlackNotification } = await import('@/lib/utils/dynamic-notifications')
       
-      // 🔒 SECURITY: Use city-specific subdomain for admin link
       const requestCity = await getCityFromHostname(request.headers.get('host') || '', { allowUnsafeFallbacks: true })
       const citySubdomain = (business.city || requestCity).toLowerCase()
       const adminUrl = `https://${citySubdomain}.qwikker.com/admin?tab=claims`
-      
-      await sendCitySlackNotification({
+
+      const slackPayload = {
         title: `✅ New Claim Request: ${business.business_name}`,
         message: `${firstName} ${lastName} has claimed ${business.business_name}!\n\n**Claimer Details:**\n• Name: ${firstName} ${lastName}\n• Email: ${email}\n• Website: ${website || 'Not provided'}\n• Verification: Email verified\n\n🔗 Review claim: ${adminUrl}`,
         city: business.city || requestCity,
-        type: 'business_signup',
+        type: 'business_signup' as const,
         data: { businessName: business.business_name, claimerName: `${firstName} ${lastName}` }
-      })
+      }
+
+      await sendCitySlackNotification(slackPayload)
+      sendHQSlackNotification(slackPayload).catch(() => {})
     } catch (slackError) {
       console.error('Slack notification failed (non-critical):', slackError)
     }

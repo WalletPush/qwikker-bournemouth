@@ -65,15 +65,19 @@ async function getFranchiseResendConfig(city: string): Promise<FranchiseResendCo
   }
 }
 
-const DEFAULT_SUPPORT_EMAIL = 'hello@qwikker.com'
+/**
+ * Auto-derives the no-reply sending address from the city subdomain.
+ */
+export function getFranchiseFromEmail(city: string): string {
+  return `no-reply@${city.toLowerCase()}.qwikker.com`
+}
 
 /**
- * Returns the franchise-specific support/contact email for use in email body copy.
- * Falls back to the global default when no franchise config exists.
+ * Auto-derives the support/reply-to address from the city subdomain.
+ * This is what users see in email body copy and what the reply-to header is set to.
  */
-export async function getFranchiseSupportEmail(city: string): Promise<string> {
-  const config = await getFranchiseResendConfig(city)
-  return config?.resend_from_email || DEFAULT_SUPPORT_EMAIL
+export function getFranchiseSupportEmail(city: string): string {
+  return `hello@${city.toLowerCase()}.qwikker.com`
 }
 
 export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promise<{
@@ -97,15 +101,17 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
       // Use franchise-specific Resend instance
       const cityResend = new Resend(franchiseConfig.resend_api_key)
       const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
+      const fromEmail = getFranchiseFromEmail(city)
+      const replyToEmail = replyTo || getFranchiseSupportEmail(city)
 
       console.log(`📧 [${city}] Sending franchise email to: ${Array.isArray(to) ? to.join(', ') : to}`)
-      console.log(`📧 [${city}] From: ${fromName} <${franchiseConfig.resend_from_email}>`)
+      console.log(`📧 [${city}] From: ${fromName} <${fromEmail}>`)
       console.log(`📧 [${city}] Subject: ${template.subject}`)
 
       const result = await cityResend.emails.send({
-        from: `${fromName} <${franchiseConfig.resend_from_email}>`,
+        from: `${fromName} <${fromEmail}>`,
         to: Array.isArray(to) ? to : [to],
-        replyTo: replyTo || franchiseConfig.resend_from_email,
+        replyTo: replyToEmail,
         subject: template.subject,
         html: template.html,
         text: template.text,
