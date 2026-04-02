@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       supabaseAdmin
         .from('business_profiles')
         .select('id, business_name, slug')
-        .eq('city', requestCity)
+        .ilike('city', requestCity)
         .in('status', ['approved', 'claimed_free'])
         .order('business_name'),
     ])

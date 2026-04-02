@@ -353,19 +353,19 @@ export function CityLandingPage({
 
       {/* Supporters Section */}
       {showSupporters && (
-        <section className="py-16 px-6 border-t border-white/5">
-          <div className="max-w-5xl mx-auto text-center">
-            <p className="text-sm text-white/40 mb-8">
+        <section className="py-12 px-6 border-t border-white/5">
+          <div className="max-w-3xl mx-auto text-center">
+            <p className="text-xs uppercase tracking-widest text-white/30 mb-6">
               {landingConfig.supporters_heading || 'Proudly supported by'}
             </p>
-            <div className="flex items-center justify-center gap-8 md:gap-12 flex-wrap">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-6 items-center justify-items-center">
               {(landingConfig.supporter_logos || []).map((supporter, i) => (
                 <img
                   key={i}
                   src={supporter.logo_url}
                   alt={supporter.name}
                   title={supporter.name}
-                  className="h-8 md:h-10 w-auto opacity-40 hover:opacity-60 transition-opacity grayscale"
+                  className="h-6 md:h-8 max-w-[100px] md:max-w-[120px] w-auto object-contain opacity-40 hover:opacity-60 transition-opacity grayscale"
                 />
               ))}
             </div>

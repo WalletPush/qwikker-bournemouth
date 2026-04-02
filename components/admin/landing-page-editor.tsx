@@ -505,12 +505,12 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
               {(config.supporter_logos || []).length > 0 && (
                 <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-4">
                   <p className="text-xs text-slate-500 mb-3">Preview</p>
-                  <p className="text-xs text-white/40 text-center mb-3">
+                  <p className="text-[10px] uppercase tracking-widest text-white/30 text-center mb-3">
                     {config.supporters_heading || 'Proudly supported by'}
                   </p>
-                  <div className="flex items-center justify-center gap-6 flex-wrap">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 items-center justify-items-center">
                     {(config.supporter_logos || []).map((s, i) => (
-                      <img key={i} src={s.logo_url} alt={s.name} className="h-6 w-auto opacity-50" />
+                      <img key={i} src={s.logo_url} alt={s.name} className="h-5 max-w-[80px] w-auto object-contain opacity-50" />
                     ))}
                   </div>
                 </div>
