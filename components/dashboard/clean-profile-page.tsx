@@ -13,6 +13,7 @@ import { BusinessHoursStructured } from '@/types/business-hours'
 import { uploadToCloudinary } from '@/lib/integrations'
 import { updateProfileFile } from '@/lib/actions/file-actions'
 import { GoogleVerificationSection } from './GoogleVerificationSection'
+import { VIBE_TAG_CATEGORIES, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH, type VibeTagsData } from '@/lib/constants/vibe-tags'
 
 interface CleanProfilePageProps {
   profile: Profile
@@ -45,9 +46,13 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
     website_url: profile.website_url || '',
     instagram_handle: profile.instagram_handle || '',
     facebook_url: profile.facebook_url || '',
+    booking_url: profile.booking_url || '',
+    booking_preference: profile.booking_preference || '',
   })
   const [businessSaving, setBusinessSaving] = useState(false)
   const [businessSaved, setBusinessSaved] = useState(false)
+  const [bookingSaving, setBookingSaving] = useState(false)
+  const [bookingSaved, setBookingSaved] = useState(false)
 
   // Business Hours State
   const [businessHours, setBusinessHours] = useState<BusinessHoursStructured | null>(
@@ -64,6 +69,14 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
   )
   const [menuSaving, setMenuSaving] = useState(false)
   const [menuSaved, setMenuSaved] = useState(false)
+
+  // Vibe Tags State
+  const existingVibeTags = (profile as unknown as Record<string, unknown>).vibe_tags as VibeTagsData | null
+  const [selectedVibeTags, setSelectedVibeTags] = useState<string[]>(existingVibeTags?.selected || [])
+  const [customVibeTags, setCustomVibeTags] = useState<string[]>(existingVibeTags?.custom || [])
+  const [customVibeInput, setCustomVibeInput] = useState('')
+  const [vibeTagsSaving, setVibeTagsSaving] = useState(false)
+  const [vibeTagsSaved, setVibeTagsSaved] = useState(false)
 
   // File upload state
   const [uploading, setUploading] = useState<string | null>(null)
@@ -110,6 +123,30 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
     }
   }
 
+  // Save Booking Preferences
+  const saveBooking = async () => {
+    setBookingSaving(true)
+    setBookingSaved(false)
+    try {
+      const result = await updateBusinessInfo(profile.user_id, {
+        booking_preference: businessData.booking_preference,
+        booking_url: businessData.booking_url,
+      })
+      if (result.success) {
+        setBookingSaved(true)
+        setMessage({ type: 'success', text: 'Booking preferences saved successfully!' })
+        router.refresh()
+        setTimeout(() => setBookingSaved(false), 3000)
+      } else {
+        throw new Error(result.error || 'Failed to save booking preferences')
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to save booking preferences' })
+    } finally {
+      setBookingSaving(false)
+    }
+  }
+
   // Save Business Hours
   const saveBusinessHours = async (hours: BusinessHoursStructured) => {
     setHoursSaving(true)
@@ -136,6 +173,45 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
       setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to save business hours' })
     } finally {
       setHoursSaving(false)
+    }
+  }
+
+  // Vibe Tag helpers
+  const toggleVibeTag = (slug: string) => {
+    setSelectedVibeTags(prev =>
+      prev.includes(slug) ? prev.filter(t => t !== slug) : [...prev, slug]
+    )
+  }
+
+  const addCustomVibeTag = () => {
+    const tag = customVibeInput.trim()
+    if (!tag || customVibeTags.length >= MAX_CUSTOM_TAGS || customVibeTags.includes(tag)) return
+    setCustomVibeTags(prev => [...prev, tag.slice(0, MAX_CUSTOM_TAG_LENGTH)])
+    setCustomVibeInput('')
+  }
+
+  const removeCustomVibeTag = (tag: string) => {
+    setCustomVibeTags(prev => prev.filter(t => t !== tag))
+  }
+
+  const saveVibeTags = async () => {
+    setVibeTagsSaving(true)
+    setVibeTagsSaved(false)
+    try {
+      const vibeData: VibeTagsData = { selected: selectedVibeTags, custom: customVibeTags }
+      const result = await updateBusinessInfo(profile.user_id, { vibe_tags: vibeData })
+      if (result.success) {
+        setVibeTagsSaved(true)
+        setMessage({ type: 'success', text: 'Vibe tags saved successfully!' })
+        router.refresh()
+        setTimeout(() => setVibeTagsSaved(false), 3000)
+      } else {
+        throw new Error(result.error || 'Failed to save vibe tags')
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to save vibe tags' })
+    } finally {
+      setVibeTagsSaving(false)
     }
   }
 
@@ -423,13 +499,13 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="business_name" className="text-white">Business Name</Label>
+              <Label htmlFor="business_name" className="text-white">Business Name <span className="text-red-500">*</span></Label>
               <Input
                 id="business_name"
                 value={businessData.business_name}
                 onChange={(e) => setBusinessData(prev => ({ ...prev, business_name: e.target.value }))}
                 className="bg-slate-700/50 border-slate-600/50 text-white"
-                placeholder="Enter your business name"
+                placeholder="Your business name"
               />
             </div>
             <div>
@@ -446,50 +522,91 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="business_category" className="text-white">Business Category <span className="text-red-500">*</span></Label>
+            <Input
+              id="business_category"
+              value={businessData.business_category}
+              onChange={(e) => setBusinessData(prev => ({ ...prev, business_category: e.target.value }))}
+              className="bg-slate-700/50 border-slate-600/50 text-white"
+              placeholder="e.g., Fine Dining, Coffee Shop, Hair Salon"
+            />
+          </div>
+
+          {/* Location sub-section */}
+          <div className="space-y-4 pt-6 border-t border-slate-700/50">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Location
+            </h3>
             <div>
-              <Label htmlFor="business_town" className="text-white">Business Town</Label>
-              <select
-                id="business_town"
-                value={businessData.business_town}
-                onChange={(e) => setBusinessData(prev => ({ ...prev, business_town: e.target.value }))}
-                className="w-full h-10 px-3 bg-slate-700/50 border border-slate-600/50 rounded-md text-white"
-              >
-                <option value="">Select town</option>
-                {BUSINESS_TOWN_OPTIONS.map(town => (
-                  <option key={town.value} value={town.value} className="bg-slate-800">{town.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label htmlFor="business_address" className="text-white">Business Address</Label>
+              <Label htmlFor="business_address" className="text-white">Business Address <span className="text-red-500">*</span></Label>
               <Input
                 id="business_address"
                 value={businessData.business_address}
                 onChange={(e) => setBusinessData(prev => ({ ...prev, business_address: e.target.value }))}
                 className="bg-slate-700/50 border-slate-600/50 text-white"
-                placeholder="Enter your business address"
+                placeholder="Street address"
               />
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="business_town" className="text-white">Town <span className="text-red-500">*</span></Label>
+                <select
+                  id="business_town"
+                  value={businessData.business_town}
+                  onChange={(e) => setBusinessData(prev => ({ ...prev, business_town: e.target.value }))}
+                  className="w-full h-10 px-3 bg-slate-700/50 border border-slate-600/50 rounded-md text-white"
+                >
+                  <option value="">Select town</option>
+                  {BUSINESS_TOWN_OPTIONS.map(town => (
+                    <option key={town.value} value={town.value} className="bg-slate-800">{town.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="business_postcode" className="text-white">Postcode</Label>
+                <Input
+                  id="business_postcode"
+                  value={businessData.business_postcode}
+                  onChange={(e) => setBusinessData(prev => ({ ...prev, business_postcode: e.target.value }))}
+                  className="bg-slate-700/50 border-slate-600/50 text-white"
+                  placeholder="BH1 2AB"
+                />
+              </div>
+            </div>
           </div>
+
           <div>
-            <Label htmlFor="business_tagline" className="text-white">Business Tagline</Label>
+            <Label htmlFor="business_tagline" className="text-white">Business Tagline <span className="text-red-500">*</span></Label>
             <Input
               id="business_tagline"
               value={businessData.business_tagline}
               onChange={(e) => setBusinessData(prev => ({ ...prev, business_tagline: e.target.value }))}
               className="bg-slate-700/50 border-slate-600/50 text-white"
-              placeholder="A catchy tagline for your business"
+              placeholder="What you're known for in one line"
+              maxLength={50}
             />
+            <p className="text-xs text-gray-400 mt-1">Appears on your business card and in search results</p>
           </div>
           <div>
-            <Label htmlFor="business_description" className="text-white">Business Description</Label>
+            <Label htmlFor="business_description" className="text-white">Business Description <span className="text-red-500">*</span></Label>
             <textarea
               id="business_description"
               value={businessData.business_description}
               onChange={(e) => setBusinessData(prev => ({ ...prev, business_description: e.target.value }))}
-              className="w-full p-3 bg-slate-700/50 border border-slate-600/50 rounded-md text-white min-h-[100px] resize-none"
-              placeholder="Describe your business..."
+              className="w-full p-3 bg-slate-700/50 border border-slate-600/50 rounded-md text-white min-h-[100px] resize-y"
+              placeholder="Tell your story -- who you are, what you do, and why people love coming here..."
+              maxLength={500}
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Our AI uses this to recommend you to the right customers &bull; {businessData.business_description.length}/500 characters
+            </p>
           </div>
           
           {/* Social Media & Website Section */}
@@ -580,6 +697,157 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
         </Card>
       </div>
 
+        {/* Booking Section */}
+        <div id="booking" className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/20 to-teal-500/20 rounded-2xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
+          <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
+            <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
+              <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-cyan-500/30 to-teal-500/30 rounded-xl flex items-center justify-center shadow-lg border border-cyan-500/30">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                Booking
+              </CardTitle>
+              <p className="text-slate-400 mt-2">How customers can book with you</p>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div>
+                <Label className="text-white">How do customers book with you?</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+                  {[
+                    { value: 'url', label: 'Online booking link' },
+                    { value: 'phone', label: 'Phone or email' },
+                    { value: 'none', label: "We don't take bookings" },
+                  ].map(option => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setBusinessData(prev => ({ ...prev, booking_preference: option.value }))}
+                      className={`p-3 rounded-lg border text-sm text-left transition-colors ${
+                        businessData.booking_preference === option.value
+                          ? 'border-[#00d083] bg-[#00d083]/10 text-white'
+                          : 'border-slate-600/50 text-slate-400 hover:border-slate-500'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {businessData.booking_preference === 'url' && (
+                <div>
+                  <Label htmlFor="booking_url" className="text-white">Booking Link</Label>
+                  <Input
+                    id="booking_url"
+                    value={businessData.booking_url}
+                    onChange={(e) => setBusinessData(prev => ({ ...prev, booking_url: e.target.value }))}
+                    className="bg-slate-700/50 border-slate-600/50 text-white"
+                    placeholder="https://book.yoursystem.com/yourvenue"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">OpenTable, Resy, DesignMyNight, or any booking page URL</p>
+                </div>
+              )}
+
+              {businessData.booking_preference === 'phone' && (
+                <p className="text-sm text-slate-400">
+                  Your contact phone number and email from the business details above will be used as the booking method.
+                </p>
+              )}
+
+              <div className="flex justify-end pt-4 border-t border-slate-700/50">
+                <SaveButton saved={bookingSaved} saving={bookingSaving} onClick={saveBooking}>
+                  Save Booking
+                </SaveButton>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Vibe Tags Section */}
+        <div id="vibe-tags" className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-pink-500/20 to-violet-500/20 rounded-2xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
+          <Card className="relative bg-slate-800/80 backdrop-blur-xl border-slate-700/50 rounded-2xl shadow-2xl">
+            <CardHeader className="bg-gradient-to-r from-slate-800/60 to-slate-700/40 p-6">
+              <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-pink-500/30 to-violet-500/30 rounded-xl flex items-center justify-center shadow-lg border border-pink-500/30">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                </div>
+                Vibe Tags
+              </CardTitle>
+              <p className="text-slate-400 mt-2">Help customers find you by describing your vibe</p>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              {VIBE_TAG_CATEGORIES.map(category => (
+                <div key={category.id}>
+                  <h4 className="text-sm font-semibold text-slate-300 mb-2">{category.label}</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {category.tags.map(tag => {
+                      const isSelected = selectedVibeTags.includes(tag.slug)
+                      return (
+                        <button
+                          key={tag.slug}
+                          type="button"
+                          onClick={() => toggleVibeTag(tag.slug)}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                            isSelected
+                              ? 'bg-[#00d083]/20 text-[#00d083] border border-[#00d083]/50'
+                              : 'bg-slate-700/50 text-slate-300 border border-slate-600/50 hover:border-slate-500'
+                          }`}
+                        >
+                          {tag.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* Custom tags */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-300 mb-2">
+                  Custom Tags ({customVibeTags.length}/{MAX_CUSTOM_TAGS})
+                </h4>
+                {customVibeTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {customVibeTags.map(tag => (
+                      <span key={tag} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium bg-violet-500/20 text-violet-300 border border-violet-500/40">
+                        {tag}
+                        <button type="button" onClick={() => removeCustomVibeTag(tag)} className="ml-1 hover:text-white">×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {customVibeTags.length < MAX_CUSTOM_TAGS && (
+                  <div className="flex gap-2">
+                    <Input
+                      value={customVibeInput}
+                      onChange={e => setCustomVibeInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomVibeTag())}
+                      maxLength={MAX_CUSTOM_TAG_LENGTH}
+                      placeholder="Add a custom tag..."
+                      className="bg-slate-700/50 border-slate-600/50 text-white max-w-xs"
+                    />
+                    <Button variant="outline" size="sm" onClick={addCustomVibeTag} className="border-slate-600 text-slate-300 hover:text-white">
+                      Add
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-slate-700/50">
+                <SaveButton saved={vibeTagsSaved} saving={vibeTagsSaving} onClick={saveVibeTags}>
+                  Save Vibe Tags
+                </SaveButton>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Featured Items Section */}
         <div id="featured-items" className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-500"></div>
@@ -592,19 +860,12 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
                   </svg>
                 </div>
                 Featured Items
-                {profile?.status === 'claimed_free' && (
-                  <span className="ml-auto px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-xs font-medium text-blue-300">
-                    Max 5 items
-                  </span>
-                )}
+                <span className="ml-auto px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-xs font-medium text-blue-300">
+                  Max 5 items
+                </span>
               </CardTitle>
               <p className="text-slate-400 mt-2">
-                Showcase your best menu items
-                {profile?.status === 'claimed_free' && (
-                  <span className="block text-xs text-slate-500 mt-1">
-                    Upgrade for unlimited menu indexing via PDF
-                  </span>
-                )}
+                Showcase your top menu items or services
               </p>
             </CardHeader>
         <CardContent className="space-y-4">
@@ -656,10 +917,10 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
               onClick={addMenuItem}
               variant="outline"
               className="border-slate-600 text-slate-300 hover:bg-slate-700"
-              disabled={profile?.status === 'claimed_free' && menuItems.length >= 5}
+              disabled={menuItems.length >= 5}
             >
               Add Item
-              {profile?.status === 'claimed_free' && menuItems.length >= 5 && (
+              {menuItems.length >= 5 && (
                 <span className="ml-2 text-xs">(Limit reached)</span>
               )}
             </Button>

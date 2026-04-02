@@ -409,37 +409,40 @@ export async function getAdminActivity(city: string, limit: number = 10): Promis
       }
     }
 
-    // Get trial expiries (businesses with featured plan that are about to expire) - CITY FILTERED
+    // Get trial expiries using actual subscription data
     const { data: trials } = await supabase
-      .from('business_profiles')
+      .from('business_subscriptions')
       .select(`
-        id,
-        business_name,
-        created_at,
-        plan,
-        business_town
+        business_id,
+        free_trial_end_date,
+        business_profiles!inner(
+          id,
+          business_name,
+          city
+        )
       `)
-      .eq('city', franchiseCity) // 🎯 FRANCHISE FILTERING: Only this city's trials
-      .eq('plan', 'featured')
-      .not('business_name', 'is', null)
+      .eq('is_in_free_trial', true)
+      .eq('status', 'trial')
+      .eq('business_profiles.city', franchiseCity)
 
     if (trials) {
       for (const trial of trials) {
-        const createdAt = new Date(trial.created_at)
-        const trialEndDate = new Date(createdAt.getTime() + (14 * 24 * 60 * 60 * 1000)) // 14 days trial
+        if (!trial.free_trial_end_date) continue
+        const bp = trial.business_profiles as unknown as { id: string; business_name: string; city: string }
+        const trialEndDate = new Date(trial.free_trial_end_date)
         const now = new Date()
         const daysLeft = Math.ceil((trialEndDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
         
-        if (daysLeft <= 3 && daysLeft > 0) {
+        if (daysLeft <= 7 && daysLeft > 0) {
           activities.push({
-            id: `trial-${trial.id}`,
+            id: `trial-${bp.id}`,
             type: 'trial_expiry',
-            message: `${trial.business_name} trial expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`,
+            message: `${bp.business_name} trial expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`,
             time: `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`,
             timestamp: trialEndDate,
-            business_name: trial.business_name,
+            business_name: bp.business_name,
             iconType: 'clock',
-            color: 'bg-orange-500'
+            color: daysLeft <= 3 ? 'bg-red-500' : 'bg-orange-500'
           })
         }
       }

@@ -326,6 +326,11 @@ export default function ClaimPage() {
         if (editedBusinessData.booking_url) {
           formData.append('editedBookingUrl', editedBusinessData.booking_url)
         }
+
+        // Add vibe tags
+        if (editedBusinessData.vibe_tags) {
+          formData.append('editedVibeTags', editedBusinessData.vibe_tags)
+        }
       }
 
       const response = await fetch('/api/claim/submit', {

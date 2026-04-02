@@ -1593,6 +1593,31 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Vibe Tags */}
+                {(() => {
+                  const vt = (business as Record<string, unknown>).vibe_tags as { selected?: string[]; custom?: string[] } | null
+                  if (!vt) return null
+                  const allTags = [...(vt.selected || []), ...(vt.custom || [])]
+                  if (allTags.length === 0) return null
+                  return (
+                    <Card className="bg-slate-800/50 border-slate-700">
+                      <CardContent className="p-4">
+                        <h4 className="text-sm font-medium text-slate-300 mb-2">Vibe Tags</h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {allTags.map((tag: string) => (
+                            <span
+                              key={tag}
+                              className="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-700/50 border border-slate-600 text-slate-300"
+                            >
+                              {tag.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                            </span>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })()}
               </div>
             )}
 

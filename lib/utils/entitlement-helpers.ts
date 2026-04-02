@@ -120,7 +120,7 @@ export function computeEntitlementState(
         isTrialActive: true,
         isTrialExpired: false,
         isPaidActive: false,
-        tierNameOrNull: sub.tier_display_name || sub.tier_name || 'Featured',
+        tierNameOrNull: sub.tier_display_name || sub.tier_name || 'Trial',
         shouldLockControls: false,
         shouldShowToUsers: true,
         displayLabel: 'Free Trial',

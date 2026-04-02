@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     const editedHours = formData.get('editedHours') as string
     const editedBookingPreference = formData.get('editedBookingPreference') as string
     const editedBookingUrl = formData.get('editedBookingUrl') as string
+    const editedVibeTags = formData.get('editedVibeTags') as string
     
     // Extract image files
     const logoFile = formData.get('logo') as File | null
@@ -312,7 +313,39 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 6. Create claim_request record with edited data
+    // 6. Check founding member eligibility before creating claim
+    let isFoundingMember = false
+    let foundingMemberSpotNumber: number | null = null
+
+    try {
+      const { data: franchiseConfig } = await supabase
+        .from('franchise_crm_configs')
+        .select('landing_page_config')
+        .eq('city', business.city)
+        .single()
+
+      const totalSpots = (franchiseConfig?.landing_page_config as Record<string, unknown>)?.founding_member_total_spots as number | undefined
+
+      if (totalSpots && totalSpots > 0) {
+        const { count } = await supabase
+          .from('claim_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('city', business.city)
+          .eq('is_founding_member', true)
+          .in('status', ['pending', 'approved'])
+
+        const claimedSpots = count || 0
+        if (claimedSpots < totalSpots) {
+          isFoundingMember = true
+          foundingMemberSpotNumber = claimedSpots + 1
+          console.log(`✅ Founding member spot #${foundingMemberSpotNumber} of ${totalSpots} assigned for ${business.city}`)
+        }
+      }
+    } catch (fmError) {
+      console.error('Founding member check failed (non-critical):', fmError)
+    }
+
+    // 7. Create claim_request record with edited data
     const { data: claimRequest, error: claimError} = await supabase
       .from('claim_requests')
       .insert({
@@ -327,6 +360,8 @@ export async function POST(request: NextRequest) {
         business_website: website || null,
         first_name: firstName,
         last_name: lastName,
+        is_founding_member: isFoundingMember,
+        founding_member_spot_number: foundingMemberSpotNumber,
         // Edited business data
         edited_business_name: editedBusinessName || null,
         edited_address: editedAddress || null,
@@ -339,6 +374,7 @@ export async function POST(request: NextRequest) {
         edited_hours: editedHours || null,
         edited_booking_preference: editedBookingPreference || null,
         edited_booking_url: editedBookingUrl || null,
+        edited_vibe_tags: editedVibeTags || null,
         logo_upload: logoUrl,
         hero_image_upload: heroImageUrl,
         data_edited: !!(editedBusinessName || editedAddress || editedPhone || editedWebsite || editedCategory || editedType || editedDescription || editedTagline || editedHours || editedBookingPreference)
@@ -368,13 +404,13 @@ export async function POST(request: NextRequest) {
 
     // Note: Business status already updated to 'pending_claim' in step 3 (atomic claim)
 
-    // 7. Delete used verification code
+    // 8. Delete used verification code
     await supabase
       .from('verification_codes')
       .delete()
       .eq('id', verification.id)
 
-    // 8. Send confirmation email to claimer
+    // 9. Send confirmation email to claimer
     try {
       // Get franchise config for Resend settings
       const { data: franchiseConfig } = await supabase
@@ -491,7 +527,7 @@ export async function POST(request: NextRequest) {
       // Don't fail the claim if email fails
     }
 
-    // 9. Send Slack notification to admin
+    // 10. Send Slack notification to admin
     try {
       const { sendCitySlackNotification, sendHQSlackNotification } = await import('@/lib/utils/dynamic-notifications')
       

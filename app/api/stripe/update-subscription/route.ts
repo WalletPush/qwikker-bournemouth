@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getStripeForConnectedAccount } from '@/lib/stripe/config'
 import { getFranchiseStripeConfig, getTierPricing } from '@/lib/stripe/checkout'
+import { getFeaturesForTier } from '@/lib/utils/features-for-tier'
 
 /**
  * POST /api/stripe/update-subscription
@@ -166,19 +167,6 @@ export async function POST(request: NextRequest) {
     })
 
     // Update our DB immediately (webhook will also fire, but this gives instant UI feedback)
-    const getFeaturesForTier = (tier: string): Record<string, boolean> => {
-      const locked = {
-        analytics: false,
-        loyalty_cards: false,
-        social_wizard: false,
-        push_notifications: false,
-      }
-      if (tier === 'spotlight') {
-        return { analytics: true, loyalty_cards: true, social_wizard: true, push_notifications: true }
-      }
-      return locked
-    }
-
     let tierId: string | null = null
     const { data: tier } = await supabase
       .from('subscription_tiers')

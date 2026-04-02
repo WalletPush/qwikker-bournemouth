@@ -16,11 +16,27 @@ SECURITY DEFINER
 AS $$
 DECLARE
   v_trial_tier_id UUID;
-  v_trial_days INTEGER := 90; -- Default
+  v_trial_days INTEGER := 90;
   v_now TIMESTAMPTZ := NOW();
   v_trial_end_date TIMESTAMPTZ;
   v_result JSONB;
+  v_business_city TEXT;
+  v_trial_tier TEXT;
 BEGIN
+  -- Get business city for franchise config lookup
+  SELECT city INTO v_business_city
+  FROM business_profiles WHERE id = p_business_id;
+
+  -- Look up franchise trial tier (dynamic, not hardcoded)
+  SELECT COALESCE(default_trial_tier, 'featured')
+  INTO v_trial_tier
+  FROM franchise_crm_configs
+  WHERE city = v_business_city;
+
+  IF v_trial_tier IS NULL THEN
+    v_trial_tier := 'featured';
+  END IF;
+
   -- 1. Get trial tier ID and trial days from subscription_tiers
   SELECT id, (features->>'trial_days')::INTEGER
   INTO v_trial_tier_id, v_trial_days
@@ -46,7 +62,7 @@ BEGIN
     approved_by = p_approved_by,
     approved_at = v_now,
     business_tier = 'free_trial',
-    plan = 'featured', -- Featured experience during trial
+    plan = v_trial_tier,
     manual_override = CASE WHEN p_manual_override THEN true ELSE manual_override END,
     manual_override_at = CASE WHEN p_manual_override THEN v_now ELSE manual_override_at END,
     manual_override_by = CASE WHEN p_manual_override THEN p_manual_override_by ELSE manual_override_by END,
@@ -90,7 +106,8 @@ BEGIN
     'success', true,
     'business_id', p_business_id,
     'trial_end_date', v_trial_end_date,
-    'trial_days', v_trial_days
+    'trial_days', v_trial_days,
+    'trial_tier', v_trial_tier
   ) INTO v_result;
   
   RETURN v_result;

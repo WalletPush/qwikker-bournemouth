@@ -4,13 +4,59 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, Sparkles, MapPin, Gift, Menu } from 'lucide-react'
 
+interface SupporterLogo {
+  name: string
+  logo_url: string
+}
+
+interface LandingPageConfig {
+  hero_headline?: string | null
+  hero_subtitle?: string | null
+  hero_image_url?: string | null
+  sponsor_enabled?: boolean
+  sponsor_name?: string | null
+  sponsor_tagline?: string | null
+  sponsor_logo_url?: string | null
+  supporters_enabled?: boolean
+  supporters_heading?: string | null
+  supporter_logos?: SupporterLogo[] | null
+  show_founding_counter?: boolean
+  founding_member_total_spots?: number
+  show_featured_businesses?: boolean
+  featured_business_ids?: string[] | null
+}
+
+interface FeaturedBusiness {
+  business_name: string
+  slug: string
+  tagline: string | null
+  logo: string | null
+}
+
 interface CityLandingPageProps {
   city: string
   displayName: string
   subdomain: string
+  landingConfig?: LandingPageConfig
+  foundingMemberSpotsLeft?: number
+  featuredBusinesses?: FeaturedBusiness[]
 }
 
-export function CityLandingPage({ city, displayName, subdomain }: CityLandingPageProps) {
+export function CityLandingPage({
+  city,
+  displayName,
+  subdomain,
+  landingConfig = {},
+  foundingMemberSpotsLeft = 0,
+  featuredBusinesses = [],
+}: CityLandingPageProps) {
+  const heroHeadline = landingConfig.hero_headline || null
+  const heroSubtitle = landingConfig.hero_subtitle || null
+  const heroImageUrl = landingConfig.hero_image_url || '/qwikkerhero.png'
+  const showFoundingCounter = landingConfig.show_founding_counter && foundingMemberSpotsLeft > 0
+  const showSponsor = landingConfig.sponsor_enabled && (landingConfig.sponsor_name || landingConfig.sponsor_logo_url)
+  const showSupporters = landingConfig.supporters_enabled && (landingConfig.supporter_logos || []).length > 0
+  const showFeatured = landingConfig.show_featured_businesses && featuredBusinesses.length > 0
   return (
     <div className="min-h-screen bg-[#0b0d10] text-white">
       {/* Header - Minimal status + nav */}
@@ -38,9 +84,8 @@ export function CityLandingPage({ city, displayName, subdomain }: CityLandingPag
       <section className="relative overflow-hidden">
         {/* Background: Cinematic abstract city bokeh */}
         <div className="absolute inset-0 z-0">
-          {/* Next.js Image with priority loading */}
           <Image
-            src="/qwikkerhero.png"
+            src={heroImageUrl}
             alt="City background"
             fill
             priority
@@ -73,21 +118,32 @@ export function CityLandingPage({ city, displayName, subdomain }: CityLandingPag
             />
           </div>
 
-          {/* Main headline - increased contrast on "in your wallet" */}
           <h1 className="text-6xl md:text-7xl font-bold mb-6 tracking-tight" style={{ textShadow: '0 2px 20px rgba(0,0,0,0.5)' }}>
-            {displayName}, <br/>
-            <span className="text-white/70">in your wallet</span>
+            {heroHeadline ? (
+              <span>{heroHeadline}</span>
+            ) : (
+              <>{displayName}, <br/><span className="text-white/70">in your wallet</span></>
+            )}
           </h1>
           
-          {/* Supporting line */}
           <p className="text-lg text-neutral-300 mb-6 leading-relaxed max-w-2xl mx-auto" style={{ textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
-            Local offers, secret menus, and dish-level recommendations — delivered to your mobile wallet.
+            {heroSubtitle || 'Local offers, secret menus, and dish-level recommendations — delivered to your mobile wallet.'}
           </p>
 
-          {/* Trust line */}
-          <p className="text-sm text-neutral-400 mb-12 leading-relaxed max-w-xl mx-auto" style={{ textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
+          <p className="text-sm text-neutral-400 mb-8 leading-relaxed max-w-xl mx-auto" style={{ textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
             Powered by real menus, real hours, and local context — not scraped reviews.
           </p>
+
+          {showFoundingCounter && (
+            <div className="mb-8 inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-full" style={{ textShadow: 'none' }}>
+              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-sm font-medium text-amber-300">
+                Only {foundingMemberSpotsLeft} founding member {foundingMemberSpotsLeft === 1 ? 'spot' : 'spots'} left
+              </span>
+            </div>
+          )}
+
+          {!showFoundingCounter && <div className="mb-4" />}
 
           {/* Single CTA */}
           <Link
@@ -254,6 +310,93 @@ export function CityLandingPage({ city, displayName, subdomain }: CityLandingPag
           </div>
         </div>
       </section>
+
+      {/* Featured Businesses */}
+      {showFeatured && (
+        <section className="py-20 px-6 border-t border-white/5">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-semibold mb-10 text-white text-center">
+              Featured in {displayName}
+            </h2>
+            <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+              {featuredBusinesses.map((biz) => (
+                <Link
+                  key={biz.slug}
+                  href={`/user/business/${biz.slug}`}
+                  className="flex-shrink-0 w-56 snap-start group"
+                >
+                  <div className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-[#00d083]/30 transition-colors h-full">
+                    {biz.logo ? (
+                      <div className="w-12 h-12 rounded-xl overflow-hidden mb-4 bg-white/10">
+                        <img src={biz.logo} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
+                        <span className="text-white/40 text-lg font-bold">
+                          {biz.business_name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                    <h3 className="text-sm font-semibold text-white group-hover:text-[#00d083] transition-colors mb-1">
+                      {biz.business_name}
+                    </h3>
+                    {biz.tagline && (
+                      <p className="text-xs text-white/40 line-clamp-2">{biz.tagline}</p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Supporters Section */}
+      {showSupporters && (
+        <section className="py-16 px-6 border-t border-white/5">
+          <div className="max-w-5xl mx-auto text-center">
+            <p className="text-sm text-white/40 mb-8">
+              {landingConfig.supporters_heading || 'Proudly supported by'}
+            </p>
+            <div className="flex items-center justify-center gap-8 md:gap-12 flex-wrap">
+              {(landingConfig.supporter_logos || []).map((supporter, i) => (
+                <img
+                  key={i}
+                  src={supporter.logo_url}
+                  alt={supporter.name}
+                  title={supporter.name}
+                  className="h-8 md:h-10 w-auto opacity-40 hover:opacity-60 transition-opacity grayscale"
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Sponsor Banner */}
+      {showSponsor && (
+        <div className="border-t border-white/5 py-5 px-6">
+          <div className="max-w-5xl mx-auto flex items-center justify-center gap-4">
+            {landingConfig.sponsor_logo_url && (
+              <img
+                src={landingConfig.sponsor_logo_url}
+                alt={landingConfig.sponsor_name || 'Sponsor'}
+                className="h-6 w-auto opacity-50"
+              />
+            )}
+            <div className="text-center">
+              {landingConfig.sponsor_name && (
+                <p className="text-xs text-white/30">
+                  Sponsored by {landingConfig.sponsor_name}
+                </p>
+              )}
+              {landingConfig.sponsor_tagline && (
+                <p className="text-[10px] text-white/20">{landingConfig.sponsor_tagline}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-white/5 py-12 px-6">

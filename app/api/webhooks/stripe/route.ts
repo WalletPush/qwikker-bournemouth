@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getStripe, getStripeForConnectedAccount } from '@/lib/stripe/config'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getFeaturesForTier } from '@/lib/utils/features-for-tier'
 
 /**
  * POST /api/webhooks/stripe
@@ -79,30 +80,6 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ received: true })
 }
 
-/**
- * Returns the features JSONB for a given tier.
- * Only Spotlight gets premium features unlocked.
- * This ensures features are always in sync with the paid tier.
- */
-function getFeaturesForTier(tierName: string): Record<string, boolean> {
-  const premiumFeatures = {
-    analytics: false,
-    loyalty_cards: false,
-    social_wizard: false,
-    push_notifications: false,
-  }
-
-  if (tierName === 'spotlight') {
-    return {
-      analytics: true,
-      loyalty_cards: true,
-      social_wizard: true,
-      push_notifications: true,
-    }
-  }
-
-  return premiumFeatures
-}
 
 /**
  * checkout.session.completed — Business just completed payment via Checkout.

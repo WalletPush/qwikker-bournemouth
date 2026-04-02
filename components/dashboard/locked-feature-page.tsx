@@ -86,7 +86,7 @@ export function LockedFeaturePage({
         </div>
 
         <p className="text-xs text-slate-500 pt-2">
-          90-day free trial available on Featured tier
+          Free trial available — upgrade anytime from your settings
         </p>
       </div>
     </div>

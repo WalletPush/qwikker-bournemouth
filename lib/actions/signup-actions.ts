@@ -63,7 +63,7 @@ interface VerificationData {
   }
 }
 
-export async function createUserAndProfile(formData: SignupData, files: { logo?: File, menu?: File[], offer?: File }, referralCode?: string, urlLocation?: string, verification?: VerificationData) {
+export async function createUserAndProfile(formData: SignupData, files: { logo?: File, menu?: File[], offer?: File }, referralCode?: string, urlLocation?: string, verification?: VerificationData, planChoice: 'free' | 'trial' = 'trial') {
   const supabaseAdmin = createAdminClient()
   
   try {
@@ -72,6 +72,15 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
     const hostname = headersList.get('host') || 'localhost:3000'
     const devLocationOverride = process.env.DEV_LOCATION_OVERRIDE // e.g., 'london', 'manchester'
     const locationInfo = await getCurrentLocation(hostname, devLocationOverride, urlLocation)
+
+    // Fetch franchise trial config for dynamic tier assignment
+    const { data: franchiseConfig } = await supabaseAdmin
+      .from('franchise_crm_configs')
+      .select('default_trial_tier, founding_member_trial_days')
+      .eq('city', locationInfo.city)
+      .single()
+
+    const defaultTrialTier = franchiseConfig?.default_trial_tier || 'featured'
     
     console.log(`🌍 Detected location: ${locationInfo.displayName} (${locationInfo.city}) from hostname: ${hostname}${devLocationOverride ? ` [ENV: ${devLocationOverride}]` : ''}${urlLocation ? ` [URL: ${urlLocation}]` : ''}`)
     // 1. Create user in auth.users using admin client
@@ -250,12 +259,12 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       referral_source: mapReferralSource(formData.referralSource || ''),
       goals: mapGoals(formData.goals || ''),
       notes: formData.notes || null,
-      plan: 'featured',
+      plan: planChoice === 'free' ? 'free' : defaultTrialTier,
       is_founder: new Date() < new Date('2025-12-31'),
-      city: locationInfo.city, // SECURITY: Use validated franchise city from request
+      city: locationInfo.city,
       status: 'incomplete',
       profile_completion_percentage: 25,
-      business_tier: 'free_trial',
+      business_tier: planChoice === 'free' ? 'free_tier' : 'free_trial',
       // Verification fields
       verification_method: verificationMethod,
       google_place_id: isGoogleVerified ? verification.placeId : null,

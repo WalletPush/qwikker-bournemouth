@@ -45,6 +45,7 @@ interface ImprovedDashboardHomeProps {
 
 export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(0)
+  const [totalTrialDays, setTotalTrialDays] = useState<number>(0)
   const [pendingChanges, setPendingChanges] = useState<any[]>([])
   const [loadingPendingChanges, setLoadingPendingChanges] = useState(false)
   const [activityFeed, setActivityFeed] = useState<any[]>([])
@@ -165,29 +166,23 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
     fetchAnalytics()
   }, [profile?.id])
 
-  // Calculate trial days - USE SUBSCRIPTION DATA FIRST, fallback to legacy
+  // Calculate trial days - ONLY from subscription data (no fallback guessing)
   useEffect(() => {
-    console.log('🔍 COMPONENT DEBUG: Profile has subscription?', !!profile?.subscription)
-    console.log('🔍 COMPONENT DEBUG: is_in_free_trial?', profile?.subscription?.is_in_free_trial)
-    console.log('🔍 COMPONENT DEBUG: free_trial_end_date?', profile?.subscription?.free_trial_end_date)
-    
     if (profile?.subscription?.is_in_free_trial && profile?.subscription?.free_trial_end_date) {
-      // Use accurate subscription trial data
       const endDate = new Date(profile.subscription.free_trial_end_date)
       const now = new Date()
       const diffTime = endDate.getTime() - now.getTime()
       const daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
-      console.log('✅ USING SUBSCRIPTION DATA: Days left =', daysLeft)
       setTrialDaysLeft(daysLeft)
-    } else if (profile?.created_at) {
-      // Fallback to legacy calculation (90 days from created_at)
-      const createdDate = new Date(profile.created_at)
-      const now = new Date()
-      const diffTime = now.getTime() - createdDate.getTime()
-      const daysSinceSignup = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-      const daysLeft = Math.max(0, 90 - daysSinceSignup)
-      console.log('❌ USING FALLBACK: Days left =', daysLeft, '(90 - ' + daysSinceSignup + ' days since signup)')
-      setTrialDaysLeft(daysLeft)
+
+      if (profile.subscription.free_trial_start_date) {
+        const startDate = new Date(profile.subscription.free_trial_start_date)
+        const total = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
+        setTotalTrialDays(total)
+      }
+    } else {
+      setTrialDaysLeft(0)
+      setTotalTrialDays(0)
     }
   }, [profile])
 
@@ -689,7 +684,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
     }
     // Fallback to legacy profile.plan
     const plan = profile?.plan || 'starter'
-    const isFreeTrial = plan === 'featured' && trialDaysLeft > 0
+    const isFreeTrial = profile?.business_tier === 'free_trial' && trialDaysLeft > 0
     const planName = plan === 'starter' ? 'Starter' : 
                     plan.charAt(0).toUpperCase() + plan.slice(1)
     return { name: planName, isFreeTrial }
@@ -1108,20 +1103,61 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </div>
             </div>
 
-            {/* Plan Display */}
-            <div className="p-4 bg-slate-700/30 rounded-lg border border-slate-600/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-[#00d083]">{displayPlanName}</p>
-                  <p className="text-sm text-slate-400">
-                    {isFreeTrial ? `${trialDaysLeft} days remaining` : 'Active subscription'}
-                  </p>
+            {/* Plan Display + Upgrade CTA */}
+            {profile?.status === 'incomplete' || profile?.status === 'pending_review' ? (
+              <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-amber-400">Pending Approval</p>
+                    <p className="text-sm text-slate-400">Your free trial will begin once your account is reviewed and approved. Complete your action items and submit for approval.</p>
+                  </div>
                 </div>
-                <Button asChild size="sm" variant="outline" className="border-slate-600 text-gray-300 hover:bg-slate-700">
-                  <Link href="/dashboard/settings">Manage</Link>
+              </div>
+            ) : isFreeTrial && trialDaysLeft > 0 ? (
+              <div className="p-4 rounded-xl border border-[#00d083]/30 bg-gradient-to-r from-[#00d083]/5 to-blue-500/5">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="font-semibold text-[#00d083]">{displayPlanName}</p>
+                    <p className="text-sm text-slate-400">{trialDaysLeft} days remaining on your free trial</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-white">{trialDaysLeft}</p>
+                    <p className="text-[10px] text-slate-500 uppercase">days left</p>
+                  </div>
+                </div>
+                <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden mb-3">
+                  <div
+                    className={`h-full rounded-full transition-all ${trialDaysLeft <= 7 ? 'bg-red-500' : trialDaysLeft <= 30 ? 'bg-yellow-500' : 'bg-[#00d083]'}`}
+                    style={{ width: `${Math.max(5, Math.min(100, (trialDaysLeft / (totalTrialDays || 90)) * 100))}%` }}
+                  />
+                </div>
+                <Button asChild size="sm" className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white font-semibold">
+                  <Link href="/dashboard/settings">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Upgrade Now
+                  </Link>
                 </Button>
               </div>
-            </div>
+            ) : (
+              <div className="p-4 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-[#00d083]">{displayPlanName}</p>
+                    <p className="text-sm text-slate-400">Active subscription</p>
+                  </div>
+                  <Button asChild size="sm" variant="outline" className="border-slate-600 text-gray-300 hover:bg-slate-700">
+                    <Link href="/dashboard/settings">Manage</Link>
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Business Metrics */}
             <div className="grid grid-cols-2 gap-3">
@@ -1165,7 +1201,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         </Card>
 
         {/* Activity Feed Card */}
-        <Card className={`bg-slate-800/50 border-slate-700 ${profile?.status === 'claimed_free' ? 'md:col-span-2 lg:col-span-2' : ''}`}>
+        <Card className={`bg-slate-800/50 border-slate-700 flex flex-col ${profile?.status === 'claimed_free' ? 'md:col-span-2 lg:col-span-2' : ''}`}>
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1179,67 +1215,52 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            {activityFeed.length > 0 ? (
-              <div className="space-y-3">
-                {activityFeed.slice(0, 3).map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg">
-                    <div className={`${activity.color} flex-shrink-0 mt-0.5`}>{activity.icon}</div>
-                    <div className="flex-1">
-                      <p className={`text-sm font-medium ${activity.color}`}>{activity.message}</p>
-                      <p className="text-xs text-slate-500">{formatTimeAgo(activity.timestamp)}</p>
+          <CardContent className="flex flex-col flex-1">
+            <div className="flex-1">
+              {activityFeed.length > 0 ? (
+                <div className="space-y-3">
+                  {activityFeed.slice(0, 3).map((activity) => (
+                    <div key={activity.id} className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg">
+                      <div className={`${activity.color} flex-shrink-0 mt-0.5`}>{activity.icon}</div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${activity.color}`}>{activity.message}</p>
+                        <p className="text-xs text-slate-500">{formatTimeAgo(activity.timestamp)}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {activityFeed.length > 3 && (
-                  <Link href="/dashboard/activity">
-                    <Button variant="ghost" size="sm" className="w-full text-slate-400 hover:text-white">
-                      View all activity
-                    </Button>
-                  </Link>
-                )}
-                
-                {/* Unlock Full Analytics Button - ONLY for non-Spotlight tiers */}
-                {!isPremiumFeatureUnlocked() && (
-                  <div className="pt-3 border-t border-slate-700/50">
-                    <Button 
-                      onClick={() => setShowAnalyticsModal(true)}
-                      size="sm" 
-                      className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40"
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
-                      Unlock Full Analytics
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
+                  ))}
+                  {activityFeed.length > 3 && (
+                    <Link href="/dashboard/activity">
+                      <Button variant="ghost" size="sm" className="w-full text-slate-400 hover:text-white">
+                        View all activity
+                      </Button>
+                    </Link>
+                  )}
                 </div>
-                <p className="text-slate-400 text-sm">No recent activity</p>
-                <p className="text-slate-500 text-xs mt-1">Activity will appear once your business is live</p>
-                
-                {/* Unlock Full Analytics Button for empty state - ONLY for non-Spotlight tiers */}
-                {!isPremiumFeatureUnlocked() && (
-                  <div className="pt-4">
-                    <Button 
-                      onClick={() => setShowAnalyticsModal(true)}
-                      size="sm" 
-                      className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40"
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
-                      Unlock Full Analytics
-                    </Button>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
                   </div>
-                )}
+                  <p className="text-slate-400 text-sm">No recent activity</p>
+                  <p className="text-slate-500 text-xs mt-1">Activity will appear once your business is live</p>
+                </div>
+              )}
+            </div>
+
+            {!isPremiumFeatureUnlocked() && (
+              <div className="pt-3 mt-auto border-t border-slate-700/50">
+                <Button 
+                  onClick={() => setShowAnalyticsModal(true)}
+                  size="sm" 
+                  className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  Unlock Full Analytics
+                </Button>
               </div>
             )}
           </CardContent>
@@ -1701,63 +1722,69 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
         </Card>
 
         {/* Referral Program Card */}
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
+        <Card className="bg-slate-800/50 border-slate-700 flex flex-col">
+          <CardHeader className="pb-3">
             <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-emerald-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
               </svg>
               Referral Program
             </CardTitle>
+            <p className="text-xs text-slate-500">Earn credits by referring other businesses</p>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-[#00d083]">0</p>
-                  <p className="text-xs text-gray-400">Businesses Referred</p>
+          <CardContent className="flex flex-col flex-1">
+            <div className="flex-1 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-700/30 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-emerald-400/80">0</p>
+                  <p className="text-[11px] text-slate-400">Referred</p>
                 </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-[#00d083]">0</p>
-                  <p className="text-xs text-gray-400">Credits Earned</p>
+                <div className="bg-slate-700/30 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-emerald-400/80">0</p>
+                  <p className="text-[11px] text-slate-400">Credits Earned</p>
                 </div>
               </div>
-              
-              <Button asChild variant="outline" className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
-                <Link href="/dashboard/referrals">Refer a Business</Link>
-              </Button>
             </div>
+              
+            <Button asChild size="sm" variant="outline" className="w-full mt-auto border-emerald-500/20 bg-emerald-500/5 text-emerald-300/80 hover:bg-emerald-500/10 hover:border-emerald-500/30 font-medium">
+              <Link href="/dashboard/referrals">
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Refer a Business
+              </Link>
+            </Button>
           </CardContent>
         </Card>
 
         {/* Support Chat Card */}
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="bg-slate-800/50 border-slate-700 flex flex-col">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-emerald-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
               Support Chat
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="flex flex-col flex-1">
+            <div className="flex-1">
               <div className="bg-slate-700/50 rounded-lg p-3 space-y-2">
                 <div className="bg-slate-600 rounded-lg p-2 text-sm text-gray-300">
                   Hi! How can we help you today?
                 </div>
-                <div className="bg-[#00d083] rounded-lg p-2 text-sm text-black ml-auto max-w-[80%]">
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 text-sm text-emerald-300/80 ml-auto max-w-[80%]">
                   I need help with my dashboard
                 </div>
                 <div className="bg-slate-600 rounded-lg p-2 text-sm text-gray-300">
-                  I'd be happy to help! Let me guide you...
+                  I&apos;d be happy to help! Let me guide you...
                 </div>
               </div>
-              
-              <Button asChild variant="outline" className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
-                <Link href="/dashboard/support">Open Chat</Link>
-              </Button>
             </div>
+              
+            <Button asChild size="sm" variant="outline" className="w-full mt-auto border-emerald-500/20 bg-emerald-500/5 text-emerald-300/80 hover:bg-emerald-500/10 hover:border-emerald-500/30">
+              <Link href="/dashboard/support">Open Chat</Link>
+            </Button>
           </CardContent>
         </Card>
 

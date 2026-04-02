@@ -36,23 +36,46 @@ export default async function HomePage() {
       const supabase = await createClient()
       const { data: cityInfo } = await supabase
         .from('franchise_public_info')
-        .select('city, display_name, subdomain, status')
+        .select('city, display_name, subdomain, status, landing_page_config')
         .eq('city', city)
         .single()
       
       console.log('🔍 [app/page.tsx] cityInfo from DB:', cityInfo)
       
-      // Show city landing page for BOTH pending_setup AND active
-      // Reasoning: City is "live" to users as soon as HQ launches it
-      // - pending_setup = City is public, admin still configuring backend
-      // - active = Admin completed setup wizard (internal database marker)
-      // - Users can try to install pass in both states (graceful errors if services incomplete)
       if (cityInfo && (cityInfo.status === 'pending_setup' || cityInfo.status === 'active')) {
+        const landingConfig = (cityInfo as Record<string, unknown>).landing_page_config as Record<string, unknown> || {}
+
+        let foundingMemberSpotsLeft = 0
+        if (landingConfig.show_founding_counter && landingConfig.founding_member_total_spots > 0) {
+          const { count } = await supabase
+            .from('claim_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('city', city)
+            .eq('is_founding_member', true)
+            .in('status', ['pending', 'approved'])
+
+          foundingMemberSpotsLeft = Math.max(0, landingConfig.founding_member_total_spots - (count || 0))
+        }
+
+        let featuredBusinesses: { business_name: string; slug: string; tagline: string | null; logo: string | null }[] = []
+        if (landingConfig.show_featured_businesses && landingConfig.featured_business_ids?.length) {
+          const { data: bizData } = await supabase
+            .from('business_profiles')
+            .select('business_name, slug, tagline, logo')
+            .in('id', landingConfig.featured_business_ids)
+            .in('status', ['approved', 'claimed_free'])
+
+          featuredBusinesses = bizData || []
+        }
+
         return (
           <CityLandingPage
             city={cityInfo.city}
             displayName={cityInfo.display_name}
             subdomain={cityInfo.subdomain}
+            landingConfig={landingConfig}
+            foundingMemberSpotsLeft={foundingMemberSpotsLeft}
+            featuredBusinesses={featuredBusinesses}
           />
         )
       }

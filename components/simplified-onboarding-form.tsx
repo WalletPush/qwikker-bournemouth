@@ -95,19 +95,39 @@ const steps = [
       </svg>
     )
   },
+  { 
+    id: 6, 
+    title: 'Choose your plan', 
+    subtitle: 'Start with a free listing or unlock all features with a trial',
+    icon: (
+      <svg className="w-16 h-16 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+      </svg>
+    )
+  },
 ]
+
+interface TrialConfig {
+  trialTier: string
+  trialDays: number
+}
 
 interface SimplifiedOnboardingFormProps {
   referralCode?: string | null
+  trialConfig?: TrialConfig
 }
 
-export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingFormProps = {}) {
+export function SimplifiedOnboardingForm({ referralCode, trialConfig }: SimplifiedOnboardingFormProps = {}) {
   const [currentStep, setCurrentStep] = useState(0) // Start at 0 for verification choice
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
   const [verificationMode, setVerificationMode] = useState<'google' | 'manual' | null>(null)
   const [googleData, setGoogleData] = useState<any>(null)
+  const [planChoice, setPlanChoice] = useState<'free' | 'trial' | null>(null)
   const router = useRouter()
+
+  const tierDisplayName = (trialConfig?.trialTier || 'featured').charAt(0).toUpperCase() + (trialConfig?.trialTier || 'featured').slice(1)
+  const trialDays = trialConfig?.trialDays || 90
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -202,6 +222,8 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
         return ['firstName', 'lastName', 'email', 'phone']
       case 5:
         return ['password', 'confirmPassword']
+      case 6:
+        return [] // Plan choice - no form validation, uses separate state
       default:
         return []
     }
@@ -259,7 +281,7 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
         method: 'manual' as const
       }
       
-      const result = await createUserAndProfile(fullFormData, files, referralCode || undefined, urlLocation || undefined, verification)
+      const result = await createUserAndProfile(fullFormData, files, referralCode || undefined, urlLocation || undefined, verification, planChoice || 'trial')
       
       if (!result.success) {
         throw new Error(result.error || 'Signup failed')
@@ -800,6 +822,135 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
                   </div>
                 )}
 
+                {/* Step 6: Plan Choice */}
+                {currentStep === 6 && (
+                  <div className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-5">
+                      {/* Free Listing Card */}
+                      <div
+                        onClick={() => setPlanChoice('free')}
+                        className={`relative rounded-xl p-6 cursor-pointer transition-all duration-200 ${
+                          planChoice === 'free'
+                            ? 'border-2 border-[#00d083] bg-[#00d083]/5'
+                            : 'border-2 border-slate-700 bg-slate-800/50 hover:border-slate-500'
+                        }`}
+                      >
+                        {planChoice === 'free' && (
+                          <div className="absolute top-4 right-4">
+                            <svg className="w-6 h-6 text-[#00d083]" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                        <div className="text-center">
+                          <div className="flex justify-center mb-3">
+                            <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                          </div>
+                          <h3 className="text-xl font-bold text-white mb-1">Free Listing</h3>
+                          <p className="text-sm text-slate-400 mb-4">Basic directory presence</p>
+                          <ul className="text-xs text-slate-400 space-y-2 text-left">
+                            <li className="flex items-center gap-2">
+                              <svg className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                              Listed in the directory
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <svg className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                              Basic business profile
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <svg className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                              Upgrade anytime
+                            </li>
+                          </ul>
+                          <div className="mt-4 pt-3 border-t border-slate-700">
+                            <p className="text-lg font-bold text-white">Free forever</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Free Trial Card */}
+                      <div
+                        onClick={() => setPlanChoice('trial')}
+                        className={`relative rounded-xl p-6 cursor-pointer transition-all duration-200 ${
+                          planChoice === 'trial'
+                            ? 'border-2 border-[#00d083] bg-[#00d083]/5'
+                            : 'border-2 border-blue-500/30 bg-slate-800/50 hover:border-blue-500/50'
+                        }`}
+                      >
+                        {planChoice === 'trial' && (
+                          <div className="absolute top-4 right-4">
+                            <svg className="w-6 h-6 text-[#00d083]" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                          <span className="bg-[#00d083] text-black text-xs font-bold px-3 py-1 rounded-full">RECOMMENDED</span>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex justify-center mb-3">
+                            <svg className="w-10 h-10 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                          </div>
+                          <h3 className="text-xl font-bold text-white mb-1">Free Trial</h3>
+                          <p className="text-sm text-slate-400 mb-4">{tierDisplayName} plan for {trialDays} days</p>
+                          <ul className="text-xs text-slate-400 space-y-2 text-left">
+                            <li className="flex items-center gap-2">
+                              <svg className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                              Full {tierDisplayName} tier access
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <svg className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                              Exclusive offers & promotions
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <svg className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                              AI-powered discovery
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <svg className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                              No card required
+                            </li>
+                          </ul>
+                          <div className="mt-4 pt-3 border-t border-slate-700">
+                            <p className="text-lg font-bold text-[#00d083]">FREE for {trialDays} days</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Upgrade Teasers */}
+                    <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-5 space-y-3">
+                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Upgrade anytime from your dashboard</p>
+                      <div className="space-y-2.5">
+                        <div className="flex items-start gap-2.5">
+                          <svg className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          <p className="text-xs text-slate-400">
+                            <span className="text-slate-300 font-medium">Spotlight</span> — Create your own loyalty stamp cards, push notifications to all users, and get advanced AI insights
+                          </p>
+                        </div>
+                        <div className="flex items-start gap-2.5">
+                          <svg className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                          </svg>
+                          <p className="text-xs text-slate-400">
+                            <span className="text-slate-300 font-medium">Starter</span> — AI-powered discovery, active offers, and social media featuring to get you noticed
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-500 text-center">
+                      All accounts are reviewed by our team before going live. You can change your plan at any time.
+                    </p>
+                  </div>
+                )}
+
                 {/* Navigation Buttons */}
                 <div className="flex gap-4 pt-8">
                   {/* Previous Button - Hide on step 0 */}
@@ -835,7 +986,7 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
                        'Continue with Manual Listing'}
                     </Button>
                   ) : currentStep < steps.length ? (
-                    // Steps 1-4: Regular continue
+                    // Steps 1-5: Regular continue
                     <Button
                       type="button"
                       onClick={nextStep}
@@ -844,10 +995,10 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
                       Continue →
                     </Button>
                   ) : (
-                    // Final step: Submit
+                    // Final step (6): Submit - requires plan choice
                     <Button
                       type="submit"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || !planChoice}
                       className="flex-1 h-12 bg-[#00d083] hover:bg-[#00b86f] disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold text-lg transition-colors"
                     >
                       {isSubmitting ? (
@@ -868,7 +1019,7 @@ export function SimplifiedOnboardingForm({ referralCode }: SimplifiedOnboardingF
                 </div>
 
                 {/* Final Step Message */}
-                {currentStep === 5 && (
+                {currentStep === 6 && (
                   <div className="bg-gradient-to-r from-green-900/20 to-blue-900/20 border border-green-500/30 rounded-lg p-6 mt-6">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">

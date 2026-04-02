@@ -10,6 +10,7 @@ import { updateBusinessInfo } from '@/lib/actions/business-actions'
 import { Profile, BUSINESS_TYPE_OPTIONS, BUSINESS_TOWN_OPTIONS, MenuPreviewItem } from '@/types/profiles'
 import { BusinessHoursInput } from '@/components/business-hours-input'
 import { BusinessHoursStructured } from '@/types/business-hours'
+import { VIBE_TAG_CATEGORIES, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH, type VibeTagsData } from '@/lib/constants/vibe-tags'
 
 interface BusinessInfoPageProps {
   profile: Profile
@@ -51,6 +52,13 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
   const [isSavingHours, setIsSavingHours] = useState(false)
   const [isSavingBasicInfo, setIsSavingBasicInfo] = useState(false)
   const [isSavingMenuItems, setIsSavingMenuItems] = useState(false)
+  const [isSavingVibeTags, setIsSavingVibeTags] = useState(false)
+
+  // Vibe tags state
+  const existingVibeTags = (profile as Record<string, unknown>).vibe_tags as VibeTagsData | null
+  const [selectedTags, setSelectedTags] = useState<string[]>(existingVibeTags?.selected || [])
+  const [customTags, setCustomTags] = useState<string[]>(existingVibeTags?.custom || [])
+  const [customTagInput, setCustomTagInput] = useState('')
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -158,6 +166,50 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
       })
     } finally {
       setIsSavingMenuItems(false)
+    }
+  }
+
+  const toggleVibeTag = (slug: string) => {
+    setSelectedTags(prev =>
+      prev.includes(slug) ? prev.filter(t => t !== slug) : [...prev, slug]
+    )
+  }
+
+  const addCustomTag = () => {
+    const tag = customTagInput.trim().toLowerCase()
+    if (!tag || customTags.length >= MAX_CUSTOM_TAGS || customTags.includes(tag)) return
+    setCustomTags(prev => [...prev, tag])
+    setCustomTagInput('')
+  }
+
+  const removeCustomTag = (tag: string) => {
+    setCustomTags(prev => prev.filter(t => t !== tag))
+  }
+
+  const saveVibeTags = async () => {
+    setIsSavingVibeTags(true)
+    try {
+      const vibeTagsData: VibeTagsData = {
+        selected: selectedTags,
+        custom: customTags,
+      }
+      const result = await updateBusinessInfo(profile.user_id, {
+        vibe_tags: vibeTagsData,
+      })
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Vibe tags saved successfully!' })
+        router.refresh()
+      } else {
+        throw new Error(result.error || 'Failed to save vibe tags')
+      }
+    } catch (error) {
+      console.error('Vibe tags save error:', error)
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to save vibe tags',
+      })
+    } finally {
+      setIsSavingVibeTags(false)
     }
   }
 
@@ -498,6 +550,104 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
                 Your contact phone number and email from the business details above will be used as the booking method.
               </p>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Vibe Tags */}
+        <Card id="vibe-tags" className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              Vibe Tags
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <p className="text-sm text-gray-400">
+              Help customers find you by describing your vibe. These tags appear on your profile and power AI recommendations.
+            </p>
+
+            {VIBE_TAG_CATEGORIES.map(category => (
+              <div key={category.id}>
+                <p className="text-sm font-medium text-slate-300 mb-2">{category.label}</p>
+                <div className="flex flex-wrap gap-2">
+                  {category.tags.map(tag => {
+                    const isSelected = selectedTags.includes(tag.slug)
+                    return (
+                      <button
+                        key={tag.slug}
+                        type="button"
+                        onClick={() => toggleVibeTag(tag.slug)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                          isSelected
+                            ? 'bg-[#00d083]/20 border-[#00d083] text-[#00d083]'
+                            : 'bg-slate-900/50 border-slate-600 text-slate-400 hover:border-slate-400'
+                        }`}
+                      >
+                        {tag.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Custom tags */}
+            <div>
+              <p className="text-sm font-medium text-slate-300 mb-2">Custom Tags</p>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {customTags.map(tag => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-purple-500/20 border border-purple-500/50 text-purple-300"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeCustomTag(tag)}
+                      className="ml-0.5 hover:text-white transition-colors"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                ))}
+              </div>
+              {customTags.length < MAX_CUSTOM_TAGS && (
+                <div className="flex gap-2">
+                  <Input
+                    value={customTagInput}
+                    onChange={(e) => setCustomTagInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag() } }}
+                    maxLength={MAX_CUSTOM_TAG_LENGTH}
+                    className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083] flex-1"
+                    placeholder="Add a custom tag (e.g., rooftop views)"
+                  />
+                  <Button
+                    type="button"
+                    onClick={addCustomTag}
+                    disabled={!customTagInput.trim()}
+                    className="bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 text-white px-4"
+                  >
+                    Add
+                  </Button>
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-1">{customTags.length}/{MAX_CUSTOM_TAGS} custom tags</p>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-slate-600">
+              <Button
+                type="button"
+                onClick={saveVibeTags}
+                disabled={isSavingVibeTags}
+                className="bg-[#00d083] hover:bg-[#00b86f] disabled:bg-slate-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors duration-200 min-w-[160px]"
+              >
+                {isSavingVibeTags ? 'Saving...' : 'Save Vibe Tags'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

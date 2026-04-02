@@ -74,7 +74,8 @@ export async function updateContactEverywhere(
         '/admin/live',
         '/dashboard',
         '/dashboard/personal',
-        '/dashboard/business'
+        '/dashboard/business',
+        '/dashboard/profile'
       ]
       
       pathsToRefresh.forEach(path => {
@@ -284,6 +285,7 @@ export async function forceRefreshAllSystems(): Promise<void> {
     '/dashboard',
     '/dashboard/personal',
     '/dashboard/business',
+    '/dashboard/profile',
     '/dashboard/offers',
     '/dashboard/secret-menu',
     '/user',

@@ -11,9 +11,10 @@ interface SettingsPageProps {
   profile?: any
   isInFreeTrial?: boolean
   stripeSubscriptionId?: string | null
+  freeTrialEndDate?: string | null
 }
 
-export function SettingsPage({ profile, isInFreeTrial: isInFreeTrialProp = false, stripeSubscriptionId }: SettingsPageProps) {
+export function SettingsPage({ profile, isInFreeTrial: isInFreeTrialProp = false, stripeSubscriptionId, freeTrialEndDate }: SettingsPageProps) {
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(0)
   const [portalLoading, setPortalLoading] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
@@ -21,25 +22,24 @@ export function SettingsPage({ profile, isInFreeTrial: isInFreeTrialProp = false
   const [cancelResult, setCancelResult] = useState<{ success: boolean; accessUntil?: string; error?: string } | null>(null)
 
   useEffect(() => {
-    if (profile?.created_at) {
-      const createdDate = new Date(profile.created_at)
+    if (freeTrialEndDate) {
+      const endDate = new Date(freeTrialEndDate)
       const now = new Date()
-      
-      // Calculate days since signup
-      const diffTime = now.getTime() - createdDate.getTime()
-      const daysSinceSignup = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-      
-      // Trial is 90 days, so countdown from 90
-      const daysLeft = Math.max(0, 90 - daysSinceSignup)
+      const daysLeft = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)))
       setTrialDaysLeft(daysLeft)
+    } else {
+      setTrialDaysLeft(0)
     }
-  }, [profile])
+  }, [freeTrialEndDate])
 
+  const isPendingApproval = profile?.status === 'incomplete' || profile?.status === 'pending_review'
   const plan = profile?.status === 'claimed_free' ? 'free' : (profile?.plan || 'starter')
   const isFreeTrial = isInFreeTrialProp && trialDaysLeft > 0
-  const planName = profile?.status === 'claimed_free' ? 'Free Listing' :
-                  isFreeTrial ? 'Featured (Free Trial)' : 
-                  plan === 'starter' ? 'Starter' : 
+  const trialPlanDisplay = plan.charAt(0).toUpperCase() + plan.slice(1)
+  const planName = isPendingApproval ? 'Pending Approval' :
+                  profile?.status === 'claimed_free' ? 'Free Listing' :
+                  isFreeTrial ? `${trialPlanDisplay} (Free Trial)` :
+                  plan === 'starter' ? 'Starter' :
                   plan.charAt(0).toUpperCase() + plan.slice(1)
 
   return (
@@ -50,42 +50,51 @@ export function SettingsPage({ profile, isInFreeTrial: isInFreeTrialProp = false
         <p className="text-gray-400">Manage your subscription and account preferences</p>
       </div>
 
-      {/* Clean Current Plan Info */}
+      {/* Current Plan Info */}
       <Card className="bg-slate-800/50 border-slate-700 max-w-md mx-auto">
         <CardContent className="p-6 text-center">
           <h3 className="text-lg font-semibold text-white mb-2">Current Plan</h3>
-          <p className="text-2xl font-bold text-[#00d083] mb-2">{planName}</p>
-          {isFreeTrial && (
-            <p className="text-sm text-gray-400">Trial expires in {trialDaysLeft} days</p>
-          )}
-          <FoundingMemberBanner 
-            profile={profile}
-            trialDaysLeft={trialDaysLeft}
-          />
-          {profile?.stripe_customer_id && !isFreeTrial && (
-            <Button
-              variant="outline"
-              className="mt-4 border-slate-600 text-slate-300 hover:bg-slate-700"
-              disabled={portalLoading}
-              onClick={async () => {
-                setPortalLoading(true)
-                try {
-                  const res = await fetch('/api/stripe/create-portal-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ businessId: profile.id }),
-                  })
-                  const data = await res.json()
-                  if (data.url) window.location.href = data.url
-                } catch {
-                  // silently fail
-                } finally {
-                  setPortalLoading(false)
-                }
-              }}
-            >
-              {portalLoading ? 'Opening...' : 'Manage Billing'}
-            </Button>
+          {isPendingApproval ? (
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-amber-400 mb-2">Pending Approval</p>
+              <p className="text-sm text-gray-400">Your free trial will begin once your account is reviewed and approved. Complete your action items and submit for approval.</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-2xl font-bold text-[#00d083] mb-2">{planName}</p>
+              {isFreeTrial && (
+                <p className="text-sm text-gray-400">Trial expires in {trialDaysLeft} days</p>
+              )}
+              <FoundingMemberBanner 
+                profile={profile}
+                trialDaysLeft={trialDaysLeft}
+              />
+              {profile?.stripe_customer_id && !isFreeTrial && (
+                <Button
+                  variant="outline"
+                  className="mt-4 border-slate-600 text-slate-300 hover:bg-slate-700"
+                  disabled={portalLoading}
+                  onClick={async () => {
+                    setPortalLoading(true)
+                    try {
+                      const res = await fetch('/api/stripe/create-portal-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ businessId: profile.id }),
+                      })
+                      const data = await res.json()
+                      if (data.url) window.location.href = data.url
+                    } catch {
+                      // silently fail
+                    } finally {
+                      setPortalLoading(false)
+                    }
+                  }}
+                >
+                  {portalLoading ? 'Opening...' : 'Manage Billing'}
+                </Button>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

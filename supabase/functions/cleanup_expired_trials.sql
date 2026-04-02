@@ -108,12 +108,11 @@ AS $$
 DECLARE
   v_business_name TEXT;
   v_trial_end_date TIMESTAMP WITH TIME ZONE;
+  v_business_city TEXT;
+  v_trial_tier TEXT;
 BEGIN
-  -- Get business info
-  SELECT 
-    bp.business_name,
-    bs.free_trial_end_date
-  INTO v_business_name, v_trial_end_date
+  SELECT bp.business_name, bs.free_trial_end_date, bp.city
+  INTO v_business_name, v_trial_end_date, v_business_city
   FROM business_profiles bp
   JOIN business_subscriptions bs ON bp.id = bs.business_id
   WHERE bp.id = p_business_id;
@@ -123,30 +122,32 @@ BEGIN
     RETURN;
   END IF;
   
-  -- Check if trial end date is in the future (extended by admin)
   IF v_trial_end_date IS NULL OR v_trial_end_date < NOW() THEN
     RETURN QUERY SELECT false, 'Trial is still expired or not extended'::TEXT;
     RETURN;
   END IF;
   
-  -- Restore subscription status to 'trial'
+  -- Look up franchise trial tier (dynamic, not hardcoded)
+  SELECT COALESCE(default_trial_tier, 'featured')
+  INTO v_trial_tier
+  FROM franchise_crm_configs
+  WHERE city = v_business_city;
+
+  IF v_trial_tier IS NULL THEN
+    v_trial_tier := 'featured';
+  END IF;
+
   UPDATE business_subscriptions
-  SET 
-    status = 'trial',
-    updated_at = NOW()
+  SET status = 'trial', updated_at = NOW()
   WHERE business_id = p_business_id;
   
-  -- Restore business_tier to 'free_trial' (makes them visible in AI again)
   UPDATE business_profiles
-  SET 
-    business_tier = 'free_trial',
-    plan = 'featured', -- Free trial gets featured tier benefits
-    updated_at = NOW()
+  SET business_tier = 'free_trial', plan = v_trial_tier, updated_at = NOW()
   WHERE id = p_business_id;
   
   RETURN QUERY SELECT 
     true, 
-    format('✅ Trial restored for %s. They must re-add KB entries manually.', v_business_name)::TEXT;
+    format('Trial restored for %s. They must re-add KB entries manually.', v_business_name)::TEXT;
 END;
 $$;
 

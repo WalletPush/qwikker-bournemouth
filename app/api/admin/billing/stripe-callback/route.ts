@@ -20,13 +20,13 @@ export async function GET(request: NextRequest) {
   if (error) {
     console.error('Stripe Connect OAuth error:', error, errorDescription)
     return NextResponse.redirect(
-      `${baseUrl}/admin?tab=setup&stripe_error=${encodeURIComponent(errorDescription || error)}`
+      `${baseUrl}/admin?tab=city-config&stripe_error=${encodeURIComponent(errorDescription || error)}`
     )
   }
   
   if (!code || !state) {
     return NextResponse.redirect(
-      `${baseUrl}/admin?tab=setup&stripe_error=Missing authorization code`
+      `${baseUrl}/admin?tab=city-config&stripe_error=Missing authorization code`
     )
   }
   
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     
     if (!city) {
       return NextResponse.redirect(
-        `${baseUrl}/admin?tab=setup&stripe_error=Invalid state parameter`
+        `${baseUrl}/admin?tab=city-config&stripe_error=Invalid state parameter`
       )
     }
     
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     
     if (!connectedAccountId) {
       return NextResponse.redirect(
-        `${baseUrl}/admin?tab=setup&stripe_error=Failed to get Stripe account ID`
+        `${baseUrl}/admin?tab=city-config&stripe_error=Failed to get Stripe account ID`
       )
     }
     
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     if (updateError) {
       console.error('Failed to update franchise config:', updateError)
       return NextResponse.redirect(
-        `${baseUrl}/admin?tab=setup&stripe_error=Failed to save Stripe connection`
+        `${baseUrl}/admin?tab=city-config&stripe_error=Failed to save Stripe connection`
       )
     }
     
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
       const accountLink = await stripe.accountLinks.create({
         account: connectedAccountId,
         refresh_url: `${baseUrl}/api/admin/billing/stripe-callback?retry=true&city=${city}`,
-        return_url: `${baseUrl}/admin?tab=setup&stripe_success=true`,
+        return_url: `${baseUrl}/admin?tab=city-config&stripe_success=true`,
         type: 'account_onboarding',
       })
       
@@ -93,13 +93,13 @@ export async function GET(request: NextRequest) {
     
     // Success! Redirect back to admin setup
     return NextResponse.redirect(
-      `${baseUrl}/admin?tab=setup&stripe_success=true`
+      `${baseUrl}/admin?tab=city-config&stripe_success=true`
     )
     
   } catch (err) {
     console.error('Stripe Connect callback error:', err)
     return NextResponse.redirect(
-      `${baseUrl}/admin?tab=setup&stripe_error=${encodeURIComponent('Failed to connect Stripe account')}`
+      `${baseUrl}/admin?tab=city-config&stripe_error=${encodeURIComponent('Failed to connect Stripe account')}`
     )
   }
 }

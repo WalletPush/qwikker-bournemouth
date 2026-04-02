@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -85,6 +85,21 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
       ? new Date(business.subscription.free_trial_end_date).toISOString().split('T')[0]
       : ''
   )
+  const [franchiseTrialDays, setFranchiseTrialDays] = useState(90)
+
+  useEffect(() => {
+    if (business?.city) {
+      fetch('/api/admin/franchise')
+        .then(res => res.json())
+        .then(data => {
+          const franchise = data.franchises?.find((f: { city: string }) => f.city === business.city)
+          if (franchise?.founding_member_trial_days) {
+            setFranchiseTrialDays(franchise.founding_member_trial_days)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [business?.city])
 
   // Calculate trial days remaining
   const calculateTrialDays = () => {
@@ -120,7 +135,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
       textColor: 'text-blue-400',
       features: [
         'All Featured features included',
-        '90-day free trial period',
+        `${franchiseTrialDays}-day free trial period`,
         'Priority AI placement',
         'Advanced menu/service indexing',
         'Up to 5 exclusive offers',
@@ -207,7 +222,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
     if (tier === 'trial' && !trialStartDate) {
       const start = new Date()
       const end = new Date()
-      end.setDate(end.getDate() + 90) // 90-day trial
+      end.setDate(end.getDate() + franchiseTrialDays)
       setTrialStartDate(start.toISOString().split('T')[0])
       setTrialEndDate(end.toISOString().split('T')[0])
       setFreeTrialEnabled(true)
@@ -372,7 +387,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
                   </div>
                   <div className="text-xs text-slate-500">
                     {tier === 'free' && 'Discover only'}
-                    {tier === 'trial' && '90-day free trial'}
+                    {tier === 'trial' && `${franchiseTrialDays}-day free trial`}
                     {tier === 'starter' && 'Basic features'}
                     {tier === 'featured' && 'Priority placement'}
                     {tier === 'spotlight' && 'All premium features'}

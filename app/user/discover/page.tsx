@@ -111,6 +111,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       latitude,
       longitude,
       additional_notes,
+      vibe_tags,
       created_at,
       plan,
       status,
@@ -239,9 +240,11 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       rating: business.rating ?? null,
       reviewCount: business.review_count ?? null,
       tags: [
-        business.display_category || business.business_category, // Use new field with fallback
+        business.display_category || business.business_category,
         business.business_type,
-        business.business_town
+        business.business_town,
+        ...((business.vibe_tags as { selected?: string[]; custom?: string[] })?.selected || []),
+        ...((business.vibe_tags as { selected?: string[]; custom?: string[] })?.custom || []),
       ].filter(Boolean),
       distance: null,
       activeOffers: filterActiveOffers(business.business_offers || []).length, // Count only active (approved + non-expired)

@@ -22,10 +22,11 @@ export default async function Settings() {
   // Get subscription status to determine if truly in trial vs paid
   let isInFreeTrial = false
   let stripeSubscriptionId: string | null = null
+  let freeTrialEndDate: string | null = null
   if (profile) {
     const { data: subscription } = await supabase
       .from('business_subscriptions')
-      .select('is_in_free_trial, status, stripe_subscription_id')
+      .select('is_in_free_trial, status, stripe_subscription_id, free_trial_end_date')
       .eq('business_id', profile.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -33,13 +34,14 @@ export default async function Settings() {
 
     isInFreeTrial = subscription?.is_in_free_trial === true && !subscription?.stripe_subscription_id
     stripeSubscriptionId = subscription?.stripe_subscription_id || null
+    freeTrialEndDate = subscription?.free_trial_end_date || null
   }
 
   const actionItemsCount = calculateActionItemsCount(profile)
 
   return (
     <DashboardLayout currentSection="settings" profile={profile} actionItemsCount={actionItemsCount}>
-      <SettingsPage profile={profile} isInFreeTrial={isInFreeTrial} stripeSubscriptionId={stripeSubscriptionId} />
+      <SettingsPage profile={profile} isInFreeTrial={isInFreeTrial} stripeSubscriptionId={stripeSubscriptionId} freeTrialEndDate={freeTrialEndDate} />
     </DashboardLayout>
   )
 }

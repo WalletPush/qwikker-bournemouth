@@ -738,19 +738,27 @@ export async function updateBusinessTier(params: {
     }
 
     // 4. Update business_profiles (plan AND business_tier AND features)
-    // 🚨 CRITICAL: Must update BOTH plan and business_tier!
-    // - plan: For display/admin UI
-    // - business_tier: For AI/embeddings/search (THIS WAS MISSING!)
     const tierForDB = selectedTier === 'trial' ? 'free_trial' : 
                       selectedTier === 'spotlight' ? 'qwikker_picks' : 
-                      selectedTier // 'featured' or 'starter'
-    
+                      selectedTier
+
+    // Look up franchise default trial tier for dynamic plan assignment
+    let planForDB = selectedTier as string
+    if (selectedTier === 'trial') {
+      const { data: franchiseConfig } = await supabaseAdmin
+        .from('franchise_crm_configs')
+        .select('default_trial_tier')
+        .eq('city', city)
+        .single()
+      planForDB = franchiseConfig?.default_trial_tier || 'featured'
+    }
+
     const { error: profileError } = await supabaseAdmin
       .from('business_profiles')
       .update({
-        plan: selectedTier === 'trial' ? 'featured' : selectedTier,
-        business_tier: tierForDB, // 🚨 FIX: Update business_tier too!
-        features: features, // Save individual feature toggles
+        plan: planForDB,
+        business_tier: tierForDB,
+        features: features,
         updated_at: now.toISOString()
       })
       .eq('id', businessId)

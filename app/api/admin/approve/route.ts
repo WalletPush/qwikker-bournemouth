@@ -55,12 +55,29 @@ export async function POST(request: NextRequest) {
     let newStatus: string
     let updateData: Record<string, unknown> = {}
     
+    // Fetch the business to check its tier before deciding approval path
+    const { data: business } = await supabaseAdmin
+      .from('business_profiles')
+      .select('business_tier, city')
+      .eq('id', businessId)
+      .single()
+
     switch (action) {
       case 'approve':
-        newStatus = 'approved'
-        updateData = {
-          status: newStatus,
-          approved_at: new Date().toISOString()
+        if (business?.business_tier === 'free_tier') {
+          // Free listing path: set claimed_free (locks dashboard, no subscription needed)
+          newStatus = 'claimed_free'
+          updateData = {
+            status: newStatus,
+            approved_at: new Date().toISOString()
+          }
+        } else {
+          // Trial path: set approved, then create trial subscription via RPC
+          newStatus = 'approved'
+          updateData = {
+            status: newStatus,
+            approved_at: new Date().toISOString()
+          }
         }
         break
       case 'reject':
@@ -103,6 +120,23 @@ export async function POST(request: NextRequest) {
     const actionPastTense = action === 'restore' ? 'restored' : `${action}d`
     console.log(`✅ Business ${data.business_name} ${actionPastTense} by ${admin.username} in ${requestCity}`)
     
+    // Create trial subscription for non-free-listing approvals
+    if (action === 'approve' && business?.business_tier !== 'free_tier') {
+      try {
+        const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc('approve_business_with_trial', {
+          p_business_id: businessId,
+          p_approved_by: admin.id
+        })
+        if (rpcError) {
+          console.error('⚠️ Trial subscription RPC error (non-critical):', rpcError)
+        } else {
+          console.log(`✅ Trial subscription created for ${data.business_name}:`, rpcResult)
+        }
+      } catch (error) {
+        console.error('⚠️ Trial subscription error (non-critical):', error)
+      }
+    }
+
     // 🧠 HYBRID KNOWLEDGE BASE: Auto-add basic info when approved
     if (action === 'approve') {
       try {

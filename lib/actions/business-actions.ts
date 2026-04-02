@@ -384,8 +384,9 @@ export async function updateBusinessInfo(userId: string, updates: any) {
 
   // 🔥 REFRESH ALL AFFECTED SYSTEMS IMMEDIATELY
   revalidatePath('/dashboard')
-  revalidatePath('/dashboard/personal') 
+  revalidatePath('/dashboard/personal')
   revalidatePath('/dashboard/business')
+  revalidatePath('/dashboard/profile')
   revalidatePath('/admin')
   revalidatePath('/admin/contacts')
   revalidatePath('/admin/live')

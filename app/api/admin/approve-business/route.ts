@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (action === 'approve') {
       const { data: profile, error: profileError } = await supabaseAdmin
         .from('business_profiles')
-        .select('id, business_name, verification_method, google_place_id, rating, manual_override')
+        .select('id, business_name, verification_method, google_place_id, rating, manual_override, business_tier')
         .eq('id', businessId)
         .single()
       
@@ -69,29 +69,51 @@ export async function POST(request: NextRequest) {
         )
       }
       
-      // ✅ LOCKDOWN: Use atomic RPC to ensure trial subscription is created
-      const { data: rpcResult, error: rpcError } = await supabaseAdmin
-        .rpc('approve_business_with_trial', {
-          p_business_id: businessId,
-          p_approved_by: user.id,
-          p_manual_override: profile.verification_method === 'manual' && manualOverride === true,
-          p_manual_override_by: profile.verification_method === 'manual' && manualOverride === true ? user.id : null
+      if (profile.business_tier === 'free_tier') {
+        // Free listing: just set claimed_free, no subscription needed
+        const { error: updateError } = await supabaseAdmin
+          .from('business_profiles')
+          .update({
+            status: 'claimed_free',
+            approved_at: new Date().toISOString(),
+            approved_by: user.id,
+          })
+          .eq('id', businessId)
+
+        if (updateError) {
+          console.error('❌ Free listing approval failed:', updateError)
+          return NextResponse.json(
+            { error: `Failed to approve free listing: ${updateError.message}` },
+            { status: 500 }
+          )
+        }
+
+        console.log(`✅ Free listing approved: ${profile.business_name}`)
+      } else {
+        // Trial path: use atomic RPC to ensure trial subscription is created
+        const { data: rpcResult, error: rpcError } = await supabaseAdmin
+          .rpc('approve_business_with_trial', {
+            p_business_id: businessId,
+            p_approved_by: user.id,
+            p_manual_override: profile.verification_method === 'manual' && manualOverride === true,
+            p_manual_override_by: profile.verification_method === 'manual' && manualOverride === true ? user.id : null
+          })
+
+        if (rpcError) {
+          console.error('❌ Atomic approval failed:', rpcError)
+          return NextResponse.json(
+            { error: `Failed to approve business: ${rpcError.message}` },
+            { status: 500 }
+          )
+        }
+
+        console.log(`✅ Business approved atomically: ${profile.business_name}`, {
+          verification_method: profile.verification_method,
+          manual_override: profile.verification_method === 'manual' && manualOverride === true,
+          trial_end_date: rpcResult?.trial_end_date,
+          trial_days: rpcResult?.trial_days
         })
-      
-      if (rpcError) {
-        console.error('❌ Atomic approval failed:', rpcError)
-        return NextResponse.json(
-          { error: `Failed to approve business: ${rpcError.message}` },
-          { status: 500 }
-        )
       }
-      
-      console.log(`✅ Business approved atomically: ${profile.business_name}`, {
-        verification_method: profile.verification_method,
-        manual_override: profile.verification_method === 'manual' && manualOverride === true,
-        trial_end_date: rpcResult?.trial_end_date,
-        trial_days: rpcResult?.trial_days
-      })
       
       // Fetch updated business for response
       const { data: updatedBusiness } = await supabaseAdmin

@@ -1484,9 +1484,18 @@ export async function generateHybridAIResponse(
             bookingLine = `\nBook by phone: ${business.phone}`
           }
 
+          let vibeTagsLine = ''
+          const vt = business.vibe_tags as { selected?: string[]; custom?: string[] } | null
+          if (vt) {
+            const allTags = [...(vt.selected || []), ...(vt.custom || [])]
+            if (allTags.length > 0) {
+              vibeTagsLine = `\nTags: ${allTags.join(', ')}`
+            }
+          }
+
           const businessSlug = getBusinessSlug(business)
           return `**${business.business_name}** [TIER: ${business.tierLabel}] [SLUG: ${businessSlug}]${ratingLine}${vibesLine}
-Category: ${business.display_category || 'Not specified'}${hoursLine}${loyaltyLine}${bookingLine}${richContent}${offerText}`
+Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursLine}${loyaltyLine}${bookingLine}${richContent}${offerText}`
         }).join('\n\n')
       : 'No businesses available in this city yet.'
     
@@ -2735,7 +2744,13 @@ async function generateBusinessDetailResponse(
     business.business_address ? `Location: ${business.business_address}` : null,
     business.phone ? `Phone: ${business.phone}` : null,
     business.website_url ? `Website: ${business.website_url}` : null,
-    business.business_hours ? `Hours: ${business.business_hours}` : null
+    business.business_hours ? `Hours: ${business.business_hours}` : null,
+    (() => {
+      const vt = (business as Record<string, unknown>).vibe_tags as { selected?: string[]; custom?: string[] } | null
+      if (!vt) return null
+      const all = [...(vt.selected || []), ...(vt.custom || [])]
+      return all.length > 0 ? `Tags: ${all.join(', ')}` : null
+    })()
   ].filter(Boolean).join('\n')
   
   // ✅ CONTEXT: Include recent conversation history for smarter responses

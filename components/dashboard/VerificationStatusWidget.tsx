@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MapPin, CheckCircle2, AlertCircle, ExternalLink, Lock } from 'lucide-react'
 import { getVerificationStatus, isGoogleVerified, isAiEligibleTier, isFreeTier } from '@/lib/atlas/eligibility'
 import Link from 'next/link'
@@ -20,11 +20,24 @@ interface VerificationStatusWidgetProps {
 export function VerificationStatusWidget({ business }: VerificationStatusWidgetProps) {
   const [loading, setLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDismissed, setIsDismissed] = useState(false)
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem(`verification-dismissed-${business.id}`) === 'true'
+    if (dismissed) setIsDismissed(true)
+  }, [business.id])
   
   const verificationStatus = getVerificationStatus(business)
   const isVerified = isGoogleVerified(business)
   const hasAtlasTier = isAiEligibleTier(business.business_tier)
   const isFree = isFreeTier(business.business_tier)
+
+  if (isDismissed && isVerified) return null
+
+  const handleDismiss = () => {
+    localStorage.setItem(`verification-dismissed-${business.id}`, 'true')
+    setIsDismissed(true)
+  }
   
   const handleVerifyClick = () => {
     // Redirect to profile page with Google verification flow
@@ -167,12 +180,25 @@ export function VerificationStatusWidget({ business }: VerificationStatusWidgetP
           </div>
         </div>
         
-        {/* Status badge */}
-        {isVerified && (
-          <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#00d083]/10 text-[#00d083] border border-[#00d083]/20">
-            Verified
-          </span>
-        )}
+        {/* Status badge + dismiss */}
+        <div className="flex items-center gap-2">
+          {isVerified && (
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#00d083]/10 text-[#00d083] border border-[#00d083]/20">
+              Verified
+            </span>
+          )}
+          {isVerified && (
+            <button
+              onClick={handleDismiss}
+              className="p-1 rounded-md text-slate-500 hover:text-slate-300 hover:bg-slate-700/50 transition-colors"
+              aria-label="Dismiss"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
       
       {/* Description */}

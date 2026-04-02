@@ -18,6 +18,7 @@ DECLARE
   v_business_name TEXT;
   v_business_city TEXT;
   v_admin_city TEXT;
+  v_trial_tier TEXT;
 BEGIN
   -- ✅ MULTI-TENANT SECURITY: Check admin has access to this business's city
   -- Get business city and admin city in one query
@@ -79,11 +80,20 @@ BEGIN
   WHERE business_id = p_business_id
   AND is_in_free_trial = true;
   
-  -- 🔥 NEW: Restore business_tier if it was downgraded
+  -- Look up franchise trial tier (dynamic, not hardcoded)
+  SELECT COALESCE(default_trial_tier, 'featured')
+  INTO v_trial_tier
+  FROM franchise_crm_configs
+  WHERE city = v_business_city;
+
+  IF v_trial_tier IS NULL THEN
+    v_trial_tier := 'featured';
+  END IF;
+
   UPDATE business_profiles
   SET 
-    business_tier = 'free_trial', -- Restore from 'starter' back to 'free_trial'
-    plan = 'featured', -- Free trials get featured benefits
+    business_tier = 'free_trial',
+    plan = v_trial_tier,
     updated_at = NOW()
   WHERE id = p_business_id;
   

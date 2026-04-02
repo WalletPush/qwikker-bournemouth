@@ -20,8 +20,7 @@ import { ComprehensiveQRDashboard } from './comprehensive-qr-dashboard'
 import { AITestPage } from './ai-test-page'
 import { QRAnalyticsDashboard } from './qr-analytics-dashboard'
 import { AdminDashboardOverview } from './admin-dashboard-overview'
-import { PricingCardEditor } from './pricing-card-editor'
-import { AdminSetupPage } from './admin-setup-page'
+import { CityConfigurationPage } from './city-configuration-page'
 import { EventPreviewCard } from '@/components/ui/event-preview-card'
 import { AdminContactCentreClient } from './admin-contact-centre-client'
 import { AdminLoyaltyQueue } from './admin-loyalty-queue'
@@ -80,9 +79,11 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const searchParams = useSearchParams()
   
   // Get initial tab from URL or default to 'pending'
-  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'unclaimed' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'contact-centre' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-test' | 'pricing' | 'setup'>(() => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'unclaimed' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'contact-centre' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-test' | 'city-config'>(() => {
     const urlTab = searchParams.get('tab')
-    const validTabs = ['overview', 'pending', 'updates', 'live', 'unclaimed', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'contact-centre', 'import', 'claims', 'loyalty-queue', 'qr-management', 'ai-test', 'pricing', 'setup']
+    // Backward compat: old ?tab=setup or ?tab=pricing → city-config
+    if (urlTab === 'setup' || urlTab === 'pricing') return 'city-config'
+    const validTabs = ['overview', 'pending', 'updates', 'live', 'unclaimed', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'contact-centre', 'import', 'claims', 'loyalty-queue', 'qr-management', 'ai-test', 'city-config']
     return validTabs.includes(urlTab || '') ? (urlTab as any) : 'overview'
   })
 
@@ -441,7 +442,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const { showSuccess, showError, showConfirm, ModalComponent } = useElegantModal()
 
   // Function to update tab and URL
-  const updateActiveTab = (newTab: 'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-test' | 'pricing' | 'setup') => {
+  const updateActiveTab = (newTab: 'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-test' | 'city-config') => {
     setActiveTab(newTab)
     setIsMobileMenuOpen(false) // Close mobile menu when tab is selected
     // Reset filters so listings always show on every tab
@@ -1480,32 +1481,17 @@ Qwikker Admin Team`
               </button>
 
               <button
-                onClick={() => setActiveTab('setup')}
+                onClick={() => setActiveTab('city-config')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                  activeTab === 'setup' 
+                  activeTab === 'city-config' 
                     ? 'bg-[#00d083] text-black' 
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
-                <span>Franchise Setup</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('pricing')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                  activeTab === 'pricing' 
-                    ? 'bg-[#00d083] text-black' 
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-                }`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Pricing & Billing</span>
+                <span>City Configuration</span>
               </button>
 
               <button
@@ -1596,8 +1582,7 @@ Qwikker Admin Team`
                 {activeTab === 'rejected' && 'Rejected Applications'}
                 {activeTab === 'knowledge' && 'Knowledge Base'}
                 {activeTab === 'analytics' && 'City Analytics'}
-                {activeTab === 'pricing' && 'Pricing & Billing'}
-                {activeTab === 'setup' && 'Franchise Setup'}
+                {activeTab === 'city-config' && 'City Configuration'}
                 {activeTab === 'contacts' && 'Business Contacts'}
                 {activeTab === 'contact-centre' && 'Contact Centre'}
                 {activeTab === 'loyalty-queue' && 'Loyalty Queue'}
@@ -1920,8 +1905,7 @@ Qwikker Admin Team`
                   {activeTab === 'rejected' && 'Rejected Applications'}
                   {activeTab === 'knowledge' && 'Knowledge Base'}
                   {activeTab === 'analytics' && 'City Analytics'}
-                  {activeTab === 'pricing' && 'Pricing & Billing'}
-                  {activeTab === 'setup' && 'Franchise Setup'}
+                  {activeTab === 'city-config' && 'City Configuration'}
                   {activeTab === 'contacts' && 'Business Contacts'}
                   {activeTab === 'contact-centre' && 'Contact Centre'}
                   {activeTab === 'loyalty-queue' && 'Loyalty Queue'}
@@ -1936,7 +1920,7 @@ Qwikker Admin Team`
                   {activeTab === 'rejected' && 'Previously rejected business applications'}
                   {activeTab === 'knowledge' && 'AI knowledge base management for businesses and city information'}
                   {activeTab === 'analytics' && `Performance metrics and user analytics for ${cityDisplayName}`}
-                  {activeTab === 'pricing' && `Customize pricing cards, currency, and billing settings for ${cityDisplayName}`}
+                  {activeTab === 'city-config' && `Setup, pricing, and trial configuration for ${cityDisplayName}`}
                   {activeTab === 'contacts' && `CRM contact management for ${cityDisplayName}`}
                   {activeTab === 'contact-centre' && `Manage messages and tasks with businesses in ${cityDisplayName}`}
                   {activeTab === 'loyalty-queue' && `Review and activate loyalty programs for businesses in ${cityDisplayName}`}
@@ -3671,14 +3655,9 @@ Qwikker Admin Team`
                 <ComprehensiveQRDashboard city={city} />
               )}
 
-              {/* Pricing & Billing Tab */}
-              {activeTab === 'pricing' && (
-                <PricingCardEditor city={city} />
-              )}
-
-              {/* Franchise Setup Tab */}
-              {activeTab === 'setup' && (
-                <AdminSetupPage city={city} />
+              {/* City Configuration Tab (Setup + Pricing + Trial) */}
+              {activeTab === 'city-config' && (
+                <CityConfigurationPage city={city} />
               )}
 
               {/* AI Test Tab */}

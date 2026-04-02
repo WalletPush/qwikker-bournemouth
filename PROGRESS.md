@@ -6,17 +6,16 @@
 
 ## Current Status
 
-- **Tier 0:** 14/16 complete. Remaining: 0.14 (marketing pages), 0.22 (pre-launch env vars)
-- **Tier 1:** 6/7 complete. Remaining: 1.6 (vibes bugs)
-- **Tier 2:** 2.1-2.4 complete. 2.5 complete. 2.15 + 2.16 + 2.18 + 2.19 complete. 2.6-2.11, 2.17 pending. 2.20, 2.21, 2.22 added.
+- **Tier 0:** 16/16 complete. Remaining: 0.14 (marketing pages), 0.22 (pre-launch env vars)
+- **Tier 1:** 7/7 complete (subject to testing)
+- **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.22 complete. 2.5 partially done. 2.8-2.11, 2.17, 2.23 pending. **2.21-2.22 need testing on production subdomain.**
 - **Tier 3:** Not started
 - **Tier 4:** Backlog
 
 ## Next up (in order per execution rule)
 
 1. Finish Tier 0 remaining (0.14, 0.22)
-2. Finish Tier 1 (1.6 vibes bugs)
-3. Finish Tier 2 (2.6-2.11, 2.17)
+2. Finish Tier 2 (2.8-2.11, 2.17, 2.23)
 
 ## Change Impact Map
 
@@ -34,6 +33,7 @@
 | 0.12a Subscription Upgrade Fix | `app/api/stripe/update-subscription/route.ts` (new), `app/api/webhooks/stripe/route.ts`, `components/dashboard/pricing-plans.tsx`, `components/dashboard/settings-page.tsx`, `app/dashboard/settings/page.tsx` | Medium | Upgrades/downgrades now update existing Stripe subscription in-place with proration (no new subscription created). UI routes through update API when `stripeSubscriptionId` exists. `customer.subscription.updated` webhook syncs tier/plan/features. Safety net: `checkout.session.completed` auto-cancels orphaned old subscriptions. Risk: Stripe Portal plan changes don't carry our metadata so features won't sync (businesses should use in-app UI). |
 | 0.12b Stripe API + Confirmation Fixes | `app/api/stripe/update-subscription/route.ts`, `components/dashboard/pricing-plans.tsx` | Medium | **Bug 1:** `subscriptions.update()` does not support `price_data.product_data` (only `checkout.sessions.create` does). Fixed: find or create a Stripe Product per tier+city with metadata, use `product: productId`. **Bug 2:** Checkout-created Products are immutable — `products.update()` throws. Fixed: never mutate Checkout-created products; maintain our own Products via metadata lookup. **Bug 3:** No confirmation dialog on plan change — one misclick could change billing. Fixed: added Dialog showing current plan, new plan, new price, and proration explanation before executing. First-time purchases still go to Stripe Checkout (has built-in confirmation). |
 | 0.12c Stripe Period Date Fix | `app/api/webhooks/stripe/route.ts`, `app/api/stripe/cancel-subscription/route.ts` | Medium | Stripe basil API (2025-03-31) moved `current_period_start/end` from top-level subscription to `items.data[]`. Webhook `handleSubscriptionUpdated` crashed with `RangeError: Invalid time value`. Cancel route returned `accessUntil: null`. Fixed: read period dates from `subscription.items.data[0]`, added `typeof === 'number'` guards on all date conversions. Cancel subscription + confirmation dialog now working end-to-end. |
+| 2.6 Business Vibe Tags | `lib/constants/vibe-tags.ts` (new), `components/dashboard/clean-profile-page.tsx`, `components/dashboard/business-info-page.tsx`, `components/dashboard/action-items-page.tsx`, `components/claim/confirm-business-details.tsx`, `app/claim/page.tsx`, `app/api/claim/submit/route.ts`, `app/api/admin/approve-claim/route.ts`, `components/user/user-business-detail-page.tsx`, `app/user/discover/page.tsx`, `lib/ai/hybrid-chat.ts`, `components/admin/comprehensive-business-crm-card.tsx`, `lib/actions/business-actions.ts`, `lib/actions/seamless-updates.ts` | Medium | **DB:** `vibe_tags` JSONB column added to `business_profiles`; `edited_vibe_tags` TEXT added to `claim_requests`. Three views updated (`business_profiles_chat_eligibility`, `business_profiles_chat_eligible`, `business_profiles_lite_eligible`). If views were recreated without the column, AI chat context and discover page would silently lose tag data. **Profile page:** Vibe Tags + Booking cards added to `clean-profile-page.tsx` — if `updateBusinessInfo` server action rejects unknown fields, saves would fail (tested: it's a pass-through, safe). **Claim flow:** `edited_vibe_tags` passed as JSON string in FormData — if approval route can't parse it, tags silently null (graceful). **Discover search:** vibe tags concatenated into search text — bad JSONB shape could cause runtime error on `.map()` (mitigated: optional chaining). **AI chat:** tags appended to context block — worst case extra whitespace if null. **Action item links:** All `/dashboard/business` hrefs replaced with `/dashboard/profile` — old page still exists at route but is unreachable from sidebar. |
 | 0.11 Mobile Optimization Pass | `components/admin/pricing-card-editor.tsx`, `comprehensive-business-crm-card.tsx`, `business-crm-card.tsx`, `admin-dashboard.tsx`, `admin-analytics.tsx`, `comprehensive-admin-analytics.tsx`, `improved-dashboard-home.tsx`, `simple-post-editor.tsx`, `user-business-detail-page.tsx`, `user-chat-page.tsx`, `user-dashboard-layout.tsx`, `app/hqadmin/layout.tsx`, `components/hqadmin/hq-admin-shell.tsx` (new) | Low | Fixed dense multi-column grids (4-6 cols) without mobile breakpoints across admin, dashboard, and user pages. Added responsive stacking at `sm:`/`md:` breakpoints. HQ admin got mobile hamburger drawer (was fixed sidebar only). Admin dashboard got iOS safe-area insets. AI Chat refactored to iMessage-style layout: input pinned at screen bottom via JS-measured height, messages anchored near input via dynamic paddingTop + ResizeObserver. Desktop unchanged. |
 
 ## Task Descriptions
@@ -56,29 +56,35 @@ Environment variables that must be set in Vercel before production launch:
 - Verify all city-specific env vars are set: `{CITY}_SLACK_WEBHOOK_URL`, Resend API keys in `franchise_crm_configs`, WalletPush credentials.
 - Verify `hello@{city}.qwikker.com` email forwarding is configured in DNS (Resend/Cloudflare) for each live city.
 
-### 2.20 Configurable Trial System & Free Listing Onboarding (pending)
-Default onboarding creates a Free Listing (not a trial). Onboarding flow offers clear choice: "Get your free listing" OR "Start your free trial". Franchise admin Pricing & Billing tab gets Trial Configuration section:
-- **Trial tier** dropdown (Starter / Featured / Spotlight) — franchise chooses what tier the trial gives access to
-- **Trial duration** (days) — already exists as `founding_member_trial_days`, just needs UI exposure
-- **Founding member toggle** (on/off, spot limit, discount %)
-- **Incentive toggles** — e.g. "Extra month free for 10 loyalty members in first 30 days"
-- **Trial terms text** — customisable per franchise
-- Refactor all 15+ hardcoded "trial = featured" references across codebase (signup-actions, entitlement-helpers, pricing-plans, dashboard-home, AI chat, tier-management, cleanup functions, etc.)
-- DB: add `trial_tier_name` column to `franchise_crm_configs`, update `setup_free_trial_on_approval` trigger
-- **Depends on:** 0.12 Stripe Integration (need payments working before trial-to-paid conversion matters)
+### 2.20 Configurable Trial System & Free Listing Onboarding (DONE — core complete)
+Onboarding now offers "Free Listing" vs "Free Trial" choice. Franchise admin can configure trial tier (Starter/Featured/Spotlight) and duration via City Configuration > Trial & Onboarding. All 4 SQL functions (`approve_business_with_trial`, `extend_business_trial`, `restore_trial_status`, `cleanup_expired_trials`) dynamically read from `franchise_crm_configs`. 15+ hardcoded "trial = featured" references refactored. Shared `getFeaturesForTier()` helper extracted. Pre-approval UX fixed: unapproved businesses see "Pending Approval" instead of fake countdown. Remaining: incentive toggles, trial terms text, founding member toggle UI.
 
-### 2.21 Founding Member Counter & Landing Page Controls (pending)
-- Visible "Only X founding member spots left in {city}" counter on city landing pages
-- Franchise admin toggle: show/hide counter on landing page
-- Data already exists: `founding_member_total_spots` on `franchise_crm_configs`, `is_founding_member_spot_available` function in DB
-- Part of a broader **Landing Page Editor** tab in franchise admin dashboard
+### 2.21 Founding Member Counter & Landing Page Controls (DONE)
+Counter on city landing pages ("Only X spots left"), admin toggle + total spots input in Landing Page editor. Wired into claim flow — auto-assigns `is_founding_member = true` on submission. Spots reserved on pending+approved claims. DB: reads from `landing_page_config` JSONB, counts from `claim_requests`.
 
-### 2.22 Landing Page Editor & Sponsor Banners (pending)
-Franchise admin tab for customising their city landing page:
-- **Sponsor banner**: toggle on/off, upload sponsor logos, editable sponsor text/tagline
-- **Founding member counter**: toggle on/off (from 2.21)
-- **Hero section**: customisable headline, subtitle, background image
-- Future: drag-and-drop section ordering, custom CTAs, featured businesses carousel config
+### 2.22 Landing Page Editor & Sponsor Banners (DONE)
+Landing Page sub-tab in admin city config. Hero customisation (headline, subtitle, background image via Cloudinary). Sponsor banner at bottom of page. Supporters section ("Proudly supported by" with multiple logos). Founding member counter toggle + total spots. Featured businesses carousel. API: `GET/POST /api/admin/landing-page` with Zod validation. DB: `landing_page_config` JSONB column on `franchise_crm_configs` + updated `franchise_public_info` view. **Needs testing on production subdomain.**
+
+### 2.6 Business Vibe Tags (DONE)
+JSONB `vibe_tags` column on `business_profiles` stores `{ selected: string[], custom: string[] }`. Three categories of fixed tags (Atmosphere, Good for, Amenities) defined in `lib/constants/vibe-tags.ts` plus up to 3 custom free-text tags. Integrated into: Profile editor (pill selector + custom input + save), Action Items (recommended nudge when null), Claim flow (picker in confirm step, stored as `edited_vibe_tags` on `claim_requests`, applied on approval), User-facing business detail page (pills in Overview tab), Discover page (tags included in search matching), AI chat (tags in business context block), Admin CRM card (read-only display). Profile page also backfilled missing Booking card, Business Category field, Business Postcode field, helper text/character counters, and required field markers. Featured items capped at 5 for all users. All action item links audited and fixed — no links point to inaccessible `/dashboard/business` route. Revalidation paths updated to include `/dashboard/profile`.
+
+**DB changes applied (manual SQL, not migrations):**
+- `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS vibe_tags JSONB DEFAULT NULL`
+- `ALTER TABLE claim_requests ADD COLUMN IF NOT EXISTS edited_vibe_tags TEXT DEFAULT NULL`
+- `CREATE OR REPLACE VIEW` on `business_profiles_chat_eligibility`, `business_profiles_chat_eligible`, `business_profiles_lite_eligible` — each had `vibe_tags` appended to SELECT list
+
+**Testing checklist:**
+1. **Profile editor:** Go to `/dashboard/profile`, scroll to Vibe Tags card. Select several fixed tags, add 1-2 custom tags, save. Refresh page — tags should persist. Deselect some, save again — changes persist.
+2. **Booking card:** On same page, set booking preference to each option. Save. Refresh — preference persists. If "Online booking link" selected, enter URL, save, verify it persists.
+3. **Featured items limit:** Try adding more than 5 items — "Add Item" button should disable with "(Limit reached)".
+4. **Action items:** If vibe_tags is null, "Add vibe tags" recommended item should appear. Link should go to `/dashboard/profile#vibe-tags`. If booking_preference is null, "Set up online booking" should appear linking to `/dashboard/profile#booking`.
+5. **Claim flow:** Start a new claim. On the confirm details step, vibe tag picker should appear. Select some tags, submit claim. Check `claim_requests` table — `edited_vibe_tags` should contain JSON string.
+6. **Admin approval:** Approve a claim that has `edited_vibe_tags`. Check `business_profiles` — `vibe_tags` should be populated with the parsed JSONB.
+7. **User detail page:** View an approved business with vibe tags. Pills should render in Overview tab under "Vibes" heading.
+8. **Discover page:** Search for a vibe tag term (e.g. "dog friendly"). Businesses with that tag should appear in results.
+9. **AI chat:** Ask the AI about a business with vibe tags (e.g. "somewhere dog friendly"). Response should reference the tag. Check console/context — tags should appear in AVAILABLE BUSINESSES block.
+10. **Admin CRM:** Open a business CRM card for a business with vibe tags. Read-only pills should display in Overview tab.
+11. **Regression:** Verify all other action item links still work (business name, hours, description, tagline, address, logo, photo, featured items, offers, secret menu, files).
 
 ## Key Rules
 

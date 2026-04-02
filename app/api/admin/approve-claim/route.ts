@@ -176,6 +176,15 @@ export async function POST(request: NextRequest) {
         if (claim.edited_booking_preference) businessUpdate.booking_preference = claim.edited_booking_preference
         if (claim.edited_booking_url) businessUpdate.booking_url = claim.edited_booking_url
       }
+
+      // Apply vibe tags if provided (independent of data_edited flag)
+      if (claim.edited_vibe_tags) {
+        try {
+          businessUpdate.vibe_tags = JSON.parse(claim.edited_vibe_tags)
+        } catch {
+          console.warn('Invalid vibe_tags JSON in claim, skipping')
+        }
+      }
       
       // Always apply hero image if uploaded (not dependent on data_edited flag)
       if (claim.hero_image_upload) {

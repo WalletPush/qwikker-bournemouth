@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Building2, Upload, X, Check, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
+import { VIBE_TAG_CATEGORIES, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH } from '@/lib/constants/vibe-tags'
 
 interface BusinessData {
   id: string
@@ -43,6 +44,7 @@ interface ConfirmBusinessDetailsProps {
     phone_e164?: string
     booking_preference?: string
     booking_url?: string
+    vibe_tags?: string
   }) => void
   onBack: () => void
 }
@@ -70,6 +72,11 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
   // Booking preference state
   const [bookingPreference, setBookingPreference] = useState('')
   const [bookingUrl, setBookingUrl] = useState('')
+
+  // Vibe tags state
+  const [selectedVibeTags, setSelectedVibeTags] = useState<string[]>([])
+  const [customVibeTags, setCustomVibeTags] = useState<string[]>([])
+  const [customVibeInput, setCustomVibeInput] = useState('')
   
   // Image upload state
   const [logoFile, setLogoFile] = useState<File | null>(null)
@@ -214,7 +221,10 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
       sms_opt_in: smsOptInAvailable && smsOptIn,
       phone_e164: (smsOptInAvailable && smsOptIn) ? phoneE164.trim() : undefined,
       booking_preference: bookingPreference || undefined,
-      booking_url: bookingPreference === 'url' ? bookingUrl.trim() : undefined
+      booking_url: bookingPreference === 'url' ? bookingUrl.trim() : undefined,
+      vibe_tags: (selectedVibeTags.length > 0 || customVibeTags.length > 0)
+        ? JSON.stringify({ selected: selectedVibeTags, custom: customVibeTags })
+        : undefined
     })
   }
 
@@ -624,6 +634,101 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
                   Your contact phone number from above will be used as the booking method.
                 </p>
               )}
+            </div>
+
+            {/* Vibe Tags (optional) */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Describe your vibe (optional)</Label>
+              <p className="text-sm text-muted-foreground">
+                Help customers find you by selecting tags that describe your business. You can always change these later.
+              </p>
+
+              {VIBE_TAG_CATEGORIES.map(category => (
+                <div key={category.id}>
+                  <p className="text-sm font-medium mb-1.5">{category.label}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {category.tags.map(tag => {
+                      const isSelected = selectedVibeTags.includes(tag.slug)
+                      return (
+                        <button
+                          key={tag.slug}
+                          type="button"
+                          onClick={() =>
+                            setSelectedVibeTags(prev =>
+                              isSelected ? prev.filter(t => t !== tag.slug) : [...prev, tag.slug]
+                            )
+                          }
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                            isSelected
+                              ? 'bg-primary/10 border-primary text-primary'
+                              : 'border-slate-300 dark:border-slate-700 text-muted-foreground hover:border-slate-400'
+                          }`}
+                        >
+                          {tag.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* Custom tags */}
+              <div>
+                <p className="text-sm font-medium mb-1.5">Custom tags</p>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {customVibeTags.map(tag => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => setCustomVibeTags(prev => prev.filter(t => t !== tag))}
+                        className="ml-0.5 hover:text-purple-900 dark:hover:text-white"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                {customVibeTags.length < MAX_CUSTOM_TAGS && (
+                  <div className="flex gap-2">
+                    <Input
+                      value={customVibeInput}
+                      onChange={(e) => setCustomVibeInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const tag = customVibeInput.trim().toLowerCase()
+                          if (tag && !customVibeTags.includes(tag)) {
+                            setCustomVibeTags(prev => [...prev, tag])
+                            setCustomVibeInput('')
+                          }
+                        }
+                      }}
+                      maxLength={MAX_CUSTOM_TAG_LENGTH}
+                      placeholder="e.g., rooftop views"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const tag = customVibeInput.trim().toLowerCase()
+                        if (tag && !customVibeTags.includes(tag)) {
+                          setCustomVibeTags(prev => [...prev, tag])
+                          setCustomVibeInput('')
+                        }
+                      }}
+                      disabled={!customVibeInput.trim()}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">{customVibeTags.length}/{MAX_CUSTOM_TAGS} custom tags</p>
+              </div>
             </div>
 
             {/* SMS Opt-in (only shown if franchise has verified SMS) */}

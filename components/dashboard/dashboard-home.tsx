@@ -56,17 +56,14 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
   })
 
   useEffect(() => {
-    if (profile?.created_at) {
-      const createdDate = new Date(profile.created_at)
+    if (profile?.subscription?.is_in_free_trial && profile?.subscription?.free_trial_end_date) {
+      const endDate = new Date(profile.subscription.free_trial_end_date)
       const now = new Date()
-      
-      // Calculate days since signup
-      const diffTime = now.getTime() - createdDate.getTime()
-      const daysSinceSignup = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-      
-      // Trial is 90 days, so countdown from 90
-      const daysLeft = Math.max(0, 90 - daysSinceSignup)
+      const diffTime = endDate.getTime() - now.getTime()
+      const daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
       setTrialDaysLeft(daysLeft)
+    } else {
+      setTrialDaysLeft(0)
     }
   }, [profile])
 
@@ -462,7 +459,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
     }
   }
   const plan = profile?.plan || 'starter'
-  const isFreeTrial = plan === 'featured' && trialDaysLeft > 0
+  const isFreeTrial = profile?.business_tier === 'free_trial' && trialDaysLeft > 0
   const planName = isFreeTrial ? 'Featured (Free Trial)' : 
                   plan === 'starter' ? 'Starter' : 
                   plan.charAt(0).toUpperCase() + plan.slice(1)
@@ -492,31 +489,42 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div>
-                <p className="text-2xl font-bold text-[#00d083]">{planName}</p>
-                <p className="text-sm text-gray-400">
-                  {isFreeTrial ? `${trialDaysLeft} days remaining` : 'Active subscription'}
-                </p>
-              </div>
-              
-              {isFreeTrial && (
-                <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-orange-300" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-sm text-orange-300 font-medium">
-                      Trial expires in {trialDaysLeft} days
+              {currentStatus === 'incomplete' || currentStatus === 'pending_review' ? (
+                <div>
+                  <p className="text-2xl font-bold text-amber-400">Pending Approval</p>
+                  <p className="text-sm text-gray-400">
+                    Your free trial will begin once your account is reviewed and approved. Complete your action items and submit for approval.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-2xl font-bold text-[#00d083]">{planName}</p>
+                    <p className="text-sm text-gray-400">
+                      {isFreeTrial ? `${trialDaysLeft} days remaining` : 'Active subscription'}
                     </p>
                   </div>
-                </div>
+                  
+                  {isFreeTrial && (
+                    <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-orange-300" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        <p className="text-sm text-orange-300 font-medium">
+                          Trial expires in {trialDaysLeft} days
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <Button asChild className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
+                    <Link href="/dashboard/settings">
+                      {isFreeTrial ? 'Upgrade Plan' : 'Manage Plan'}
+                    </Link>
+                  </Button>
+                </>
               )}
-              
-              <Button asChild className="w-full bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white">
-                <Link href="/dashboard/settings">
-                  {isFreeTrial ? 'Upgrade Plan' : 'Manage Plan'}
-                </Link>
-              </Button>
             </div>
           </CardContent>
         </Card>

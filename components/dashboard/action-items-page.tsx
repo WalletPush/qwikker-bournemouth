@@ -367,12 +367,26 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   if (!profile?.booking_preference) {
     optionalTodos.push({
       title: 'Set up online booking',
-      href: '/dashboard/business#booking',
+      href: '/dashboard/profile#booking',
       priority: 'RECOMMENDED',
       description: 'Let customers book directly from your listing. Supports booking links or phone.',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      )
+    })
+  }
+
+  if (!profile?.vibe_tags) {
+    optionalTodos.push({
+      title: 'Add vibe tags to your profile',
+      href: '/dashboard/profile#vibe-tags',
+      priority: 'RECOMMENDED',
+      description: 'Describe your vibe so customers can find you. Tags like "dog-friendly" or "date night" power AI recommendations.',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
         </svg>
       )
     })
@@ -682,7 +696,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                 </div>
               </Link>
 
-              <Link href="/dashboard/business" className="block">
+              <Link href="/dashboard/profile#business-info" className="block">
                 <div className="p-4 bg-slate-700/50 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
