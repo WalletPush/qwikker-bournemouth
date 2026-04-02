@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { GlobalHomepagePremium } from '@/components/marketing/global-homepage-premium'
 import { CityLandingPage } from '@/components/marketing/city-landing-page'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
@@ -45,24 +45,26 @@ export default async function HomePage() {
       if (cityInfo && (cityInfo.status === 'pending_setup' || cityInfo.status === 'active')) {
         const landingConfig = (cityInfo as Record<string, unknown>).landing_page_config as Record<string, unknown> || {}
 
+        const serviceClient = createServiceRoleClient()
+
         let foundingMemberSpotsLeft = 0
         if (landingConfig.show_founding_counter && landingConfig.founding_member_total_spots > 0) {
-          const { count } = await supabase
+          const { count } = await serviceClient
             .from('claim_requests')
             .select('id', { count: 'exact', head: true })
-            .eq('city', city)
+            .ilike('city', city)
             .eq('is_founding_member', true)
             .in('status', ['pending', 'approved'])
 
-          foundingMemberSpotsLeft = Math.max(0, landingConfig.founding_member_total_spots - (count || 0))
+          foundingMemberSpotsLeft = Math.max(0, (landingConfig.founding_member_total_spots as number) - (count || 0))
         }
 
         let featuredBusinesses: { business_name: string; slug: string; tagline: string | null; logo: string | null }[] = []
-        if (landingConfig.show_featured_businesses && landingConfig.featured_business_ids?.length) {
-          const { data: bizData } = await supabase
+        if (landingConfig.show_featured_businesses && (landingConfig.featured_business_ids as string[] | null)?.length) {
+          const { data: bizData } = await serviceClient
             .from('business_profiles')
             .select('business_name, slug, tagline, logo')
-            .in('id', landingConfig.featured_business_ids)
+            .in('id', landingConfig.featured_business_ids as string[])
             .in('status', ['approved', 'claimed_free'])
 
           featuredBusinesses = bizData || []

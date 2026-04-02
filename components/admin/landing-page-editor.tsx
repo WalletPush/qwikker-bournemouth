@@ -139,13 +139,13 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
     const file = e.target.files?.[0]
     if (!file || !newSupporterName.trim()) return
 
+    const nameToAdd = newSupporterName.trim()
     setUploadingSupporterLogo(true)
     const url = await uploadImageToCloudinary(file, `qwikker/supporters/${city}`)
     if (url) {
-      const current = config.supporter_logos || []
       setConfig(prev => ({
         ...prev,
-        supporter_logos: [...current, { name: newSupporterName.trim(), logo_url: url }],
+        supporter_logos: [...(prev.supporter_logos || []), { name: nameToAdd, logo_url: url }],
       }))
       setNewSupporterName('')
     }

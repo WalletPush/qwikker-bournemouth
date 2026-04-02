@@ -134,25 +134,36 @@ export function CityLandingPage({
             Powered by real menus, real hours, and local context — not scraped reviews.
           </p>
 
-          {showFoundingCounter && (
-            <div className="mb-8 inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-full" style={{ textShadow: 'none' }}>
-              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-sm font-medium text-amber-300">
-                Only {foundingMemberSpotsLeft} founding member {foundingMemberSpotsLeft === 1 ? 'spot' : 'spots'} left
-              </span>
-            </div>
-          )}
-
-          {!showFoundingCounter && <div className="mb-4" />}
-
           {/* Single CTA */}
-          <Link
-            href="/join"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-[#00d083]/10 hover:bg-[#00d083]/15 border border-[#00d083]/30 text-[#00d083] rounded-xl font-medium transition-all"
-          >
-            Add to your mobile wallet
-            <ArrowRight className="w-5 h-5" />
-          </Link>
+          <div className="mb-6">
+            <Link
+              href="/join"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-[#00d083] hover:bg-[#00b86f] text-white rounded-xl font-semibold transition-all shadow-lg shadow-[#00d083]/20"
+            >
+              Add to your mobile wallet
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
+
+          {/* Business CTA with founding member count */}
+          {showFoundingCounter ? (
+            <p className="text-sm text-white/50" style={{ textShadow: 'none' }}>
+              Are you a business?{' '}
+              <Link href="/claim" className="text-[#00d083] hover:text-[#00d083]/80 font-medium transition-colors">
+                Click here
+              </Link>
+              {' '}to join now — only{' '}
+              <span className="text-white font-semibold">{foundingMemberSpotsLeft}</span>
+              {' '}founding member {foundingMemberSpotsLeft === 1 ? 'spot' : 'spots'} available
+            </p>
+          ) : (
+            <p className="text-sm text-white/50" style={{ textShadow: 'none' }}>
+              Are you a business?{' '}
+              <Link href="/claim" className="text-[#00d083] hover:text-[#00d083]/80 font-medium transition-colors">
+                Click here to join
+              </Link>
+            </p>
+          )}
         </div>
       </section>
 
