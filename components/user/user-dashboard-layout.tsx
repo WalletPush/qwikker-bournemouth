@@ -227,12 +227,12 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
         style={{
           paddingTop: `calc(env(safe-area-inset-top) + 1rem)`,
         }}>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             {/* Left side - Mobile menu button */}
-            <div className="flex items-center">
+            <div className="flex items-center min-w-0 flex-shrink">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-3 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors touch-manipulation min-h-[48px] min-w-[48px] flex items-center justify-center"
+                className="lg:hidden flex-shrink-0 p-3 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors touch-manipulation min-h-[48px] min-w-[48px] flex items-center justify-center"
                 aria-label="Open navigation menu"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,9 +241,9 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
               </button>
               {/* Page title */}
               {currentSection === 'chat' ? (
-                <div className="flex items-center gap-2 ml-3 lg:ml-0">
-                  <img src="/qwikker-logo-web.svg" alt="Qwikker" width={100} height={24} className="h-5 w-auto" />
-                  <span className="text-sm text-slate-400 font-medium">Companion</span>
+                <div className="flex items-center gap-1.5 ml-3 lg:ml-0 min-w-0">
+                  <img src="/qwikker-logo-web.svg" alt="Qwikker" width={100} height={24} className="h-5 w-auto flex-shrink-0" />
+                  <span className="text-sm text-slate-400 font-medium hidden sm:inline">Companion</span>
                 </div>
               ) : (
                 <div className="hidden lg:block">
@@ -257,14 +257,14 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
             </div>
 
             {/* Right side - Location and city switcher */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 flex-shrink-0">
               <div className="text-right">
-                <p className="font-semibold text-slate-100">{cityDisplayName}</p>
-                <p className="text-sm text-slate-400">Current City</p>
+                <p className="font-semibold text-slate-100 text-sm sm:text-base truncate max-w-[120px] sm:max-w-none">{cityDisplayName}</p>
+                <p className="text-xs sm:text-sm text-slate-400">Current City</p>
               </div>
               
               {/* City indicator */}
-              <div className="w-10 h-10 bg-slate-700 border border-slate-600 rounded-full flex items-center justify-center font-semibold text-slate-100">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-slate-700 border border-slate-600 rounded-full flex items-center justify-center font-semibold text-slate-100 text-sm flex-shrink-0">
                 {cityDisplayName.charAt(0).toUpperCase()}
               </div>
             </div>
