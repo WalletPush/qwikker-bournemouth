@@ -69,9 +69,10 @@ export default async function HomePage() {
 
           const now = new Date()
           featuredBusinesses = (bizData || []).filter(biz => {
-            const subs = (biz as Record<string, unknown>).business_subscriptions as Array<{ is_in_free_trial: boolean; free_trial_end_date: string | null }> | null
+            const subs = (biz as Record<string, unknown>).business_subscriptions as Array<{ is_in_free_trial: boolean; free_trial_end_date: string | null; status: string }> | null
             if (!subs || subs.length === 0) return true
             const sub = subs[0]
+            if (sub.status === 'cancelled') return false
             if (!sub.is_in_free_trial) return true
             if (sub.free_trial_end_date) return new Date(sub.free_trial_end_date) >= now
             return true

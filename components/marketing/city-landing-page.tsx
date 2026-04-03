@@ -371,7 +371,7 @@ export function CityLandingPage({
             </p>
             <div className="flex items-center justify-center gap-6 md:gap-8 flex-wrap">
               {(landingConfig.supporter_logos || []).map((supporter, i) => (
-                <div key={i} className="h-10 md:h-12 w-[120px] md:w-[140px] flex items-center justify-center">
+                <div key={i} className="h-14 md:h-16 w-[140px] md:w-[180px] flex items-center justify-center">
                   <img
                     src={supporter.logo_url}
                     alt={supporter.name}
