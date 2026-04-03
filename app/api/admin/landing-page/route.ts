@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         .single(),
       supabaseAdmin
         .from('business_profiles')
-        .select('id, business_name, status')
+        .select('id, business_name, status, business_subscriptions!business_subscriptions_business_id_fkey(is_in_free_trial, free_trial_end_date, status)')
         .ilike('city', requestCity)
         .in('status', ['approved', 'claimed_free'])
         .order('business_name'),
@@ -74,12 +74,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: configResult.error.message }, { status: 500 })
     }
 
+    const now = new Date()
+    const activeBusinesses = (businessesResult.data || []).filter(biz => {
+      const subs = (biz as Record<string, unknown>).business_subscriptions as Array<{ is_in_free_trial: boolean; free_trial_end_date: string | null; status: string }> | null
+      if (!subs || subs.length === 0) return true
+      const sub = subs[0]
+      if (!sub.is_in_free_trial) return true
+      if (sub.free_trial_end_date) {
+        return new Date(sub.free_trial_end_date) >= now
+      }
+      return true
+    })
+
     return NextResponse.json({
       success: true,
       config: configResult.data?.landing_page_config || {},
       foundingMemberEnabled: configResult.data?.founding_member_enabled || false,
       foundingMemberTotalSpots: configResult.data?.founding_member_total_spots || 0,
-      businesses: businessesResult.data || [],
+      businesses: activeBusinesses.map(b => ({ id: b.id, business_name: b.business_name, status: b.status })),
     })
   } catch (error) {
     console.error('Landing page GET error:', error)

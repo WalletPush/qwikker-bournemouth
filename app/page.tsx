@@ -63,11 +63,19 @@ export default async function HomePage() {
         if (landingConfig.show_featured_businesses && (landingConfig.featured_business_ids as string[] | null)?.length) {
           const { data: bizData } = await serviceClient
             .from('business_profiles')
-            .select('id, business_name, tagline, logo')
+            .select('id, business_name, tagline, logo, business_subscriptions!business_subscriptions_business_id_fkey(is_in_free_trial, free_trial_end_date, status)')
             .in('id', landingConfig.featured_business_ids as string[])
             .in('status', ['approved', 'claimed_free'])
 
-          featuredBusinesses = bizData || []
+          const now = new Date()
+          featuredBusinesses = (bizData || []).filter(biz => {
+            const subs = (biz as Record<string, unknown>).business_subscriptions as Array<{ is_in_free_trial: boolean; free_trial_end_date: string | null }> | null
+            if (!subs || subs.length === 0) return true
+            const sub = subs[0]
+            if (!sub.is_in_free_trial) return true
+            if (sub.free_trial_end_date) return new Date(sub.free_trial_end_date) >= now
+            return true
+          }).map(b => ({ id: b.id, business_name: b.business_name, tagline: b.tagline, logo: b.logo }))
         }
 
         return (
