@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         .single(),
       supabaseAdmin
         .from('business_profiles')
-        .select('id, business_name, slug')
+        .select('id, business_name, status')
         .ilike('city', requestCity)
         .in('status', ['approved', 'claimed_free'])
         .order('business_name'),

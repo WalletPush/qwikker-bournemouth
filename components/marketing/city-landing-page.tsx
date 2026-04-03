@@ -27,10 +27,14 @@ interface LandingPageConfig {
 }
 
 interface FeaturedBusiness {
+  id: string
   business_name: string
-  slug: string
   tagline: string | null
   logo: string | null
+}
+
+function toSlug(name: string): string {
+  return name.toLowerCase().replace(/['']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
 interface CityLandingPageProps {
@@ -332,8 +336,8 @@ export function CityLandingPage({
             <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
               {featuredBusinesses.map((biz) => (
                 <Link
-                  key={biz.slug}
-                  href={`/user/business/${biz.slug}`}
+                  key={biz.id}
+                  href={`/user/business/${toSlug(biz.business_name)}`}
                   className="flex-shrink-0 w-56 snap-start group"
                 >
                   <div className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-[#00d083]/30 transition-colors h-full">

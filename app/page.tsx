@@ -59,11 +59,11 @@ export default async function HomePage() {
           foundingMemberSpotsLeft = Math.max(0, (landingConfig.founding_member_total_spots as number) - (count || 0))
         }
 
-        let featuredBusinesses: { business_name: string; slug: string; tagline: string | null; logo: string | null }[] = []
+        let featuredBusinesses: { business_name: string; id: string; tagline: string | null; logo: string | null }[] = []
         if (landingConfig.show_featured_businesses && (landingConfig.featured_business_ids as string[] | null)?.length) {
           const { data: bizData } = await serviceClient
             .from('business_profiles')
-            .select('business_name, slug, tagline, logo')
+            .select('id, business_name, tagline, logo')
             .in('id', landingConfig.featured_business_ids as string[])
             .in('status', ['approved', 'claimed_free'])
 

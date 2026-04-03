@@ -52,7 +52,7 @@ interface LandingPageConfig {
 interface BusinessOption {
   id: string
   business_name: string
-  slug: string
+  status?: string
 }
 
 interface LandingPageEditorProps {
@@ -612,13 +612,14 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
                       <button
                         key={biz.id}
                         onClick={() => toggleFeaturedBusiness(biz.id)}
-                        className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
+                        className={`w-full text-left px-3 py-2 rounded-lg border transition-colors flex items-center justify-between ${
                           isSelected
                             ? 'border-[#00d083]/40 bg-[#00d083]/10 text-white'
                             : 'border-slate-700 bg-slate-900/50 text-slate-400 hover:border-slate-600'
                         }`}
                       >
                         <span className="text-sm">{biz.business_name}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-500">{biz.status}</span>
                       </button>
                     )
                   })}
