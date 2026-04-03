@@ -369,14 +369,14 @@ export function CityLandingPage({
             <p className="text-xs uppercase tracking-widest text-white/50 mb-6">
               {landingConfig.supporters_heading || 'Proudly supported by'}
             </p>
-            <div className="flex items-center justify-center gap-8 md:gap-10 flex-wrap">
+            <div className="flex items-center justify-center gap-6 md:gap-8 flex-wrap">
               {(landingConfig.supporter_logos || []).map((supporter, i) => (
                 <img
                   key={i}
                   src={supporter.logo_url}
                   alt={supporter.name}
                   title={supporter.name}
-                  className="h-8 md:h-10 max-w-[110px] md:max-w-[130px] w-auto object-contain opacity-50 grayscale hover:grayscale-0 hover:opacity-90 transition-all duration-300"
+                  className="h-5 md:h-6 max-w-[80px] md:max-w-[100px] w-auto object-contain opacity-50 grayscale hover:grayscale-0 hover:opacity-90 transition-all duration-300"
                 />
               ))}
             </div>
