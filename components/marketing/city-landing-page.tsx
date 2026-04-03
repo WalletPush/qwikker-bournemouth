@@ -29,7 +29,7 @@ interface LandingPageConfig {
 interface FeaturedBusiness {
   id: string
   business_name: string
-  tagline: string | null
+  business_tagline: string | null
   logo: string | null
 }
 
@@ -355,8 +355,8 @@ export function CityLandingPage({
                     <h3 className="text-sm font-semibold text-white group-hover:text-[#00d083] transition-colors mb-1">
                       {biz.business_name}
                     </h3>
-                    {biz.tagline && (
-                      <p className="text-xs text-white/40 line-clamp-2">{biz.tagline}</p>
+                    {biz.business_tagline && (
+                      <p className="text-xs text-white/40 line-clamp-2">{biz.business_tagline}</p>
                     )}
                   </div>
                 </Link>

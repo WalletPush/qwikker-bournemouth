@@ -8,14 +8,15 @@
 
 - **Tier 0:** 16/16 complete. Remaining: 0.14 (marketing pages), 0.22 (pre-launch env vars)
 - **Tier 1:** 7/7 complete (subject to testing)
-- **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.22 complete. 2.5 partially done. 2.8-2.11, 2.17, 2.23 pending. **2.21-2.22 need testing on production subdomain.**
+- **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.22 complete. 2.5 partially done. 2.8-2.11, 2.17, 2.23, **2.24** pending. **2.21-2.22 need testing on production subdomain.**
 - **Tier 3:** Not started
 - **Tier 4:** Backlog
 
 ## Next up (in order per execution rule)
 
-1. Finish Tier 0 remaining (0.14, 0.22)
-2. Finish Tier 2 (2.8-2.11, 2.17, 2.23)
+1. **2.24 — Claim Flow Trial Option (CRITICAL / PRE-LAUNCH)**
+2. Finish Tier 0 remaining (0.14, 0.22)
+3. Finish Tier 2 (2.8-2.11, 2.17, 2.23)
 
 ## Change Impact Map
 
@@ -55,6 +56,20 @@ Environment variables that must be set in Vercel before production launch:
 - **`SENTRY_DSN`** — (optional, only if Sentry is integrated later) Error monitoring DSN.
 - Verify all city-specific env vars are set: `{CITY}_SLACK_WEBHOOK_URL`, Resend API keys in `franchise_crm_configs`, WalletPush credentials.
 - Verify `hello@{city}.qwikker.com` email forwarding is configured in DNS (Resend/Cloudflare) for each live city.
+
+### 2.24 Claim Flow Trial Option (CRITICAL — NOT STARTED)
+**Priority: PRE-LAUNCH BLOCKER.** The claim flow (`/claim`) does NOT offer a Free Trial option. When a business owner claims their auto-imported listing, they are silently assigned `claimed_free` with `is_in_free_trial: false` — no choice is presented. This is a major gap because claiming businesses are the most engaged leads and should be offered the same "Free Listing vs Free Trial" choice that exists in the onboarding flow (`/onboarding`).
+
+**What needs to happen:**
+1. **Claim confirm step** (`components/claim/confirm-business-details.tsx`): Add "Free Listing vs Free Trial" card selector (same UI as onboarding Step 6). Read trial tier/days from `franchise_crm_configs` via API.
+2. **Claim submit API** (`app/api/claim/submit/route.ts`): Accept and store `plan_choice` ('free' | 'trial') on the `claim_requests` row. New column needed: `plan_choice TEXT DEFAULT 'free'`.
+3. **Approve claim API** (`app/api/admin/approve-claim/route.ts`): If `claim.plan_choice === 'trial'`, call `approve_business_with_trial()` SQL function instead of creating a basic free subscription. This sets `status = 'approved'` (not `claimed_free`), `is_in_free_trial = true`, and `free_trial_end_date` from franchise config.
+4. **Admin CRM**: Show which plan the claimer chose so admin knows before approving.
+5. **DB**: `ALTER TABLE claim_requests ADD COLUMN plan_choice TEXT DEFAULT 'free'`
+
+**Risk:** Medium. Touches the claim → approval pipeline. Must not break existing pending claims (default to 'free'). Trial expiry, cleanup cron, and expired trials tab must all work for claim-originated trials the same as onboarding-originated trials.
+
+**What could break:** Approving a claim with `plan_choice = 'trial'` would set status to `'approved'` instead of `'claimed_free'` — downstream code that checks for `claimed_free` status may behave differently. Need to audit `claimed_free` references.
 
 ### 2.20 Configurable Trial System & Free Listing Onboarding (DONE — core complete)
 Onboarding now offers "Free Listing" vs "Free Trial" choice. Franchise admin can configure trial tier (Starter/Featured/Spotlight) and duration via City Configuration > Trial & Onboarding. All 4 SQL functions (`approve_business_with_trial`, `extend_business_trial`, `restore_trial_status`, `cleanup_expired_trials`) dynamically read from `franchise_crm_configs`. 15+ hardcoded "trial = featured" references refactored. Shared `getFeaturesForTier()` helper extracted. Pre-approval UX fixed: unapproved businesses see "Pending Approval" instead of fake countdown. Remaining: incentive toggles, trial terms text, founding member toggle UI.

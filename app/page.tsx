@@ -59,11 +59,11 @@ export default async function HomePage() {
           foundingMemberSpotsLeft = Math.max(0, (landingConfig.founding_member_total_spots as number) - (count || 0))
         }
 
-        let featuredBusinesses: { business_name: string; id: string; tagline: string | null; logo: string | null }[] = []
+        let featuredBusinesses: { business_name: string; id: string; business_tagline: string | null; logo: string | null }[] = []
         if (landingConfig.show_featured_businesses && (landingConfig.featured_business_ids as string[] | null)?.length) {
           const { data: bizData } = await serviceClient
             .from('business_profiles')
-            .select('id, business_name, tagline, logo, business_subscriptions!business_subscriptions_business_id_fkey(is_in_free_trial, free_trial_end_date, status)')
+            .select('id, business_name, business_tagline, logo, business_subscriptions!business_subscriptions_business_id_fkey(is_in_free_trial, free_trial_end_date, status)')
             .in('id', landingConfig.featured_business_ids as string[])
             .in('status', ['approved', 'claimed_free'])
 
@@ -75,7 +75,7 @@ export default async function HomePage() {
             if (!sub.is_in_free_trial) return true
             if (sub.free_trial_end_date) return new Date(sub.free_trial_end_date) >= now
             return true
-          }).map(b => ({ id: b.id, business_name: b.business_name, tagline: b.tagline, logo: b.logo }))
+          }).map(b => ({ id: b.id, business_name: b.business_name, business_tagline: b.business_tagline, logo: b.logo }))
         }
 
         return (
