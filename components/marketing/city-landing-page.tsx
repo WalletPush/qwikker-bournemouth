@@ -365,7 +365,7 @@ export function CityLandingPage({
       {/* Supporters Section */}
       {showSupporters && (
         <section className="py-12 px-6 border-t border-white/5">
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto text-center">
             <p className="text-xs uppercase tracking-widest text-white/50 mb-6">
               {landingConfig.supporters_heading || 'Proudly supported by'}
             </p>
@@ -376,7 +376,8 @@ export function CityLandingPage({
                   src={supporter.logo_url}
                   alt={supporter.name}
                   title={supporter.name}
-                  className="h-8 md:h-10 max-w-[100px] md:max-w-[120px] w-auto object-contain opacity-40 grayscale hover:grayscale-0 hover:opacity-90 transition-all duration-300"
+                  style={{ height: '40px', maxWidth: '120px', width: 'auto' }}
+                  className="object-contain opacity-40 grayscale hover:grayscale-0 hover:opacity-90 transition-all duration-300"
                 />
               ))}
             </div>
