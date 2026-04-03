@@ -376,7 +376,7 @@ export function CityLandingPage({
                   src={supporter.logo_url}
                   alt={supporter.name}
                   title={supporter.name}
-                  style={{ height: '40px', maxWidth: '120px', width: 'auto' }}
+                  style={{ height: '60px', maxWidth: '160px', width: 'auto' }}
                   className="object-contain opacity-40 grayscale hover:grayscale-0 hover:opacity-90 transition-all duration-300"
                 />
               ))}
