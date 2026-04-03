@@ -30,12 +30,9 @@ interface FeaturedBusiness {
   id: string
   business_name: string
   business_tagline: string | null
-  logo: string | null
+  business_images: string[] | null
 }
 
-function toSlug(name: string): string {
-  return name.toLowerCase().replace(/['']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-}
 
 interface CityLandingPageProps {
   city: string
@@ -333,34 +330,33 @@ export function CityLandingPage({
             <h2 className="text-2xl md:text-3xl font-semibold mb-10 text-white text-center">
               Featured in {displayName}
             </h2>
-            <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
-              {featuredBusinesses.map((biz) => (
-                <Link
-                  key={biz.id}
-                  href={`/user/business/${toSlug(biz.business_name)}`}
-                  className="flex-shrink-0 w-56 snap-start group"
-                >
-                  <div className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-[#00d083]/30 transition-colors h-full">
-                    {biz.logo ? (
-                      <div className="w-12 h-12 rounded-xl overflow-hidden mb-4 bg-white/10">
-                        <img src={biz.logo} alt="" className="w-full h-full object-cover" />
+            <div className="flex gap-4 justify-center flex-wrap">
+              {featuredBusinesses.map((biz) => {
+                const heroImage = biz.business_images?.[0]
+                return (
+                  <div
+                    key={biz.id}
+                    className="w-64 sm:w-72"
+                  >
+                    <div className="relative rounded-2xl overflow-hidden h-44 sm:h-52 border border-white/10">
+                      {heroImage ? (
+                        <img src={heroImage} alt={biz.business_name} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-800" />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                        <h3 className="text-base font-semibold text-white leading-tight mb-1">
+                          {biz.business_name}
+                        </h3>
+                        {biz.business_tagline && (
+                          <p className="text-xs text-white/60 line-clamp-2">{biz.business_tagline}</p>
+                        )}
                       </div>
-                    ) : (
-                      <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                        <span className="text-white/40 text-lg font-bold">
-                          {biz.business_name.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-                    <h3 className="text-sm font-semibold text-white group-hover:text-[#00d083] transition-colors mb-1">
-                      {biz.business_name}
-                    </h3>
-                    {biz.business_tagline && (
-                      <p className="text-xs text-white/40 line-clamp-2">{biz.business_tagline}</p>
-                    )}
+                    </div>
                   </div>
-                </Link>
-              ))}
+                )
+              })}
             </div>
           </div>
         </section>
@@ -370,17 +366,17 @@ export function CityLandingPage({
       {showSupporters && (
         <section className="py-12 px-6 border-t border-white/5">
           <div className="max-w-3xl mx-auto text-center">
-            <p className="text-xs uppercase tracking-widest text-white/30 mb-6">
+            <p className="text-xs uppercase tracking-widest text-white/50 mb-6">
               {landingConfig.supporters_heading || 'Proudly supported by'}
             </p>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-6 items-center justify-items-center">
+            <div className="flex items-center justify-center gap-8 md:gap-10 flex-wrap">
               {(landingConfig.supporter_logos || []).map((supporter, i) => (
                 <img
                   key={i}
                   src={supporter.logo_url}
                   alt={supporter.name}
                   title={supporter.name}
-                  className="h-6 md:h-8 max-w-[100px] md:max-w-[120px] w-auto object-contain opacity-40 hover:opacity-60 transition-opacity grayscale"
+                  className="h-8 md:h-10 max-w-[110px] md:max-w-[130px] w-auto object-contain opacity-50 grayscale hover:grayscale-0 hover:opacity-90 transition-all duration-300"
                 />
               ))}
             </div>
@@ -390,23 +386,23 @@ export function CityLandingPage({
 
       {/* Sponsor Banner */}
       {showSponsor && (
-        <div className="border-t border-white/5 py-5 px-6">
-          <div className="max-w-5xl mx-auto flex items-center justify-center gap-4">
+        <div className="border-t border-white/5 py-8 px-6">
+          <div className="max-w-5xl mx-auto flex flex-col items-center gap-3">
             {landingConfig.sponsor_logo_url && (
               <img
                 src={landingConfig.sponsor_logo_url}
                 alt={landingConfig.sponsor_name || 'Sponsor'}
-                className="h-6 w-auto opacity-50"
+                className="h-10 w-auto"
               />
             )}
             <div className="text-center">
               {landingConfig.sponsor_name && (
-                <p className="text-xs text-white/30">
+                <p className="text-xs text-white/40">
                   Sponsored by {landingConfig.sponsor_name}
                 </p>
               )}
               {landingConfig.sponsor_tagline && (
-                <p className="text-[10px] text-white/20">{landingConfig.sponsor_tagline}</p>
+                <p className="text-[10px] text-white/25 mt-0.5">{landingConfig.sponsor_tagline}</p>
               )}
             </div>
           </div>
