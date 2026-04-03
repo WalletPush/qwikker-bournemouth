@@ -392,7 +392,7 @@ export function CityLandingPage({
             <div className="text-center">
               {landingConfig.sponsor_name && (
                 <p className="text-sm text-white/60">
-                  Sponsored by {landingConfig.sponsor_name}
+                  Qwikker {displayName} is sponsored by {landingConfig.sponsor_name}
                 </p>
               )}
               {landingConfig.sponsor_tagline && (
