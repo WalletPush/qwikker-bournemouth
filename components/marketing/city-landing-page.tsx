@@ -389,6 +389,16 @@ export function CityLandingPage({
       {showSponsor && (
         <div className="border-t border-white/5 py-8 px-6">
           <div className="max-w-5xl mx-auto flex flex-col items-center gap-3">
+            <div className="text-center">
+              {landingConfig.sponsor_name && (
+                <p className="text-sm text-white/60">
+                  Sponsored by {landingConfig.sponsor_name}
+                </p>
+              )}
+              {landingConfig.sponsor_tagline && (
+                <p className="text-xs text-white/40 mt-0.5">{landingConfig.sponsor_tagline}</p>
+              )}
+            </div>
             {landingConfig.sponsor_logo_url && (
               <img
                 src={landingConfig.sponsor_logo_url}
@@ -396,16 +406,6 @@ export function CityLandingPage({
                 className="h-10 w-auto"
               />
             )}
-            <div className="text-center">
-              {landingConfig.sponsor_name && (
-                <p className="text-xs text-white/40">
-                  Sponsored by {landingConfig.sponsor_name}
-                </p>
-              )}
-              {landingConfig.sponsor_tagline && (
-                <p className="text-[10px] text-white/25 mt-0.5">{landingConfig.sponsor_tagline}</p>
-              )}
-            </div>
           </div>
         </div>
       )}
