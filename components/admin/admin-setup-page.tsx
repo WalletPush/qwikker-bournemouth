@@ -308,14 +308,28 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
     }
   }
 
+  const passwordRules = [
+    { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
+    { label: 'One uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
+    { label: 'One lowercase letter', test: (p: string) => /[a-z]/.test(p) },
+    { label: 'One number', test: (p: string) => /[0-9]/.test(p) },
+    { label: 'One special character', test: (p: string) => /[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(p) },
+  ]
+
+  const passedRules = passwordRules.filter(r => r.test(passwordData.newPassword)).length
+  const strengthScore = passwordData.newPassword.length === 0 ? 0 : passedRules
+  const strengthLabel = strengthScore <= 1 ? 'Weak' : strengthScore <= 2 ? 'Fair' : strengthScore <= 3 ? 'Good' : strengthScore <= 4 ? 'Strong' : 'Excellent'
+  const strengthColor = strengthScore <= 1 ? 'bg-red-500' : strengthScore <= 2 ? 'bg-orange-500' : strengthScore <= 3 ? 'bg-yellow-500' : strengthScore <= 4 ? 'bg-emerald-400' : 'bg-emerald-500'
+  const allRulesPassed = passedRules === passwordRules.length
+
   const changePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setMessage('❌ New passwords do not match')
       return
     }
 
-    if (passwordData.newPassword.length < 8) {
-      setMessage('❌ Password must be at least 8 characters')
+    if (!allRulesPassed) {
+      setMessage('❌ Password does not meet all requirements')
       return
     }
 
@@ -557,7 +571,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                   </svg>
                   Change Password
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-4">
                   <div>
                     <Label className="text-slate-300 text-sm mb-2 block">Current Password</Label>
                     <Input
@@ -574,8 +588,49 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       value={passwordData.newPassword}
                       onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
                       className="bg-slate-700/80 border-slate-600 text-white h-12 rounded-xl"
-                      placeholder="Min 8 characters"
+                      placeholder="Min 8 characters, mixed case, number, special"
                     />
+
+                    {passwordData.newPassword.length > 0 && (
+                      <div className="mt-3 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                              <div
+                                key={i}
+                                className={`flex-1 h-full rounded-full transition-all duration-300 ${
+                                  i <= strengthScore ? strengthColor : 'bg-slate-700'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className={`text-xs font-medium min-w-[60px] text-right ${
+                            strengthScore <= 1 ? 'text-red-400' : strengthScore <= 2 ? 'text-orange-400' : strengthScore <= 3 ? 'text-yellow-400' : 'text-emerald-400'
+                          }`}>
+                            {strengthLabel}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                          {passwordRules.map((rule, i) => (
+                            <div key={i} className="flex items-center gap-2 text-xs">
+                              {rule.test(passwordData.newPassword) ? (
+                                <svg className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              ) : (
+                                <svg className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              )}
+                              <span className={rule.test(passwordData.newPassword) ? 'text-slate-300' : 'text-slate-500'}>
+                                {rule.label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <Label className="text-slate-300 text-sm mb-2 block">Confirm New Password</Label>
@@ -585,11 +640,14 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
                       className="bg-slate-700/80 border-slate-600 text-white h-12 rounded-xl"
                     />
+                    {passwordData.confirmPassword.length > 0 && passwordData.newPassword !== passwordData.confirmPassword && (
+                      <p className="text-xs text-red-400 mt-1.5">Passwords do not match</p>
+                    )}
                   </div>
                 </div>
                 <Button
                   onClick={changePassword}
-                  disabled={passwordStatus === 'saving' || !passwordData.currentPassword || !passwordData.newPassword}
+                  disabled={passwordStatus === 'saving' || !passwordData.currentPassword || !allRulesPassed || passwordData.newPassword !== passwordData.confirmPassword}
                   className={`mt-4 px-6 py-3 rounded-xl font-bold transition-all ${
                     passwordStatus === 'saved' 
                       ? 'bg-green-500 hover:bg-green-600' 

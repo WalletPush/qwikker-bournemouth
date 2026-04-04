@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Sparkles, MapPin, Gift, Menu } from 'lucide-react'
+import { ArrowRight, Sparkles, Gift, Menu, Stamp } from 'lucide-react'
 
 interface SupporterLogo {
   name: string
@@ -33,7 +33,6 @@ interface FeaturedBusiness {
   business_images: string[] | null
 }
 
-
 interface CityLandingPageProps {
   city: string
   displayName: string
@@ -58,19 +57,17 @@ export function CityLandingPage({
   const showSponsor = landingConfig.sponsor_enabled && (landingConfig.sponsor_name || landingConfig.sponsor_logo_url)
   const showSupporters = landingConfig.supporters_enabled && (landingConfig.supporter_logos || []).length > 0
   const showFeatured = landingConfig.show_featured_businesses && featuredBusinesses.length > 0
+
   return (
-    <div className="min-h-screen bg-[#0b0d10] text-white">
-      {/* Header - Minimal status + nav */}
+    <div className="min-h-screen bg-[#0b0d10] text-white overflow-x-hidden">
+      {/* Header */}
       <header className="border-b border-white/5 bg-[#0b0d10]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
-          {/* Left: Status label - quieter */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs">
             <div className="w-1.5 h-1.5 rounded-full bg-[#00d083]" />
             <span className="text-white/50">{displayName} — Live</span>
           </div>
-          
-          {/* Right: Minimal nav */}
-          <nav className="flex items-center gap-6">
+          <nav className="flex items-center gap-4 sm:gap-6">
             <Link href="/for-business" className="text-sm text-white/40 hover:text-white/60 transition-colors">
               For Business
             </Link>
@@ -81,9 +78,8 @@ export function CityLandingPage({
         </div>
       </header>
 
-      {/* Hero - Cinematic with editorial spacing */}
+      {/* Hero */}
       <section className="relative overflow-hidden">
-        {/* Background: Cinematic abstract city bokeh */}
         <div className="absolute inset-0 z-0">
           <Image
             src={heroImageUrl}
@@ -97,8 +93,6 @@ export function CityLandingPage({
               filter: 'blur(0.8px)'
             }}
           />
-          
-          {/* Gradient overlay */}
           <div 
             className="absolute inset-0 z-10"
             style={{
@@ -107,19 +101,17 @@ export function CityLandingPage({
           />
         </div>
 
-        {/* Content - elevated with text shadow */}
-        <div className="relative z-10 max-w-3xl mx-auto px-6 pt-40 pb-48 text-center">
-          {/* Logo - reduced by ~7% for better balance */}
+        <div className="relative z-10 max-w-3xl mx-auto px-6 pt-32 sm:pt-40 pb-36 sm:pb-48 text-center">
           <div className="mb-12 flex justify-center">
             <img 
               src="/qwikker-logo-web.svg" 
               alt="QWIKKER" 
-              className="h-11 w-auto"
+              className="h-9 sm:h-11 w-auto"
               style={{ filter: 'drop-shadow(0 2px 20px rgba(0,0,0,0.5))' }}
             />
           </div>
 
-          <h1 className="text-6xl md:text-7xl font-bold mb-6 tracking-tight" style={{ textShadow: '0 2px 20px rgba(0,0,0,0.5)' }}>
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold mb-6 tracking-tight" style={{ textShadow: '0 2px 20px rgba(0,0,0,0.5)' }}>
             {heroHeadline ? (
               <span>{heroHeadline}</span>
             ) : (
@@ -127,15 +119,14 @@ export function CityLandingPage({
             )}
           </h1>
           
-          <p className="text-lg text-neutral-300 mb-6 leading-relaxed max-w-2xl mx-auto" style={{ textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
-            {heroSubtitle || 'Local offers, secret menus, and dish-level recommendations — delivered to your mobile wallet.'}
+          <p className="text-base sm:text-lg text-neutral-300 mb-6 leading-relaxed max-w-2xl mx-auto" style={{ textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
+            {heroSubtitle || 'Local offers, loyalty rewards, secret menus, and dish-level recommendations — delivered to your mobile wallet.'}
           </p>
 
           <p className="text-sm text-neutral-400 mb-8 leading-relaxed max-w-xl mx-auto" style={{ textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
             Powered by real menus, real hours, and local context — not scraped reviews.
           </p>
 
-          {/* Single CTA */}
           <div className="mb-6">
             <Link
               href="/join"
@@ -146,7 +137,6 @@ export function CityLandingPage({
             </Link>
           </div>
 
-          {/* Business CTA with founding member count */}
           {showFoundingCounter ? (
             <p className="text-sm text-white/50" style={{ textShadow: 'none' }}>
               Are you a business?{' '}
@@ -168,40 +158,47 @@ export function CityLandingPage({
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="py-24 px-6">
+      {/* Features Grid — 4 cards */}
+      <section className="py-20 sm:py-24 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <div className="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur">
-              <div className="w-12 h-12 rounded-xl bg-[#00d083]/10 border border-[#00d083]/20 flex items-center justify-center mb-6">
-                <Gift className="w-6 h-6 text-[#00d083]" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="p-6 sm:p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur hover:scale-[1.02] hover:border-[#00d083]/30 transition-all duration-300">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#00d083]/10 border border-[#00d083]/20 flex items-center justify-center mb-5 sm:mb-6">
+                <Gift className="w-5 h-5 sm:w-6 sm:h-6 text-[#00d083]" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Local Offers</h3>
-              <p className="text-white/60 leading-relaxed">
-                Quiet perks from places you already trust. Delivered to your wallet.
+              <h3 className="text-base sm:text-xl font-semibold mb-2 sm:mb-3">Local Offers</h3>
+              <p className="text-white/60 text-sm sm:text-base leading-relaxed">
+                Exclusive deals from places you already love. Delivered straight to your wallet.
               </p>
             </div>
 
-            {/* Feature 2 */}
-            <div className="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur">
-              <div className="w-12 h-12 rounded-xl bg-[#00d083]/10 border border-[#00d083]/20 flex items-center justify-center mb-6">
-                <Menu className="w-6 h-6 text-[#00d083]" />
+            <div className="p-6 sm:p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur hover:scale-[1.02] hover:border-[#00d083]/30 transition-all duration-300">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#00d083]/10 border border-[#00d083]/20 flex items-center justify-center mb-5 sm:mb-6">
+                <Stamp className="w-5 h-5 sm:w-6 sm:h-6 text-[#00d083]" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Secret Menu Club</h3>
-              <p className="text-white/60 leading-relaxed">
-                Off-menu dishes and hidden combinations. Unlocks as venues join.
+              <h3 className="text-base sm:text-xl font-semibold mb-2 sm:mb-3">Built-in Loyalty Cards</h3>
+              <p className="text-white/60 text-sm sm:text-base leading-relaxed">
+                Ditch the paper stamp cards. Earn, collect, and redeem rewards digitally — powered by smart tracking.
               </p>
             </div>
 
-            {/* Feature 3 */}
-            <div className="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur">
-              <div className="w-12 h-12 rounded-xl bg-[#00d083]/10 border border-[#00d083]/20 flex items-center justify-center mb-6">
-                <Sparkles className="w-6 h-6 text-[#00d083]" />
+            <div className="p-6 sm:p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur hover:scale-[1.02] hover:border-[#00d083]/30 transition-all duration-300">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#00d083]/10 border border-[#00d083]/20 flex items-center justify-center mb-5 sm:mb-6">
+                <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-[#00d083]" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">AI Companion</h3>
-              <p className="text-white/60 leading-relaxed">
-                Ask by craving, vibe, or budget. Gets sharper as businesses verify details.
+              <h3 className="text-base sm:text-xl font-semibold mb-2 sm:mb-3">Secret Menu Club</h3>
+              <p className="text-white/60 text-sm sm:text-base leading-relaxed">
+                Hidden dishes and off-menu combos that unlock as local venues join.
+              </p>
+            </div>
+
+            <div className="p-6 sm:p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur hover:scale-[1.02] hover:border-[#00d083]/30 transition-all duration-300">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#00d083]/10 border border-[#00d083]/20 flex items-center justify-center mb-5 sm:mb-6">
+                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-[#00d083]" />
+              </div>
+              <h3 className="text-base sm:text-xl font-semibold mb-2 sm:mb-3">AI Companion</h3>
+              <p className="text-white/60 text-sm sm:text-base leading-relaxed">
+                Ask by craving, vibe, or budget. Powered by real menus and verified local data.
               </p>
             </div>
           </div>
@@ -209,12 +206,12 @@ export function CityLandingPage({
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-6">
+      <section className="py-20 sm:py-24 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
             Ready to explore {displayName}?
           </h2>
-          <p className="text-xl text-white/60 mb-10">
+          <p className="text-lg sm:text-xl text-white/60 mb-10">
             Add Qwikker to your mobile wallet and open your city dashboard.
           </p>
           <Link
@@ -227,96 +224,37 @@ export function CityLandingPage({
         </div>
       </section>
 
-      {/* How it works - Soft step indicators */}
-      <section className="py-32 px-6 border-t border-white/5">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-semibold mb-16 text-white text-center">
+      {/* How it works — 3-column steps */}
+      <section className="py-20 sm:py-28 px-4 sm:px-6 border-t border-white/5">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-semibold mb-14 sm:mb-20 text-white text-center">
             How it works
           </h2>
           
-          <div className="space-y-12">
-            {/* Step 1 */}
-            <div className="flex gap-6">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/60 text-sm font-medium">
-                  ①
-                </div>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-white mb-2">Add the pass</h3>
-                <p className="text-white/60 leading-relaxed">
-                  Add Qwikker to your mobile wallet. You&apos;ll be taken straight to your city dashboard.
-                </p>
-              </div>
-            </div>
+          <div className="grid md:grid-cols-3 gap-10 md:gap-6 relative">
+            <div className="hidden md:block absolute top-5 left-[16.67%] right-[16.67%] h-px border-t border-dashed border-white/10" />
 
-            {/* Step 2 */}
-            <div className="flex gap-6">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/60 text-sm font-medium">
-                  ②
-                </div>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-white mb-2">Your access stays with you</h3>
-                <p className="text-white/60 leading-relaxed">
-                  Flip the pass anytime to return — your dashboard link is always saved on the back.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="flex gap-6">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/60 text-sm font-medium">
-                  ③
-                </div>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-white mb-2">No setup, no maintenance</h3>
-                <p className="text-white/60 leading-relaxed">
-                  No app. No accounts. Your city updates automatically as it grows.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Subtle divider */}
-      <div className="max-w-3xl mx-auto px-6">
-        <div className="h-px bg-white/5" />
-      </div>
-
-      {/* Cities grow over time - Soft step indicators */}
-      <section className="py-32 px-6">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-semibold mb-16 text-white text-center">
-            Cities grow over time
-          </h2>
-          
-          <div className="space-y-12">
-            {/* Point 1 */}
-            <div>
-              <h3 className="text-xl font-semibold text-white mb-2">Curated first</h3>
-              <p className="text-white/60 leading-relaxed">
-                Every city launches with hand-picked places to explore.
+            <div className="text-center">
+              <div className="text-3xl sm:text-4xl font-bold text-[#00d083] mb-4 tabular-nums">01</div>
+              <h3 className="text-lg sm:text-xl font-semibold text-white mb-3">Add to your wallet</h3>
+              <p className="text-white/50 text-sm sm:text-base leading-relaxed">
+                Tap the button. No app to download — Qwikker lives in Apple or Google Wallet.
               </p>
             </div>
 
-            {/* Point 2 */}
-            <div>
-              <h3 className="text-xl font-semibold text-white mb-2">Features unlock quietly</h3>
-              <p className="text-white/60 leading-relaxed">
-                Offers, secret menus, and companion features appear as local businesses join.
+            <div className="text-center">
+              <div className="text-3xl sm:text-4xl font-bold text-[#00d083] mb-4 tabular-nums">02</div>
+              <h3 className="text-lg sm:text-xl font-semibold text-white mb-3">Explore your city</h3>
+              <p className="text-white/50 text-sm sm:text-base leading-relaxed">
+                Browse offers, collect loyalty rewards, discover secret menus, and chat with the AI companion.
               </p>
             </div>
 
-            {/* Point 3 */}
-            <div>
-              <h3 className="text-xl font-semibold text-white mb-2">Nothing to manage</h3>
-              <p className="text-white/60 leading-relaxed">
-                Your pass updates on its own — your city just keeps getting better.
+            <div className="text-center">
+              <div className="text-3xl sm:text-4xl font-bold text-[#00d083] mb-4 tabular-nums">03</div>
+              <h3 className="text-lg sm:text-xl font-semibold text-white mb-3">It grows with your city</h3>
+              <p className="text-white/50 text-sm sm:text-base leading-relaxed">
+                New businesses, offers, and rewards appear automatically. Your pass stays up to date.
               </p>
             </div>
           </div>
@@ -325,7 +263,7 @@ export function CityLandingPage({
 
       {/* Featured Businesses */}
       {showFeatured && (
-        <section className="py-20 px-6 border-t border-white/5">
+        <section className="py-20 px-4 sm:px-6 border-t border-white/5">
           <div className="max-w-5xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-semibold mb-10 text-white text-center">
               Featured in {displayName}
@@ -364,7 +302,7 @@ export function CityLandingPage({
 
       {/* Supporters Section */}
       {showSupporters && (
-        <section className="py-12 px-6 border-t border-white/5">
+        <section className="py-12 px-4 sm:px-6 border-t border-white/5">
           <div className="max-w-4xl mx-auto text-center">
             <p className="text-xs uppercase tracking-widest text-white/50 mb-6">
               {landingConfig.supporters_heading || 'Proudly supported by'}
@@ -387,7 +325,7 @@ export function CityLandingPage({
 
       {/* Sponsor Banner */}
       {showSponsor && (
-        <div className="border-t border-white/5 py-8 px-6">
+        <div className="border-t border-white/5 py-8 px-4 sm:px-6">
           <div className="max-w-5xl mx-auto flex flex-col items-center gap-3">
             <div className="text-center">
               {landingConfig.sponsor_name && (
@@ -411,19 +349,18 @@ export function CityLandingPage({
       )}
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-12 px-6">
+      <footer className="border-t border-white/5 py-12 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center gap-8 mb-8">
+            <div className="flex flex-col items-center gap-1">
               <img 
                 src="/qwikker-logo-web.svg" 
                 alt="QWIKKER" 
                 className="h-6 w-auto"
               />
-              <span className="text-white/40">·</span>
               <span className="text-white/40 text-sm">{displayName}</span>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 flex-wrap justify-center">
               <Link href="/for-business" className="text-sm text-white/60 hover:text-white transition-colors">
                 For Business
               </Link>
@@ -436,7 +373,6 @@ export function CityLandingPage({
             </div>
           </div>
           
-          {/* Copyright */}
           <div className="text-center">
             <p className="text-sm text-white/40">© Qwikker 2026</p>
           </div>
