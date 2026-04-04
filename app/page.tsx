@@ -79,6 +79,25 @@ export default async function HomePage() {
           }).map(b => ({ id: b.id, business_name: b.business_name, business_tagline: b.business_tagline, business_images: b.business_images }))
         }
 
+        let passHolderCount = 0
+        if (landingConfig.show_pass_count) {
+          const { count } = await serviceClient
+            .from('app_users')
+            .select('id', { count: 'exact', head: true })
+            .ilike('city', city)
+          passHolderCount = count || 0
+        }
+
+        let trialEnabled = false
+        const { data: crmConfig } = await serviceClient
+          .from('franchise_crm_configs')
+          .select('founding_member_trial_days')
+          .eq('city', city)
+          .single()
+        if (crmConfig?.founding_member_trial_days && crmConfig.founding_member_trial_days > 0) {
+          trialEnabled = true
+        }
+
         return (
           <CityLandingPage
             city={cityInfo.city}
@@ -87,6 +106,8 @@ export default async function HomePage() {
             landingConfig={landingConfig}
             foundingMemberSpotsLeft={foundingMemberSpotsLeft}
             featuredBusinesses={featuredBusinesses}
+            passHolderCount={passHolderCount}
+            trialEnabled={trialEnabled}
           />
         )
       }

@@ -1,8 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Sparkles, Gift, Menu, Stamp } from 'lucide-react'
+import { ArrowRight, Sparkles, Gift, Menu, Stamp, ChevronDown } from 'lucide-react'
 
 interface SupporterLogo {
   name: string
@@ -24,6 +25,7 @@ interface LandingPageConfig {
   founding_member_total_spots?: number
   show_featured_businesses?: boolean
   featured_business_ids?: string[] | null
+  show_pass_count?: boolean
 }
 
 interface FeaturedBusiness {
@@ -40,6 +42,28 @@ interface CityLandingPageProps {
   landingConfig?: LandingPageConfig
   foundingMemberSpotsLeft?: number
   featuredBusinesses?: FeaturedBusiness[]
+  passHolderCount?: number
+  trialEnabled?: boolean
+}
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="border-b border-white/5">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between py-5 text-left gap-4"
+      >
+        <span className="text-base sm:text-lg font-medium text-white">{question}</span>
+        <ChevronDown className={`w-5 h-5 text-white/40 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <p className="text-white/50 text-sm sm:text-base leading-relaxed pb-5 pr-10">
+          {answer}
+        </p>
+      )}
+    </div>
+  )
 }
 
 export function CityLandingPage({
@@ -49,6 +73,8 @@ export function CityLandingPage({
   landingConfig = {},
   foundingMemberSpotsLeft = 0,
   featuredBusinesses = [],
+  passHolderCount = 0,
+  trialEnabled = false,
 }: CityLandingPageProps) {
   const heroHeadline = landingConfig.hero_headline || null
   const heroSubtitle = landingConfig.hero_subtitle || null
@@ -57,6 +83,7 @@ export function CityLandingPage({
   const showSponsor = landingConfig.sponsor_enabled && (landingConfig.sponsor_name || landingConfig.sponsor_logo_url)
   const showSupporters = landingConfig.supporters_enabled && (landingConfig.supporter_logos || []).length > 0
   const showFeatured = landingConfig.show_featured_businesses && featuredBusinesses.length > 0
+  const showPassCount = landingConfig.show_pass_count && passHolderCount > 0
 
   return (
     <div className="min-h-screen bg-[#0b0d10] text-white overflow-x-hidden">
@@ -205,6 +232,32 @@ export function CityLandingPage({
         </div>
       </section>
 
+      {/* Business CTA Banner */}
+      <section className="px-4 sm:px-6 pb-10">
+        <div className="max-w-3xl mx-auto">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 sm:p-10 text-center">
+            <h3 className="text-xl sm:text-2xl font-semibold text-white mb-3">
+              Own a local business in {displayName}?
+            </h3>
+            <p className="text-white/50 text-sm sm:text-base mb-6 max-w-lg mx-auto leading-relaxed">
+              Get featured, manage offers, and build customer loyalty — all from one dashboard.
+            </p>
+            {trialEnabled && (
+              <p className="text-[#00d083] text-sm mb-6 font-medium">
+                Start with a free trial — no commitment.
+              </p>
+            )}
+            <Link
+              href="/for-business"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-[#00d083]/40 text-[#00d083] hover:bg-[#00d083]/10 font-medium text-sm transition-all"
+            >
+              Learn more
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20 sm:py-24 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto text-center">
@@ -221,6 +274,35 @@ export function CityLandingPage({
             Get the {displayName} pass
             <ArrowRight className="w-5 h-5" />
           </Link>
+        </div>
+      </section>
+
+      {/* Why Qwikker? */}
+      <section className="py-20 sm:py-24 px-4 sm:px-6 border-t border-white/5">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-semibold mb-14 sm:mb-16 text-white text-center">
+            Why Qwikker?
+          </h2>
+          <div className="space-y-10">
+            <div>
+              <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Real data, not scraped reviews</h3>
+              <p className="text-white/50 text-sm sm:text-base leading-relaxed">
+                Every menu, every offer, and every recommendation comes from verified business data — not aggregated reviews or pay-to-win listings.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Your wallet, not another app</h3>
+              <p className="text-white/50 text-sm sm:text-base leading-relaxed">
+                No downloads, no accounts, no notifications you didn&apos;t ask for. Just a pass in your Apple or Google Wallet that opens your city dashboard.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Built city by city</h3>
+              <p className="text-white/50 text-sm sm:text-base leading-relaxed">
+                Each city is curated individually with local knowledge baked in. No generic results — what you see is specific to {displayName}.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -261,6 +343,15 @@ export function CityLandingPage({
         </div>
       </section>
 
+      {/* Pass Holder Count */}
+      {showPassCount && (
+        <section className="py-10 px-4 sm:px-6">
+          <p className="text-center text-white/40 text-sm sm:text-base">
+            Join <span className="text-white font-semibold">{passHolderCount.toLocaleString()}</span> people already exploring {displayName}
+          </p>
+        </section>
+      )}
+
       {/* Featured Businesses */}
       {showFeatured && (
         <section className="py-20 px-4 sm:px-6 border-t border-white/5">
@@ -299,6 +390,29 @@ export function CityLandingPage({
           </div>
         </section>
       )}
+
+      {/* FAQ */}
+      <section className="py-20 sm:py-24 px-4 sm:px-6 border-t border-white/5">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-semibold mb-10 text-white text-center">
+            Frequently asked questions
+          </h2>
+          <div>
+            <FaqItem
+              question="Is it free?"
+              answer="Yes. Adding Qwikker to your wallet is completely free. You get access to offers, loyalty rewards, secret menus, and the AI companion at no cost."
+            />
+            <FaqItem
+              question="Do I need to download an app?"
+              answer="No. Qwikker lives in your Apple or Google Wallet. Tap the pass anytime to open your city dashboard in the browser — no app needed."
+            />
+            <FaqItem
+              question="How do businesses join?"
+              answer="Local businesses can claim their listing and start managing offers, loyalty cards, and their menu — all from a simple dashboard. Visit the For Business page to learn more."
+            />
+          </div>
+        </div>
+      </section>
 
       {/* Supporters Section */}
       {showSupporters && (

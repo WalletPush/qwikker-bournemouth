@@ -47,6 +47,7 @@ interface LandingPageConfig {
   founding_member_total_spots?: number
   show_featured_businesses?: boolean
   featured_business_ids?: string[] | null
+  show_pass_count?: boolean
 }
 
 interface BusinessOption {
@@ -627,6 +628,35 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
               )}
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Pass Holder Count */}
+      <Card className="bg-slate-800/50 border-slate-700">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-[#00d083]/10">
+              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <div>
+              <CardTitle className="text-white">Pass Holder Count</CardTitle>
+              <p className="text-sm text-slate-400 mt-1">Show how many people have the city pass on your landing page</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-slate-300">Show Pass Holder Count</Label>
+              <p className="text-xs text-slate-500 mt-1">Displays &quot;Join X people already exploring [city]&quot; on the landing page</p>
+            </div>
+            <Toggle
+              checked={config.show_pass_count || false}
+              onCheckedChange={(val) => setConfig(prev => ({ ...prev, show_pass_count: val }))}
+            />
+          </div>
         </CardContent>
       </Card>
 

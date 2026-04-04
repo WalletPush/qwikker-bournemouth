@@ -27,6 +27,7 @@ const landingPageConfigSchema = z.object({
 
   show_featured_businesses: z.boolean().optional(),
   featured_business_ids: z.array(z.string().uuid()).nullable().optional(),
+  show_pass_count: z.boolean().optional(),
 })
 
 export async function GET(request: NextRequest) {
