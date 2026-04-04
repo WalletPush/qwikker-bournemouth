@@ -25,7 +25,7 @@ export default function AboutPage() {
           
           <div className="flex items-center gap-8">
             <Link 
-              href="/#live-cities" 
+              href="https://qwikker.com/#live-cities" 
               className="text-sm text-white/[0.68] hover:text-white/[0.92] transition-colors"
             >
               Live cities
@@ -127,7 +127,7 @@ export default function AboutPage() {
 
         <div className="mt-20">
           <Link 
-            href="/#live-cities"
+            href="https://qwikker.com/#live-cities"
             className="text-[#00d083] hover:text-white transition-colors text-sm flex items-center gap-1"
           >
             View live cities
@@ -143,7 +143,7 @@ export default function AboutPage() {
         <div className="max-w-[1200px] mx-auto px-6 py-12">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
             <div className="flex gap-8 text-sm">
-              <Link href="/#live-cities" className="text-white/[0.45] hover:text-white/[0.92] transition-colors">
+              <Link href="https://qwikker.com/#live-cities" className="text-white/[0.45] hover:text-white/[0.92] transition-colors">
                 Live cities
               </Link>
               <Link href="/for-business" className="text-white/[0.45] hover:text-white/[0.92] transition-colors">

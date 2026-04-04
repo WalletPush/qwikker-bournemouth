@@ -314,7 +314,7 @@ export function CityLandingPage({
                   src={supporter.logo_url}
                   alt={supporter.name}
                   title={supporter.name}
-                  style={{ height: '120px', maxWidth: '320px', width: 'auto' }}
+                  style={{ height: '80px', maxWidth: '200px', width: 'auto' }}
                   className="object-contain opacity-40 grayscale hover:grayscale-0 hover:opacity-90 transition-all duration-300"
                 />
               ))}
