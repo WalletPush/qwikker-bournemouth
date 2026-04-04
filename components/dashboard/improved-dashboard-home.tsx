@@ -56,6 +56,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
     founding_member_discount: number
     founding_member_title: string
     founding_member_description: string
+    default_trial_tier: string
+    founding_member_trial_days: number
   } | null>(null)
   const [analyticsData, setAnalyticsData] = useState<{
     totalProfileViews: number
@@ -224,7 +226,9 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             founding_member_enabled: data.config.founding_member_enabled ?? true,
             founding_member_discount: data.config.founding_member_discount || 20,
             founding_member_title: data.config.founding_member_title || 'Founding Member Benefit',
-            founding_member_description: data.config.founding_member_description || ''
+            founding_member_description: data.config.founding_member_description || '',
+            default_trial_tier: data.config.default_trial_tier || 'featured',
+            founding_member_trial_days: data.config.founding_member_trial_days || 30,
           })
         }
       } catch (error) {
@@ -850,10 +854,23 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
             
             {/* Upgrade Section */}
             <div className="space-y-5">
-              <h3 className="text-2xl font-semibold text-white">Upgrade to Start Getting Recommended</h3>
-              <p className="text-slate-300 text-base leading-relaxed max-w-2xl mx-auto">
-                Free listings are visible. <span className="text-white font-medium">Upgraded listings are actively suggested by AI</span> and shown more prominently to customers looking right now.
-              </p>
+              {franchiseConfig?.default_trial_tier && franchiseConfig?.founding_member_trial_days ? (
+                <>
+                  <h3 className="text-2xl font-semibold text-white">
+                    Start your {franchiseConfig.founding_member_trial_days}-day free {franchiseConfig.default_trial_tier.charAt(0).toUpperCase() + franchiseConfig.default_trial_tier.slice(1)} trial
+                  </h3>
+                  <p className="text-slate-300 text-base leading-relaxed max-w-2xl mx-auto">
+                    Unlock priority AI recommendations, unlimited offers, secret menus, and analytics — free for {franchiseConfig.founding_member_trial_days} days, no commitment.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-2xl font-semibold text-white">Upgrade to Start Getting Recommended</h3>
+                  <p className="text-slate-300 text-base leading-relaxed max-w-2xl mx-auto">
+                    Free listings are visible. <span className="text-white font-medium">Upgraded listings are actively suggested by AI</span> and shown more prominently to customers looking right now.
+                  </p>
+                </>
+              )}
               
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
@@ -864,7 +881,9 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40 font-semibold px-8"
                 >
                   <Link href="/dashboard/settings#pricing">
-                    View Plans
+                    {franchiseConfig?.founding_member_trial_days
+                      ? `Start ${franchiseConfig.founding_member_trial_days}-Day Free Trial`
+                      : 'View Plans'}
                   </Link>
                 </Button>
                 <button
@@ -1861,6 +1880,8 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           businessId={profile.id}
           isOpen={showWelcomeModal}
           onClose={() => setShowWelcomeModal(false)}
+          trialTier={franchiseConfig?.default_trial_tier}
+          trialDays={franchiseConfig?.founding_member_trial_days}
         />
       )}
 

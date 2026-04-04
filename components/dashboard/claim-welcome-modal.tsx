@@ -10,9 +10,12 @@ interface ClaimWelcomeModalProps {
   businessId: string
   isOpen: boolean
   onClose: () => void
+  trialTier?: string
+  trialDays?: number
 }
 
-export function ClaimWelcomeModal({ businessName, businessId, isOpen, onClose }: ClaimWelcomeModalProps) {
+export function ClaimWelcomeModal({ businessName, businessId, isOpen, onClose, trialTier, trialDays }: ClaimWelcomeModalProps) {
+  const tierName = trialTier ? trialTier.charAt(0).toUpperCase() + trialTier.slice(1) : null
   const [isClosing, setIsClosing] = useState(false)
 
   const handleClose = async () => {
@@ -67,188 +70,63 @@ export function ClaimWelcomeModal({ businessName, businessId, isOpen, onClose }:
               Your Free Listing Includes
             </h3>
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm py-2">
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="text-slate-300">Visible in Discover section</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="text-slate-300">Basic AI chat visibility</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="text-slate-300">Up to 5 menu items</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="text-slate-300">1 offer per month</span>
-              </div>
+              {['Visible in Discover section', 'Basic AI chat visibility', 'Up to 5 menu items', '1 offer per month'].map((item) => (
+                <div key={item} className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-slate-300">{item}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Upgrade to Start Getting Recommended */}
+          {/* Trial / Upgrade CTA */}
           <div className="bg-gradient-to-br from-[#00d083]/10 to-emerald-500/5 border border-[#00d083]/30 rounded-xl p-6">
-            <h3 className="text-xl font-bold text-white mb-2">
-              🚀 Upgrade to Start Getting Recommended
-            </h3>
-            <p className="text-slate-300 text-sm mb-6 leading-relaxed">
-              Free listings are visible. <span className="text-white font-medium">Upgraded listings are actively suggested by AI</span> and shown more prominently to customers looking right now.
-            </p>
-
-            <div className="space-y-5">
-              {/* Get Recommended by AI */}
-              <div>
-                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
-                  <span className="text-lg">🧠</span>
-                  Get Recommended by AI
-                </h4>
-                <p className="text-slate-400 text-sm mb-2">
-                  When users ask "Best food near me" or "Where should we eat tonight?" — <span className="text-slate-200">your business and specific dishes can be suggested directly.</span>
+            {tierName && trialDays ? (
+              <>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  Start your {trialDays}-day free {tierName} trial
+                </h3>
+                <p className="text-slate-300 text-sm mb-4 leading-relaxed">
+                  Unlock priority AI recommendations, unlimited offers, secret menus, and analytics — free for {trialDays} days. No commitment.
                 </p>
-                <div className="space-y-1 text-xs text-slate-400 ml-6">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Full menu indexing (AI can recommend your dishes)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Priority visibility in AI results</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Dish-level discovery</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Show Up When People Search Nearby */}
-              <div>
-                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
-                  <span className="text-lg">📍</span>
-                  Show Up When People Search Nearby
-                </h4>
-                <p className="text-slate-400 text-sm mb-2">
-                  Qwikker is used in-the-moment.
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  Upgrade to Start Getting Recommended
+                </h3>
+                <p className="text-slate-300 text-sm mb-4 leading-relaxed">
+                  Free listings are visible. <span className="text-white font-medium">Upgraded listings are actively suggested by AI</span> and shown more prominently to customers looking right now.
                 </p>
-                <div className="space-y-1 text-xs text-slate-400 ml-6">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Featured placement in discovery</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Visibility inside Atlas (interactive AI map)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Higher exposure for "near me" searches</span>
-                  </div>
-                </div>
-              </div>
+              </>
+            )}
 
-              {/* Turn Offers Into Traffic */}
-              <div>
-                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
-                  <span className="text-lg">🎯</span>
-                  Turn Offers Into Traffic
-                </h4>
-                <p className="text-slate-400 text-sm mb-2">
-                  Users often ask for deals.
-                </p>
-                <div className="space-y-1 text-xs text-slate-400 ml-6">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                {[
+                  'Priority AI recommendations',
+                  'Full menu indexing',
+                  'Unlimited offers and events',
+                  'Secret Menu Club access',
+                  'Premium placement in discovery',
+                  'Business analytics',
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-2 text-slate-300">
+                    <svg className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span>Time-based offers</span>
+                    <span>{item}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Offers surfaced inside AI chat</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Featured in "Current Deals" flows</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stand Out + Secret Menu */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-white font-semibold mb-2 flex items-center gap-2 text-sm">
-                    <span>🌟</span>
-                    Stand Out Visually
-                  </h4>
-                  <div className="space-y-1 text-xs text-slate-400 ml-5">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Premium carousel cards</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Priority positioning</span>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-2 flex items-center gap-2 text-sm">
-                    <span>🔐</span>
-                    Secret Menu Club
-                  </h4>
-                  <div className="space-y-1 text-xs text-slate-400 ml-5">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Exclusive hidden items</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <svg className="w-3 h-3 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Build loyal customers</span>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-slate-700/50 text-center">
-              <p className="text-slate-200 font-medium text-sm mb-4">
-                Qwikker helps customers <span className="text-[#00d083]">choose you</span> — not just scroll past you.
-              </p>
+            <div className="mt-6 pt-5 border-t border-slate-700/50 text-center">
               <Button asChild size="sm" className="bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold">
                 <Link href="/dashboard/settings#pricing">
-                  View Plans
+                  {tierName && trialDays ? `Start ${trialDays}-Day Free Trial` : 'View Plans'}
                 </Link>
               </Button>
             </div>

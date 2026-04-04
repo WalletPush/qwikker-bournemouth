@@ -225,10 +225,10 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
       features: [
         'Listed in Discover directory',
         'Basic business profile',
-        'Update profile info',
-        'Limited visibility',
-        '❌ No AI chat visibility',
-        '❌ No offers or events',
+        'Basic AI chat visibility',
+        'Up to 5 menu items',
+        '1 offer per month',
+        '❌ No priority AI recommendations',
         '❌ No secret menu items',
         '❌ No analytics'
       ],

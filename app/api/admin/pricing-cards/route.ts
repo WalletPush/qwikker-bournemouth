@@ -82,7 +82,9 @@ export async function GET(request: NextRequest) {
         founding_member_discount,
         founding_member_title,
         founding_member_description,
-        pricing_cards
+        pricing_cards,
+        default_trial_tier,
+        founding_member_trial_days
       `)
       .eq('city', city)
       .single()

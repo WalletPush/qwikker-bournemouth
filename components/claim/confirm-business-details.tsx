@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label'
 import { Building2, Upload, X, Check, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
 import { VIBE_TAG_CATEGORIES, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH } from '@/lib/constants/vibe-tags'
+import { BusinessHoursInput } from '@/components/business-hours-input'
+import { BusinessHoursStructured, convertStructuredToText } from '@/types/business-hours'
 
 interface BusinessData {
   id: string
@@ -64,6 +66,7 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
   // Hours confirmation state
   const [googleHoursCorrect, setGoogleHoursCorrect] = useState<boolean | null>(null)
   const [customHours, setCustomHours] = useState('')
+  const [structuredHours, setStructuredHours] = useState<BusinessHoursStructured | null>(null)
   
   // SMS opt-in state (only relevant if smsOptInAvailable)
   const [smsOptIn, setSmsOptIn] = useState(false)
@@ -213,8 +216,9 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
       type: type.trim(),
       description: description.trim(),
       tagline: tagline.trim(),
-      // Use custom hours if user said Google hours are incorrect, otherwise use Google hours
-      hours: googleHoursCorrect === false ? customHours.trim() : hours.trim(),
+      hours: googleHoursCorrect === false
+        ? (structuredHours ? convertStructuredToText(structuredHours) : customHours.trim())
+        : hours.trim(),
       logo: logoFile || undefined,
       heroImage: heroImageFile || undefined,
       // Include SMS opt-in data only if available and opted in
@@ -546,21 +550,15 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
                 </div>
               </div>
               
-              {/* Show custom hours input if user selects No */}
+              {/* Show structured hours input if user selects No */}
               {googleHoursCorrect === false && (
                 <div className="space-y-2">
-                  <Label htmlFor="customHours">Enter your opening hours</Label>
-                  <Textarea
-                    id="customHours"
-                    value={customHours}
-                    onChange={(e) => setCustomHours(e.target.value)}
-                    placeholder="Mon-Fri: 9am-5pm&#10;Sat: 10am-4pm&#10;Sun: Closed"
-                    rows={4}
-                    className="resize-none"
+                  <Label>Set your opening hours</Label>
+                  <BusinessHoursInput
+                    compact
+                    value={structuredHours}
+                    onChange={(hours) => setStructuredHours(hours)}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Enter your opening hours (one line per day, or a summary)
-                  </p>
                 </div>
               )}
             </div>

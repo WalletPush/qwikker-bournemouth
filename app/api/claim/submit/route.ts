@@ -415,7 +415,7 @@ export async function POST(request: NextRequest) {
       // Get franchise config for Resend settings
       const { data: franchiseConfig } = await supabase
         .from('franchise_crm_configs')
-        .select('resend_api_key, resend_from_email, resend_from_name, display_name, founding_member_enabled, founding_member_trial_days, founding_member_discount_percent')
+        .select('resend_api_key, resend_from_email, resend_from_name, display_name, founding_member_enabled, founding_member_trial_days, founding_member_discount_percent, default_trial_tier')
         .eq('city', business.city)
         .single()
 
@@ -496,7 +496,7 @@ export async function POST(request: NextRequest) {
                       Founding Member Bonus
                     </p>
                     <ul style="margin: 0; padding-left: 20px; color: #525252; font-size: 14px;">
-                      <li style="margin: 6px 0;"><strong>${franchiseConfig.founding_member_trial_days || 90}-day FREE Featured tier trial</strong></li>
+                      <li style="margin: 6px 0;"><strong>${franchiseConfig.founding_member_trial_days || 90}-day FREE ${(franchiseConfig.default_trial_tier || 'featured').charAt(0).toUpperCase() + (franchiseConfig.default_trial_tier || 'featured').slice(1)} tier trial</strong></li>
                       <li style="margin: 6px 0;"><strong>${franchiseConfig.founding_member_discount_percent || 20}% OFF FOR LIFE</strong> on annual plans</li>
                       <li style="margin: 6px 0;">Exclusive founding member badge</li>
                     </ul>

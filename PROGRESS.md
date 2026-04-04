@@ -8,15 +8,16 @@
 
 - **Tier 0:** 16/16 complete. Remaining: 0.14 (marketing pages), 0.22 (pre-launch env vars)
 - **Tier 1:** 7/7 complete (subject to testing)
-- **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.22 complete. 2.5 partially done. 2.8-2.11, 2.17, 2.23, **2.24** pending. **2.21-2.22 need testing on production subdomain.**
+- **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.23 complete. 2.5 partially done. 2.8-2.11, 2.17, **2.24** pending. **2.21-2.23 need testing on production subdomain.**
 - **Tier 3:** Not started
 - **Tier 4:** Backlog
 
 ## Next up (in order per execution rule)
 
-1. **2.24 — Claim Flow Trial Option (CRITICAL / PRE-LAUNCH)**
-2. Finish Tier 0 remaining (0.14, 0.22)
-3. Finish Tier 2 (2.8-2.11, 2.17, 2.23)
+1. **TEST SESSION NEEDED** — Landing page sections, claim hours, trial/pricing fixes, welcome modal (see testing checklist below)
+2. **2.24 — Claim Flow Trial Option (CRITICAL / PRE-LAUNCH)**
+3. Finish Tier 0 remaining (0.14, 0.22)
+4. Finish Tier 2 (2.8-2.11, 2.17)
 
 ## Change Impact Map
 
@@ -35,6 +36,7 @@
 | 0.12b Stripe API + Confirmation Fixes | `app/api/stripe/update-subscription/route.ts`, `components/dashboard/pricing-plans.tsx` | Medium | **Bug 1:** `subscriptions.update()` does not support `price_data.product_data` (only `checkout.sessions.create` does). Fixed: find or create a Stripe Product per tier+city with metadata, use `product: productId`. **Bug 2:** Checkout-created Products are immutable — `products.update()` throws. Fixed: never mutate Checkout-created products; maintain our own Products via metadata lookup. **Bug 3:** No confirmation dialog on plan change — one misclick could change billing. Fixed: added Dialog showing current plan, new plan, new price, and proration explanation before executing. First-time purchases still go to Stripe Checkout (has built-in confirmation). |
 | 0.12c Stripe Period Date Fix | `app/api/webhooks/stripe/route.ts`, `app/api/stripe/cancel-subscription/route.ts` | Medium | Stripe basil API (2025-03-31) moved `current_period_start/end` from top-level subscription to `items.data[]`. Webhook `handleSubscriptionUpdated` crashed with `RangeError: Invalid time value`. Cancel route returned `accessUntil: null`. Fixed: read period dates from `subscription.items.data[0]`, added `typeof === 'number'` guards on all date conversions. Cancel subscription + confirmation dialog now working end-to-end. |
 | 2.6 Business Vibe Tags | `lib/constants/vibe-tags.ts` (new), `components/dashboard/clean-profile-page.tsx`, `components/dashboard/business-info-page.tsx`, `components/dashboard/action-items-page.tsx`, `components/claim/confirm-business-details.tsx`, `app/claim/page.tsx`, `app/api/claim/submit/route.ts`, `app/api/admin/approve-claim/route.ts`, `components/user/user-business-detail-page.tsx`, `app/user/discover/page.tsx`, `lib/ai/hybrid-chat.ts`, `components/admin/comprehensive-business-crm-card.tsx`, `lib/actions/business-actions.ts`, `lib/actions/seamless-updates.ts` | Medium | **DB:** `vibe_tags` JSONB column added to `business_profiles`; `edited_vibe_tags` TEXT added to `claim_requests`. Three views updated (`business_profiles_chat_eligibility`, `business_profiles_chat_eligible`, `business_profiles_lite_eligible`). If views were recreated without the column, AI chat context and discover page would silently lose tag data. **Profile page:** Vibe Tags + Booking cards added to `clean-profile-page.tsx` — if `updateBusinessInfo` server action rejects unknown fields, saves would fail (tested: it's a pass-through, safe). **Claim flow:** `edited_vibe_tags` passed as JSON string in FormData — if approval route can't parse it, tags silently null (graceful). **Discover search:** vibe tags concatenated into search text — bad JSONB shape could cause runtime error on `.map()` (mitigated: optional chaining). **AI chat:** tags appended to context block — worst case extra whitespace if null. **Action item links:** All `/dashboard/business` hrefs replaced with `/dashboard/profile` — old page still exists at route but is unreachable from sidebar. |
+| 2.23 Landing Page Sections + Claim/Trial Fixes | `components/marketing/city-landing-page.tsx`, `app/page.tsx`, `components/admin/landing-page-editor.tsx`, `app/api/admin/landing-page/route.ts`, `components/business-hours-input.tsx`, `components/claim/confirm-business-details.tsx`, `app/api/claim/search/route.ts`, `app/api/admin/approve-claim/route.ts`, `app/api/claim/submit/route.ts`, `components/dashboard/claim-welcome-modal.tsx`, `components/dashboard/improved-dashboard-home.tsx`, `components/dashboard/pricing-plans.tsx`, `app/api/admin/pricing-cards/route.ts` | Medium | 13 files touched. Landing page adds 4 new sections (no existing sections modified). Claim search now returns `business_hours` (new field in response — backwards compatible). Approval route clears `business_hours_structured` when edited hours present (could affect profile display for future approvals — intended). Welcome modal lost emoji content (intentional). Pricing cards API returns 2 new fields (additive). Free Listing features updated to match reality. |
 | 0.11 Mobile Optimization Pass | `components/admin/pricing-card-editor.tsx`, `comprehensive-business-crm-card.tsx`, `business-crm-card.tsx`, `admin-dashboard.tsx`, `admin-analytics.tsx`, `comprehensive-admin-analytics.tsx`, `improved-dashboard-home.tsx`, `simple-post-editor.tsx`, `user-business-detail-page.tsx`, `user-chat-page.tsx`, `user-dashboard-layout.tsx`, `app/hqadmin/layout.tsx`, `components/hqadmin/hq-admin-shell.tsx` (new) | Low | Fixed dense multi-column grids (4-6 cols) without mobile breakpoints across admin, dashboard, and user pages. Added responsive stacking at `sm:`/`md:` breakpoints. HQ admin got mobile hamburger drawer (was fixed sidebar only). Admin dashboard got iOS safe-area insets. AI Chat refactored to iMessage-style layout: input pinned at screen bottom via JS-measured height, messages anchored near input via dynamic paddingTop + ResizeObserver. Desktop unchanged. |
 
 ## Task Descriptions
@@ -70,6 +72,43 @@ Environment variables that must be set in Vercel before production launch:
 **Risk:** Medium. Touches the claim → approval pipeline. Must not break existing pending claims (default to 'free'). Trial expiry, cleanup cron, and expired trials tab must all work for claim-originated trials the same as onboarding-originated trials.
 
 **What could break:** Approving a claim with `plan_choice = 'trial'` would set status to `'approved'` instead of `'claimed_free'` — downstream code that checks for `claimed_free` status may behave differently. Need to audit `claimed_free` references.
+
+### 2.23 Landing Page New Sections, Claim Hours Fix, Trial/Pricing Cleanup (DONE — NEEDS TESTING)
+
+**Landing page sections** (city-landing-page.tsx, page.tsx, landing-page-editor.tsx, landing-page API):
+- Business CTA banner between Features Grid and CTA (links to /for-business, shows free trial mention if `founding_member_trial_days > 0`)
+- "Why Qwikker?" editorial section (3 value props) between CTA and How it works
+- Pass holder count ("Join X people exploring {city}") — admin toggleable via `show_pass_count` in landing config, queries `app_users` count
+- FAQ accordion (3 questions, always visible) between Featured Businesses and Supporters
+- Admin editor: new "Pass Holder Count" toggle card
+
+**Claim hours selector** (business-hours-input.tsx, confirm-business-details.tsx):
+- `BusinessHoursInput` now accepts `compact` prop (renders without Card wrapper)
+- Claim form "No, I'll enter my own" now shows the structured hours picker instead of a plain textarea
+- On submit, structured hours are converted to text via `convertStructuredToText`
+
+**Claim hours bugs fixed** (claim/search API, approve-claim API):
+- Search API was NOT returning `business_hours` from DB — always showed "No hours found from Google". Fixed: added `business_hours` to select + response.
+- Approval route was writing `edited_hours` to `business_hours` (text) but NOT clearing `business_hours_structured` (jsonb). Old structured data persisted on profile page. Fixed: now sets `business_hours_structured = null` when custom hours are provided.
+
+**Trial/pricing fixes** (claim submit API, welcome modal, dashboard home, pricing-plans, pricing-cards API):
+- Claim email: uses `default_trial_tier` from `franchise_crm_configs` instead of hardcoded "Featured"
+- Welcome modal: all emojis removed, shows "Start your X-day free [Tier] trial" when trial data available, clean 2x3 benefit grid
+- Dashboard home upgrade banner: trial-aware messaging ("Start your 30-day free Spotlight trial") with dynamic CTA button
+- Free Listing pricing card: corrected features (was showing "No AI chat visibility" etc — free listings DO get basic AI chat, 5 menu items, 1 offer/month)
+- Pricing cards API: now returns `default_trial_tier` and `founding_member_trial_days`
+
+**Testing checklist:**
+1. **Landing page sections:** Visit a city subdomain landing page. Verify: Business CTA banner visible below features grid, "Why Qwikker?" section between CTA and How it works, FAQ accordion works (click to expand/collapse), no horizontal scroll on mobile.
+2. **Pass holder count:** In admin Landing Page editor, toggle "Show Pass Holder Count" on, save. Refresh landing page — "Join X people exploring {city}" should appear if there are app_users in that city.
+3. **Business CTA trial mention:** If `founding_member_trial_days > 0` for the city, the Business CTA should show "Start with a free trial — no commitment."
+4. **Claim hours (Google hours showing):** Start a new claim, search for a business that has `business_hours` populated in the DB. Confirm page should show the hours under "From Google Places", NOT "No hours found."
+5. **Claim hours (custom entry):** Select "No, I'll enter my own" — structured hours picker should appear (pattern selector + time dropdowns). Enter hours, submit. Check `claim_requests.edited_hours` — should contain formatted text.
+6. **Claim hours (approval overwrite):** Approve the claim. Check `business_profiles` — `business_hours` should match edited text, `business_hours_structured` should be NULL (not stale data).
+7. **Welcome modal:** Log in as a newly approved `claimed_free` business. Modal should appear with NO emojis, trial CTA should show correct tier/days from franchise config.
+8. **Dashboard home:** For `claimed_free` business, upgrade banner should show "Start your X-day free [Tier] trial" and CTA button should say "Start X-Day Free Trial".
+9. **Pricing cards:** View Plans page — Free Listing card should show: Basic AI chat visibility, Up to 5 menu items, 1 offer per month. Should NOT show "No AI chat visibility" or "No offers or events".
+10. **Claim email:** Submit a new claim — email should say "[X]-day FREE [correct tier] tier trial" (matching `default_trial_tier` in franchise config), not hardcoded "Featured".
 
 ### 2.20 Configurable Trial System & Free Listing Onboarding (DONE — core complete)
 Onboarding now offers "Free Listing" vs "Free Trial" choice. Franchise admin can configure trial tier (Starter/Featured/Spotlight) and duration via City Configuration > Trial & Onboarding. All 4 SQL functions (`approve_business_with_trial`, `extend_business_trial`, `restore_trial_status`, `cleanup_expired_trials`) dynamically read from `franchise_crm_configs`. 15+ hardcoded "trial = featured" references refactored. Shared `getFeaturesForTier()` helper extracted. Pre-approval UX fixed: unapproved businesses see "Pending Approval" instead of fake countdown. Remaining: incentive toggles, trial terms text, founding member toggle UI.

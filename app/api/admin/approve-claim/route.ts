@@ -172,7 +172,10 @@ export async function POST(request: NextRequest) {
         if (claim.edited_type) businessUpdate.business_type = claim.edited_type
         if (claim.edited_description) businessUpdate.business_description = claim.edited_description
         if (claim.edited_tagline) businessUpdate.business_tagline = claim.edited_tagline
-        if (claim.edited_hours) businessUpdate.business_hours = claim.edited_hours
+        if (claim.edited_hours) {
+          businessUpdate.business_hours = claim.edited_hours
+          businessUpdate.business_hours_structured = null
+        }
         if (claim.edited_booking_preference) businessUpdate.booking_preference = claim.edited_booking_preference
         if (claim.edited_booking_url) businessUpdate.booking_url = claim.edited_booking_url
       }

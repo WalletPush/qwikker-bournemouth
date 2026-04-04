@@ -21,9 +21,10 @@ interface BusinessHoursInputProps {
   onSave?: (hours: BusinessHoursStructured) => Promise<void>
   isSaving?: boolean
   className?: string
+  compact?: boolean
 }
 
-export function BusinessHoursInput({ value, onChange, onSave, isSaving, className }: BusinessHoursInputProps) {
+export function BusinessHoursInput({ value, onChange, onSave, isSaving, className, compact }: BusinessHoursInputProps) {
   const [pattern, setPattern] = useState<'weekdays_same' | 'weekdays_weekend' | 'custom'>('weekdays_weekend')
   const [formData, setFormData] = useState<BusinessHoursFormData>({
     pattern: 'weekdays_weekend',
@@ -207,18 +208,11 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
     </div>
   )
 
-  return (
-    <Card className={`bg-slate-800/50 border-slate-700 ${className}`}>
-      <CardHeader>
-        <CardTitle className="text-white">Business Hours</CardTitle>
-        <p className="text-sm text-slate-400">
-          Set your opening hours. This structured format helps customers and AI understand when you're open.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Pattern Selection */}
-        <div className="space-y-3">
-          <Label className="text-white font-medium">Hours Pattern</Label>
+  const content = (
+    <div className={`space-y-6 ${compact ? '' : ''}`}>
+      {/* Pattern Selection */}
+      <div className="space-y-3">
+        <Label className="text-white font-medium">Hours Pattern</Label>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <button
               type="button"
@@ -430,7 +424,7 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
         </div>
 
         {/* Save Button */}
-        {onSave && (
+        {onSave && !compact && (
           <div className="flex justify-end pt-4 border-t border-slate-600">
             <Button
               type="button"
@@ -442,7 +436,22 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
             </Button>
           </div>
         )}
-      </CardContent>
+    </div>
+  )
+
+  if (compact) {
+    return <div className={className}>{content}</div>
+  }
+
+  return (
+    <Card className={`bg-slate-800/50 border-slate-700 ${className}`}>
+      <CardHeader>
+        <CardTitle className="text-white">Business Hours</CardTitle>
+        <p className="text-sm text-slate-400">
+          Set your opening hours. This structured format helps customers and AI understand when you're open.
+        </p>
+      </CardHeader>
+      <CardContent>{content}</CardContent>
     </Card>
   )
 }

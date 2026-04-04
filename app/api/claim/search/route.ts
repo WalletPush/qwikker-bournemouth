@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // Search for unclaimed businesses matching the query
     const { data: businesses, error } = await supabase
       .from('business_profiles')
-      .select('id, business_name, business_address, business_town, business_postcode, business_type, business_category, system_category, display_category, placeholder_variant, owner_user_id, business_tagline, email, phone, website, business_images, rating, review_count, years_on_google, google_place_id, status')
+      .select('id, business_name, business_address, business_town, business_postcode, business_type, business_category, system_category, display_category, placeholder_variant, owner_user_id, business_tagline, email, phone, website, business_images, rating, review_count, years_on_google, google_place_id, status, business_hours')
       .eq('city', city)
       .eq('status', 'unclaimed')
       .or(`business_name.ilike.%${query}%,business_category.ilike.%${query}%,business_type.ilike.%${query}%`)
@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
         rating: business.rating,
         reviewCount: business.review_count,
         yearsOnGoogle: business.years_on_google,
+        hours: business.business_hours || '',
         status: business.status
       }
     })
