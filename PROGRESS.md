@@ -24,8 +24,11 @@
 8. ~~**2.25 Loyalty System Audit**~~ — DONE. Earn route now issues WalletPush pass on auto-create. Wallet buttons in earn page + QR scanner.
 9. ~~**2.28 Google Review Gate**~~ — DONE. Self-reported rating input on manual onboarding, admin verify button on CRM card, soft 4.4 gate on approve routes.
 10. ~~**0.29 Identity + Shortlink Critical Fix**~~ — DONE. Three bugs: (a) `updatePassLinksAsync` scoping error since March 4 = zero passes got shortlinks, (b) cookie never set reliably = identity lost across pages, (c) layout nav links lost wallet_pass_id on first render.
-11. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
-12. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
+11. ~~**0.30 Loyalty Pass Front Update Fix**~~ — DONE. Sequential awaits with delays on WalletPush PUT calls. Status text cleaned up for reward states.
+12. ~~**0.31 Wallet Install Banner Fix**~~ — DONE. Banner no longer shows false positive after pass installed. Emoji replaced with proper icon.
+13. ~~**0.32 AI Chat Loyalty Nudge Fix**~~ — DONE. Strengthened prompt from "may" to "MUST" for reward-ready businesses. Context-aware: leads with rewards on broad discovery, PS footnote on specific intent.
+14. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
+15. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
 13. Finish Tier 0 remaining (0.14, 0.22)
 14. Finish Tier 2 (2.8-2.11, 2.17)
 
@@ -99,7 +102,37 @@ Replace flat action items list with multi-step wizard. Required vs recommended s
 | 2.23 Landing Page Sections + Claim/Trial Fixes | `components/marketing/city-landing-page.tsx`, `app/page.tsx`, `components/admin/landing-page-editor.tsx`, `app/api/admin/landing-page/route.ts`, `components/business-hours-input.tsx`, `components/claim/confirm-business-details.tsx`, `app/api/claim/search/route.ts`, `app/api/admin/approve-claim/route.ts`, `app/api/claim/submit/route.ts`, `components/dashboard/claim-welcome-modal.tsx`, `components/dashboard/improved-dashboard-home.tsx`, `components/dashboard/pricing-plans.tsx`, `app/api/admin/pricing-cards/route.ts` | Medium | 13 files touched. Landing page adds 4 new sections (no existing sections modified). Claim search now returns `business_hours` (new field in response — backwards compatible). Approval route clears `business_hours_structured` when edited hours present (could affect profile display for future approvals — intended). Welcome modal lost emoji content (intentional). Pricing cards API returns 2 new fields (additive). Free Listing features updated to match reality. |
 | 0.11 Mobile Optimization Pass | `components/admin/pricing-card-editor.tsx`, `comprehensive-business-crm-card.tsx`, `business-crm-card.tsx`, `admin-dashboard.tsx`, `admin-analytics.tsx`, `comprehensive-admin-analytics.tsx`, `improved-dashboard-home.tsx`, `simple-post-editor.tsx`, `user-business-detail-page.tsx`, `user-chat-page.tsx`, `user-dashboard-layout.tsx`, `app/hqadmin/layout.tsx`, `components/hqadmin/hq-admin-shell.tsx` (new) | Low | Fixed dense multi-column grids (4-6 cols) without mobile breakpoints across admin, dashboard, and user pages. Added responsive stacking at `sm:`/`md:` breakpoints. HQ admin got mobile hamburger drawer (was fixed sidebar only). Admin dashboard got iOS safe-area insets. AI Chat refactored to iMessage-style layout: input pinned at screen bottom via JS-measured height, messages anchored near input via dynamic paddingTop + ResizeObserver. Desktop unchanged. |
 
+| 0.30 Loyalty Pass Front Fix | `app/api/loyalty/earn/route.ts`, `app/api/loyalty/redemption/consume/route.ts`, `app/api/loyalty/redemption/reset-pass/route.ts` | Low | WalletPush field updates now sequential with `await` + 500ms delays. If WalletPush API is slow, earn/redeem response time increases by ~1.5s. Status text changed: "Reward Available!" and "Reward Redeemed!" (no stamp counter prefix). |
+| 0.31 Wallet Install Banner Fix | `components/wallet/pass-installer-client.tsx`, `components/wallet/wallet-install-banner.tsx` | Low | Auto-download now clears localStorage immediately — banner won't show after normal install. Edge case: if user dismisses native iOS preview without adding pass, banner won't show as safety net (acceptable — "Add to Wallet" button still visible in installer success state). |
+| 0.32 AI Chat Loyalty Nudge | `lib/ai/hybrid-chat.ts` | Low | System prompt loyalty rules strengthened. Broad discovery queries now lead with REWARD READY businesses. Specific intent queries get PS footnote. Risk: AI might over-emphasise loyalty in edge cases — monitor and tune. |
+
 ## Task Descriptions
+
+### 0.30 Loyalty Pass Front Not Updating (DONE — April 8 2026)
+**Symptom:** Front of loyalty pass showed stale progress (e.g. "2/3 Stamps") while back showed correct value (e.g. "Stamps: 3"). After redeeming, front didn't update either.
+
+**Root cause:** All `updateLoyaltyPassField()` calls were fire-and-forget (no `await`), firing concurrently. WalletPush API drops concurrent PUT requests to the same pass — `Points` succeeded (first to arrive), `Status` silently failed (second concurrent request dropped).
+
+**Fix:** All update calls now use `await` with 500ms delays between them: Points → (500ms) → Status → (500ms) → Last_Message. The `push: true` flag on the last call delivers all queued changes at once. Also cleaned up Status text: "Reward Available!" and "Reward Redeemed!" without redundant stamp counter prefix (e.g. was "3/3 Stamps — Reward Available!", now just "Reward Available!").
+
+**Template mapping confirmed:** Front label "Progress" uses `${Status}` placeholder. No separate Progress field exists.
+
+### 0.31 Wallet Install Banner False Positive (DONE — April 8 2026)
+**Symptom:** Dashboard showed "Your Qwikker pass isn't in your wallet yet" banner even when the pass WAS installed. Also used an unprofessional apple emoji.
+
+**Root cause:** Pass installer auto-downloads the .pkpass (triggering iOS native preview) but never cleared the `qwikker-pass-install` localStorage flag. Only the banner's own buttons cleared it.
+
+**Fix:** Auto-download now clears localStorage immediately. Banner emoji replaced with SVG wallet icon. Copy made platform-aware ("Add your pass to Apple/Google Wallet" instead of presumptuous "isn't in your wallet yet").
+
+### 0.32 AI Chat Loyalty Nudge Not Triggering (DONE — April 8 2026)
+**Symptom:** User had REWARD READY at Ember & Oak, asked "where should I go tonight", AI didn't mention the reward. Only mentioned it when directly asked "do I have any rewards".
+
+**Root cause:** System prompt used "may" language: "you may open broad discovery responses with a brief loyalty nudge". AI treated it as optional.
+
+**Fix:** Rewrote loyalty rules to be context-aware:
+- Broad discovery ("where should I go tonight") → MUST lead with REWARD READY / ALMOST THERE businesses
+- Specific intent ("best Greek food") → only mention reward if business matches query; otherwise brief PS footnote
+- Prevents irrelevant shoehorning while ensuring rewards are never silently ignored
 
 ### 2.19 Native Google Wallet Support for Android (DONE)
 WalletPush API returns `google.saveUrl` — now captured and returned to client. Android users redirected to native Google Wallet save flow instead of .pkpass download. WalletPasses app no longer required. Consumer welcome email updated.
