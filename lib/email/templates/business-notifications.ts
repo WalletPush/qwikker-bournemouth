@@ -53,6 +53,7 @@ export interface BusinessSubmittedEmailData {
 }
 
 export interface BusinessApprovalEmailData {
+  email: string
   firstName: string
   businessName: string
   city: string
@@ -61,6 +62,7 @@ export interface BusinessApprovalEmailData {
 }
 
 export interface OfferApprovalEmailData {
+  email: string
   firstName: string
   businessName: string
   offerName: string
@@ -79,6 +81,7 @@ export interface MenuApprovalEmailData {
 }
 
 export interface BusinessRejectionEmailData {
+  email: string
   firstName: string
   businessName: string
   rejectionReason?: string

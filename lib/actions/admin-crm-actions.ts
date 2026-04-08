@@ -413,6 +413,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         // Google rating & reviews
         rating: business.rating || null,
         review_count: business.review_count || null,
+        rating_source: business.rating_source || null,
         google_primary_type: business.google_primary_type || null,
         latitude: business.latitude || null,
         longitude: business.longitude || null,

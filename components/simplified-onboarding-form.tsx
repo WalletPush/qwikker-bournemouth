@@ -124,6 +124,9 @@ export function SimplifiedOnboardingForm({ referralCode, trialConfig }: Simplifi
   const [verificationMode, setVerificationMode] = useState<'google' | 'manual' | null>(null)
   const [googleData, setGoogleData] = useState<any>(null)
   const [planChoice, setPlanChoice] = useState<'free' | 'trial' | null>(null)
+  const [hasGoogleListing, setHasGoogleListing] = useState<boolean | null>(null)
+  const [manualRating, setManualRating] = useState<string>('')
+  const [manualReviewCount, setManualReviewCount] = useState<string>('')
   const router = useRouter()
 
   const tierDisplayName = (trialConfig?.trialTier || 'featured').charAt(0).toUpperCase() + (trialConfig?.trialTier || 'featured').slice(1)
@@ -278,7 +281,9 @@ export function SimplifiedOnboardingForm({ referralCode, trialConfig }: Simplifi
           postcode: googleData.postcode
         }
       } : {
-        method: 'manual' as const
+        method: 'manual' as const,
+        manualRating: manualRating ? parseFloat(manualRating) : 0,
+        manualReviewCount: manualReviewCount ? parseInt(manualReviewCount, 10) : 0,
       }
       
       const result = await createUserAndProfile(fullFormData, files, referralCode || undefined, urlLocation || undefined, verification, planChoice || 'trial')
@@ -510,6 +515,119 @@ export function SimplifiedOnboardingForm({ referralCode, trialConfig }: Simplifi
                         </div>
                       </div>
                     </div>
+
+                    {/* Manual path: Google listing check + rating input */}
+                    {verificationMode === 'manual' && (
+                      <div className="space-y-4 animate-fade-in">
+                        <div className="bg-slate-800/60 border border-slate-700 rounded-lg p-5">
+                          <p className="text-sm font-medium text-white mb-4">
+                            Do you have a Google Business listing?
+                          </p>
+                          <div className="flex gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setHasGoogleListing(true)}
+                              className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-colors ${
+                                hasGoogleListing === true
+                                  ? 'bg-[#00d083]/15 border-2 border-[#00d083] text-[#00d083]'
+                                  : 'bg-slate-700/50 border-2 border-slate-600 text-slate-300 hover:border-slate-500'
+                              }`}
+                            >
+                              Yes, I have one
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setHasGoogleListing(false); setManualRating(''); setManualReviewCount('') }}
+                              className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-colors ${
+                                hasGoogleListing === false
+                                  ? 'bg-amber-500/15 border-2 border-amber-500 text-amber-400'
+                                  : 'bg-slate-700/50 border-2 border-slate-600 text-slate-300 hover:border-slate-500'
+                              }`}
+                            >
+                              No, I don't
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* No Google listing — block */}
+                        {hasGoogleListing === false && (
+                          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-5">
+                            <div className="flex items-start gap-3">
+                              <svg className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <div>
+                                <h4 className="text-sm font-semibold text-amber-300 mb-2">
+                                  Google listing required
+                                </h4>
+                                <p className="text-xs text-amber-200/80 leading-relaxed mb-3">
+                                  Qwikker is a curated directory for businesses with established Google reviews (4.4+ stars). We use this to maintain quality for our users.
+                                </p>
+                                <p className="text-xs text-amber-200/80 leading-relaxed mb-4">
+                                  Set up your free Google Business Profile, collect some reviews, and come back when you're ready.
+                                </p>
+                                <a
+                                  href="https://business.google.com"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 rounded-lg text-amber-300 text-xs font-medium transition-colors"
+                                >
+                                  Set up Google Business Profile
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Has Google listing — rating input */}
+                        {hasGoogleListing === true && (
+                          <div className="bg-slate-800/60 border border-slate-700 rounded-lg p-5 space-y-4">
+                            <p className="text-sm font-medium text-white">
+                              What is your Google rating?
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              Enter your current Google rating and review count. This will be verified by our team before approval.
+                            </p>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs text-slate-400">Google rating (1.0 - 5.0)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  min="1"
+                                  max="5"
+                                  value={manualRating}
+                                  onChange={(e) => setManualRating(e.target.value)}
+                                  placeholder="e.g. 4.7"
+                                  className="h-11 bg-slate-900 border-slate-600 focus:border-[#00d083] text-white"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs text-slate-400">Number of reviews</Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={manualReviewCount}
+                                  onChange={(e) => setManualReviewCount(e.target.value)}
+                                  placeholder="e.g. 85"
+                                  className="h-11 bg-slate-900 border-slate-600 focus:border-[#00d083] text-white"
+                                />
+                              </div>
+                            </div>
+                            {manualRating && parseFloat(manualRating) > 0 && parseFloat(manualRating) < 4.4 && (
+                              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                                <p className="text-xs text-amber-300">
+                                  Qwikker requires a 4.4+ star rating. You can still apply but your listing will be reviewed by our team.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Google Places Autocomplete - Only show when Google is selected */}
                     {verificationMode === 'google' && (
@@ -976,13 +1094,24 @@ export function SimplifiedOnboardingForm({ referralCode, trialConfig }: Simplifi
                           alert('Please search and select your business from Google Places first.')
                           return
                         }
+                        if (verificationMode === 'manual' && hasGoogleListing === true && !manualRating) {
+                          alert('Please enter your Google rating to continue.')
+                          return
+                        }
                         nextStep()
                       }}
-                      disabled={!verificationMode || (verificationMode === 'google' && !googleData)}
+                      disabled={
+                        !verificationMode ||
+                        (verificationMode === 'google' && !googleData) ||
+                        (verificationMode === 'manual' && hasGoogleListing === null) ||
+                        (verificationMode === 'manual' && hasGoogleListing === false) ||
+                        (verificationMode === 'manual' && hasGoogleListing === true && !manualRating)
+                      }
                       className="flex-1 h-12 bg-[#00d083] hover:bg-[#00b86f] disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold text-lg transition-colors"
                     >
                       {!verificationMode ? 'Select an option to continue' : 
                        verificationMode === 'google' ? 'Continue with Google' : 
+                       hasGoogleListing === false ? 'Google listing required' :
                        'Continue with Manual Listing'}
                     </Button>
                   ) : currentStep < steps.length ? (

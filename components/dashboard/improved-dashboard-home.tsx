@@ -709,12 +709,13 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
 
   // Check if a specific feature is unlocked (for individual feature cards)
   const isFeatureUnlocked = (featureKey: string) => {
-    // FIRST: Check individual feature override
+    // FIRST: Check tier-based access (authoritative source)
+    if (isPremiumFeatureUnlocked()) return true
+    // SECOND: Check individual feature override (for granular admin control)
     if (profile?.features && typeof profile.features[featureKey] === 'boolean') {
       return profile.features[featureKey]
     }
-    // SECOND: Check tier-based access
-    return isPremiumFeatureUnlocked()
+    return false
   }
 
   const handleSubmitForReview = async () => {

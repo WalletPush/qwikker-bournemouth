@@ -8,7 +8,7 @@ import { sendBusinessApprovedNotification, getUsersForBusinessNotifications, sen
 
 export async function POST(request: NextRequest) {
   try {
-    const { businessId, action } = await request.json()
+    const { businessId, action, forceApprove } = await request.json()
     
     if (!businessId || !action) {
       return NextResponse.json(
@@ -55,15 +55,34 @@ export async function POST(request: NextRequest) {
     let newStatus: string
     let updateData: Record<string, unknown> = {}
     
-    // Fetch the business to check its tier before deciding approval path
     const { data: business } = await supabaseAdmin
       .from('business_profiles')
-      .select('business_tier, city')
+      .select('business_tier, city, rating, rating_source, manual_override, business_name')
       .eq('id', businessId)
       .single()
 
+    const RATING_THRESHOLD = 4.4
+
     switch (action) {
       case 'approve':
+        if (
+          !forceApprove &&
+          !business?.manual_override &&
+          business?.rating != null &&
+          business.rating > 0 &&
+          business.rating < RATING_THRESHOLD
+        ) {
+          return NextResponse.json(
+            {
+              warning: true,
+              message: `${business.business_name} has a ${business.rating.toFixed(1)}★ rating (below ${RATING_THRESHOLD}★ threshold). Approve anyway?`,
+              rating: business.rating,
+              ratingSource: business.rating_source,
+            },
+            { status: 200 }
+          )
+        }
+
         if (business?.business_tier === 'free_tier') {
           // Free listing path: set claimed_free (locks dashboard, no subscription needed)
           newStatus = 'claimed_free'
@@ -72,10 +91,9 @@ export async function POST(request: NextRequest) {
             approved_at: new Date().toISOString()
           }
         } else {
-          // Trial path: set approved, then create trial subscription via RPC
+          // Trial path: RPC handles status + plan + tier, we only set approved_at here
           newStatus = 'approved'
           updateData = {
-            status: newStatus,
             approved_at: new Date().toISOString()
           }
         }
@@ -101,7 +119,7 @@ export async function POST(request: NextRequest) {
         )
     }
     
-    const { data, error } = await supabaseAdmin
+    let { data, error } = await supabaseAdmin
       .from('business_profiles')
       .update(updateData)
       .eq('id', businessId)
@@ -128,12 +146,46 @@ export async function POST(request: NextRequest) {
           p_approved_by: admin.id
         })
         if (rpcError) {
-          console.error('⚠️ Trial subscription RPC error (non-critical):', rpcError)
+          console.error('⚠️ Trial subscription RPC error, falling back to direct status update:', rpcError)
+          await supabaseAdmin
+            .from('business_profiles')
+            .update({ status: 'approved' })
+            .eq('id', businessId)
         } else {
           console.log(`✅ Trial subscription created for ${data.business_name}:`, rpcResult)
         }
+
+        // Re-fetch business data (RPC updated plan, business_tier, status)
+        const { data: refreshed } = await supabaseAdmin
+          .from('business_profiles')
+          .select('*')
+          .eq('id', businessId)
+          .single()
+        if (refreshed) data = refreshed
+
+        // Set features + correct business_tier based on the plan assigned by the RPC
+        // The RPC hardcodes business_tier='free_trial' — override to match the actual plan
+        const { getFeaturesForTier } = await import('@/lib/utils/features-for-tier')
+        const planToTierMap: Record<string, string> = {
+          spotlight: 'qwikker_picks',
+          featured: 'featured',
+          starter: 'recommended',
+        }
+        const correctTier = planToTierMap[data.plan] || 'free_trial'
+        await supabaseAdmin
+          .from('business_profiles')
+          .update({
+            features: getFeaturesForTier(data.plan || 'featured'),
+            business_tier: correctTier,
+          })
+          .eq('id', businessId)
+
       } catch (error) {
-        console.error('⚠️ Trial subscription error (non-critical):', error)
+        console.error('⚠️ Trial subscription error, falling back to direct status update:', error)
+        await supabaseAdmin
+          .from('business_profiles')
+          .update({ status: 'approved' })
+          .eq('id', businessId)
       }
     }
 
@@ -204,6 +256,7 @@ export async function POST(request: NextRequest) {
           const { getFranchiseSupportEmail } = await import('@/lib/email/send-franchise-email')
           const supportEmail = await getFranchiseSupportEmail(requestCity)
           const emailResult = await sendBusinessApprovalNotification({
+            email: data.email,
             firstName: data.first_name || 'Business Owner',
             businessName: data.business_name,
             city: requestCity,
@@ -253,6 +306,7 @@ export async function POST(request: NextRequest) {
           const { getFranchiseSupportEmail } = await import('@/lib/email/send-franchise-email')
           const supportEmail = await getFranchiseSupportEmail(requestCity)
           const emailResult = await sendBusinessRejectionNotification({
+            email: data.email,
             firstName: data.first_name || 'Business Owner',
             businessName: data.business_name,
             rejectionReason: data.admin_notes || 'Please review and update your business information.',

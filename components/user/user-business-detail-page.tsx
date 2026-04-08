@@ -888,9 +888,9 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                   </div>
                 </CardContent>
               </Card>
-            ) : business.status !== 'unclaimed' && !business.auto_imported ? (
+            ) : business.status !== 'unclaimed' && !business.auto_imported && business.menuPreview && business.menuPreview.length > 0 ? (
               <>
-                {/* AI Chat Prompt - Primary CTA (only for claimed businesses) */}
+                {/* AI Chat Prompt - Primary CTA (only for claimed businesses with menu data) */}
                 <Card className="bg-gradient-to-br from-[#00d083]/10 to-[#00b86f]/10 border-[#00d083]/30 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#00d083]/20 to-transparent rounded-bl-full"></div>
                   <CardContent className="p-6">
@@ -918,6 +918,24 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                   </CardContent>
                 </Card>
               </>
+            ) : business.status !== 'unclaimed' && !business.auto_imported ? (
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardContent className="p-8 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="p-4 bg-slate-700/30 rounded-full">
+                      <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-slate-100 mb-2">No Menu Items Yet</h3>
+                      <p className="text-slate-400 text-sm">
+                        This business hasn't added their menu yet. Check back soon!
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ) : null}
 
             {/* Featured Menu Items - Secondary */}

@@ -105,12 +105,12 @@ export async function sendBusinessApprovalNotification(data: BusinessApprovalEma
   error?: string
 }> {
   try {
-    console.log(`📧 Sending business approval email to ${data.firstName} for ${data.businessName}`)
+    console.log(`📧 Sending business approval email to ${data.firstName} (${data.email})`)
     
     const template = createBusinessApprovalEmail(data)
     
     const result = await sendEmailWithRetry({
-      to: data.firstName ? `${data.firstName} <${data.businessName}>` : data.businessName,
+      to: data.email,
       template,
       tags: [
         { name: 'category', value: 'business_approval' },
@@ -145,12 +145,12 @@ export async function sendOfferApprovalNotification(data: OfferApprovalEmailData
   error?: string
 }> {
   try {
-    console.log(`📧 Sending offer approval email for "${data.offerName}" to ${data.firstName}`)
+    console.log(`📧 Sending offer approval email for "${data.offerName}" to ${data.firstName} (${data.email})`)
     
     const template = createOfferApprovalEmail(data)
     
     const result = await sendEmailWithRetry({
-      to: data.firstName ? `${data.firstName} <${data.businessName}>` : data.businessName,
+      to: data.email,
       template,
       tags: [
         { name: 'category', value: 'offer_approval' },
@@ -225,12 +225,12 @@ export async function sendBusinessRejectionNotification(data: BusinessRejectionE
   error?: string
 }> {
   try {
-    console.log(`📧 Sending business rejection email to ${data.firstName} for ${data.businessName}`)
+    console.log(`📧 Sending business rejection email to ${data.firstName} (${data.email})`)
     
     const template = createBusinessRejectionEmail(data)
     
     const result = await sendEmailWithRetry({
-      to: data.firstName ? `${data.firstName} <${data.businessName}>` : data.businessName,
+      to: data.email,
       template,
       tags: [
         { name: 'category', value: 'business_rejection' },

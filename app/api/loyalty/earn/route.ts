@@ -14,7 +14,7 @@ import {
   IP_VELOCITY_THRESHOLD,
   IP_VELOCITY_WINDOW_MINUTES,
 } from '@/lib/loyalty/loyalty-utils'
-import { updateLoyaltyPassField } from '@/lib/loyalty/walletpush-loyalty'
+import { issueLoyaltyPass, updateLoyaltyPassField } from '@/lib/loyalty/walletpush-loyalty'
 
 /**
  * POST /api/loyalty/earn
@@ -173,6 +173,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create membership' }, { status: 500 })
     }
 
+    // 8b. If we just auto-created membership, issue a WalletPush pass
+    let passCreated = false
+    let passAppleUrl: string | undefined
+    let passGoogleUrl: string | undefined
+
+    if (!membership.walletpush_serial && hasWalletPushCredentials(program)) {
+      const { data: appUser } = await serviceRole
+        .from('app_users')
+        .select('first_name, last_name, email')
+        .eq('wallet_pass_id', walletPassId)
+        .single()
+
+      const initialFields = getLoyaltyPassFieldValues(program, membership, program.type)
+
+      const passResult = await issueLoyaltyPass(
+        program as any,
+        {
+          firstName: appUser?.first_name || 'Qwikker',
+          lastName: appUser?.last_name || 'Member',
+          email: appUser?.email || `${walletPassId}@pass.qwikker.com`,
+        },
+        initialFields
+      )
+
+      if (passResult) {
+        await serviceRole
+          .from('loyalty_memberships')
+          .update({ walletpush_serial: passResult.serial })
+          .eq('id', membership.id)
+
+        membership = { ...membership, walletpush_serial: passResult.serial }
+        passCreated = true
+        passAppleUrl = passResult.appleUrl
+        passGoogleUrl = passResult.googleUrl
+      } else {
+        console.error('[loyalty/earn] Auto-create pass failed for membership', membership.id)
+      }
+    }
+
     // 9. Cooldown check
     const earnCheck = canEarnNow(membership, program)
     if (!earnCheck.allowed) {
@@ -293,6 +332,9 @@ export async function POST(request: NextRequest) {
       rewardUnlocked,
       proximityMessage,
       nextEligibleAt,
+      passCreated,
+      appleUrl: passAppleUrl || null,
+      googleUrl: passGoogleUrl || null,
       program: {
         business_name: businessName,
         logo_url: (program as any).business_profiles?.logo || program.logo_url || null,

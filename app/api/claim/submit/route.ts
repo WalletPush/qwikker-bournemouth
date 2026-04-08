@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     const editedBookingPreference = formData.get('editedBookingPreference') as string
     const editedBookingUrl = formData.get('editedBookingUrl') as string
     const editedVibeTags = formData.get('editedVibeTags') as string
+    const planChoice = formData.get('planChoice') as string
     
     // Extract image files
     const logoFile = formData.get('logo') as File | null
@@ -375,6 +376,7 @@ export async function POST(request: NextRequest) {
         edited_booking_preference: editedBookingPreference || null,
         edited_booking_url: editedBookingUrl || null,
         edited_vibe_tags: editedVibeTags || null,
+        plan_choice: planChoice || 'free',
         logo_upload: logoUrl,
         hero_image_upload: heroImageUrl,
         data_edited: !!(editedBusinessName || editedAddress || editedPhone || editedWebsite || editedCategory || editedType || editedDescription || editedTagline || editedHours || editedBookingPreference)

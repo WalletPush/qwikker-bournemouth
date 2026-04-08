@@ -85,7 +85,7 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
       ? new Date(business.subscription.free_trial_end_date).toISOString().split('T')[0]
       : ''
   )
-  const [franchiseTrialDays, setFranchiseTrialDays] = useState(90)
+  const [franchiseTrialDays, setFranchiseTrialDays] = useState(30)
 
   useEffect(() => {
     if (business?.city) {
@@ -200,8 +200,15 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
         analytics: true,
         push_notifications: true
       })
-    } else if (tier === 'trial' || tier === 'featured') {
-      // Trial and Featured have same features, just different billing
+    } else if (tier === 'trial') {
+      // Trial: features depend on the business's plan (set by franchise config)
+      const plan = business?.plan
+      if (plan === 'spotlight') {
+        setFeatures({ social_wizard: true, loyalty_cards: true, analytics: true, push_notifications: true })
+      } else {
+        setFeatures({ social_wizard: false, loyalty_cards: false, analytics: false, push_notifications: false })
+      }
+    } else if (tier === 'featured') {
       setFeatures({
         social_wizard: false,
         loyalty_cards: false,

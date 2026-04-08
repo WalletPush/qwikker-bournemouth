@@ -69,6 +69,7 @@ export default function ClaimPage() {
   
   // Franchise capabilities (determines what features to show)
   const [smsOptInAvailable, setSmsOptInAvailable] = useState(false)
+  const [trialConfig, setTrialConfig] = useState<{ trialTier: string; trialDays: number } | null>(null)
   
   // Fetch city and capabilities on mount
   useEffect(() => {
@@ -89,6 +90,19 @@ export default function ClaimPage() {
         const capabilitiesData = await capabilitiesResponse.json()
         if (capabilitiesData.success && capabilitiesData.capabilities) {
           setSmsOptInAvailable(capabilitiesData.capabilities.sms_opt_in_available)
+        }
+
+        // Fetch trial config for plan choice card
+        const resolvedCity = cityData.success ? cityData.city : getCityFromHostnameClient(window.location.hostname)
+        if (resolvedCity) {
+          const trialResponse = await fetch(`/api/admin/pricing-cards?city=${encodeURIComponent(resolvedCity)}`)
+          const trialData = await trialResponse.json()
+          if (trialData.success && trialData.config?.default_trial_tier && trialData.config?.founding_member_trial_days) {
+            setTrialConfig({
+              trialTier: trialData.config.default_trial_tier,
+              trialDays: trialData.config.founding_member_trial_days,
+            })
+          }
         }
       } catch (error) {
         console.error('Error fetching city/capabilities:', error)
@@ -330,6 +344,11 @@ export default function ClaimPage() {
         // Add vibe tags
         if (editedBusinessData.vibe_tags) {
           formData.append('editedVibeTags', editedBusinessData.vibe_tags)
+        }
+
+        // Add plan choice
+        if (editedBusinessData.plan_choice) {
+          formData.append('planChoice', editedBusinessData.plan_choice)
         }
       }
 
@@ -712,6 +731,7 @@ export default function ClaimPage() {
               reviewCount: getDisplayReviewCount(selectedBusiness)
             }}
             smsOptInAvailable={smsOptInAvailable}
+            trialConfig={trialConfig}
             onConfirm={handleBusinessDetailsConfirmed}
             onBack={handleBack}
           />

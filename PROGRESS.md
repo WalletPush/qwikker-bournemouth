@@ -6,18 +6,74 @@
 
 ## Current Status
 
-- **Tier 0:** 16/16 complete. Remaining: 0.14 (marketing pages), 0.22 (pre-launch env vars)
+- **Tier 0:** 20/20 complete. All P0/P1 critical bugs fixed (April 2026). Remaining: 0.14 (marketing pages), 0.22 (pre-launch env vars).
 - **Tier 1:** 7/7 complete (subject to testing)
-- **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.23 complete. 2.5 partially done. 2.8-2.11, 2.17, **2.24** pending. **2.21-2.23 need testing on production subdomain.**
+- **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.26, 2.28 complete. 2.5 partially done. **No PRE-LAUNCH BLOCKERS remaining.** Pending: 2.27 (wizard), 2.8-2.11, 2.17.
 - **Tier 3:** Not started
 - **Tier 4:** Backlog
 
-## Next up (in order per execution rule)
+## Execution Priority (April 2026)
 
-1. **TEST SESSION NEEDED** — Landing page sections, claim hours, trial/pricing fixes, welcome modal (see testing checklist below)
-2. **2.24 — Claim Flow Trial Option (CRITICAL / PRE-LAUNCH)**
-3. Finish Tier 0 remaining (0.14, 0.22)
-4. Finish Tier 2 (2.8-2.11, 2.17)
+1. ~~**0.23 Trial System Fix**~~ — DONE. Root cause: stale DB trigger `setup_free_trial_on_approval` racing the RPC. Trigger dropped. Code fixes already in place.
+2. ~~**0.24 Loyalty Pass Fix**~~ — DONE. Removed unused `Earn_Url` field from join + retry routes.
+3. ~~**0.25 Email Recipient Bug**~~ — DONE. All notification functions now use `data.email`. Interfaces updated.
+4. ~~**2.26 Submit CTA + Menu Tab**~~ — DONE. Submit CTA hidden for pending_review/approved. Menu tab checks menuPreview before AI prompt.
+5. ~~**0.26 Pricing Card Overflow**~~ — DONE. Responsive fonts + min-w-0 + break-words on pricing cards.
+6. ~~**USER ACTION: Data fix SQL**~~ — DONE. Coastal Pantry subscription + features + business_tier fixed.
+7. ~~**2.24 Claim Flow Trial**~~ — DONE. Plan choice cards in claim flow, approve-claim routes to RPC for trial. USER ACTION: Run `ALTER TABLE claim_requests ADD COLUMN IF NOT EXISTS plan_choice TEXT DEFAULT 'free'`
+8. ~~**2.25 Loyalty System Audit**~~ — DONE. Earn route now issues WalletPush pass on auto-create. Wallet buttons in earn page + QR scanner.
+9. ~~**2.28 Google Review Gate**~~ — DONE. Self-reported rating input on manual onboarding, admin verify button on CRM card, soft 4.4 gate on approve routes.
+10. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
+11. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
+12. Finish Tier 0 remaining (0.14, 0.22)
+13. Finish Tier 2 (2.8-2.11, 2.17)
+
+## Critical Issues Found (April 2026 Audit)
+
+### 0.23 Trial System Critical Fix (P0) -- FIXED
+**Symptoms:** Bournemouth configured for 30-day Spotlight trial. Dashboard showed 119 days. All Spotlight features locked. Admin CRM showed 90 days. Subscription pointed to free tier instead of trial tier.
+
+**ROOT CAUSE: Stale database trigger `setup_free_trial_on_approval`** (verified via `pg_trigger` + `pg_get_functiondef` on live DB). This trigger from the original billing system (Sept 2025) was never removed when the `approve_business_with_trial` RPC replaced it. The trigger fires `AFTER UPDATE ON business_profiles` when status changes to 'approved', creating a subscription with the FREE tier and hardcoded 120 days — racing the RPC and winning every time because the approve route set status='approved' before calling the RPC.
+
+**Fix applied:**
+1. Trigger dropped: `DROP TRIGGER trigger_setup_free_trial_on_approval ON business_profiles`
+2. Approve route already fixed (previous session): trial path doesn't set status in initial update, lets RPC handle it
+3. Features update already added after RPC call
+4. `isFeatureUnlocked()` already fixed to check tier before JSONB
+5. Admin CRM defaults already fixed (30 days, plan-aware features)
+6. **USER ACTION NEEDED:** Run data fix SQL for existing businesses (see plan file)
+
+### 0.24 Loyalty Pass Earn_Url Fix (P0) -- FIXED
+**Symptom:** 400 Bad Request on every loyalty pass join attempt. "Form field Earn_Url does not match any template placeholder"
+
+**Root cause:** WalletPush template no longer has an `Earn_Url` placeholder. Code was sending it anyway.
+
+**Fix:** Removed unused `earnUrl` variable from `join/route.ts` and `retry-pass/route.ts`.
+
+### 0.25 Business Email Recipient Bug (P1) -- FIXED
+**Symptom:** Business owners never receive approval or rejection emails.
+
+**Root cause:** Email functions used `businessName` as the `to:` address instead of actual email.
+
+**Fix (already applied in previous session):** All three notification functions (`approval`, `rejection`, `offer`) now use `data.email`. Interfaces include `email: string`. Callers pass `data.email`.
+
+### 0.26 Pricing Card Overflow (P2) -- FIXED
+**Symptom:** Bali pricing cards (IDR currency) overflow card borders on MacBook screens.
+
+**Root cause:** 4-col grid + `text-3xl` + long IDR strings (Rp1,600,000) + no `min-w-0` + no responsive font.
+
+**Fix:** Added `min-w-0` to card elements, responsive font sizes (`text-2xl lg:text-3xl`), and `break-words` on price containers. Both `pricing-plans.tsx` and `pricing-card-editor.tsx`.
+
+### 2.26 Submit CTA + Menu Tab Fixes (P1) -- FIXED
+**Issue A:** Submit CTA now hidden for `pending_review` and `approved` statuses. "Under Review" banner shows when `pending_review`.
+**Issue B:** Menu tab now checks `menuPreview.length > 0` before showing AI prompt. Shows "No Menu Items Yet" for claimed businesses without menu data.
+
+### 2.27 Action Items Wizard Redesign (Feature)
+Replace flat action items list with multi-step wizard. Required vs recommended steps. Auto-progression. Inline forms. Final "Submit for Review" at end. Blocks submission until required items complete.
+
+### 2.28 Google Review Rating Gate (Feature)
+**Google-verified path:** Rating is auto-captured from Google Places but never enforced — 3-star businesses sail through. Need explicit pass/fail display + soft block below 4.4.
+**Manual listing path:** No input field exists at all — `rating: 0, review_count: 0` hardcoded. Need to add a "What's your Google rating?" step with numeric inputs and an "I don't have a Google listing" option. Both paths should flag below-threshold businesses for admin review (`quality_flagged`).
 
 ## Change Impact Map
 
@@ -35,6 +91,8 @@
 | 0.12a Subscription Upgrade Fix | `app/api/stripe/update-subscription/route.ts` (new), `app/api/webhooks/stripe/route.ts`, `components/dashboard/pricing-plans.tsx`, `components/dashboard/settings-page.tsx`, `app/dashboard/settings/page.tsx` | Medium | Upgrades/downgrades now update existing Stripe subscription in-place with proration (no new subscription created). UI routes through update API when `stripeSubscriptionId` exists. `customer.subscription.updated` webhook syncs tier/plan/features. Safety net: `checkout.session.completed` auto-cancels orphaned old subscriptions. Risk: Stripe Portal plan changes don't carry our metadata so features won't sync (businesses should use in-app UI). |
 | 0.12b Stripe API + Confirmation Fixes | `app/api/stripe/update-subscription/route.ts`, `components/dashboard/pricing-plans.tsx` | Medium | **Bug 1:** `subscriptions.update()` does not support `price_data.product_data` (only `checkout.sessions.create` does). Fixed: find or create a Stripe Product per tier+city with metadata, use `product: productId`. **Bug 2:** Checkout-created Products are immutable — `products.update()` throws. Fixed: never mutate Checkout-created products; maintain our own Products via metadata lookup. **Bug 3:** No confirmation dialog on plan change — one misclick could change billing. Fixed: added Dialog showing current plan, new plan, new price, and proration explanation before executing. First-time purchases still go to Stripe Checkout (has built-in confirmation). |
 | 0.12c Stripe Period Date Fix | `app/api/webhooks/stripe/route.ts`, `app/api/stripe/cancel-subscription/route.ts` | Medium | Stripe basil API (2025-03-31) moved `current_period_start/end` from top-level subscription to `items.data[]`. Webhook `handleSubscriptionUpdated` crashed with `RangeError: Invalid time value`. Cancel route returned `accessUntil: null`. Fixed: read period dates from `subscription.items.data[0]`, added `typeof === 'number'` guards on all date conversions. Cancel subscription + confirmation dialog now working end-to-end. |
+| 2.24 Claim Flow Trial Option | `components/claim/confirm-business-details.tsx`, `app/claim/page.tsx`, `app/api/claim/submit/route.ts`, `app/api/admin/approve-claim/route.ts` | Medium | Claim flow now offers Free Listing vs Free Trial choice. Trial path calls `approve_business_with_trial` RPC. Trial claims get `status = 'approved'` (not `claimed_free`) + `visibility: 'ai_enabled'`. DB: new `plan_choice` column on `claim_requests`. If column missing, defaults to free. If RPC fails, falls back to `claimed_free`. Existing pending claims unaffected — null plan_choice routes to free path. |
+| 2.25 Loyalty Earn Pass Fix | `app/api/loyalty/earn/route.ts`, `components/loyalty/earn-page-client.tsx`, `components/loyalty/qr-scanner.tsx` | Low-Medium | Earn route now issues WalletPush pass when auto-creating membership (first earn for new members). Looks up user from `app_users`, calls `issueLoyaltyPass`, stores serial. Response includes `passCreated`/`appleUrl`/`googleUrl`. Client components show wallet install buttons. Existing members unaffected. If WalletPush fails, earn still succeeds (stamp recorded), user can retry-pass later. First earn is ~1-2s slower. |
 | 2.6 Business Vibe Tags | `lib/constants/vibe-tags.ts` (new), `components/dashboard/clean-profile-page.tsx`, `components/dashboard/business-info-page.tsx`, `components/dashboard/action-items-page.tsx`, `components/claim/confirm-business-details.tsx`, `app/claim/page.tsx`, `app/api/claim/submit/route.ts`, `app/api/admin/approve-claim/route.ts`, `components/user/user-business-detail-page.tsx`, `app/user/discover/page.tsx`, `lib/ai/hybrid-chat.ts`, `components/admin/comprehensive-business-crm-card.tsx`, `lib/actions/business-actions.ts`, `lib/actions/seamless-updates.ts` | Medium | **DB:** `vibe_tags` JSONB column added to `business_profiles`; `edited_vibe_tags` TEXT added to `claim_requests`. Three views updated (`business_profiles_chat_eligibility`, `business_profiles_chat_eligible`, `business_profiles_lite_eligible`). If views were recreated without the column, AI chat context and discover page would silently lose tag data. **Profile page:** Vibe Tags + Booking cards added to `clean-profile-page.tsx` — if `updateBusinessInfo` server action rejects unknown fields, saves would fail (tested: it's a pass-through, safe). **Claim flow:** `edited_vibe_tags` passed as JSON string in FormData — if approval route can't parse it, tags silently null (graceful). **Discover search:** vibe tags concatenated into search text — bad JSONB shape could cause runtime error on `.map()` (mitigated: optional chaining). **AI chat:** tags appended to context block — worst case extra whitespace if null. **Action item links:** All `/dashboard/business` hrefs replaced with `/dashboard/profile` — old page still exists at route but is unreachable from sidebar. |
 | 2.23 Landing Page Sections + Claim/Trial Fixes | `components/marketing/city-landing-page.tsx`, `app/page.tsx`, `components/admin/landing-page-editor.tsx`, `app/api/admin/landing-page/route.ts`, `components/business-hours-input.tsx`, `components/claim/confirm-business-details.tsx`, `app/api/claim/search/route.ts`, `app/api/admin/approve-claim/route.ts`, `app/api/claim/submit/route.ts`, `components/dashboard/claim-welcome-modal.tsx`, `components/dashboard/improved-dashboard-home.tsx`, `components/dashboard/pricing-plans.tsx`, `app/api/admin/pricing-cards/route.ts` | Medium | 13 files touched. Landing page adds 4 new sections (no existing sections modified). Claim search now returns `business_hours` (new field in response — backwards compatible). Approval route clears `business_hours_structured` when edited hours present (could affect profile display for future approvals — intended). Welcome modal lost emoji content (intentional). Pricing cards API returns 2 new fields (additive). Free Listing features updated to match reality. |
 | 0.11 Mobile Optimization Pass | `components/admin/pricing-card-editor.tsx`, `comprehensive-business-crm-card.tsx`, `business-crm-card.tsx`, `admin-dashboard.tsx`, `admin-analytics.tsx`, `comprehensive-admin-analytics.tsx`, `improved-dashboard-home.tsx`, `simple-post-editor.tsx`, `user-business-detail-page.tsx`, `user-chat-page.tsx`, `user-dashboard-layout.tsx`, `app/hqadmin/layout.tsx`, `components/hqadmin/hq-admin-shell.tsx` (new) | Low | Fixed dense multi-column grids (4-6 cols) without mobile breakpoints across admin, dashboard, and user pages. Added responsive stacking at `sm:`/`md:` breakpoints. HQ admin got mobile hamburger drawer (was fixed sidebar only). Admin dashboard got iOS safe-area insets. AI Chat refactored to iMessage-style layout: input pinned at screen bottom via JS-measured height, messages anchored near input via dynamic paddingTop + ResizeObserver. Desktop unchanged. |
@@ -59,19 +117,74 @@ Environment variables that must be set in Vercel before production launch:
 - Verify all city-specific env vars are set: `{CITY}_SLACK_WEBHOOK_URL`, Resend API keys in `franchise_crm_configs`, WalletPush credentials.
 - Verify `hello@{city}.qwikker.com` email forwarding is configured in DNS (Resend/Cloudflare) for each live city.
 
-### 2.24 Claim Flow Trial Option (CRITICAL — NOT STARTED)
-**Priority: PRE-LAUNCH BLOCKER.** The claim flow (`/claim`) does NOT offer a Free Trial option. When a business owner claims their auto-imported listing, they are silently assigned `claimed_free` with `is_in_free_trial: false` — no choice is presented. This is a major gap because claiming businesses are the most engaged leads and should be offered the same "Free Listing vs Free Trial" choice that exists in the onboarding flow (`/onboarding`).
+### 2.24 Claim Flow Trial Option (DONE — April 8 2026)
+Claim flow now offers "Free Listing vs Free Trial" choice, matching the onboarding flow.
 
-**What needs to happen:**
-1. **Claim confirm step** (`components/claim/confirm-business-details.tsx`): Add "Free Listing vs Free Trial" card selector (same UI as onboarding Step 6). Read trial tier/days from `franchise_crm_configs` via API.
-2. **Claim submit API** (`app/api/claim/submit/route.ts`): Accept and store `plan_choice` ('free' | 'trial') on the `claim_requests` row. New column needed: `plan_choice TEXT DEFAULT 'free'`.
-3. **Approve claim API** (`app/api/admin/approve-claim/route.ts`): If `claim.plan_choice === 'trial'`, call `approve_business_with_trial()` SQL function instead of creating a basic free subscription. This sets `status = 'approved'` (not `claimed_free`), `is_in_free_trial = true`, and `free_trial_end_date` from franchise config.
-4. **Admin CRM**: Show which plan the claimer chose so admin knows before approving.
-5. **DB**: `ALTER TABLE claim_requests ADD COLUMN plan_choice TEXT DEFAULT 'free'`
+**What was built:**
+1. **Claim confirm step** (`confirm-business-details.tsx`): Plan choice cards at top of form. RECOMMENDED badge on trial card. Only shows when franchise has `trialDays > 0`. Defaults to "Free Listing".
+2. **Claim page** (`app/claim/page.tsx`): Fetches trial config from `GET /api/admin/pricing-cards?city=X` on mount. Passes `trialConfig` to ConfirmBusinessDetails. Threads `plan_choice` through FormData.
+3. **Submit API** (`app/api/claim/submit/route.ts`): Reads `planChoice`, stores as `plan_choice` on `claim_requests`. Defaults to `'free'`.
+4. **Approve-claim API** (`app/api/admin/approve-claim/route.ts`): Branching logic — trial path calls `approve_business_with_trial` RPC, sets features + correct `business_tier` + `visibility: 'ai_enabled'`. Free path unchanged. Falls back to free if RPC fails. Slack message shows plan label.
 
-**Risk:** Medium. Touches the claim → approval pipeline. Must not break existing pending claims (default to 'free'). Trial expiry, cleanup cron, and expired trials tab must all work for claim-originated trials the same as onboarding-originated trials.
+**DB change needed:** `ALTER TABLE claim_requests ADD COLUMN IF NOT EXISTS plan_choice TEXT DEFAULT 'free'`
 
-**What could break:** Approving a claim with `plan_choice = 'trial'` would set status to `'approved'` instead of `'claimed_free'` — downstream code that checks for `claimed_free` status may behave differently. Need to audit `claimed_free` references.
+**Risk:** Medium. Trial claims get `status = 'approved'` (not `'claimed_free'`). Code checking `claimed_free` won't match trial claims — by design, trial claims get premium features. If RPC fails, safe fallback to `claimed_free`. Existing pending claims default to free path (null is not `=== 'trial'`).
+
+**What could break:**
+- Franchise without trial config → plan choice cards hidden, defaults to free (safe)
+- `plan_choice` column missing → approve route treats as free (safe, but run the ALTER TABLE)
+- Trial claim RPC fails → business gets `claimed_free` instead of trial (safe degradation, admin can re-set via tier management)
+- Pricing-cards API returns error → trialConfig stays null, cards hidden (safe)
+
+**Testing:** See full checklist in roadmap plan file.
+
+### 2.25 Loyalty System Earn Pass Fix (DONE — April 8 2026)
+Earn route now issues a WalletPush loyalty pass when auto-creating a membership.
+
+**What was fixed:**
+1. **Earn route** (`app/api/loyalty/earn/route.ts`): After auto-creating membership, looks up user from `app_users`, calls `issueLoyaltyPass`, stores serial. Response includes `passCreated`, `appleUrl`, `googleUrl`.
+2. **Earn page client** (`earn-page-client.tsx`): Shows "Add to Apple Wallet" / "Add to Google Wallet" buttons on success/reward when pass was created.
+3. **QR scanner** (`qr-scanner.tsx`): Same wallet buttons in success/reward states. `EarnResult` interface extended.
+
+**Risk:** Low-Medium. New code path only fires on first earn (auto-create). Existing members unaffected. If WalletPush fails, earn still succeeds — user can retry-pass later. First earn ~1-2s slower.
+
+**What could break:**
+- WalletPush API failure → earn succeeds but no wallet pass (fallback: retry-pass)
+- Existing members with `walletpush_serial = null` from before this fix → need retry-pass or backfill SQL
+- Two simultaneous earn requests → possible duplicate pass (mitigated by hasFired ref)
+
+### 2.28 Google Review Rating Gate (DONE — April 8 2026)
+Enforces Qwikker's 4.4-star quality standard across all onboarding paths.
+
+**What was built:**
+1. **Manual onboarding form** (`simplified-onboarding-form.tsx`): New "Do you have a Google listing?" toggle. If No → blocks with message + link to set up Google Business Profile. If Yes → two inputs for Google rating + review count with amber warning for < 4.4. Form cannot proceed without completing this step.
+2. **Signup persistence** (`lib/actions/signup-actions.ts`): Manual path now stores self-reported `rating` + `review_count` + `rating_source = 'self_reported'`. Google path sets `rating_source = 'google_verified'`.
+3. **Admin approve routes** (`app/api/admin/approve/route.ts`, `app/api/admin/approve-claim/route.ts`): Soft 4.4 rating gate. If business rating < 4.4 and no `forceApprove` flag, returns a `warning` response. Admin must acknowledge and resend with `forceApprove: true`.
+4. **CRM card** (`comprehensive-business-crm-card.tsx`): Rating source badges (green "Google Verified", amber "Self-Reported", blue "Admin Verified", grey "Not Verified"). Verify panel for self-reported/unknown ratings with "Lookup on Google" button + Google Maps fallback link. Shows claimed vs actual side-by-side. "Use Google values" or "Keep claimed values" confirm buttons.
+5. **Verify API** (`app/api/admin/verify-rating/route.ts`): POST fetches real rating from Google Places (by `google_place_id` or text search). PATCH updates `rating_source` to `admin_verified` and optionally overrides rating/review_count.
+
+**DB change needed:** `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS rating_source TEXT DEFAULT 'unknown'`
+
+**Types updated:** `BusinessCRMData` interface in `types/billing.ts` now includes `rating_source`. CRM data mapping in `admin-crm-actions.ts` passes it through.
+
+**Risk:** Low-Medium. Self-reported ratings can be gamed but admin MUST verify before approval (amber badge makes it visually obvious). Businesses without Google listing are blocked from joining. Existing businesses with `rating: 0` show "Not Verified" badge. Column default is `'unknown'` — all existing rows safe.
+
+**What could break:**
+- `rating_source` column not added → code treats null as `'unknown'` (safe)
+- Google Places API key missing → lookup returns error, admin can use Google Maps link as fallback
+- Manual onboarding form layout may need mobile testing (new inputs added)
+- Approve routes now require `forceApprove: true` for < 4.4 businesses → admin CRM UI must handle `warning` response
+
+**Testing checklist:**
+1. Manual onboarding: select "I don't have a Google listing" → form blocks with helpful message
+2. Manual onboarding: enter rating 4.8 + 50 reviews → submits, check `rating_source = 'self_reported'` in DB
+3. Manual onboarding: enter rating 3.9 → amber warning shows, can still submit
+4. Google verification: rating auto-captured → check `rating_source = 'google_verified'` in DB
+5. Admin CRM: self-reported business shows amber badge + "Lookup on Google" button
+6. Admin clicks "Lookup on Google" → shows real vs claimed rating side-by-side
+7. Admin clicks "Use Google values" → `rating_source` updated to `admin_verified`, rating overwritten
+8. Franchise admin tries to approve business with rating < 4.4 → warning response returned
+9. Existing businesses with `rating: 0` show grey "Not Verified" badge
 
 ### 2.23 Landing Page New Sections, Claim Hours Fix, Trial/Pricing Cleanup (DONE — NEEDS TESTING)
 

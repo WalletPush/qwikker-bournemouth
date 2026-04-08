@@ -459,7 +459,7 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
         return (
           <Card 
             key={plan.id}
-            className={`relative bg-slate-800/50 border transition-all duration-300 hover:scale-[1.02] flex flex-col ${
+            className={`relative bg-slate-800/50 border transition-all duration-300 hover:scale-[1.02] flex flex-col min-w-0 ${
               isFreeListingCard ? 'border-slate-600 opacity-80' :
               isFreeTrialFeatured ? 'ring-2 ring-[#00d083]/50 border-[#00d083]/50' : 
               plan.popular ? 'border-blue-500/50' : 
@@ -499,22 +499,22 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
               <div className="mt-4">
                 {/* Clean Pricing Display */}
                 {isFreeListingCard ? (
-                  <div className="text-3xl font-bold text-slate-400 mb-2">
+                  <div className="text-2xl lg:text-3xl font-bold text-slate-400 mb-2 break-words">
                     Free
-                    <span className="text-lg font-normal text-slate-500">/forever</span>
+                    <span className="text-base lg:text-lg font-normal text-slate-500">/forever</span>
                   </div>
                 ) : billingCycle === 'monthly' ? (
-                  <div className="text-3xl font-bold text-white mb-2">
+                  <div className="text-2xl lg:text-3xl font-bold text-white mb-2 break-words">
                     {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.price, dynamicPricing?.currency)}
-                    <span className="text-lg font-normal text-gray-400">/month</span>
+                    <span className="text-base lg:text-lg font-normal text-gray-400">/month</span>
                   </div>
                 ) : showDiscountPricing ? (
                   <>
-                    <div className="text-3xl font-bold text-green-400 mb-1">
+                    <div className="text-2xl lg:text-3xl font-bold text-green-400 mb-1 break-words">
                       {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.yearlyDiscount, dynamicPricing?.currency)}
-                      <span className="text-lg font-normal text-green-400/70">/year</span>
+                      <span className="text-base lg:text-lg font-normal text-green-400/70">/year</span>
                     </div>
-                    <div className="text-sm text-slate-500 line-through">
+                    <div className="text-sm text-slate-500 line-through break-words">
                       {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.yearlyPrice, dynamicPricing?.currency)}/year
                     </div>
                     <div className="text-xs text-green-300 mt-1">
@@ -523,9 +523,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
                   </>
                 ) : (
                   <>
-                    <div className="text-3xl font-bold text-white mb-1">
+                    <div className="text-2xl lg:text-3xl font-bold text-white mb-1 break-words">
                       {dynamicPricing?.currency_symbol || '£'}{formatPrice(plan.yearlyPrice, dynamicPricing?.currency)}
-                      <span className="text-lg font-normal text-gray-400">/year</span>
+                      <span className="text-base lg:text-lg font-normal text-gray-400">/year</span>
                     </div>
                     <div className="text-xs text-blue-400 mt-1">2 months free vs monthly</div>
                   </>

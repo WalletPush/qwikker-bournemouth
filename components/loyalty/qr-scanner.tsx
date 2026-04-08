@@ -22,6 +22,9 @@ interface EarnResult {
   proximityMessage: string | null
   nextEligibleAt: string | null
   cooldownReason: string | null
+  passCreated: boolean
+  appleUrl: string | null
+  googleUrl: string | null
   program: {
     business_name: string
     logo_url: string | null
@@ -95,6 +98,9 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
           proximityMessage: null,
           nextEligibleAt: data.nextEligibleAt,
           cooldownReason: data.error || null,
+          passCreated: false,
+          appleUrl: null,
+          googleUrl: null,
           program: data.program || { business_name: '', logo_url: null, program_name: '', reward_description: '', reward_threshold: 10, stamp_icon: 'stamp', stamp_label: 'stamps' },
         })
         setState('cooldown')
@@ -119,6 +125,9 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
         proximityMessage: data.proximityMessage,
         nextEligibleAt: data.nextEligibleAt,
         cooldownReason: null,
+        passCreated: data.passCreated || false,
+        appleUrl: data.appleUrl || null,
+        googleUrl: data.googleUrl || null,
         program: data.program || { business_name: '', logo_url: null, program_name: '', reward_description: '', reward_threshold: 10, stamp_icon: 'stamp', stamp_label: 'stamps' },
       })
       setState(data.rewardUnlocked ? 'reward' : 'success')
@@ -324,6 +333,31 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
               {earnResult.proximityMessage && (
                 <p className="text-emerald-400 text-sm font-medium">{earnResult.proximityMessage}</p>
               )}
+              {earnResult.passCreated && (earnResult.appleUrl || earnResult.googleUrl) && (
+                <div className="w-full space-y-2">
+                  <p className="text-zinc-400 text-xs text-center">Your loyalty pass is ready</p>
+                  {earnResult.appleUrl && (
+                    <a
+                      href={earnResult.appleUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full h-11 bg-black border border-zinc-700 rounded-xl text-white text-sm font-semibold hover:bg-zinc-900 transition-colors"
+                    >
+                      Add to Apple Wallet
+                    </a>
+                  )}
+                  {earnResult.googleUrl && (
+                    <a
+                      href={earnResult.googleUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full h-11 bg-white border border-zinc-200 rounded-xl text-black text-sm font-semibold hover:bg-zinc-100 transition-colors"
+                    >
+                      Add to Google Wallet
+                    </a>
+                  )}
+                </div>
+              )}
               <button onClick={handleClose} className="mt-4 w-full h-11 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-xl transition-colors">
                 Done
               </button>
@@ -352,6 +386,31 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
                 size={32}
                 className="justify-center"
               />
+              {earnResult.passCreated && (earnResult.appleUrl || earnResult.googleUrl) && (
+                <div className="w-full space-y-2">
+                  <p className="text-zinc-400 text-xs text-center">Your loyalty pass is ready</p>
+                  {earnResult.appleUrl && (
+                    <a
+                      href={earnResult.appleUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full h-11 bg-black border border-zinc-700 rounded-xl text-white text-sm font-semibold hover:bg-zinc-900 transition-colors"
+                    >
+                      Add to Apple Wallet
+                    </a>
+                  )}
+                  {earnResult.googleUrl && (
+                    <a
+                      href={earnResult.googleUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full h-11 bg-white border border-zinc-200 rounded-xl text-black text-sm font-semibold hover:bg-zinc-100 transition-colors"
+                    >
+                      Add to Google Wallet
+                    </a>
+                  )}
+                </div>
+              )}
               <button onClick={handleClose} className="mt-4 w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl transition-colors">
                 View Reward
               </button>

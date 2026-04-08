@@ -9,7 +9,7 @@ import { createChangeRejectionEmail } from '@/lib/email/templates/business-notif
 
 export async function POST(request: NextRequest) {
   try {
-    const { claimId, action } = await request.json()
+    const { claimId, action, forceApprove } = await request.json()
     
     if (!claimId || !action) {
       return NextResponse.json(
@@ -64,7 +64,10 @@ export async function POST(request: NextRequest) {
           city,
           business_images,
           email,
-          billing_email
+          billing_email,
+          rating,
+          rating_source,
+          manual_override
         )
       `)
       .eq('id', claimId)
@@ -86,6 +89,26 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'approve') {
+      // Soft 4.4 rating gate
+      const RATING_THRESHOLD = 4.4
+      if (
+        !forceApprove &&
+        !claim.business.manual_override &&
+        claim.business.rating != null &&
+        claim.business.rating > 0 &&
+        claim.business.rating < RATING_THRESHOLD
+      ) {
+        return NextResponse.json(
+          {
+            warning: true,
+            message: `${claim.business.business_name} has a ${claim.business.rating.toFixed(1)}★ rating (below ${RATING_THRESHOLD}★ threshold). Approve anyway?`,
+            rating: claim.business.rating,
+            ratingSource: claim.business.rating_source,
+          },
+          { status: 200 }
+        )
+      }
+
       // 🔒 CRITICAL GUARDRAIL: Cannot approve claim without at least 1 uploaded image
       if (!claim.logo_upload && !claim.hero_image_upload) {
         return NextResponse.json(
@@ -113,62 +136,55 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // 2. Update business_profiles with edited data and set status to 'claimed_free'
-      const businessUpdate: any = {
-        status: 'claimed_free',
-        user_id: claim.user_id, // CRITICAL: Set user_id so they can log in!
+      // 2. Build business update with edited data + ownership fields
+      const isTrialClaim = claim.plan_choice === 'trial'
+      const businessUpdate: Record<string, unknown> = {
+        user_id: claim.user_id,
         owner_user_id: claim.user_id,
         claimed_at: new Date().toISOString(),
-        visibility: 'discover_only', // Free tier only visible in discover
-        admin_chat_fallback_approved: true, // Auto-enable AI visibility for claimed businesses
-        updated_at: new Date().toISOString()
+        admin_chat_fallback_approved: true,
+        updated_at: new Date().toISOString(),
       }
-      
-      // ✅ EMAIL HANDLING: Set billing_email from claim, only set public email if currently null
+
+      // Free path sets status directly; trial path lets the RPC handle status
+      if (!isTrialClaim) {
+        businessUpdate.status = 'claimed_free'
+        businessUpdate.visibility = 'discover_only'
+      }
+
       if (claim.business_email) {
-        // Always set billing_email from claim for contact/billing purposes
         if (!claim.business.billing_email) {
           businessUpdate.billing_email = claim.business_email
         }
-        
-        // Only set public listing email if it's currently null (preserve existing public emails)
         if (!claim.business.email) {
           businessUpdate.email = claim.business_email
         }
       }
-      
-      // Always apply logo if uploaded (not dependent on data_edited flag)
+
       if (claim.logo_upload) {
         businessUpdate.logo = claim.logo_upload
       }
-      
-      // Add edited data if claimer provided it
+
       if (claim.data_edited) {
         if (claim.edited_business_name) businessUpdate.business_name = claim.edited_business_name
         if (claim.edited_address) businessUpdate.business_address = claim.edited_address
         if (claim.edited_phone) businessUpdate.phone = claim.edited_phone
         if (claim.edited_website) businessUpdate.website = claim.edited_website
-        
-        // ✅ CATEGORY: Write to system_category + display_category (NEVER business_category)
+
         if (claim.edited_category) {
           const displayLabel = claim.edited_category.trim()
           const systemCat = getSystemCategoryFromDisplayLabel(displayLabel)
-          
-          // Only update category if mapping is valid
           if (!systemCat || !isValidSystemCategory(systemCat)) {
             console.warn(`⚠️ Cannot map edited_category: "${displayLabel}" - leaving existing category unchanged`)
-            // Do NOT update category fields - keep existing values intact
           } else {
             businessUpdate.display_category = displayLabel
             businessUpdate.system_category = systemCat
-            // Sanity check before write
-            if (!isValidSystemCategory(businessUpdate.system_category)) {
+            if (!isValidSystemCategory(businessUpdate.system_category as string)) {
               throw new Error(`Invalid system_category: "${businessUpdate.system_category}" derived from "${displayLabel}"`)
             }
           }
-          // NEVER write business_category (trigger will backfill during Phase 1)
         }
-        
+
         if (claim.edited_type) businessUpdate.business_type = claim.edited_type
         if (claim.edited_description) businessUpdate.business_description = claim.edited_description
         if (claim.edited_tagline) businessUpdate.business_tagline = claim.edited_tagline
@@ -180,7 +196,6 @@ export async function POST(request: NextRequest) {
         if (claim.edited_booking_url) businessUpdate.booking_url = claim.edited_booking_url
       }
 
-      // Apply vibe tags if provided (independent of data_edited flag)
       if (claim.edited_vibe_tags) {
         try {
           businessUpdate.vibe_tags = JSON.parse(claim.edited_vibe_tags)
@@ -188,16 +203,13 @@ export async function POST(request: NextRequest) {
           console.warn('Invalid vibe_tags JSON in claim, skipping')
         }
       }
-      
-      // Always apply hero image if uploaded (not dependent on data_edited flag)
+
       if (claim.hero_image_upload) {
-        // Add hero image to business_images array (deduplicate using Set)
         const existing = Array.isArray(claim.business.business_images) ? claim.business.business_images : []
         const nextImages = [claim.hero_image_upload, ...existing].filter(Boolean)
-        const deduped = Array.from(new Set(nextImages))
-        businessUpdate.business_images = deduped
+        businessUpdate.business_images = Array.from(new Set(nextImages))
       }
-      
+
       const { error: updateBusinessError } = await supabaseAdmin
         .from('business_profiles')
         .update(businessUpdate)
@@ -211,50 +223,97 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // 3. Get the "free" tier ID from subscription_tiers
-      const { data: freeTier, error: tierError } = await supabaseAdmin
-        .from('subscription_tiers')
-        .select('id')
-        .eq('tier_name', 'free')
-        .single()
-
-      if (tierError || !freeTier) {
-        console.error('Free tier not found:', tierError)
-        return NextResponse.json(
-          { error: 'Free tier not configured. Please run add_free_tier_to_subscription_tiers.sql first.' },
-          { status: 500 }
-        )
-      }
-
-      // 4. Create a subscription entry for the free tier (idempotent)
-      // Check if subscription already exists to prevent duplicates
-      const { data: existingSubscription } = await supabaseAdmin
-        .from('business_subscriptions')
-        .select('id')
-        .eq('business_id', claim.business_id)
-        .eq('tier_id', freeTier.id)
-        .eq('status', 'active')
-        .maybeSingle()
-
-      if (!existingSubscription) {
-        const { error: subscriptionError } = await supabaseAdmin
-          .from('business_subscriptions')
-          .insert({
-            user_id: claim.user_id,
-            business_id: claim.business_id,
-            tier_id: freeTier.id,
-            status: 'active',
-            is_in_free_trial: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+      // 3. Create subscription — trial path uses RPC, free path creates free tier subscription
+      if (isTrialClaim) {
+        // TRIAL PATH: Call the same RPC as the onboarding approve flow
+        try {
+          const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc('approve_business_with_trial', {
+            p_business_id: claim.business_id,
+            p_approved_by: admin.id
           })
+          if (rpcError) {
+            console.error('⚠️ Trial RPC error on claim approval, falling back to free:', rpcError)
+            // Fallback: set as claimed_free if RPC fails
+            await supabaseAdmin
+              .from('business_profiles')
+              .update({ status: 'claimed_free', visibility: 'discover_only' })
+              .eq('id', claim.business_id)
+          } else {
+            console.log(`✅ Trial subscription created for claimed business ${claim.business.business_name}:`, rpcResult)
 
-        if (subscriptionError) {
-          console.error('Error creating subscription:', subscriptionError)
-          // Non-critical - continue
+            // Re-fetch to get RPC-assigned plan
+            const { data: refreshed } = await supabaseAdmin
+              .from('business_profiles')
+              .select('plan')
+              .eq('id', claim.business_id)
+              .single()
+
+            const plan = refreshed?.plan || 'featured'
+
+            // Set features + correct business_tier based on plan
+            const { getFeaturesForTier } = await import('@/lib/utils/features-for-tier')
+            const planToTierMap: Record<string, string> = {
+              spotlight: 'qwikker_picks',
+              featured: 'featured',
+              starter: 'recommended',
+            }
+            await supabaseAdmin
+              .from('business_profiles')
+              .update({
+                features: getFeaturesForTier(plan),
+                business_tier: planToTierMap[plan] || 'free_trial',
+                visibility: 'ai_enabled',
+              })
+              .eq('id', claim.business_id)
+          }
+        } catch (error) {
+          console.error('⚠️ Trial subscription error on claim, falling back to free:', error)
+          await supabaseAdmin
+            .from('business_profiles')
+            .update({ status: 'claimed_free', visibility: 'discover_only' })
+            .eq('id', claim.business_id)
         }
       } else {
-        console.log('Subscription already exists for this business/tier combination - skipping')
+        // FREE PATH: Create free tier subscription (existing behavior)
+        const { data: freeTier, error: tierError } = await supabaseAdmin
+          .from('subscription_tiers')
+          .select('id')
+          .eq('tier_name', 'free')
+          .single()
+
+        if (tierError || !freeTier) {
+          console.error('Free tier not found:', tierError)
+          return NextResponse.json(
+            { error: 'Free tier not configured.' },
+            { status: 500 }
+          )
+        }
+
+        const { data: existingSubscription } = await supabaseAdmin
+          .from('business_subscriptions')
+          .select('id')
+          .eq('business_id', claim.business_id)
+          .eq('tier_id', freeTier.id)
+          .eq('status', 'active')
+          .maybeSingle()
+
+        if (!existingSubscription) {
+          const { error: subscriptionError } = await supabaseAdmin
+            .from('business_subscriptions')
+            .insert({
+              user_id: claim.user_id,
+              business_id: claim.business_id,
+              tier_id: freeTier.id,
+              status: 'active',
+              is_in_free_trial: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+
+          if (subscriptionError) {
+            console.error('Error creating subscription:', subscriptionError)
+          }
+        }
       }
 
       // 5. Send approval email to business owner
@@ -387,9 +446,10 @@ export async function POST(request: NextRequest) {
       try {
         const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
         
+        const planLabel = isTrialClaim ? 'Free Trial' : 'Free Listing'
         await sendCitySlackNotification({
           title: `Claim Approved: ${claim.business.business_name}`,
-          message: `Business claim has been approved!\n\n**Business:** ${claim.business.business_name}\n**Status:** Claimed Free\n**Owner:** User ID ${claim.user_id}\n\nBusiness is now live on Qwikker as a free listing.`,
+          message: `Business claim has been approved!\n\n**Business:** ${claim.business.business_name}\n**Plan:** ${planLabel}\n**Owner:** User ID ${claim.user_id}\n\nBusiness is now live on Qwikker.`,
           city: claim.business.city,
           type: 'admin_action',
           data: { businessName: claim.business.business_name, action: 'claim_approved' }

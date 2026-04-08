@@ -155,6 +155,47 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const [messageBody, setMessageBody] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
 
+  // Rating verification state
+  const [ratingLookup, setRatingLookup] = useState<{
+    loading: boolean
+    result: { found: boolean; googleRating?: number; googleReviewCount?: number; match?: boolean } | null
+    error: string | null
+  }>({ loading: false, result: null, error: null })
+
+  const handleVerifyRating = useCallback(async () => {
+    setRatingLookup({ loading: true, result: null, error: null })
+    try {
+      const res = await fetch('/api/admin/verify-rating', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: business.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Lookup failed')
+      setRatingLookup({ loading: false, result: data, error: null })
+    } catch (err: unknown) {
+      setRatingLookup({ loading: false, result: null, error: err instanceof Error ? err.message : 'Lookup failed' })
+    }
+  }, [business.id])
+
+  const handleConfirmRating = useCallback(async (useGoogleValues: boolean) => {
+    try {
+      const updateData: Record<string, unknown> = { rating_source: 'admin_verified' }
+      if (useGoogleValues && ratingLookup.result?.found) {
+        updateData.rating = ratingLookup.result.googleRating
+        updateData.review_count = ratingLookup.result.googleReviewCount
+      }
+      await fetch('/api/admin/verify-rating', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: business.id, ...updateData }),
+      })
+      window.location.reload()
+    } catch {
+      // Silently fail — admin can retry
+    }
+  }, [business.id, ratingLookup.result])
+
   // DEBUG: Check subscription data
   console.log(`🔍 CRM Card for ${business.business_name}:`, {
     has_subscription: !!business.subscription,
@@ -859,21 +900,49 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     {business.google_primary_type.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                   </p>
                 )}
-                {/* Google Rating & Review Count */}
-                {(business.rating || business.review_count) && (
-                  <div className="flex items-center gap-2 mt-1">
-                    {business.rating && (
+                {/* Google Rating & Review Count + Rating Source Badge */}
+                {(business.rating || business.review_count) ? (
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {business.rating ? (
                       <div className="flex items-center gap-1">
                         <svg className="w-4 h-4 fill-yellow-400 text-yellow-400" viewBox="0 0 24 24">
                           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                         </svg>
                         <span className="text-sm font-semibold text-white">{business.rating.toFixed(1)}</span>
                       </div>
-                    )}
-                    {business.review_count && (
+                    ) : null}
+                    {business.review_count ? (
                       <span className="text-sm text-slate-400">({business.review_count} reviews)</span>
+                    ) : null}
+                    {/* Rating source badge */}
+                    {business.rating_source === 'google_verified' && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/15 text-green-400 border border-green-500/30">
+                        Google Verified
+                      </span>
+                    )}
+                    {business.rating_source === 'self_reported' && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                        Self-Reported
+                      </span>
+                    )}
+                    {business.rating_source === 'admin_verified' && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                        Admin Verified
+                      </span>
+                    )}
+                    {(!business.rating_source || business.rating_source === 'unknown') && business.rating && business.rating > 0 && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-500/15 text-slate-400 border border-slate-500/30">
+                        Not Verified
+                      </span>
                     )}
                   </div>
+                ) : (
+                  <span className="text-xs text-slate-500 mt-1 inline-flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01" />
+                    </svg>
+                    No rating data
+                  </span>
                 )}
               </div>
             </div>
@@ -937,6 +1006,96 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
           </div>
           
+          {/* Rating Verification Panel — shown for self-reported or unverified ratings */}
+          {(business.rating_source === 'self_reported' || ((!business.rating_source || business.rating_source === 'unknown') && business.rating && business.rating > 0)) && (
+            <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-xs text-amber-300">
+                    {business.rating_source === 'self_reported' ? 'Rating is self-reported — verify before approving' : 'Rating source unknown — verify'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleVerifyRating}
+                    disabled={ratingLookup.loading}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 rounded-lg text-amber-300 text-xs font-medium transition-colors disabled:opacity-50"
+                  >
+                    {ratingLookup.loading ? (
+                      <div className="w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    )}
+                    Lookup on Google
+                  </button>
+                  <a
+                    href={`https://www.google.com/maps/search/${encodeURIComponent(business.business_name + ' ' + business.business_town)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2 py-1.5 text-xs text-slate-400 hover:text-slate-300 transition-colors"
+                  >
+                    Google Maps
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+
+              {/* Lookup result */}
+              {ratingLookup.error && (
+                <div className="mt-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded p-2">
+                  {ratingLookup.error}
+                </div>
+              )}
+              {ratingLookup.result && (
+                <div className="mt-3 space-y-2">
+                  {ratingLookup.result.found ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-slate-800/60 rounded-lg p-2.5 text-center">
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Claimed</p>
+                          <p className="text-lg font-bold text-white">{business.rating?.toFixed(1) || '—'}</p>
+                          <p className="text-[10px] text-slate-500">{business.review_count || 0} reviews</p>
+                        </div>
+                        <div className="bg-slate-800/60 rounded-lg p-2.5 text-center">
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Google</p>
+                          <p className={`text-lg font-bold ${ratingLookup.result.match ? 'text-green-400' : 'text-amber-400'}`}>
+                            {ratingLookup.result.googleRating?.toFixed(1) || '—'}
+                          </p>
+                          <p className="text-[10px] text-slate-500">{ratingLookup.result.googleReviewCount || 0} reviews</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleConfirmRating(true)}
+                          className="flex-1 py-1.5 text-xs font-medium bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 text-green-400 rounded-lg transition-colors"
+                        >
+                          Use Google values
+                        </button>
+                        <button
+                          onClick={() => handleConfirmRating(false)}
+                          className="flex-1 py-1.5 text-xs font-medium bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-400 rounded-lg transition-colors"
+                        >
+                          Keep claimed values
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-xs text-slate-400 bg-slate-800/40 rounded p-2">
+                      No Google listing found for this business. Use the Google Maps link to search manually.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Tier-colored Full Width Line - More Visible */}
           <div className={`h-1 w-full bg-gradient-to-r ${getTierAccentGradient(business)} rounded-full mb-6 opacity-80`} />
 

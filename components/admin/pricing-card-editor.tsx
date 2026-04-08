@@ -363,7 +363,7 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
         className={`cursor-pointer transition-all duration-300 h-full ${isSelected ? 'ring-2 ring-blue-400 rounded-lg' : ''}`}
         onClick={() => setSelectedCard(tier)}
       >
-        <Card className={`relative bg-slate-800/50 border transition-colors duration-300 flex flex-col h-full ${
+        <Card className={`relative bg-slate-800/50 border transition-colors duration-300 flex flex-col h-full min-w-0 ${
           card.popular ? 'border-blue-500/50' : 
           tier === 'spotlight' ? 'border-yellow-500/50' : 
           'border-slate-700'
@@ -383,17 +383,15 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
             <CardTitle className="text-xl font-bold text-white">{planNames[tier]}</CardTitle>
             <div className="mt-4">
               {tier === 'free' ? (
-                // Free card - no pricing, just "Free"
-                <div className="text-3xl font-bold text-slate-400 mb-2">
+                <div className="text-2xl lg:text-3xl font-bold text-slate-400 mb-2 break-words">
                   Free
-                  <span className="text-lg font-normal text-slate-500">/forever</span>
+                  <span className="text-base lg:text-lg font-normal text-slate-500">/forever</span>
                 </div>
               ) : (
                 <>
-                  {/* Paid tiers - show monthly and annual pricing */}
-                  <div className="text-3xl font-bold text-white mb-2">
+                  <div className="text-2xl lg:text-3xl font-bold text-white mb-2 break-words">
                     {config.currency_symbol}{formatPrice(card.price, config.currency)}
-                    <span className="text-lg font-normal text-gray-400">/month</span>
+                    <span className="text-base lg:text-lg font-normal text-gray-400">/month</span>
                   </div>
                   
                   {/* Clean Yearly Pricing */}

@@ -27,9 +27,15 @@ interface BusinessData {
   reviewCount?: number
 }
 
+interface TrialConfig {
+  trialTier: string
+  trialDays: number
+}
+
 interface ConfirmBusinessDetailsProps {
   business: BusinessData
   smsOptInAvailable: boolean
+  trialConfig?: TrialConfig | null
   onConfirm: (editedData: {
     business_name: string
     address: string
@@ -47,11 +53,17 @@ interface ConfirmBusinessDetailsProps {
     booking_preference?: string
     booking_url?: string
     vibe_tags?: string
+    plan_choice?: string
   }) => void
   onBack: () => void
 }
 
-export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm, onBack }: ConfirmBusinessDetailsProps) {
+export function ConfirmBusinessDetails({ business, smsOptInAvailable, trialConfig, onConfirm, onBack }: ConfirmBusinessDetailsProps) {
+  // Plan choice state
+  const [planChoice, setPlanChoice] = useState<'free' | 'trial'>('free')
+  const tierDisplayName = (trialConfig?.trialTier || 'featured').charAt(0).toUpperCase() + (trialConfig?.trialTier || 'featured').slice(1)
+  const trialDays = trialConfig?.trialDays || 30
+
   // Form state
   const [businessName, setBusinessName] = useState(business.name || '')
   const [address, setAddress] = useState(business.address || '')
@@ -228,7 +240,8 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
       booking_url: bookingPreference === 'url' ? bookingUrl.trim() : undefined,
       vibe_tags: (selectedVibeTags.length > 0 || customVibeTags.length > 0)
         ? JSON.stringify({ selected: selectedVibeTags, custom: customVibeTags })
-        : undefined
+        : undefined,
+      plan_choice: planChoice,
     })
   }
 
@@ -250,6 +263,84 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, onConfirm,
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+
+            {/* Plan Choice */}
+            {trialConfig && trialConfig.trialDays > 0 && (
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Choose your plan</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div
+                    onClick={() => setPlanChoice('free')}
+                    className={`relative rounded-xl p-5 cursor-pointer transition-all duration-200 ${
+                      planChoice === 'free'
+                        ? 'border-2 border-[#00d083] bg-[#00d083]/5'
+                        : 'border-2 border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500'
+                    }`}
+                  >
+                    {planChoice === 'free' && (
+                      <div className="absolute top-3 right-3">
+                        <Check className="w-5 h-5 text-[#00d083]" />
+                      </div>
+                    )}
+                    <h4 className="font-bold text-lg mb-1">Free Listing</h4>
+                    <p className="text-sm text-muted-foreground mb-3">Basic directory presence</p>
+                    <ul className="text-xs text-muted-foreground space-y-1.5">
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                        Listed in the directory
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                        Basic business profile
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                        Upgrade anytime
+                      </li>
+                    </ul>
+                    <p className="mt-3 pt-2 border-t text-sm font-bold">Free forever</p>
+                  </div>
+
+                  <div
+                    onClick={() => setPlanChoice('trial')}
+                    className={`relative rounded-xl p-5 cursor-pointer transition-all duration-200 ${
+                      planChoice === 'trial'
+                        ? 'border-2 border-[#00d083] bg-[#00d083]/5'
+                        : 'border-2 border-blue-500/30 hover:border-blue-500/50'
+                    }`}
+                  >
+                    <div className="absolute -top-2.5 left-1/2 transform -translate-x-1/2">
+                      <span className="bg-[#00d083] text-black text-[10px] font-bold px-2.5 py-0.5 rounded-full">RECOMMENDED</span>
+                    </div>
+                    {planChoice === 'trial' && (
+                      <div className="absolute top-3 right-3">
+                        <Check className="w-5 h-5 text-[#00d083]" />
+                      </div>
+                    )}
+                    <h4 className="font-bold text-lg mb-1">Free Trial</h4>
+                    <p className="text-sm text-muted-foreground mb-3">{tierDisplayName} plan for {trialDays} days</p>
+                    <ul className="text-xs text-muted-foreground space-y-1.5">
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" />
+                        Full {tierDisplayName} tier access
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" />
+                        AI-powered discovery
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" />
+                        No card required
+                      </li>
+                    </ul>
+                    <p className="mt-3 pt-2 border-t text-sm font-bold text-[#00d083]">FREE for {trialDays} days</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Divider */}
+            {trialConfig && trialConfig.trialDays > 0 && <div className="border-t pt-2" />}
             
             {/* Logo Upload */}
             <div id="logo" className="space-y-2">

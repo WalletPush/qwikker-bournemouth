@@ -48,6 +48,8 @@ interface SignupData {
 interface VerificationData {
   method: 'google' | 'manual'
   placeId?: string
+  manualRating?: number
+  manualReviewCount?: number
   googleData?: {
     name: string
     formattedAddress: string
@@ -269,8 +271,9 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       verification_method: verificationMethod,
       google_place_id: isGoogleVerified ? verification.placeId : null,
       google_verified_at: isGoogleVerified ? new Date().toISOString() : null,
-      rating: isGoogleVerified ? verification.googleData!.rating : 0,
-      review_count: isGoogleVerified ? verification.googleData!.userRatingsTotal : 0,
+      rating: isGoogleVerified ? verification.googleData!.rating : (verification?.manualRating || 0),
+      review_count: isGoogleVerified ? verification.googleData!.userRatingsTotal : (verification?.manualReviewCount || 0),
+      rating_source: isGoogleVerified ? 'google_verified' : (verification?.manualRating ? 'self_reported' : 'unknown'),
       google_types: isGoogleVerified ? verification.googleData!.types : null,
       google_primary_type: isGoogleVerified ? verification.googleData!.googlePrimaryType : null,
       manual_override: false, // Always false on signup, admin will set if needed
@@ -316,7 +319,7 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
 
       const slackPayload = {
         title: `🎉 New Business Registration: ${formData.businessName}`,
-        message: `${formData.businessName} (${formData.businessType}) has registered in ${locationInfo.city}!\n\n**Business Details:**\n• Email: ${formData.email}\n• Location: ${locationInfo.city}\n• Type: ${formData.businessType}\n• Plan: Starter`,
+        message: `${formData.businessName} (${formData.businessType}) has registered in ${locationInfo.city}!\n\n**Business Details:**\n• Email: ${formData.email}\n• Location: ${locationInfo.city}\n• Type: ${formData.businessType}\n• Plan: Pending Approval`,
         city: locationInfo.city,
         type: 'business_signup' as const,
         data: { 

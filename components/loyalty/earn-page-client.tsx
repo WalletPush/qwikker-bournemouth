@@ -38,6 +38,8 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [countdown, setCountdown] = useState('')
   const [showVibePrompt, setShowVibePrompt] = useState(false)
+  const [passCreated, setPassCreated] = useState(false)
+  const [walletUrls, setWalletUrls] = useState<{ appleUrl: string | null; googleUrl: string | null }>({ appleUrl: null, googleUrl: null })
   const hasFired = useRef(false)
 
   const stampIconName = STAMP_ICONS[program.stamp_icon as StampIconKey]?.icon || 'Stamp'
@@ -77,6 +79,11 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
       setBalance(data.newBalance)
       setProximityMessage(data.proximityMessage)
       setNextEligibleAt(data.nextEligibleAt)
+
+      if (data.passCreated) {
+        setPassCreated(true)
+        setWalletUrls({ appleUrl: data.appleUrl || null, googleUrl: data.googleUrl || null })
+      }
 
       if (data.rewardUnlocked) {
         setState('reward')
@@ -207,6 +214,33 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
               </p>
             )}
 
+            {passCreated && (walletUrls.appleUrl || walletUrls.googleUrl) && (
+              <div className="w-full space-y-2">
+                <p className="text-zinc-400 text-xs text-center">Your loyalty pass is ready</p>
+                {walletUrls.appleUrl && (
+                  <a
+                    href={walletUrls.appleUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full h-11 bg-black border border-zinc-700 rounded-xl text-white text-sm font-semibold hover:bg-zinc-900 transition-colors"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                    Add to Apple Wallet
+                  </a>
+                )}
+                {walletUrls.googleUrl && (
+                  <a
+                    href={walletUrls.googleUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full h-11 bg-white border border-zinc-200 rounded-xl text-black text-sm font-semibold hover:bg-zinc-100 transition-colors"
+                  >
+                    Add to Google Wallet
+                  </a>
+                )}
+              </div>
+            )}
+
             <Link
               href={`/user/rewards?wallet_pass_id=${encodeURIComponent(walletPassId)}`}
               className="mt-2 w-full flex items-center justify-center gap-2 h-11 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl transition-colors"
@@ -262,6 +296,33 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
               size={32}
               className="justify-center"
             />
+
+            {passCreated && (walletUrls.appleUrl || walletUrls.googleUrl) && (
+              <div className="w-full space-y-2">
+                <p className="text-zinc-400 text-xs text-center">Your loyalty pass is ready</p>
+                {walletUrls.appleUrl && (
+                  <a
+                    href={walletUrls.appleUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full h-11 bg-black border border-zinc-700 rounded-xl text-white text-sm font-semibold hover:bg-zinc-900 transition-colors"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                    Add to Apple Wallet
+                  </a>
+                )}
+                {walletUrls.googleUrl && (
+                  <a
+                    href={walletUrls.googleUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full h-11 bg-white border border-zinc-200 rounded-xl text-black text-sm font-semibold hover:bg-zinc-100 transition-colors"
+                  >
+                    Add to Google Wallet
+                  </a>
+                )}
+              </div>
+            )}
 
             <Link
               href={`/user/rewards?wallet_pass_id=${encodeURIComponent(walletPassId)}`}

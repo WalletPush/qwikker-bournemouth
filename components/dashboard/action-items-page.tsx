@@ -863,9 +863,28 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
         </div>
       )}
 
+      {/* Under Review Banner */}
+      {profile?.status === 'pending_review' && (
+      <Card className="bg-gradient-to-br from-amber-950/40 to-yellow-950/30 border border-amber-500/30">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-amber-500/20">
+              <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-amber-400">Your Listing is Under Review</h3>
+              <p className="text-sm text-amber-300/70">We're reviewing your submission and will notify you once it's approved.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      )}
+
       {/* Submit Listing Button - CLEAN & SIMPLE */}
-      {/* 🔒 HIDE for claimed_free businesses */}
-      {profile?.status !== 'claimed_free' && (
+      {/* Hide for claimed_free, pending_review, and approved businesses */}
+      {!['claimed_free', 'pending_review', 'approved'].includes(profile?.status || '') && (
       <Card id="submit-listing" className={`scroll-mt-20 ${
         isReadyToSubmit 
           ? 'bg-gradient-to-br from-green-950/60 to-emerald-950/40 border-2 border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.2)]' 
