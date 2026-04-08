@@ -4,6 +4,25 @@ import { getCityFromHostname } from '@/lib/utils/city-detection'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
+
+  // Persist wallet_pass_id from URL → cookie so identity survives across navigations.
+  // cookies().set() only works in Route Handlers / Server Actions, NOT in page server
+  // components, so the middleware is the only reliable place to do this.
+  const urlWalletPassId = request.nextUrl.searchParams.get('wallet_pass_id')
+  if (urlWalletPassId && urlWalletPassId.length >= 10) {
+    const existingCookie = request.cookies.get('qwikker_wallet_pass_id')?.value
+    if (existingCookie !== urlWalletPassId) {
+      supabaseResponse.cookies.set({
+        name: 'qwikker_wallet_pass_id',
+        value: urlWalletPassId,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60,
+        path: '/',
+      })
+    }
+  }
   
   // 🌍 MULTI-CITY: Detect city for ALL requests (needed for RLS)
   const hostname = request.headers.get('host') || ''

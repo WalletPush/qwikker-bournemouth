@@ -1,6 +1,7 @@
 import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getCityDisplayName } from '@/lib/utils/city-detection'
 import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
+import { getValidatedUser } from '@/lib/utils/wallet-pass-security'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserRewardsPage } from '@/components/user/user-rewards-page'
 
@@ -54,9 +55,35 @@ export default async function RewardsPage({ searchParams }: RewardsPageProps) {
     )
   }
 
+  const { user: validatedUser, isValid } = await getValidatedUser(walletPassId)
+
+  let currentUser = null
+  if (isValid && validatedUser) {
+    currentUser = {
+      id: validatedUser.id,
+      wallet_pass_id: validatedUser.wallet_pass_id,
+      name: validatedUser.name,
+      email: validatedUser.email,
+      city: validatedUser.city,
+      tier: validatedUser.tier || 'explorer',
+      level: validatedUser.level || 1,
+    }
+  } else {
+    currentUser = {
+      id: 'user-processing',
+      wallet_pass_id: walletPassId,
+      name: walletPassId ? 'New User' : 'Guest',
+      email: null,
+      city: currentCity,
+      tier: 'explorer',
+      level: 1,
+    }
+  }
+
   return (
     <UserDashboardLayout
       currentSection="rewards"
+      currentUser={currentUser}
       walletPassId={walletPassId}
       currentCity={currentCity}
       cityDisplayName={cityDisplayName}

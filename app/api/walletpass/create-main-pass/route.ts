@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
       
       // Fire-and-forget: update pass links with personalized URLs containing wallet_pass_id
       updatePassLinksAsync(
-        MOBILE_WALLET_APP_KEY, passTypeId, passSerialNumber, cityBaseUrl
+        MOBILE_WALLET_APP_KEY, passTypeId, passSerialNumber, cityBaseUrl, walletpushDashboardUrl
       ).catch(err => console.warn('⚠️ Non-critical: pass link update failed:', err))
 
       // 📧 SEND CONSUMER WELCOME EMAIL (non-blocking)
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      return NextResponse.json({ 
+      const jsonResponse = NextResponse.json({ 
         success: true, 
         passUrl: passUrl,
         googleWalletUrl,
@@ -233,6 +233,19 @@ export async function POST(request: NextRequest) {
         passTypeIdentifier: passTypeId,
         message: 'Main wallet pass created successfully'
       })
+
+      // Set cookie on the response so subsequent page loads use the new ID
+      jsonResponse.cookies.set({
+        name: 'qwikker_wallet_pass_id',
+        value: passSerialNumber,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60,
+        path: '/',
+      })
+
+      return jsonResponse
     } else {
       return NextResponse.json({ 
         success: false, 
@@ -259,7 +272,8 @@ async function updatePassLinksAsync(
   apiKey: string,
   passTypeId: string,
   serialNumber: string,
-  cityBaseUrl: string
+  cityBaseUrl: string,
+  walletpushDashboardUrl?: string
 ) {
   // Extract suffix after last dash for short URL code
   const parts = serialNumber.split('-')

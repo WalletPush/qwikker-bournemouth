@@ -23,10 +23,11 @@
 7. ~~**2.24 Claim Flow Trial**~~ — DONE. Plan choice cards in claim flow, approve-claim routes to RPC for trial. USER ACTION: Run `ALTER TABLE claim_requests ADD COLUMN IF NOT EXISTS plan_choice TEXT DEFAULT 'free'`
 8. ~~**2.25 Loyalty System Audit**~~ — DONE. Earn route now issues WalletPush pass on auto-create. Wallet buttons in earn page + QR scanner.
 9. ~~**2.28 Google Review Gate**~~ — DONE. Self-reported rating input on manual onboarding, admin verify button on CRM card, soft 4.4 gate on approve routes.
-10. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
-11. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
-12. Finish Tier 0 remaining (0.14, 0.22)
-13. Finish Tier 2 (2.8-2.11, 2.17)
+10. ~~**0.29 Identity + Shortlink Critical Fix**~~ — DONE. Three bugs: (a) `updatePassLinksAsync` scoping error since March 4 = zero passes got shortlinks, (b) cookie never set reliably = identity lost across pages, (c) layout nav links lost wallet_pass_id on first render.
+11. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
+12. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
+13. Finish Tier 0 remaining (0.14, 0.22)
+14. Finish Tier 2 (2.8-2.11, 2.17)
 
 ## Critical Issues Found (April 2026 Audit)
 
@@ -92,6 +93,7 @@ Replace flat action items list with multi-step wizard. Required vs recommended s
 | 0.12b Stripe API + Confirmation Fixes | `app/api/stripe/update-subscription/route.ts`, `components/dashboard/pricing-plans.tsx` | Medium | **Bug 1:** `subscriptions.update()` does not support `price_data.product_data` (only `checkout.sessions.create` does). Fixed: find or create a Stripe Product per tier+city with metadata, use `product: productId`. **Bug 2:** Checkout-created Products are immutable — `products.update()` throws. Fixed: never mutate Checkout-created products; maintain our own Products via metadata lookup. **Bug 3:** No confirmation dialog on plan change — one misclick could change billing. Fixed: added Dialog showing current plan, new plan, new price, and proration explanation before executing. First-time purchases still go to Stripe Checkout (has built-in confirmation). |
 | 0.12c Stripe Period Date Fix | `app/api/webhooks/stripe/route.ts`, `app/api/stripe/cancel-subscription/route.ts` | Medium | Stripe basil API (2025-03-31) moved `current_period_start/end` from top-level subscription to `items.data[]`. Webhook `handleSubscriptionUpdated` crashed with `RangeError: Invalid time value`. Cancel route returned `accessUntil: null`. Fixed: read period dates from `subscription.items.data[0]`, added `typeof === 'number'` guards on all date conversions. Cancel subscription + confirmation dialog now working end-to-end. |
 | 2.24 Claim Flow Trial Option | `components/claim/confirm-business-details.tsx`, `app/claim/page.tsx`, `app/api/claim/submit/route.ts`, `app/api/admin/approve-claim/route.ts` | Medium | Claim flow now offers Free Listing vs Free Trial choice. Trial path calls `approve_business_with_trial` RPC. Trial claims get `status = 'approved'` (not `claimed_free`) + `visibility: 'ai_enabled'`. DB: new `plan_choice` column on `claim_requests`. If column missing, defaults to free. If RPC fails, falls back to `claimed_free`. Existing pending claims unaffected — null plan_choice routes to free path. |
+| 0.29 Identity + Shortlink Fix | `create-main-pass/route.ts`, `lib/supabase/middleware.ts`, `user-dashboard-layout.tsx` | Low | Fixed `updatePassLinksAsync` scoping bug (missing `walletpushDashboardUrl` param since `dce02c79` March 4 → zero shortlinks set on any pass). Middleware now sets `qwikker_wallet_pass_id` cookie from URL params (reliable — replaces broken `cookies().set()` in server components). Layout `resolvedPassId` initialised from prop (no useEffect delay). Existing passes since March 4 have stale placeholder URLs — users must reinstall or call update-existing-links API. |
 | 2.25 Loyalty Earn Pass Fix | `app/api/loyalty/earn/route.ts`, `components/loyalty/earn-page-client.tsx`, `components/loyalty/qr-scanner.tsx` | Low-Medium | Earn route now issues WalletPush pass when auto-creating membership (first earn for new members). Looks up user from `app_users`, calls `issueLoyaltyPass`, stores serial. Response includes `passCreated`/`appleUrl`/`googleUrl`. Client components show wallet install buttons. Existing members unaffected. If WalletPush fails, earn still succeeds (stamp recorded), user can retry-pass later. First earn is ~1-2s slower. |
 | 2.6 Business Vibe Tags | `lib/constants/vibe-tags.ts` (new), `components/dashboard/clean-profile-page.tsx`, `components/dashboard/business-info-page.tsx`, `components/dashboard/action-items-page.tsx`, `components/claim/confirm-business-details.tsx`, `app/claim/page.tsx`, `app/api/claim/submit/route.ts`, `app/api/admin/approve-claim/route.ts`, `components/user/user-business-detail-page.tsx`, `app/user/discover/page.tsx`, `lib/ai/hybrid-chat.ts`, `components/admin/comprehensive-business-crm-card.tsx`, `lib/actions/business-actions.ts`, `lib/actions/seamless-updates.ts` | Medium | **DB:** `vibe_tags` JSONB column added to `business_profiles`; `edited_vibe_tags` TEXT added to `claim_requests`. Three views updated (`business_profiles_chat_eligibility`, `business_profiles_chat_eligible`, `business_profiles_lite_eligible`). If views were recreated without the column, AI chat context and discover page would silently lose tag data. **Profile page:** Vibe Tags + Booking cards added to `clean-profile-page.tsx` — if `updateBusinessInfo` server action rejects unknown fields, saves would fail (tested: it's a pass-through, safe). **Claim flow:** `edited_vibe_tags` passed as JSON string in FormData — if approval route can't parse it, tags silently null (graceful). **Discover search:** vibe tags concatenated into search text — bad JSONB shape could cause runtime error on `.map()` (mitigated: optional chaining). **AI chat:** tags appended to context block — worst case extra whitespace if null. **Action item links:** All `/dashboard/business` hrefs replaced with `/dashboard/profile` — old page still exists at route but is unreachable from sidebar. |
 | 2.23 Landing Page Sections + Claim/Trial Fixes | `components/marketing/city-landing-page.tsx`, `app/page.tsx`, `components/admin/landing-page-editor.tsx`, `app/api/admin/landing-page/route.ts`, `components/business-hours-input.tsx`, `components/claim/confirm-business-details.tsx`, `app/api/claim/search/route.ts`, `app/api/admin/approve-claim/route.ts`, `app/api/claim/submit/route.ts`, `components/dashboard/claim-welcome-modal.tsx`, `components/dashboard/improved-dashboard-home.tsx`, `components/dashboard/pricing-plans.tsx`, `app/api/admin/pricing-cards/route.ts` | Medium | 13 files touched. Landing page adds 4 new sections (no existing sections modified). Claim search now returns `business_hours` (new field in response — backwards compatible). Approval route clears `business_hours_structured` when edited hours present (could affect profile display for future approvals — intended). Welcome modal lost emoji content (intentional). Pricing cards API returns 2 new fields (additive). Free Listing features updated to match reality. |
@@ -185,6 +187,43 @@ Enforces Qwikker's 4.4-star quality standard across all onboarding paths.
 7. Admin clicks "Use Google values" → `rating_source` updated to `admin_verified`, rating overwritten
 8. Franchise admin tries to approve business with rating < 4.4 → warning response returned
 9. Existing businesses with `rating: 0` show grey "Not Verified" badge
+
+### 0.29 Identity + Shortlink Critical Fix (P0 — DONE — April 8 2026)
+**Symptoms:** User identity ("New User" instead of name) lost on every page except Dashboard. Pass back-of-card links open pages without identity. Vibes fail with security warnings. Loyalty auto-fill broken.
+
+**ROOT CAUSES (three separate bugs, all contributing):**
+
+**Bug A — `updatePassLinksAsync` scoping error (commit `dce02c79`, March 4)**
+The "Add per-city WalletPush URLs" commit added `walletpushDashboardUrl = credentials.dashboardUrl` inside the `POST()` function, then referenced it inside the separate `updatePassLinksAsync()` function without passing it as a parameter. JavaScript throws `ReferenceError: walletpushDashboardUrl is not defined`. The `.catch()` swallows it. **Every pass created since March 4 has placeholder URLs** (`/user/chat`, `/user/offers`) instead of shortlinks (`/c/{code}`, `/o/{code}`). Shortlinks contain user identity; placeholders don't.
+
+**Bug B — Cookie never set reliably**
+All page server components (`dashboard`, `events`, `rewards`, etc.) call `setWalletPassCookie()` which uses `cookies().set()`. In Next.js 15, `cookies().set()` only works in Server Actions and Route Handlers — NOT in page server components. These calls silently fail. The only place the cookie was being set was from the `create-main-pass` API route response (added in this session), but any existing pass users relied on the broken page-level cookie setting.
+
+**Bug C — Layout nav links missing wallet_pass_id on first render**
+`UserDashboardLayout` initialised `resolvedPassId` as `useState(null)`, then set it in `useEffect`. SSR-rendered nav links had no `wallet_pass_id`. After hydration, useEffect fires and links update — but any click in between would navigate without identity.
+
+**Fixes applied:**
+1. **`app/api/walletpass/create-main-pass/route.ts`**: Added `walletpushDashboardUrl` as 5th parameter to `updatePassLinksAsync()`. Function signature and call site both updated.
+2. **`lib/supabase/middleware.ts`**: Added cookie propagation at the middleware level. If `wallet_pass_id` is in URL searchParams, the middleware sets the `qwikker_wallet_pass_id` cookie on the response. Runs on every request. Reliable and guaranteed to work.
+3. **`components/user/user-dashboard-layout.tsx`**: Changed `useState(null)` to `useState(walletPassId || null)` so nav links include wallet_pass_id from the very first SSR render.
+4. **`app/api/walletpass/create-main-pass/route.ts`** (from earlier in session): API response now sets the cookie directly on the JSON response.
+
+**Risk:** Low. All changes are additive/hardening. Existing flows unchanged. Middleware cookie is a belt-and-suspenders addition.
+
+**What could break:**
+- If middleware is skipped (e.g. static files, `_next` paths) → no cookie set from URL, but these paths don't need it
+- If `wallet_pass_id` URL param has garbage value → middleware sets garbage cookie → `getValidatedUser` returns `isValid: false` → "New User" (same as before, no worse)
+- For passes created between March 4 and this fix: back-of-card links still have placeholder URLs (not shortlinks). Users must reinstall pass OR call `/api/walletpass/update-existing-links` to patch them. Alternatively, the middleware cookie fix means if a user visits ANY page with `?wallet_pass_id=xxx` in the URL, the cookie persists — so dashboard → sidebar navigation will work even without shortlinks.
+
+**Testing checklist:**
+1. **Delete existing pass, clear cookies, reinstall from /join**. After install → welcome page → dashboard should show your name.
+2. **Navigate to Events, Rewards, Secret Menu, Settings** via sidebar. ALL should show your name, not "New User".
+3. **Check server logs** for `✅ Updated AI_Url → .../c/{code}` and `✅ Updated Offers_Url → .../o/{code}` (confirms shortlinks set on pass).
+4. **Tap pass back-of-card AI Chat link** on phone. Should open `/c/{code}` → redirect to `/user/chat?wallet_pass_id=xxx` → identity preserved.
+5. **Tap pass back-of-card Offers link** on phone. Same flow via `/o/{code}`.
+6. **Close browser entirely, reopen dashboard URL** (no `?wallet_pass_id`). Cookie should persist. Name should show.
+7. **Scan loyalty Join QR with native camera** (not in-app). Should redirect to start page → "Already have a pass?" email lookup should be available.
+8. **Earn a stamp** → vibe popup should NOT show security warnings. Vibe submission should succeed.
 
 ### 2.23 Landing Page New Sections, Claim Hours Fix, Trial/Pricing Cleanup (DONE — NEEDS TESTING)
 

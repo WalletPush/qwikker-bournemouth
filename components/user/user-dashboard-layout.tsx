@@ -94,8 +94,9 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifBadge, setNotifBadge] = useState(0)
 
-  // Resolved wallet pass ID — starts null to match server render, then hydrates client-side
-  const [resolvedPassId, setResolvedPassId] = useState<string | null>(null)
+  // Resolved wallet pass ID — initialised from the server-provided prop so that
+  // navigation links include it on the very first render (no useEffect delay).
+  const [resolvedPassId, setResolvedPassId] = useState<string | null>(walletPassId || null)
 
   useEffect(() => {
     let id = walletPassId || null
