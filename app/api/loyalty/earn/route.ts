@@ -274,10 +274,13 @@ export async function POST(request: NextRequest) {
       const serial = membership.walletpush_serial
       const businessName = (program as any).business_profiles?.business_name || 'this business'
 
+      // Sequential updates with delays — WalletPush API drops concurrent PUTs
       if (rewardUnlocked) {
-        updateLoyaltyPassField(program, serial, 'Points', String(newBalance), false)
-        updateLoyaltyPassField(program, serial, 'Status', 'Reward Available!', false)
-        updateLoyaltyPassField(
+        await updateLoyaltyPassField(program, serial, 'Points', String(newBalance), false)
+        await new Promise(r => setTimeout(r, 500))
+        await updateLoyaltyPassField(program, serial, 'Status', `${newBalance}/${program.reward_threshold} ${program.stamp_label} — Reward Available!`, false)
+        await new Promise(r => setTimeout(r, 500))
+        await updateLoyaltyPassField(
           program,
           serial,
           'Last_Message',
@@ -290,8 +293,9 @@ export async function POST(request: NextRequest) {
           { ...membership, stamps_balance: newBalance },
           program.type
         )
-        updateLoyaltyPassField(program, serial, 'Points', fieldValues.Points, false)
-        updateLoyaltyPassField(program, serial, 'Status', fieldValues.Status, true)
+        await updateLoyaltyPassField(program, serial, 'Points', fieldValues.Points, false)
+        await new Promise(r => setTimeout(r, 500))
+        await updateLoyaltyPassField(program, serial, 'Status', fieldValues.Status, true)
       }
     }
 

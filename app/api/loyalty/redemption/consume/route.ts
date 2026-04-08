@@ -126,9 +126,11 @@ export async function POST(request: NextRequest) {
     // WalletPush: update pass fields (fire-and-forget, push only on last call)
     if (hasWalletPushCredentials(program) && membership.walletpush_serial) {
       const serial = membership.walletpush_serial
-      updateLoyaltyPassField(program, serial, 'Points', String(newBalance), false)
-      updateLoyaltyPassField(program, serial, 'Status', 'Reward Redeemed!', false)
-      updateLoyaltyPassField(
+      await updateLoyaltyPassField(program, serial, 'Points', String(newBalance), false)
+      await new Promise(r => setTimeout(r, 500))
+      await updateLoyaltyPassField(program, serial, 'Status', `${newBalance}/${program.reward_threshold} ${program.stamp_label} — Redeemed!`, false)
+      await new Promise(r => setTimeout(r, 500))
+      await updateLoyaltyPassField(
         program,
         serial,
         'Last_Message',

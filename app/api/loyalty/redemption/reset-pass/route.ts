@@ -53,9 +53,11 @@ export async function POST(request: NextRequest) {
       program.type
     )
 
-    updateLoyaltyPassField(program, serial, 'Points', fieldValues.Points, false)
-    updateLoyaltyPassField(program, serial, 'Status', fieldValues.Status, false)
-    updateLoyaltyPassField(
+    await updateLoyaltyPassField(program, serial, 'Points', fieldValues.Points, false)
+    await new Promise(r => setTimeout(r, 500))
+    await updateLoyaltyPassField(program, serial, 'Status', fieldValues.Status, false)
+    await new Promise(r => setTimeout(r, 500))
+    await updateLoyaltyPassField(
       program,
       serial,
       'Last_Message',
