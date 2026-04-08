@@ -184,11 +184,15 @@ export function PassInstallerClient({
       } catch {}
 
 
-      // Android + Google Wallet URL available → open native Google Wallet
+      // Auto-download triggers native wallet preview — mark as installed
+      try {
+        localStorage.setItem('qwikker-pass-install-dismissed', 'true')
+        localStorage.removeItem('qwikker-pass-install')
+      } catch {}
+
       if (deviceType === 'android' && gWalletUrl) {
         window.location.href = gWalletUrl
       } else {
-        // iOS / fallback: trigger .pkpass download without navigating away
         const link = document.createElement('a')
         link.href = finalPassUrl
         link.style.display = 'none'
@@ -496,6 +500,12 @@ export function PassInstallerClient({
                     {(passUrl || googleWalletUrl) && (
                       <a
                         href={(deviceType === 'android' && googleWalletUrl) ? googleWalletUrl : (passUrl || '#')}
+                        onClick={() => {
+                          try {
+                            localStorage.setItem('qwikker-pass-install-dismissed', 'true')
+                            localStorage.removeItem('qwikker-pass-install')
+                          } catch {}
+                        }}
                         className="block w-full py-4 bg-[#00D083] hover:bg-[#00b86f] text-black font-semibold text-base rounded-lg transition-all shadow-lg shadow-[#00D083]/10 mb-3"
                       >
                         {deviceType === 'android' ? 'Add to Google Wallet' : 'Add to Apple Wallet'}

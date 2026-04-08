@@ -64,17 +64,20 @@ export function WalletInstallBanner() {
     : installData.passUrl
 
   return (
-    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6">
+    <div className="bg-slate-800/80 border border-slate-700/50 rounded-xl p-4 mb-6">
       <div className="flex items-start gap-3">
-        <div className="text-2xl flex-shrink-0 mt-0.5">
-          {deviceType === 'iphone' ? '🍎' : '📱'}
+        <div className="flex-shrink-0 mt-0.5 w-8 h-8 rounded-lg bg-[#00D083]/10 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-[#00D083]">
+            <rect x="2" y="5" width="20" height="14" rx="2" />
+            <line x1="2" y1="10" x2="22" y2="10" />
+          </svg>
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-white text-sm">
-            Your Qwikker pass isn&apos;t in your wallet yet
+            Add your pass to {deviceType === 'android' ? 'Google' : 'Apple'} Wallet
           </p>
           <p className="text-xs text-slate-400 mt-1">
-            Add it now to get offers, secret menus and loyalty stamps delivered straight to your phone.
+            Get offers, secret menus and loyalty stamps delivered straight to your phone.
           </p>
 
           <div className="flex gap-2 mt-3">
