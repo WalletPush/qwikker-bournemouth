@@ -173,6 +173,17 @@ export function PassInstallerClient({
       setSuccess(true)
       setLoading(false)
 
+      // Persist pass URLs so the dashboard can show an install prompt if skipped
+      try {
+        localStorage.setItem('qwikker-pass-install', JSON.stringify({
+          passUrl: finalPassUrl,
+          googleWalletUrl: gWalletUrl,
+          serialNumber: data.serialNumber,
+          createdAt: Date.now(),
+        }))
+      } catch {}
+
+
       // Android + Google Wallet URL available → open native Google Wallet
       if (deviceType === 'android' && gWalletUrl) {
         window.location.href = gWalletUrl

@@ -290,21 +290,33 @@ async function updatePassLinksAsync(
     },
   ]
 
-  for (const update of linkUpdates) {
-    try {
-      const url = getWalletPushFieldUrl(passTypeId, serialNumber, update.field, walletpushDashboardUrl)
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: getWalletPushAuthHeader(apiKey),
-        body: JSON.stringify({ value: update.value })
-      })
-      if (res.ok) {
-        console.log(`✅ Updated ${update.field} → ${update.value}`)
-      } else {
-        console.warn(`⚠️ Failed to update ${update.field}: ${res.status}`)
+  for (let i = 0; i < linkUpdates.length; i++) {
+    const update = linkUpdates[i]
+
+    // Small delay between requests to avoid WalletPush API rate limits
+    if (i > 0) await new Promise(r => setTimeout(r, 1500))
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const url = getWalletPushFieldUrl(passTypeId, serialNumber, update.field, walletpushDashboardUrl)
+        console.log(`📡 [Attempt ${attempt}] Updating ${update.field} → ${update.value}`)
+        const res = await fetch(url, {
+          method: 'PUT',
+          headers: getWalletPushAuthHeader(apiKey),
+          body: JSON.stringify({ value: update.value })
+        })
+        if (res.ok) {
+          console.log(`✅ Updated ${update.field} → ${update.value}`)
+          break
+        } else {
+          const body = await res.text().catch(() => '')
+          console.warn(`⚠️ Failed to update ${update.field}: ${res.status} ${body}`)
+          if (attempt < 2) await new Promise(r => setTimeout(r, 2000))
+        }
+      } catch (err) {
+        console.warn(`⚠️ Error updating ${update.field} (attempt ${attempt}):`, err)
+        if (attempt < 2) await new Promise(r => setTimeout(r, 2000))
       }
-    } catch (err) {
-      console.warn(`⚠️ Error updating ${update.field}:`, err)
     }
   }
 }

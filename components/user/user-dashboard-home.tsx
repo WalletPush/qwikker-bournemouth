@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { HomeFeedResponse, TonightCard, DishCard, DealCard, PersonalisedCard, RewardCard, TonightLabel } from '@/lib/home-feed/types'
 import { StampGrid } from '@/components/loyalty/stamp-grid'
 import { STAMP_ICONS, type StampIconKey } from '@/lib/loyalty/loyalty-utils'
+import { WalletInstallBanner } from '@/components/wallet/wallet-install-banner'
 
 interface UserDashboardHomeProps {
   feed: HomeFeedResponse | null
@@ -219,6 +220,8 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
 
   return (
     <div className="space-y-10 sm:space-y-12 pb-8">
+      <WalletInstallBanner />
+
       {/* Hero Section */}
       <HeroSection
         userName={userName}
