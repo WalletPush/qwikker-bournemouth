@@ -30,6 +30,7 @@ export function PassInstallerClient({
   const [passUrl, setPassUrl] = useState<string | null>(null)
   const [googleWalletUrl, setGoogleWalletUrl] = useState<string | null>(null)
   const [serialNumber, setSerialNumber] = useState<string | null>(null)
+  const [showContinue, setShowContinue] = useState(false)
   
   // Marketing consent state
   const [showConsent, setShowConsent] = useState(false)
@@ -81,9 +82,18 @@ export function PassInstallerClient({
     }
   }, [showQR, deviceType])
 
-  // Countdown timer after success
+  // Delay showing "Continue to Dashboard" so users add the pass first.
+  // The native iOS pass preview sheet needs time to appear and be interacted with.
   useEffect(() => {
-    if (success && countdown > 0) {
+    if (success && !showContinue) {
+      const delay = setTimeout(() => setShowContinue(true), 8000)
+      return () => clearTimeout(delay)
+    }
+  }, [success, showContinue])
+
+  // Countdown only starts AFTER the continue button is visible
+  useEffect(() => {
+    if (showContinue && countdown > 0) {
       const timer = setTimeout(() => {
         setCountdown(countdown - 1)
       }, 1000)
@@ -95,7 +105,7 @@ export function PassInstallerClient({
       
       return () => clearTimeout(timer)
     }
-  }, [success, countdown, serialNumber, formData.firstName, formData.lastName])
+  }, [showContinue, countdown, serialNumber, formData.firstName, formData.lastName])
 
   // Form submit -> show consent modal instead of directly creating pass
   function handleFormSubmit(e: React.FormEvent) {
@@ -465,29 +475,53 @@ export function PassInstallerClient({
                 <h3 className="text-xl font-bold text-[#00D083] mb-2">
                   Your Pass is Ready!
                 </h3>
-                <p className="text-neutral-300 mb-4">
-                  Add the pass to your wallet, then continue to your dashboard.
-                </p>
-                
-                {(passUrl || googleWalletUrl) && (
-                  <a
-                    href={(deviceType === 'android' && googleWalletUrl) ? googleWalletUrl : (passUrl || '#')}
-                    className="block w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-sm transition-colors mb-3"
-                  >
-                    Didn&apos;t get the pass? Tap here to install
-                  </a>
+
+                {!showContinue ? (
+                  <>
+                    <p className="text-neutral-300 mb-5">
+                      A preview should appear — tap <strong>Add</strong> to save it to your wallet.
+                    </p>
+
+                    {(passUrl || googleWalletUrl) && (
+                      <a
+                        href={(deviceType === 'android' && googleWalletUrl) ? googleWalletUrl : (passUrl || '#')}
+                        className="block w-full py-4 bg-[#00D083] hover:bg-[#00b86f] text-black font-semibold text-base rounded-lg transition-all shadow-lg shadow-[#00D083]/10 mb-3"
+                      >
+                        {deviceType === 'android' ? 'Add to Google Wallet' : 'Add to Apple Wallet'}
+                      </a>
+                    )}
+
+                    <p className="text-xs text-neutral-500 mt-3">
+                      Didn&apos;t see the preview? Tap the button above.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-neutral-300 mb-4">
+                      Pass added? Continue to your dashboard.
+                    </p>
+
+                    {(passUrl || googleWalletUrl) && (
+                      <a
+                        href={(deviceType === 'android' && googleWalletUrl) ? googleWalletUrl : (passUrl || '#')}
+                        className="block w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-sm transition-colors mb-3"
+                      >
+                        Didn&apos;t get the pass? Tap here to install
+                      </a>
+                    )}
+
+                    <a
+                      href={`/welcome?wallet_pass_id=${serialNumber}&name=${encodeURIComponent(formData.firstName + ' ' + formData.lastName)}`}
+                      className="block w-full py-4 bg-[#00D083] hover:bg-[#00b86f] text-black font-semibold text-base rounded-lg transition-all shadow-lg shadow-[#00D083]/10"
+                    >
+                      Continue to Dashboard
+                    </a>
+
+                    <p className="text-xs text-neutral-500 mt-3">
+                      Auto-redirecting in {countdown}s...
+                    </p>
+                  </>
                 )}
-                
-                <a
-                  href={`/welcome?wallet_pass_id=${serialNumber}&name=${encodeURIComponent(formData.firstName + ' ' + formData.lastName)}`}
-                  className="block w-full py-4 bg-[#00D083] hover:bg-[#00b86f] text-black font-semibold text-base rounded-lg transition-all shadow-lg shadow-[#00D083]/10"
-                >
-                  Continue to Dashboard
-                </a>
-                
-                <p className="text-xs text-neutral-500 mt-3">
-                  Auto-redirecting in {countdown}s...
-                </p>
               </div>
             )}
           </div>
