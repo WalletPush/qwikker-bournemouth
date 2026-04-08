@@ -37,7 +37,21 @@
 21. Finish Tier 2 (2.8-2.11, 2.17)
 
 ### WalletPush SDK Investigation (Backlog)
-Spoke to WalletPush about using the Mobile Wallet SDK for loyalty card creation inside Qwikker. The SDK has template creation and batch field update APIs, but each template has its own API key and the `templateJson` schema is undocumented. Need to confirm: (1) Can an API key with `admin:full` scope create new templates? (2) What's the `templateJson` schema? (3) Is there a batch field update REST endpoint? If answers are positive, could automate loyalty card setup from the business dashboard without city admins leaving Qwikker.
+Investigated using the Mobile Wallet SDK for automated loyalty card creation inside Qwikker.
+
+**Confirmed (from SDK docs + ChatGPT analysis):**
+- `admin:full` scoped API key should allow `admin.templates.create()` — template creation via SDK
+- `admin.pass.updateValues()` exists for batch field updates (solves our sequential PUT race condition)
+- `admin.templates.images.set()` exists for uploading logo/strip images
+
+**Unknown / needs testing:**
+- `templateJson` schema is undocumented (the `{ ... }` in the docs) — need to inspect an existing template via `admin.templates.get()` to reverse-engineer it
+- No REST endpoints documented separately — SDK wraps a REST API but URLs are not exposed
+- Need to either: (a) inspect SDK network calls in browser DevTools to find REST URLs, (b) ask WalletPush for REST API docs, or (c) test if the SDK runs in Node.js
+
+**Security caveat:** `admin:full` key must NEVER be exposed client-side. All SDK/REST calls must happen server-side from Next.js API routes. The SDK is designed for `window.MobileWallet` (browser) — may not work in Node.js. REST endpoint discovery is the safer path.
+
+**Next step:** Create a sandbox test — load SDK in browser, call `admin.templates.create()` / `admin.templates.get()` / `admin.pass.updateValues()` with an `admin:full` key, inspect Network tab for REST endpoints and `templateJson` schema. If viable, build server-side API routes that call those REST endpoints directly.
 
 ## Critical Issues Found (April 2026 Audit)
 
