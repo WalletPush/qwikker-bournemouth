@@ -9,7 +9,7 @@
 - **Tier 0:** 20/20 complete. All P0/P1 critical bugs fixed (April 2026). Remaining: 0.14 (marketing pages), 0.22 (pre-launch env vars).
 - **Tier 1:** 7/7 complete (subject to testing)
 - **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.26, 2.28 complete. 2.5 partially done. **No PRE-LAUNCH BLOCKERS remaining.** Pending: 2.27 (wizard), 2.8-2.11, 2.17.
-- **Tier 3:** Not started
+- **Tier 3:** Intelligence plumbing (3.1-3.4) scoped — wire existing user data into AI chat + feed. No new tables for Phase 1.
 - **Tier 4:** Backlog
 
 ## Execution Priority (April 2026)
@@ -27,10 +27,17 @@
 11. ~~**0.30 Loyalty Pass Front Update Fix**~~ — DONE. Sequential awaits with delays on WalletPush PUT calls. Status text cleaned up for reward states.
 12. ~~**0.31 Wallet Install Banner Fix**~~ — DONE. Banner no longer shows false positive after pass installed. Emoji replaced with proper icon.
 13. ~~**0.32 AI Chat Loyalty Nudge Fix**~~ — DONE. Strengthened prompt from "may" to "MUST" for reward-ready businesses. Context-aware: leads with rewards on broad discovery, PS footnote on specific intent.
-14. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
-15. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
-13. Finish Tier 0 remaining (0.14, 0.22)
-14. Finish Tier 2 (2.8-2.11, 2.17)
+14. **3.1 Intelligence Plumbing — Wire Existing Data Into AI Chat** — HIGH PRIORITY. Read `preferred_categories`, `dietary_restrictions`, recent vibes, saved businesses, offer claims from existing tables and inject as `USER PROFILE` section in chat system prompt. No new tables needed — just plumbing. Data exists in 8+ tables but none of it reaches the AI today.
+15. **3.2 Persist Chat Context** — Save chat messages to a `chat_messages` table. Load last N messages on new chat instead of relying on client-side history. AI remembers conversations across sessions.
+16. **3.3 Feed Personalization** — Wire `preferred_categories` + user lat/lng into `buildHomeFeed`. Boost matching businesses in home feed. Feed the "Based on what you like" section with dietary restrictions.
+17. **3.4 Lightweight User Insights** — Nightly/weekly aggregation of top cuisines, visit patterns, average time. Store as jsonb on `app_users`. Feed into chat + feed ranking. Only after 3.1-3.3 prove value.
+18. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
+19. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
+20. Finish Tier 0 remaining (0.14, 0.22)
+21. Finish Tier 2 (2.8-2.11, 2.17)
+
+### WalletPush SDK Investigation (Backlog)
+Spoke to WalletPush about using the Mobile Wallet SDK for loyalty card creation inside Qwikker. The SDK has template creation and batch field update APIs, but each template has its own API key and the `templateJson` schema is undocumented. Need to confirm: (1) Can an API key with `admin:full` scope create new templates? (2) What's the `templateJson` schema? (3) Is there a batch field update REST endpoint? If answers are positive, could automate loyalty card setup from the business dashboard without city admins leaving Qwikker.
 
 ## Critical Issues Found (April 2026 Audit)
 
