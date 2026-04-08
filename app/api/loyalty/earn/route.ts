@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
       if (rewardUnlocked) {
         await updateLoyaltyPassField(program, serial, 'Points', String(newBalance), false)
         await new Promise(r => setTimeout(r, 500))
-        await updateLoyaltyPassField(program, serial, 'Status', `${newBalance}/${program.reward_threshold} ${program.stamp_label} — Reward Available!`, false)
+        await updateLoyaltyPassField(program, serial, 'Status', 'Reward Available!', false)
         await new Promise(r => setTimeout(r, 500))
         await updateLoyaltyPassField(
           program,

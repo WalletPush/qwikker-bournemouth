@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
       const serial = membership.walletpush_serial
       await updateLoyaltyPassField(program, serial, 'Points', String(newBalance), false)
       await new Promise(r => setTimeout(r, 500))
-      await updateLoyaltyPassField(program, serial, 'Status', `${newBalance}/${program.reward_threshold} ${program.stamp_label} — Redeemed!`, false)
+      await updateLoyaltyPassField(program, serial, 'Status', 'Reward Redeemed!', false)
       await new Promise(r => setTimeout(r, 500))
       await updateLoyaltyPassField(
         program,
