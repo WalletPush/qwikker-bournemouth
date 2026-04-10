@@ -465,6 +465,79 @@ function postProcessResponse(response: string, businesses: any[]): string {
 }
 
 /**
+ * Build USER PROFILE section for AI prompt.
+ * Summarised format with max 2 example names per section, 1500 char hard cap.
+ * Deduplicates business names across sections (Loved > Saved > Claims).
+ */
+function buildUserProfileSection(data: {
+  preferredCategories: string[]
+  dietaryRestrictions: string[]
+  vibes: string[]
+  saved: string[]
+  claims: { offerTitle: string; businessName: string }[]
+}): string {
+  const { preferredCategories, dietaryRestrictions, vibes, saved, claims } = data
+
+  const hasAnyData = preferredCategories.length > 0 ||
+    dietaryRestrictions.length > 0 ||
+    vibes.length > 0 ||
+    saved.length > 0 ||
+    claims.length > 0
+
+  if (!hasAnyData) return ''
+
+  const usedNames = new Set<string>()
+
+  const interestsLine = preferredCategories.length > 0
+    ? `- Interests: ${preferredCategories.join(', ')}`
+    : ''
+  const dietaryLine = dietaryRestrictions.length > 0
+    ? `- Dietary: ${dietaryRestrictions.join(', ')}`
+    : ''
+
+  // Loved (highest priority — gets first pick of names)
+  const uniqueVibes = vibes.filter(n => !usedNames.has(n))
+  uniqueVibes.forEach(n => usedNames.add(n))
+  const lovedLine = uniqueVibes.length > 0
+    ? `- Loved: ${uniqueVibes.length} business${uniqueVibes.length !== 1 ? 'es' : ''} (recent: ${uniqueVibes.slice(0, 2).join(', ')})`
+    : ''
+
+  // Saved (second priority)
+  const uniqueSaved = saved.filter(n => !usedNames.has(n))
+  uniqueSaved.forEach(n => usedNames.add(n))
+  const savedLine = uniqueSaved.length > 0
+    ? `- Saved: ${uniqueSaved.length} business${uniqueSaved.length !== 1 ? 'es' : ''} (recent: ${uniqueSaved.slice(0, 2).join(', ')})`
+    : ''
+
+  // Claims (lowest priority)
+  const uniqueClaims = claims.filter(c => !usedNames.has(c.businessName))
+  uniqueClaims.forEach(c => usedNames.add(c.businessName))
+  const claimsLine = uniqueClaims.length > 0
+    ? `- Recent deals claimed: ${uniqueClaims.length} (e.g. ${uniqueClaims[0].offerTitle} at ${uniqueClaims[0].businessName})`
+    : ''
+
+  // Assemble in priority order with hard cap enforcement
+  const HARD_CAP = 1500
+  const header = 'USER PROFILE:'
+  // Never dropped: interests + dietary
+  const coreSections = [interestsLine, dietaryLine].filter(Boolean)
+  // Droppable in reverse order: claims first, then saved, then loved
+  const droppable = [lovedLine, savedLine, claimsLine].filter(Boolean)
+
+  let sections = [...coreSections, ...droppable]
+  let result = `${header}\n${sections.join('\n')}`
+
+  // Drop from the end (claims → saved → loved) until under cap
+  while (result.length > HARD_CAP && droppable.length > 0) {
+    const dropped = droppable.pop()!
+    sections = sections.filter(s => s !== dropped)
+    result = `${header}\n${sections.join('\n')}`
+  }
+
+  return result
+}
+
+/**
  * Build compressed system prompt for AI chat
  */
 function buildSystemPromptV2(args: {
@@ -481,8 +554,9 @@ function buildSystemPromptV2(args: {
   userName?: string
   userLoyaltySummary?: string
   eventContext?: string
+  userProfileSection?: string
 }): string {
-  const { cityDisplayName, userMessage, isBroadQuery, stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, previousResponses, userName, userLoyaltySummary, eventContext } = args
+  const { cityDisplayName, userMessage, isBroadQuery, stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, previousResponses, userName, userLoyaltySummary, eventContext, userProfileSection } = args
 
   const convoFocus = state?.currentBusiness
     ? `FOCUS: You are currently discussing ${state.currentBusiness.name}. Stay on that unless the user asks to switch.`
@@ -548,6 +622,7 @@ HARD RULES (DO NOT BREAK):
   ❌ DO NOT say "I don't have menu details" when Featured Menu Items are listed
 - SHOW ALL UPFRONT: If you have 2+ relevant matches, mention ALL in your FIRST answer. Never drip-feed. If AVAILABLE BUSINESSES contains ANY businesses, you MUST recommend from them — never claim you have no recommendations when businesses are listed in your context.
 - NO HALLUCINATIONS: Never invent dishes, vibe, amenities, hours, or offers. Only mention specifics from AVAILABLE BUSINESSES.
+- 🚨 PER-BUSINESS DATA BOUNDARY: Each business's features are independent. When a user asks for specific amenities (outdoor seating, WiFi, parking, dog friendly, wheelchair accessible, etc.), ONLY claim a business has that feature if it appears in THAT business's Tags, KB content, or description. Never transfer or blend features from one business onto another. If Business A has "outdoor seating" and Business B does not, do NOT say Business B has outdoor seating — even if Business B matches other parts of the query. It is better to recommend fewer businesses accurately than to fabricate features to make more businesses fit.
 - 🚨 ABSOLUTE RULE — QWIKKER BUSINESSES ONLY: You MUST ONLY mention businesses, venues, attractions, or commercial establishments that appear in AVAILABLE BUSINESSES above. If a place charges admission, sells products, or is a registered business, it MUST be in AVAILABLE BUSINESSES or you MUST NOT mention it. This includes but is not limited to: cinemas, bowling alleys, aquariums, theme parks, soft play centres, swimming pools, museums with paid admission, escape rooms, trampoline parks, and any chain brand (e.g. ODEON, Oceanarium, Adventure Wonderland). NEVER bold a name that is not a linked Qwikker business.
   The ONLY non-business places you may reference are free public outdoor spaces: parks, beaches, piers, promenades, and town squares.
   BEFORE saying you don't have recommendations, CHECK every business in AVAILABLE BUSINESSES for relevant features in their KB/menu data. A restaurant with a kids menu IS a valid answer for "things to do with kids." A bar with outdoor seating IS relevant for "patio drinks." Only say you have no recommendations when genuinely no business in your context has relevant data for the query.
@@ -563,6 +638,14 @@ HARD RULES (DO NOT BREAK):
 - ZERO RESULTS: Be honest. NEVER say "you're in luck" if you have nothing to show. Suggest a nearby alternative category or ask what else they'd like.
 - MATCH USER LANGUAGE: If the user asked for "bars", say "bars" in your response — never substitute with "dining options", "restaurants", or "places to eat". Mirror the user's terminology.
 - "ANY MORE?" HANDLING: If you showed all matches, say so. If you missed any, correct yourself immediately.
+- USER PROFILE (READ CAREFULLY):
+  The USER PROFILE is a preference SIGNAL, not a constraint. Use it to enhance relevance, never to override the user's current query.
+  1. INTENT FIRST: Always fully answer the user's request first. Personalisation should refine, not redirect the answer. If they ask for "best burger" and their profile says "Cafes", recommend burger places — not cafes.
+  2. INTERESTS: When the query is broad ("where should I go tonight?"), lean towards businesses matching their interests and loved/saved places.
+  3. DIETARY (SOFT FILTER): If dietary restrictions exist, prioritise businesses with clear matches in KB/menu data. If no explicit dietary data exists for a business, still suggest strong matches but note: "worth checking their menu for [restriction] options." Never confidently recommend something that clearly conflicts (e.g. a steakhouse for a vegan).
+  4. SILENT USE: Do NOT repeat the user's profile back to them. Just use it.
+  5. NO PROFILE = NO ASSUMPTIONS: If no USER PROFILE section exists, do not assume any preferences or restrictions.
+  6. TIE-BREAKER ONLY: USER PROFILE is a tie-breaker, not an override. When two businesses are similarly relevant to the query, prefer the one matching the user's profile. Never promote a low-relevance business above a high-relevance one just because it matches preferences. The ranked business list order reflects verified relevance — respect it.
 - LOYALTY (CRITICAL — READ CAREFULLY):
   1. NEVER fabricate loyalty stamp counts, stamp progress, or reward proximity. Only cite data that appears in the structured [USER: X/Y stamps] tag within a business entry.
   2. BROAD DISCOVERY (e.g. "where should I go tonight", "any recommendations", "what's good"): If USER LOYALTY PROGRESS shows "REWARD READY" or "ALMOST THERE", you MUST lead with those businesses. Example: "You've got a free [reward] waiting at [business] — tonight could be the night to claim it!" Then continue with other recommendations.
@@ -590,7 +673,7 @@ ${varietyBlock}
 ${clarifyBlock}
 ${stateContext ? `CONVERSATION CONTEXT:\n${stateContext}\n` : ''}
 ${convoFocus}
-
+${userProfileSection ? `\n${userProfileSection}\n` : ''}
 AVAILABLE BUSINESSES (sorted by tier; qwikker_picks first):
 ${businessContext || 'No businesses available.'}
 ${userLoyaltySummary || ''}
@@ -748,7 +831,8 @@ export async function generateHybridAIResponse(
     // MIXED = discovery with constraints (e.g., "restaurants with offers", "family friendly with deals")
     const isMixedQuery = /(with|that has|which has|anywhere|places|restaurants?|bars?|cafes?|family|kids?|cheap|good|best)/i.test(userMessage)
     
-    const isHardOfferQuery = isOfferQuery && !isMixedQuery
+    const mentionsSecretMenu = /\b(secret\s*menus?)\b/i.test(lowerMessage)
+    const isHardOfferQuery = isOfferQuery && !isMixedQuery && !mentionsSecretMenu
     const isHardEventQuery = isEventQuery && !isMixedQuery
     
     const isKbDisabled = isHardOfferQuery || isHardEventQuery
@@ -1401,6 +1485,61 @@ export async function generateHybridAIResponse(
       console.log('⚠️ Loyalty context fetch failed (non-critical):', e)
     }
 
+    // Step 4a-2: Fetch user profile data for personalisation (service role — RLS city filter bypass)
+    let userProfileSection = ''
+    if (context.walletPassId) {
+      try {
+        const serviceClient = createServiceRoleClient()
+        const walletPassId = context.walletPassId
+
+        const [prefsResult, vibesResult, savedResult, claimsResult] = await Promise.allSettled([
+          serviceClient.from('app_users')
+            .select('preferred_categories, dietary_restrictions, preferred_radius_miles')
+            .eq('wallet_pass_id', walletPassId).single(),
+          serviceClient.from('qwikker_vibes')
+            .select('business_id, business_profiles!inner(business_name)')
+            .eq('vibe_user_key', walletPassId)
+            .eq('vibe_rating', 'loved_it')
+            .order('created_at', { ascending: false }).limit(20),
+          serviceClient.from('user_saved_items')
+            .select('item_id')
+            .eq('wallet_pass_id', walletPassId)
+            .eq('item_type', 'business').limit(20),
+          serviceClient.from('user_offer_claims')
+            .select('offer_title, business_name')
+            .eq('wallet_pass_id', walletPassId)
+            .order('claimed_at', { ascending: false }).limit(10),
+        ])
+
+        const prefs = prefsResult.status === 'fulfilled' ? prefsResult.value.data : null
+        const vibes = vibesResult.status === 'fulfilled' ? vibesResult.value.data : []
+        const savedIds = savedResult.status === 'fulfilled' ? savedResult.value.data : []
+        const claims = claimsResult.status === 'fulfilled' ? claimsResult.value.data : []
+
+        // Two-step resolve for saved items (no FK to business_profiles)
+        let saved: { business_name: string }[] = []
+        if (savedIds.length > 0) {
+          const ids = savedIds.map((s: { item_id: string }) => s.item_id)
+          const { data } = await serviceClient
+            .from('business_profiles')
+            .select('business_name')
+            .in('id', ids)
+          saved = data || []
+        }
+
+        // Build USER PROFILE with hard cap + dedup
+        userProfileSection = buildUserProfileSection({
+          preferredCategories: prefs?.preferred_categories || [],
+          dietaryRestrictions: prefs?.dietary_restrictions || [],
+          vibes: (vibes || []).map((v: any) => (v.business_profiles as any)?.business_name).filter(Boolean),
+          saved: saved.map(s => s.business_name).filter(Boolean),
+          claims: (claims || []).map((c: any) => ({ offerTitle: c.offer_title, businessName: c.business_name })).filter((c: any) => c.businessName),
+        })
+      } catch (e) {
+        console.log('⚠️ User profile fetch failed (non-critical):', e)
+      }
+    }
+
     // Step 4b: Build RICH context with KB content merged with DB data
     const businessContext = sortedForContext.length > 0
       ? sortedForContext.slice(0, 10).map((business, index) => {
@@ -1674,12 +1813,32 @@ Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursL
       }
     }
 
+    // Build tag match callout for the top business if it has a strong tag match
+    let tagMatchCallout = ''
+    if (detectedIntent.hasIntent && sortedForContext.length > 0) {
+      const topBiz = sortedForContext[0]
+      if ((topBiz.relevanceScore || 0) >= 4) {
+        const vt = topBiz.vibe_tags as { selected?: string[]; custom?: string[] } | null
+        if (vt) {
+          const allTags = [...(vt.selected || []), ...(vt.custom || [])].map(t => t.toLowerCase())
+          const matchedTags = detectedIntent.keywords.filter(kw => {
+            const kwLower = kw.toLowerCase()
+            const kwHyph = kwLower.replace(/\s+/g, '-')
+            return allTags.some(tag => tag === kwLower || tag === kwHyph || tag.replace(/-/g, ' ') === kwLower)
+          })
+          if (matchedTags.length > 0) {
+            tagMatchCallout = `\n🎯 PRIORITY MATCH: "${topBiz.business_name}" has explicit vibe tags matching the user's query (${matchedTags.join(', ')}). This is verified business data — recommend this business FIRST.\n`
+          }
+        }
+      }
+    }
+
     const systemPrompt = buildSystemPromptV2({ 
       cityDisplayName, 
       userMessage, 
       isBroadQuery, 
       stateContext, 
-      businessContext, 
+      businessContext: tagMatchCallout + businessContext, 
       cityContext, 
       state,
       atlasAvailable,
@@ -1687,7 +1846,8 @@ Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursL
       previousResponses,
       userName,
       userLoyaltySummary,
-      eventContext
+      eventContext,
+      userProfileSection,
     })
     
     if (process.env.NODE_ENV === 'development') console.log('[PROMPT] systemPrompt chars=', systemPrompt.length)

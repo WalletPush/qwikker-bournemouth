@@ -1,6 +1,6 @@
 # Progress Tracker
 
-> Quick reference for new chats. Full plan is in `.cursor/plans/platform_audit_roadmap_7ed16549.plan.md`
+> Quick reference for new chats. Full plan is in `/Users/qwikker/.cursor/plans/platform_audit_roadmap_7ed16549.plan.md`
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
@@ -8,9 +8,10 @@
 
 - **Tier 0:** 20/20 complete. All P0/P1 critical bugs fixed (April 2026). Remaining: 0.14 (marketing pages), 0.22 (pre-launch env vars).
 - **Tier 1:** 7/7 complete (subject to testing)
-- **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.26, 2.28 complete. 2.5 partially done. **No PRE-LAUNCH BLOCKERS remaining.** Pending: 2.27 (wizard), 2.8-2.11, 2.17.
-- **Tier 3:** Intelligence plumbing (3.1-3.4) scoped — wire existing user data into AI chat + feed. No new tables for Phase 1.
+- **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.26, 2.28, 2.29 complete. 2.5 partially done. **No PRE-LAUNCH BLOCKERS remaining.** Pending: 2.27 (wizard), 2.8-2.11, 2.17.
+- **Tier 3:** Intelligence plumbing (3.1-3.4) scoped — wire existing user data into AI chat + feed. No new tables for Phase 1. **3.1 COMPLETE (9/9 subtasks done)**.
 - **Tier 4:** Backlog
+- **Home Feed:** 3 bugs fixed (tonight links, loyalty display, personalised reasons). Menu item images added (dashboard upload, home feed, business detail, secret menu).
 
 ## Execution Priority (April 2026)
 
@@ -27,14 +28,17 @@
 11. ~~**0.30 Loyalty Pass Front Update Fix**~~ — DONE. Sequential awaits with delays on WalletPush PUT calls. Status text cleaned up for reward states.
 12. ~~**0.31 Wallet Install Banner Fix**~~ — DONE. Banner no longer shows false positive after pass installed. Emoji replaced with proper icon.
 13. ~~**0.32 AI Chat Loyalty Nudge Fix**~~ — DONE. Strengthened prompt from "may" to "MUST" for reward-ready businesses. Context-aware: leads with rewards on broad discovery, PS footnote on specific intent.
-14. **3.1 Intelligence Plumbing — Wire Existing Data Into AI Chat** — HIGH PRIORITY. Read `preferred_categories`, `dietary_restrictions`, recent vibes, saved businesses, offer claims from existing tables and inject as `USER PROFILE` section in chat system prompt. No new tables needed — just plumbing. Data exists in 8+ tables but none of it reaches the AI today.
-15. **3.2 Persist Chat Context** — Save chat messages to a `chat_messages` table. Load last N messages on new chat instead of relying on client-side history. AI remembers conversations across sessions.
-16. **3.3 Feed Personalization** — Wire `preferred_categories` + user lat/lng into `buildHomeFeed`. Boost matching businesses in home feed. Feed the "Based on what you like" section with dietary restrictions.
-17. **3.4 Lightweight User Insights** — Nightly/weekly aggregation of top cuisines, visit patterns, average time. Store as jsonb on `app_users`. Feed into chat + feed ranking. Only after 3.1-3.3 prove value.
-18. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
-19. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
-20. Finish Tier 0 remaining (0.14, 0.22)
-21. Finish Tier 2 (2.8-2.11, 2.17)
+14. ~~**2.29 Home Feed Fixes + Menu Item Images**~~ — DONE. Three feed bugs fixed + menu image upload feature.
+15. ~~**0.33 AI Chat Quality Fixes (April 9)**~~ — DONE. Four fixes: (a) per-business data boundary rule stops hallucinated amenities, (b) secret menu queries escape hard offer gate, (c) vibe tag scoring in relevance scorer (+4 for tag match), (d) near-me location prompt shows before AI responds.
+16. ~~**3.1 Intelligence Plumbing — Wire Existing Data Into AI Chat**~~ — **DONE (9/9 subtasks)**. Full spec: `/Users/qwikker/.cursor/plans/intelligence_plumbing_3.1_f9759930.plan.md`.
+    (a) `/business-signup` middleware hotfix, (b) shared constants file `lib/constants/user-preferences.ts`, (c) personalisation wizard `components/user/personalisation-wizard.tsx`, (d) wizard integration into `user-dashboard-home.tsx` with cold-user guard + removed old PreferencesCard, (e) settings sync (dietary section added, shared constants imported), (f) AI profile fetch via `Promise.allSettled` using `createServiceRoleClient()`, (g) AI profile inject (USER PROFILE section + 6 prompt rules + 1500 char hard cap + business name dedup), (h) feed boost (+1 interaction score for category matches in `buildPersonalisedSection` using `CATEGORY_MAP` + `normalize` + `includes` matching), (i) sanity check SQLs provided.
+17. **3.2 Persist Chat Context** — Save chat messages to a `chat_messages` table. Load last N messages on new chat instead of relying on client-side history. AI remembers conversations across sessions.
+18. **3.3 Feed Personalization** — Wire `preferred_categories` + user lat/lng into `buildHomeFeed`. Boost matching businesses in home feed. Feed the "Based on what you like" section with dietary restrictions.
+19. **3.4 Lightweight User Insights** — Nightly/weekly aggregation of top cuisines, visit patterns, average time. Store as jsonb on `app_users`. Feed into chat + feed ranking. Only after 3.1-3.3 prove value.
+20. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
+21. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
+22. Finish Tier 0 remaining (0.14, 0.22)
+23. Finish Tier 2 (2.8-2.11, 2.17)
 
 ### WalletPush SDK Investigation (Backlog)
 Investigated using the Mobile Wallet SDK for automated loyalty card creation inside Qwikker.
@@ -126,6 +130,8 @@ Replace flat action items list with multi-step wizard. Required vs recommended s
 | 0.30 Loyalty Pass Front Fix | `app/api/loyalty/earn/route.ts`, `app/api/loyalty/redemption/consume/route.ts`, `app/api/loyalty/redemption/reset-pass/route.ts` | Low | WalletPush field updates now sequential with `await` + 500ms delays. If WalletPush API is slow, earn/redeem response time increases by ~1.5s. Status text changed: "Reward Available!" and "Reward Redeemed!" (no stamp counter prefix). |
 | 0.31 Wallet Install Banner Fix | `components/wallet/pass-installer-client.tsx`, `components/wallet/wallet-install-banner.tsx` | Low | Auto-download now clears localStorage immediately — banner won't show after normal install. Edge case: if user dismisses native iOS preview without adding pass, banner won't show as safety net (acceptable — "Add to Wallet" button still visible in installer success state). |
 | 0.32 AI Chat Loyalty Nudge | `lib/ai/hybrid-chat.ts` | Low | System prompt loyalty rules strengthened. Broad discovery queries now lead with REWARD READY businesses. Specific intent queries get PS footnote. Risk: AI might over-emphasise loyalty in edge cases — monitor and tune. |
+| 2.29 Home Feed + Menu Images | `lib/home-feed/types.ts`, `lib/home-feed/feed-builder.ts`, `components/user/user-dashboard-home.tsx`, `components/dashboard/clean-profile-page.tsx`, `components/dashboard/secret-menu-page.tsx`, `lib/actions/business-actions.ts`, `components/user/user-secret-menu-page.tsx`, `app/user/secret-menu/page.tsx`, `components/user/user-business-detail-page.tsx` | Low-Medium | **Bug fixes:** Tonight/dish/personalised cards now link to `/user/business/{slug}` (generated from business_name, no DB slug column). Loyalty section shows membership progress + filters discover by joined. Personalised reasons combined with separator. **Menu images:** `image_url` added to MenuPreviewItem JSONB (no migration). Cloudinary upload in dashboard. Dish cards use dishImage with businessImage fallback. Secret menu items support optional image. AI chat images removed (LLM unreliable). |
+| 0.33 AI Chat Quality Fixes | `lib/ai/hybrid-chat.ts`, `lib/ai/relevance-scorer.ts`, `components/user/user-chat-page.tsx` | Low | **Hallucination fix:** Per-business data boundary rule in system prompt — AI cannot transfer amenities between businesses. **Secret menu gate:** Queries mentioning "secret menu" no longer treated as hard offer queries (were hitting "no offers" bailout). **Vibe tag scoring:** `relevance-scorer.ts` now checks `vibe_tags` JSONB before early return — tag matches score +4, plus priority callout injected into AI context for top match. **Near-me UX:** Client-side "near me" detection intercepts query before API call, shows location prompt only, then resends after user picks location. |
 
 ## Task Descriptions
 
@@ -154,6 +160,19 @@ Replace flat action items list with multi-step wizard. Required vs recommended s
 - Broad discovery ("where should I go tonight") → MUST lead with REWARD READY / ALMOST THERE businesses
 - Specific intent ("best Greek food") → only mention reward if business matches query; otherwise brief PS footnote
 - Prevents irrelevant shoehorning while ensuring rewards are never silently ignored
+
+### 2.29 Home Feed Fixes + Menu Item Images (DONE — April 2026)
+**Three bug fixes:**
+1. **Tonight/dish/personalised card links:** Cards under "What's hot", "Must try dishes", and "Based on what you like" were navigating to `/user/discover` instead of the business detail page. Fixed by generating slugs from `business_name` and linking to `/user/business/{slug}`. No DB `slug` column exists — slugs are computed at render time.
+2. **Loyalty cards section:** "Start collecting" was shown even for programs the user had already joined. Fixed by fetching `/api/loyalty/me` alongside `/api/loyalty/discover`, rendering joined memberships with progress, and filtering discover list to exclude already-joined programs.
+3. **Personalised reasons:** "Based on what you like" only showed vibe-based businesses. Fixed by pulling saved businesses, offer claims, and atlas selections into the reasons. Multiple reasons now combined with " · " separator.
+
+**Menu item images feature:**
+- Business dashboard: optional Cloudinary image upload per featured menu item (stored in `menu_preview` JSONB `image_url` field — no migration needed).
+- Home feed: "Must try dishes" cards show dish image when available, fallback to business image.
+- Business detail page: featured menu items show thumbnail when image uploaded.
+- Secret menu: optional image upload per secret item, displayed on both dashboard and user-facing page.
+- AI chat images: attempted but reverted — LLM did not consistently embed markdown images when instructed. Kept text-only for reliability.
 
 ### 2.19 Native Google Wallet Support for Android (DONE)
 WalletPush API returns `google.saveUrl` — now captured and returned to client. Android users redirected to native Google Wallet save flow instead of .pkpass download. WalletPasses app no longer required. Consumer welcome email updated.

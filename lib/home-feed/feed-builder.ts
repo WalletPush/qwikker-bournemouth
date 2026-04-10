@@ -22,6 +22,7 @@ import {
   getBusinessImage,
   normaliseTier,
 } from './ranking'
+import { CATEGORY_MAP, normalize } from '@/lib/constants/user-preferences'
 import type {
   HomeFeedResponse,
   TonightCard,
@@ -80,8 +81,10 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
     console.log(`[home-feed] Premium count: ${premiumCount}, hybrid mode: ${hybridMode}`)
   }
 
-  // Build user greeting
-  const userName = walletPassId ? await fetchUserName(supabase, walletPassId) : null
+  // Build user greeting + fetch preferred categories
+  const userInfo = walletPassId ? await fetchUserName(supabase, walletPassId) : null
+  const userName = userInfo?.name || null
+  const preferredCategories = userInfo?.preferredCategories || []
   const greeting = getGreeting(timeOfDay, userName || 'there', cityDisplayName)
   const greetingSubtitle = getGreetingSubtitle(timeOfDay, cityDisplayName)
 
@@ -90,7 +93,7 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
   const dishes = buildDishesSection(businesses, hybridMode, dedup)
   const deals = buildDealsSection(offers, businesses, dedup, userLat, userLng)
   const personalised = interactionsResult
-    ? buildPersonalisedSection(interactionsResult, businesses, offers, hybridMode, dedup)
+    ? buildPersonalisedSection(interactionsResult, businesses, offers, hybridMode, dedup, preferredCategories)
     : []
   const rewards = loyaltyResult
 
@@ -128,6 +131,11 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
 // =============================================================================
 // Data Fetching
 // =============================================================================
+
+function generateSlug(businessName: string | null, id: string): string {
+  if (!businessName) return id
+  return businessName.toLowerCase().replace(/['']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || id
+}
 
 async function fetchBusinesses(supabase: any, city: string) {
   const { data, error } = await supabase
@@ -280,12 +288,14 @@ async function fetchLoyaltyMemberships(walletPassId: string): Promise<RewardCard
 
     return data.memberships.map((m: any) => ({
       id: m.id || m.program_id,
-      businessName: m.business_name || m.businessName || 'Unknown',
-      programType: m.program_type || 'stamps',
+      programPublicId: m.program?.public_id || '',
+      businessName: m.program?.business?.business_name || m.business_name || 'Unknown',
+      businessLogo: m.program?.business?.logo || null,
+      programType: m.program?.type || 'stamps',
       currentBalance: m.stamps_balance || m.points_balance || 0,
-      threshold: m.reward_threshold || 10,
-      rewardDescription: m.reward_description || 'Free reward',
-      stampIcon: m.stamp_icon,
+      threshold: m.program?.reward_threshold || 10,
+      rewardDescription: m.program?.reward_description || 'Free reward',
+      stampIcon: m.program?.stamp_icon,
     }))
   } catch (err) {
     console.error('[home-feed] Error fetching loyalty:', err)
@@ -344,18 +354,17 @@ async function fetchUserInteractions(supabase: any, walletPassId: string): Promi
   }
 }
 
-async function fetchUserName(supabase: any, walletPassId: string): Promise<string | null> {
+async function fetchUserName(supabase: any, walletPassId: string): Promise<{ name: string | null; preferredCategories: string[] }> {
   const { data } = await supabase
     .from('app_users')
-    .select('name')
+    .select('name, preferred_categories')
     .eq('wallet_pass_id', walletPassId)
     .single()
 
-  if (data?.name) {
-    // Return first name only
-    return data.name.split(' ')[0]
+  return {
+    name: data?.name ? data.name.split(' ')[0] : null,
+    preferredCategories: data?.preferred_categories || [],
   }
-  return null
 }
 
 // =============================================================================
@@ -423,6 +432,7 @@ function buildTonightSection(
       label: 'happening_tonight',
       businessId: event.business_id,
       businessName: event.biz.business_name || event.business_name,
+      businessSlug: generateSlug(event.biz.business_name, event.business_id),
       businessImage: image,
       businessLogo: logo,
       tier: normaliseTier(event.biz.plan),
@@ -474,6 +484,7 @@ function buildTonightSection(
       label: 'tonights_deal',
       businessId: offer.business_id,
       businessName: biz.business_name,
+      businessSlug: generateSlug(biz.business_name, offer.business_id),
       businessImage: image,
       businessLogo: logo,
       tier: normaliseTier(biz.plan),
@@ -524,6 +535,7 @@ function buildTonightSection(
         label: 'place_to_try',
         businessId: biz.id,
         businessName: biz.business_name,
+        businessSlug: generateSlug(biz.business_name, biz.id),
         businessImage: image,
         businessLogo: logo,
         tier: normaliseTier(biz.plan),
@@ -569,8 +581,10 @@ function buildDishesSection(
         dishName: dish.name,
         dishPrice: dish.price || null,
         dishDescription: dish.description || null,
+        dishImage: dish.image_url || null,
         businessId: biz.id,
         businessName: biz.business_name,
+        businessSlug: generateSlug(biz.business_name, biz.id),
         businessImage: image,
         businessLogo: logo,
         tier: normaliseTier(biz.plan),
@@ -669,7 +683,8 @@ function buildPersonalisedSection(
   businesses: any[],
   offers: any[],
   hybridMode: boolean,
-  dedup: DedupTracker
+  dedup: DedupTracker,
+  preferredCategories: string[] = []
 ): PersonalisedCard[] {
   // Score each business the user has interacted with
   const businessScores = new Map<string, number>()
@@ -689,6 +704,9 @@ function buildPersonalisedSection(
 
   if (businessScores.size === 0) return []
 
+  // Pre-compute mapped tokens from user preferences for category matching
+  const mappedTokens = preferredCategories.flatMap(p => CATEGORY_MAP[p] || [p]).map(normalize)
+
   const railBusinessIds = new Set<string>()
 
   // Sort businesses by interaction score, then tier
@@ -696,8 +714,18 @@ function buildPersonalisedSection(
     .map(([bizId, interactionScore]) => {
       const biz = businesses.find((b: any) => b.id === bizId)
       if (!biz) return null
+
+      // Preference boost: +1 if business category matches user preferences
+      let score = interactionScore
+      if (mappedTokens.length > 0) {
+        const bizCategory = normalize(biz.display_category)
+        if (bizCategory && mappedTokens.some(token => bizCategory.includes(token))) {
+          score += 1
+        }
+      }
+
       const tierScore = computeCompositeScore({ plan: biz.plan, status: biz.status })
-      return { biz, interactionScore, totalScore: interactionScore * 10 + tierScore }
+      return { biz, interactionScore: score, totalScore: score * 10 + tierScore }
     })
     .filter(Boolean)
     .sort((a: any, b: any) => b.totalScore - a.totalScore)
@@ -717,17 +745,18 @@ function buildPersonalisedSection(
     )
     const bizDish = item.biz.menu_preview?.[0] as MenuPreviewItem | undefined
 
-    // Determine reason text
     const reasons: string[] = []
     if (interactions.lovedBusinessIds.includes(item.biz.id)) reasons.push('You loved this')
     if (interactions.savedBusinessIds.includes(item.biz.id)) reasons.push('You saved this')
     if (interactions.claimedOfferBusinessIds.includes(item.biz.id)) reasons.push('You claimed a deal here')
-    const reason = reasons[0] || 'Based on your activity'
+    if (interactions.atlasSelectedBusinessIds.includes(item.biz.id)) reasons.push('You explored this')
+    const reason = reasons.length > 0 ? reasons.join(' · ') : 'Based on your activity'
 
     result.push({
       id: `personal-${item.biz.id}`,
       businessId: item.biz.id,
       businessName: item.biz.business_name,
+      businessSlug: generateSlug(item.biz.business_name, item.biz.id),
       businessImage: image,
       businessLogo: logo,
       tier: normaliseTier(item.biz.plan),

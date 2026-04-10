@@ -9,12 +9,14 @@ import { Label } from '@/components/ui/label'
 import { addSecretMenuItem, deleteSecretMenuItem } from '@/lib/actions/business-actions'
 import { Profile } from '@/types/profiles'
 import { getMaxSecretMenuItems } from '@/lib/utils/tier-limits'
+import { uploadToCloudinary } from '@/lib/integrations'
 
 interface SecretMenuItem {
   id: string
   itemName: string
   description?: string
   price?: string
+  image_url?: string
   created_at: string
   status?: string
   approved_at?: string
@@ -37,7 +39,9 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
     itemName: '',
     description: '',
     price: '',
+    image_url: '',
   })
+  const [imageUploading, setImageUploading] = useState(false)
 
   // Load existing secret menu items from additional_notes
   useEffect(() => {
@@ -78,15 +82,16 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
           itemName: '',
           description: '',
           price: '',
+          image_url: '',
         })
         
-        // Add the new item to local state
         if (result.data) {
           setSecretMenuItems(prev => [...prev, {
             id: Date.now().toString(),
             itemName: result.data.itemName,
             description: result.data.description,
             price: result.data.price,
+            image_url: result.data.image_url,
             created_at: result.data.created_at
           }])
         }
@@ -111,9 +116,30 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
       itemName: '',
       description: '',
       price: '',
+      image_url: '',
     })
     setShowCreateForm(false)
     setMessage(null)
+  }
+
+  const handleSecretImageUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setMessage({ type: 'error', text: 'Please upload an image file' })
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Image must be under 5MB' })
+      return
+    }
+    setImageUploading(true)
+    try {
+      const url = await uploadToCloudinary(file, 'qwikker/secret-menu')
+      setFormData(prev => ({ ...prev, image_url: url }))
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to upload image. Please try again.' })
+    } finally {
+      setImageUploading(false)
+    }
   }
 
   const handleDeleteSecretMenuItem = async (itemId: string) => {
@@ -229,7 +255,14 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
           <CardContent className="space-y-4">
             {secretMenuItems.map((item, index) => (
               <div key={item.id || index} className="bg-slate-700/30 rounded-lg p-4">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-4">
+                  {item.image_url && (
+                    <img
+                      src={item.image_url}
+                      alt={item.itemName}
+                      className="w-16 h-16 rounded-lg object-cover border border-slate-600 shrink-0"
+                    />
+                  )}
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-white mb-2">{item.itemName}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -363,6 +396,55 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
                   />
                   <p className="text-xs text-gray-400 mt-1">
                     Optional - leave blank if price varies or is discussed in person
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-white">Photo (optional)</Label>
+                  {formData.image_url ? (
+                    <div className="flex items-center gap-3 mt-2">
+                      <img
+                        src={formData.image_url}
+                        alt="Secret item"
+                        className="w-20 h-20 rounded-lg object-cover border border-slate-600"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
+                        variant="outline"
+                        size="sm"
+                        className="border-slate-600 text-slate-300 hover:bg-slate-700 text-xs"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center gap-2 mt-2 px-4 py-3 bg-slate-700/30 border border-dashed border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors">
+                      {imageUploading ? (
+                        <span className="text-sm text-slate-400">Uploading...</span>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className="text-sm text-slate-400">Add a photo of this secret item</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={imageUploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleSecretImageUpload(file)
+                          e.target.value = ''
+                        }}
+                      />
+                    </label>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">
+                    A tantalising photo makes your secret item more appealing
                   </p>
                 </div>
               </div>

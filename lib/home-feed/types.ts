@@ -27,6 +27,7 @@ export interface TonightCard {
   label: TonightLabel
   businessId: string
   businessName: string
+  businessSlug: string
   businessImage: string | null
   businessLogo: string | null
   tier: BusinessTier | null
@@ -45,8 +46,10 @@ export interface DishCard {
   dishName: string
   dishPrice: string | null
   dishDescription: string | null
+  dishImage: string | null
   businessId: string
   businessName: string
+  businessSlug: string
   businessImage: string | null
   businessLogo: string | null
   tier: BusinessTier | null
@@ -70,6 +73,7 @@ export interface PersonalisedCard {
   id: string
   businessId: string
   businessName: string
+  businessSlug: string
   businessImage: string | null
   businessLogo: string | null
   tier: BusinessTier | null
@@ -81,7 +85,9 @@ export interface PersonalisedCard {
 
 export interface RewardCard {
   id: string
+  programPublicId: string
   businessName: string
+  businessLogo: string | null
   programType: 'stamps' | 'points'
   currentBalance: number
   threshold: number
@@ -130,6 +136,7 @@ export interface MenuPreviewItem {
   name: string
   price: string
   description: string
+  image_url?: string
 }
 
 export interface ScoredOffer {

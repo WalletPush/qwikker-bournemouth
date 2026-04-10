@@ -68,6 +68,7 @@ export async function updateSession(request: NextRequest) {
   const publicPaths = [
     '/',            // Root landing page (marketing)
     '/for-business',// Business marketing page
+    '/business-signup', // Business signup/onboarding page
     '/about',       // About page
     '/join',        // Pass installer page
     '/user',        // User dashboard (uses wallet_pass_id, not auth)

@@ -131,14 +131,15 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
         name: item.itemName,
         description: item.description || 'A delicious secret item',
         price: item.price || null,
+        image_url: item.image_url || null,
         hint: `Ask your server for "${item.itemName}" - they'll know what you mean! 😉`,
-        rarity: rarity, // Spotlight = 5 (LEGENDARY), others = 3
-        pointsReward: isSpotlight ? 100 : 50, // More points for legendary items
+        rarity: rarity,
+        pointsReward: isSpotlight ? 100 : 50,
         unlockMethods: [
           { type: 'visit', description: 'Visit the restaurant and ask for this item' },
           { type: 'points', cost: isSpotlight ? 50 : 25, description: `Spend ${isSpotlight ? 50 : 25} points to unlock remotely` }
         ],
-        isReal: true // Flag to identify real items
+        isReal: true
       }))
     }
   }).filter(menu => menu.items.length > 0) // Only include businesses with secret menu items

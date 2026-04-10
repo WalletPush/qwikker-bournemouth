@@ -103,8 +103,34 @@ export function scoreBusinessRelevance(
     priorityTerms.some(p => kw.toLowerCase().includes(p))
   )
   
-  // For non-priority queries with a semantic score, return it directly
-  if (semanticScore > 0 && !hasPriorityIntent) {
+  // Check vibe tag matches BEFORE early return — tags are explicit business declarations
+  let vibeTagScore = 0
+  const vt = business.vibe_tags as { selected?: string[]; custom?: string[] } | null
+  if (vt && intent.hasIntent) {
+    const allTags = [...(vt.selected || []), ...(vt.custom || [])].map(t => t.toLowerCase())
+    for (const keyword of intent.keywords) {
+      const kw = keyword.toLowerCase()
+      const kwHyphenated = kw.replace(/\s+/g, '-')
+      const kwSpaced = kw.replace(/-/g, ' ')
+      if (allTags.some(tag => tag === kw || tag === kwHyphenated || tag === kwSpaced || tag.replace(/-/g, ' ') === kw)) {
+        vibeTagScore = 4
+        break
+      }
+    }
+    if (vibeTagScore === 0) {
+      for (const category of intent.categories) {
+        const cat = category.toLowerCase()
+        const catHyphenated = cat.replace(/\s+/g, '-')
+        if (allTags.some(tag => tag === cat || tag === catHyphenated || tag.replace(/-/g, ' ') === cat)) {
+          vibeTagScore = 4
+          break
+        }
+      }
+    }
+  }
+  
+  // For non-priority queries with a semantic score AND no tag match, return semantic directly
+  if (semanticScore > 0 && !hasPriorityIntent && vibeTagScore === 0) {
     if (process.env.NODE_ENV === 'development') {
       console.log(`📊 Relevance: ${business.business_name} = ${semanticScore} (semantic:${kbSimilarityScore?.toFixed(2)})`)
     }
@@ -186,6 +212,12 @@ export function scoreBusinessRelevance(
     }
   }
   
+  // Add vibe tag score to keyword score
+  if (vibeTagScore > 0) {
+    score += vibeTagScore
+    reasons.push(`tag:match`)
+  }
+
   // KB content match - CRITICAL for queries where info lives in KB not in category/name
   // Examples: "kids menu", "vegan options", "outdoor seating", "gluten free"
   // For these queries, KB is the STRONGEST signal (+4), not the weakest

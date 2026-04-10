@@ -8,6 +8,7 @@ import type { HomeFeedResponse, TonightCard, DishCard, DealCard, PersonalisedCar
 import { StampGrid } from '@/components/loyalty/stamp-grid'
 import { STAMP_ICONS, type StampIconKey } from '@/lib/loyalty/loyalty-utils'
 import { WalletInstallBanner } from '@/components/wallet/wallet-install-banner'
+import { PersonalisationWizard, shouldShowWizard } from '@/components/user/personalisation-wizard'
 
 interface UserDashboardHomeProps {
   feed: HomeFeedResponse | null
@@ -45,6 +46,29 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
   const [secretsUnlockedCount, setSecretsUnlockedCount] = useState(0)
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
   const [availablePrograms, setAvailablePrograms] = useState<DiscoverProgram[]>([])
+  const [showWizard, setShowWizard] = useState(false)
+
+  // Check if personalisation wizard should show (cold users only)
+  useEffect(() => {
+    if (!feed || !walletPassId) return
+    const hasEngagement = feed.personalised.length > 0
+    const checkPrefs = async () => {
+      try {
+        const res = await fetch(`/api/user/preferences?walletPassId=${walletPassId}`)
+        const data = res.ok ? await res.json() : {}
+        const show = shouldShowWizard({
+          walletPassId,
+          preferredCategories: data.preferred_categories || [],
+          dietaryRestrictions: data.dietary_restrictions || [],
+          hasEngagement,
+        })
+        setShowWizard(show)
+      } catch {
+        // If fetch fails, don't show wizard
+      }
+    }
+    checkPrefs()
+  }, [feed, walletPassId])
 
   useEffect(() => {
     const loadData = async () => {
@@ -194,6 +218,9 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
   const showRewardsEmpty = !!walletPassId && rewards.length === 0
   const isNewUser = personalised.length === 0
 
+  const joinedPublicIds = new Set(rewards.map(r => r.programPublicId).filter(Boolean))
+  const unjoinedPrograms = availablePrograms.filter(p => !joinedPublicIds.has(p.public_id))
+
   // Build greeting client-side so the user name is always correct
   const greetingMap: Record<string, string> = {
     morning: `Good morning, ${userName}`,
@@ -220,6 +247,12 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
 
   return (
     <div className="space-y-10 sm:space-y-12 pb-8">
+      {showWizard && walletPassId && (
+        <PersonalisationWizard
+          walletPassId={walletPassId}
+          onComplete={() => setShowWizard(false)}
+        />
+      )}
       <WalletInstallBanner />
 
       {/* Hero Section */}
@@ -301,9 +334,9 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
         </FeedSection>
       )}
 
-      {/* Your Rewards */}
+      {/* Your Loyalty Cards */}
       {hasRewards && (
-        <FeedSection title="Your rewards">
+        <FeedSection title="Your loyalty cards">
           <CardRail>
             {rewards.map(card => (
               <RewardCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
@@ -311,10 +344,10 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
           </CardRail>
         </FeedSection>
       )}
-      {!hasRewards && availablePrograms.length > 0 && (
-        <FeedSection title="Loyalty cards available">
+      {unjoinedPrograms.length > 0 && (
+        <FeedSection title={hasRewards ? 'More loyalty cards' : 'Loyalty cards available'}>
           <CardRail>
-            {availablePrograms.map(program => (
+            {unjoinedPrograms.map(program => (
               <AvailableLoyaltyCard key={program.id} program={program} />
             ))}
           </CardRail>
@@ -326,10 +359,7 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
         <ActivityFeed activity={recentActivity} getNavUrl={getNavUrl} getChatUrl={getChatUrl} />
       )}
 
-      {/* Preferences Card */}
-      {isNewUser && (
-        <PreferencesCard walletPassId={walletPassId} />
-      )}
+      {/* Personalisation wizard replaces the old PreferencesCard */}
 
       {/* How Qwikker Works -- collapsible */}
       <HowItWorksSection cityDisplayName={cityDisplayName} getNavUrl={getNavUrl} />
@@ -474,7 +504,7 @@ function TonightCardComponent({ card, getNavUrl }: { card: TonightCard; getNavUr
     ? getNavUrl('/user/events')
     : card.offerId
     ? getNavUrl('/user/offers')
-    : getNavUrl('/user/discover')
+    : getNavUrl(`/user/business/${card.businessSlug}`)
 
   return (
     <Link href={href} className="snap-start shrink-0 w-[78vw] sm:w-72 block">
@@ -500,11 +530,12 @@ function TonightCardComponent({ card, getNavUrl }: { card: TonightCard; getNavUr
 }
 
 function DishCardComponent({ card, getNavUrl }: { card: DishCard; getNavUrl: (href: string) => string }) {
+  const bgImage = card.dishImage || card.businessImage
   return (
-    <Link href={getNavUrl('/user/discover')} className="snap-start shrink-0 w-[78vw] sm:w-64 block">
+    <Link href={getNavUrl(`/user/business/${card.businessSlug}`)} className="snap-start shrink-0 w-[78vw] sm:w-64 block">
       <div
         className="relative h-48 rounded-xl overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors group bg-cover bg-center bg-slate-800"
-        style={card.businessImage ? { backgroundImage: `url(${card.businessImage})` } : undefined}
+        style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
       >
         <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-sm px-4 py-3 z-10">
           <p className="text-white font-medium text-sm">{card.dishName}</p>
@@ -541,7 +572,7 @@ function DealCardComponent({ card, getNavUrl }: { card: DealCard; getNavUrl: (hr
 
 function PersonalisedCardComponent({ card, getNavUrl }: { card: PersonalisedCard; getNavUrl: (href: string) => string }) {
   return (
-    <Link href={getNavUrl('/user/discover')} className="snap-start shrink-0 w-[78vw] sm:w-64 block">
+    <Link href={getNavUrl(`/user/business/${card.businessSlug}`)} className="snap-start shrink-0 w-[78vw] sm:w-64 block">
       <div
         className="relative h-48 rounded-xl overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors group bg-cover bg-center bg-slate-800"
         style={card.businessImage ? { backgroundImage: `url(${card.businessImage})` } : undefined}
@@ -566,9 +597,18 @@ function RewardCardComponent({ card, getNavUrl }: { card: RewardCard; getNavUrl:
   return (
     <Link href={getNavUrl('/user/rewards')} className="snap-start shrink-0 w-[78vw] sm:w-64">
       <div className="rounded-xl bg-slate-800 border border-slate-700/50 p-4 space-y-3">
-        <div>
-          <p className="text-white font-medium text-sm">{card.businessName}</p>
-          <p className="text-slate-500 text-xs mt-0.5">{card.rewardDescription}</p>
+        <div className="flex items-center gap-3">
+          {card.businessLogo ? (
+            <img src={card.businessLogo} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+          ) : (
+            <div className="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center text-white text-sm font-bold bg-slate-600">
+              {card.businessName.charAt(0)}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-white font-medium text-sm truncate">{card.businessName}</p>
+            <p className="text-slate-500 text-xs truncate">{card.rewardDescription}</p>
+          </div>
         </div>
         <StampGrid
           stampIcon={stampIconName}
@@ -662,100 +702,7 @@ function SecretTeaserCard({ count, getNavUrl }: { count: number; getNavUrl: (hre
   )
 }
 
-// =============================================================================
-// Preferences Card
-// =============================================================================
-
-const CATEGORY_OPTIONS = [
-  'Restaurants', 'Cafes', 'Bars', 'Takeaway', 'Family', 'Fine Dining', 'Brunch', 'Late Night',
-]
-
-function PreferencesCard({ walletPassId }: { walletPassId: string | null }) {
-  const [selected, setSelected] = useState<string[]>([])
-  const [dismissed, setDismissed] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [loaded, setLoaded] = useState(false)
-
-  // Load existing preferences from database
-  useEffect(() => {
-    if (!walletPassId) return
-    const load = async () => {
-      try {
-        const res = await fetch(`/api/user/preferences?walletPassId=${walletPassId}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.preferred_categories?.length > 0) {
-            setSelected(data.preferred_categories)
-          }
-        }
-      } catch { /* safe to ignore */ }
-      setLoaded(true)
-    }
-    load()
-  }, [walletPassId])
-
-  if (dismissed) return null
-
-  const toggle = async (cat: string) => {
-    const updated = selected.includes(cat)
-      ? selected.filter(c => c !== cat)
-      : [...selected, cat]
-    setSelected(updated)
-
-    // Save to database
-    if (!walletPassId) return
-    setSaving(true)
-    try {
-      await fetch('/api/user/preferences', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletPassId, preferred_categories: updated }),
-      })
-    } catch { /* safe to ignore */ }
-    setSaving(false)
-  }
-
-  return (
-    <section className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-5">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-200">Help us find places you'll love</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Tap categories that interest you</p>
-        </div>
-        <button
-          onClick={() => setDismissed(true)}
-          className="text-slate-600 hover:text-slate-400 transition-colors p-1"
-          aria-label="Dismiss"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {CATEGORY_OPTIONS.map(cat => (
-          <button
-            key={cat}
-            onClick={() => toggle(cat)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              selected.includes(cat)
-                ? 'bg-white text-slate-900'
-                : 'bg-slate-700/60 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-      {saving && (
-        <p className="text-[11px] text-slate-600 mt-2">Saving...</p>
-      )}
-      {!saving && selected.length > 0 && loaded && (
-        <p className="text-[11px] text-slate-500 mt-2">Saved</p>
-      )}
-    </section>
-  )
-}
+// PreferencesCard removed — replaced by PersonalisationWizard
 
 // =============================================================================
 // Navigation Stat Cards

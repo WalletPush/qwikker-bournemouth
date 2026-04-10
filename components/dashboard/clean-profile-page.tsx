@@ -240,10 +240,41 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
   }
 
   // Helper functions
+  const [menuImageUploading, setMenuImageUploading] = useState<number | null>(null)
+
+  const handleMenuItemImageUpload = async (index: number, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setMessage({ type: 'error', text: 'Please upload an image file' })
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Image must be under 5MB' })
+      return
+    }
+    setMenuImageUploading(index)
+    try {
+      const url = await uploadToCloudinary(file, 'qwikker/menu-items')
+      const updated = menuItems.map((item, i) =>
+        i === index ? { ...item, image_url: url } : item
+      )
+      setMenuItems(updated)
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to upload image. Please try again.' })
+    } finally {
+      setMenuImageUploading(null)
+    }
+  }
+
+  const removeMenuItemImage = (index: number) => {
+    const updated = menuItems.map((item, i) =>
+      i === index ? { ...item, image_url: undefined } : item
+    )
+    setMenuItems(updated)
+  }
+
   const addMenuItem = () => {
-    // ✅ Enforce 5-item limit for claimed_free tier
     if (profile?.status === 'claimed_free' && menuItems.length >= 5) {
-      return // Prevent adding more than 5 items
+      return
     }
     setMenuItems([...menuItems, { name: '', price: '', description: '' }])
   }
@@ -870,44 +901,89 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
             </CardHeader>
         <CardContent className="space-y-4">
           {menuItems.map((item, index) => (
-            <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-700/30 rounded-lg">
-              <div>
-                <Label className="text-white text-sm">Item Name</Label>
-                <Input
-                  value={item.name}
-                  onChange={(e) => updateMenuItem(index, 'name', e.target.value)}
-                  className="bg-slate-600/50 border-slate-500/50 text-white"
-                  placeholder="Item name"
-                />
+            <div key={index} className="p-4 bg-slate-700/30 rounded-lg space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-white text-sm">Item Name</Label>
+                  <Input
+                    value={item.name}
+                    onChange={(e) => updateMenuItem(index, 'name', e.target.value)}
+                    className="bg-slate-600/50 border-slate-500/50 text-white"
+                    placeholder="Item name"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white text-sm">Price</Label>
+                  <Input
+                    value={item.price}
+                    onChange={(e) => updateMenuItem(index, 'price', e.target.value)}
+                    className="bg-slate-600/50 border-slate-500/50 text-white"
+                    placeholder="£0.00"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label className="text-white text-sm">Description</Label>
+                  <textarea
+                    value={item.description}
+                    onChange={(e) => updateMenuItem(index, 'description', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-600/50 border border-slate-500/50 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent resize-none"
+                    placeholder="Brief description of the item"
+                    rows={2}
+                  />
+                </div>
               </div>
-              <div>
-                <Label className="text-white text-sm">Price</Label>
-                <Input
-                  value={item.price}
-                  onChange={(e) => updateMenuItem(index, 'price', e.target.value)}
-                  className="bg-slate-600/50 border-slate-500/50 text-white"
-                  placeholder="£0.00"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <Label className="text-white text-sm">Description</Label>
-                <textarea
-                  value={item.description}
-                  onChange={(e) => updateMenuItem(index, 'description', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-600/50 border border-slate-500/50 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#00d083] focus:border-transparent resize-none"
-                  placeholder="Brief description of the item"
-                  rows={2}
-                />
-              </div>
-              <div className="flex items-end">
-                <Button
-                  onClick={() => removeMenuItem(index)}
-                  variant="outline"
-                  size="sm"
-                  className="border-red-500/50 text-red-400 hover:bg-red-500/10"
-                >
-                  Remove
-                </Button>
+              <div className="flex items-center gap-4">
+                {item.image_url ? (
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={item.image_url}
+                      alt={item.name || 'Item'}
+                      className="w-16 h-16 rounded-lg object-cover border border-slate-600"
+                    />
+                    <Button
+                      onClick={() => removeMenuItemImage(index)}
+                      variant="outline"
+                      size="sm"
+                      className="border-slate-600 text-slate-300 hover:bg-slate-700 text-xs"
+                    >
+                      Remove image
+                    </Button>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2 px-3 py-2 bg-slate-600/30 border border-dashed border-slate-500/50 rounded-lg cursor-pointer hover:bg-slate-600/50 transition-colors">
+                    {menuImageUploading === index ? (
+                      <span className="text-xs text-slate-400">Uploading...</span>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-xs text-slate-400">Add photo (optional)</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={menuImageUploading === index}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) handleMenuItemImageUpload(index, file)
+                        e.target.value = ''
+                      }}
+                    />
+                  </label>
+                )}
+                <div className="ml-auto">
+                  <Button
+                    onClick={() => removeMenuItem(index)}
+                    variant="outline"
+                    size="sm"
+                    className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
             </div>
           ))}

@@ -22,6 +22,7 @@ interface RealSecretMenu {
     name: string
     description: string
     price?: string
+    image_url?: string
     hint: string
     rarity: number
     pointsReward: number
@@ -357,7 +358,17 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
         </div>
 
 
-        <CardHeader className="pb-2 pt-8 sm:pt-12 px-3 sm:px-6">
+        {isUnlocked && item.image_url && (
+          <div className="mx-3 mt-8 sm:mx-6 sm:mt-12">
+            <img
+              src={item.image_url}
+              alt={item.name}
+              className="w-full h-28 sm:h-36 object-cover rounded-lg border border-purple-500/30"
+            />
+          </div>
+        )}
+
+        <CardHeader className={`pb-2 px-3 sm:px-6 ${isUnlocked && item.image_url ? 'pt-3' : 'pt-8 sm:pt-12'}`}>
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <CardTitle className={`text-base font-bold sm:text-lg mb-1.5 transition-all duration-300 leading-tight ${

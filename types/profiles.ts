@@ -5,6 +5,7 @@ export interface MenuPreviewItem {
   name: string;
   price: string;
   description: string;
+  image_url?: string;
 }
 
 // Business offer structure for multiple offers

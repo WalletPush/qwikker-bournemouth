@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { UserHelpDialog } from '@/components/user/user-help-dialog'
 import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
+import { CATEGORY_OPTIONS, DIETARY_OPTIONS } from '@/lib/constants/user-preferences'
 interface UserSettingsPageProps {
   currentUser?: {
     id: string
@@ -39,6 +40,7 @@ export function UserSettingsPage({ currentUser, currentCity: currentCityProp, ci
 
   const [preferences, setPreferences] = useState({
     categories: [] as string[],
+    dietary: [] as string[],
     radius: '3 miles',
   })
   const [prefSaving, setPrefSaving] = useState(false)
@@ -59,6 +61,9 @@ export function UserSettingsPage({ currentUser, currentCity: currentCityProp, ci
         if (data.preferred_categories?.length > 0) {
           setPreferences(prev => ({ ...prev, categories: data.preferred_categories }))
         }
+        if (data.dietary_restrictions?.length > 0) {
+          setPreferences(prev => ({ ...prev, dietary: data.dietary_restrictions }))
+        }
         if (data.preferred_radius_miles) {
           const miles = data.preferred_radius_miles
           const label = miles === 1 ? '1 mile' : `${miles} miles`
@@ -68,13 +73,14 @@ export function UserSettingsPage({ currentUser, currentCity: currentCityProp, ci
     } catch { /* safe to ignore */ }
   }
 
-  const savePreferences = async (updated: { categories?: string[]; radius?: string }) => {
+  const savePreferences = async (updated: { categories?: string[]; dietary?: string[]; radius?: string }) => {
     const passId = currentUser?.wallet_pass_id
     if (!passId) return
     setPrefSaving(true)
     try {
       const body: Record<string, unknown> = { walletPassId: passId }
       if (updated.categories) body.preferred_categories = updated.categories
+      if (updated.dietary) body.dietary_restrictions = updated.dietary
       if (updated.radius) {
         const match = updated.radius.match(/(\d+)/)
         if (match) body.preferred_radius_miles = parseInt(match[1], 10)
@@ -294,9 +300,9 @@ export function UserSettingsPage({ currentUser, currentCity: currentCityProp, ci
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <p className="text-white font-medium mb-3">Favorite Categories</p>
+            <p className="text-white font-medium mb-3">Favourite Categories</p>
             <div className="flex flex-wrap gap-2">
-              {['Restaurant', 'Cafe', 'Bar', 'Takeaway', 'Family', 'Fine Dining', 'Fast Food'].map((category) => (
+              {CATEGORY_OPTIONS.map((category) => (
                 <button
                   key={category}
                   onClick={() => {
@@ -313,6 +319,31 @@ export function UserSettingsPage({ currentUser, currentCity: currentCityProp, ci
                   }`}
                 >
                   {category}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-white font-medium mb-3">Dietary Requirements</p>
+            <div className="flex flex-wrap gap-2">
+              {DIETARY_OPTIONS.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => {
+                    const updated = preferences.dietary.includes(option)
+                      ? preferences.dietary.filter(d => d !== option)
+                      : [...preferences.dietary, option]
+                    setPreferences(prev => ({ ...prev, dietary: updated }))
+                    savePreferences({ dietary: updated })
+                  }}
+                  className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+                    preferences.dietary.includes(option)
+                      ? 'bg-[#00d083] text-black'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  {option}
                 </button>
               ))}
             </div>

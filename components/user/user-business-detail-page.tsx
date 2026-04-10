@@ -890,33 +890,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
               </Card>
             ) : business.status !== 'unclaimed' && !business.auto_imported && business.menuPreview && business.menuPreview.length > 0 ? (
               <>
-                {/* AI Chat Prompt - Primary CTA (only for claimed businesses with menu data) */}
-                <Card className="bg-gradient-to-br from-[#00d083]/10 to-[#00b86f]/10 border-[#00d083]/30 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#00d083]/20 to-transparent rounded-bl-full"></div>
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-gradient-to-br from-[#00d083] to-[#00b86f] rounded-full">
-                        <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-slate-100 mb-2">Discover the Full Menu with AI</h3>
-                        <p className="text-slate-300 mb-4">
-                          Chat with your local guide to explore the complete menu, get personalized recommendations, and discover hidden gems!
-                        </p>
-                        <Button asChild className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold">
-                          <Link href={getNavUrl(`/user/chat?business=${business.name}`)}>
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                            </svg>
-                            Ask About {business.name}'s Menu
-                          </Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+{/* AI CTA is at bottom of Featured Menu Items section */}
               </>
             ) : business.status !== 'unclaimed' && !business.auto_imported ? (
               <Card className="bg-slate-800/50 border-slate-700">
@@ -950,11 +924,18 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
               <CardContent>
                 <div className="grid gap-4">
                   {business.menuPreview && business.menuPreview.map((item: any, index: number) => (
-                    <div key={index} className="flex items-start justify-between py-4 border-b border-slate-600 last:border-b-0">
-                      <div className="flex-1">
+                    <div key={index} className="flex items-start gap-4 py-4 border-b border-slate-600 last:border-b-0">
+                      {item.image_url && (
+                        <img
+                          src={item.image_url}
+                          alt={item.name}
+                          className="w-20 h-20 rounded-xl object-cover border border-slate-600 shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
                         <p className="text-slate-100 font-medium text-lg">{item.name}</p>
                         {item.description && (
-                          <p className="text-slate-400 text-sm mt-1">{item.description}</p>
+                          <p className="text-slate-400 text-sm mt-1 line-clamp-2">{item.description}</p>
                         )}
                         <div className="flex items-center gap-2 mt-2">
                           <span className="bg-[#00d083]/10 text-[#00d083] text-xs px-2 py-1 rounded-full">
@@ -962,23 +943,19 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                           </span>
                         </div>
                       </div>
-                      <div className="text-right ml-4">
+                      <div className="text-right ml-2 shrink-0">
                         <span className="text-[#00d083] font-bold text-xl">{formatPrice(item.price)}</span>
                       </div>
                     </div>
                   ))}
                   
-                  {/* See More Prompt */}
-                  <div className="mt-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600 text-center">
-                    <p className="text-slate-300 text-sm mb-3">
-                      Want to see the full menu, daily specials, and get personalized recommendations?
+                  <div className="mt-4 flex items-center gap-3 p-3 bg-slate-700/20 rounded-lg border border-slate-700/50">
+                    <p className="text-slate-400 text-sm flex-1">
+                      See the full menu, specials &amp; recommendations
                     </p>
-                    <Button asChild variant="outline" className="border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10">
+                    <Button asChild size="sm" className="bg-[#00d083]/15 hover:bg-[#00d083]/25 text-[#00d083] border border-[#00d083]/30 shrink-0">
                       <Link href={getNavUrl(`/user/chat?business=${business.name}`)}>
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        Chat for Full Menu
+                        Ask AI
                       </Link>
                     </Button>
                   </div>

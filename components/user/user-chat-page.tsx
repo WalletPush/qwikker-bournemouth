@@ -357,6 +357,26 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
 
     setMessages(prev => [...prev, userMessage])
     setInputValue('')
+
+    // Client-side "near me" detection: if user asks for nearby results and we don't have
+    // location yet, show the location prompt BEFORE calling the AI
+    const isNearMeQuery = /\b(near\s*me|nearby|close\s*by|around\s*me|closest|nearest|walking\s*distance)\b/i.test(message)
+    if (isNearMeQuery && locationStatus !== 'granted') {
+      setPendingNearMeQuery(message)
+      const locationPrompt: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: '',
+        timestamp: new Date().toISOString(),
+        processedContent: '',
+        needsLocation: true,
+        locationReason: 'I need your location to find the best places near you'
+      }
+      setMessages(prev => [...prev, locationPrompt])
+      setStreamingComplete(prev => new Set(prev).add(locationPrompt.id))
+      return
+    }
+
     setIsTyping(true)
 
     try {
@@ -670,10 +690,9 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   const processAIResponse = (content: string, sources: any[] = []) => {
     let processedContent = content
 
-    // CRITICAL FIX: Parse markdown links FIRST (before bold text)
+    // Parse markdown links (before bold text)
     // Pattern: [**text**](/url) or [text](/url)
     processedContent = processedContent.replace(/\[(\*\*)?([^\]]+)(\*\*)?\]\(([^)]+)\)/g, (match, bold1, text, bold2, url) => {
-      // Return as clickable link with proper styling
       return `<a href="${url}" class="text-[#00d083] hover:text-[#00b86f] underline font-semibold cursor-pointer">${text}</a>`
     })
 
@@ -932,7 +951,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
             const isNewMessage = messageIndex >= initialMessageCountRef.current
             const isLastAiMessage = message.type === 'ai' && messageIndex === processedMessages.length - 1
             const alreadyStreamed = streamingComplete.has(message.id)
-            const skipStreaming = !isNewMessage || !isLastAiMessage || alreadyStreamed
+            const skipStreaming = !isNewMessage || !isLastAiMessage || alreadyStreamed || message.needsLocation
             
             return (
             <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
