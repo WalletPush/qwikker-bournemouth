@@ -36,7 +36,8 @@ const PLACEHOLDER_TEXTS = [
   'Where should I eat tonight?',
 ]
 
-export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplayName, userName = 'Guest' }: UserDashboardHomeProps) {
+export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplayName, userName: rawUserName = 'Guest' }: UserDashboardHomeProps) {
+  const userName = rawUserName !== 'Guest' ? rawUserName.split(' ')[0] : 'Guest'
   const router = useRouter()
   const [searchValue, setSearchValue] = useState('')
   const [isSearching, setIsSearching] = useState(false)

@@ -87,8 +87,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   }
   
   // Get stats for city badge (use franchise `city` column, not `business_town`)
-  // Use service role to get accurate counts regardless of RLS
-  const { createServiceRoleClient } = await import('@/lib/supabase/server')
   const supabaseAdmin = createServiceRoleClient()
 
   const { data: businesses } = await supabaseAdmin
