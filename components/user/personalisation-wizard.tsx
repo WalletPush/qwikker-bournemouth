@@ -5,6 +5,7 @@ import { CATEGORY_OPTIONS, DIETARY_OPTIONS } from '@/lib/constants/user-preferen
 
 interface PersonalisationWizardProps {
   walletPassId: string
+  userName?: string
   onComplete: () => void
 }
 
@@ -12,7 +13,8 @@ const STORAGE_KEY_COMPLETED = 'qwikker-personalisation-completed'
 const STORAGE_KEY_SKIPPED = 'qwikker-personalisation-skipped-at'
 const SESSION_KEY_SHOWN = 'qwikker-wizard-shown-this-session'
 
-export function PersonalisationWizard({ walletPassId, onComplete }: PersonalisationWizardProps) {
+export function PersonalisationWizard({ walletPassId, userName, onComplete }: PersonalisationWizardProps) {
+  const firstName = userName && userName !== 'Guest' ? userName.split(' ')[0] : null
   const [step, setStep] = useState<1 | 2>(1)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedDietary, setSelectedDietary] = useState<string[]>([])
@@ -97,11 +99,16 @@ export function PersonalisationWizard({ walletPassId, onComplete }: Personalisat
 
         {step === 1 ? (
           <>
+            {firstName && (
+              <p className="text-sm text-[#00d083] font-medium text-center mb-4">
+                Hey {firstName}, welcome to Qwikker
+              </p>
+            )}
             <h2 className="text-2xl font-bold text-white text-center mb-2">
               What are you into?
             </h2>
             <p className="text-neutral-400 text-center mb-8">
-              Tap everything that sounds good
+              Tap everything that sounds good — we&apos;ll personalise your experience
             </p>
 
             <div className="flex flex-wrap justify-center gap-3 mb-10">

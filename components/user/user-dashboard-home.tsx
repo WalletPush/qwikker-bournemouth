@@ -250,6 +250,7 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
       {showWizard && walletPassId && (
         <PersonalisationWizard
           walletPassId={walletPassId}
+          userName={userName}
           onComplete={() => setShowWizard(false)}
         />
       )}
