@@ -1,6 +1,6 @@
 /**
  * Canonical user preference constants — single source of truth.
- * Used by: personalisation wizard, settings page, feed boost, AI chat profile.
+ * Used by: personalization wizard, settings page, feed boost, AI chat profile.
  */
 
 export const CATEGORY_OPTIONS = [

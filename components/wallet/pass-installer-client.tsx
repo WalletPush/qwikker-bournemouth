@@ -400,7 +400,7 @@ export function PassInstallerClient({
                     <div>
                       <p className="text-white font-medium text-sm">Wallet Pass Promotions</p>
                       <p className="text-neutral-400 text-xs mt-1">
-                        Receive exclusive offers, secret menus and personalised deals directly on your wallet pass
+                        Receive exclusive offers, secret menus and personalized deals directly on your wallet pass
                       </p>
                     </div>
                   </label>
@@ -450,7 +450,7 @@ export function PassInstallerClient({
                     Don't Miss Out!
                   </h4>
                   <p className="text-neutral-300 text-sm mb-4">
-                    Stay in the loop with personalised offers, secret menu items, exclusive events and more from your favourite local businesses.
+                    Stay in the loop with personalized offers, secret menu items, exclusive events and more from your favourite local businesses.
                   </p>
                   <div className="bg-[#00D083]/10 border border-[#00D083]/30 rounded-lg p-3 mb-4">
                     <p className="text-[#00D083] text-sm font-medium">

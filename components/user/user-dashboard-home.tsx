@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { HomeFeedResponse, TonightCard, DishCard, DealCard, PersonalisedCard, RewardCard, TonightLabel } from '@/lib/home-feed/types'
+import type { HomeFeedResponse, TonightCard, DishCard, DealCard, PersonalizedCard, RewardCard, TonightLabel } from '@/lib/home-feed/types'
 import { StampGrid } from '@/components/loyalty/stamp-grid'
 import { STAMP_ICONS, type StampIconKey } from '@/lib/loyalty/loyalty-utils'
 import { WalletInstallBanner } from '@/components/wallet/wallet-install-banner'
-import { PersonalisationWizard, shouldShowWizard } from '@/components/user/personalisation-wizard'
+import { PersonalizationWizard, shouldShowWizard } from '@/components/user/personalization-wizard'
 
 interface UserDashboardHomeProps {
   feed: HomeFeedResponse | null
@@ -49,10 +49,10 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
   const [availablePrograms, setAvailablePrograms] = useState<DiscoverProgram[]>([])
   const [showWizard, setShowWizard] = useState(false)
 
-  // Check if personalisation wizard should show (cold users only)
+  // Check if personalization wizard should show (cold users only)
   useEffect(() => {
     if (!feed || !walletPassId) return
-    const hasEngagement = feed.personalised.length > 0
+    const hasEngagement = feed.personalized.length > 0
     const checkPrefs = async () => {
       try {
         const res = await fetch(`/api/user/preferences?walletPassId=${walletPassId}`)
@@ -214,10 +214,10 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
     )
   }
 
-  const { meta, tonight, dishes, deals, personalised, rewards, secretTeaser, stats } = feed
+  const { meta, tonight, dishes, deals, personalized, rewards, secretTeaser, stats } = feed
   const hasRewards = rewards.length > 0
   const showRewardsEmpty = !!walletPassId && rewards.length === 0
-  const isNewUser = personalised.length === 0
+  const isNewUser = personalized.length === 0
 
   const joinedPublicIds = new Set(rewards.map(r => r.programPublicId).filter(Boolean))
   const unjoinedPrograms = availablePrograms.filter(p => !joinedPublicIds.has(p.public_id))
@@ -249,7 +249,7 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
   return (
     <div className="space-y-10 sm:space-y-12 pb-8">
       {showWizard && walletPassId && (
-        <PersonalisationWizard
+        <PersonalizationWizard
           walletPassId={walletPassId}
           userName={userName}
           onComplete={() => setShowWizard(false)}
@@ -301,11 +301,11 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
       )}
 
       {/* Based on What You Like */}
-      {personalised.length > 0 && (
+      {personalized.length > 0 && (
         <FeedSection title="Based on what you like">
           <CardRail>
-            {personalised.map(card => (
-              <PersonalisedCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
+            {personalized.map(card => (
+              <PersonalizedCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
             ))}
           </CardRail>
         </FeedSection>
@@ -361,7 +361,7 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
         <ActivityFeed activity={recentActivity} getNavUrl={getNavUrl} getChatUrl={getChatUrl} />
       )}
 
-      {/* Personalisation wizard replaces the old PreferencesCard */}
+      {/* Personalization wizard replaces the old PreferencesCard */}
 
       {/* How Qwikker Works -- collapsible */}
       <HowItWorksSection cityDisplayName={cityDisplayName} getNavUrl={getNavUrl} />
@@ -572,7 +572,7 @@ function DealCardComponent({ card, getNavUrl }: { card: DealCard; getNavUrl: (hr
   )
 }
 
-function PersonalisedCardComponent({ card, getNavUrl }: { card: PersonalisedCard; getNavUrl: (href: string) => string }) {
+function PersonalizedCardComponent({ card, getNavUrl }: { card: PersonalizedCard; getNavUrl: (href: string) => string }) {
   return (
     <Link href={getNavUrl(`/user/business/${card.businessSlug}`)} className="snap-start shrink-0 w-[78vw] sm:w-64 block">
       <div
@@ -704,7 +704,7 @@ function SecretTeaserCard({ count, getNavUrl }: { count: number; getNavUrl: (hre
   )
 }
 
-// PreferencesCard removed — replaced by PersonalisationWizard
+// PreferencesCard removed — replaced by PersonalizationWizard
 
 // =============================================================================
 // Navigation Stat Cards

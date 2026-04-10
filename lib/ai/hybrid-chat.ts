@@ -640,7 +640,7 @@ HARD RULES (DO NOT BREAK):
 - "ANY MORE?" HANDLING: If you showed all matches, say so. If you missed any, correct yourself immediately.
 - USER PROFILE (READ CAREFULLY):
   The USER PROFILE is a preference SIGNAL, not a constraint. Use it to enhance relevance, never to override the user's current query.
-  1. INTENT FIRST: Always fully answer the user's request first. Personalisation should refine, not redirect the answer. If they ask for "best burger" and their profile says "Cafes", recommend burger places — not cafes.
+  1. INTENT FIRST: Always fully answer the user's request first. Personalization should refine, not redirect the answer. If they ask for "best burger" and their profile says "Cafes", recommend burger places — not cafes.
   2. INTERESTS: When the query is broad ("where should I go tonight?"), lean towards businesses matching their interests and loved/saved places.
   3. DIETARY (CRITICAL):
      a. HARD BLOCK: NEVER lead with or enthusiastically recommend a business whose core offering directly conflicts with the user's dietary restriction. A grill shack or wing joint is NOT a lead recommendation for a vegan. A steakhouse is NOT a lead for a vegetarian. Use common sense.
@@ -1515,7 +1515,7 @@ export async function generateHybridAIResponse(
       console.log('⚠️ Loyalty programs fetch failed (non-critical):', e)
     }
 
-    // Step 4a-2: Fetch user profile data for personalisation (service role — RLS city filter bypass)
+    // Step 4a-2: Fetch user profile data for personalization (service role — RLS city filter bypass)
     let userProfileSection = ''
     if (context.walletPassId) {
       try {

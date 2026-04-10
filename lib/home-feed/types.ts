@@ -69,7 +69,7 @@ export interface DealCard {
   tier: BusinessTier | null
 }
 
-export interface PersonalisedCard {
+export interface PersonalizedCard {
   id: string
   businessId: string
   businessName: string
@@ -104,7 +104,7 @@ export interface HomeFeedResponse {
   tonight: TonightCard[]
   dishes: DishCard[]
   deals: DealCard[]
-  personalised: PersonalisedCard[]
+  personalized: PersonalizedCard[]
   rewards: RewardCard[]
   secretTeaser: SecretTeaser | null
   stats: {

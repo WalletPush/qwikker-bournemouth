@@ -28,7 +28,7 @@ import type {
   TonightCard,
   DishCard,
   DealCard,
-  PersonalisedCard,
+  PersonalizedCard,
   RewardCard,
   TonightLabel,
   MenuPreviewItem,
@@ -92,8 +92,8 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
   const tonight = buildTonightSection(businesses, offers, events, hybridMode, dedup, userLat, userLng)
   const dishes = buildDishesSection(businesses, hybridMode, dedup)
   const deals = buildDealsSection(offers, businesses, dedup, userLat, userLng)
-  const personalised = interactionsResult
-    ? buildPersonalisedSection(interactionsResult, businesses, offers, hybridMode, dedup, preferredCategories)
+  const personalized = interactionsResult
+    ? buildPersonalizedSection(interactionsResult, businesses, offers, hybridMode, dedup, preferredCategories)
     : []
   const rewards = loyaltyResult
 
@@ -121,7 +121,7 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
     tonight,
     dishes,
     deals,
-    personalised,
+    personalized,
     rewards,
     secretTeaser,
     stats,
@@ -678,14 +678,14 @@ function buildDealsSection(
   return result.length >= MIN_CARDS_TO_SHOW ? result : []
 }
 
-function buildPersonalisedSection(
+function buildPersonalizedSection(
   interactions: UserInteractions,
   businesses: any[],
   offers: any[],
   hybridMode: boolean,
   dedup: DedupTracker,
   preferredCategories: string[] = []
-): PersonalisedCard[] {
+): PersonalizedCard[] {
   // Score each business the user has interacted with
   const businessScores = new Map<string, number>()
 
@@ -730,7 +730,7 @@ function buildPersonalisedSection(
     .filter(Boolean)
     .sort((a: any, b: any) => b.totalScore - a.totalScore)
 
-  const result: PersonalisedCard[] = []
+  const result: PersonalizedCard[] = []
 
   for (const item of ranked) {
     if (!item) continue

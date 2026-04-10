@@ -96,14 +96,14 @@ export function createConsumerWelcomeEmail(data: ConsumerWelcomeEmailData): Emai
 
       <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:18px;margin:0 0 24px;">
         <p style="font-size:13px;font-weight:600;color:#ffffff;margin:0 0 10px;">Access your dashboard any time from your wallet pass:</p>
-        <p style="font-size:13px;line-height:1.8;color:#999;margin:0 0 6px;"><strong style="color:#ccc;">iPhone:</strong> Open the Wallet app, tap your QWIKKER pass, then tap the info icon <span style="color:#ccc;">(i)</span> to view your personalised links.</p>
-        <p style="font-size:13px;line-height:1.8;color:#999;margin:0;"><strong style="color:#ccc;">Android:</strong> Open Google Wallet, tap your QWIKKER pass, then tap the three-dot menu to view your personalised links.</p>
+        <p style="font-size:13px;line-height:1.8;color:#999;margin:0 0 6px;"><strong style="color:#ccc;">iPhone:</strong> Open the Wallet app, tap your QWIKKER pass, then tap the info icon <span style="color:#ccc;">(i)</span> to view your personalized links.</p>
+        <p style="font-size:13px;line-height:1.8;color:#999;margin:0;"><strong style="color:#ccc;">Android:</strong> Open Google Wallet, tap your QWIKKER pass, then tap the three-dot menu to view your personalized links.</p>
       </div>
 
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `Welcome to QWIKKER ${cityDisplay}, ${data.firstName}\n\nYour pass is set up. Here's what you've unlocked:\n\n- AI Companion: Ask for recommendations and discover hidden gems\n- Exclusive Offers: Deals from local businesses\n- Secret Menus: Off-menu items only QWIKKER members can access\n- Loyalty Rewards: Earn points at your favourite spots\n\nDashboard: ${data.dashboardUrl}\nAI Chat: ${data.chatUrl}\nOffers: ${data.offersUrl}\n\nAccess your dashboard any time from your wallet pass:\n- iPhone: Open the Wallet app, tap your QWIKKER pass, then tap the info icon (i) to view your personalised links.\n- Android: Open Google Wallet, tap your QWIKKER pass, then tap the three-dot menu to view your personalised links.\n\nBest,\nThe QWIKKER Team`
+  const text = `Welcome to QWIKKER ${cityDisplay}, ${data.firstName}\n\nYour pass is set up. Here's what you've unlocked:\n\n- AI Companion: Ask for recommendations and discover hidden gems\n- Exclusive Offers: Deals from local businesses\n- Secret Menus: Off-menu items only QWIKKER members can access\n- Loyalty Rewards: Earn points at your favourite spots\n\nDashboard: ${data.dashboardUrl}\nAI Chat: ${data.chatUrl}\nOffers: ${data.offersUrl}\n\nAccess your dashboard any time from your wallet pass:\n- iPhone: Open the Wallet app, tap your QWIKKER pass, then tap the info icon (i) to view your personalized links.\n- Android: Open Google Wallet, tap your QWIKKER pass, then tap the three-dot menu to view your personalized links.\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }

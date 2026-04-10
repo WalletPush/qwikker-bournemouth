@@ -3,17 +3,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CATEGORY_OPTIONS, DIETARY_OPTIONS } from '@/lib/constants/user-preferences'
 
-interface PersonalisationWizardProps {
+interface PersonalizationWizardProps {
   walletPassId: string
   userName?: string
   onComplete: () => void
 }
 
 // Scoped to walletPassId so a new pass gets a fresh wizard experience
-const getStorageKey = (passId: string, suffix: string) => `qwikker-personalisation-${suffix}-${passId}`
+const getStorageKey = (passId: string, suffix: string) => `qwikker-personalization-${suffix}-${passId}`
 const SESSION_KEY_SHOWN = 'qwikker-wizard-shown-this-session'
 
-export function PersonalisationWizard({ walletPassId, userName, onComplete }: PersonalisationWizardProps) {
+export function PersonalizationWizard({ walletPassId, userName, onComplete }: PersonalizationWizardProps) {
   const firstName = userName && userName !== 'Guest' ? userName.split(' ')[0] : null
   const [step, setStep] = useState<1 | 2>(1)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -108,7 +108,7 @@ export function PersonalisationWizard({ walletPassId, userName, onComplete }: Pe
               What are you into?
             </h2>
             <p className="text-neutral-400 text-center mb-8">
-              Tap everything that sounds good — we&apos;ll personalise your experience
+              Tap everything that sounds good — we&apos;ll personalize your experience
             </p>
 
             <div className="flex flex-wrap justify-center gap-3 mb-10">
