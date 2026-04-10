@@ -678,9 +678,9 @@ ${clarifyBlock}
 ${stateContext ? `CONVERSATION CONTEXT:\n${stateContext}\n` : ''}
 ${convoFocus}
 ${userProfileSection ? `\n${userProfileSection}\n` : ''}
+${userLoyaltySummary || ''}
 AVAILABLE BUSINESSES (sorted by tier; qwikker_picks first):
 ${businessContext || 'No businesses available.'}
-${userLoyaltySummary || ''}
 ${cityContext ? `CITY & LOCAL KNOWLEDGE (verified, use this FIRST before your own knowledge):\n${cityContext}\n\nIMPORTANT: When answering questions about transport, parking, areas, or practical tips, use the CITY & LOCAL KNOWLEDGE above as your primary source. You may add general context (e.g. weather, geography) but NEVER name any specific business, attraction, venue, museum, activity centre, or commercial establishment that is not in AVAILABLE BUSINESSES above. If you don't have relevant businesses for what they're asking, say so honestly.\n` : ''}
 ${eventContext || ''}
 `.trim()
@@ -1290,6 +1290,59 @@ export async function generateHybridAIResponse(
       }))
     ]
     
+    // Step 3b: Fetch user loyalty memberships BEFORE sorting so we can boost rankings
+    const userLoyaltyByBusinessId = new Map<string, { stamps_balance: number; stamps_remaining: number }>()
+    const loyaltyByBusinessId = new Map<string, { program_name: string; reward_description: string; reward_threshold: number }>()
+    let userLoyaltySummary = ''
+
+    if (context.walletPassId) {
+      try {
+        const serviceRole = createServiceRoleClient()
+        const { data: memberships } = await serviceRole
+          .from('loyalty_memberships')
+          .select(`
+            program_id, stamps_balance,
+            loyalty_programs!inner(
+              business_id, program_name, reward_description, reward_threshold,
+              business_profiles!inner(business_name)
+            )
+          `)
+          .eq('user_wallet_pass_id', context.walletPassId)
+          .eq('status', 'active')
+
+        const summaryLines: string[] = []
+
+        for (const m of memberships || []) {
+          const prog = (m as any).loyalty_programs
+          if (prog?.business_id) {
+            const remaining = prog.reward_threshold - m.stamps_balance
+            userLoyaltyByBusinessId.set(prog.business_id, {
+              stamps_balance: m.stamps_balance,
+              stamps_remaining: remaining,
+            })
+            if (!loyaltyByBusinessId.has(prog.business_id)) {
+              loyaltyByBusinessId.set(prog.business_id, {
+                program_name: prog.program_name,
+                reward_description: prog.reward_description,
+                reward_threshold: prog.reward_threshold,
+              })
+            }
+            const bizName = prog.business_profiles?.business_name || prog.program_name
+            const nearReward = remaining <= 3 && remaining > 0
+            const rewardReady = remaining <= 0
+            const statusTag = rewardReady ? ' ⭐ REWARD READY!' : nearReward ? ' 🔥 ALMOST THERE!' : ''
+            summaryLines.push(`- ${bizName}: ${m.stamps_balance}/${prog.reward_threshold} stamps (${remaining} to go for ${prog.reward_description})${statusTag}`)
+          }
+        }
+
+        if (summaryLines.length > 0) {
+          userLoyaltySummary = `\nUSER LOYALTY PROGRESS:\n${summaryLines.join('\n')}\n`
+        }
+      } catch (e) {
+        console.log('⚠️ Loyalty membership fetch failed (non-critical):', e)
+      }
+    }
+
     // Step 4: Apply "Relevance decides IF, Tier decides ORDER" rule
     // 🚨 CRITICAL FIX: NEVER use browse fallback for specific queries!
     // If user asks for Greek and we only have 1, show that 1 Greek place, NOT random cafes!
@@ -1321,6 +1374,22 @@ export async function generateHybridAIResponse(
       sortedForContext = allBusinessesForContext
     }
     
+    // Loyalty boost: businesses where the user has stamps get a ranking nudge.
+    // This ensures "where should I go tonight" leads with near-reward businesses.
+    if (userLoyaltyByBusinessId.size > 0) {
+      for (const biz of sortedForContext) {
+        const progress = userLoyaltyByBusinessId.get(biz.id)
+        if (!progress) continue
+        const rewardReady = progress.stamps_remaining <= 0
+        const almostThere = progress.stamps_remaining > 0 && progress.stamps_remaining <= 3
+        const boost = rewardReady ? 3 : almostThere ? 2 : 1
+        biz.relevanceScore = (biz.relevanceScore || 0) + boost
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🎟️ Loyalty boost: ${biz.business_name} +${boost} (${rewardReady ? 'REWARD READY' : almostThere ? 'ALMOST THERE' : 'member'})`)
+        }
+      }
+    }
+
     // Sort strategies:
     // BROWSE MODE: Tier first (paid always above unclaimed), then rating within tier
     // INTENT MODE: Relevance first (truth), then tier as tiebreaker, then rating
@@ -1328,16 +1397,21 @@ export async function generateHybridAIResponse(
     
     sortedForContext.sort((a, b) => {
       if (!detectedIntent.hasIntent) {
-        // BROWSE MODE: Tier-first guarantees paying businesses always appear above unclaimed
+        // BROWSE MODE: Loyalty-boosted businesses float to top within their tier
         // 1. Tier priority (paid > claimed > unclaimed)
         if (a.tierPriority !== b.tierPriority) return a.tierPriority - b.tierPriority
+
+        // 2. Loyalty boost within same tier (higher = user has more engagement)
+        const loyaltyA = userLoyaltyByBusinessId.has(a.id) ? (a.relevanceScore || 0) : 0
+        const loyaltyB = userLoyaltyByBusinessId.has(b.id) ? (b.relevanceScore || 0) : 0
+        if (loyaltyA !== loyaltyB) return loyaltyB - loyaltyA
         
-        // 2. Rating within same tier (higher = better)
+        // 3. Rating within same tier (higher = better)
         const ratingA = a.rating || 0
         const ratingB = b.rating || 0
         if (ratingA !== ratingB) return ratingB - ratingA
         
-        // 3. Distance (if available, closer = better)
+        // 4. Distance (if available, closer = better)
         if (userLoc && a.latitude && b.latitude && a.longitude && b.longitude) {
           const distA = calculateDistance(userLoc, { latitude: a.latitude, longitude: a.longitude })
           const distB = calculateDistance(userLoc, { latitude: b.latitude, longitude: b.longitude })
@@ -1420,14 +1494,10 @@ export async function generateHybridAIResponse(
       })
     }
     
-    // Step 4a: Fetch loyalty programs for context businesses + ALL user memberships
+    // Step 4a: Fetch loyalty programs for context businesses (user memberships already fetched in Step 3b)
     const contextBusinessIds = sortedForContext.slice(0, 10).map(b => b.id).filter(Boolean)
-    const loyaltyByBusinessId = new Map<string, { program_name: string; reward_description: string; reward_threshold: number }>()
-    const userLoyaltyByBusinessId = new Map<string, { stamps_balance: number; stamps_remaining: number }>()
-    let userLoyaltySummary = ''
 
     try {
-      // Fetch loyalty programs for context businesses (for non-member businesses in recommendations)
       if (contextBusinessIds.length > 0) {
         const { data: loyaltyPrograms } = await supabase
           .from('loyalty_programs')
@@ -1436,57 +1506,13 @@ export async function generateHybridAIResponse(
           .eq('status', 'active')
 
         for (const lp of loyaltyPrograms || []) {
-          loyaltyByBusinessId.set(lp.business_id, lp)
-        }
-      }
-
-      // Fetch ALL user memberships regardless of context businesses
-      if (context.walletPassId) {
-        const serviceRole = createServiceRoleClient()
-        const { data: memberships } = await serviceRole
-          .from('loyalty_memberships')
-          .select(`
-            program_id, stamps_balance,
-            loyalty_programs!inner(
-              business_id, program_name, reward_description, reward_threshold,
-              business_profiles!inner(business_name)
-            )
-          `)
-          .eq('user_wallet_pass_id', context.walletPassId)
-          .eq('status', 'active')
-
-        const summaryLines: string[] = []
-
-        for (const m of memberships || []) {
-          const prog = (m as any).loyalty_programs
-          if (prog?.business_id) {
-            const remaining = prog.reward_threshold - m.stamps_balance
-            userLoyaltyByBusinessId.set(prog.business_id, {
-              stamps_balance: m.stamps_balance,
-              stamps_remaining: remaining,
-            })
-            // Also ensure this program is in the loyalty map for context building
-            if (!loyaltyByBusinessId.has(prog.business_id)) {
-              loyaltyByBusinessId.set(prog.business_id, {
-                program_name: prog.program_name,
-                reward_description: prog.reward_description,
-                reward_threshold: prog.reward_threshold,
-              })
-            }
-            const bizName = prog.business_profiles?.business_name || prog.program_name
-            const nearReward = remaining <= 3 && remaining > 0
-            const rewardReady = remaining <= 0
-            const statusTag = rewardReady ? ' ⭐ REWARD READY!' : nearReward ? ' 🔥 ALMOST THERE!' : ''
-            summaryLines.push(`- ${bizName}: ${m.stamps_balance}/${prog.reward_threshold} stamps (${remaining} to go for ${prog.reward_description})${statusTag}`)
+          if (!loyaltyByBusinessId.has(lp.business_id)) {
+            loyaltyByBusinessId.set(lp.business_id, lp)
           }
-        }
-
-        if (summaryLines.length > 0) {
-          userLoyaltySummary = `\nUSER LOYALTY PROGRESS:\n${summaryLines.join('\n')}\n`
         }
       }
     } catch (e) {
-      console.log('⚠️ Loyalty context fetch failed (non-critical):', e)
+      console.log('⚠️ Loyalty programs fetch failed (non-critical):', e)
     }
 
     // Step 4a-2: Fetch user profile data for personalisation (service role — RLS city filter bypass)
@@ -1601,15 +1627,23 @@ export async function generateHybridAIResponse(
             ratingLine = `\nRating: ${business.rating}★ from ${business.review_count} Google reviews`
           }
           
-          // Loyalty program context — program existence is public, user progress requires validated wallet pass
+          // Loyalty program context with prominent tags for user progress
           let loyaltyLine = ''
+          let loyaltyTag = ''
           const loyaltyProg = loyaltyByBusinessId.get(business.id)
           if (loyaltyProg) {
             loyaltyLine = `\nLoyalty: Collect ${loyaltyProg.reward_threshold} stamps for ${loyaltyProg.reward_description}`
             if (context.walletPassId) {
               const userProgress = userLoyaltyByBusinessId.get(business.id)
               if (userProgress) {
+                const rewardReady = userProgress.stamps_remaining <= 0
+                const almostThere = userProgress.stamps_remaining > 0 && userProgress.stamps_remaining <= 3
                 loyaltyLine += ` [USER: ${userProgress.stamps_balance}/${loyaltyProg.reward_threshold} stamps, ${userProgress.stamps_remaining} to go]`
+                if (rewardReady) {
+                  loyaltyTag = ` [⭐ REWARD READY — free ${loyaltyProg.reward_description} waiting!]`
+                } else if (almostThere) {
+                  loyaltyTag = ` [🔥 ${userProgress.stamps_remaining} stamp${userProgress.stamps_remaining !== 1 ? 's' : ''} away from free ${loyaltyProg.reward_description}!]`
+                }
               }
             }
           }
@@ -1637,7 +1671,7 @@ export async function generateHybridAIResponse(
           }
 
           const businessSlug = getBusinessSlug(business)
-          return `**${business.business_name}** [TIER: ${business.tierLabel}] [SLUG: ${businessSlug}]${ratingLine}${vibesLine}
+          return `**${business.business_name}** [TIER: ${business.tierLabel}] [SLUG: ${businessSlug}]${loyaltyTag}${ratingLine}${vibesLine}
 Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursLine}${loyaltyLine}${bookingLine}${richContent}${offerText}`
         }).join('\n\n')
       : 'No businesses available in this city yet.'
