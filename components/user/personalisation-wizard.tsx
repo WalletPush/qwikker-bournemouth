@@ -9,8 +9,8 @@ interface PersonalisationWizardProps {
   onComplete: () => void
 }
 
-const STORAGE_KEY_COMPLETED = 'qwikker-personalisation-completed'
-const STORAGE_KEY_SKIPPED = 'qwikker-personalisation-skipped-at'
+// Scoped to walletPassId so a new pass gets a fresh wizard experience
+const getStorageKey = (passId: string, suffix: string) => `qwikker-personalisation-${suffix}-${passId}`
 const SESSION_KEY_SHOWN = 'qwikker-wizard-shown-this-session'
 
 export function PersonalisationWizard({ walletPassId, userName, onComplete }: PersonalisationWizardProps) {
@@ -74,17 +74,17 @@ export function PersonalisationWizard({ walletPassId, userName, onComplete }: Pe
       // Non-fatal
     }
     setSaving(false)
-    localStorage.setItem(STORAGE_KEY_COMPLETED, 'true')
+    localStorage.setItem(getStorageKey(walletPassId, 'completed'), 'true')
     onComplete()
   }
 
   const handleSkip = () => {
-    localStorage.setItem(STORAGE_KEY_SKIPPED, Date.now().toString())
+    localStorage.setItem(getStorageKey(walletPassId, 'skipped'), Date.now().toString())
     onComplete()
   }
 
   const handleNoneOfThese = () => {
-    localStorage.setItem(STORAGE_KEY_COMPLETED, 'true')
+    localStorage.setItem(getStorageKey(walletPassId, 'completed'), 'true')
     onComplete()
   }
 
@@ -212,9 +212,9 @@ export function shouldShowWizard(opts: {
 
   if (typeof window === 'undefined') return false
 
-  if (localStorage.getItem(STORAGE_KEY_COMPLETED)) return false
+  if (localStorage.getItem(getStorageKey(opts.walletPassId, 'completed'))) return false
 
-  const skippedAt = localStorage.getItem(STORAGE_KEY_SKIPPED)
+  const skippedAt = localStorage.getItem(getStorageKey(opts.walletPassId, 'skipped'))
   if (skippedAt && Date.now() - parseInt(skippedAt, 10) < 24 * 60 * 60 * 1000) return false
 
   if (sessionStorage.getItem(SESSION_KEY_SHOWN)) return false
