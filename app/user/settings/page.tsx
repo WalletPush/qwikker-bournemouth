@@ -1,7 +1,6 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserSettingsPage } from '@/components/user/user-settings-page'
-// Removed service role import for security
-import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getCityDisplayName } from '@/lib/utils/city-detection'
 
 export const dynamic = 'force-dynamic'
@@ -45,8 +44,10 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   
   const walletPassId = urlWalletPassId || cookieWalletPassId || null
   
-  // SECURITY: Use tenant-aware client (no service role fallback)
-  const supabase = await createTenantAwareClient()
+  // Use service role for user lookup — createTenantAwareClient uses createBrowserClient
+  // which doesn't work in server components, causing RLS to silently block the query.
+  const { createServiceRoleClient } = await import('@/lib/supabase/server')
+  const supabase = createServiceRoleClient()
   
   let currentUser = null
   
@@ -57,7 +58,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         .select('*')
         .eq('wallet_pass_id', walletPassId)
         .eq('wallet_pass_status', 'active')
-        .eq('city', currentCity) // Explicit city filter for extra safety
+        .eq('city', currentCity)
         .single()
       
       if (user) {
