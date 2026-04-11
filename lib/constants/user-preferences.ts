@@ -32,7 +32,7 @@ export const CATEGORY_MAP: Record<string, string[]> = {
   'Date Night': ['restaurant', 'bar', 'wine bar', 'cocktail bar'],
   'Bakeries': ['bakery'],
   'Nightlife': ['bar', 'night club', 'cocktail bar', 'night_club'],
-  'Activities': ['entertainment', 'arcade', 'gaming', 'event'],
+  'Activities': ['entertainment', 'arcade', 'gaming', 'bowling', 'escape', 'trampoline'],
   'Wellness': ['wellness', 'spa', 'sauna', 'plunge'],
 }
 
