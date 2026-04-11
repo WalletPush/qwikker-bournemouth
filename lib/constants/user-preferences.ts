@@ -6,17 +6,18 @@
 export const CATEGORY_OPTIONS = [
   'Restaurants', 'Cafes', 'Bars', 'Pubs', 'Takeaway',
   'Fine Dining', 'Brunch', 'Late Night', 'Family Friendly', 'Date Night',
+  'Bakeries', 'Nightlife', 'Activities', 'Wellness',
 ] as const
 
 export const DIETARY_OPTIONS = [
   'Vegetarian', 'Vegan', 'Gluten-Free', 'Dairy-Free',
   'Nut Allergy', 'Halal', 'Kosher', 'Pescatarian',
+  'Egg Allergy', 'Soy Allergy', 'Shellfish Allergy', 'Sesame Allergy',
 ] as const
 
 /**
- * Maps user-facing category names to DB display_category tokens.
- * DB values are granular ("Italian restaurant", "Wine bar", "Coffee shop").
- * Use with `normalize()` + `.includes()` matching — NOT exact equality.
+ * Maps user-facing category names to tokens matched against display_category,
+ * system_category, and business_type via `normalize()` + `.includes()`.
  */
 export const CATEGORY_MAP: Record<string, string[]> = {
   'Restaurants': ['restaurant'],
@@ -26,9 +27,13 @@ export const CATEGORY_MAP: Record<string, string[]> = {
   'Takeaway': ['takeaway', 'fast food'],
   'Fine Dining': ['restaurant', 'fine dining'],
   'Brunch': ['restaurant', 'cafe'],
-  'Late Night': ['bar', 'pub', 'night club'],
+  'Late Night': ['bar', 'pub', 'night club', 'cocktail bar'],
   'Family Friendly': ['restaurant', 'cafe'],
-  'Date Night': ['restaurant', 'bar', 'wine bar'],
+  'Date Night': ['restaurant', 'bar', 'wine bar', 'cocktail bar'],
+  'Bakeries': ['bakery'],
+  'Nightlife': ['bar', 'night club', 'cocktail bar', 'night_club'],
+  'Activities': ['entertainment', 'arcade', 'gaming', 'event'],
+  'Wellness': ['wellness', 'spa', 'sauna', 'plunge'],
 }
 
 /** Defensive normalizer — handles undefined, trims, lowercases. */

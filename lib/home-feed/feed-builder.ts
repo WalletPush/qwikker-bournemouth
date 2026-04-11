@@ -715,11 +715,15 @@ function buildPersonalizedSection(
       const biz = businesses.find((b: any) => b.id === bizId)
       if (!biz) return null
 
-      // Preference boost: +1 if business category matches user preferences
+      // Preference boost: +1 if any category field matches user preferences
       let score = interactionScore
       if (mappedTokens.length > 0) {
-        const bizCategory = normalize(biz.display_category)
-        if (bizCategory && mappedTokens.some(token => bizCategory.includes(token))) {
+        const fields = [
+          normalize(biz.display_category),
+          normalize(biz.system_category),
+          normalize(biz.business_type),
+        ].filter(Boolean)
+        if (fields.some(f => mappedTokens.some(token => f.includes(token)))) {
           score += 1
         }
       }
