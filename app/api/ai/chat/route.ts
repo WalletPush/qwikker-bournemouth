@@ -31,6 +31,7 @@ function persistChatMessages(
         wallet_pass_id: walletPassId,
         role: 'user',
         content: userMessage,
+        metadata: {},
         created_at: now,
       },
       {
@@ -38,8 +39,8 @@ function persistChatMessages(
         wallet_pass_id: walletPassId,
         role: 'ai',
         content: aiResponse,
-        metadata: metadata || {},
-        created_at: new Date(Date.now() + 1).toISOString(), // +1ms to preserve ordering
+        metadata: metadata ?? {},
+        created_at: new Date(Date.now() + 1).toISOString(),
       },
     ])
     .then(({ error }) => {
