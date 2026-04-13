@@ -33,13 +33,14 @@
 16. ~~**3.1 Intelligence Plumbing — Wire Existing Data Into AI Chat**~~ — **DONE (9/9 subtasks + hardening)**. Full spec: `/Users/qwikker/.cursor/plans/intelligence_plumbing_3.1_f9759930.plan.md`.
     **Core (9/9):** (a) `/business-signup` middleware hotfix, (b) shared constants file `lib/constants/user-preferences.ts`, (c) personalization wizard `components/user/personalization-wizard.tsx`, (d) wizard integration into `user-dashboard-home.tsx` with cold-user guard + removed old PreferencesCard, (e) settings sync (dietary section added, shared constants imported), (f) AI profile fetch via `Promise.allSettled` using `createServiceRoleClient()`, (g) AI profile inject (USER PROFILE section + 6 prompt rules + 1500 char hard cap + business name dedup), (h) feed boost (+1 interaction score for category matches using `CATEGORY_MAP` + `normalize` + `includes` matching), (i) sanity check SQLs provided.
     **Hardening:** (j) localStorage keys scoped to wallet pass ID — new pass gets fresh wizard, (k) AI loyalty prioritization — membership fetch moved before sort, +3/+2/+1 relevance boost (reward ready/almost there/member), loyalty summary moved before business list in prompt, prominent `[REWARD READY]`/`[ALMOST THERE]` tags on business headers, (l) American spelling standardization across 8 files (personalisation → personalization), (m) expanded categories (10 → 14: added Bakeries, Nightlife, Activities, Wellness) and dietary options (8 → 12: added Egg/Soy/Shellfish/Sesame allergies), (n) feed boost now matches against `display_category` + `system_category` + `business_type` for more reliable matching.
-17. **3.2 Persist Chat Context** — Save chat messages to a `chat_messages` table. Load last N messages on new chat instead of relying on client-side history. AI remembers conversations across sessions.
-18. **3.3 Feed Personalization** — Wire `preferred_categories` + user lat/lng into `buildHomeFeed`. Boost matching businesses in home feed. Feed the "Based on what you like" section with dietary restrictions.
-19. **3.4 Lightweight User Insights** — Nightly/weekly aggregation of top cuisines, visit patterns, average time. Store as jsonb on `app_users`. Feed into chat + feed ranking. Only after 3.1-3.3 prove value.
-20. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
-21. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
-22. Finish Tier 0 remaining (0.14, 0.22)
-23. Finish Tier 2 (2.8-2.11, 2.17)
+17. **VITAL: Privacy Policy & Terms Update** — Current policy is a generic template missing: AI/personalization disclosure, wallet pass identity model, specific data collected (preferences, dietary, vibes, saves, claims, loyalty), named third-party processors (Supabase, Vercel, WalletPush, Resend, Stripe, Cloudinary, OpenAI/Google), location data clarification, correct plan tier names. Remove "personalized advertisements" (no ads). Fix auto-generating date + placeholder address. Keep social media language for future social wizard. **Recommend legal review before launch, especially for AI + GDPR.**
+18. **3.2 Persist Chat Context** — Save chat messages to a `chat_messages` table. Load last N messages on new chat instead of relying on client-side history. AI remembers conversations across sessions.
+19. **3.3 Feed Personalization** — Wire `preferred_categories` + user lat/lng into `buildHomeFeed`. Boost matching businesses in home feed. Feed the "Based on what you like" section with dietary restrictions.
+20. **3.4 Lightweight User Insights** — Nightly/weekly aggregation of top cuisines, visit patterns, average time. Store as jsonb on `app_users`. Feed into chat + feed ranking. Only after 3.1-3.3 prove value.
+21. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
+22. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
+23. Finish Tier 0 remaining (0.14, 0.22)
+24. Finish Tier 2 (2.8-2.11, 2.17)
 
 ### WalletPush SDK Investigation (Backlog)
 Investigated using the Mobile Wallet SDK for automated loyalty card creation inside Qwikker.
