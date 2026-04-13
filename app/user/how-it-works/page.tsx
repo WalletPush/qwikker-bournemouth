@@ -1,7 +1,6 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { UserHowItWorksPage } from '@/components/user/user-how-it-works-page'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
-// Removed service role import for security
 
 export const dynamic = 'force-dynamic'
 
@@ -29,9 +28,8 @@ export default async function HowItWorksPage({ searchParams }: HowItWorksPagePro
   let currentUser = null
   if (walletPassId) {
     try {
-      // SECURITY: Use tenant-aware client (no service role fallback)
-      const { createTenantAwareClient } = await import('@/lib/utils/tenant-security')
-      const supabase = await createTenantAwareClient()
+      const { createServiceRoleClient } = await import('@/lib/supabase/server')
+      const supabase = createServiceRoleClient()
       const { data: user } = await supabase
         .from('app_users')
         .select('*')

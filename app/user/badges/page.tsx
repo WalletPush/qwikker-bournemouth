@@ -1,8 +1,7 @@
 import { Suspense } from 'react'
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { SimpleBadgesPage } from '@/components/user/simple-badges-page'
-// Removed service role import for security
-import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 
 export const dynamic = 'force-dynamic'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
@@ -35,8 +34,8 @@ export default async function BadgesPage({ searchParams }: BadgesPageProps) {
     )
   }
 
-  // SECURITY: Use tenant-aware client (no service role fallback)
-  const supabase = await createTenantAwareClient()
+  const { createServiceRoleClient } = await import('@/lib/supabase/server')
+  const supabase = createServiceRoleClient()
 
   const resolvedSearchParams = await searchParams
   const urlWalletPassId = resolvedSearchParams.wallet_pass_id

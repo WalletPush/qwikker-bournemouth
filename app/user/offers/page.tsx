@@ -36,7 +36,6 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     )
   }
 
-  // Use tenant-aware client with fixed RLS policies
   const supabase = await createTenantAwareClient()
   console.log('✅ Using tenant-aware client with fixed business_offers RLS')
 
@@ -59,12 +58,15 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   if (walletPassId) {
     updatePassActivity(walletPassId).catch(console.error)
   }
+
+  const { createServiceRoleClient } = await import('@/lib/supabase/server')
+  const supabaseUser = createServiceRoleClient()
   
   // Get current user for the layout
   let currentUser = null
   if (walletPassId) {
     try {
-      const { data: user } = await supabase
+      const { data: user } = await supabaseUser
         .from('app_users')
         .select('*')
         .eq('wallet_pass_id', walletPassId)

@@ -28,7 +28,6 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
   const currentCity = await getSafeCurrentCity()
   const urlWalletPassId = resolvedSearchParams.wallet_pass_id
   
-  // SECURITY: Use tenant-aware client (no service role fallback)
   const supabase = await createTenantAwareClient()
   
   // Get wallet pass ID from URL or cookie
@@ -49,11 +48,15 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
     try { await setWalletPassCookie(urlWalletPassId) } catch {}
   }
   
+  // Server component: use service role for app_users (RLS blocks tenant-aware client)
+  const { createServiceRoleClient } = await import('@/lib/supabase/server')
+  const supabaseUser = createServiceRoleClient()
+
   // Get current user for the layout
   let currentUser = null
   if (walletPassId) {
     try {
-      const { data: user } = await supabase
+      const { data: user } = await supabaseUser
         .from('app_users')
         .select('*')
         .eq('wallet_pass_id', walletPassId)

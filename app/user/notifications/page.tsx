@@ -1,6 +1,6 @@
 import { UserDashboardLayout } from '@/components/user/user-dashboard-layout'
 import { NotificationsPageClient } from '@/components/user/notifications-page-client'
-import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getCityDisplayName } from '@/lib/utils/city-detection'
 import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
 import { getValidatedUser } from '@/lib/utils/wallet-pass-security'
@@ -38,15 +38,6 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
     )
   }
 
-  // SECURITY: Use tenant-aware client
-  let supabase
-  try {
-    supabase = await createTenantAwareClient()
-  } catch (error) {
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
-    supabase = createServiceRoleClient()
-  }
-  
   // Wallet pass authentication
   const resolvedSearchParams = await searchParams
   const urlWalletPassId = resolvedSearchParams.wallet_pass_id

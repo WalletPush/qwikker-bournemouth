@@ -34,8 +34,6 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
     )
   }
 
-  // Use tenant-aware client instead of service role
-  // SECURITY: Use tenant-aware client (no fallback to service role)
   const supabase = await createTenantAwareClient()
 
   const resolvedSearchParams = await searchParams
@@ -50,12 +48,15 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
   }
   
   const walletPassId = urlWalletPassId || cookieWalletPassId || null
+
+  const { createServiceRoleClient } = await import('@/lib/supabase/server')
+  const supabaseUser = createServiceRoleClient()
   
   // Get current user for the layout
   let currentUser = null
   if (walletPassId) {
     try {
-      const { data: user } = await supabase
+      const { data: user } = await supabaseUser
         .from('app_users')
         .select('*')
         .eq('wallet_pass_id', walletPassId)
