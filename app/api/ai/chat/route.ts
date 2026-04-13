@@ -5,6 +5,47 @@ import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
 import { getValidatedUser } from '@/lib/utils/wallet-pass-security'
 import { createTenantAwareServerClient } from '@/lib/utils/tenant-security'
 import { getOpenStatusForToday } from '@/lib/utils/opening-hours'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+
+/**
+ * Fire-and-forget: persist user + AI messages to chat_messages table.
+ * Runs async without blocking the response. Failures are logged, not thrown.
+ */
+function persistChatMessages(
+  sessionId: string | undefined,
+  walletPassId: string | undefined,
+  userMessage: string,
+  aiResponse: string,
+  metadata?: Record<string, unknown>
+) {
+  if (!sessionId || !walletPassId) return
+
+  const supabase = createServiceRoleClient()
+  const now = new Date().toISOString()
+
+  supabase
+    .from('chat_messages')
+    .insert([
+      {
+        session_id: sessionId,
+        wallet_pass_id: walletPassId,
+        role: 'user',
+        content: userMessage,
+        created_at: now,
+      },
+      {
+        session_id: sessionId,
+        wallet_pass_id: walletPassId,
+        role: 'ai',
+        content: aiResponse,
+        metadata: metadata || {},
+        created_at: new Date(Date.now() + 1).toISOString(), // +1ms to preserve ordering
+      },
+    ])
+    .then(({ error }) => {
+      if (error) console.error('[chat-persist] Failed to save messages:', error.message)
+    })
+}
 
 type MentionedBiz = { name: string; slug: string }
 
@@ -232,7 +273,7 @@ function generateDeterministicQuickReplies(
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, walletPassId, conversationHistory, userLocation } = await request.json()
+    const { message, walletPassId, conversationHistory, userLocation, sessionId } = await request.json()
 
     // Validate required fields
     if (!message || typeof message !== 'string') {
@@ -880,6 +921,9 @@ export async function POST(request: NextRequest) {
           // Only show Atlas CTA if THIS business has coords
           const hasCoords = !!(biz.latitude && biz.longitude)
           
+          // Persist detail-mode messages (fire-and-forget)
+          persistChatMessages(sessionId, validatedWalletPassId, message, detailFactsBlock)
+
           return NextResponse.json({
             response: detailFactsBlock,
             intent: 'unknown',
@@ -1045,6 +1089,12 @@ export async function POST(request: NextRequest) {
       hasBusinessResults: result.hasBusinessResults,
       businessCarouselCount: result.businessCarousel?.length || 0,
       eventCardsCount: result.eventCards?.length || 0
+    })
+
+    // Persist messages (fire-and-forget — does not block response)
+    persistChatMessages(sessionId, validatedWalletPassId, message, finalResponse, {
+      quickReplies,
+      intent,
     })
 
     return NextResponse.json({

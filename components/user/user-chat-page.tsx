@@ -110,6 +110,9 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const chatWrapperRef = useRef<HTMLDivElement>(null)
   const [chatHeight, setChatHeight] = useState<string>('80dvh')
+
+  // Persistent session ID for chat_messages grouping
+  const [sessionId, setSessionId] = useState<string>(() => crypto.randomUUID())
   
   // ✅ MVP-CRITICAL: messagesRef to prevent race conditions on fast interactions
   const messagesRef = useRef<ChatMessage[]>([])
@@ -209,10 +212,6 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     }
   }, [locationStatus, userLocation, pendingNearMeQuery])
   
-  // Session storage keys for chat memory
-  const chatSessionKey = `qwikker-chat-session-${currentUser?.wallet_pass_id || 'guest'}`
-  const chatStreamCountKey = `qwikker-chat-stream-count-${currentUser?.wallet_pass_id || 'guest'}`
-
   // Measure exact position and fill to bottom of viewport
   useEffect(() => {
     const el = chatWrapperRef.current
@@ -237,87 +236,76 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     scrollToBottom()
   }, [messages.length]) // Changed from [messages] to [messages.length]
 
-  // Load chat history from session storage or initialize with welcome message
-  useEffect(() => {
-    try {
-      // Try to load existing session
-      const savedMessages = sessionStorage.getItem(chatSessionKey)
-      const savedStreamCount = sessionStorage.getItem(chatStreamCountKey)
-      
-      if (savedMessages) {
-        const parsedMessages = JSON.parse(savedMessages)
-        // Only restore if messages are from today (session-based, not persistent)
-        const latestMessage = parsedMessages[parsedMessages.length - 1]
-        const messageDate = new Date(latestMessage.timestamp).toDateString()
-        const today = new Date().toDateString()
-        
-        if (messageDate === today && parsedMessages.length > 0) {
-          console.log('🔄 Restoring chat session with', parsedMessages.length, 'messages')
-          setMessages(parsedMessages)
-          
-          // Restore the stream count from session storage (all these messages have been streamed)
-          const streamCount = savedStreamCount ? parseInt(savedStreamCount, 10) : parsedMessages.length
-          initialMessageCountRef.current = streamCount
-          console.log('📊 Restored stream count:', streamCount, '(preventing re-stream)')
-          return
-        }
-      }
-    } catch (error) {
-      console.log('📝 No valid chat session found, starting fresh')
-    }
-
-    // Create fresh welcome message if no valid session
+  // Generate a welcome message (not persisted — client-side only)
+  const buildWelcomeMessage = (): ChatMessage => {
     const userName = currentUser?.name?.split(' ')[0] || null
-    
-    // 🎯 DYNAMIC GREETINGS: Rotate through different welcome messages  
     const greetings = userName ? [
-      `Hey ${userName}! 👋 Looking for something tasty in ${cityDisplayName}? I've got the inside scoop on great restaurants, exclusive offers, and secret menus!`,
+      `Hey ${userName}! Looking for something tasty in ${cityDisplayName}? I've got the inside scoop on great restaurants, exclusive offers, and secret menus!`,
       `${userName}! Ready to discover ${cityDisplayName}'s best spots? I can show you top-rated restaurants, unbeatable deals, and hidden gems!`,
       `Alright ${userName}, what's the vibe? Looking for food, drinks, or just somewhere new to explore in ${cityDisplayName}?`,
-      `Hey ${userName}! Whether you're after a quick bite, a proper meal, or the best deals in town—I've got you covered!`,
-      `${userName}! Let's find you something brilliant. Restaurants, offers, secret menus—what are you in the mood for?`
+      `Hey ${userName}! Whether you're after a quick bite, a proper meal, or the best deals in town — I've got you covered!`,
+      `${userName}! Let's find you something brilliant. Restaurants, offers, secret menus — what are you in the mood for?`
     ] : [
-      `Hey! 👋 Looking for something tasty in ${cityDisplayName}? I've got the inside scoop on great restaurants, exclusive offers, and secret menus!`,
+      `Hey! Looking for something tasty in ${cityDisplayName}? I've got the inside scoop on great restaurants, exclusive offers, and secret menus!`,
       `Ready to discover ${cityDisplayName}'s best spots? I can show you top-rated restaurants, unbeatable deals, and hidden gems!`,
       `Alright, what's the vibe? Looking for food, drinks, or just somewhere new to explore in ${cityDisplayName}?`,
-      `Whether you're after a quick bite, a proper meal, or the best deals in town—I've got you covered!`,
-      `Let's find you something brilliant. Restaurants, offers, secret menus—what are you in the mood for?`
+      `Whether you're after a quick bite, a proper meal, or the best deals in town — I've got you covered!`,
+      `Let's find you something brilliant. Restaurants, offers, secret menus — what are you in the mood for?`
     ]
-    
-    // Pick a random greeting
-    const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)]
-    
-    const welcomeMessage: ChatMessage = {
+    return {
       id: Date.now().toString(),
       type: 'ai',
-      content: randomGreeting,
+      content: greetings[Math.floor(Math.random() * greetings.length)],
       timestamp: new Date().toISOString(),
-      quickReplies: [
-        "Show me Qwikker Picks",
-        "Find restaurants",
-        "Current deals"
-      ]
+      quickReplies: ["Show me Qwikker Picks", "Find restaurants", "Current deals"],
     }
-    setMessages([welcomeMessage])
-    // Track initial count (welcome message = 1)
-    initialMessageCountRef.current = 1
-    // Save stream count to session storage
-    sessionStorage.setItem(chatStreamCountKey, '1')
-  }, [currentUser, chatSessionKey, chatStreamCountKey])
+  }
 
-  // Save messages to session storage whenever messages change
+  // Load chat history from API (persisted) or show fresh welcome message
   useEffect(() => {
-    if (messages.length > 0) {
+    const walletPassId = currentUser?.wallet_pass_id
+    if (!walletPassId) {
+      // Guest — show welcome message, no persistence
+      const welcome = buildWelcomeMessage()
+      setMessages([welcome])
+      initialMessageCountRef.current = 1
+      return
+    }
+
+    let cancelled = false
+
+    async function loadHistory() {
       try {
-        sessionStorage.setItem(chatSessionKey, JSON.stringify(messages))
-        // Save the current message count as the stream count
-        // This ensures that when we reload, we know how many messages have already been streamed
-        sessionStorage.setItem(chatStreamCountKey, messages.length.toString())
-      } catch (error) {
-        console.log('💾 Could not save chat session:', error)
+        const res = await fetch(`/api/user/chat-history?walletPassId=${encodeURIComponent(walletPassId)}`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+
+        if (cancelled) return
+
+        if (data.sessionId) setSessionId(data.sessionId)
+
+        if (data.messages && data.messages.length > 0) {
+          console.log('Restoring chat session with', data.messages.length, 'messages')
+          setMessages(data.messages)
+          initialMessageCountRef.current = data.messages.length
+        } else {
+          const welcome = buildWelcomeMessage()
+          setMessages([welcome])
+          initialMessageCountRef.current = 1
+        }
+      } catch (err) {
+        console.error('[chat-history] Failed to load — starting fresh:', err)
+        if (!cancelled) {
+          const welcome = buildWelcomeMessage()
+          setMessages([welcome])
+          initialMessageCountRef.current = 1
+        }
       }
     }
-  }, [messages, chatSessionKey, chatStreamCountKey])
+
+    loadHistory()
+    return () => { cancelled = true }
+  }, [currentUser?.wallet_pass_id])
 
   // Handle pre-filled message from URL parameter
   useEffect(() => {
@@ -401,9 +389,10 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         body: JSON.stringify({
           message,
           walletPassId: currentUser?.wallet_pass_id,
-          city: currentCity, // Send city for proper filtering
+          city: currentCity,
           conversationHistory: fullConversationHistory,
-          userLocation: locationStatus === 'granted' && userLocation ? userLocation : null
+          userLocation: locationStatus === 'granted' && userLocation ? userLocation : null,
+          sessionId,
         })
       })
 
@@ -497,11 +486,12 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: `__qwikker_business_detail__:${businessId}`, // Hidden command
+          message: `__qwikker_business_detail__:${businessId}`,
           walletPassId: currentUser?.wallet_pass_id,
           city: currentCity,
-          conversationHistory: recentHistory, // ✅ Pass context for smarter responses
-          userLocation: locationStatus === 'granted' && userLocation ? userLocation : null
+          conversationHistory: recentHistory,
+          userLocation: locationStatus === 'granted' && userLocation ? userLocation : null,
+          sessionId,
         })
       })
       
@@ -580,11 +570,12 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         body: JSON.stringify({
           message: `Show me all current offers and deals from ${businessName}. Include details like discount amount, terms, and expiry dates. Ask if I want to add any to my wallet.`,
           walletPassId: currentUser?.wallet_pass_id,
-          city: currentCity, // Send city for proper filtering
+          city: currentCity,
           conversationHistory: messages.slice(-4).map(msg => ({
             role: msg.type === 'user' ? 'user' : 'assistant',
             content: msg.content
-          }))
+          })),
+          sessionId,
         })
       })
 
@@ -801,29 +792,13 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     window.location.href = url
   }
 
-  // Clear chat session
+  // Start a new chat — fresh sessionId, fresh welcome message
   const handleClearChat = () => {
-    try {
-      sessionStorage.removeItem(chatSessionKey)
-      sessionStorage.removeItem(chatStreamCountKey)
-      // Reinitialize with welcome message
-      const userName = currentUser?.name?.split(' ')[0] || 'Explorer'
-      const welcomeMessage: ChatMessage = {
-        id: Date.now().toString(),
-        type: 'ai',
-        content: `Hi ${userName}! I'm here to help you discover the best of ${cityDisplayName}. I can show you great restaurants, exclusive offers, and even add deals straight to your wallet! What are you looking for?`,
-        timestamp: new Date().toISOString(),
-        quickReplies: [
-          "Show me Qwikker Picks",
-          "Find restaurants",
-          "Current deals"
-        ]
-      }
-      setMessages([welcomeMessage])
-      console.log('🗑️ Chat session cleared')
-    } catch (error) {
-      console.log('❌ Could not clear chat session:', error)
-    }
+    setSessionId(crypto.randomUUID())
+    const welcome = buildWelcomeMessage()
+    setMessages([welcome])
+    initialMessageCountRef.current = 1
+    setStreamingComplete(new Set())
   }
 
   // Memoize atlas businesses to prevent unnecessary re-renders when Atlas is kept mounted
@@ -947,7 +922,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
           {processedMessages.map((message, messageIndex) => {
             // Only stream NEW messages (added after page load)
-            // Messages loaded from sessionStorage should NOT re-stream
+            // Messages loaded from API should NOT re-stream
             const isNewMessage = messageIndex >= initialMessageCountRef.current
             const isLastAiMessage = message.type === 'ai' && messageIndex === processedMessages.length - 1
             const alreadyStreamed = streamingComplete.has(message.id)

@@ -41,6 +41,7 @@
 22. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
 23. Finish Tier 0 remaining (0.14, 0.22)
 24. Finish Tier 2 (2.8-2.11, 2.17)
+25. **Promo Pack QR Codes (Pre-Linked Loyalty Table Tents)** — Mass-print QR code table tents with unique short codes (e.g. `QWIK-7291`). Each QR points to `/promo/:code` — initially unlinked (shows generic page). When a business sets up their loyalty program, they enter the 4-digit code → QR redirects to their loyalty join page. New `promo_codes` table (`code`, `city`, `business_id` nullable, `linked_at`). Admin batch-generate per city. Dashboard UI: "Already have a promo pack QR? Enter your code." Franchise-scalable — each city admin generates their own batch. High-conversion launch strategy: deliver 250-300 packs to Bournemouth businesses with table tents, stickers, and marketing materials.
 
 ### WalletPush SDK Investigation (Backlog)
 Investigated using the Mobile Wallet SDK for automated loyalty card creation inside Qwikker.
