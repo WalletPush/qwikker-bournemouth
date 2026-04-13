@@ -18,15 +18,14 @@ export async function GET(request: NextRequest) {
 
   const supabase = createServiceRoleClient()
 
-  // Find the most recent session from today
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
+  // Find the most recent session within the last 24 hours
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
   const { data: latestMsg, error: latestErr } = await supabase
     .from('chat_messages')
     .select('session_id')
     .eq('wallet_pass_id', walletPassId)
-    .gte('created_at', todayStart.toISOString())
+    .gte('created_at', cutoff.toISOString())
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
