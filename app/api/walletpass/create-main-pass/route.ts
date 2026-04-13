@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
     // Send all field values upfront so the pass is fully populated on creation.
     // AI_Url/Offers_Url use generic URLs that get updated post-creation
     // with shortlinks containing the real WalletPush serial number.
-    // MEMBER_ID populates the Google Wallet QR code barcode value.
     const passData: Record<string, string> = {
       'First_Name': firstName,
       'Last_Name': lastName,
@@ -68,7 +67,6 @@ export async function POST(request: NextRequest) {
       'AI_Url': `${cityBaseUrl}/user/chat`,
       'Offers_Url': `${cityBaseUrl}/user/offers`,
       'Last_Message': `Hey ${firstName}, Your Qwikker ${displayName} pass is now installed and ready for use. You will now be redirected to your dashboard. Access this any time from the back of your pass.`,
-      'MEMBER_ID': `${cityBaseUrl}/user/dashboard`,
     }
     
     console.log('📡 Creating WalletPush pass for:', firstName, lastName)
@@ -289,10 +287,6 @@ async function updatePassLinksAsync(
     {
       field: WALLET_PASS_FIELDS.OFFERS_URL,
       value: `${cityBaseUrl}/o/${shortCode}`
-    },
-    {
-      field: WALLET_PASS_FIELDS.MEMBER_ID,
-      value: `${cityBaseUrl}/user/dashboard?wallet_pass_id=${serialNumber}`
     },
   ]
 
