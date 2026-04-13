@@ -191,7 +191,9 @@ export function PassInstallerClient({
       } catch {}
 
       if (deviceType === 'android' && gWalletUrl) {
-        window.location.href = gWalletUrl
+        // Open Google Wallet in a new tab so the success page stays visible.
+        // window.location.href would strand the user on Google's page with no way back.
+        window.open(gWalletUrl, '_blank')
       } else {
         const link = document.createElement('a')
         link.href = finalPassUrl

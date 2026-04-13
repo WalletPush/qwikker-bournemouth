@@ -9,7 +9,7 @@
 - **Tier 0:** 20/20 complete. All P0/P1 critical bugs fixed (April 2026). Remaining: 0.14 (marketing pages), 0.22 (pre-launch env vars).
 - **Tier 1:** 7/7 complete (subject to testing)
 - **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.26, 2.28, 2.29 complete. 2.5 partially done. **No PRE-LAUNCH BLOCKERS remaining.** Pending: 2.27 (wizard), 2.8-2.11, 2.17.
-- **Tier 3:** Intelligence plumbing (3.1-3.4) scoped — wire existing user data into AI chat + feed. No new tables for Phase 1. **3.1 COMPLETE (9/9 subtasks done)**.
+- **Tier 3:** Intelligence plumbing (3.1-3.4) scoped — wire existing user data into AI chat + feed. **3.1 COMPLETE (9/9 subtasks done). 3.2 COMPLETE (chat persistence with 24h sessions).**
 - **Tier 4:** Backlog
 - **Home Feed:** 3 bugs fixed (tonight links, loyalty display, personalized reasons). Menu item images added (dashboard upload, home feed, business detail, secret menu).
 
@@ -34,14 +34,43 @@
     **Core (9/9):** (a) `/business-signup` middleware hotfix, (b) shared constants file `lib/constants/user-preferences.ts`, (c) personalization wizard `components/user/personalization-wizard.tsx`, (d) wizard integration into `user-dashboard-home.tsx` with cold-user guard + removed old PreferencesCard, (e) settings sync (dietary section added, shared constants imported), (f) AI profile fetch via `Promise.allSettled` using `createServiceRoleClient()`, (g) AI profile inject (USER PROFILE section + 6 prompt rules + 1500 char hard cap + business name dedup), (h) feed boost (+1 interaction score for category matches using `CATEGORY_MAP` + `normalize` + `includes` matching), (i) sanity check SQLs provided.
     **Hardening:** (j) localStorage keys scoped to wallet pass ID — new pass gets fresh wizard, (k) AI loyalty prioritization — membership fetch moved before sort, +3/+2/+1 relevance boost (reward ready/almost there/member), loyalty summary moved before business list in prompt, prominent `[REWARD READY]`/`[ALMOST THERE]` tags on business headers, (l) American spelling standardization across 8 files (personalisation → personalization), (m) expanded categories (10 → 14: added Bakeries, Nightlife, Activities, Wellness) and dietary options (8 → 12: added Egg/Soy/Shellfish/Sesame allergies), (n) feed boost now matches against `display_category` + `system_category` + `business_type` for more reliable matching.
 17. **VITAL: Privacy Policy & Terms Update** — Current policy is a generic template missing: AI/personalization disclosure, wallet pass identity model, specific data collected (preferences, dietary, vibes, saves, claims, loyalty), named third-party processors (Supabase, Vercel, WalletPush, Resend, Stripe, Cloudinary, OpenAI/Google), location data clarification, correct plan tier names. Remove "personalized advertisements" (no ads). Fix auto-generating date + placeholder address. Keep social media language for future social wizard. **Recommend legal review before launch, especially for AI + GDPR.**
-18. **3.2 Persist Chat Context** — Save chat messages to a `chat_messages` table. Load last N messages on new chat instead of relying on client-side history. AI remembers conversations across sessions.
-19. **3.3 Feed Personalization** — Wire `preferred_categories` + user lat/lng into `buildHomeFeed`. Boost matching businesses in home feed. Feed the "Based on what you like" section with dietary restrictions.
-20. **3.4 Lightweight User Insights** — Nightly/weekly aggregation of top cuisines, visit patterns, average time. Store as jsonb on `app_users`. Feed into chat + feed ranking. Only after 3.1-3.3 prove value.
-21. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
-22. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
-23. Finish Tier 0 remaining (0.14, 0.22)
-24. Finish Tier 2 (2.8-2.11, 2.17)
-25. **Promo Pack QR Codes (Pre-Linked Loyalty Table Tents)** — Mass-print QR code table tents with unique short codes (e.g. `QWIK-7291`). Each QR points to `/promo/:code` — initially unlinked (shows generic page). When a business sets up their loyalty program, they enter the 4-digit code → QR redirects to their loyalty join page. New `promo_codes` table (`code`, `city`, `business_id` nullable, `linked_at`). Admin batch-generate per city. Dashboard UI: "Already have a promo pack QR? Enter your code." Franchise-scalable — each city admin generates their own batch. High-conversion launch strategy: deliver 250-300 packs to Bournemouth businesses with table tents, stickers, and marketing materials.
+18. ~~**3.2 Persist Chat Context**~~ — **DONE**. New `chat_messages` table (user must run CREATE TABLE + RLS SQL manually). GET `/api/user/chat-history` loads most recent session within 24-hour rolling window (up to 50 messages). POST `/api/ai/chat` now persists user + AI messages with `await` (not fire-and-forget — Next.js context teardown kills in-flight requests). Client loads history on mount, passes `sessionId` in all requests, "New Chat" generates fresh `sessionId`. 30-day cleanup SQL provided (manual or pg_cron).
+    **Files:** `app/api/user/chat-history/route.ts` (new), `app/api/ai/chat/route.ts`, `components/user/user-chat-page.tsx`.
+    **DB:** `chat_messages` table with RLS policies — user must run provided SQL.
+19. ~~**0.35 AI Dietary + Menu Hardening (April 10-13)**~~ — **DONE**. Five fixes:
+    (a) **Identity loss across all user pages** — 8 server component pages were using `createTenantAwareClient()` for `app_users` lookups, which fails under RLS in server components. Switched to `createServiceRoleClient()` for user lookups only. Other RLS-backed queries unchanged. Files: `app/user/chat/page.tsx`, `app/user/business/[slug]/page.tsx`, `app/user/secret-menu/page.tsx`, `app/user/discover/page.tsx`, `app/user/notifications/page.tsx`, `app/user/offers/page.tsx`, `app/user/badges/page.tsx`, `app/user/how-it-works/page.tsx`.
+    (b) **Dietary conflict tags on businesses** — `hasDietaryConflict` helper in `hybrid-chat.ts` prepends `[DIETARY CONFLICT]` tags to businesses with conflicting keywords (grill, steakhouse, seafood etc.) when user is vegetarian/vegan. Checks KB/menu content for dietary-friendly signals first to avoid false positives.
+    (c) **Secret menu item dietary tagging** — Post-processes KB content to scan individual `SECRET MENU ITEM` blocks for meat/fish keywords. Prepends `[DIETARY CONFLICT]` tag to specific items when user is vegetarian/vegan.
+    (d) **Menu blindness fix** — Prompt rules strengthened: absolute ban on "I don't have menu details" when KB has menu data. Explicit instruction to list more items when asked "what else do they have?".
+    (e) **Dietary prompt escalation** — DIETARY rule escalated to "ZERO TOLERANCE" with explicit examples and 4-part HARD BLOCK.
+20. ~~**0.36 Google Wallet Pass Investigation + Android Redirect Fix (April 13)**~~ — **DONE (code fixes). WalletPush template fixes pending support ticket.**
+    **Investigation:** Decoded the Google Wallet JWT from WalletPush API response. Found 5 issues — 3 fixable in code, 2 requiring WalletPush dashboard/support.
+    **Code fixes applied:**
+    (a) **MEMBER_ID in passData** — QR code barcode showed "Sample MEMBER_ID" because the code never sent this field. Now sends `MEMBER_ID` with dashboard URL at creation, updated to personalized URL via PUT post-creation. Google Wallet JWT snapshot uses initial value; self-corrects on sync. Apple Wallet unaffected (ignores unrecognized fields).
+    (b) **Android redirect fix** — `window.location.href = gWalletUrl` navigated the entire page to Google's "Save to Wallet" flow, stranding users with no way back to Qwikker. Changed to `window.open(gWalletUrl, '_blank')` so the success page stays visible. Both `pass-installer-client.tsx` and `improved-wallet-installer.tsx` fixed. Apple/iOS flow completely unchanged (uses anchor tag `.pkpass` download).
+    (c) **DASHBOARD_URL constant** — `WALLET_PASS_FIELDS.DASHBOARD_URL` was referenced in `update-existing-links/route.ts` but never defined, resolving to `undefined`. Silent bug — Dashboard_Url PUTs were always failing. Added `DASHBOARD_URL: 'Dashboard_Url'` and `MEMBER_ID: 'MEMBER_ID'` to `wallet-pass-fields.ts`.
+    **Files changed:** `app/api/walletpass/create-main-pass/route.ts`, `components/wallet/pass-installer-client.tsx`, `components/wallet-pass/improved-wallet-installer.tsx`, `lib/config/wallet-pass-fields.ts`.
+    **WalletPush template issues (need support ticket for template `d9110746-50d3-46b9-8799-a2b7f22ec939`):**
+    - Duplicate images: strip image in both `heroImage` AND `imageModulesData`, logo in both `logo` AND `imageModulesData` — shows twice on Google Wallet
+    - URLs not clickable: `AI_Url` and `Offers_Url` mapped to `textModulesData` (plain text) instead of `linksModuleData` (tappable links). WalletPush Placeholder Type dropdown has no "URL" option (only Text/Number/Currency/Date/Email/Phone)
+    - Card title: `Current_Offer` mapped as Google Wallet `cardTitle` — way too long. Should be "Qwikker Bournemouth"
+    - Background color: `#FFFFFF` on Google (white). Apple pass uses same setting and looks perfect, so can't change without affecting iPhone. Needs Google-specific override from WalletPush.
+
+    **What could break:**
+    | Symptom | Likely cause | How to fix |
+    |---|---|---|
+    | Apple pass QR code shows wrong data | `MEMBER_ID` field somehow mapped to Apple barcode (unlikely — Apple barcode is separate) | Remove `MEMBER_ID` from `passData` in `create-main-pass/route.ts` |
+    | WalletPush rejects pass creation with "unmatchedFields: MEMBER_ID" | Template doesn't have `MEMBER_ID` placeholder | Remove `MEMBER_ID` from `passData`. Check WalletPush Placeholders tab |
+    | Android popup blocked (Google Wallet doesn't open) | `window.open` blocked by browser popup blocker | Revert to `window.location.href` or show a manual "Save to Google Wallet" button |
+    | `updatePassLinksAsync` takes longer (3 PUTs instead of 2) | New `MEMBER_ID` PUT adds ~1.5s with rate limit delay | Non-critical — fire-and-forget, user already has pass |
+    | `update-existing-links` route suddenly updates Dashboard_Url | Previously `WALLET_PASS_FIELDS.DASHBOARD_URL` was `undefined`, now it's `'Dashboard_Url'` | This is a fix, not a regression. If the template doesn't have `Dashboard_Url`, the PUT will 404 harmlessly |
+21. **3.3 Feed Personalization** — Wire `preferred_categories` + user lat/lng into `buildHomeFeed`. Boost matching businesses in home feed. Feed the "Based on what you like" section with dietary restrictions.
+22. **3.4 Lightweight User Insights** — Nightly/weekly aggregation of top cuisines, visit patterns, average time. Store as jsonb on `app_users`. Feed into chat + feed ranking. Only after 3.1-3.3 prove value.
+23. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
+24. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
+25. Finish Tier 0 remaining (0.14, 0.22)
+26. Finish Tier 2 (2.8-2.11, 2.17)
+27. **Promo Pack QR Codes (Pre-Linked Loyalty Table Tents)** — Mass-print QR code table tents with unique short codes (e.g. `QWIK-7291`). Each QR points to `/promo/:code` — initially unlinked (shows generic page). When a business sets up their loyalty program, they enter the 4-digit code → QR redirects to their loyalty join page. New `promo_codes` table (`code`, `city`, `business_id` nullable, `linked_at`). Admin batch-generate per city. Dashboard UI: "Already have a promo pack QR? Enter your code." Franchise-scalable — each city admin generates their own batch. High-conversion launch strategy: deliver 250-300 packs to Bournemouth businesses with table tents, stickers, and marketing materials.
 
 ### WalletPush SDK Investigation (Backlog)
 Investigated using the Mobile Wallet SDK for automated loyalty card creation inside Qwikker.

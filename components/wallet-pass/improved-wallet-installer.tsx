@@ -123,9 +123,9 @@ export function ImprovedWalletInstaller({
           if (prev <= 1) {
             clearInterval(timer)
             setStep('installing')
-            // Android + Google Wallet URL → open native Google Wallet
+            // Android: open Google Wallet in new tab so success page stays visible
             if (deviceInfo.isAndroid && result.googleWalletUrl) {
-              window.location.href = result.googleWalletUrl
+              window.open(result.googleWalletUrl, '_blank')
             } else {
               window.location.href = result.passUrl
             }

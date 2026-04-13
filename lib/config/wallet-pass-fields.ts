@@ -54,6 +54,8 @@ export const WALLET_PASS_FIELDS = {
   LAST_MESSAGE: 'Last_Message',
   OFFERS_URL: 'Offers_Url',
   AI_URL: 'AI_Url',
+  DASHBOARD_URL: 'Dashboard_Url',
+  MEMBER_ID: 'MEMBER_ID',
 } as const
 
 export type WalletPassFieldName = typeof WALLET_PASS_FIELDS[keyof typeof WALLET_PASS_FIELDS]
