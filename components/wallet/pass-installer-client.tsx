@@ -31,6 +31,7 @@ export function PassInstallerClient({
   const [googleWalletUrl, setGoogleWalletUrl] = useState<string | null>(null)
   const [serialNumber, setSerialNumber] = useState<string | null>(null)
   const [showContinue, setShowContinue] = useState(false)
+  const [googleWalletTapped, setGoogleWalletTapped] = useState(false)
   
   // Marketing consent state
   const [showConsent, setShowConsent] = useState(false)
@@ -190,10 +191,10 @@ export function PassInstallerClient({
         localStorage.removeItem('qwikker-pass-install')
       } catch {}
 
-      if (deviceType === 'android' && gWalletUrl) {
-        // Open Google Wallet in a new tab so the success page stays visible.
-        // window.location.href would strand the user on Google's page with no way back.
-        window.open(gWalletUrl, '_blank')
+      if (deviceType === 'android') {
+        // Android: do NOT auto-redirect. Google Wallet has no native overlay like Apple.
+        // Any redirect (window.open or window.location.href) strands the user.
+        // Instead, show the success page with a manual "Save to Google Wallet" button.
       } else {
         const link = document.createElement('a')
         link.href = finalPassUrl
@@ -485,8 +486,67 @@ export function PassInstallerClient({
               </div>
             )}
 
-            {/* Success Message */}
-            {success && (
+            {/* Success Message — Android */}
+            {success && deviceType === 'android' && (
+              <div className="bg-[#00D083]/10 border border-[#00D083]/20 rounded-lg p-6 text-center">
+                <div className="text-5xl mb-4">✅</div>
+                <h3 className="text-xl font-bold text-[#00D083] mb-2">
+                  Your Pass is Ready!
+                </h3>
+
+                {!googleWalletTapped ? (
+                  <>
+                    <p className="text-neutral-300 mb-5">
+                      Save your pass to Google Wallet to access exclusive offers, secret menus and your AI companion.
+                    </p>
+
+                    {googleWalletUrl && (
+                      <a
+                        href={googleWalletUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setGoogleWalletTapped(true)}
+                        className="w-full py-4 bg-white hover:bg-neutral-100 text-black font-semibold text-base rounded-lg transition-all shadow-lg flex items-center justify-center gap-2"
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#4285F4"/><path d="M12 2C6.48 2 2 6.48 2 12h10V2z" fill="#EA4335"/><path d="M2 12c0 5.52 4.48 10 10 10V12H2z" fill="#34A853"/><path d="M12 22c5.52 0 10-4.48 10-10H12v10z" fill="#FBBC05"/></svg>
+                        Save to Google Wallet
+                      </a>
+                    )}
+
+                    <p className="text-xs text-neutral-500 mt-4">
+                      You&apos;ll need this pass to use Qwikker
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-neutral-300 mb-5">
+                      Pass saved? Continue to your personalized dashboard.
+                    </p>
+
+                    {googleWalletUrl && (
+                      <a
+                        href={googleWalletUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-sm transition-colors mb-3"
+                      >
+                        Didn&apos;t save? Tap here to try again
+                      </a>
+                    )}
+
+                    <a
+                      href={`/welcome?wallet_pass_id=${serialNumber}&name=${encodeURIComponent(formData.firstName + ' ' + formData.lastName)}${returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ''}`}
+                      className="block w-full py-4 bg-[#00D083] hover:bg-[#00b86f] text-black font-semibold text-base rounded-lg transition-all shadow-lg shadow-[#00D083]/10"
+                    >
+                      Continue to Dashboard
+                    </a>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Success Message — iOS / Desktop */}
+            {success && deviceType !== 'android' && (
               <div className="bg-[#00D083]/10 border border-[#00D083]/20 rounded-lg p-6 text-center">
                 <div className="text-5xl mb-4">✅</div>
                 <h3 className="text-xl font-bold text-[#00D083] mb-2">
@@ -499,9 +559,9 @@ export function PassInstallerClient({
                       A preview should appear — tap <strong>Add</strong> to save it to your wallet.
                     </p>
 
-                    {(passUrl || googleWalletUrl) && (
+                    {passUrl && (
                       <a
-                        href={(deviceType === 'android' && googleWalletUrl) ? googleWalletUrl : (passUrl || '#')}
+                        href={passUrl}
                         onClick={() => {
                           try {
                             localStorage.setItem('qwikker-pass-install-dismissed', 'true')
@@ -510,7 +570,7 @@ export function PassInstallerClient({
                         }}
                         className="block w-full py-4 bg-[#00D083] hover:bg-[#00b86f] text-black font-semibold text-base rounded-lg transition-all shadow-lg shadow-[#00D083]/10 mb-3"
                       >
-                        {deviceType === 'android' ? 'Add to Google Wallet' : 'Add to Apple Wallet'}
+                        Add to Apple Wallet
                       </a>
                     )}
 
@@ -524,9 +584,9 @@ export function PassInstallerClient({
                       Pass added? Continue to your dashboard.
                     </p>
 
-                    {(passUrl || googleWalletUrl) && (
+                    {passUrl && (
                       <a
-                        href={(deviceType === 'android' && googleWalletUrl) ? googleWalletUrl : (passUrl || '#')}
+                        href={passUrl}
                         className="block w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-sm transition-colors mb-3"
                       >
                         Didn&apos;t get the pass? Tap here to install
@@ -534,7 +594,7 @@ export function PassInstallerClient({
                     )}
 
                     <a
-                      href={`/welcome?wallet_pass_id=${serialNumber}&name=${encodeURIComponent(formData.firstName + ' ' + formData.lastName)}`}
+                      href={`/welcome?wallet_pass_id=${serialNumber}&name=${encodeURIComponent(formData.firstName + ' ' + formData.lastName)}${returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ''}`}
                       className="block w-full py-4 bg-[#00D083] hover:bg-[#00b86f] text-black font-semibold text-base rounded-lg transition-all shadow-lg shadow-[#00D083]/10"
                     >
                       Continue to Dashboard

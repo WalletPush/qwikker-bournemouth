@@ -123,9 +123,10 @@ export function ImprovedWalletInstaller({
           if (prev <= 1) {
             clearInterval(timer)
             setStep('installing')
-            // Android: open Google Wallet in new tab so success page stays visible
+            // Android: skip auto-redirect entirely — show success page with manual button.
+            // Google Wallet has no native overlay; any redirect strands the user.
             if (deviceInfo.isAndroid && result.googleWalletUrl) {
-              window.open(result.googleWalletUrl, '_blank')
+              // no-op: user will tap the Google Wallet button manually
             } else {
               window.location.href = result.passUrl
             }
