@@ -506,10 +506,15 @@ export function PassInstallerClient({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setGoogleWalletTapped(true)}
-                        className="w-full py-4 bg-white hover:bg-neutral-100 text-black font-semibold text-base rounded-lg transition-all shadow-lg flex items-center justify-center gap-2"
+                        className="flex justify-center"
                       >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#4285F4"/><path d="M12 2C6.48 2 2 6.48 2 12h10V2z" fill="#EA4335"/><path d="M2 12c0 5.52 4.48 10 10 10V12H2z" fill="#34A853"/><path d="M12 22c5.52 0 10-4.48 10-10H12v10z" fill="#FBBC05"/></svg>
-                        Save to Google Wallet
+                        {/* Official Google Wallet badge */}
+                        <img
+                          src="https://developers.google.com/static/wallet/images/branding/en/wallet/add-to-google-wallet-button.svg"
+                          alt="Add to Google Wallet"
+                          height={48}
+                          className="h-12"
+                        />
                       </a>
                     )}
 
