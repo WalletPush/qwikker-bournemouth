@@ -642,9 +642,9 @@ HARD RULES (DO NOT BREAK):
   The USER PROFILE is a preference SIGNAL, not a constraint. Use it to enhance relevance, never to override the user's current query.
   1. INTENT FIRST: Always fully answer the user's request first. Personalization should refine, not redirect the answer. If they ask for "best burger" and their profile says "Cafes", recommend burger places — not cafes.
   2. INTERESTS: When the query is broad ("where should I go tonight?"), lean towards businesses matching their interests and loved/saved places.
-  3. DIETARY (CRITICAL):
-     a. HARD BLOCK: NEVER lead with or enthusiastically recommend a business whose core offering directly conflicts with the user's dietary restriction. A grill shack or wing joint is NOT a lead recommendation for a vegan. A steakhouse is NOT a lead for a vegetarian. Use common sense.
-     b. PRIORITISE: When the query is broad, lead with businesses that have clear vegan/vegetarian/etc options in their KB or menu data.
+  3. DIETARY (CRITICAL — ZERO TOLERANCE):
+     a. HARD BLOCK: Any business tagged [DIETARY CONFLICT] MUST NOT appear in your first recommendation. Push it to the END of your list or omit it entirely. NEVER describe meat dishes, grill items, or steaks to a vegetarian/vegan user. NEVER recommend a grill shack, steakhouse, or wing joint as a lead option for a vegetarian or vegan — even if it has high ratings or loyalty rewards.
+     b. PRIORITISE: When the query is broad, ALWAYS lead with businesses that have clear vegan/vegetarian/etc options in their KB or menu data.
      c. UNKNOWN: If a business has no explicit dietary data, you may still mention it but add: "worth checking their menu for [restriction] options."
      d. NEVER hide all results — if nothing matches the restriction perfectly, say so honestly and show what's available with appropriate caveats.
   4. SILENT USE: Do NOT repeat the user's profile back to them. Just use it.
@@ -1570,6 +1570,28 @@ export async function generateHybridAIResponse(
       }
     }
 
+    // Dietary conflict detection: tag businesses whose core offering conflicts
+    const userDietary = (prefs?.dietary_restrictions || []) as string[]
+    const dietaryLower = userDietary.map((d: string) => d.toLowerCase())
+
+    function hasDietaryConflict(business: any): boolean {
+      if (dietaryLower.length === 0) return false
+      const cat = (business.display_category || '').toLowerCase()
+      const name = (business.business_name || '').toLowerCase()
+      const sysCategory = (business.system_category || '').toLowerCase()
+      const combined = `${cat} ${name} ${sysCategory}`
+
+      const isVeg = dietaryLower.includes('vegetarian') || dietaryLower.includes('vegan')
+      const isVegan = dietaryLower.includes('vegan')
+
+      if (isVeg && /\b(grill|steakhouse|steak house|wing|bbq|barbecue|burger bar|meat)\b/.test(combined)) return true
+      if (isVegan && /\b(grill|steakhouse|steak house|wing|bbq|barbecue|burger bar|meat|dairy|cheese)\b/.test(combined)) return true
+      if (dietaryLower.includes('shellfish allergy') && /\b(seafood|shellfish|oyster)\b/.test(combined)) return true
+      if (dietaryLower.includes('gluten free') && /\b(bakery|donut|pizza)\b/.test(combined)) return true
+
+      return false
+    }
+
     // Step 4b: Build RICH context with KB content merged with DB data
     const businessContext = sortedForContext.length > 0
       ? sortedForContext.slice(0, 10).map((business, index) => {
@@ -1671,7 +1693,10 @@ export async function generateHybridAIResponse(
           }
 
           const businessSlug = getBusinessSlug(business)
-          return `**${business.business_name}** [TIER: ${business.tierLabel}] [SLUG: ${businessSlug}]${loyaltyTag}${ratingLine}${vibesLine}
+          const dietaryConflictTag = hasDietaryConflict(business)
+            ? ` [⚠️ DIETARY CONFLICT — do NOT lead with this business for ${userDietary.join('/')} user]`
+            : ''
+          return `**${business.business_name}** [TIER: ${business.tierLabel}] [SLUG: ${businessSlug}]${loyaltyTag}${dietaryConflictTag}${ratingLine}${vibesLine}
 Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursLine}${loyaltyLine}${bookingLine}${richContent}${offerText}`
         }).join('\n\n')
       : 'No businesses available in this city yet.'

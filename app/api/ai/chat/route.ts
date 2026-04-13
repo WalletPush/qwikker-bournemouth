@@ -8,44 +8,48 @@ import { getOpenStatusForToday } from '@/lib/utils/opening-hours'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 /**
- * Fire-and-forget: persist user + AI messages to chat_messages table.
- * Runs async without blocking the response. Failures are logged, not thrown.
+ * Persist user + AI messages to chat_messages table.
+ * Awaited before returning the response to prevent Next.js context teardown
+ * from killing the in-flight Supabase request. Insert is fast (~50ms).
  */
-function persistChatMessages(
+async function persistChatMessages(
   sessionId: string | undefined,
   walletPassId: string | undefined,
   userMessage: string,
   aiResponse: string,
   metadata?: Record<string, unknown>
-) {
+): Promise<void> {
   if (!sessionId || !walletPassId) return
 
-  const supabase = createServiceRoleClient()
-  const now = new Date().toISOString()
+  try {
+    const supabase = createServiceRoleClient()
+    const now = new Date().toISOString()
 
-  supabase
-    .from('chat_messages')
-    .insert([
-      {
-        session_id: sessionId,
-        wallet_pass_id: walletPassId,
-        role: 'user',
-        content: userMessage,
-        metadata: {},
-        created_at: now,
-      },
-      {
-        session_id: sessionId,
-        wallet_pass_id: walletPassId,
-        role: 'ai',
-        content: aiResponse,
-        metadata: metadata ?? {},
-        created_at: new Date(Date.now() + 1).toISOString(),
-      },
-    ])
-    .then(({ error }) => {
-      if (error) console.error('[chat-persist] Failed to save messages:', error.message)
-    })
+    const { error } = await supabase
+      .from('chat_messages')
+      .insert([
+        {
+          session_id: sessionId,
+          wallet_pass_id: walletPassId,
+          role: 'user',
+          content: userMessage,
+          metadata: {},
+          created_at: now,
+        },
+        {
+          session_id: sessionId,
+          wallet_pass_id: walletPassId,
+          role: 'ai',
+          content: aiResponse,
+          metadata: metadata ?? {},
+          created_at: new Date(Date.now() + 1).toISOString(),
+        },
+      ])
+
+    if (error) console.error('[chat-persist] Failed to save messages:', error.message)
+  } catch (err) {
+    console.error('[chat-persist] Unexpected error:', err)
+  }
 }
 
 type MentionedBiz = { name: string; slug: string }
@@ -923,7 +927,7 @@ export async function POST(request: NextRequest) {
           const hasCoords = !!(biz.latitude && biz.longitude)
           
           // Persist detail-mode messages (fire-and-forget)
-          persistChatMessages(sessionId, validatedWalletPassId, message, detailFactsBlock)
+          await persistChatMessages(sessionId, validatedWalletPassId, message, detailFactsBlock)
 
           return NextResponse.json({
             response: detailFactsBlock,
@@ -1092,8 +1096,8 @@ export async function POST(request: NextRequest) {
       eventCardsCount: result.eventCards?.length || 0
     })
 
-    // Persist messages (fire-and-forget — does not block response)
-    persistChatMessages(sessionId, validatedWalletPassId, message, finalResponse, {
+    // Persist messages (awaited to prevent Next.js context teardown, ~50ms)
+    await persistChatMessages(sessionId, validatedWalletPassId, message, finalResponse, {
       quickReplies,
       intent,
     })
