@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing walletPassId' }, { status: 400 })
   }
 
+  console.log(`[chat-history] Loading history for ${walletPassId}`)
+
   const supabase = createServiceRoleClient()
 
   // Find the most recent session within the last 24 hours
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!latestMsg) {
-    // No session today — return fresh sessionId
+    console.log('[chat-history] No recent session found — starting fresh')
     return NextResponse.json({ sessionId: crypto.randomUUID(), messages: [] })
   }
 
@@ -55,6 +57,8 @@ export async function GET(request: NextRequest) {
     console.error('[chat-history] Error loading messages:', msgErr)
     return NextResponse.json({ sessionId, messages: [] })
   }
+
+  console.log(`[chat-history] Returning ${messages?.length || 0} messages for session ${sessionId}`)
 
   return NextResponse.json({
     sessionId,
