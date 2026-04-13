@@ -1581,8 +1581,20 @@ export async function generateHybridAIResponse(
       const sysCategory = (business.system_category || '').toLowerCase()
       const combined = `${cat} ${name} ${sysCategory}`
 
+      // Check KB + menu data for dietary-friendly signals before flagging
+      const kb = (kbContentByBusinessId.get(business.id) || '').toLowerCase()
+      const menuItems = (business.menu_preview || []).map((i: any) => `${i.name || ''} ${i.description || ''}`).join(' ').toLowerCase()
+      const allContent = `${kb} ${menuItems}`
+
       const isVeg = dietaryLower.includes('vegetarian') || dietaryLower.includes('vegan')
       const isVegan = dietaryLower.includes('vegan')
+
+      // If the business KB/menu explicitly mentions catering to this diet, no conflict
+      const vegFriendlySignals = /\b(vegetarian (menu|option|friendly|section)|veg(an|etarian) burger|plant.?based|meat.?free|veggie (menu|option|burger|wrap))\b/
+      const veganFriendlySignals = /\b(vegan (menu|option|friendly|section)|plant.?based (menu|option)|fully vegan)\b/
+
+      if (isVeg && vegFriendlySignals.test(allContent)) return false
+      if (isVegan && veganFriendlySignals.test(allContent)) return false
 
       if (isVeg && /\b(grill|steakhouse|steak house|wing|bbq|barbecue|burger bar|meat)\b/.test(combined)) return true
       if (isVegan && /\b(grill|steakhouse|steak house|wing|bbq|barbecue|burger bar|meat|dairy|cheese)\b/.test(combined)) return true
