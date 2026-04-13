@@ -3,8 +3,7 @@ import { UserChatPage } from '@/components/user/user-chat-page'
 import { getCityDisplayName } from '@/lib/utils/city-detection'
 
 export const dynamic = 'force-dynamic'
-// Removed service role import for security
-import { createTenantAwareClient, getSafeCurrentCity } from '@/lib/utils/tenant-security'
+import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
 
 export default async function ChatPage({
@@ -30,15 +29,9 @@ export default async function ChatPage({
     )
   }
 
-  // SECURITY: Use tenant-aware client with service role fallback for user lookup
-  let supabase
-  try {
-    supabase = await createTenantAwareClient()
-  } catch (error) {
-    console.warn('⚠️ Chat: Falling back to service role client for user lookup:', error)
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
-    supabase = createServiceRoleClient()
-  }
+  // Use service role client for user lookup (server component — RLS blocks tenant-aware client)
+  const { createServiceRoleClient } = await import('@/lib/supabase/server')
+  const supabase = createServiceRoleClient()
 
   const params = await searchParams
   const urlWalletPassId = params.wallet_pass_id
