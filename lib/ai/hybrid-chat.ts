@@ -1619,9 +1619,25 @@ export async function generateHybridAIResponse(
           
           let richContent = ''
           if (kbContent) {
-            // KB content is GOLD - it has everything (all relevant KB entries concatenated)!
-            richContent = `\n${kbContent}`
-            console.log(`✅ Using KB content for ${business.business_name} (${kbContent.length} chars)`)
+            let processedKb = kbContent
+            // Tag individual secret menu items that conflict with user dietary restrictions
+            if (dietaryLower.length > 0) {
+              const isVeg = dietaryLower.includes('vegetarian') || dietaryLower.includes('vegan')
+              const isVegan = dietaryLower.includes('vegan')
+              const meatSignals = /\b(steak|ribeye|sirloin|pork|bacon|chicken|lamb|beef|brisket|ribs|bone marrow|duck|venison|sausage|wing|burger(?!\s*\(v))\b/i
+
+              processedKb = processedKb.replace(
+                /(SECRET MENU ITEM:.*?)(?=\nSECRET MENU ITEM:|\n\n|$)/gs,
+                (block) => {
+                  if (isVeg && meatSignals.test(block)) {
+                    return `[⚠️ DIETARY CONFLICT — this item contains meat/fish, user is ${userDietaryRestrictions.join('/')}. Do NOT recommend without asking first.]\n${block}`
+                  }
+                  return block
+                }
+              )
+            }
+            richContent = `\n${processedKb}`
+            console.log(`✅ Using KB content for ${business.business_name} (${processedKb.length} chars)`)
           } else {
             // Fallback to basic DB fields
             if (business.business_tagline) {
