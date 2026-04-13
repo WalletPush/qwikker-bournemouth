@@ -80,14 +80,24 @@ export function WalletInstallBanner() {
             Get offers, secret menus and loyalty stamps delivered straight to your phone.
           </p>
 
-          <div className="flex gap-2 mt-3">
-            <a
-              href={installUrl}
-              onClick={handleInstalled}
-              className="flex-1 py-2.5 bg-[#00D083] hover:bg-[#00b86f] text-black font-semibold text-sm rounded-lg text-center transition-colors"
-            >
-              {deviceType === 'android' ? 'Add to Google Wallet' : 'Add to Apple Wallet'}
-            </a>
+          <div className="flex gap-2 mt-3 items-center">
+            {deviceType === 'android' ? (
+              <a
+                href={installUrl}
+                onClick={handleInstalled}
+                className="flex-1 flex justify-center"
+              >
+                <img src="https://developers.google.com/static/wallet/images/branding/en/wallet/add-to-google-wallet-button.svg" alt="Add to Google Wallet" className="h-10" />
+              </a>
+            ) : (
+              <a
+                href={installUrl}
+                onClick={handleInstalled}
+                className="flex-1 py-2.5 bg-[#00D083] hover:bg-[#00b86f] text-black font-semibold text-sm rounded-lg text-center transition-colors"
+              >
+                Add to Apple Wallet
+              </a>
+            )}
             <button
               onClick={handleDismiss}
               className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 text-sm rounded-lg transition-colors"

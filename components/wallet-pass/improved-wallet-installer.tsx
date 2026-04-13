@@ -358,20 +358,25 @@ export function ImprovedWalletInstaller({
                   ? 'Adding to Google Wallet...'
                   : 'Opening wallet pass...'}
             </p>
-            <Button
-              onClick={() => {
-                if (deviceInfo.isAndroid && googleWalletUrl) {
-                  window.open(googleWalletUrl, '_blank')
-                } else {
-                  handleManualDownload()
-                }
-              }}
-              variant="outline"
-              size="sm"
-              className="text-[#00d083] border-[#00d083]"
-            >
-              {deviceInfo.isAndroid && googleWalletUrl ? 'Open Google Wallet' : 'Manual Download'}
-            </Button>
+            {deviceInfo.isAndroid && googleWalletUrl ? (
+              <a
+                href={googleWalletUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex justify-center"
+              >
+                <img src="https://developers.google.com/static/wallet/images/branding/en/wallet/add-to-google-wallet-button.svg" alt="Add to Google Wallet" className="h-10" />
+              </a>
+            ) : (
+              <Button
+                onClick={handleManualDownload}
+                variant="outline"
+                size="sm"
+                className="text-[#00d083] border-[#00d083]"
+              >
+                Manual Download
+              </Button>
+            )}
           </div>
         )}
 

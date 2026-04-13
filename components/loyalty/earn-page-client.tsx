@@ -233,9 +233,9 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
                     href={walletUrls.googleUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full h-11 bg-white border border-zinc-200 rounded-xl text-black text-sm font-semibold hover:bg-zinc-100 transition-colors"
+                    className="flex justify-center"
                   >
-                    Add to Google Wallet
+                    <img src="https://developers.google.com/static/wallet/images/branding/en/wallet/add-to-google-wallet-button.svg" alt="Add to Google Wallet" className="h-11" />
                   </a>
                 )}
               </div>
@@ -316,9 +316,9 @@ export function EarnPageClient({ publicId, token, walletPassId, program }: EarnP
                     href={walletUrls.googleUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full h-11 bg-white border border-zinc-200 rounded-xl text-black text-sm font-semibold hover:bg-zinc-100 transition-colors"
+                    className="flex justify-center"
                   >
-                    Add to Google Wallet
+                    <img src="https://developers.google.com/static/wallet/images/branding/en/wallet/add-to-google-wallet-button.svg" alt="Add to Google Wallet" className="h-11" />
                   </a>
                 )}
               </div>
