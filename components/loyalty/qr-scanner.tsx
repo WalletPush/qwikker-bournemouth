@@ -353,7 +353,7 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
                       rel="noopener noreferrer"
                       className="flex justify-center"
                     >
-                      <img src="https://developers.google.com/static/wallet/images/branding/en/wallet/add-to-google-wallet-button.svg" alt="Add to Google Wallet" className="h-11" />
+                      <img src="/images/add-to-google-wallet.svg" alt="Add to Google Wallet" className="h-11" />
                     </a>
                   )}
                 </div>
@@ -406,7 +406,7 @@ export function QrScanner({ walletPassId, onClose, onStampEarned }: QrScannerPro
                       rel="noopener noreferrer"
                       className="flex justify-center"
                     >
-                      <img src="https://developers.google.com/static/wallet/images/branding/en/wallet/add-to-google-wallet-button.svg" alt="Add to Google Wallet" className="h-11" />
+                      <img src="/images/add-to-google-wallet.svg" alt="Add to Google Wallet" className="h-11" />
                     </a>
                   )}
                 </div>

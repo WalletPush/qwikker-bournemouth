@@ -510,7 +510,7 @@ export function PassInstallerClient({
                       >
                         {/* Official Google Wallet badge */}
                         <img
-                          src="https://developers.google.com/static/wallet/images/branding/en/wallet/add-to-google-wallet-button.svg"
+                          src="/images/add-to-google-wallet.svg"
                           alt="Add to Google Wallet"
                           height={48}
                           className="h-12"
