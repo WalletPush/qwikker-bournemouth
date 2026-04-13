@@ -1517,6 +1517,7 @@ export async function generateHybridAIResponse(
 
     // Step 4a-2: Fetch user profile data for personalization (service role — RLS city filter bypass)
     let userProfileSection = ''
+    let userDietaryRestrictions: string[] = []
     if (context.walletPassId) {
       try {
         const serviceClient = createServiceRoleClient()
@@ -1557,10 +1558,13 @@ export async function generateHybridAIResponse(
           saved = data || []
         }
 
+        // Extract dietary restrictions for conflict detection (used outside this block)
+        userDietaryRestrictions = prefs?.dietary_restrictions || []
+
         // Build USER PROFILE with hard cap + dedup
         userProfileSection = buildUserProfileSection({
           preferredCategories: prefs?.preferred_categories || [],
-          dietaryRestrictions: prefs?.dietary_restrictions || [],
+          dietaryRestrictions: userDietaryRestrictions,
           vibes: (vibes || []).map((v: any) => (v.business_profiles as any)?.business_name).filter(Boolean),
           saved: saved.map(s => s.business_name).filter(Boolean),
           claims: (claims || []).map((c: any) => ({ offerTitle: c.offer_title, businessName: c.business_name })).filter((c: any) => c.businessName),
@@ -1571,8 +1575,7 @@ export async function generateHybridAIResponse(
     }
 
     // Dietary conflict detection: tag businesses whose core offering conflicts
-    const userDietary = (prefs?.dietary_restrictions || []) as string[]
-    const dietaryLower = userDietary.map((d: string) => d.toLowerCase())
+    const dietaryLower = userDietaryRestrictions.map((d: string) => d.toLowerCase())
 
     function hasDietaryConflict(business: any): boolean {
       if (dietaryLower.length === 0) return false
@@ -1706,7 +1709,7 @@ export async function generateHybridAIResponse(
 
           const businessSlug = getBusinessSlug(business)
           const dietaryConflictTag = hasDietaryConflict(business)
-            ? ` [⚠️ DIETARY CONFLICT — do NOT lead with this business for ${userDietary.join('/')} user]`
+            ? ` [⚠️ DIETARY CONFLICT — do NOT lead with this business for ${userDietaryRestrictions.join('/')} user]`
             : ''
           return `**${business.business_name}** [TIER: ${business.tierLabel}] [SLUG: ${businessSlug}]${loyaltyTag}${dietaryConflictTag}${ratingLine}${vibesLine}
 Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursLine}${loyaltyLine}${bookingLine}${richContent}${offerText}`
