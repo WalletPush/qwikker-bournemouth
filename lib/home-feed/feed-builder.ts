@@ -32,6 +32,8 @@ import type {
   RewardCard,
   TonightLabel,
   MenuPreviewItem,
+  UserFeedProfile,
+  LoyaltyStatus,
 } from './types'
 
 const isDev = process.env.NODE_ENV === 'development'
@@ -81,19 +83,31 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
     console.log(`[home-feed] Premium count: ${premiumCount}, hybrid mode: ${hybridMode}`)
   }
 
-  // Build user greeting + fetch preferred categories
-  const userInfo = walletPassId ? await fetchUserName(supabase, walletPassId) : null
-  const userName = userInfo?.name || null
-  const preferredCategories = userInfo?.preferredCategories || []
-  const greeting = getGreeting(timeOfDay, userName || 'there', cityDisplayName)
+  // Build user profile for personalization
+  const userProfile: UserFeedProfile = walletPassId
+    ? await fetchUserProfile(supabase, walletPassId)
+    : { firstName: null, preferredCategories: [], dietaryRestrictions: [] }
+  const greeting = getGreeting(timeOfDay, userProfile.firstName || 'there', cityDisplayName)
   const greetingSubtitle = getGreetingSubtitle(timeOfDay, cityDisplayName)
 
-  // Build all sections
-  const tonight = buildTonightSection(businesses, offers, events, hybridMode, dedup, userLat, userLng)
-  const dishes = buildDishesSection(businesses, hybridMode, dedup)
-  const deals = buildDealsSection(offers, businesses, dedup, userLat, userLng)
+  // Build loyalty status map for cross-section boosting
+  const loyaltyMap = buildLoyaltyStatusMap(loyaltyResult)
+
+  // Pre-compute category match tokens once for all section builders
+  const mappedTokens = userProfile.preferredCategories
+    .flatMap(p => CATEGORY_MAP[p] || [p])
+    .map(normalize)
+
+  if (isDev && mappedTokens.length > 0) {
+    console.log(`[home-feed] User preferences: categories=${userProfile.preferredCategories.join(',')}, dietary=${userProfile.dietaryRestrictions.join(',')}, loyalty=${loyaltyMap.size} memberships`)
+  }
+
+  // Build all sections with personalization context
+  const tonight = buildTonightSection(businesses, offers, events, hybridMode, dedup, userLat, userLng, mappedTokens, loyaltyMap)
+  const dishes = buildDishesSection(businesses, hybridMode, dedup, userProfile.dietaryRestrictions, mappedTokens, loyaltyMap)
+  const deals = buildDealsSection(offers, businesses, dedup, userLat, userLng, mappedTokens, loyaltyMap)
   const personalized = interactionsResult
-    ? buildPersonalizedSection(interactionsResult, businesses, offers, hybridMode, dedup, preferredCategories)
+    ? buildPersonalizedSection(interactionsResult, businesses, offers, hybridMode, dedup, userProfile.preferredCategories, loyaltyMap)
     : []
   const rewards = loyaltyResult
 
@@ -154,6 +168,7 @@ async function fetchBusinesses(supabase: any, city: string) {
       business_type,
       system_category,
       display_category,
+      vibe_tags,
       rating,
       review_count,
       additional_notes,
@@ -289,6 +304,7 @@ async function fetchLoyaltyMemberships(walletPassId: string): Promise<RewardCard
     return data.memberships.map((m: any) => ({
       id: m.id || m.program_id,
       programPublicId: m.program?.public_id || '',
+      businessId: m.program?.business_id || undefined,
       businessName: m.program?.business?.business_name || m.business_name || 'Unknown',
       businessLogo: m.program?.business?.logo || null,
       programType: m.program?.type || 'stamps',
@@ -354,17 +370,112 @@ async function fetchUserInteractions(supabase: any, walletPassId: string): Promi
   }
 }
 
-async function fetchUserName(supabase: any, walletPassId: string): Promise<{ name: string | null; preferredCategories: string[] }> {
+async function fetchUserProfile(supabase: any, walletPassId: string): Promise<UserFeedProfile> {
   const { data } = await supabase
     .from('app_users')
-    .select('name, preferred_categories')
+    .select('name, preferred_categories, dietary_restrictions')
     .eq('wallet_pass_id', walletPassId)
     .single()
 
   return {
-    name: data?.name ? data.name.split(' ')[0] : null,
+    firstName: data?.name ? data.name.split(' ')[0] : null,
     preferredCategories: data?.preferred_categories || [],
+    dietaryRestrictions: data?.dietary_restrictions || [],
   }
+}
+
+// =============================================================================
+// Personalization Helpers
+// =============================================================================
+
+const MEAT_KEYWORDS = /\b(chicken|beef|steak|pork|lamb|bacon|sausage|ribs|brisket|wing|duck|turkey|prawn|shrimp|lobster|crab|oyster|salmon|tuna|fish|ham|chorizo|salami|pepperoni|meatball|pulled pork|burger patty)\b/i
+const DAIRY_KEYWORDS = /\b(cheese|cream|butter|milk|yogurt|mozzarella|parmesan|brie|cheddar|mascarpone)\b/i
+const GLUTEN_KEYWORDS = /\b(bread|pasta|pizza|pastry|croissant|donut|pie|flour tortilla|naan|wrap|panini|ciabatta|baguette|sourdough)\b/i
+const SHELLFISH_KEYWORDS = /\b(prawn|shrimp|lobster|crab|oyster|mussel|clam|scallop)\b/i
+
+/**
+ * Check if a dish name/description conflicts with user dietary restrictions.
+ * Returns true if the dish should be demoted.
+ */
+function hasDishDietaryConflict(dishName: string, dishDescription: string | null, restrictions: string[]): boolean {
+  if (restrictions.length === 0) return false
+  const text = `${dishName} ${dishDescription || ''}`.toLowerCase()
+  const lower = restrictions.map(r => r.toLowerCase())
+
+  if ((lower.includes('vegan') || lower.includes('vegetarian')) && MEAT_KEYWORDS.test(text)) return true
+  if (lower.includes('vegan') && DAIRY_KEYWORDS.test(text)) return true
+  if ((lower.includes('gluten-free') || lower.includes('gluten free')) && GLUTEN_KEYWORDS.test(text)) return true
+  if ((lower.includes('shellfish allergy') || lower.includes('shellfish')) && SHELLFISH_KEYWORDS.test(text)) return true
+  if ((lower.includes('dairy-free') || lower.includes('dairy free')) && DAIRY_KEYWORDS.test(text)) return true
+
+  return false
+}
+
+/**
+ * Compute preference boost for a business based on category match and vibe tags.
+ */
+function computeBusinessPreferenceBoost(
+  biz: any,
+  mappedTokens: string[],
+  loyaltyMap: Map<string, LoyaltyStatus>
+): { boost: number; reasons: string[] } {
+  let boost = 0
+  const reasons: string[] = []
+
+  // Category match: +10 if user preferences align with business category
+  if (mappedTokens.length > 0) {
+    const fields = [
+      normalize(biz.display_category),
+      normalize(biz.system_category),
+      normalize(biz.business_type),
+    ].filter(Boolean)
+    if (fields.some(f => mappedTokens.some(token => f.includes(token)))) {
+      boost += 10
+      reasons.push('Matches your taste')
+    }
+  }
+
+  // Vibe tag overlap: +5 if business vibe tags match user category interests
+  const vt = biz.vibe_tags as { selected?: string[]; custom?: string[] } | null
+  if (vt && mappedTokens.length > 0) {
+    const allTags = [...(vt.selected || []), ...(vt.custom || [])].map(t => t.toLowerCase())
+    if (allTags.some(tag => mappedTokens.some(token => tag.includes(token)))) {
+      boost += 5
+      if (!reasons.includes('Matches your taste')) reasons.push('Matches your vibe')
+    }
+  }
+
+  // Loyalty boost based on membership status
+  const loyaltyStatus = loyaltyMap.get(biz.id)
+  if (loyaltyStatus === 'reward_ready') {
+    boost += 12
+    reasons.push('Reward waiting')
+  } else if (loyaltyStatus === 'almost_there') {
+    boost += 6
+    reasons.push('Almost earned a reward')
+  } else if (loyaltyStatus === 'member') {
+    boost += 3
+  }
+
+  return { boost, reasons }
+}
+
+/**
+ * Build a Map<businessId, LoyaltyStatus> from RewardCard array.
+ */
+function buildLoyaltyStatusMap(rewards: RewardCard[]): Map<string, LoyaltyStatus> {
+  const map = new Map<string, LoyaltyStatus>()
+  for (const r of rewards) {
+    if (!r.businessId) continue
+    if (r.currentBalance >= r.threshold) {
+      map.set(r.businessId, 'reward_ready')
+    } else if (r.currentBalance >= r.threshold - 2 && r.currentBalance > 0) {
+      map.set(r.businessId, 'almost_there')
+    } else {
+      map.set(r.businessId, 'member')
+    }
+  }
+  return map
 }
 
 // =============================================================================
@@ -378,7 +489,9 @@ function buildTonightSection(
   hybridMode: boolean,
   dedup: DedupTracker,
   userLat?: number | null,
-  userLng?: number | null
+  userLng?: number | null,
+  mappedTokens: string[] = [],
+  loyaltyMap: Map<string, LoyaltyStatus> = new Map()
 ): TonightCard[] {
   const cards: TonightCard[] = []
   const railBusinessIds = new Set<string>()
@@ -406,9 +519,11 @@ function buildTonightSection(
     })
     .map((e: any) => {
       const biz = e.business_profiles || businesses.find((b: any) => b.id === e.business_id)!
+      const { boost, reasons } = computeBusinessPreferenceBoost(biz, mappedTokens, loyaltyMap)
       return {
         ...e,
         biz,
+        prefReasons: reasons,
         score: computeCompositeScore({
           plan: biz.plan,
           status: biz.status,
@@ -416,6 +531,7 @@ function buildTonightSection(
           longitude: biz.longitude,
           userLat,
           userLng,
+          preferenceBoost: boost,
         }),
       }
     })
@@ -436,6 +552,7 @@ function buildTonightSection(
       businessImage: image,
       businessLogo: logo,
       tier: normaliseTier(event.biz.plan),
+      reason: event.prefReasons?.length > 0 ? event.prefReasons[0] : undefined,
       eventId: event.id,
       eventName: event.event_name,
       eventTime: event.event_start_time,
@@ -456,19 +573,25 @@ function buildTonightSection(
       const biz = o.business_profiles
       return shouldIncludeInPremiumSection(biz.plan, biz.status, hybridMode)
     })
-    .map((o: any) => ({
-      ...o,
-      score: computeCompositeScore({
-        plan: o.business_profiles.plan,
-        status: o.business_profiles.status,
-        latitude: o.business_profiles.latitude,
-        longitude: o.business_profiles.longitude,
-        userLat,
-        userLng,
-        offerEndDate: o.offer_end_date,
-        createdAt: o.created_at,
-      }),
-    }))
+    .map((o: any) => {
+      const biz = o.business_profiles
+      const { boost, reasons } = computeBusinessPreferenceBoost(biz, mappedTokens, loyaltyMap)
+      return {
+        ...o,
+        prefReasons: reasons,
+        score: computeCompositeScore({
+          plan: biz.plan,
+          status: biz.status,
+          latitude: biz.latitude,
+          longitude: biz.longitude,
+          userLat,
+          userLng,
+          offerEndDate: o.offer_end_date,
+          createdAt: o.created_at,
+          preferenceBoost: boost,
+        }),
+      }
+    })
     .sort((a: any, b: any) => b.score - a.score)
 
   for (const offer of scoredOffers) {
@@ -488,6 +611,7 @@ function buildTonightSection(
       businessImage: image,
       businessLogo: logo,
       tier: normaliseTier(biz.plan),
+      reason: offer.prefReasons?.length > 0 ? offer.prefReasons[0] : undefined,
       offerId: offer.id,
       offerName: offer.offer_name,
       offerValue: offer.offer_value,
@@ -507,18 +631,23 @@ function buildTonightSection(
   if (cards.length < MAX_CARDS_PER_RAIL) {
     const scoredBusinesses = businesses
       .filter((b: any) => shouldIncludeInPremiumSection(b.plan, b.status, hybridMode))
-      .map((b: any) => ({
-        ...b,
-        score: computeCompositeScore({
-          plan: b.plan,
-          status: b.status,
-          latitude: b.latitude,
-          longitude: b.longitude,
-          userLat,
-          userLng,
-          createdAt: b.created_at,
-        }),
-      }))
+      .map((b: any) => {
+        const { boost, reasons } = computeBusinessPreferenceBoost(b, mappedTokens, loyaltyMap)
+        return {
+          ...b,
+          prefReasons: reasons,
+          score: computeCompositeScore({
+            plan: b.plan,
+            status: b.status,
+            latitude: b.latitude,
+            longitude: b.longitude,
+            userLat,
+            userLng,
+            createdAt: b.created_at,
+            preferenceBoost: boost,
+          }),
+        }
+      })
       .sort((a: any, b: any) => b.score - a.score)
 
     // Dynamic cap: expand to fill remaining slots when events/deals are scarce
@@ -539,6 +668,7 @@ function buildTonightSection(
         businessImage: image,
         businessLogo: logo,
         tier: normaliseTier(biz.plan),
+        reason: biz.prefReasons?.length > 0 ? biz.prefReasons[0] : undefined,
       })
       railBusinessIds.add(biz.id)
       dedup.markBusinessUsed(biz.id)
@@ -562,7 +692,10 @@ function buildTonightSection(
 function buildDishesSection(
   businesses: any[],
   hybridMode: boolean,
-  dedup: DedupTracker
+  dedup: DedupTracker,
+  dietaryRestrictions: string[] = [],
+  mappedTokens: string[] = [],
+  loyaltyMap: Map<string, LoyaltyStatus> = new Map()
 ): DishCard[] {
   const allDishes: (DishCard & { compositeScore: number })[] = []
   const railBusinessIds = new Set<string>()
@@ -571,11 +704,21 @@ function buildDishesSection(
     if (!shouldIncludeInDishesSection(biz.plan, biz.status, hybridMode)) continue
     if (!biz.menu_preview || !Array.isArray(biz.menu_preview)) continue
 
-    const score = computeCompositeScore({ plan: biz.plan, status: biz.status })
+    const { boost, reasons } = computeBusinessPreferenceBoost(biz, mappedTokens, loyaltyMap)
     const { image, logo } = getBusinessImage(biz.business_images, biz.logo)
 
     for (const dish of biz.menu_preview as MenuPreviewItem[]) {
       if (!dish.name) continue
+
+      // Dietary conflict demotion: push conflicting dishes to bottom, not removed
+      const dietaryPenalty = hasDishDietaryConflict(dish.name, dish.description, dietaryRestrictions) ? -20 : 0
+
+      const score = computeCompositeScore({
+        plan: biz.plan,
+        status: biz.status,
+        preferenceBoost: boost + dietaryPenalty,
+      })
+
       allDishes.push({
         id: `dish-${biz.id}-${dish.name.toLowerCase().trim().replace(/\s+/g, '-')}`,
         dishName: dish.name,
@@ -588,6 +731,7 @@ function buildDishesSection(
         businessImage: image,
         businessLogo: logo,
         tier: normaliseTier(biz.plan),
+        reason: dietaryPenalty === 0 && reasons.length > 0 ? reasons[0] : undefined,
         compositeScore: score,
       })
     }
@@ -621,14 +765,18 @@ function buildDealsSection(
   businesses: any[],
   dedup: DedupTracker,
   userLat?: number | null,
-  userLng?: number | null
+  userLng?: number | null,
+  mappedTokens: string[] = [],
+  loyaltyMap: Map<string, LoyaltyStatus> = new Map()
 ): DealCard[] {
   const railBusinessIds = new Set<string>()
 
   const scored = offers.map((o: any) => {
     const biz = o.business_profiles
+    const { boost, reasons } = computeBusinessPreferenceBoost(biz, mappedTokens, loyaltyMap)
     return {
       ...o,
+      prefReasons: reasons,
       score: computeCompositeScore({
         plan: biz.plan,
         status: biz.status,
@@ -638,6 +786,7 @@ function buildDealsSection(
         userLng,
         offerEndDate: o.offer_end_date,
         createdAt: o.created_at,
+        preferenceBoost: boost,
       }),
     }
   })
@@ -664,6 +813,7 @@ function buildDealsSection(
       businessImage: image,
       businessLogo: logo,
       tier: normaliseTier(biz.plan),
+      reason: offer.prefReasons?.length > 0 ? offer.prefReasons[0] : undefined,
     })
     railBusinessIds.add(offer.business_id)
     dedup.markBusinessUsed(offer.business_id)
@@ -684,7 +834,8 @@ function buildPersonalizedSection(
   offers: any[],
   hybridMode: boolean,
   dedup: DedupTracker,
-  preferredCategories: string[] = []
+  preferredCategories: string[] = [],
+  loyaltyMap: Map<string, LoyaltyStatus> = new Map()
 ): PersonalizedCard[] {
   // Score each business the user has interacted with
   const businessScores = new Map<string, number>()
@@ -704,32 +855,20 @@ function buildPersonalizedSection(
 
   if (businessScores.size === 0) return []
 
-  // Pre-compute mapped tokens from user preferences for category matching
   const mappedTokens = preferredCategories.flatMap(p => CATEGORY_MAP[p] || [p]).map(normalize)
-
   const railBusinessIds = new Set<string>()
 
-  // Sort businesses by interaction score, then tier
   const ranked = Array.from(businessScores.entries())
     .map(([bizId, interactionScore]) => {
       const biz = businesses.find((b: any) => b.id === bizId)
       if (!biz) return null
 
-      // Preference boost: +1 if any category field matches user preferences
-      let score = interactionScore
-      if (mappedTokens.length > 0) {
-        const fields = [
-          normalize(biz.display_category),
-          normalize(biz.system_category),
-          normalize(biz.business_type),
-        ].filter(Boolean)
-        if (fields.some(f => mappedTokens.some(token => f.includes(token)))) {
-          score += 1
-        }
-      }
+      // Preference boost from shared helper (category +10, vibe +5, loyalty +3/6/12)
+      const { boost: prefBoost, reasons: prefReasons } = computeBusinessPreferenceBoost(biz, mappedTokens, loyaltyMap)
 
       const tierScore = computeCompositeScore({ plan: biz.plan, status: biz.status })
-      return { biz, interactionScore: score, totalScore: score * 10 + tierScore }
+      const totalScore = (interactionScore + prefBoost) * 10 + tierScore
+      return { biz, interactionScore, prefReasons, totalScore }
     })
     .filter(Boolean)
     .sort((a: any, b: any) => b.totalScore - a.totalScore)
@@ -743,17 +882,20 @@ function buildPersonalizedSection(
 
     const { image, logo } = getBusinessImage(item.biz.business_images, item.biz.logo)
 
-    // Find a relevant offer or dish to surface
     const bizOffer = offers.find((o: any) =>
       o.business_id === item.biz.id && dedup.canUseOffer(o.id)
     )
     const bizDish = item.biz.menu_preview?.[0] as MenuPreviewItem | undefined
 
+    // Build rich reason string combining interaction + preference + loyalty
     const reasons: string[] = []
     if (interactions.lovedBusinessIds.includes(item.biz.id)) reasons.push('You loved this')
     if (interactions.savedBusinessIds.includes(item.biz.id)) reasons.push('You saved this')
     if (interactions.claimedOfferBusinessIds.includes(item.biz.id)) reasons.push('You claimed a deal here')
     if (interactions.atlasSelectedBusinessIds.includes(item.biz.id)) reasons.push('You explored this')
+    for (const pr of item.prefReasons) {
+      if (!reasons.includes(pr)) reasons.push(pr)
+    }
     const reason = reasons.length > 0 ? reasons.join(' · ') : 'Based on your activity'
 
     result.push({

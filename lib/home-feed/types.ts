@@ -31,6 +31,7 @@ export interface TonightCard {
   businessImage: string | null
   businessLogo: string | null
   tier: BusinessTier | null
+  reason?: string
   offerId?: string
   offerName?: string
   offerValue?: string
@@ -53,6 +54,7 @@ export interface DishCard {
   businessImage: string | null
   businessLogo: string | null
   tier: BusinessTier | null
+  reason?: string
 }
 
 export interface DealCard {
@@ -67,6 +69,7 @@ export interface DealCard {
   businessImage: string | null
   businessLogo: string | null
   tier: BusinessTier | null
+  reason?: string
 }
 
 export interface PersonalizedCard {
@@ -86,6 +89,7 @@ export interface PersonalizedCard {
 export interface RewardCard {
   id: string
   programPublicId: string
+  businessId?: string
   businessName: string
   businessLogo: string | null
   programType: 'stamps' | 'points'
@@ -114,6 +118,16 @@ export interface HomeFeedResponse {
     badgeCount: number
   }
 }
+
+// Feed personalization types
+
+export interface UserFeedProfile {
+  firstName: string | null
+  preferredCategories: string[]
+  dietaryRestrictions: string[]
+}
+
+export type LoyaltyStatus = 'reward_ready' | 'almost_there' | 'member'
 
 // Internal types used during ranking (not exposed to client)
 

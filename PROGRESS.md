@@ -9,7 +9,7 @@
 - **Tier 0:** 20/20 complete. All P0/P1 critical bugs fixed (April 2026). Remaining: 0.14 (marketing pages), 0.22 (pre-launch env vars).
 - **Tier 1:** 7/7 complete (subject to testing)
 - **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.26, 2.28, 2.29 complete. 2.5 partially done. **No PRE-LAUNCH BLOCKERS remaining.** Pending: 2.27 (wizard), 2.8-2.11, 2.17.
-- **Tier 3:** Intelligence plumbing (3.1-3.4) scoped — wire existing user data into AI chat + feed. **3.1 COMPLETE (9/9 subtasks done). 3.2 COMPLETE (chat persistence with 24h sessions).**
+- **Tier 3:** Intelligence plumbing (3.1-3.4) scoped — wire existing user data into AI chat + feed. **3.1 COMPLETE (9/9 subtasks done). 3.2 COMPLETE (chat persistence with 24h sessions). 3.3 COMPLETE (feed personalization — category/dietary/loyalty/vibe boost across all sections).**
 - **Tier 4:** Backlog
 - **Home Feed:** 3 bugs fixed (tonight links, loyalty display, personalized reasons). Menu item images added (dashboard upload, home feed, business detail, secret menu).
 
@@ -47,7 +47,7 @@
     **Investigation:** Decoded the Google Wallet JWT from WalletPush API response. Found 5 issues — 3 fixable in code, 2 requiring WalletPush dashboard/support.
     **Code fixes applied:**
     (a) **MEMBER_ID in passData** — QR code barcode showed "Sample MEMBER_ID" because the code never sent this field. Now sends `MEMBER_ID` with dashboard URL at creation, updated to personalized URL via PUT post-creation. Google Wallet JWT snapshot uses initial value; self-corrects on sync. Apple Wallet unaffected (ignores unrecognized fields).
-    (b) **Android redirect fix** — `window.location.href = gWalletUrl` navigated the entire page to Google's "Save to Wallet" flow, stranding users with no way back to Qwikker. Changed to `window.open(gWalletUrl, '_blank')` so the success page stays visible. Both `pass-installer-client.tsx` and `improved-wallet-installer.tsx` fixed. Apple/iOS flow completely unchanged (uses anchor tag `.pkpass` download).
+    (b) **Android redirect fix (initial)** — `window.location.href = gWalletUrl` navigated the entire page to Google's "Save to Wallet" flow, stranding users with no way back to Qwikker. Initially changed to `window.open(gWalletUrl, '_blank')` — later evolved into a full gated two-step flow in 0.37. Both `pass-installer-client.tsx` and `improved-wallet-installer.tsx` fixed. Apple/iOS flow completely unchanged (uses anchor tag `.pkpass` download).
     (c) **DASHBOARD_URL constant** — `WALLET_PASS_FIELDS.DASHBOARD_URL` was referenced in `update-existing-links/route.ts` but never defined, resolving to `undefined`. Silent bug — Dashboard_Url PUTs were always failing. Added `DASHBOARD_URL: 'Dashboard_Url'` and `MEMBER_ID: 'MEMBER_ID'` to `wallet-pass-fields.ts`.
     **Files changed:** `app/api/walletpass/create-main-pass/route.ts`, `components/wallet/pass-installer-client.tsx`, `components/wallet-pass/improved-wallet-installer.tsx`, `lib/config/wallet-pass-fields.ts`.
     **WalletPush template issues (need support ticket for template `d9110746-50d3-46b9-8799-a2b7f22ec939`):**
@@ -64,8 +64,35 @@
     | Android popup blocked (Google Wallet doesn't open) | `window.open` blocked by browser popup blocker | Revert to `window.location.href` or show a manual "Save to Google Wallet" button |
     | `updatePassLinksAsync` takes longer (3 PUTs instead of 2) | New `MEMBER_ID` PUT adds ~1.5s with rate limit delay | Non-critical — fire-and-forget, user already has pass |
     | `update-existing-links` route suddenly updates Dashboard_Url | Previously `WALLET_PASS_FIELDS.DASHBOARD_URL` was `undefined`, now it's `'Dashboard_Url'` | This is a fix, not a regression. If the template doesn't have `Dashboard_Url`, the PUT will 404 harmlessly |
-21. **3.3 Feed Personalization** — Wire `preferred_categories` + user lat/lng into `buildHomeFeed`. Boost matching businesses in home feed. Feed the "Based on what you like" section with dietary restrictions.
-22. **3.4 Lightweight User Insights** — Nightly/weekly aggregation of top cuisines, visit patterns, average time. Store as jsonb on `app_users`. Feed into chat + feed ranking. Only after 3.1-3.3 prove value.
+21. ~~**0.37 Google Wallet Button Branding + Android Gated Flow (April 13)**~~ — **DONE**.
+    (a) **Android gated install flow** — Removed all auto-redirect for Android. Success page now shows a two-step flow: Step 1 shows only "Save to Google Wallet" button (must tap before seeing "Continue to Dashboard"). Step 2 reveals dashboard button + "Didn't save? Tap here to try again" link. Prevents users being stranded on Google's pay.google.com page.
+    (b) **Official Google Wallet badge** — Replaced all plain-text "Add to Google Wallet" buttons with the official Google badge SVG across 8 components: `pass-installer-client.tsx`, `improved-wallet-installer.tsx`, `earn-page-client.tsx` (x2), `join-page-client.tsx`, `qr-scanner.tsx` (x2), `wallet-install-banner.tsx`.
+    (c) **SVG hosted locally** — External URL (`developers.google.com`) returned an HTML sign-in page instead of the SVG. Downloaded the real asset from Google's official zip pack (`enGB_add_to_google_wallet_wallet-button.svg`) and serve from `/public/images/add-to-google-wallet.svg`.
+    (d) **WalletPush class-level template issue identified** — Decoded the Google Wallet JWT. Object-level data is 100% correct (real URLs, resolved names). But Google Wallet displays CLASS-level `textModulesData` defaults ("Sample AI_Url", literal `${First_Name}`) instead of object-level values. Core identity fields (`First_Name`, `Last_Name`, `Email`) interpolate correctly in "This Pass Belongs to" but custom fields (`AI_Url`, `Offers_Url`, `Last_Message`, `Current_Offer`) fall back to class defaults. **Requires WalletPush template fix — not a code issue.**
+    **Files changed:** `components/wallet/pass-installer-client.tsx`, `components/wallet-pass/improved-wallet-installer.tsx`, `components/loyalty/earn-page-client.tsx`, `components/loyalty/join-page-client.tsx`, `components/loyalty/qr-scanner.tsx`, `components/wallet/wallet-install-banner.tsx`, `public/images/add-to-google-wallet.svg`.
+22. ~~**3.3 Feed Personalization (April 14)**~~ — **DONE**. Full preference-aware home feed ranking across all sections.
+    **Changes:**
+    (a) **User profile expanded** — `fetchUserName` → `fetchUserProfile`, now loads `dietary_restrictions` alongside `preferred_categories` from `app_users`. Returns typed `UserFeedProfile`.
+    (b) **`vibe_tags` added to `fetchBusinesses`** — jsonb column now available for vibe matching in all section builders.
+    (c) **`computeCompositeScore` extended** — New optional `preferenceBoost` parameter (0-27 range). Additive to existing tier/proximity/freshness/urgency scoring. Backward compatible — callers without preferences see zero boost.
+    (d) **Category boost (+10)** — Businesses matching user `preferred_categories` (via `CATEGORY_MAP` token matching against `display_category`/`system_category`/`business_type`) get +10 in Tonight, Dishes, Deals, and Personalized sections.
+    (e) **Vibe tag boost (+5)** — Businesses with `vibe_tags` overlapping user category tokens get +5 additional boost.
+    (f) **Loyalty boost (+3/+6/+12)** — `buildLoyaltyStatusMap` converts `RewardCard[]` into `Map<businessId, LoyaltyStatus>`. Member=+3, almost_there=+6, reward_ready=+12. Applied across all sections.
+    (g) **Dietary demotion (-20) in Dishes** — `hasDishDietaryConflict` checks dish name + description against meat/dairy/gluten/shellfish keywords. Conflicting dishes pushed to bottom, NOT removed (prevents empty sections in small cities).
+    (h) **Reason tags** — Optional `reason?: string` added to `TonightCard`, `DishCard`, `DealCard` types. Populated with "Matches your taste", "Reward waiting", "Almost earned a reward", "Matches your vibe". Personalized section reasons enriched with preference + loyalty context.
+    (i) **`RewardCard` type** — Added optional `businessId` field, populated from `m.program.business_id` in loyalty API response.
+    **Files changed:** `lib/home-feed/feed-builder.ts`, `lib/home-feed/ranking.ts`, `lib/home-feed/types.ts`.
+    **No new tables, no migrations, no new API routes.**
+    **What could break:**
+
+    | Symptom | Likely cause | How to fix |
+    |---|---|---|
+    | Feed order unchanged after setting preferences | `preferred_categories` empty in DB | Check `app_users` for the wallet_pass_id — run wizard or set manually |
+    | Dishes section empty in small city | Dietary demotion (-20) combined with low tier weight pushed all dishes below 0 | Reduce penalty from -20 to -10 in `hasDishDietaryConflict` call |
+    | "Matches your taste" showing on wrong business | `CATEGORY_MAP` token too broad (e.g. "bar" matching "barber") | Tighten tokens in `lib/constants/user-preferences.ts` |
+    | Loyalty boost not applying | `RewardCard.businessId` undefined | Check `/api/loyalty/me` returns `program.business_id` |
+    | Personalized section reason text too long | Multiple reasons concatenated | Reduce to first 2 reasons in `buildPersonalizedSection` |
+22b. **3.4 Lightweight User Insights** — **DEFERRED (post-launch)**. Nightly aggregation of user behavior patterns into jsonb on `app_users`. Only valuable once real users generate enough data. Revisit if users skip the wizard and feed/chat feels generic.
 23. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
 24. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
 25. Finish Tier 0 remaining (0.14, 0.22)

@@ -70,7 +70,8 @@ export function shouldIncludeInDishesSection(
 }
 
 /**
- * Compute composite score for a business/offer/event
+ * Compute composite score for a business/offer/event.
+ * preferenceBoost is calculated by section builders based on category/dietary/loyalty match.
  */
 export function computeCompositeScore(params: {
   plan: string | null
@@ -81,8 +82,9 @@ export function computeCompositeScore(params: {
   userLng?: number | null
   createdAt?: string | null
   offerEndDate?: string | null
+  preferenceBoost?: number
 }): number {
-  const { plan, status, latitude, longitude, userLat, userLng, createdAt, offerEndDate } = params
+  const { plan, status, latitude, longitude, userLat, userLng, createdAt, offerEndDate, preferenceBoost } = params
 
   let score = getTierWeight(plan, status)
 
@@ -116,6 +118,14 @@ export function computeCompositeScore(params: {
       if (isDev) {
         console.log(`  [ranking] urgency: expires in ${hoursUntilExpiry.toFixed(1)}h → +${urgency.toFixed(1)}`)
       }
+    }
+  }
+
+  // Preference boost: category match, dietary, loyalty — computed by section builders
+  if (preferenceBoost) {
+    score += preferenceBoost
+    if (isDev) {
+      console.log(`  [ranking] preference boost: +${preferenceBoost}`)
     }
   }
 
