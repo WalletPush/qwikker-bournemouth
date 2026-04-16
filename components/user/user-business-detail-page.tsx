@@ -795,71 +795,15 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                       const isClaimed = claimedOffers.has(offer.id)
                       
                       return (
-                        <div key={offer.id} className="bg-slate-700/50 rounded-lg p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <h4 className="text-slate-100 font-semibold mb-1">{offer.title}</h4>
-                              <p className="text-slate-300 text-sm mb-2">{offer.description}</p>
-                              <p className="text-slate-400 text-xs">{offer.terms}</p>
-                            </div>
-                            <div className="flex items-center gap-2 ml-4">
-                              <button className="p-2 bg-slate-600/50 hover:bg-red-500/20 rounded-full transition-colors duration-200">
-                                <svg className="w-4 h-4 text-slate-400 hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                </svg>
-                              </button>
-                              <span className="bg-orange-500 text-slate-100 text-sm px-3 py-1 rounded-full font-bold">
-                                {offer.badge}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {isClaimed && (
-                            <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-lg p-2 mb-3">
-                              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              <span className="text-green-400 text-sm font-medium">Claimed</span>
-                            </div>
-                          )}
-                          
-                          <div className="flex gap-2">
-                            {!isClaimed ? (
-                              <Button 
-                                onClick={() => claimOffer(offer.id, offer.title, business.name)}
-                                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold text-sm"
-                              >
-                                Claim Offer
-                              </Button>
-                            ) : (
-                              <AddToWalletButton 
-                                offer={{
-                                  id: offer.id,
-                                  title: offer.title,
-                                  description: offer.description,
-                                  business_name: business.name,
-                                  valid_until: offer.valid_until,
-                                  terms: offer.terms,
-                                  offer_value: offer.discount || offer.type
-                                }}
-                                userWalletPassId={walletPassId}
-                                variant="default"
-                                size="sm"
-                                className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold text-sm"
-                              />
-                            )}
-                            
-                            <Button 
-                              asChild
-                              variant="outline" 
-                              className="border-[#00d083]/50 text-[#00d083] hover:bg-[#00d083]/10 text-sm"
-                            >
-                              <Link href={getNavUrl(`/user/chat?business=${business.name}&topic=offer&offer=${offer.title}`)}>
-                                Ask About Offer
-                              </Link>
-                            </Button>
-                          </div>
-                        </div>
+                        <OfferCard
+                          key={offer.id}
+                          offer={offer}
+                          isClaimed={isClaimed}
+                          businessName={business.name}
+                          walletPassId={walletPassId}
+                          onClaim={() => claimOffer(offer.id, offer.title, business.name)}
+                          chatHref={getNavUrl(`/user/chat?business=${business.name}&topic=offer&offer=${offer.title}`)}
+                        />
                       )
                     })}
                   </div>
@@ -1273,6 +1217,108 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function OfferCard({ offer, isClaimed, businessName, walletPassId, onClaim, chatHref }: {
+  offer: any
+  isClaimed: boolean
+  businessName: string
+  walletPassId?: string
+  onClaim: () => void
+  chatHref: string
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const hasDetails = offer.description || offer.terms
+
+  return (
+    <div className="bg-slate-700/50 rounded-lg p-4">
+      {/* Header: title + badge */}
+      <div className="flex items-start justify-between mb-3">
+        <h4 className="text-slate-100 font-semibold flex-1 mr-3">{offer.title}</h4>
+        <span className="bg-orange-500 text-slate-100 text-sm px-3 py-1 rounded-full font-bold whitespace-nowrap flex-shrink-0">
+          {offer.badge}
+        </span>
+      </div>
+
+      {/* Expandable details */}
+      {hasDetails && (
+        <>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-emerald-400 text-xs font-medium mb-3 flex items-center gap-1 hover:text-emerald-300 transition-colors"
+          >
+            {expanded ? 'Hide details' : 'View details & terms'}
+            <svg
+              className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {expanded && (
+            <div className="mb-3 space-y-2 text-sm animate-in fade-in duration-200">
+              {offer.description && (
+                <p className="text-slate-300">{offer.description}</p>
+              )}
+              {offer.terms && (
+                <div className="bg-slate-800/50 rounded-md p-3 border border-slate-600/30">
+                  <p className="text-slate-400 text-xs font-medium mb-1">Terms & Conditions</p>
+                  <p className="text-slate-400 text-xs leading-relaxed">{offer.terms}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {isClaimed && (
+        <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-lg p-2 mb-3">
+          <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <span className="text-green-400 text-sm font-medium">Claimed</span>
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        {!isClaimed ? (
+          <Button
+            onClick={onClaim}
+            className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold text-sm"
+          >
+            Claim Offer
+          </Button>
+        ) : (
+          <AddToWalletButton
+            offer={{
+              id: offer.id,
+              title: offer.title,
+              description: offer.description,
+              business_name: businessName,
+              valid_until: offer.valid_until,
+              terms: offer.terms,
+              offer_value: offer.discount || offer.type
+            }}
+            userWalletPassId={walletPassId}
+            variant="default"
+            size="sm"
+            className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold text-sm"
+          />
+        )}
+
+        <Button
+          asChild
+          variant="outline"
+          className="border-[#00d083]/50 text-[#00d083] hover:bg-[#00d083]/10 text-sm"
+        >
+          <Link href={chatHref}>
+            Ask About Offer
+          </Link>
+        </Button>
+      </div>
     </div>
   )
 }
