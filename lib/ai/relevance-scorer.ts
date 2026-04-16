@@ -129,8 +129,11 @@ export function scoreBusinessRelevance(
     }
   }
   
-  // For non-priority queries with a semantic score AND no tag match, return semantic directly
-  if (semanticScore > 0 && !hasPriorityIntent && vibeTagScore === 0) {
+  // For non-priority, non-cuisine queries with a semantic score AND no tag match, return semantic directly.
+  // IMPORTANT: When categories are present (cuisine queries like "Italian", "Greek"), always run
+  // keyword scoring — the +3 category match properly identifies restaurants of that cuisine.
+  const hasCuisineCategories = intent.categories.length > 0
+  if (semanticScore > 0 && !hasPriorityIntent && !hasCuisineCategories && vibeTagScore === 0) {
     if (process.env.NODE_ENV === 'development') {
       console.log(`📊 Relevance: ${business.business_name} = ${semanticScore} (semantic:${kbSimilarityScore?.toFixed(2)})`)
     }
@@ -195,14 +198,21 @@ export function scoreBusinessRelevance(
     }
   }
   
-  // +2 for business name match (strong signal)
-  // Check categories, keywords, AND cuisine synonym terms (e.g. "gyros" for greek)
-  const nameTermsToCheck = [
-    ...intent.categories,
-    ...intent.keywords,
-    ...(intent.cuisineTerms || [])
-  ]
-  for (const term of nameTermsToCheck) {
+  // +2 for business name matching a category (e.g. "Italian" in "Italian Kitchen")
+  for (const category of intent.categories) {
+    if (businessName.includes(category.toLowerCase())) {
+      score += 2
+      reasons.push(`name:${category}`)
+      break
+    }
+  }
+
+  // +2 for business name matching a keyword or cuisine synonym (e.g. "gyros" in "Triangle Gyros")
+  // This is a SEPARATE loop — a business matching both category AND keyword gets +4
+  // Deduplicate: skip terms already checked in the category loop above
+  const categorySet = new Set(intent.categories.map(c => c.toLowerCase()))
+  const nameKeywords = [...intent.keywords, ...(intent.cuisineTerms || [])].filter(t => !categorySet.has(t.toLowerCase()))
+  for (const term of nameKeywords) {
     if (businessName.includes(term.toLowerCase())) {
       score += 2
       reasons.push(`name:${term}`)

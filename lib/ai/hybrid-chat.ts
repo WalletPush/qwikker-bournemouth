@@ -225,9 +225,10 @@ function buildInventoryVocabulary(businesses: any[]): InventoryVocabulary {
  * Robust check that coordinates are valid numbers within Earth's bounds
  */
 function hasValidCoords(b: any): boolean {
-  const lat = Number(b?.latitude)
-  const lng = Number(b?.longitude)
-  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+  if (b?.latitude == null || b?.longitude == null) return false
+  const lat = Number(b.latitude)
+  const lng = Number(b.longitude)
+  return Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0 && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
 }
 
 /**
@@ -635,6 +636,7 @@ HARD RULES (DO NOT BREAK):
 - "QWIKKER PICKS": Only use this label if EVERY business you mentioned is [TIER: qwikker_picks].
 - ATLAS: ${atlasAvailable ? 'When listing 2+ businesses, end your response with a short line like: "Tap **Explore on Atlas** below to take a guided tour of these spots on the map!" — use natural wording but always mention the Atlas button.' : 'DO NOT mention map views or Atlas — the map is not available for these businesses.'}
 - 📅 BOOKING CTA: When recommending a business that has a "Book online:" or "Book by phone:" line in its data, include a brief booking nudge at the end of that business's paragraph. Use category-appropriate phrasing (e.g. "Reserve a table" for restaurants, "Book an appointment" for barbers/salons, or just "Book online" if unsure). If it is a URL: "[Reserve a table](URL)" or "[Book an appointment](URL)". If phone: "Call to book: PHONE". One line max. NOTE: This is for BUSINESS reservations only — do NOT confuse with event ticket links.
+- 🍝 CUISINE QUERIES WITH PARTIAL MATCHES: If the user asks for a specific cuisine (e.g. "Italian", "Mexican", "Thai") and no business in your context is categorized exactly as that cuisine, but some businesses have related dishes or items in their KB/menu data (pasta, pizza, tacos, pad thai, etc.), you MUST recommend those businesses. Acknowledge honestly that there isn't a dedicated [cuisine] restaurant on Qwikker yet, then highlight the businesses that offer relevant dishes: "There isn't a dedicated Italian spot on Qwikker yet, but [Business Name] has some great Italian-inspired dishes — try their [specific item from KB]." This is FAR more helpful than saying "I don't have any recommendations." The businesses are in your context BECAUSE they have relevant menu items — use them.
 - ZERO RESULTS: Be honest. NEVER say "you're in luck" if you have nothing to show. Suggest a nearby alternative category or ask what else they'd like.
 - MATCH USER LANGUAGE: If the user asked for "bars", say "bars" in your response — never substitute with "dining options", "restaurants", or "places to eat". Mirror the user's terminology.
 - "ANY MORE?" HANDLING: If you showed all matches, say so. If you missed any, correct yourself immediately.
@@ -801,13 +803,20 @@ export async function generateHybridAIResponse(
     // 🎯 EARLY DETAIL SHORT-CIRCUIT: Detect follow-up/detail queries about a specific business
     // If user is asking about a business we already know about (from slug), skip global KB search
     const lowerMessage = userMessage.toLowerCase()
-    const isFollowUpDetailQuery = /\b(what else|any more|anything else|what do they (sell|serve|have|offer)|what('?s| is) on (the |their )?menu|tell me (more|about)|their menu|their food|kids menu|dessert menu|drink menu|wine list)\b/i.test(lowerMessage)
+    const isFollowUpDetailQuery = /\b(what else|any more|anything else|what do they (sell|serve|have|offer)|what('?s| is) on (the |their )?menu|tell me (more|about)|their menu|their food|their kids menu|their dessert menu|their drink menu|their wine list)\b/i.test(lowerMessage)
     const isAnaphoricQuery = /^(any more|anything else|what else|more|another|more places)[\?\!\.]*$/i.test(userMessage.trim())
     
+    // KB-priority queries MUST always search KB (kids menu, vegan, dietary info lives ONLY in KB)
+    const kbPriorityTerms = ['kids', 'children', 'family', 'vegan', 'vegetarian', 'gluten', 'allerg', 'halal', 'kosher', 'outdoor', 'patio', 'dog friendly', 'pet friendly']
+    const isKbPriorityQuery = kbPriorityTerms.some(term => lowerMessage.includes(term))
+
     // Short-circuit: if we have a resolved business slug AND query is about that business
-    const shouldShortCircuitToDetail = (isFollowUpDetailQuery || isAnaphoricQuery) && lastSlug
+    // BUT never skip KB search for priority queries where KB is the only source of truth
+    const shouldShortCircuitToDetail = (isFollowUpDetailQuery || isAnaphoricQuery) && lastSlug && !isKbPriorityQuery
     
-    if (shouldShortCircuitToDetail) {
+    if (isKbPriorityQuery && (isFollowUpDetailQuery || isAnaphoricQuery) && lastSlug) {
+      console.log(`📚 [KB PRIORITY] "${lowerMessage}" needs KB search even though it looks like a follow-up — KB is the source of truth for this info`)
+    } else if (shouldShortCircuitToDetail) {
       console.log(`🎯 [DETAIL SHORT-CIRCUIT] Follow-up query about ${lastSlug} - skipping global KB search`)
     } else if (isAnaphoricQuery) {
       // Anaphoric but no clear target - we'll handle this below
