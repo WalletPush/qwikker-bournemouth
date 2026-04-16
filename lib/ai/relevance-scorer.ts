@@ -177,11 +177,11 @@ export function scoreBusinessRelevance(
     }
   }
   
-  // Also check if category contains any of the ORIGINAL keywords (e.g., "pizza")
-  // This ensures "Pizza restaurant" matches when user asks for "pizza"
-  if (score === 0) { // Only if we didn't already get a category match
-    for (const keyword of intent.keywords) {
-      const kw = keyword.toLowerCase()
+  // Also check cuisine synonym terms against categories (e.g., "gyros" in category, "pizza" in category)
+  if (score === 0) {
+    const categoryTermsToCheck = [...intent.keywords, ...(intent.cuisineTerms || [])]
+    for (const term of categoryTermsToCheck) {
+      const kw = term.toLowerCase()
       
       if (
         displayCategory.includes(kw) ||
@@ -189,25 +189,23 @@ export function scoreBusinessRelevance(
         googlePrimaryType.includes(kw)
       ) {
         score += 3
-        reasons.push(`category:${keyword}`)
-        break // Only count once
+        reasons.push(`category:${term}`)
+        break
       }
     }
   }
   
   // +2 for business name match (strong signal)
-  for (const category of intent.categories) {
-    if (businessName.includes(category.toLowerCase())) {
+  // Check categories, keywords, AND cuisine synonym terms (e.g. "gyros" for greek)
+  const nameTermsToCheck = [
+    ...intent.categories,
+    ...intent.keywords,
+    ...(intent.cuisineTerms || [])
+  ]
+  for (const term of nameTermsToCheck) {
+    if (businessName.includes(term.toLowerCase())) {
       score += 2
-      reasons.push(`name:${category}`)
-      break
-    }
-  }
-  
-  for (const keyword of intent.keywords) {
-    if (businessName.includes(keyword.toLowerCase())) {
-      score += 2
-      reasons.push(`name:${keyword}`)
+      reasons.push(`name:${term}`)
       break
     }
   }

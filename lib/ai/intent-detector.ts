@@ -11,6 +11,7 @@ export interface IntentResult {
   hasIntent: boolean
   categories: string[] // e.g. ["greek", "mediterranean"]
   keywords: string[] // e.g. ["vegan", "gluten-free"]
+  cuisineTerms: string[] // All synonym terms for matched cuisines (e.g. ["greek", "gyro", "gyros", "souvlaki"])
   negatedCategories: string[] // e.g. ["italian"] for "not italian"
   confidence: number // 0-1
 }
@@ -84,10 +85,12 @@ export function detectIntent(query: string): IntentResult {
     dessert: ['dessert', 'desserts', 'ice cream', 'gelato', 'frozen yogurt', 'bubble tea', 'boba'],
   }
   
-  // Check cuisines
+  // Check cuisines and collect all synonym terms for matched cuisines
+  const cuisineTerms: string[] = []
   for (const [cuisine, terms] of Object.entries(cuisineMap)) {
     if (terms.some(term => q.includes(term))) {
       categories.push(cuisine)
+      cuisineTerms.push(...terms)
     }
   }
   
@@ -146,6 +149,7 @@ export function detectIntent(query: string): IntentResult {
     hasIntent,
     categories,
     keywords,
+    cuisineTerms,
     negatedCategories,
     confidence
   }

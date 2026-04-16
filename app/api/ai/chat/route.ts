@@ -389,7 +389,7 @@ export async function POST(request: NextRequest) {
       Math.abs(Number(b.longitude)) <= 180
     ).length >= 2
     
-    // Count how many map pins have valid coords
+    // Count how many map pins have valid coords (2+ for a meaningful Atlas tour)
     const hasAtlasPins = (result.mapPins || []).filter((p: any) => 
       p.latitude && 
       p.longitude && 

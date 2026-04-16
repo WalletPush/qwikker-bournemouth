@@ -2396,8 +2396,7 @@ Present this information clearly and offer further help.`
         uiMode = 'conversational'
         shouldAttachCarousel = false
       }
-      // Carousel disabled: Tier 1 is test data only. Re-enable when real paid businesses exist.
-      console.log(`🎨 UI Mode: ${uiMode}, carousel: OFF (disabled until real Tier 1 data)`)
+      console.log(`🎨 UI Mode: ${uiMode}, carousel: OFF`)
       
       console.log(`🎨 UI Mode: ${uiMode}, shouldAttachCarousel: ${shouldAttachCarousel}`)
       
