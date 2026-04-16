@@ -40,6 +40,30 @@ const isDev = process.env.NODE_ENV === 'development'
 const MAX_CARDS_PER_RAIL = 6
 const MIN_CARDS_TO_SHOW = 1
 
+const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
+
+/**
+ * Returns true if the offer text mentions a specific day that doesn't match today.
+ * e.g. "Sunday lunch" on a Thursday → true (should be excluded)
+ */
+function isMismatchedDayOffer(offerName: string): boolean {
+  const text = offerName.toLowerCase()
+  const todayIndex = new Date().getDay()
+
+  for (let i = 0; i < DAY_NAMES.length; i++) {
+    const day = DAY_NAMES[i]
+    const short = day.slice(0, 3)
+    const regex = new RegExp(`\\b${day}s?\\b|\\b${short}s?\\b`)
+    if (regex.test(text) && i !== todayIndex) return true
+  }
+
+  const isWeekend = todayIndex === 0 || todayIndex === 6
+  if (/\bweekend\b/.test(text) && !isWeekend) return true
+  if (/\bweekday\b/.test(text) && isWeekend) return true
+
+  return false
+}
+
 interface BuildFeedParams {
   city: string
   walletPassId: string | null
@@ -567,11 +591,13 @@ function buildTonightSection(
     }
   }
 
-  // Priority 2: Tonight's deals
+  // Priority 2: Tonight's deals (skip offers that mention a different day)
   const scoredOffers = offers
     .filter((o: any) => {
       const biz = o.business_profiles
-      return shouldIncludeInPremiumSection(biz.plan, biz.status, hybridMode)
+      if (!shouldIncludeInPremiumSection(biz.plan, biz.status, hybridMode)) return false
+      if (isMismatchedDayOffer(o.offer_name || '')) return false
+      return true
     })
     .map((o: any) => {
       const biz = o.business_profiles
