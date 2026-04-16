@@ -341,7 +341,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                 </span>
                 <a
                   href={`/claim?business_id=${business.id}`}
-                  className="px-1.5 py-0.5 rounded text-[9px] leading-tight bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
+                  className="px-1.5 py-0.5 rounded text-[9px] leading-tight whitespace-nowrap bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
                 >
                   Your business? Claim here
                 </a>
@@ -365,7 +365,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                 </span>
                 <a
                   href={`/claim?business_id=${business.id}`}
-                  className="px-1.5 py-0.5 rounded text-[9px] leading-tight bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
+                  className="px-1.5 py-0.5 rounded text-[9px] leading-tight whitespace-nowrap bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
                 >
                   Your business? Claim here
                 </a>

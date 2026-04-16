@@ -310,7 +310,7 @@ export function BusinessCard({
               })()}
             </div>
             
-            {/* Heart Icon - Absolute positioned top-right */}
+            {/* Heart Icon - Absolute positioned top-right corner */}
             <button 
               onClick={(e) => {
                 e.preventDefault()
@@ -319,7 +319,7 @@ export function BusinessCard({
                   onToggleSave()
                 }
               }}
-              className={`absolute top-3 right-3 w-7 h-7 flex items-center justify-center backdrop-blur-sm rounded-full transition-all ${
+              className={`absolute top-1 right-1 w-7 h-7 flex items-center justify-center backdrop-blur-sm rounded-full transition-all ${
                 isSaved 
                   ? 'bg-pink-500/90 hover:bg-pink-600/90' 
                   : 'bg-slate-800/80 hover:bg-slate-700/80'
