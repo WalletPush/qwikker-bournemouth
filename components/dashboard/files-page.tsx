@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ActionItemsReturnBar } from '@/components/dashboard/action-items-return-bar'
 import { LoadingButton } from '@/components/ui/loading-button'
 import { useRouter } from 'next/navigation'
 import { updateProfileFile, deleteBusinessImage, reorderBusinessImages, uploadMultipleBusinessImages } from '@/lib/actions/file-actions'
@@ -198,7 +199,8 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-16">
+      <ActionItemsReturnBar />
       {/* Page Header */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-semibold tracking-tight text-white mb-2">Files & Media</h1>

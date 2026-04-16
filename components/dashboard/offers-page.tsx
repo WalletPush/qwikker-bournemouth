@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ActionItemsReturnBar } from '@/components/dashboard/action-items-return-bar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -308,7 +309,8 @@ export function OffersPage({ profile }: OffersPageProps) {
   const isClaimedFree = profile.status === 'claimed_free'
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-16">
+      <ActionItemsReturnBar />
       {/* Qwikker Exclusive Offer Promotion Banner */}
       <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-6">
         <div className="text-center">
@@ -882,7 +884,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                       }`}
                     placeholder="e.g., Student Discount, Happy Hour Special"
                     required
-                    maxLength={80}
+                    maxLength={120}
                       readOnly={isEditMode}
                       disabled={isEditMode}
                   />
@@ -928,7 +930,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                         }`}
                       placeholder="e.g., 20% off, Buy 1 Get 1 Free"
                       required
-                      maxLength={80}
+                      maxLength={120}
                         readOnly={isEditMode}
                         disabled={isEditMode}
                     />
@@ -1102,11 +1104,11 @@ export function OffersPage({ profile }: OffersPageProps) {
                     onChange={(e) => handleInputChange('offerDescription', e.target.value)}
                     className="w-full bg-slate-800 text-white border-2 border-slate-600 focus:border-[#00d083] focus:ring-2 focus:ring-[#00d083]/20 hover:border-slate-500 rounded-lg p-4 min-h-[100px] resize-vertical transition-all duration-200 placeholder:text-slate-500 shadow-sm"
                     required
-                    maxLength={300}
+                    maxLength={500}
                     placeholder="e.g., A midweek fire-led dining experience at Ember & Oak, featuring a curated sharing menu cooked over open flames."
                   />
                   <p className="text-slate-400 text-xs mt-2">
-                    Full description - will be truncated to 2 lines on the card
+                    Full description - will be truncated to 2 lines on the offer card ({formData.offerDescription.length}/500)
                   </p>
                 </div>
               </div>

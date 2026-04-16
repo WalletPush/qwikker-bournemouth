@@ -461,9 +461,10 @@ export async function approveEvent(eventId: string): Promise<{
       console.error('⚠️ Knowledge base sync failed, but event was approved:', syncResult.error)
     }
 
+    const approvedEvent = data[0]
+
     // 📧 Send event approval email (franchise-aware)
     try {
-      const approvedEvent = data[0]
       const { data: biz } = await supabase
         .from('business_profiles')
         .select('email, first_name, business_name, city')

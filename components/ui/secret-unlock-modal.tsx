@@ -12,6 +12,7 @@ interface SecretUnlockModalProps {
     description: string
     price?: string
     hint?: string
+    ordering_instructions?: string
   }
   business: {
     name?: string
@@ -116,7 +117,7 @@ export function SecretUnlockModal({ isOpen, onClose, item, business }: SecretUnl
                 <h4 className="font-medium text-white text-sm">How to Order</h4>
               </div>
               <p className="text-slate-300 text-sm">
-                Simply ask your server for "<span className="text-white font-medium">{item.name}</span>" or show them this screen!
+                {item.ordering_instructions || `Simply ask your server for "${item.name}" or show them this screen!`}
               </p>
             </div>
 

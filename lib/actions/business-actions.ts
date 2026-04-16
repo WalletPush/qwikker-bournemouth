@@ -13,6 +13,7 @@ export async function addSecretMenuItem(userId: string, itemData: {
   description?: string
   price?: string
   image_url?: string
+  ordering_instructions?: string
 }) {
   const supabaseAdmin = createAdminClient()
 

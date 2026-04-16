@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ActionItemsReturnBar } from '@/components/dashboard/action-items-return-bar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -376,7 +377,8 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pb-16">
+      <ActionItemsReturnBar />
       {/* Clean Professional Header */}
       <div className="relative bg-slate-800/50 border-b border-slate-700/50 p-8 mb-8">
         <div className="relative flex items-center gap-8 max-w-4xl mx-auto">

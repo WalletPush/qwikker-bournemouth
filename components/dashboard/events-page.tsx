@@ -473,7 +473,7 @@ export function EventsPage({ businessId, businessName, plan = 'starter' }: Event
                       onChange={(e) => handleInputChange('event_name', e.target.value)}
                       placeholder="e.g., Live Jazz Night"
                       required
-                      maxLength={80}
+                      maxLength={120}
                       className="bg-slate-700/50 border-slate-600 text-white"
                     />
                   </div>
@@ -502,7 +502,7 @@ export function EventsPage({ businessId, businessName, plan = 'starter' }: Event
                     value={formData.event_short_description}
                     onChange={(e) => handleInputChange('event_short_description', e.target.value)}
                     placeholder="Brief 1-2 sentence summary"
-                    maxLength={150}
+                    maxLength={250}
                     className="bg-slate-700/50 border-slate-600 text-white"
                   />
                 </div>
@@ -515,7 +515,7 @@ export function EventsPage({ businessId, businessName, plan = 'starter' }: Event
                     onChange={(e) => handleInputChange('event_description', e.target.value)}
                     placeholder="Detailed description of your event..."
                     required
-                    maxLength={1000}
+                    maxLength={2000}
                     rows={4}
                     className="bg-slate-700/50 border-slate-600 text-white"
                   />

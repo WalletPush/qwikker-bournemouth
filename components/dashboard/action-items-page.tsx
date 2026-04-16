@@ -14,6 +14,14 @@ interface ActionItemsPageProps {
   profile?: any
 }
 
+const TOTAL_REQUIRED_FIELDS = 8
+
+/** Inject ?from=action-items before any hash fragment so target pages can show a return bar */
+function withReturnParam(href: string): string {
+  const [path, hash] = href.split('#')
+  return `${path}${path.includes('?') ? '&' : '?'}from=action-items${hash ? `#${hash}` : ''}`
+}
+
 export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingChanges, setPendingChanges] = useState<any[]>([])
@@ -552,7 +560,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                   ) : (
                     // Show remaining required items
                     requiredTodos.map((todo, index) => (
-                      <Link key={index} href={todo.href}>
+                      <Link key={index} href={withReturnParam(todo.href)}>
                         <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer">
                           <div className="w-2 h-2 bg-red-400 rounded-full"></div>
                           <span className="text-sm text-red-300 flex-1">{todo.title}</span>
@@ -575,7 +583,7 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                 </h3>
                 <div className="grid gap-3">
                   {optionalTodos.map((todo, index) => (
-                    <Link key={index} href={todo.href}>
+                    <Link key={index} href={withReturnParam(todo.href)}>
                       <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 transition-colors cursor-pointer">
                         <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                         <span className="text-sm text-blue-300 flex-1">{todo.title}</span>
@@ -726,6 +734,9 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
   }
 
   // Original logic for incomplete/pending businesses
+  const completedRequired = TOTAL_REQUIRED_FIELDS - requiredTodos.length
+  const progressPercent = Math.round((completedRequired / TOTAL_REQUIRED_FIELDS) * 100)
+
   return (
     <div className="space-y-6">
       <div>
@@ -736,6 +747,27 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
             : 'All required fields complete! You can now submit your listing for admin review.'
           }
         </p>
+      </div>
+
+      {/* Progress bar */}
+      <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-slate-300">
+            Profile completion
+          </span>
+          <span className="text-sm font-bold text-white">
+            {completedRequired} of {TOTAL_REQUIRED_FIELDS} required
+          </span>
+        </div>
+        <div className="w-full h-2.5 bg-slate-700 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500 ease-out bg-gradient-to-r from-[#00d083] to-[#00b86f]"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        {completedRequired === TOTAL_REQUIRED_FIELDS && (
+          <p className="text-xs text-green-400 mt-2 font-medium">All required fields complete — ready to submit!</p>
+        )}
       </div>
 
       {totalItems === 0 ? (
@@ -841,9 +873,12 @@ export function ActionItemsPage({ profile }: ActionItemsPageProps) {
                           )}
                         </div>
                         {!item.isSubmission && (
-                          <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-white flex-shrink-0">
-                            <Link href={item.href}>Complete</Link>
-                          </Button>
+                          <Link
+                            href={withReturnParam(item.href)}
+                            className="inline-flex items-center justify-center h-8 px-3 rounded-md text-sm font-medium text-white bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] flex-shrink-0"
+                          >
+                            Complete
+                          </Link>
                         )}
                         {item.isSubmission && (
                           <div className="flex items-center gap-2 text-green-400 flex-shrink-0">

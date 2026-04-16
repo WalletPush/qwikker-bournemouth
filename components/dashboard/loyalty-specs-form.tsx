@@ -99,6 +99,7 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
       if (data.program) onProgramUpdate(data.program)
     } catch (e: any) {
       setError(e.message)
+      throw e
     } finally {
       setIsSaving(false)
     }
@@ -121,8 +122,12 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
   }, [saveProgress, existingProgram, onProgramUpdate])
 
   const goNext = useCallback(async () => {
-    await saveProgress()
-    setStep((s) => Math.min(s + 1, 4) as StepIndex)
+    try {
+      await saveProgress()
+      setStep((s) => Math.min(s + 1, 4) as StepIndex)
+    } catch {
+      // Error already displayed via setError in saveProgress
+    }
   }, [saveProgress])
 
   const goBack = useCallback(() => {

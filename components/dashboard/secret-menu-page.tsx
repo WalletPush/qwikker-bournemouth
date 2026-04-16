@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { ActionItemsReturnBar } from '@/components/dashboard/action-items-return-bar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +18,7 @@ interface SecretMenuItem {
   description?: string
   price?: string
   image_url?: string
+  ordering_instructions?: string
   created_at: string
   status?: string
   approved_at?: string
@@ -40,6 +42,7 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
     description: '',
     price: '',
     image_url: '',
+    ordering_instructions: '',
   })
   const [imageUploading, setImageUploading] = useState(false)
 
@@ -83,6 +86,7 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
           description: '',
           price: '',
           image_url: '',
+          ordering_instructions: '',
         })
         
         if (result.data) {
@@ -92,6 +96,7 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
             description: result.data.description,
             price: result.data.price,
             image_url: result.data.image_url,
+            ordering_instructions: result.data.ordering_instructions,
             created_at: result.data.created_at
           }])
         }
@@ -117,6 +122,7 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
       description: '',
       price: '',
       image_url: '',
+      ordering_instructions: '',
     })
     setShowCreateForm(false)
     setMessage(null)
@@ -179,7 +185,8 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
   const currentItemCount = secretMenuItems.length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-16">
+      <ActionItemsReturnBar />
       {/* Qwikker Exclusive Secret Menu Promotion Banner */}
       <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-6">
         <div className="text-center">
@@ -278,6 +285,12 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
                           <span className="text-white ml-2">{item.price}</span>
                         </div>
                       )}
+                      {item.ordering_instructions && (
+                        <div className="md:col-span-2">
+                          <span className="text-gray-400">Ordering Instructions:</span>
+                          <p className="text-white mt-1">{item.ordering_instructions}</p>
+                        </div>
+                      )}
                       <div>
                         <span className="text-gray-400">Added:</span>
                         <span className="text-white ml-2">
@@ -292,11 +305,12 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
                       size="sm"
                       className="border-slate-600 text-gray-300 hover:bg-slate-700"
                       onClick={() => {
-                        // Pre-fill form for editing
                         setFormData({
                           itemName: item.itemName,
                           description: item.description || '',
                           price: item.price || '',
+                          image_url: item.image_url || '',
+                          ordering_instructions: item.ordering_instructions || '',
                         })
                         setShowCreateForm(true)
                       }}
@@ -363,7 +377,7 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
                     className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
                     placeholder="e.g., The Founder's Special, Hidden Gem Latte"
                     required
-                    maxLength={60}
+                    maxLength={100}
                   />
                   <p className="text-xs text-gray-400 mt-1">
                     Give your secret item an intriguing name that customers will remember
@@ -378,10 +392,10 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     className="flex w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-white placeholder:text-gray-400 focus:border-[#00d083] focus:ring-[3px] focus:ring-[#00d083]/20 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 min-h-[100px] resize-none"
                     placeholder="Describe what makes this item special, its ingredients, or why it's exclusive..."
-                    maxLength={200}
+                    maxLength={500}
                   />
                   <p className="text-xs text-gray-400 mt-1">
-                    Help customers understand what makes this item unique and worth trying
+                    Help customers understand what makes this item unique and worth trying ({formData.description.length}/500)
                   </p>
                 </div>
 
@@ -396,6 +410,21 @@ export function SecretMenuPage({ profile }: SecretMenuPageProps) {
                   />
                   <p className="text-xs text-gray-400 mt-1">
                     Optional - leave blank if price varies or is discussed in person
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="ordering_instructions" className="text-white">Ordering Instructions</Label>
+                  <textarea
+                    id="ordering_instructions"
+                    value={formData.ordering_instructions}
+                    onChange={(e) => handleInputChange('ordering_instructions', e.target.value)}
+                    className="flex w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-white placeholder:text-gray-400 focus:border-[#00d083] focus:ring-[3px] focus:ring-[#00d083]/20 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px] resize-none"
+                    placeholder='e.g., "Ask for the Secret Burger", "Show this screen to your server", "Available after 5pm only"'
+                    maxLength={300}
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Tell customers how to order this item -- shown when they unlock it ({formData.ordering_instructions.length}/300)
                   </p>
                 </div>
 

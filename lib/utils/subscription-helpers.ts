@@ -33,7 +33,7 @@ export async function getBusinessTierInfo(businessId: string): Promise<BusinessT
     
     const profileFeatures = (profile?.features as any) || {}
     
-    // SECOND: Check the new subscription system
+    // SECOND: Check the new subscription system (active OR trial)
     const { data: subscription } = await supabase
       .from('business_subscriptions')
       .select(`
@@ -45,12 +45,30 @@ export async function getBusinessTierInfo(businessId: string): Promise<BusinessT
         )
       `)
       .eq('business_id', businessId)
-      .eq('status', 'active')
+      .in('status', ['active', 'trial'])
       .single()
 
     if (subscription?.subscription_tiers) {
       const tier = subscription.subscription_tiers
       const tierFeatures = tier.features as any || {}
+      
+      // Skip expired trials
+      const isTrialExpired = subscription.is_in_free_trial &&
+        subscription.free_trial_end_date &&
+        new Date(subscription.free_trial_end_date) < new Date()
+      
+      if (isTrialExpired) {
+        return {
+          tier: 'starter' as const,
+          displayName: 'Trial Expired',
+          hasAnalyticsAccess: false,
+          hasAdvancedQR: false,
+          hasPushNotifications: false,
+          maxOffers: 3,
+          isInTrial: false,
+          trialEndsAt: subscription.free_trial_end_date
+        }
+      }
       
       // 🎯 PRIORITY ORDER:
       // 1. Individual feature override from business_profiles.features
