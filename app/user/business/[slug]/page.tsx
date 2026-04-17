@@ -210,16 +210,13 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       // ✅ MATCH CHAT SLUG LOGIC: Use DB slug if available, otherwise generate consistently
       slug: business.slug || business.business_name?.toLowerCase().replace(/['']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || business.id,
       offers: business.business_offers?.filter(offer => {
-        // Must be approved
         if (offer.status !== 'approved') return false
-        // Check if expired
-        if (offer.offer_end_date) {
-          const endDate = new Date(offer.offer_end_date)
-          const today = new Date()
-          today.setHours(0, 0, 0, 0) // Compare at day level
-          return endDate >= today // Only show if not expired
-        }
-        return true // No end date = always active
+        const now = new Date()
+        const todayStart = new Date()
+        todayStart.setHours(0, 0, 0, 0)
+        if (offer.offer_end_date && new Date(offer.offer_end_date) < todayStart) return false
+        if (offer.offer_start_date && new Date(offer.offer_start_date) > now) return false
+        return true
       }).map(offer => ({
         id: offer.id,
         businessId: business.id,
@@ -257,12 +254,11 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       longitude: business.longitude,
       activeOffers: business.business_offers?.filter(offer => {
         if (offer.status !== 'approved') return false
-        if (offer.offer_end_date) {
-          const endDate = new Date(offer.offer_end_date)
-          const today = new Date()
-          today.setHours(0, 0, 0, 0)
-          return endDate >= today
-        }
+        const nowCheck = new Date()
+        const todayCheck = new Date()
+        todayCheck.setHours(0, 0, 0, 0)
+        if (offer.offer_end_date && new Date(offer.offer_end_date) < todayCheck) return false
+        if (offer.offer_start_date && new Date(offer.offer_start_date) > nowCheck) return false
         return true
       })?.length || 0,
       menuPreview: business.menu_preview || [], // Add menu preview for popular items

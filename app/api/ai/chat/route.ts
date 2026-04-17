@@ -612,12 +612,56 @@ export async function POST(request: NextRequest) {
             const searchTerm = nameTokens.join(' ')
             console.log(`🔍 [DB LOOKUP] Searching for: "${searchTerm}"`)
 
-            const { data: dbMatches, error: dbErr } = await supabase
+            let dbMatches: { id: string; business_name: string }[] | null = null
+            let dbErr: any = null
+
+            // Try 1: exact substring match (e.g. "bellaggio" in "Bellaggio")
+            const result1 = await supabase
               .from('business_profiles')
               .select('id, business_name')
               .eq('city', city)
               .ilike('business_name', `%${searchTerm}%`)
               .limit(3)
+            dbMatches = result1.data
+            dbErr = result1.error
+
+            // Try 2: if no match, try each token individually (handles multi-word mismatches)
+            if ((!dbMatches || dbMatches.length === 0) && nameTokens.length > 1) {
+              for (const token of nameTokens) {
+                if (token.length < 4) continue
+                const { data: tokenMatches } = await supabase
+                  .from('business_profiles')
+                  .select('id, business_name')
+                  .eq('city', city)
+                  .ilike('business_name', `%${token}%`)
+                  .limit(3)
+                if (tokenMatches && tokenMatches.length > 0) {
+                  dbMatches = tokenMatches
+                  console.log(`🔍 [DB LOOKUP] Token "${token}" matched: ${tokenMatches.map(b => b.business_name).join(', ')}`)
+                  break
+                }
+              }
+            }
+
+            // Try 3: fuzzy prefix match — use first 4 chars of longest token
+            // Handles common misspellings like "Bellagio" -> "Bell%" matching "Bellaggio"
+            if (!dbMatches || dbMatches.length === 0) {
+              const longestToken = nameTokens.sort((a, b) => b.length - a.length)[0]
+              if (longestToken && longestToken.length >= 5) {
+                const prefix = longestToken.substring(0, Math.ceil(longestToken.length * 0.6))
+                console.log(`🔍 [DB LOOKUP] Trying fuzzy prefix: "${prefix}%"`)
+                const { data: fuzzyMatches } = await supabase
+                  .from('business_profiles')
+                  .select('id, business_name')
+                  .eq('city', city)
+                  .ilike('business_name', `%${prefix}%`)
+                  .limit(5)
+                if (fuzzyMatches && fuzzyMatches.length > 0) {
+                  dbMatches = fuzzyMatches
+                  console.log(`🔍 [DB LOOKUP] Fuzzy prefix matched: ${fuzzyMatches.map(b => b.business_name).join(', ')}`)
+                }
+              }
+            }
 
             console.log(`🔍 [DB LOOKUP] Results: ${dbMatches?.length ?? 0} matches${dbErr ? `, ERROR: ${dbErr.message}` : ''}${dbMatches?.length ? ` — ${dbMatches.map((b: any) => b.business_name).join(', ')}` : ''}`)
 
@@ -636,7 +680,20 @@ export async function POST(request: NextRequest) {
                 matchedBy = 'db_name_lookup'
                 console.log(`🔍 [DB LOOKUP] Resolved "${exact.business_name}" from ${dbMatches.length} candidates`)
               } else {
-                console.log(`⚠️ [DB LOOKUP] Ambiguous: ${dbMatches.map(b => b.business_name).join(', ')}`)
+                // Pick the closest match by checking if the search term shares most characters
+                const bestFuzzy = dbMatches.reduce((best, b) => {
+                  const name = b.business_name.toLowerCase()
+                  const shared = [...searchTerm].filter((c, i) => name[i] === c).length
+                  const bestShared = best ? [...searchTerm].filter((c, i) => best.business_name.toLowerCase()[i] === c).length : 0
+                  return shared > bestShared ? b : best
+                }, null as { id: string; business_name: string } | null)
+                if (bestFuzzy) {
+                  resolvedSlug = generateSlugFromName(bestFuzzy.business_name)
+                  matchedBy = 'db_fuzzy_lookup'
+                  console.log(`🔍 [DB LOOKUP] Fuzzy best match: "${bestFuzzy.business_name}" for "${searchTerm}"`)
+                } else {
+                  console.log(`⚠️ [DB LOOKUP] Ambiguous: ${dbMatches.map(b => b.business_name).join(', ')}`)
+                }
               }
             }
           }
@@ -691,6 +748,7 @@ export async function POST(request: NextRequest) {
           phone,
           website_url,
           business_description,
+          business_hours,
           business_hours_structured,
           latitude,
           longitude
@@ -836,9 +894,8 @@ export async function POST(request: NextRequest) {
           // Opening hours - NO EMOJI (always show if available, or if specifically asked)
           const wantsFullHours = /\b(full hours|all hours|weekly hours|hours for the week|hours during the week|week hours|hours this week|opening hours for the week|weekly schedule|complete hours|entire schedule|what time|what are the hours|when.*open|opening hours)\b/i.test(message)
           
-          if ((biz.business_hours_structured && asksHoursOnly) || wantsFullHours) {
+          if ((asksHoursOnly || wantsFullHours) && biz.business_hours_structured) {
             if (wantsFullHours) {
-              // Format full weekly schedule
               function formatWeeklyHours(rawData: any): string {
                 const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
                 const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -851,7 +908,6 @@ export async function POST(request: NextRequest) {
                   if (dayData.closed === true) {
                     lines.push(`${dayLabels[i]}: Closed`)
                   } else if (dayData.open && dayData.close) {
-                    // Parse and format times
                     const parseTime = (t: string) => {
                       const [h, m] = t.split(':').map(Number)
                       const ampm = h >= 12 ? 'pm' : 'am'
@@ -866,12 +922,10 @@ export async function POST(request: NextRequest) {
               }
               
               const weeklySchedule = formatWeeklyHours(biz.business_hours_structured)
-              // Format as bullet list to ensure proper line breaks in markdown
               const weeklyBullets = weeklySchedule.split('\n').map(l => `- ${l}`).join('\n')
               facts.push(`**Hours:**\n${weeklyBullets}`)
-              console.log('🕒 [FULL HOURS] Showing weekly schedule')
+              console.log('🕒 [FULL HOURS] Showing weekly schedule (structured)')
             } else {
-              // Show today's status + summary
               const openStatus = getOpenStatusForToday(biz.business_hours_structured, new Date())
               console.log('🕒 [DETAIL MODE HOURS]', { 
                 hasHours: openStatus.hasHours, 
@@ -883,8 +937,10 @@ export async function POST(request: NextRequest) {
                 facts.push(`**Hours:** ${openStatus.conversational} (${openStatus.todaySummary})`)
               }
             }
-          } else if ((asksHoursOnly || wantsFullHours) && !biz.business_hours_structured) {
-            // User asked for hours but we don't have them
+          } else if ((asksHoursOnly || wantsFullHours) && biz.business_hours) {
+            facts.push(`**Hours:**\n${biz.business_hours}`)
+            console.log('🕒 [FULL HOURS] Showing text hours (no structured data)')
+          } else if (asksHoursOnly || wantsFullHours) {
             facts.push(`**Hours:** I don't have the full hours for ${biz.business_name} yet.`)
             if (biz.phone) facts.push(`Try calling ${biz.phone} or check their website.`)
           }

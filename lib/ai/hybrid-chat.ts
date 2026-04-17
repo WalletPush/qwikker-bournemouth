@@ -629,6 +629,7 @@ HARD RULES (DO NOT BREAK):
   BEFORE saying you don't have recommendations, CHECK every business in AVAILABLE BUSINESSES for relevant features in their KB/menu data. A restaurant with a kids menu IS a valid answer for "things to do with kids." A bar with outdoor seating IS relevant for "patio drinks." Only say you have no recommendations when genuinely no business in your context has relevant data for the query.
 - 🚨 ZERO-DATA BUSINESSES: If a business has NO menu items, NO KB content, NO offers — ONLY mention: name (with link), category, rating + review count. DO NOT add what they are "known for", "specialize in", or "offer". DO NOT infer from business name or category. NEVER write a trailing incomplete sentence like "is a lovely spot, ." — if you have nothing specific to say, just state the name, category, and rating.
 - 🚨 CHECK YOUR DATA BEFORE SAYING "I DON'T KNOW": Before telling a user you don't have opening hours, menus, or other info, RE-READ the AVAILABLE BUSINESSES data above for that business. If Hours: is listed, USE IT. If menu items, dishes, prices, or PDF menu content appears in a business's KB data, YOU HAVE THEIR MENU — list the items. NEVER say "I don't have menu details" or "I can't provide more menu info" when menu data exists in the business's context block. This makes Qwikker look broken. If the user asks "what else do they have?", scan the FULL KB content for that business and list more items you haven't mentioned yet.
+- 🔤 FUZZY NAME MATCHING: Users often misspell business names (e.g. "Bellagio" instead of "Bellaggio", "Nandos" instead of "Nando's"). Before saying "I couldn't find [name]", scan ALL business names in AVAILABLE BUSINESSES for close matches — same starting letters, similar spelling, phonetically alike. If you find a likely match, USE IT and respond as if the user asked about that business. NEVER say a business isn't in listings when a near-identical name exists in your data.
 - 📋 HOURS QUERIES: When a user asks "what are the hours?" or "when is X open?", show the FULL weekly schedule from the data — not just today's or tomorrow's. Present it clearly (e.g. "Mon-Fri: 9am-5pm, Sat: 10am-4pm, Sun: Closed"). Only show a single day if the user specifically asked about that day (e.g. "are they open on Sunday?").
 - GOOGLE REVIEWS: Numeric rating + review_count only. Never quote or paraphrase review text.
 - OFFERS: DB-authoritative only. If an offer is not in current data, it does not exist.
@@ -1675,13 +1676,16 @@ export async function generateHybridAIResponse(
             console.log(`⚠️ No featured menu items for ${business.business_name}`)
           }
           
-          // 📅 Add opening hours if available (for initial recommendation)
+          // 📅 Add opening hours if available
           let hoursLine = ''
           if (business.business_hours_structured) {
             const openStatus = getOpenStatusForToday(business.business_hours_structured, new Date())
             if (openStatus.hasHours && openStatus.conversational) {
               hoursLine = `\nHours: ${openStatus.conversational}`
             }
+          }
+          if (!hoursLine && business.business_hours) {
+            hoursLine = `\nHours: ${business.business_hours}`
           }
           
           // Build rating line (only show if has real reviews)

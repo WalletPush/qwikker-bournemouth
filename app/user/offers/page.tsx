@@ -160,17 +160,15 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     console.error('Error fetching business offers:', error)
   }
   
-  // Filter out expired offers
+  // Filter out expired and not-yet-started offers
+  const now = new Date()
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+
   const activeOffers = (businessOffers || []).filter(offer => {
-    // If no end date, offer is always active
-    if (!offer.offer_end_date) return true
-    
-    // Check if offer hasn't expired
-    const endDate = new Date(offer.offer_end_date)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0) // Start of today
-    
-    return endDate >= today
+    if (offer.offer_end_date && new Date(offer.offer_end_date) < todayStart) return false
+    if (offer.offer_start_date && new Date(offer.offer_start_date) > now) return false
+    return true
   })
 
   // Transform offers to match expected format

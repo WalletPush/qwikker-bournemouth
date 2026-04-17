@@ -16,18 +16,23 @@ export function isOfferExpired(offerEndDate: string | null | undefined): boolean
 }
 
 /**
- * Filter offers to only include active (approved and non-expired) ones
+ * Check if an offer hasn't started yet
  */
-export function filterActiveOffers<T extends { status?: string; offer_end_date?: string | null }>(
+export function isOfferNotStarted(offerStartDate: string | null | undefined): boolean {
+  if (!offerStartDate) return false
+  return new Date(offerStartDate) > new Date()
+}
+
+/**
+ * Filter offers to only include active (approved, started, and non-expired) ones
+ */
+export function filterActiveOffers<T extends { status?: string; offer_start_date?: string | null; offer_end_date?: string | null }>(
   offers: T[]
 ): T[] {
   return offers.filter(offer => {
-    // Must be approved
     if (offer.status !== 'approved') return false
-    
-    // Must not be expired
     if (isOfferExpired(offer.offer_end_date)) return false
-    
+    if (isOfferNotStarted(offer.offer_start_date)) return false
     return true
   })
 }

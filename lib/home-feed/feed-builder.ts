@@ -139,12 +139,21 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
   const secretMenuCount = countSecretMenuItems(businesses)
   const secretTeaser = secretMenuCount > 0 ? { count: secretMenuCount } : null
 
+  // Count upcoming events (today + future)
+  const today = new Date().toISOString().split('T')[0]
+  const { count: upcomingEventCount } = await supabase
+    .from('business_events')
+    .select('id, business_profiles!inner(city)', { count: 'exact', head: true })
+    .eq('status', 'approved')
+    .gte('event_date', today)
+    .eq('business_profiles.city', city)
+
   // Stats
-  const totalOffers = offers.length
   const stats = {
     totalBusinesses: businesses.length,
-    totalOffers,
+    totalOffers: offers.length,
     totalSecretMenus: secretMenuCount,
+    totalEvents: upcomingEventCount ?? 0,
     badgeCount: 0, // populated client-side from badge tracker
   }
 
@@ -282,6 +291,7 @@ async function fetchTonightEvents(supabase: any, city: string) {
       event_date,
       event_start_time,
       event_end_time,
+      event_image,
       business_id,
       business_profiles!inner(
         id,
@@ -581,6 +591,7 @@ function buildTonightSection(
       eventName: event.event_name,
       eventTime: event.event_start_time,
       eventType: event.event_type,
+      eventImage: event.event_image || null,
     })
     railBusinessIds.add(event.business_id)
     dedup.markBusinessUsed(event.business_id)

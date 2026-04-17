@@ -40,6 +40,7 @@ export interface TonightCard {
   eventName?: string
   eventTime?: string
   eventType?: string
+  eventImage?: string | null
 }
 
 export interface DishCard {
@@ -115,6 +116,7 @@ export interface HomeFeedResponse {
     totalBusinesses: number
     totalOffers: number
     totalSecretMenus: number
+    totalEvents: number
     badgeCount: number
   }
 }
