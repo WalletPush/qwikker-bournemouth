@@ -114,92 +114,91 @@ export function EmailVerification({ email, onVerified, onResend, onBack }: Email
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" onClick={onBack} className="mb-4">
+      <Button variant="ghost" onClick={onBack} className="mb-4 text-neutral-400 hover:text-white hover:bg-white/[0.05]">
         ← Back
       </Button>
 
-      <Card>
-        <CardHeader className="text-center">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Mail className="w-8 h-8 text-primary" />
-          </div>
-          <CardTitle>Check Your Email</CardTitle>
-          <CardDescription>
-            We sent a 6-digit verification code to:
-            <br />
-            <strong className="text-foreground">{email}</strong>
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Code Input */}
-          <div className="space-y-4">
-            <label className="text-sm font-medium block text-center">
-              Enter Verification Code
-            </label>
-            <div 
-              className="flex gap-2 justify-center"
-              onPaste={handlePaste}
-            >
-              {code.map((digit, index) => (
-                <Input
-                  key={index}
-                  ref={(el) => { inputRefs.current[index] = el }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  className="w-12 h-14 text-center text-2xl font-bold"
-                  disabled={isVerifying}
-                  autoFocus={index === 0}
-                />
-              ))}
+      <div className="relative">
+        <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-b from-[#00d083]/20 via-white/[0.06] to-transparent" />
+        <Card className="relative bg-[#111315]/80 backdrop-blur-xl border-0 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+          <CardHeader className="text-center px-8 pt-8">
+            <div className="w-16 h-16 rounded-2xl bg-[#00d083]/10 border border-[#00d083]/20 flex items-center justify-center mx-auto mb-4">
+              <Mail className="w-8 h-8 text-[#00d083]" />
+            </div>
+            <CardTitle className="text-xl text-white">Check Your Email</CardTitle>
+            <CardDescription className="text-neutral-500">
+              We sent a 6-digit verification code to:
+              <br />
+              <strong className="text-white">{email}</strong>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 px-8 pb-8">
+            <div className="space-y-4">
+              <label className="text-sm font-medium block text-center text-neutral-300">
+                Enter Verification Code
+              </label>
+              <div 
+                className="flex gap-2 justify-center"
+                onPaste={handlePaste}
+              >
+                {code.map((digit, index) => (
+                  <Input
+                    key={index}
+                    ref={(el) => { inputRefs.current[index] = el }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleChange(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(index, e)}
+                    className="w-12 h-14 text-center text-2xl font-bold bg-white/[0.04] border-white/[0.08] text-white focus:border-[#00d083]/40 focus:ring-[#00d083]/20 rounded-xl"
+                    disabled={isVerifying}
+                    autoFocus={index === 0}
+                  />
+                ))}
+              </div>
+
+              {error && (
+                <p className="text-sm text-red-400 text-center">{error}</p>
+              )}
+
+              {isVerifying && (
+                <p className="text-sm text-neutral-400 text-center flex items-center justify-center gap-2">
+                  <span className="animate-spin">⏳</span>
+                  Verifying...
+                </p>
+              )}
             </div>
 
-            {error && (
-              <p className="text-sm text-destructive text-center">{error}</p>
-            )}
-
-            {isVerifying && (
-              <p className="text-sm text-muted-foreground text-center flex items-center justify-center gap-2">
-                <span className="animate-spin">⏳</span>
-                Verifying...
+            <div className="text-center space-y-2">
+              <p className="text-sm text-neutral-500">
+                Didn&apos;t receive the code?
               </p>
-            )}
-          </div>
+              {resendCountdown > 0 ? (
+                <p className="text-sm text-neutral-500">
+                  Resend available in {resendCountdown}s
+                </p>
+              ) : (
+                <button 
+                  onClick={handleResend}
+                  className="text-sm text-[#00d083] hover:text-[#00e894] font-medium transition-colors"
+                >
+                  Resend Code
+                </button>
+              )}
+            </div>
 
-          {/* Resend Button */}
-          <div className="text-center space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Didn't receive the code?
-            </p>
-            {resendCountdown > 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Resend available in {resendCountdown}s
-              </p>
-            ) : (
-              <Button 
-                variant="link" 
-                onClick={handleResend}
-                className="p-0 h-auto"
-              >
-                Resend Code
-              </Button>
-            )}
-          </div>
-
-          {/* Helpful Tips */}
-          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-2 text-sm">
-            <p className="font-medium">💡 Tips:</p>
-            <ul className="space-y-1 text-muted-foreground">
-              <li>• Check your spam/junk folder</li>
-              <li>• Make sure you entered the correct email</li>
-              <li>• The code expires after 15 minutes</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 space-y-2 text-sm">
+              <p className="font-medium text-neutral-300">Tips:</p>
+              <ul className="space-y-1 text-neutral-500">
+                <li>• Check your spam/junk folder</li>
+                <li>• Make sure you entered the correct email</li>
+                <li>• The code expires after 15 minutes</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

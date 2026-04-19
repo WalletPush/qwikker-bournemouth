@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Building2, Star, MapPin, Globe, Mail } from 'lucide-react'
+import { Search, Building2, Star, MapPin, Globe, Mail, CheckCircle2, Clock, Shield, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -371,17 +371,27 @@ export default function ClaimPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 relative">
-      {/* Subtle green radial glow */}
+    <div className="min-h-screen bg-[#0b0d10] text-white relative overflow-hidden">
+      {/* Layered background effects */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[#00d083] opacity-[0.03] blur-[120px] rounded-full" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-[#00d083] opacity-[0.04] blur-[160px] rounded-full" />
+        <div className="absolute top-[20%] right-0 w-[400px] h-[400px] bg-[#00d083] opacity-[0.03] blur-[100px] rounded-full" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-emerald-600 opacity-[0.02] blur-[120px] rounded-full" />
       </div>
+
+      {/* Subtle grid pattern overlay */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-[0.015]"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+          backgroundSize: '60px 60px'
+        }}
+      />
       
-      <div className="container max-w-4xl mx-auto px-4 py-12 relative">
+      <div className="container max-w-4xl mx-auto px-4 py-12 md:py-16 relative">
         {/* Header */}
-        <div className="text-center mb-12">
-          {/* QWIKKER Logo */}
-          <div className="flex justify-center mb-8">
+        <div className="text-center mb-12 md:mb-16">
+          <div className="flex justify-center mb-10">
             <img 
               src="/qwikker-logo-web.svg" 
               alt="QWIKKER" 
@@ -390,148 +400,205 @@ export default function ClaimPage() {
             />
           </div>
           
-          <h1 className="text-3xl md:text-4xl font-semibold mb-2">Claim Your Business</h1>
-          <p className="text-base text-muted-foreground">
-            Already listed? Verify ownership to start managing your listing.
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#00d083]/10 border border-[#00d083]/20 text-[#00d083] text-sm font-medium mb-6">
+            <Sparkles className="w-3.5 h-3.5" />
+            Free to claim your listing
+          </div>
+          
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-transparent">
+            Claim Your Business
+          </h1>
+          <p className="text-base md:text-lg text-neutral-400 max-w-lg mx-auto leading-relaxed">
+            Already listed? Verify ownership and start managing your listing, offers, and visibility.
           </p>
         </div>
 
         {/* Step 1: Search */}
         {step === 'search' && (
-          <div className="space-y-6">
-            <Card className="dark:bg-[#181818] border-white/[0.06] shadow-[0_10px_40px_rgba(0,0,0,0.4)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.6)] border-t-[#00d083]/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Search className="w-5 h-5" />
-                  Find Your Business
-                </CardTitle>
-                <CardDescription>
-                  Search by name or category
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    placeholder="e.g. The Larder House, Scissors Barbers, Ember & Oak"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    className="flex-1"
-                  />
-                  <button
-                    onClick={() => handleSearch()}
-                    className="bg-[#00d083] hover:bg-[#00b86f] text-[#0a0a0a] px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 whitespace-nowrap"
-                  >
-                    <Search className="w-4 h-4" />
-                    Search
-                  </button>
-                </div>
+          <div className="space-y-8">
+            {/* Search card */}
+            <div className="relative group">
+              <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-b from-[#00d083]/20 via-white/[0.06] to-transparent opacity-100" />
+              <Card className="relative bg-[#111315]/80 backdrop-blur-xl border-0 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+                <CardHeader className="pb-4 pt-8 px-8">
+                  <CardTitle className="flex items-center gap-3 text-xl font-semibold text-white">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#00d083]/10 border border-[#00d083]/20">
+                      <Search className="w-5 h-5 text-[#00d083]" />
+                    </div>
+                    Find Your Business
+                  </CardTitle>
+                  <CardDescription className="text-neutral-500 ml-[52px]">
+                    Search by name or category
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 px-8 pb-8">
+                  <div className="flex gap-3">
+                    <Input
+                      type="text"
+                      placeholder="e.g. The Larder House, Scissors Barbers, Ember & Oak"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                      className="flex-1 h-12 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-neutral-600 focus:border-[#00d083]/40 focus:ring-[#00d083]/20 rounded-xl text-base"
+                    />
+                    <button
+                      onClick={() => handleSearch()}
+                      className="bg-[#00d083] hover:bg-[#00b86f] text-[#0a0a0a] h-12 px-7 rounded-xl font-semibold transition-all flex items-center gap-2.5 whitespace-nowrap hover:shadow-[0_0_20px_rgba(0,208,131,0.3)] active:scale-[0.98]"
+                    >
+                      <Search className="w-4 h-4" />
+                      Search
+                    </button>
+                  </div>
 
-                {searchResults.length > 0 && (
-                  <div className="space-y-3 mt-6">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
-                    </p>
-                    {searchResults.map((business) => {
-                      const displayName = getDisplayName(business)
-                      const displayAddress = getDisplayAddress(business)
-                      const displayCategory = getDisplayCategory(business)
-                      const displayReviewCount = getDisplayReviewCount(business)
-                      
-                      // Resolve category and placeholder URL
-                      const resolvedCategory = resolveSystemCategory(business) || (business as any).system_category || (business as any).systemCategory || 'other'
-                      const placeholderVariant = (business as any).placeholder_variant ?? undefined
-                      const imgSrc = business.image || getPlaceholderUrl(resolvedCategory, business.id)
-                      
-                      return (
-                        <Card 
-                          key={business.id}
-                          className="hover:border-primary cursor-pointer transition-all"
-                          onClick={() => handleSelectBusiness(business)}
-                        >
-                          <CardContent className="p-4">
-                            <div className="flex gap-4">
-                              {/* ✅ Always show image - use placeholder for unclaimed businesses */}
-                              <img 
-                                src={imgSrc}
-                                alt={displayName}
-                                className="w-20 h-20 rounded-lg object-cover"
-                                onError={(e) => {
-                                  // Fallback to default placeholder if image fails to load
-                                  const target = e.target as HTMLImageElement
-                                  if (target.src !== '/placeholders/default/00.webp') {
-                                    target.src = '/placeholders/default/00.webp'
-                                  }
-                                }}
-                              />
-                              <div className="flex-1">
-                                <h3 className="font-semibold text-lg mb-1">{displayName}</h3>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                  {business.rating && (
-                                    <div className="flex items-center gap-1">
-                                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                      <span>{business.rating} ({displayReviewCount} reviews)</span>
-                                    </div>
-                                  )}
-                                  {displayAddress && (
-                                    <div className="flex items-center gap-1">
-                                      <MapPin className="w-4 h-4" />
-                                      <span>{displayAddress}</span>
+                  {searchResults.length > 0 && (
+                    <div className="space-y-3 mt-6">
+                      <p className="text-sm font-medium text-neutral-500">
+                        {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
+                      </p>
+                      {searchResults.map((business) => {
+                        const displayName = getDisplayName(business)
+                        const displayAddress = getDisplayAddress(business)
+                        const displayCategory = getDisplayCategory(business)
+                        const displayReviewCount = getDisplayReviewCount(business)
+                        
+                        const resolvedCategory = resolveSystemCategory(business) || (business as any).system_category || (business as any).systemCategory || 'other'
+                        const placeholderVariant = (business as any).placeholder_variant ?? undefined
+                        const imgSrc = business.image || getPlaceholderUrl(resolvedCategory, business.id)
+                        
+                        return (
+                          <div 
+                            key={business.id}
+                            className="group/card relative cursor-pointer"
+                            onClick={() => handleSelectBusiness(business)}
+                          >
+                            <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-[#00d083]/0 via-[#00d083]/0 to-[#00d083]/0 group-hover/card:from-[#00d083]/30 group-hover/card:via-[#00d083]/10 group-hover/card:to-[#00d083]/30 transition-all duration-300" />
+                            <div className="relative bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/[0.1] rounded-xl p-4 transition-all duration-300">
+                              <div className="flex gap-4">
+                                <img 
+                                  src={imgSrc}
+                                  alt={displayName}
+                                  className="w-20 h-20 rounded-xl object-cover ring-1 ring-white/[0.08]"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement
+                                    if (target.src !== '/placeholders/default/00.webp') {
+                                      target.src = '/placeholders/default/00.webp'
+                                    }
+                                  }}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-semibold text-lg text-white mb-1.5 truncate">{displayName}</h3>
+                                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-400">
+                                    {business.rating && (
+                                      <div className="flex items-center gap-1.5">
+                                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                        <span>{business.rating} ({displayReviewCount} reviews)</span>
+                                      </div>
+                                    )}
+                                    {displayAddress && (
+                                      <div className="flex items-center gap-1.5">
+                                        <MapPin className="w-3.5 h-3.5 text-neutral-500" />
+                                        <span className="truncate">{displayAddress}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {displayCategory && (
+                                    <div className="mt-2.5">
+                                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-white/[0.06] text-neutral-300 border border-white/[0.06]">
+                                        {displayCategory}
+                                      </span>
                                     </div>
                                   )}
                                 </div>
-                                {displayCategory && (
-                                  <div className="mt-2">
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                                      {displayCategory}
-                                    </span>
-                                  </div>
-                                )}
+                                <div className="hidden sm:flex items-center text-neutral-600 group-hover/card:text-[#00d083] transition-colors">
+                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                  </svg>
+                                </div>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
-                      )
-                    })}
-                  </div>
-                )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
 
-                {searchQuery && searchResults.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Building2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="mb-2">No businesses found matching "{searchQuery}"</p>
-                    <p className="text-sm">We may not have imported your business yet.</p>
-                    <button className="mt-3 text-sm text-[#00d083] hover:underline">
-                      Contact us to add your business
-                    </button>
-                  </div>
-                )}
+                  {searchQuery && searchResults.length === 0 && (
+                    <div className="text-center py-10 text-neutral-500">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
+                        <Building2 className="w-8 h-8 opacity-40" />
+                      </div>
+                      <p className="mb-1.5 text-neutral-300">No businesses found matching &ldquo;{searchQuery}&rdquo;</p>
+                      <p className="text-sm text-neutral-500">We may not have imported your business yet.</p>
+                      <a href="/onboarding" className="mt-4 inline-block text-sm text-[#00d083] hover:text-[#00e894] transition-colors font-medium">
+                        Create your free listing here →
+                      </a>
+                    </div>
+                  )}
 
-                {!searchQuery && searchResults.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Search className="w-12 h-12 mx-auto mb-3 opacity-30 animate-pulse" />
-                    <p className="text-sm">Start typing to search for your business</p>
-                    <p className="text-xs mt-2 opacity-60">(minimum 2 characters)</p>
-                  </div>
-                )}
+                  {!searchQuery && searchResults.length === 0 && (
+                    <div className="text-center py-10">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#00d083]/5 border border-[#00d083]/10 flex items-center justify-center">
+                        <Search className="w-7 h-7 text-[#00d083]/40" />
+                      </div>
+                      <p className="text-sm text-neutral-400">Start typing to search for your business</p>
+                      <p className="text-xs mt-2 text-neutral-600">(minimum 2 characters)</p>
+                    </div>
+                  )}
 
-                {searchQuery.length === 1 && searchResults.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Search className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">Type at least 2 characters to search</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  {searchQuery.length === 1 && searchResults.length === 0 && (
+                    <div className="text-center py-10">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
+                        <Search className="w-7 h-7 opacity-30" />
+                      </div>
+                      <p className="text-sm text-neutral-400">Type at least 2 characters to search</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-3">
-                Can't find your business?
+            {/* Create listing CTA */}
+            <div className="text-center pt-2">
+              <p className="text-sm text-neutral-500 mb-3">
+                Can&apos;t find your business?
               </p>
-              <button className="px-5 py-2.5 border border-[#00d083]/30 text-[#00d083] hover:bg-[#00d083]/10 rounded-lg font-medium transition-colors text-sm">
-                Request a listing
-              </button>
+              <a 
+                href="/onboarding"
+                className="inline-flex items-center px-6 py-2.5 border border-[#00d083]/20 text-[#00d083] hover:bg-[#00d083]/10 hover:border-[#00d083]/30 rounded-xl font-medium transition-all text-sm"
+              >
+                Create your free listing here →
+              </a>
+            </div>
+
+            {/* Trust signals */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
+              <div className="flex items-center gap-3 px-5 py-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#00d083]/10">
+                  <Clock className="w-4 h-4 text-[#00d083]" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-neutral-200">Quick Setup</p>
+                  <p className="text-xs text-neutral-500">Under 5 minutes</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#00d083]/10">
+                  <Shield className="w-4 h-4 text-[#00d083]" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-neutral-200">Verified Owners</p>
+                  <p className="text-xs text-neutral-500">Email verification</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#00d083]/10">
+                  <CheckCircle2 className="w-4 h-4 text-[#00d083]" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-neutral-200">Free to Claim</p>
+                  <p className="text-xs text-neutral-500">No hidden costs</p>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -539,168 +606,167 @@ export default function ClaimPage() {
         {/* Step 2: Confirm Business */}
         {step === 'confirm' && selectedBusiness && (
           <div className="space-y-6">
-            <Button variant="ghost" onClick={handleBack} className="mb-4">
+            <Button variant="ghost" onClick={handleBack} className="mb-4 text-neutral-400 hover:text-white hover:bg-white/[0.05]">
               ← Back to Search
             </Button>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Confirm Your Business</CardTitle>
-                <CardDescription>
-                  Verify the details match before proceeding
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Business Preview */}
-                <div className="flex gap-4">
-                  <img 
-                    src={
-                      selectedBusiness.image || 
-                      getPlaceholderUrl(
-                        resolveSystemCategory(selectedBusiness),
-                        selectedBusiness.id
-                      )
-                    }
-                    alt={selectedBusiness.name || selectedBusiness.business_name || ''}
-                    className="w-24 h-24 rounded-lg object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement
-                      target.src = getPlaceholderUrl('other', selectedBusiness.id)
-                    }}
-                  />
-                  <div className="flex-1">
-                    <h3 className="font-bold text-2xl mb-2">{selectedBusiness.name}</h3>
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span>{selectedBusiness.rating} stars ({selectedBusiness.reviewCount} reviews on Google)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>{selectedBusiness.address}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4" />
-                        <span>{selectedBusiness.category}</span>
+            <div className="relative">
+              <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-b from-[#00d083]/20 via-white/[0.06] to-transparent" />
+              <Card className="relative bg-[#111315]/80 backdrop-blur-xl border-0 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+                <CardHeader className="px-8 pt-8">
+                  <CardTitle className="text-xl text-white">Confirm Your Business</CardTitle>
+                  <CardDescription className="text-neutral-500">
+                    Verify the details match before proceeding
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 px-8 pb-8">
+                  <div className="flex gap-4 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <img 
+                      src={
+                        selectedBusiness.image || 
+                        getPlaceholderUrl(
+                          resolveSystemCategory(selectedBusiness),
+                          selectedBusiness.id
+                        )
+                      }
+                      alt={selectedBusiness.name || selectedBusiness.business_name || ''}
+                      className="w-24 h-24 rounded-xl object-cover ring-1 ring-white/[0.08]"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.src = getPlaceholderUrl('other', selectedBusiness.id)
+                      }}
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-bold text-2xl mb-2 text-white">{selectedBusiness.name}</h3>
+                      <div className="space-y-2 text-sm text-neutral-400">
+                        <div className="flex items-center gap-2">
+                          <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                          <span>{selectedBusiness.rating} stars ({selectedBusiness.reviewCount} reviews on Google)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-neutral-500" />
+                          <span>{selectedBusiness.address}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-neutral-500" />
+                          <span>{selectedBusiness.category}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Notice */}
-                <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-                  <p className="text-sm text-slate-700 dark:text-slate-300">
-                    This information is from Google. You'll be able to update it once verified.
-                  </p>
-                </div>
+                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+                    <p className="text-sm text-neutral-400">
+                      This information is from Google. You&apos;ll be able to update it once verified.
+                    </p>
+                  </div>
 
-                {/* Confirm Buttons */}
-                <div className="flex gap-3">
-                  <Button onClick={handleConfirm} className="flex-1" size="lg">
-                    Yes, This Is My Business
-                  </Button>
-                  <Button onClick={handleBack} variant="outline" className="flex-1" size="lg">
-                    Not My Business
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex gap-3">
+                    <button onClick={handleConfirm} className="flex-1 h-12 bg-[#00d083] hover:bg-[#00b86f] text-[#0a0a0a] rounded-xl font-semibold transition-all hover:shadow-[0_0_20px_rgba(0,208,131,0.3)] active:scale-[0.98]">
+                      Yes, This Is My Business
+                    </button>
+                    <button onClick={handleBack} className="flex-1 h-12 border border-white/[0.1] hover:border-white/[0.2] text-neutral-300 hover:text-white rounded-xl font-medium transition-all hover:bg-white/[0.04]">
+                      Not My Business
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
 
         {/* Step 3: Contact Details */}
         {step === 'email-verify' && selectedBusiness && (
           <div className="space-y-6">
-            <Button variant="ghost" onClick={handleBack} className="mb-4">
+            <Button variant="ghost" onClick={handleBack} className="mb-4 text-neutral-400 hover:text-white hover:bg-white/[0.05]">
               ← Back
             </Button>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Business Contact Information</CardTitle>
-                <CardDescription>
-                  We need your business email to verify ownership
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Email Field */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    Business Email Address *
-                  </label>
-                  <Input
-                    type="email"
-                    placeholder="info@yourbusiness.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="text-base"
-                  />
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-2 text-sm">
-                    <p className="font-medium">Business email examples:</p>
-                    <ul className="space-y-1 text-muted-foreground ml-4 list-disc">
-                      <li>info@yourbusiness.com</li>
-                      <li>yourbusinessname@gmail.com</li>
-                      <li>owner.name@yourbusiness.com</li>
-                    </ul>
-                    <p className="text-muted-foreground mt-2 text-xs">
-                      Using a business email helps us verify ownership more quickly.
+            <div className="relative">
+              <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-b from-[#00d083]/20 via-white/[0.06] to-transparent" />
+              <Card className="relative bg-[#111315]/80 backdrop-blur-xl border-0 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+                <CardHeader className="px-8 pt-8">
+                  <CardTitle className="text-xl text-white">Business Contact Information</CardTitle>
+                  <CardDescription className="text-neutral-500">
+                    We need your business email to verify ownership
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 px-8 pb-8">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-2 text-neutral-300">
+                      <Mail className="w-4 h-4 text-[#00d083]" />
+                      Business Email Address *
+                    </label>
+                    <Input
+                      type="email"
+                      placeholder="info@yourbusiness.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="h-12 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-neutral-600 focus:border-[#00d083]/40 focus:ring-[#00d083]/20 rounded-xl text-base"
+                    />
+                    <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 space-y-2 text-sm">
+                      <p className="font-medium text-neutral-300">Business email examples:</p>
+                      <ul className="space-y-1 text-neutral-500 ml-4 list-disc">
+                        <li>info@yourbusiness.com</li>
+                        <li>yourbusinessname@gmail.com</li>
+                        <li>owner.name@yourbusiness.com</li>
+                      </ul>
+                      <p className="text-neutral-600 mt-2 text-xs">
+                        Using a business email helps us verify ownership more quickly.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-2 text-neutral-300">
+                      <Globe className="w-4 h-4 text-[#00d083]" />
+                      Business Website (Optional)
+                    </label>
+                    <Input
+                      type="url"
+                      placeholder="https://yourbusiness.com"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      className="h-12 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-neutral-600 focus:border-[#00d083]/40 focus:ring-[#00d083]/20 rounded-xl text-base"
+                    />
+                    <p className="text-sm text-neutral-500">
+                      Adding your website helps us verify ownership faster. Leave blank if not applicable.
                     </p>
                   </div>
-                </div>
 
-                {/* Website Field */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <Globe className="w-4 h-4" />
-                    Business Website (Optional)
-                  </label>
-                  <Input
-                    type="url"
-                    placeholder="https://yourbusiness.com"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                    className="text-base"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Adding your website helps us verify ownership faster. Leave blank if not applicable.
-                  </p>
-                </div>
+                  <button 
+                    className={`w-full h-12 rounded-xl font-semibold transition-all active:scale-[0.98] ${
+                      email
+                        ? 'bg-[#00d083] hover:bg-[#00b86f] text-[#0a0a0a] hover:shadow-[0_0_20px_rgba(0,208,131,0.3)]'
+                        : 'bg-white/[0.06] text-neutral-600 cursor-not-allowed'
+                    }`}
+                    disabled={!email}
+                    onClick={handleSendVerification}
+                  >
+                    Send Verification Code
+                  </button>
 
-                {/* Submit Button */}
-                <Button 
-                  size="lg" 
-                  className="w-full"
-                  disabled={!email}
-                  onClick={handleSendVerification}
-                >
-                  Send Verification Code
-                </Button>
-
-                {/* What Happens Next */}
-                <div className="border-t pt-6">
-                  <h4 className="font-medium mb-3">What happens next?</h4>
-                  <ol className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex gap-2">
-                      <span className="font-medium">1.</span>
-                      <span>We'll send a 6-digit verification code to your email</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-medium">2.</span>
-                      <span>Enter the code and create your account</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-medium">3.</span>
-                      <span>Your claim will be reviewed (usually within 48 hours)</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-medium">4.</span>
-                      <span>Once approved, you'll receive dashboard access</span>
-                    </li>
-                  </ol>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="border-t border-white/[0.06] pt-6">
+                    <h4 className="font-medium mb-4 text-neutral-200">What happens next?</h4>
+                    <ol className="space-y-3 text-sm">
+                      {[
+                        'We\'ll send a 6-digit verification code to your email',
+                        'Enter the code and create your account',
+                        'Your claim will be reviewed (usually within 48 hours)',
+                        'Once approved, you\'ll receive dashboard access',
+                      ].map((text, i) => (
+                        <li key={i} className="flex gap-3 items-start">
+                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#00d083]/10 text-[#00d083] text-xs font-bold shrink-0 mt-0.5">
+                            {i + 1}
+                          </span>
+                          <span className="text-neutral-400">{text}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
 

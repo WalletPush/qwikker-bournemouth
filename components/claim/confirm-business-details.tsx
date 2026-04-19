@@ -247,21 +247,23 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, trialConfi
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" onClick={onBack} className="mb-4">
+      <Button variant="ghost" onClick={onBack} className="mb-4 text-neutral-400 hover:text-white hover:bg-white/[0.05]">
         ← Back
       </Button>
 
-      <Card>
-        <CardHeader>
-          <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center mx-auto mb-4">
-            <Building2 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-          </div>
-          <CardTitle className="text-center">Confirm Business Details</CardTitle>
-          <CardDescription className="text-center">
-            Please review and update your business information. Add a logo and cover image to make your listing stand out.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="relative">
+        <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-b from-[#00d083]/20 via-white/[0.06] to-transparent" />
+        <Card className="relative bg-[#111315]/80 backdrop-blur-xl border-0 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+          <CardHeader className="px-8 pt-8">
+            <div className="w-16 h-16 rounded-2xl bg-[#00d083]/10 border border-[#00d083]/20 flex items-center justify-center mx-auto mb-4">
+              <Building2 className="w-8 h-8 text-[#00d083]" />
+            </div>
+            <CardTitle className="text-center text-xl text-white">Confirm Business Details</CardTitle>
+            <CardDescription className="text-center text-neutral-500">
+              Please review and update your business information. Add a logo and cover image to make your listing stand out.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-8 pb-8">
           <form onSubmit={handleSubmit} className="space-y-6">
 
             {/* Plan Choice */}
@@ -915,12 +917,13 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, trialConfi
               )}
             </Button>
 
-            <p className="text-xs text-center text-muted-foreground">
-              You'll create your account in the next step
+            <p className="text-xs text-center text-neutral-600">
+              You&apos;ll create your account in the next step
             </p>
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }
