@@ -30,6 +30,7 @@ export default async function LoyaltyPage() {
       )
     `)
     .eq('business_id', profile?.id)
+    .in('status', ['active', 'trial'])
     .single()
 
   const enrichedProfile = {

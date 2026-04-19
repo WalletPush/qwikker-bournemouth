@@ -33,11 +33,21 @@ export async function POST(request: NextRequest) {
     }
 
     const tierInfo = await getBusinessTierInfo(business.id)
-    if (tierInfo.tier !== 'spotlight') {
-      return NextResponse.json(
-        { error: 'Loyalty programs require Spotlight tier' },
-        { status: 403 }
-      )
+    const hasLoyaltyAccess = tierInfo.tier === 'spotlight' || tierInfo.tier === 'pro'
+    if (!hasLoyaltyAccess) {
+      // Check feature override as fallback
+      const { data: profileCheck } = await supabase
+        .from('business_profiles')
+        .select('features')
+        .eq('id', business.id)
+        .single()
+      const features = (profileCheck?.features as Record<string, boolean>) || {}
+      if (!features.loyalty_cards) {
+        return NextResponse.json(
+          { error: 'Loyalty programs require Spotlight tier' },
+          { status: 403 }
+        )
+      }
     }
 
     const body: Partial<LoyaltyProgramFormData> = await request.json()

@@ -20,9 +20,15 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
   const [program, setProgram] = useState<LoyaltyProgram | null>(initialProgram)
   const [showUpgradeModal, setShowUpgradeModal] = useState(true)
 
+  const sub = profile?.subscription
+  const tierName = sub?.subscription_tiers?.tier_name
+  const tierFeatures = sub?.subscription_tiers?.features as Record<string, boolean> | undefined
+  const isSubActive = sub?.status === 'active' || sub?.status === 'trial'
+  const isTrialNotExpired = !sub?.is_in_free_trial || !sub?.free_trial_end_date || new Date(sub.free_trial_end_date) > new Date()
+
   const hasAccess =
     profile?.features?.loyalty_cards === true ||
-    profile?.subscription?.subscription_tiers?.tier_name === 'spotlight' ||
+    (isSubActive && isTrialNotExpired && (tierName === 'spotlight' || tierName === 'pro' || tierFeatures?.loyalty_cards === true)) ||
     profile?.plan === 'spotlight' ||
     profile?.plan === 'pro'
 
