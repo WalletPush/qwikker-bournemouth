@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Building2, Star, MapPin, Globe, Mail, CheckCircle2, Clock, Shield, Sparkles } from 'lucide-react'
+import { Search, Building2, Star, MapPin, Globe, Mail, CheckCircle2, Clock, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -400,8 +400,7 @@ export default function ClaimPage() {
             />
           </div>
           
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#00d083]/10 border border-[#00d083]/20 text-[#00d083] text-sm font-medium mb-6">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-[#00d083]/10 border border-[#00d083]/20 text-[#00d083] text-sm font-medium mb-6">
             Free to claim your listing
           </div>
           
