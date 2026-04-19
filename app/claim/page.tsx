@@ -388,7 +388,7 @@ export default function ClaimPage() {
         }}
       />
       
-      <div className="container max-w-4xl mx-auto px-4 py-12 md:py-16 relative">
+      <div className="container max-w-2xl mx-auto px-4 py-12 md:py-16 relative">
         {/* Header */}
         <div className="text-center mb-12 md:mb-16">
           <div className="flex justify-center mb-10">
