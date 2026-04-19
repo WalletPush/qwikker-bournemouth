@@ -395,8 +395,7 @@ export default function ClaimPage() {
             <img 
               src="/qwikker-logo-web.svg" 
               alt="QWIKKER" 
-              className="h-8 md:h-10"
-              style={{ maxHeight: '40px' }}
+              className="h-12 w-auto"
             />
           </div>
           
