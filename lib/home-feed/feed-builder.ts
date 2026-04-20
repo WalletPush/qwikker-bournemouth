@@ -325,28 +325,42 @@ async function fetchTonightEvents(supabase: any, city: string) {
 
 async function fetchLoyaltyMemberships(walletPassId: string): Promise<RewardCard[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const res = await fetch(`${baseUrl}/api/loyalty/me?walletPassId=${walletPassId}`, {
-      cache: 'no-store',
-    })
+    const supabase = createServiceRoleClient()
 
-    if (!res.ok) return []
+    const { data: memberships, error } = await supabase
+      .from('loyalty_memberships')
+      .select(`
+        *,
+        loyalty_programs(
+          id, public_id, business_id, program_name, type, reward_threshold, reward_description,
+          stamp_label, stamp_icon, status, primary_color, city,
+          business_profiles(business_name, logo)
+        )
+      `)
+      .eq('user_wallet_pass_id', walletPassId)
+      .eq('status', 'active')
+      .order('last_active_at', { ascending: false })
 
-    const data = await res.json()
-    if (!data.memberships || !Array.isArray(data.memberships)) return []
+    if (error || !memberships || memberships.length === 0) return []
 
-    return data.memberships.map((m: any) => ({
-      id: m.id || m.program_id,
-      programPublicId: m.program?.public_id || '',
-      businessId: m.program?.business_id || undefined,
-      businessName: m.program?.business?.business_name || m.business_name || 'Unknown',
-      businessLogo: m.program?.business?.logo || null,
-      programType: m.program?.type || 'stamps',
-      currentBalance: m.stamps_balance || m.points_balance || 0,
-      threshold: m.program?.reward_threshold || 10,
-      rewardDescription: m.program?.reward_description || 'Free reward',
-      stampIcon: m.program?.stamp_icon,
-    }))
+    return (memberships as any[])
+      .filter((m) => m.loyalty_programs)
+      .map((m) => {
+        const program = m.loyalty_programs
+        const bp = program.business_profiles || {}
+        return {
+          id: m.id || m.program_id,
+          programPublicId: program.public_id || '',
+          businessId: program.business_id || undefined,
+          businessName: bp.business_name || 'Unknown',
+          businessLogo: bp.logo || null,
+          programType: program.type || 'stamps',
+          currentBalance: m.stamps_balance || m.points_balance || 0,
+          threshold: program.reward_threshold || 10,
+          rewardDescription: program.reward_description || 'Free reward',
+          stampIcon: program.stamp_icon,
+        }
+      })
   } catch (err) {
     console.error('[home-feed] Error fetching loyalty:', err)
     return []
