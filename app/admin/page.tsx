@@ -86,6 +86,7 @@ export default async function AdminPage() {
       admin_notes,
       rating,
       review_count,
+      rating_source,
       latitude,
       longitude,
       status,
