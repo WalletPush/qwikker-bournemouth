@@ -16,7 +16,7 @@ SECURITY DEFINER
 AS $$
 DECLARE
   v_trial_tier_id UUID;
-  v_trial_days INTEGER := 90;
+  v_trial_days INTEGER;
   v_now TIMESTAMPTZ := NOW();
   v_trial_end_date TIMESTAMPTZ;
   v_result JSONB;
@@ -27,30 +27,30 @@ BEGIN
   SELECT city INTO v_business_city
   FROM business_profiles WHERE id = p_business_id;
 
-  -- Look up franchise trial tier (dynamic, not hardcoded)
-  SELECT COALESCE(default_trial_tier, 'featured')
-  INTO v_trial_tier
+  -- Look up franchise trial tier AND trial duration from city config
+  SELECT
+    COALESCE(default_trial_tier, 'featured'),
+    COALESCE(founding_member_trial_days, 30)
+  INTO v_trial_tier, v_trial_days
   FROM franchise_crm_configs
   WHERE city = v_business_city;
 
   IF v_trial_tier IS NULL THEN
     v_trial_tier := 'featured';
   END IF;
+  IF v_trial_days IS NULL OR v_trial_days <= 0 THEN
+    v_trial_days := 30;
+  END IF;
 
-  -- 1. Get trial tier ID and trial days from subscription_tiers
-  SELECT id, (features->>'trial_days')::INTEGER
-  INTO v_trial_tier_id, v_trial_days
+  -- 1. Get trial tier ID from subscription_tiers (for FK reference only)
+  SELECT id
+  INTO v_trial_tier_id
   FROM subscription_tiers
   WHERE tier_name = 'trial'
   LIMIT 1;
   
   IF v_trial_tier_id IS NULL THEN
     RAISE EXCEPTION 'Trial tier not found in subscription_tiers';
-  END IF;
-  
-  -- Fallback if trial_days not set in features
-  IF v_trial_days IS NULL THEN
-    v_trial_days := 90;
   END IF;
   
   v_trial_end_date := v_now + (v_trial_days || ' days')::INTERVAL;

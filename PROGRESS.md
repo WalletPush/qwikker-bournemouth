@@ -12,6 +12,7 @@
 - **Tier 3:** Intelligence plumbing (3.1-3.4) scoped — wire existing user data into AI chat + feed. **3.1 COMPLETE (9/9 subtasks done). 3.2 COMPLETE (chat persistence with 24h sessions). 3.3 COMPLETE (feed personalization — category/dietary/loyalty/vibe boost across all sections).**
 - **Tier 4:** Backlog
 - **Home Feed:** 3 bugs fixed (tonight links, loyalty display, personalized reasons). Menu item images added (dashboard upload, home feed, business detail, secret menu).
+- **Claim Trial Flow:** 3 critical fixes applied (April 20): missing UNIQUE constraint on `business_subscriptions`, RPC reading wrong trial duration (90 vs 30), dashboard guard for pending claims. **⚠️ Must test full claim-to-trial flow before recording business walkthrough video.**
 
 ## Execution Priority (April 2026)
 
@@ -94,9 +95,19 @@
     | Personalized section reason text too long | Multiple reasons concatenated | Reduce to first 2 reasons in `buildPersonalizedSection` |
 22b. **3.5 Real AI Chat Streaming** — **PENDING**. Current setup makes a blocking `openai.chat.completions.create()` call (~20-35s for full response), then sends the entire text to the client where `StreamingText` fakes a typewriter effect. This is NOT real streaming — the user stares at a blank screen for the full generation time. **Fix:** Switch to `stream: true` on the OpenAI call, use a `ReadableStream` / SSE response from the API route, and consume tokens on the client as they arrive. The first token should appear in ~1-2s. System prompt is ~33K chars and KB content can be 9K+ per business — these drive the generation time but should NOT be trimmed (accuracy > speed). Streaming solves the UX problem without sacrificing context. **Files:** `app/api/ai/chat/route.ts` (switch to streaming response), `components/user/user-chat-page.tsx` (consume SSE/stream instead of JSON), `lib/ai/hybrid-chat.ts` (return stream instead of string).
 22c. **3.4 Lightweight User Insights** — **DEFERRED (post-launch)**. Nightly aggregation of user behavior patterns into jsonb on `app_users`. Only valuable once real users generate enough data. Revisit if users skip the wizard and feed/chat feels generic.
-23. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
-24. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
-25. Finish Tier 0 remaining (0.14, 0.22)
+23. ~~**0.38 Claim Trial Flow Critical Fixes (April 20)**~~ — **DONE (3 fixes + 1 UX improvement)**.
+    (a) **UNIQUE constraint missing on `business_subscriptions.business_id`** — The `approve_business_with_trial` RPC uses `ON CONFLICT (business_id) DO NOTHING`, which requires a UNIQUE constraint. Without it, PostgreSQL throws an error, the entire RPC fails, and the fallback sets the business to `claimed_free` instead of trial. **USER ACTION DONE:** `ALTER TABLE business_subscriptions ADD CONSTRAINT business_subscriptions_business_id_key UNIQUE (business_id);`
+    (b) **RPC using wrong trial duration (90 days instead of 30)** — The RPC was reading `trial_days` from `subscription_tiers.features->>'trial_days'` (global: 90) instead of `founding_member_trial_days` from `franchise_crm_configs` (Bournemouth: 30). Fixed: RPC now reads both `default_trial_tier` AND `founding_member_trial_days` from the city's franchise config. Fallback is 30 days (not 90). **USER ACTION DONE:** Ran updated `CREATE OR REPLACE FUNCTION` on production.
+    (c) **"Return to Business Dashboard" button on pending-approval page** — Button linked to `/dashboard` but businesses can't sign in until approved. Changed to **"All Done — We'll Be in Touch!"** linking to home, with subtitle "You'll be able to sign in once your claim is approved".
+    (d) **Dashboard guard for pending claims** — If a user signs in before their claim is approved (no `business_profiles` row linked), the dashboard now checks `claim_requests` for a pending claim and shows a clean "Hey [name], we're on it!" page with progress checklist instead of a broken/empty dashboard. If no pending claim either, redirects to `/onboarding`.
+    **Files changed:** `supabase/functions/approve_business_with_trial.sql`, `components/claim/pending-approval.tsx`, `app/dashboard/page.tsx`, `components/dashboard/claim-pending-dashboard.tsx` (new).
+    **Sanity check passed:** Franchise config (30 days, spotlight), unique constraint exists, RPC deployed and reads city config, Chaplin's reset to unclaimed with no subscription/claim rows.
+
+24. **⚠️ TEST: CLAIM TRIAL FLOW BEFORE RECORDING** — Submit claim for Chaplin's with "Free Trial" selected. Before approving: sign in and verify the "claim pending" dashboard page appears. Then approve the claim and verify: (a) business lands on Spotlight trial dashboard (not free listing), (b) trial shows 30 days (not 90), (c) subscription row exists with `status='trial'` and `is_in_free_trial=true`, (d) all premium features unlocked. **Do NOT record the video until this test passes.**
+
+25. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
+26. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
+27. Finish Tier 0 remaining (0.14, 0.22)
 26. Finish Tier 2 (2.8-2.11, 2.17)
 27. **Promo Pack QR Codes (Pre-Linked Loyalty Table Tents)** — Mass-print QR code table tents with unique short codes (e.g. `QWIK-7291`). Each QR points to `/promo/:code` — initially unlinked (shows generic page). When a business sets up their loyalty program, they enter the 4-digit code → QR redirects to their loyalty join page. New `promo_codes` table (`code`, `city`, `business_id` nullable, `linked_at`). Admin batch-generate per city. Dashboard UI: "Already have a promo pack QR? Enter your code." Franchise-scalable — each city admin generates their own batch. High-conversion launch strategy: deliver 250-300 packs to Bournemouth businesses with table tents, stickers, and marketing materials.
 

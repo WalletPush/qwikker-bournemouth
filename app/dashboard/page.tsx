@@ -36,6 +36,33 @@ export default async function DashboardPage() {
     .eq('user_id', data.claims.sub)
     .single()
 
+  // If no business profile linked yet, check for a pending claim
+  if (!profile) {
+    const { data: pendingClaim } = await supabase
+      .from('claim_requests')
+      .select('id, business_id, status, first_name, created_at, business:business_id(business_name, city)')
+      .eq('user_id', data.claims.sub)
+      .in('status', ['pending', 'submitted', 'under_review'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (pendingClaim) {
+      const { ClaimPendingDashboard } = await import('@/components/dashboard/claim-pending-dashboard')
+      const business = pendingClaim.business as { business_name: string; city: string } | null
+      return (
+        <ClaimPendingDashboard
+          firstName={pendingClaim.first_name || 'there'}
+          businessName={business?.business_name || 'your business'}
+          city={business?.city || 'your city'}
+          claimDate={pendingClaim.created_at}
+        />
+      )
+    }
+
+    redirect('/onboarding')
+  }
+
   // Get subscription data (for accurate tier and trial info) - GET LATEST ONLY!
   const { data: subscription, error: subError } = await supabase
     .from('business_subscriptions')

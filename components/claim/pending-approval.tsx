@@ -102,13 +102,16 @@ export function PendingApproval({
                 <p className="text-xs text-neutral-600 mt-2">{supportEmail}</p>
               </div>
 
-              <div className="border-t border-white/[0.06] pt-6 text-center">
+              <div className="border-t border-white/[0.06] pt-6 text-center space-y-3">
                 <a 
-                  href="/dashboard"
+                  href="/"
                   className="inline-flex items-center justify-center h-12 px-8 bg-[#00d083] hover:bg-[#00b86f] text-[#0a0a0a] rounded-xl font-semibold transition-all hover:shadow-[0_0_20px_rgba(0,208,131,0.3)] active:scale-[0.98]"
                 >
-                  Return to Business Dashboard
+                  All Done — We&apos;ll Be in Touch!
                 </a>
+                <p className="text-xs text-neutral-600">
+                  You&apos;ll be able to sign in once your claim is approved
+                </p>
               </div>
             </div>
           </CardContent>

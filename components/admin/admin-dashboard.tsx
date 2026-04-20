@@ -2248,9 +2248,10 @@ Qwikker Admin Team`
                         status: 'unclaimed',
                         auto_imported: business.auto_imported || false, // ✅ CRITICAL: Required for isImportedUnclaimed gate
                         admin_chat_fallback_approved: business.admin_chat_fallback_approved || false, // ✅ CRITICAL: AI eligibility flag
-                        rating: business.rating || null, // Google rating
-                        review_count: business.review_count || null, // Google review count
-                        google_primary_type: business.google_primary_type || null, // Google's primary business type
+                        rating: business.rating || null,
+                        review_count: business.review_count || null,
+                        rating_source: business.rating_source || null,
+                        google_primary_type: business.google_primary_type || null,
                         google_place_id: business.google_place_id || null,
                         latitude: business.latitude || null, // ✅ CRITICAL: For distance calculations
                         longitude: business.longitude || null, // ✅ CRITICAL: For distance calculations
