@@ -322,7 +322,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
       {/* Hero Section — image with badges, text below */}
       <div className="rounded-xl overflow-hidden">
         {/* Image container */}
-        <div className="relative h-48 md:h-72">
+        <div className="relative h-48 md:h-72 overflow-hidden">
           {(() => {
             const systemCategory = resolveSystemCategory(business)
 
