@@ -1,5 +1,19 @@
 import { generateEmbedding, storeKnowledgeWithEmbedding } from './embeddings'
 
+// pdfjs-dist 5.x expects browser globals that don't exist in Node.js
+if (typeof globalThis.DOMMatrix === 'undefined') {
+  // @ts-expect-error minimal stub for pdfjs-dist in Node
+  globalThis.DOMMatrix = class DOMMatrix {
+    constructor() { return Object.create(DOMMatrix.prototype) }
+  }
+}
+if (typeof globalThis.Path2D === 'undefined') {
+  // @ts-expect-error minimal stub for pdfjs-dist in Node
+  globalThis.Path2D = class Path2D {
+    constructor() { return Object.create(Path2D.prototype) }
+  }
+}
+
 interface ProcessedPDF {
   success: boolean
   text?: string
@@ -16,7 +30,6 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<ProcessedPDF> 
   try {
     console.log(`📄 Processing PDF (${buffer.length} bytes)...`)
     
-    // Use require for pdf-parse to avoid ESM issues
     const pdfParse = require('pdf-parse')
     
     if (typeof pdfParse !== 'function') {

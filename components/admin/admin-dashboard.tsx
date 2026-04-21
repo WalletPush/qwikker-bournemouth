@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { AdminLogoutButton } from '@/components/admin-logout-button'
@@ -403,6 +403,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [inspectionModal, setInspectionModal] = useState<{ open: boolean; business: Business | null }>({ open: false, business: null })
   const [inspectedBusinesses, setInspectedBusinesses] = useState<Set<string>>(new Set())
   const [processingChangeId, setProcessingChangeId] = useState<string | null>(null)
+  const inFlightChangeRef = useRef<string | null>(null)
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [eventPreviewModal, setEventPreviewModal] = useState<{ open: boolean; event: any; businessName: string } | null>(null)
@@ -724,6 +725,8 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   }
 
   const handleChangeApproval = async (changeId: string, action: 'approve' | 'reject') => {
+    if (inFlightChangeRef.current === changeId) return
+    inFlightChangeRef.current = changeId
     setProcessingChangeId(changeId)
     
     try {
@@ -756,6 +759,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
         `An unexpected error occurred while trying to ${action} the change. Please try again.`
       )
     } finally {
+      inFlightChangeRef.current = null
       setProcessingChangeId(null)
     }
   }

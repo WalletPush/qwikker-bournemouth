@@ -93,7 +93,16 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    console.log('✅ Change record found:', change.change_type, change.business?.business_name)
+    console.log('✅ Change record found:', change.change_type, change.business?.business_name, 'status:', change.status)
+    
+    // Idempotency guard: prevent double-processing
+    if (change.status !== 'pending') {
+      console.log(`⚠️ Change ${changeId} already processed (status: ${change.status})`)
+      return NextResponse.json(
+        { message: `Change already ${change.status}`, status: change.status },
+        { status: 200 }
+      )
+    }
     
     // Verify the change belongs to the admin's city
     if (change.business?.city !== requestCity) {

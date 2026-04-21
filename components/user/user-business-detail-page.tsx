@@ -319,88 +319,88 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
         </Button>
       </div>
 
-      {/* Hero Section with Image Carousel or Placeholder */}
-      <div className="relative h-64 md:h-80 rounded-xl overflow-hidden">
-        {(() => {
-          const systemCategory = resolveSystemCategory(business)
+      {/* Hero Section — image with badges, text below */}
+      <div className="rounded-xl overflow-hidden">
+        {/* Image container */}
+        <div className="relative h-48 md:h-72">
+          {(() => {
+            const systemCategory = resolveSystemCategory(business)
 
-          return business.status === 'unclaimed' || (!business.images || business.images.length === 0) ? (
-            // Unclaimed or no images → Show placeholder with subtle info message
-            <>
-              <BusinessCardImage
-                businessName={business.name}
-                businessId={business.id}
-                systemCategory={systemCategory}
-                showUnclaimedBadge={false}
-                className="h-full w-full"
-              />
-              {business.status === 'unclaimed' && !business.owner_user_id && (
-              <div className="absolute top-3 right-3 z-20 flex flex-col gap-1 items-end">
-                <span className="px-1.5 py-0.5 rounded text-[9px] leading-tight bg-slate-800/60 backdrop-blur-sm border border-slate-700/30 text-slate-400">
-                  Listing not yet claimed
-                </span>
-                <a
-                  href={`/claim?business_id=${business.id}`}
-                  className="inline-block px-1.5 py-0.5 rounded text-[9px] leading-tight whitespace-nowrap bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
-                  style={{ minHeight: 'unset', minWidth: 'unset' }}
-                >
-                  Your business? Claim here
-                </a>
-              </div>
+            return business.status === 'unclaimed' || (!business.images || business.images.length === 0) ? (
+              <>
+                <BusinessCardImage
+                  businessName={business.name}
+                  businessId={business.id}
+                  systemCategory={systemCategory}
+                  showUnclaimedBadge={false}
+                  className="h-full w-full"
+                />
+                {business.status === 'unclaimed' && !business.owner_user_id && (
+                  <div className="absolute top-3 right-3 z-20 flex flex-col gap-1 items-end">
+                    <span className="px-1.5 py-0.5 rounded text-[9px] leading-tight bg-slate-800/60 backdrop-blur-sm border border-slate-700/30 text-slate-400">
+                      Listing not yet claimed
+                    </span>
+                    <a
+                      href={`/claim?business_id=${business.id}`}
+                      className="inline-block px-1.5 py-0.5 rounded text-[9px] leading-tight whitespace-nowrap bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
+                      style={{ minHeight: 'unset', minWidth: 'unset' }}
+                    >
+                      Your business? Claim here
+                    </a>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <ImageCarousel
+                  images={business.images || []}
+                  alt={business.name}
+                  className="w-full h-full"
+                  showArrows={true}
+                  showDots={true}
+                />
+                {business.status === 'unclaimed' && !business.owner_user_id && (
+                  <div className="absolute top-3 right-3 z-20 flex flex-col gap-1 items-end">
+                    <span className="px-1.5 py-0.5 rounded text-[9px] leading-tight bg-slate-800/60 backdrop-blur-sm border border-slate-700/30 text-slate-400">
+                      Listing not yet claimed
+                    </span>
+                    <a
+                      href={`/claim?business_id=${business.id}`}
+                      className="inline-block px-1.5 py-0.5 rounded text-[9px] leading-tight whitespace-nowrap bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
+                      style={{ minHeight: 'unset', minWidth: 'unset' }}
+                    >
+                      Your business? Claim here
+                    </a>
+                  </div>
+                )}
+              </>
+            )
+          })()}
+
+          {/* Tier badges & offer chip — overlaid on image */}
+          <div className="absolute top-3 left-3 flex flex-col gap-1.5 sm:top-4 sm:left-4 sm:gap-2">
+            {business.plan === 'spotlight' && (
+              <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-[10px] px-2.5 py-1 rounded-full font-extrabold shadow-lg sm:text-sm sm:px-3 uppercase tracking-wide">
+                QWIKKER PICK
+              </span>
             )}
-          </>
-        ) : (
-          // Has real images → ImageCarousel
-          <>
-            <ImageCarousel
-              images={business.images || []}
-              alt={business.name}
-              className="w-full h-full"
-              showArrows={true}
-              showDots={true}
-            />
-            {business.status === 'unclaimed' && !business.owner_user_id && (
-              <div className="absolute top-3 right-3 z-20 flex flex-col gap-1 items-end">
-                <span className="px-1.5 py-0.5 rounded text-[9px] leading-tight bg-slate-800/60 backdrop-blur-sm border border-slate-700/30 text-slate-400">
-                  Listing not yet claimed
-                </span>
-                <a
-                  href={`/claim?business_id=${business.id}`}
-                  className="inline-block px-1.5 py-0.5 rounded text-[9px] leading-tight whitespace-nowrap bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
-                  style={{ minHeight: 'unset', minWidth: 'unset' }}
-                >
-                  Your business? Claim here
-                </a>
-              </div>
+            {business.plan === 'featured' && (
+              <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-[10px] px-2.5 py-1 rounded-full font-extrabold shadow-lg sm:text-sm sm:px-3 uppercase tracking-wide">
+                FEATURED
+              </span>
             )}
-          </>
-        )
-        })()}
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/40 to-transparent"></div>
-        
-        {/* Tier Badges - Top Left (MOBILE: keep on left side to avoid claim badges on right) */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5 sm:top-4 sm:left-4 sm:gap-2">
-          {business.plan === 'spotlight' && (
-            <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-[10px] px-2.5 py-1 rounded-full font-extrabold shadow-lg sm:text-sm sm:px-3 uppercase tracking-wide">
-              QWIKKER PICK
-            </span>
-          )}
-          {business.plan === 'featured' && (
-            <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-[10px] px-2.5 py-1 rounded-full font-extrabold shadow-lg sm:text-sm sm:px-3 uppercase tracking-wide">
-              FEATURED
-            </span>
-          )}
-          {business.activeOffers > 0 && (
-            <span className="bg-orange-500 text-slate-100 text-[10px] px-2.5 py-1 rounded-full shadow-lg font-medium sm:text-sm sm:px-3">
-              {business.activeOffers} {business.activeOffers === 1 ? 'Offer' : 'Offers'}
-            </span>
-          )}
+            {business.activeOffers > 0 && (
+              <span className="bg-orange-500 text-slate-100 text-[10px] px-2.5 py-1 rounded-full shadow-lg font-medium sm:text-sm sm:px-3">
+                {business.activeOffers} {business.activeOffers === 1 ? 'Offer' : 'Offers'}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Business Info Overlay */}
-        <div className="absolute bottom-3 left-4 right-4">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-1">{business.name}</h1>
-          <p className="text-xl text-[#00d083] mb-2">
+        {/* Business info — below the image for full readability */}
+        <div className="px-4 pt-4 pb-2">
+          <h1 className="text-2xl md:text-4xl font-bold text-slate-100 mb-1">{business.name}</h1>
+          <p className="text-base md:text-xl text-[#00d083] mb-2">
             {getHeroLine({
               business_tagline: business.tagline || business.business_tagline,
               business_town: business.town || business.business_town,
@@ -411,14 +411,14 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
               system_category: business.system_category
             })}
           </p>
-          
-          <div className="flex items-center gap-4 mb-0">
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <div className="flex items-center gap-1">
               <div className="flex">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <svg
                     key={star}
-                    className={`w-5 h-5 ${star <= business.rating ? 'text-yellow-400' : 'text-gray-600'}`}
+                    className={`w-4 h-4 md:w-5 md:h-5 ${star <= business.rating ? 'text-yellow-400' : 'text-gray-600'}`}
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -426,13 +426,13 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                   </svg>
                 ))}
               </div>
-              <span className="text-slate-100 font-semibold text-lg">{business.rating}</span>
-              <span className="text-slate-300">({business.reviewCount} reviews)</span>
+              <span className="text-slate-100 font-semibold text-base md:text-lg">{business.rating}</span>
+              <span className="text-slate-400 text-sm">({business.reviewCount} reviews)</span>
             </div>
             {userDistance !== null && (
-              <>
-                <span className="text-slate-300">•</span>
-                <span className="text-slate-300">
+              <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <span>•</span>
+                <span>
                   {userDistance < 0.1 ? '< 0.1' : 
                    Math.abs(userDistance - Math.round(userDistance)) < 0.1 
                      ? Math.round(userDistance) 
@@ -440,15 +440,15 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                 </span>
                 {walkingTime !== null && walkingTime > 5 && (
                   <>
-                    <span className="text-slate-300">•</span>
-                    <span className="text-slate-300">
+                    <span>•</span>
+                    <span>
                       {walkingTime >= 60 
                         ? `${(walkingTime / 60).toFixed(1)} hr walk`
                         : `${Math.round(walkingTime)} min walk`}
                     </span>
                   </>
                 )}
-              </>
+              </div>
             )}
           </div>
         </div>
