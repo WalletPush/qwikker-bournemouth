@@ -48,8 +48,23 @@ interface UserRewardsPageProps {
 
 export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
   const [memberships, setMemberships] = useState<Membership[]>([])
+  const [suggestions, setSuggestions] = useState<LoyaltyPick[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const fetchSuggestions = useCallback(async (currentMemberships: Membership[]) => {
+    try {
+      const res = await fetch('/api/loyalty/discover')
+      if (res.ok) {
+        const data = await res.json()
+        const joinedProgramIds = new Set(currentMemberships.map(m => m.program.public_id))
+        const filtered = (data.programs || []).filter(
+          (p: LoyaltyPick) => !joinedProgramIds.has(p.public_id)
+        )
+        setSuggestions(filtered)
+      }
+    } catch {}
+  }, [])
 
   useEffect(() => {
     async function load() {
@@ -57,7 +72,9 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
         const res = await fetch(`/api/loyalty/me?walletPassId=${encodeURIComponent(walletPassId)}`)
         if (res.ok) {
           const data = await res.json()
-          setMemberships(data.memberships || [])
+          const loaded = data.memberships || []
+          setMemberships(loaded)
+          if (loaded.length > 0) fetchSuggestions(loaded)
         }
       } catch (err) {
         console.error('Failed to load memberships:', err)
@@ -66,7 +83,7 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
       }
     }
     load()
-  }, [walletPassId])
+  }, [walletPassId, fetchSuggestions])
 
   const [redeemingMembership, setRedeemingMembership] = useState<Membership | null>(null)
   const [showScanner, setShowScanner] = useState(false)
@@ -80,10 +97,12 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
       const res = await fetch(`/api/loyalty/me?walletPassId=${encodeURIComponent(walletPassId)}`)
       if (res.ok) {
         const data = await res.json()
-        setMemberships(data.memberships || [])
+        const loaded = data.memberships || []
+        setMemberships(loaded)
+        if (loaded.length > 0) fetchSuggestions(loaded)
       }
     } catch {}
-  }, [walletPassId])
+  }, [walletPassId, fetchSuggestions])
 
   if (isLoading) {
     return (
@@ -277,6 +296,46 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
           </div>
         )
       })}
+
+      {/* Suggestions — programs the user hasn't joined yet */}
+      {suggestions.length > 0 && (
+        <div className="pt-4 space-y-3">
+          <p className="text-zinc-400 text-xs uppercase tracking-wide font-medium px-1">
+            More rewards we think you&apos;d like
+          </p>
+          {suggestions.map((p) => {
+            const iconKey = p.stamp_icon as StampIconKey | undefined
+            const stampIconName = (iconKey && STAMP_ICONS[iconKey]?.icon) || 'Stamp'
+
+            return (
+              <Link
+                key={p.id}
+                href={`/loyalty/start/${p.public_id}?wallet_pass_id=${encodeURIComponent(walletPassId)}`}
+                className="flex items-center gap-3 p-3 bg-zinc-900/60 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-colors"
+              >
+                {(p.business.logo || p.logo_url) ? (
+                  <img
+                    src={p.business.logo || p.logo_url || ''}
+                    alt=""
+                    className="w-10 h-10 rounded-lg object-cover bg-zinc-800 shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
+                    <Gift className="w-5 h-5 text-zinc-600" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium truncate">{p.business.business_name}</p>
+                  <p className="text-zinc-500 text-xs truncate">
+                    Collect {p.reward_threshold} {p.stamp_label.toLowerCase()} for {p.reward_description}
+                  </p>
+                </div>
+                <div className="text-emerald-400 text-xs font-medium shrink-0">Join</div>
+              </Link>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
