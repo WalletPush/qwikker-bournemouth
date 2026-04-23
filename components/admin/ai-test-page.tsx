@@ -26,32 +26,32 @@ function getTestQueries(cityName: string) {
   },
   {
     id: 'business-specific-1', 
-    query: "Tell me about Jerry's Burgers menu",
-    expectedContext: "Should only return Jerry's Burgers information",
+    query: `Who does a good steak for under fifteen pounds in ${displayCity}?`,
+    expectedContext: 'Should search menus and return specific recommendations',
     category: 'Business Specific'
   },
   {
     id: 'offers-1',
-    query: "What offers are available this week?",
-    expectedContext: "Should return current live offers",
+    query: 'What offers are available this week?',
+    expectedContext: 'Should return current live offers',
     category: 'Offers'
   },
   {
     id: 'secret-menu-1',
-    query: "Show me secret menu items",
-    expectedContext: "Should return secret menu items from approved businesses",
+    query: 'Are there any secret menu items I should know about?',
+    expectedContext: 'Should return secret menu items from approved businesses',
     category: 'Secret Menu'
   },
   {
     id: 'location-1',
-    query: "Where can I get coffee near the beach?",
-    expectedContext: "Should filter by location and business type",
+    query: `Where can I get a good coffee in ${displayCity}?`,
+    expectedContext: 'Should filter by business type and return relevant results',
     category: 'Location-based'
   },
   {
     id: 'edge-case-1',
-    query: "What's the weather like today?",
-    expectedContext: "Should decline to answer non-business queries",
+    query: 'Can you book me a table for two tonight?',
+    expectedContext: 'Should explain it cannot make bookings but suggest businesses',
     category: 'Edge Cases'
   }
   ]
