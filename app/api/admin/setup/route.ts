@@ -331,14 +331,13 @@ export async function POST(request: NextRequest) {
     if (config.atlas_min_rating !== undefined) updates.atlas_min_rating = config.atlas_min_rating
     if (config.atlas_mode !== undefined && config.atlas_mode !== '') updates.atlas_mode = config.atlas_mode
 
-    // Perform upsert with only the fields we want to update
-    console.log('🔄 Attempting upsert with updates:', Object.keys(updates))
+    // Update only the fields we're changing — preserves all existing columns
+    console.log('🔄 Attempting update with fields:', Object.keys(updates))
     
     const { data: updatedConfig, error } = await supabase
       .from('franchise_crm_configs')
-      .upsert(updates, {
-        onConflict: 'city' // Update if city exists, insert if new
-      })
+      .update(updates)
+      .eq('city', city)
       .select()
       .single()
 
