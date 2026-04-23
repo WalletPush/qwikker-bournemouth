@@ -257,44 +257,42 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
     loadConfig()
   }, [city])
 
-  const saveConfig = async () => {
+  const saveConfig = async (activate = false) => {
     if (!config) return
-    
+
     setSaveStatus('saving')
     setMessage('')
 
     try {
-      // Filter out empty/blank values to avoid overwriting existing DB values
       const filteredConfig: any = {}
-      
+
       Object.keys(config).forEach(key => {
         const value = config[key as keyof FranchiseConfig]
-        
-        // Only include non-empty values
-        // Empty strings, null, undefined will be excluded
-        // Booleans, numbers (including 0), and non-empty strings will be included
+
         if (value !== '' && value !== null && value !== undefined) {
           filteredConfig[key] = value
         }
       })
 
-      console.log('💾 Saving config for city:', city)
-      console.log('📦 Filtered config:', filteredConfig)
+      console.log('💾 Saving config for city:', city, activate ? '(+ activating)' : '')
 
       const response = await fetch('/api/admin/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ city, config: filteredConfig })
+        body: JSON.stringify({ city, config: filteredConfig, activate })
       })
       
       if (response.ok) {
+        const result = await response.json()
         setSaveStatus('saved')
-        setMessage('✓ Configuration saved successfully')
+        setMessage(result.activated ? '🚀 Franchise is now live!' : '✓ Configuration saved successfully')
         
-        setTimeout(() => {
-          setSaveStatus('idle')
-          setMessage('')
-        }, 3000)
+        if (!result.activated) {
+          setTimeout(() => {
+            setSaveStatus('idle')
+            setMessage('')
+          }, 3000)
+        }
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('❌ Save failed:', response.status, errorData)
@@ -428,7 +426,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
     { id: 2, name: 'Franchise Details', icon: '2' },
     { id: 3, name: 'Your API Services', icon: '3' },
     { id: 4, name: 'Integrations', icon: '4' },
-    { id: 5, name: 'Save & Launch', icon: '5' },
+    { id: 5, name: 'Launch Franchise', icon: '5' },
   ]
 
   if (isLoading || !config) {
@@ -1926,14 +1924,14 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
           </div>
         )}
 
-        {/* STEP 5: Review & Save */}
+        {/* STEP 5: Launch Franchise */}
         {activeStep === 5 && (
           <Card className="bg-slate-800/50 border border-slate-700">
             <CardHeader>
               <div className="mb-6">
-                <CardTitle className="text-white text-lg font-medium mb-1">Review & Save</CardTitle>
+                <CardTitle className="text-white text-lg font-medium mb-1">Launch Franchise</CardTitle>
                 <p className="text-slate-400 text-sm">
-                  Your configuration will be saved and applied immediately.
+                  Review your configuration and launch your franchise. Your city will go live immediately.
                 </p>
               </div>
             </CardHeader>
@@ -1974,11 +1972,11 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
               
               <div className="flex flex-col items-center gap-4 pt-6">
                 <button
-                  onClick={saveConfig}
-                  disabled={saveStatus === 'saving'}
-                  className={`px-8 py-2.5 text-sm font-medium text-white transition-colors rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+                  onClick={() => saveConfig(true)}
+                  disabled={saveStatus === 'saving' || saveStatus === 'saved'}
+                  className={`px-8 py-3 text-sm font-medium text-white transition-colors rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                     saveStatus === 'saved' 
-                      ? 'bg-[#00D083] hover:bg-[#00b86f]' 
+                      ? 'bg-[#00D083]' 
                       : saveStatus === 'error'
                       ? 'bg-red-600 hover:bg-red-700'
                       : 'bg-[#00D083] hover:bg-[#00b86f]'
@@ -1990,12 +1988,12 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Saving...
+                      Launching...
                     </>
                   )}
-                  {saveStatus === 'saved' && 'Saved'}
+                  {saveStatus === 'saved' && '🚀 Franchise is Live!'}
                   {saveStatus === 'error' && 'Error - Try Again'}
-                  {saveStatus === 'idle' && 'Save Configuration'}
+                  {saveStatus === 'idle' && 'Launch Franchise'}
                 </button>
                 
                 <Button

@@ -358,12 +358,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 🚀 AUTO-ACTIVATION LOGIC
-    // Auto-activation is disabled - admins can manually set status to 'active' when ready
-    // This allows for incremental configuration without premature activation
+    // 🚀 ACTIVATION: franchise admin clicks "Launch Franchise" on final wizard step
+    const activate = body.activate === true
+    if (activate && updatedConfig?.status === 'pending_setup') {
+      const { error: activateError } = await supabase
+        .from('franchise_crm_configs')
+        .update({ status: 'active' })
+        .eq('city', city)
+
+      if (activateError) {
+        console.error('❌ Failed to activate franchise:', activateError.message)
+        return NextResponse.json({
+          success: true,
+          activated: false,
+          message: 'Configuration saved but activation failed. Please try again.'
+        })
+      }
+
+      console.log(`✅ Franchise ${city} activated — now live`)
+      return NextResponse.json({
+        success: true,
+        activated: true,
+        message: 'Franchise is now live!'
+      })
+    }
 
     return NextResponse.json({
       success: true,
+      activated: false,
       message: 'Franchise configuration updated successfully'
     })
 

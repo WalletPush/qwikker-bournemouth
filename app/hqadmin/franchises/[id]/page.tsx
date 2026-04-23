@@ -226,6 +226,8 @@ export default function FranchiseDetailPage() {
               <div className="text-sm font-medium text-white">Franchise Status</div>
               <div className="text-xs text-neutral-500 mt-0.5">
                 {franchise.status === 'active' ? 'Franchise is live and operational' : 
+                 franchise.status === 'pending_setup' ? 'Franchise is completing setup' :
+                 franchise.status === 'coming_soon' ? 'Franchise has not been launched yet' :
                  franchise.status === 'suspended' ? 'Franchise access is suspended' :
                  'Franchise is archived'}
               </div>
