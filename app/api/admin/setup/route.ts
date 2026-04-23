@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
     // 🔒 SECURITY: Derive city from hostname (can't be spoofed by client)
     const city = await getCityFromRequest(request.headers)
     
-    const { config } = await request.json()
+    const { config, activate: shouldActivate } = await request.json()
 
     if (!config || typeof config !== 'object') {
       return NextResponse.json(
@@ -358,7 +358,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 🚀 ACTIVATION: franchise admin clicks "Launch Franchise" on final wizard step
-    const activate = body.activate === true
+    const activate = shouldActivate === true
     if (activate && updatedConfig?.status === 'pending_setup') {
       const { error: activateError } = await supabase
         .from('franchise_crm_configs')
