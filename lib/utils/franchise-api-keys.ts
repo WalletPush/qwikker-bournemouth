@@ -55,7 +55,7 @@ export async function getFranchiseApiKeys(city: string): Promise<FranchiseApiKey
         ghl_webhook_url
       `)
       .eq('city', city)
-      .eq('status', 'active')
+      .in('status', ['active', 'pending_setup'])
       .single()
     
     if (error) {
@@ -69,15 +69,17 @@ export async function getFranchiseApiKeys(city: string): Promise<FranchiseApiKey
       return getFallbackApiKeys(city)
     }
     
-    // If database values are empty, use environment variable fallback ONLY for email/slack
+    // Strip any invisible Unicode chars from API keys (copy-paste artifacts)
+    const clean = (v: string | null) => v ? v.replace(/[^\x20-\x7E]/g, '').trim() || null : null
+
     const keys: FranchiseApiKeys = {
-      resend_api_key: data.resend_api_key || process.env.RESEND_API_KEY || null,
+      resend_api_key: clean(data.resend_api_key) || process.env.RESEND_API_KEY || null,
       resend_from_email: data.resend_from_email || process.env.EMAIL_FROM || null,
       resend_from_name: data.resend_from_name || `${city.charAt(0).toUpperCase() + city.slice(1)} Qwikker`,
-      openai_api_key: data.openai_api_key || null, // NO FALLBACK - franchise must configure their own
-      anthropic_api_key: data.anthropic_api_key || null, // NO FALLBACK - franchise must configure their own
+      openai_api_key: clean(data.openai_api_key) || null,
+      anthropic_api_key: clean(data.anthropic_api_key) || null,
       slack_webhook_url: data.slack_webhook_url || process.env[`SLACK_WEBHOOK_URL_${city.toUpperCase()}`] || process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL || null,
-      walletpush_api_key: data.walletpush_api_key || process.env.MOBILE_WALLET_APP_KEY || null,
+      walletpush_api_key: clean(data.walletpush_api_key) || process.env.MOBILE_WALLET_APP_KEY || null,
       walletpush_template_id: data.walletpush_template_id || process.env.MOBILE_WALLET_TEMPLATE_ID || null,
       ghl_webhook_url: data.ghl_webhook_url || null,
     }
