@@ -93,6 +93,7 @@ export function HQAdminShell({ userEmail, children }: HQAdminShellProps) {
             <NavLink href="/hqadmin/city-requests" icon="map">City Requests</NavLink>
 
             <div className="pt-4 mt-4 border-t border-slate-800">
+              <NavLink href="/admin/find-user" icon="users">Find Users</NavLink>
               <NavLink href="/hqadmin/settings" icon="settings">Settings</NavLink>
               <HQLogoutButton />
             </div>
