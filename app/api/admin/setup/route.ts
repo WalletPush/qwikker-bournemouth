@@ -218,9 +218,11 @@ export async function POST(request: NextRequest) {
     const addIfPresent = (key: string, value: any) => {
       if (value === undefined || value === null) return
       
-      // If it's a string and looks like a masked value, skip it
       if (typeof value === 'string') {
         if (value.includes('••••') || value.trim() === '') return
+        // Strip invisible Unicode characters (line separators, zero-width spaces, etc.)
+        value = value.replace(/[^\x20-\x7E]/g, '').trim()
+        if (value === '') return
       }
       
       updates[key] = value
