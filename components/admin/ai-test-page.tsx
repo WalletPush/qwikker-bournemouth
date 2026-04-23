@@ -15,11 +15,13 @@ interface TestResult {
   timestamp: Date
 }
 
-const testQueries = [
+function getTestQueries(cityName: string) {
+  const displayCity = cityName.charAt(0).toUpperCase() + cityName.slice(1)
+  return [
   {
     id: 'general-1',
-    query: "What are the best restaurants in Bournemouth?",
-    expectedContext: "Should return local Bournemouth businesses only",
+    query: `What are the best restaurants in ${displayCity}?`,
+    expectedContext: `Should return local ${displayCity} businesses only`,
     category: 'General Discovery'
   },
   {
@@ -52,20 +54,26 @@ const testQueries = [
     expectedContext: "Should decline to answer non-business queries",
     category: 'Edge Cases'
   }
-]
+  ]
+}
 
-export function AITestPage() {
+interface AITestPageProps {
+  city?: string
+}
+
+export function AITestPage({ city = 'bournemouth' }: AITestPageProps) {
   const [isRunning, setIsRunning] = useState(false)
   const [currentTest, setCurrentTest] = useState<string | null>(null)
   const [results, setResults] = useState<TestResult[]>([])
-  const [selectedCity, setSelectedCity] = useState('bournemouth')
+  const selectedCity = city
   const [customQuery, setCustomQuery] = useState('')
+  const testQueries = getTestQueries(city)
 
   const clearResults = () => {
     setResults([])
   }
 
-  const runSingleTest = async (testQuery: typeof testQueries[0]) => {
+  const runSingleTest = async (testQuery: ReturnType<typeof getTestQueries>[0]) => {
     setCurrentTest(testQuery.id)
     const startTime = Date.now()
     
@@ -168,15 +176,9 @@ export function AITestPage() {
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   City Context
                 </label>
-                <select 
-                  value={selectedCity}
-                  onChange={(e) => setSelectedCity(e.target.value)}
-                  className="w-full p-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
-                >
-                  <option value="bournemouth">Bournemouth</option>
-                  <option value="london">London</option>
-                  <option value="paris">Paris</option>
-                </select>
+                <div className="w-full p-2 bg-slate-800 border border-slate-700 rounded-lg text-white capitalize">
+                  {selectedCity}
+                </div>
               </div>
               
               <Button 
