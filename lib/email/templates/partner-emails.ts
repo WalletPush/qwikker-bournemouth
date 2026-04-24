@@ -55,12 +55,12 @@ export function createPartnerClaimEmail(data: {
         <p style="font-size:13px;color:#6b7280;margin:4px 0 0;">Hold expires in 30 days</p>
       </div>
       <p style="font-size:14px;line-height:1.6;color:#9ca3af;margin:24px 0 0;">
-        If you have any questions in the meantime, reply to this email.
+        If you have any questions in the meantime, reach out to us at <a href="mailto:support@qwikker.com" style="color:#00d083;text-decoration:none;">support@qwikker.com</a>
       </p>
     </div>
   `)
 
-  const text = `Hi ${data.full_name},\n\nYou've successfully claimed ${data.city_name} as your city on Qwikker. Your claim is held for 30 days.\n\nA member of our team will be in touch within 48 hours to discuss next steps.\n\nIf you have any questions, reply to this email.`
+  const text = `Hi ${data.full_name},\n\nYou've successfully claimed ${data.city_name} as your city on Qwikker. Your claim is held for 30 days.\n\nA member of our team will be in touch within 48 hours to discuss next steps.\n\nIf you have any questions, reach out to us at support@qwikker.com`
 
   return { subject, html, text }
 }
@@ -86,12 +86,12 @@ export function createPartnerWaitlistEmail(data: {
         We&rsquo;ll notify you immediately if this city becomes available. In the meantime, if you&rsquo;d like to explore other cities, visit our partners page.
       </p>
       <p style="font-size:14px;line-height:1.6;color:#9ca3af;margin:24px 0 0;">
-        If you have any questions, reply to this email.
+        If you have any questions, reach out to us at <a href="mailto:support@qwikker.com" style="color:#00d083;text-decoration:none;">support@qwikker.com</a>
       </p>
     </div>
   `)
 
-  const text = `Hi ${data.full_name},\n\nYou've been added to the waitlist for ${data.city_name}. This city is currently claimed by another partner.\n\nWe'll notify you immediately if this city becomes available.\n\nIf you have any questions, reply to this email.`
+  const text = `Hi ${data.full_name},\n\nYou've been added to the waitlist for ${data.city_name}. This city is currently claimed by another partner.\n\nWe'll notify you immediately if this city becomes available.\n\nIf you have any questions, reach out to us at support@qwikker.com`
 
   return { subject, html, text }
 }
