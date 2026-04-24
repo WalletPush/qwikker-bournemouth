@@ -91,6 +91,7 @@ export function HQAdminShell({ userEmail, children }: HQAdminShellProps) {
             <NavLink href="/hqadmin/audit-logs" icon="list">Audit Logs</NavLink>
             <NavLink href="/hqadmin/contact-centre" icon="chat">Contact Centre</NavLink>
             <NavLink href="/hqadmin/city-requests" icon="map">City Requests</NavLink>
+            <NavLink href="/hqadmin/partners" icon="handshake">Partner Claims</NavLink>
 
             <div className="pt-4 mt-4 border-t border-slate-800">
               <NavLink href="/admin/find-user" icon="users">Find Users</NavLink>
@@ -161,6 +162,11 @@ function Icon({ name }: { name: string }) {
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+    handshake: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l4-4m0 0l4 4m-4-4v12M3 7l4-4m0 0l4 4M7 3v12m14-8l-4 4m0 0l-4-4m4 4V3" />
       </svg>
     ),
     settings: (

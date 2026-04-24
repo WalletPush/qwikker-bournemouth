@@ -82,7 +82,9 @@ export async function updateSession(request: NextRequest) {
     '/welcome',     // Welcome page
     '/onboarding',  // Onboarding flow
     '/wallet-pass', // Wallet pass pages
-    '/loyalty'      // Loyalty flows (earn, join, start) -- uses wallet_pass_id cookie
+    '/loyalty',     // Loyalty flows (earn, join, start) -- uses wallet_pass_id cookie
+    '/partners',    // City partner landing page (public)
+    '/privacy-policy' // Privacy policy page
   ]
   
   // Check if current path matches any public path
