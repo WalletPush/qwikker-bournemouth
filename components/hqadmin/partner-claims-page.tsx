@@ -89,6 +89,7 @@ export function PartnerClaimsPage() {
     const diff = new Date(expiresAt).getTime() - Date.now()
     if (diff <= 0) return 'Expired'
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    if (days > 365) return 'Reserved indefinitely'
     if (days > 1) return `${days} days left`
     const hours = Math.floor(diff / (1000 * 60 * 60))
     return `${hours}h left`
@@ -283,6 +284,12 @@ function ClaimCard({
               className="px-3 py-1.5 rounded-md text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
             >
               Extend 30d
+            </button>
+            <button
+              onClick={() => onAction(claim.id, 'reserve')}
+              className="px-3 py-1.5 rounded-md text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors"
+            >
+              Reserve
             </button>
             <button
               onClick={() => onAction(claim.id, 'convert')}

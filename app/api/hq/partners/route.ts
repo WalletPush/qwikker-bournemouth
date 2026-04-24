@@ -89,6 +89,20 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ success: true })
       }
 
+      case 'reserve': {
+        const { error } = await supabase
+          .from('partner_claims')
+          .update({
+            status: 'claimed',
+            expires_at: new Date('2099-12-31').toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+
+        if (error) throw error
+        return NextResponse.json({ success: true })
+      }
+
       case 'convert': {
         const { error } = await supabase
           .from('partner_claims')
