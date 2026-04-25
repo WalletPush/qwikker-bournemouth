@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { SmartQRGenerator } from './smart-qr-generator'
 import { ComprehensiveQRDashboard } from './comprehensive-qr-dashboard'
 import { AITestPage } from './ai-test-page'
+import { AIManagementPage } from './ai-management-page'
 import { QRAnalyticsDashboard } from './qr-analytics-dashboard'
 import { AdminDashboardOverview } from './admin-dashboard-overview'
 import { CityConfigurationPage } from './city-configuration-page'
@@ -79,11 +80,12 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const searchParams = useSearchParams()
   
   // Get initial tab from URL or default to 'pending'
-  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'unclaimed' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'contact-centre' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-test' | 'city-config'>(() => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'unclaimed' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'contact-centre' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-management' | 'city-config'>(() => {
     const urlTab = searchParams.get('tab')
     // Backward compat: old ?tab=setup or ?tab=pricing → city-config
     if (urlTab === 'setup' || urlTab === 'pricing') return 'city-config'
-    const validTabs = ['overview', 'pending', 'updates', 'live', 'unclaimed', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'contact-centre', 'import', 'claims', 'loyalty-queue', 'qr-management', 'ai-test', 'city-config']
+    if (urlTab === 'ai-test') return 'ai-management'
+    const validTabs = ['overview', 'pending', 'updates', 'live', 'unclaimed', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'contact-centre', 'import', 'claims', 'loyalty-queue', 'qr-management', 'ai-management', 'city-config']
     return validTabs.includes(urlTab || '') ? (urlTab as any) : 'overview'
   })
 
@@ -443,7 +445,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const { showSuccess, showError, showConfirm, ModalComponent } = useElegantModal()
 
   // Function to update tab and URL
-  const updateActiveTab = (newTab: 'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-test' | 'city-config') => {
+  const updateActiveTab = (newTab: 'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-management' | 'city-config') => {
     setActiveTab(newTab)
     setIsMobileMenuOpen(false) // Close mobile menu when tab is selected
     // Reset filters so listings always show on every tab
@@ -1499,17 +1501,17 @@ Qwikker Admin Team`
               </button>
 
               <button
-                onClick={() => setActiveTab('ai-test')}
+                onClick={() => setActiveTab('ai-management')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                  activeTab === 'ai-test' 
-                    ? 'bg-[#00d083] text-black' 
+                  activeTab === 'ai-management'
+                    ? 'bg-[#00d083] text-black'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
-                <span>AI Test</span>
+                <span>AI Management</span>
               </button>
 
         </nav>
@@ -1557,7 +1559,7 @@ Qwikker Admin Team`
                 {activeTab === 'import' && 'Import Businesses'}
                 {activeTab === 'claims' && 'Claim Requests'}
                 {activeTab === 'qr-management' && 'QR Code Management'}
-                {activeTab === 'ai-test' && 'AI Chat Testing'}
+                {activeTab === 'ai-management' && 'AI Management'}
                 </h1>
               </div>
             </div>
@@ -1878,7 +1880,7 @@ Qwikker Admin Team`
                   {activeTab === 'contact-centre' && 'Contact Centre'}
                   {activeTab === 'loyalty-queue' && 'Loyalty Queue'}
                   {activeTab === 'qr-management' && 'QR Code Management'}
-                  {activeTab === 'ai-test' && 'AI Chat Testing'}
+                  {activeTab === 'ai-management' && 'AI Management'}
                 </h2>
                 <p className="text-slate-400">
                   {activeTab === 'overview' && `Quick overview of ${cityDisplayName} admin activities and priority action`}
@@ -1895,7 +1897,7 @@ Qwikker Admin Team`
                   {activeTab === 'import' && 'Auto-populate your city with businesses from Google Places API'}
                   {activeTab === 'claims' && 'Review and approve business owners claiming their listings'}
                   {activeTab === 'qr-management' && 'Generate and manage QR codes for businesses, offers, and secret menus'}
-                  {activeTab === 'ai-test' && 'Test AI chat responses and knowledge base accuracy'}
+                  {activeTab === 'ai-management' && 'Monitor AI usage, costs, knowledge base health, and configuration'}
                 </p>
               </div>
             )}
@@ -3635,9 +3637,9 @@ Qwikker Admin Team`
                 <CityConfigurationPage city={city} />
               )}
 
-              {/* AI Test Tab */}
-              {activeTab === 'ai-test' && (
-                <AITestPage city={city} />
+              {/* AI Management Tab */}
+              {activeTab === 'ai-management' && (
+                <AIManagementPage city={city} />
               )}
 
             </div>

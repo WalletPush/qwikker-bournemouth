@@ -58,9 +58,9 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const searchParams = useSearchParams()
   
   // Get initial tab from URL or default to 'pending'
-  const [activeTab, setActiveTab] = useState<'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'ai-test' | 'qr-codes'>(() => {
+  const [activeTab, setActiveTab] = useState<'pending' | 'updates' | 'live' | 'incomplete' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'ai-management' | 'qr-codes'>(() => {
     const urlTab = searchParams.get('tab')
-    const validTabs = ['pending', 'updates', 'live', 'incomplete', 'rejected', 'knowledge', 'analytics', 'contacts', 'ai-test', 'qr-codes']
+    const validTabs = ['pending', 'updates', 'live', 'incomplete', 'rejected', 'knowledge', 'analytics', 'contacts', 'ai-management', 'qr-codes']
     return validTabs.includes(urlTab || '') ? (urlTab as any) : 'pending'
   })
   const [businessList, setBusinessList] = useState<Business[]>(businesses)
@@ -134,7 +134,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       color: 'bg-indigo-600/20 text-indigo-300 border-indigo-500/30'
     },
     {
-      id: 'ai-test',
+      id: 'ai-management',
       label: 'AI Chat Test',
       icon: '🤖',
       count: 0,
@@ -348,7 +348,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
               {activeTab === 'knowledge' && 'Knowledge Base'}
               {activeTab === 'analytics' && 'City Analytics'}
               {activeTab === 'contacts' && 'Business Contacts'}
-              {activeTab === 'ai-test' && 'AI Chat Testing'}
+              {activeTab === 'ai-management' && 'AI Management'}
               {activeTab === 'qr-codes' && 'QR Code Management'}
             </h2>
             <p className="text-slate-400">
@@ -360,7 +360,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
               {activeTab === 'knowledge' && 'AI knowledge base management for businesses and city information'}
               {activeTab === 'analytics' && `Performance metrics and user analytics for ${cityDisplayName}`}
               {activeTab === 'contacts' && `CRM contact management with GHL sync for ${cityDisplayName}`}
-              {activeTab === 'ai-test' && 'Test AI chat responses for accuracy, context awareness, and business filtering'}
+              {activeTab === 'ai-management' && 'Test AI chat responses for accuracy, context awareness, and business filtering'}
               {activeTab === 'qr-codes' && `Manage dynamic QR code assignments and deep linking for ${cityDisplayName}`}
             </p>
           </div>
@@ -451,7 +451,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
             )}
 
             {/* AI Chat Tab */}
-            {activeTab === 'ai-test' && (
+            {activeTab === 'ai-management' && (
               <div className="h-full flex flex-col">
                 {/* Header */}
                 <div className="mb-4">

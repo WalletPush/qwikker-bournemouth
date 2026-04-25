@@ -23,6 +23,7 @@ import { getFranchiseApiKeys } from '@/lib/utils/franchise-api-keys'
 import { normalizeLocation, calculateDistance, isValidUUID } from '@/lib/utils/location'
 import { getBusinessVibeStats } from '@/lib/utils/vibes'
 import { getOpenStatusForToday } from '@/lib/utils/opening-hours'
+import { logAIUsage } from './usage-tracker'
 
 // DO NOT instantiate OpenAI globally - must be per-franchise to use their API key
 // Each franchise pays for their own AI usage via franchise_crm_configs.openai_api_key
@@ -2020,6 +2021,10 @@ Present this information clearly and offer further help.`
           })
           
           aiResponse = factCompletion.choices[0]?.message?.content || factBlock
+
+          if (factCompletion.usage) {
+            logAIUsage({ city, walletPassId: context.walletPassId, model: modelToUse, usage: factCompletion.usage, queryType: 'fact_mode' })
+          }
           
           // GUARDRAIL: If model still hedges, use raw fact block
           const hasHedging = /typically|usually|might|probably|often|generally|tends to|check (their|the) site|confirm/i.test(aiResponse)
@@ -2049,6 +2054,10 @@ Present this information clearly and offer further help.`
     })
 
       aiResponse = completion.choices[0]?.message?.content || ''
+
+      if (completion.usage) {
+        logAIUsage({ city, walletPassId: context.walletPassId, model: modelToUse, usage: completion.usage, queryType: classification.complexity })
+      }
     }
     
     // === POST-PROCESSING GUARDRAILS ===
@@ -3051,6 +3060,10 @@ async function generateBusinessDetailResponse(
     
     const aiResponse = completion.choices[0].message.content || 
       `${business.business_name} is a ${business.display_category || 'local business'} with ${business.rating}★ rating. Want directions?`
+
+    if (completion.usage) {
+      logAIUsage({ city: context.city, walletPassId: context.walletPassId, model: 'gpt-4o-mini', usage: completion.usage, queryType: 'business_detail' })
+    }
     
     console.log(`✅ Generated detail response for ${business.business_name}`)
     
