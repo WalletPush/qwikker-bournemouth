@@ -62,11 +62,11 @@ export function AIManagementPage({ city }: AIManagementPageProps) {
     }
   }
 
-  const tabs: { id: SubTab; label: string; icon: string }[] = [
-    { id: 'usage', label: 'Usage & Costs', icon: '📊' },
-    { id: 'kb-health', label: 'KB Health', icon: '🧠' },
-    { id: 'testing', label: 'AI Testing', icon: '🧪' },
-    { id: 'config', label: 'Configuration', icon: '⚙️' },
+  const tabs: { id: SubTab; label: string }[] = [
+    { id: 'usage', label: 'Usage & Costs' },
+    { id: 'kb-health', label: 'KB Health' },
+    { id: 'testing', label: 'AI Testing' },
+    { id: 'config', label: 'Configuration' },
   ]
 
   return (
@@ -83,7 +83,6 @@ export function AIManagementPage({ city }: AIManagementPageProps) {
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
             }`}
           >
-            <span className="mr-1.5">{tab.icon}</span>
             {tab.label}
           </button>
         ))}
@@ -247,7 +246,7 @@ function UsageDashboard({ data, isLoading, error, days, setDays, onRefresh }: {
       {/* Empty state */}
       {usage.totalCalls === 0 && (
         <div className="text-center py-16 bg-slate-800/40 rounded-xl border border-slate-700/30">
-          <p className="text-4xl mb-3">📊</p>
+          <p className="text-4xl mb-3 opacity-30">—</p>
           <p className="text-lg font-medium text-white">No AI usage data yet</p>
           <p className="text-sm text-slate-400 mt-1">Usage data will appear here once users start chatting with your AI concierge</p>
         </div>
@@ -303,7 +302,7 @@ function KBHealthDashboard({ data, isLoading }: { data: UsageData | null; isLoad
       {/* Coverage gaps */}
       {knowledgeBase.coverageGaps.length > 0 && (
         <div className="bg-slate-800/60 border border-orange-600/20 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-orange-400 mb-3">⚠️ Businesses Without KB Entries</h3>
+          <h3 className="text-sm font-semibold text-orange-400 mb-3">Businesses Without KB Entries</h3>
           <p className="text-xs text-slate-400 mb-3">These active businesses have no knowledge base data. The AI concierge won't be able to answer specific questions about them.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {knowledgeBase.coverageGaps.map(biz => (
@@ -319,7 +318,7 @@ function KBHealthDashboard({ data, isLoading }: { data: UsageData | null; isLoad
       {/* All clear */}
       {knowledgeBase.coverageGaps.length === 0 && knowledgeBase.totalBusinesses > 0 && (
         <div className="text-center py-8 bg-[#00d083]/5 border border-[#00d083]/20 rounded-xl">
-          <p className="text-3xl mb-2">✅</p>
+          <p className="text-3xl mb-2 opacity-30">—</p>
           <p className="text-sm font-medium text-[#00d083]">All active businesses have knowledge base entries</p>
         </div>
       )}
@@ -378,7 +377,7 @@ function ConfigSection({ city }: { city: string }) {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            📊 View OpenAI Usage
+            View OpenAI Usage
             <ExternalLinkIcon />
           </a>
           <a
@@ -387,7 +386,7 @@ function ConfigSection({ city }: { city: string }) {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            💳 Add Credits
+            Add Credits
             <ExternalLinkIcon />
           </a>
           <a
@@ -396,14 +395,14 @@ function ConfigSection({ city }: { city: string }) {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            🔑 API Keys
+            API Keys
             <ExternalLinkIcon />
           </a>
         </div>
       </div>
 
       <div className="bg-slate-800/60 border border-blue-600/20 rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-blue-400 mb-2">ℹ️ How AI Costs Work</h3>
+        <h3 className="text-sm font-semibold text-blue-400 mb-2">How AI Costs Work</h3>
         <div className="text-xs text-slate-400 space-y-2">
           <p>Your AI concierge uses OpenAI's GPT models. Costs are based on token usage:</p>
           <div className="grid grid-cols-2 gap-2 bg-slate-900/50 rounded-lg p-3">

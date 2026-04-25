@@ -12,13 +12,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Admin authentication required' }, { status: 401 })
     }
 
-    const admin = await getAdminById(adminSessionCookie.value)
+    let adminSession
+    try {
+      adminSession = JSON.parse(adminSessionCookie.value)
+    } catch {
+      return NextResponse.json({ error: 'Invalid admin session' }, { status: 401 })
+    }
+
+    const admin = await getAdminById(adminSession.adminId)
     if (!admin) {
       return NextResponse.json({ error: 'Invalid admin session' }, { status: 401 })
     }
 
-    const city = getCityFromHostname(request.headers.get('host') || '')
-    if (!city || !isAdminForCity(admin, city)) {
+    const hostname = request.headers.get('host') || ''
+    const city = await getCityFromHostname(hostname)
+    if (!city || !await isAdminForCity(adminSession.adminId, city)) {
       return NextResponse.json({ error: 'Not authorized for this city' }, { status: 403 })
     }
 
@@ -61,13 +69,11 @@ export async function GET(request: NextRequest) {
     const chats = chatMessages.data || []
     const businesses = businessProfiles.data || []
 
-    // Aggregate usage stats
     const totalPromptTokens = logs.reduce((sum, l) => sum + (l.prompt_tokens || 0), 0)
     const totalCompletionTokens = logs.reduce((sum, l) => sum + (l.completion_tokens || 0), 0)
     const totalTokens = logs.reduce((sum, l) => sum + (l.total_tokens || 0), 0)
     const totalCost = logs.reduce((sum, l) => sum + parseFloat(l.estimated_cost_usd || '0'), 0)
 
-    // Cost by model
     const costByModel: Record<string, { tokens: number; cost: number; calls: number }> = {}
     for (const log of logs) {
       const model = log.model || 'unknown'
@@ -77,7 +83,6 @@ export async function GET(request: NextRequest) {
       costByModel[model].calls += 1
     }
 
-    // Daily breakdown
     const dailyUsage: Record<string, { tokens: number; cost: number; calls: number }> = {}
     for (const log of logs) {
       const day = new Date(log.created_at).toISOString().split('T')[0]
@@ -87,18 +92,15 @@ export async function GET(request: NextRequest) {
       dailyUsage[day].calls += 1
     }
 
-    // Busiest hours
     const hourlyBuckets: Record<number, number> = {}
     for (const log of logs) {
       const hour = new Date(log.created_at).getHours()
       hourlyBuckets[hour] = (hourlyBuckets[hour] || 0) + 1
     }
 
-    // Unique sessions from chat messages
     const uniqueSessions = new Set(chats.filter(c => c.session_id).map(c => c.session_id))
     const userMessages = chats.filter(c => c.role === 'user').length
 
-    // KB health
     const activeKb = kb.filter(e => e.status === 'active')
     const businessesWithKb = new Set(activeKb.map(e => e.business_id).filter(Boolean))
     const businessesWithoutKb = businesses.filter(b => !businessesWithKb.has(b.id) && b.status === 'active')

@@ -12,13 +12,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Admin authentication required' }, { status: 401 })
     }
 
-    const admin = await getAdminById(adminSessionCookie.value)
+    let adminSession
+    try {
+      adminSession = JSON.parse(adminSessionCookie.value)
+    } catch {
+      return NextResponse.json({ error: 'Invalid admin session' }, { status: 401 })
+    }
+
+    const admin = await getAdminById(adminSession.adminId)
     if (!admin) {
       return NextResponse.json({ error: 'Invalid admin session' }, { status: 401 })
     }
 
-    const city = getCityFromHostname(request.headers.get('host') || '')
-    if (!city || !isAdminForCity(admin, city)) {
+    const hostname = request.headers.get('host') || ''
+    const city = await getCityFromHostname(hostname)
+    if (!city || !await isAdminForCity(adminSession.adminId, city)) {
       return NextResponse.json({ error: 'Not authorized for this city' }, { status: 403 })
     }
 
