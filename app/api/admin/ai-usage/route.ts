@@ -1,35 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
+import { getAdminFromSession } from '@/lib/utils/admin-session'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCityFromHostname } from '@/lib/utils/city-detection'
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const adminSessionCookie = cookieStore.get('qwikker_admin_session')
-    if (!adminSessionCookie?.value) {
+    const admin = await getAdminFromSession()
+    if (!admin) {
       return NextResponse.json({ error: 'Admin authentication required' }, { status: 401 })
     }
 
-    let adminSession
-    try {
-      adminSession = JSON.parse(adminSessionCookie.value)
-    } catch {
-      return NextResponse.json({ error: 'Invalid admin session' }, { status: 401 })
-    }
-
-    const admin = await getAdminById(adminSession.adminId)
-    if (!admin) {
-      return NextResponse.json({ error: 'Invalid admin session' }, { status: 401 })
-    }
-
-    const hostname = request.headers.get('host') || ''
-    const city = await getCityFromHostname(hostname)
-    if (!city || !await isAdminForCity(adminSession.adminId, city)) {
-      return NextResponse.json({ error: 'Not authorized for this city' }, { status: 403 })
-    }
-
+    const city = admin.city
     const supabase = createAdminClient()
     const { searchParams } = new URL(request.url)
     const days = parseInt(searchParams.get('days') || '30', 10)
