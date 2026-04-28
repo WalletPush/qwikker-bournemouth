@@ -9,7 +9,6 @@ const SLIDES = [
   { id: 0, text: 'Bring customers back.', classes: 'text-4xl sm:text-5xl lg:text-7xl font-semibold' },
   { id: 1, text: 'Again.', classes: 'text-5xl sm:text-6xl lg:text-[5.5rem] font-semibold' },
   { id: 2, text: 'And again!', classes: 'text-5xl sm:text-7xl lg:text-[6.5rem] font-bold' },
-  { id: 3, text: 'AND AGAIN.', classes: 'text-6xl sm:text-8xl lg:text-[8rem] font-bold leading-none' },
 ]
 
 const SAMPLE_CARDS = [
@@ -130,7 +129,7 @@ function StickyScrollSequence() {
     return () => observers.forEach(o => o.disconnect())
   }, [])
 
-  const totalSlides = SLIDES.length + 3 // 4 text + introducing + single card + 3 cards
+  const totalSlides = SLIDES.length + 3 // 3 text + introducing + single card + 3 cards
 
   return (
     <div className="relative" style={{ height: `${totalSlides * 100}vh` }}>
@@ -151,8 +150,8 @@ function StickyScrollSequence() {
         style={{ height: '100vh' }}
       >
         <AnimatePresence mode="wait">
-          {/* Text slides 0-3 */}
-          {activeSlide <= 3 && (
+          {/* Text slides 0-2 */}
+          {activeSlide <= 2 && (
             <motion.div
               key={`slide-${activeSlide}`}
               initial={{ opacity: 0, filter: 'blur(12px)' }}
@@ -168,7 +167,7 @@ function StickyScrollSequence() {
           )}
 
           {/* Introducing Qwikker Loyalty */}
-          {activeSlide === 4 && (
+          {activeSlide === 3 && (
             <motion.div
               key="introducing"
               initial={{ opacity: 0, filter: 'blur(12px)' }}
@@ -187,7 +186,7 @@ function StickyScrollSequence() {
           )}
 
           {/* Single loyalty card */}
-          {activeSlide === 5 && (
+          {activeSlide === 4 && (
             <motion.div
               key="single-card"
               initial={{ opacity: 0, scale: 0.92, filter: 'blur(8px)' }}
@@ -218,7 +217,7 @@ function StickyScrollSequence() {
           )}
 
           {/* 3 cards fanning out side by side */}
-          {activeSlide === 6 && (
+          {activeSlide === 5 && (
             <motion.div
               key="three-cards"
               initial={{ opacity: 0 }}
