@@ -6,6 +6,7 @@
  */
 
 import type { TimeOfDay, BusinessTier } from './types'
+import { getPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -303,14 +304,27 @@ export function getGreetingSubtitle(timeOfDay: TimeOfDay, cityDisplayName: strin
 }
 
 /**
- * Get the first usable image from a business
+ * Get the first usable image from a business.
+ * Falls back to the placeholder system when no uploaded photos exist.
  */
-export function getBusinessImage(businessImages: string[] | null, logo: string | null): {
+export function getBusinessImage(
+  businessImages: string[] | null,
+  logo: string | null,
+  systemCategory?: string | null,
+  businessId?: string | null,
+): {
   image: string | null
   logo: string | null
 } {
-  const image = businessImages && businessImages.length > 0 ? businessImages[0] : null
-  return { image, logo }
+  if (businessImages && businessImages.length > 0) {
+    return { image: businessImages[0], logo }
+  }
+
+  if (systemCategory && businessId) {
+    return { image: getPlaceholderUrl(systemCategory, businessId), logo }
+  }
+
+  return { image: null, logo }
 }
 
 /**
