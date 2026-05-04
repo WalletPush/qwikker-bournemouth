@@ -75,7 +75,7 @@ export function FranchiseInvitationEmail({
                       Start Training →
                     </a>
                     <p style="margin: 12px 0 0 0; font-size: 13px; color: #92400e;">
-                      The episodes take around 45 minutes in total. By the end, you'll have everything you need to launch.
+                      By the end, you'll have everything you need to launch.
                     </p>
                   </td>
                 </tr>
@@ -89,7 +89,7 @@ export function FranchiseInvitationEmail({
               <div style="background: #f7fafc; border-radius: 8px; padding: 20px; border: 1px solid #e2e8f0;">
                 <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: #2d3748;">🎨 Your Brand Kit</h4>
                 <p style="margin: 0 0 12px 0; font-size: 14px; color: #4a5568; line-height: 1.6;">
-                  Download your Qwikker logos, icon, and brand assets. You'll need these during Episode 1 (WalletPush pass design) and for your landing page.
+                  Download your Qwikker logos, icon, and brand assets. You'll need these during Episode 1 (WalletPush pass design).
                 </p>
                 <a href="https://drive.google.com/file/d/1ErDdjd2n_1XbfHg-jWFjddeTHhcaIlu0/view?usp=share_link" style="display: inline-block; color: #00D083; text-decoration: none; font-size: 14px; font-weight: 700;">
                   📥 Download Brand Kit (ZIP)
@@ -175,7 +175,7 @@ export function FranchiseInvitationEmail({
             <td style="padding: 0 40px 40px 40px; border-top: 1px solid #e2e8f0;">
               <p style="margin: 20px 0 0 0; font-size: 14px; color: #718096; line-height: 1.6;">
                 <strong style="color: #2d3748;">Need help getting started?</strong><br>
-                Our HQ team is here to support you. Reply to this email or contact us at 
+                Our HQ team is here to support you. Contact us at 
                 <a href="mailto:support@qwikker.com" style="color: #00D083; text-decoration: none;">support@qwikker.com</a>
               </p>
             </td>
@@ -231,13 +231,13 @@ Please complete Episodes 1-6 of the Qwikker Admin Training before accessing your
 Start training here:
 https://trainings.walletpush.io/communities/groups/qwikker/home
 
-The episodes take around 45 minutes in total. By the end, you'll have everything you need to launch.
+By the end, you'll have everything you need to launch.
 
 ---
 
 🎨 YOUR BRAND KIT
 
-Download your Qwikker logos, icon, and brand assets (needed for Episode 1):
+Download your Qwikker logos, icon, and brand assets (needed for Episode 1 - WalletPush pass design):
 https://drive.google.com/file/d/1ErDdjd2n_1XbfHg-jWFjddeTHhcaIlu0/view?usp=share_link
 
 ---
@@ -258,7 +258,7 @@ QUICK START
 YOUR DASHBOARD URL
 ${subdomain}.qwikker.com/admin
 
-Need help? Reply to this email or contact support@qwikker.com
+Need help? Contact us at support@qwikker.com
 
 Welcome to the Qwikker family!
 
