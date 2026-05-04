@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { AdminSetupPage } from './admin-setup-page'
 import { PricingCardEditor } from './pricing-card-editor'
 import { LandingPageEditor } from './landing-page-editor'
+import { StripeConnectSection } from './stripe-connect-section'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -40,7 +41,14 @@ const SUB_TABS = [
 type SubTabId = typeof SUB_TABS[number]['id']
 
 export function CityConfigurationPage({ city }: CityConfigurationPageProps) {
-  const [activeSubTab, setActiveSubTab] = useState<SubTabId>('setup')
+  const [activeSubTab, setActiveSubTab] = useState<SubTabId>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tab = params.get('tab')
+      if (tab && SUB_TABS.some(t => t.id === tab)) return tab as SubTabId
+    }
+    return 'setup'
+  })
 
   return (
     <div className="space-y-6">
@@ -70,7 +78,10 @@ export function CityConfigurationPage({ city }: CityConfigurationPageProps) {
       )}
 
       {activeSubTab === 'pricing' && (
-        <PricingCardEditor city={city} />
+        <div className="space-y-6">
+          <StripeConnectSection city={city} />
+          <PricingCardEditor city={city} />
+        </div>
       )}
 
       {activeSubTab === 'trial' && (
