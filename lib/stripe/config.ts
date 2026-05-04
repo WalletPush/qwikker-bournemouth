@@ -51,9 +51,12 @@ export function getStripeConnectClientId(): string {
 }
 
 export function getStripeConnectRedirectUri(): string {
-  return process.env.NEXT_PUBLIC_APP_URL 
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/billing/stripe-callback`
-    : 'http://localhost:3000/api/admin/billing/stripe-callback'
+  // Always use the canonical base domain (qwikker.com) for Stripe OAuth callbacks.
+  // After the exchange, the callback route redirects to the correct city subdomain.
+  const baseUrl = process.env.STRIPE_CONNECT_REDIRECT_BASE_URL 
+    || process.env.NEXT_PUBLIC_APP_URL 
+    || 'http://localhost:3000'
+  return `${baseUrl}/api/admin/billing/stripe-callback`
 }
 
 // Generate OAuth URL for connecting a franchise

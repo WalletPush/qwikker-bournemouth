@@ -13,8 +13,8 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
   
-  // Base URL for redirects
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  // Base URL for redirects -- will be overridden with city subdomain once state is decoded
+  let baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   
   // Handle errors from Stripe
   if (error) {
@@ -39,6 +39,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         `${baseUrl}/admin?tab=city-config&stripe_error=Invalid state parameter`
       )
+    }
+    
+    // Redirect back to the correct city subdomain after OAuth completes
+    const isProduction = process.env.NODE_ENV === 'production'
+    if (isProduction) {
+      baseUrl = `https://${city}.qwikker.com`
     }
     
     // Exchange the authorization code for access token and account ID
