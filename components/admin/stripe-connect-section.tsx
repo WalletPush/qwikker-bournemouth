@@ -18,6 +18,9 @@ export function StripeConnectSection({ city }: StripeConnectSectionProps) {
     if (params.get('stripe_success')) {
       setMessage({ type: 'success', text: 'Stripe account connected successfully!' })
       window.history.replaceState({}, '', window.location.pathname)
+    } else if (params.get('stripe_pending')) {
+      setMessage({ type: 'error', text: 'Stripe account linked but onboarding not complete. Please click "Connect with Stripe" to finish setup.' })
+      window.history.replaceState({}, '', window.location.pathname)
     } else if (params.get('stripe_error')) {
       setMessage({ type: 'error', text: decodeURIComponent(params.get('stripe_error')!) })
       window.history.replaceState({}, '', window.location.pathname)

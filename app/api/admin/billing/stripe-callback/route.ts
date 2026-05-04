@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       const accountLink = await stripe.accountLinks.create({
         account: connectedAccountId,
         refresh_url: `${baseUrl}/api/admin/billing/stripe-callback?retry=true&city=${city}`,
-        return_url: `${baseUrl}/admin?stripe_success=true&tab=pricing`,
+        return_url: `${baseUrl}/admin?stripe_pending=true&tab=pricing`,
         type: 'account_onboarding',
       })
       
