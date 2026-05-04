@@ -54,8 +54,47 @@ export function FranchiseInvitationEmail({
                 🎉 Welcome to Qwikker, ${ownerName}!
               </h1>
               <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #4a5568;">
-                Your <strong>${franchiseName}</strong> franchise has been created and is ready to go! You now have access to the full Qwikker platform to manage your city's businesses, offers, events, and more.
+                Your <strong>${franchiseName}</strong> franchise has been created and your city is ready to go! Your subdomain <strong>${subdomain}.qwikker.com</strong> is fully configured and waiting for you.
               </p>
+            </td>
+          </tr>
+          
+          <!-- Training Section -->
+          <tr>
+            <td style="padding: 0 40px 30px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: #fffbeb; border-radius: 8px; border: 1px solid #fbbf24; overflow: hidden;">
+                <tr>
+                  <td style="padding: 25px 30px;">
+                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: #92400e;">
+                      ⚡ Before You Log In
+                    </h3>
+                    <p style="margin: 0 0 15px 0; font-size: 15px; line-height: 1.6; color: #78350f;">
+                      Please complete <strong>Episodes 1–6</strong> of the Qwikker Admin Training before accessing your dashboard. These short videos walk you through setting up the external services your city needs — you'll collect all the API keys and credentials required for your setup wizard.
+                    </p>
+                    <a href="https://trainings.walletpush.io/communities/groups/qwikker/home" style="display: inline-block; background: #f59e0b; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 700;">
+                      Start Training →
+                    </a>
+                    <p style="margin: 12px 0 0 0; font-size: 13px; color: #92400e;">
+                      The episodes take around 45 minutes in total. By the end, you'll have everything you need to launch.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Brand Kit Download -->
+          <tr>
+            <td style="padding: 0 40px 30px 40px;">
+              <div style="background: #f7fafc; border-radius: 8px; padding: 20px; border: 1px solid #e2e8f0;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: #2d3748;">🎨 Your Brand Kit</h4>
+                <p style="margin: 0 0 12px 0; font-size: 14px; color: #4a5568; line-height: 1.6;">
+                  Download your Qwikker logos, icon, and brand assets. You'll need these during Episode 1 (WalletPush pass design) and for your landing page.
+                </p>
+                <a href="https://drive.google.com/file/d/1ErDdjd2n_1XbfHg-jWFjddeTHhcaIlu0/view?usp=share_link" style="display: inline-block; color: #00D083; text-decoration: none; font-size: 14px; font-weight: 700;">
+                  📥 Download Brand Kit (ZIP)
+                </a>
+              </div>
             </td>
           </tr>
           
@@ -97,11 +136,11 @@ export function FranchiseInvitationEmail({
                 🚀 Quick Start Guide
               </h3>
               <ol style="margin: 0; padding-left: 20px; color: #4a5568; font-size: 15px; line-height: 1.8;">
-                <li>Click the button below to access your admin dashboard</li>
-                <li>Login with the credentials above</li>
+                <li>Complete Episodes 1–6 of the Admin Training (above)</li>
+                <li>Log in with the credentials above</li>
                 <li>Set your new secure password</li>
-                <li>Complete your franchise setup wizard</li>
-                <li>Start onboarding businesses in ${franchiseName}!</li>
+                <li>Paste your API keys into the setup wizard (Episode 6 walks you through this)</li>
+                <li>Launch your city and start onboarding businesses!</li>
               </ol>
             </td>
           </tr>
@@ -180,7 +219,28 @@ WELCOME TO QWIKKER!
 
 Hi ${ownerName},
 
-Your ${franchiseName} franchise has been created and is ready to go!
+Your ${franchiseName} franchise has been created and your city is ready to go!
+Your subdomain ${subdomain}.qwikker.com is fully configured and waiting for you.
+
+---
+
+⚡ BEFORE YOU LOG IN
+
+Please complete Episodes 1-6 of the Qwikker Admin Training before accessing your dashboard. These short videos walk you through setting up the external services your city needs.
+
+Start training here:
+https://trainings.walletpush.io/communities/groups/qwikker/home
+
+The episodes take around 45 minutes in total. By the end, you'll have everything you need to launch.
+
+---
+
+🎨 YOUR BRAND KIT
+
+Download your Qwikker logos, icon, and brand assets (needed for Episode 1):
+https://drive.google.com/file/d/1ErDdjd2n_1XbfHg-jWFjddeTHhcaIlu0/view?usp=share_link
+
+---
 
 YOUR LOGIN CREDENTIALS
 Username: ${username}
@@ -189,11 +249,11 @@ Temporary Password: ${temporaryPassword}
 IMPORTANT: You'll be required to change this password on your first login for security.
 
 QUICK START
-1. Go to ${loginUrl}
-2. Login with the credentials above
+1. Complete Episodes 1-6 of the Admin Training (above)
+2. Log in at ${loginUrl}
 3. Set your new secure password
-4. Complete your franchise setup wizard
-5. Start onboarding businesses!
+4. Paste your API keys into the setup wizard (Episode 6 walks you through this)
+5. Launch your city and start onboarding businesses!
 
 YOUR DASHBOARD URL
 ${subdomain}.qwikker.com/admin
