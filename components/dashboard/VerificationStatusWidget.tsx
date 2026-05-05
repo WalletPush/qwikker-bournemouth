@@ -210,7 +210,7 @@ export function VerificationStatusWidget({ business }: VerificationStatusWidgetP
             </p>
             {hasAtlasTier && (
               <p className="text-sm text-[#00d083]">
-                ✓ Your {business.business_tier === 'free_trial' ? 'Featured trial' : business.business_tier} plan includes Atlas map placement
+                ✓ Your {business.business_tier === 'free_trial' ? 'trial' : business.business_tier} plan includes Atlas map placement
               </p>
             )}
             {business.google_place_id && (

@@ -98,7 +98,7 @@ export default async function SupportPage() {
             <div className="border-l-2 border-[#00d083] pl-4">
               <h4 className="font-semibold text-white mb-2">How do I create my first offer?</h4>
               <p className="text-gray-300 text-sm mb-2">
-                Visit the Offers page to create exclusive deals for your customers. You can create up to 3 offers during your free trial.
+                Visit the Offers page to create exclusive deals for your customers. The number of active offers depends on your plan.
               </p>
               <Button asChild variant="link" className="text-[#00d083] p-0 h-auto">
                 <Link href="/dashboard/offers">Go to Offers →</Link>
@@ -108,7 +108,7 @@ export default async function SupportPage() {
             <div className="border-l-2 border-[#00d083] pl-4">
               <h4 className="font-semibold text-white mb-2">What happens when my free trial ends?</h4>
               <p className="text-gray-300 text-sm mb-2">
-                Your free trial includes all Featured plan benefits. Before it ends, you can upgrade to continue accessing premium features. Check your dashboard to see how many days remain.
+                Your free trial gives you access to your trial tier benefits. Before it ends, you can upgrade to continue accessing premium features. Check your dashboard to see how many days remain.
               </p>
               <Button asChild variant="link" className="text-[#00d083] p-0 h-auto">
                 <Link href="/dashboard/settings">View Plans →</Link>

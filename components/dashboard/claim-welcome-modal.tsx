@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { getTierFeatures } from '@/lib/utils/tier-limits'
 
 interface ClaimWelcomeModalProps {
   businessName: string
@@ -70,7 +71,7 @@ export function ClaimWelcomeModal({ businessName, businessId, isOpen, onClose, t
               Your Free Listing Includes
             </h3>
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm py-2">
-              {['Visible in Discover section', 'Basic AI chat visibility', 'Up to 5 menu items', '1 offer per month'].map((item) => (
+              {['Listed in Discover directory', 'Basic AI chat visibility', 'Up to 5 featured menu items', '1 active offer'].map((item) => (
                 <div key={item} className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -89,7 +90,7 @@ export function ClaimWelcomeModal({ businessName, businessId, isOpen, onClose, t
                   Start your {trialDays}-day free {tierName} trial
                 </h3>
                 <p className="text-slate-300 text-sm mb-4 leading-relaxed">
-                  Unlock priority AI recommendations, unlimited offers, secret menus, and analytics — free for {trialDays} days. No commitment.
+                  Unlock {getTierFeatures(trialTier || 'starter').slice(0, 3).join(', ').toLowerCase()} and more — free for {trialDays} days. No commitment.
                 </p>
               </>
             ) : (
@@ -105,14 +106,7 @@ export function ClaimWelcomeModal({ businessName, businessId, isOpen, onClose, t
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                {[
-                  'Priority AI recommendations',
-                  'Full menu indexing',
-                  'Unlimited offers and events',
-                  'Secret Menu Club access',
-                  'Premium placement in discovery',
-                  'Business analytics',
-                ].map((item) => (
+                {getTierFeatures(trialTier || 'starter').slice(0, 6).map((item) => (
                   <div key={item} className="flex items-center gap-2 text-slate-300">
                     <svg className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

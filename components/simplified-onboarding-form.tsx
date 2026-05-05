@@ -12,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { GooglePlacesAutocompleteV2 } from '@/components/ui/google-places-autocomplete-v2'
 import { GoogleAddressAutocomplete } from '@/components/ui/google-address-autocomplete'
+import { getTierFeatures } from '@/lib/utils/tier-limits'
 
 // Simplified validation schema - only essential fields
 const formSchema = z.object({
@@ -971,15 +972,19 @@ export function SimplifiedOnboardingForm({ referralCode, trialConfig }: Simplifi
                           <ul className="text-xs text-slate-400 space-y-2 text-left">
                             <li className="flex items-center gap-2">
                               <svg className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                              Listed in the directory
+                              Listed in Discover directory
                             </li>
                             <li className="flex items-center gap-2">
                               <svg className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                              Basic business profile
+                              Basic AI chat visibility
                             </li>
                             <li className="flex items-center gap-2">
                               <svg className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                              Upgrade anytime
+                              Up to 5 featured menu items
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <svg className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                              1 active offer
                             </li>
                           </ul>
                           <div className="mt-4 pt-3 border-t border-slate-700">
@@ -1016,18 +1021,12 @@ export function SimplifiedOnboardingForm({ referralCode, trialConfig }: Simplifi
                           <h3 className="text-xl font-bold text-white mb-1">Free Trial</h3>
                           <p className="text-sm text-slate-400 mb-4">{tierDisplayName} plan for {trialDays} days</p>
                           <ul className="text-xs text-slate-400 space-y-2 text-left">
-                            <li className="flex items-center gap-2">
+                            {getTierFeatures(trialConfig?.trialTier || 'starter').slice(0, 3).map((feature) => (
+                            <li key={feature} className="flex items-center gap-2">
                               <svg className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                              Full {tierDisplayName} tier access
+                              {feature}
                             </li>
-                            <li className="flex items-center gap-2">
-                              <svg className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                              Exclusive offers & promotions
-                            </li>
-                            <li className="flex items-center gap-2">
-                              <svg className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                              AI-powered discovery
-                            </li>
+                            ))}
                             <li className="flex items-center gap-2">
                               <svg className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                               No card required
@@ -1049,7 +1048,7 @@ export function SimplifiedOnboardingForm({ referralCode, trialConfig }: Simplifi
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                           </svg>
                           <p className="text-xs text-slate-400">
-                            <span className="text-slate-300 font-medium">Spotlight</span> — Create your own loyalty stamp cards, push notifications to all users, and get advanced AI insights
+                            <span className="text-slate-300 font-medium">Spotlight</span> — White-label digital stamp card, push notifications, social wizard, and Qwikker Pick badge
                           </p>
                         </div>
                         <div className="flex items-start gap-2.5">
@@ -1057,7 +1056,7 @@ export function SimplifiedOnboardingForm({ referralCode, trialConfig }: Simplifi
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                           </svg>
                           <p className="text-xs text-slate-400">
-                            <span className="text-slate-300 font-medium">Starter</span> — AI-powered discovery, active offers, and social media featuring to get you noticed
+                            <span className="text-slate-300 font-medium">Starter</span> — Carousel card in AI chat, 3 active offers, secret menu items, and events
                           </p>
                         </div>
                       </div>

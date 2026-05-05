@@ -15,6 +15,7 @@ import { HowQwikkerWorksModal } from '@/components/dashboard/how-qwikker-works-m
 import { VerificationStatusWidget } from './VerificationStatusWidget'
 import { ClaimWelcomeModal } from './claim-welcome-modal'
 import { isFreeTier } from '@/lib/atlas/eligibility'
+import { getTierFeatures } from '@/lib/utils/tier-limits'
 import { LoyaltyCardPreview, toLoyaltyCardPreviewProps } from '@/components/loyalty/loyalty-card-preview'
 
 interface ImprovedDashboardHomeProps {
@@ -827,7 +828,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-slate-300">Visible in Discover section</span>
+                  <span className="text-slate-300">Listed in Discover directory</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -839,13 +840,13 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                   <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-slate-300">Up to 5 menu items</span>
+                  <span className="text-slate-300">Up to 5 featured menu items</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-slate-300">1 offer per month</span>
+                  <span className="text-slate-300">1 active offer</span>
                 </div>
               </div>
             </div>
@@ -861,7 +862,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                     Start your {franchiseConfig.founding_member_trial_days}-day free {franchiseConfig.default_trial_tier.charAt(0).toUpperCase() + franchiseConfig.default_trial_tier.slice(1)} trial
                   </h3>
                   <p className="text-slate-300 text-base leading-relaxed max-w-2xl mx-auto">
-                    Unlock priority AI recommendations, unlimited offers, secret menus, and analytics — free for {franchiseConfig.founding_member_trial_days} days, no commitment.
+                    Unlock {getTierFeatures(franchiseConfig.default_trial_tier).slice(0, 3).join(', ').toLowerCase()} and more — free for {franchiseConfig.founding_member_trial_days} days, no commitment.
                   </p>
                 </>
               ) : (

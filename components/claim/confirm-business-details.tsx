@@ -11,6 +11,7 @@ import Image from 'next/image'
 import { VIBE_TAG_CATEGORIES, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH } from '@/lib/constants/vibe-tags'
 import { BusinessHoursInput } from '@/components/business-hours-input'
 import { BusinessHoursStructured, convertStructuredToText } from '@/types/business-hours'
+import { getTierFeatures } from '@/lib/utils/tier-limits'
 
 interface BusinessData {
   id: string
@@ -285,19 +286,23 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, trialConfi
                       </div>
                     )}
                     <h4 className="font-bold text-lg mb-1">Free Listing</h4>
-                    <p className="text-sm text-muted-foreground mb-3">Basic directory presence</p>
+                    <p className="text-sm text-muted-foreground mb-3">Basic visibility</p>
                     <ul className="text-xs text-muted-foreground space-y-1.5">
                       <li className="flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                        Listed in the directory
+                        Listed in Discover directory
                       </li>
                       <li className="flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                        Basic business profile
+                        Basic AI chat visibility
                       </li>
                       <li className="flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                        Upgrade anytime
+                        Up to 5 featured menu items
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                        1 active offer
                       </li>
                     </ul>
                     <p className="mt-3 pt-2 border-t text-sm font-bold">Free forever</p>
@@ -322,14 +327,12 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, trialConfi
                     <h4 className="font-bold text-lg mb-1">Free Trial</h4>
                     <p className="text-sm text-muted-foreground mb-3">{tierDisplayName} plan for {trialDays} days</p>
                     <ul className="text-xs text-muted-foreground space-y-1.5">
-                      <li className="flex items-center gap-1.5">
+                      {getTierFeatures(trialConfig?.trialTier || 'starter').slice(0, 3).map((feature) => (
+                      <li key={feature} className="flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" />
-                        Full {tierDisplayName} tier access
+                        {feature}
                       </li>
-                      <li className="flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" />
-                        AI-powered discovery
-                      </li>
+                      ))}
                       <li className="flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-[#00d083] flex-shrink-0" />
                         No card required

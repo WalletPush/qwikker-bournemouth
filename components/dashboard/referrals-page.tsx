@@ -170,7 +170,7 @@ export function ReferralsPage({ profile }: ReferralsPageProps) {
             </svg>
             <strong>Upgrade Required</strong>
           </div>
-          <p className="mt-2">Referral rewards are only available for Spotlight and Premium plans. Upgrade your plan to start earning £10 per successful referral.</p>
+          <p className="mt-2">Referral rewards are only available for Spotlight plans. Upgrade your plan to start earning £10 per successful referral.</p>
         </div>
       )}
 

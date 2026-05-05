@@ -4,18 +4,26 @@
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
-## Current Status
+## Current Status (Updated May 2, 2026)
 
-- **Tier 0:** 20/20 complete. All P0/P1 critical bugs fixed (April 2026). Remaining: 0.14 (marketing pages), 0.22 (pre-launch env vars).
+- **Tier 0:** 22/22 complete. All P0/P1 critical bugs fixed (April 2026). 0.14 (marketing pages) DONE. Remaining: 0.22 (pre-launch env vars — Stripe live keys in progress).
 - **Tier 1:** 7/7 complete (subject to testing)
-- **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.26, 2.28, 2.29 complete. 2.5 partially done. **No PRE-LAUNCH BLOCKERS remaining.** Pending: 2.27 (wizard), 2.8-2.11, 2.17.
-- **Tier 3:** Intelligence plumbing (3.1-3.4) scoped — wire existing user data into AI chat + feed. **3.1 COMPLETE (9/9 subtasks done). 3.2 COMPLETE (chat persistence with 24h sessions). 3.3 COMPLETE (feed personalization — category/dietary/loyalty/vibe boost across all sections).**
+- **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.29 complete. 2.27 DONE. 2.5, 2.8, 2.9 partially done (code exists, needs testing/completion). **No PRE-LAUNCH BLOCKERS remaining.** Pending: 2.10 (Sentry), 2.11 (loyalty PDF sheets), 2.17 (AI regression test).
+- **Tier 3:** Intelligence plumbing complete. **3.1 COMPLETE. 3.2 COMPLETE. 3.3 COMPLETE.** 3.4 deferred post-launch. 3.5 (real AI streaming) pending.
 - **Tier 4:** Backlog
-- **Home Feed:** 3 bugs fixed (tonight links, loyalty display, personalized reasons). Menu item images added (dashboard upload, home feed, business detail, secret menu).
-- **Claim Trial Flow:** 3 critical fixes applied (April 20): missing UNIQUE constraint on `business_subscriptions`, RPC reading wrong trial duration (90 vs 30), dashboard guard for pending claims. **⚠️ Must test full claim-to-trial flow before recording business walkthrough video.**
+- **Home Feed:** 3 bugs fixed (tonight links, loyalty display, personalized reasons). Menu item images added. Placeholder image fallback fix for imported businesses (April 29).
+- **Claim Trial Flow:** 3 critical fixes applied (April 20). **⚠️ Must test full claim-to-trial flow before recording business walkthrough video.**
+- **Stripe:** Live account activated (April 29). Connect Client ID available. Redirect URI, webhook, and env vars still need configuring. Security audit identified auth gaps in payment routes — fixes scoped but not yet implemented.
+- **QR Code System:** Consolidation plan created (April 24). 5 parallel systems identified, 7-step plan to unify. Full plan: `/Users/qwikker/.cursor/plans/qr_code_system_consolidation_53ea0981.plan.md`. All steps pending.
+- **New features (April 24-29):** City Partner Claims system (`/partners`), AI Management dashboard (usage tracking, KB health, config), AI usage logging (`ai_usage_logs` table), "Never recommend external platforms" AI rule, OpusReach Intake Pack.
 
-## Execution Priority (April 2026)
+## Execution Priority (April/May 2026)
 
+### NEXT UP (Most Urgent)
+1. **Stripe Canonical URL Fix** — Small code change in `stripe-callback/route.ts`: redirect to `https://{city}.qwikker.com/admin` (from state param) instead of hardcoded `NEXT_PUBLIC_APP_URL`. Register ONE redirect URI in Stripe Dashboard: `https://qwikker.com/api/admin/billing/stripe-callback`. Set `NEXT_PUBLIC_APP_URL=https://qwikker.com` in Vercel. Sign state with HMAC. Add auth to all Stripe routes. **This unblocks all franchise billing.**
+2. **Admin Onboarding Training Videos** — Screen-recorded tutorials for franchise operators covering: pass creation, admin setup wizard credentials, Google Places API, Resend email, import tool, offer/secret menu creation, loyalty setup. See "Training Video Plan" section below.
+
+### Completed (April 2026)
 1. ~~**0.23 Trial System Fix**~~ — DONE. Root cause: stale DB trigger `setup_free_trial_on_approval` racing the RPC. Trigger dropped. Code fixes already in place.
 2. ~~**0.24 Loyalty Pass Fix**~~ — DONE. Removed unused `Earn_Url` field from join + retry routes.
 3. ~~**0.25 Email Recipient Bug**~~ — DONE. All notification functions now use `data.email`. Interfaces updated.
@@ -105,11 +113,213 @@
 
 24. **⚠️ TEST: CLAIM TRIAL FLOW BEFORE RECORDING** — Submit claim for Chaplin's with "Free Trial" selected. Before approving: sign in and verify the "claim pending" dashboard page appears. Then approve the claim and verify: (a) business lands on Spotlight trial dashboard (not free listing), (b) trial shows 30 days (not 90), (c) subscription row exists with `status='trial'` and `is_in_free_trial=true`, (d) all premium features unlocked. **Do NOT record the video until this test passes.**
 
-25. **2.27 Action Items Wizard** — UX redesign of action items as multi-step wizard.
-26. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
-27. Finish Tier 0 remaining (0.14, 0.22)
-26. Finish Tier 2 (2.8-2.11, 2.17)
-27. **Promo Pack QR Codes (Pre-Linked Loyalty Table Tents)** — Mass-print QR code table tents with unique short codes (e.g. `QWIK-7291`). Each QR points to `/promo/:code` — initially unlinked (shows generic page). When a business sets up their loyalty program, they enter the 4-digit code → QR redirects to their loyalty join page. New `promo_codes` table (`code`, `city`, `business_id` nullable, `linked_at`). Admin batch-generate per city. Dashboard UI: "Already have a promo pack QR? Enter your code." Franchise-scalable — each city admin generates their own batch. High-conversion launch strategy: deliver 250-300 packs to Bournemouth businesses with table tents, stickers, and marketing materials.
+25. ~~**2.27 Action Items Wizard**~~ — **DONE**. Checklist with required/recommended items, `?from=action-items` return bar on all target pages, admin-assigned tasks from Contact Centre, "Submit for Review" at end, progress tracking.
+26. ~~**0.14 Marketing Pages**~~ — **DONE**. `/for-business` (benefit-led, city selection, loyalty scroll), `/about` (team story), `/privacy-policy`, `/terms-of-service` all exist.
+27. **2.5 User Help / Report Issue** — **PARTIALLY DONE**. Help dialog (4 categories) + `/api/user/support` + Slack notifications working. Contact Centre exists. Remaining: auto-attach browser info. Needs testing.
+28. **2.8 Loyalty & Saves Analytics** — **PARTIALLY DONE**. Loyalty stats dashboard exists (overview/members/redemptions). Analytics page has views+claims chart. Remaining: integrate loyalty joins/stamps/redemptions into main analytics. Needs testing.
+29. **2.9 Business Activity Notifications** — **PARTIALLY DONE**. Code exists (8 notification types, activity page, API routes) but `business_notifications` table may not exist on production (no migration found). Email digest and real-time push not implemented. Needs DB verification.
+30. ~~**Home Feed Placeholder Fix (April 29)**~~ — **DONE**. `getBusinessImage` in `ranking.ts` now falls back to `getPlaceholderUrl` when `business_images` is empty. All 6 call sites in `feed-builder.ts` updated. SQL queries for offers/events now SELECT `system_category`.
+31. ~~**City Partner Claims (April 24)**~~ — **DONE**. `/partners` landing page, `partner_claims` table, claim submission with plan selection, HQ admin management UI, Slack notifications.
+32. **AI Management Dashboard (April 25)** — **BUILT, NEEDS TESTING**. Usage tracking, KB health monitoring, config management. `ai_usage_logs` table with cost/token tracking. "Never recommend external platforms" AI rule. Some data display was incorrect — needs verification.
+33. **Stripe Security Hardening** — PENDING. Auth gaps identified in 6 payment API routes. Fixes scoped: add session checks, sign OAuth state with HMAC, use canonical callback URL. See Stripe audit in conversation history.
+34. **QR Code System Consolidation** — PENDING. 7-step plan to unify 5 parallel QR systems into one working system. Scan tracking, deep linking, pass-installation gate, "Edit Destination" for retargeting printed QR codes. Full plan: `/Users/qwikker/.cursor/plans/qr_code_system_consolidation_53ea0981.plan.md`.
+35. **0.22 Pre-launch Env Vars** — IN PROGRESS. Stripe live keys pending (Connect Client ID available: `ca_U08l...`). Webhook endpoint needs creating. `STRIPE_SECRET_KEY`, `STRIPE_CONNECT_CLIENT_ID`, `STRIPE_WEBHOOK_SECRET` to set in Vercel.
+36. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
+37. Finish Tier 2 remaining (2.10 Sentry, 2.11 Loyalty PDF sheets, 2.17 AI regression test)
+38. **3.5 Real AI Chat Streaming** — Blocking OpenAI call (20-35s) → true SSE streaming. Biggest UX win remaining.
+39. **Promo Pack QR Codes (Pre-Linked Loyalty Table Tents)** — Mass-print QR code table tents with unique short codes (e.g. `QWIK-7291`). Each QR points to `/promo/:code` — initially unlinked (shows generic page). When a business sets up their loyalty program, they enter the 4-digit code → QR redirects to their loyalty join page. New `promo_codes` table (`code`, `city`, `business_id` nullable, `linked_at`). Admin batch-generate per city. Dashboard UI: "Already have a promo pack QR? Enter your code." Franchise-scalable — each city admin generates their own batch. High-conversion launch strategy: deliver 250-300 packs to Bournemouth businesses with table tents, stickers, and marketing materials.
+
+### Business Value Enhancement Roadmap (May 2026)
+
+Strategic audit of what would make Qwikker irresistible to local businesses. Findings from full codebase review of business-facing features, consumer experience, tier gating, analytics, and conversion flows.
+
+**What's already strong (keep and amplify):**
+- AI concierge that actively recommends businesses (unique moat — no competitor has this)
+- Wallet pass as persistent retention layer (lock screen, push, loyalty — more present than any app)
+- Secret Menu gamification (drives curiosity and repeat visits)
+- Tiered AI visibility (carousel vs text-only creates real upgrade pressure)
+- Loyalty baked into the wallet (no separate app, no paper cards)
+
+**Priority 1 — High impact, moderate effort:**
+
+| # | Feature | What it does | Why it matters |
+|---|---------|-------------|----------------|
+| BV-1 | **ROI Calculator on Analytics** | Show estimated revenue from claims/visits: "23 claims x ~£15 avg = £345 revenue. Plan cost: £59. ROI: 5.8x" | Single most persuasive metric. Turns abstract subscription into concrete profit centre. |
+| BV-2 | **Weekly Performance Email to Businesses** | Automated summary: views, claims, saves, AI mentions, ranking vs category. Sent every Monday. | #1 retention driver. Keeps businesses aware of the platform when they're not logging in. |
+| BV-3 | **Blurred Analytics for Free Tier** | Show numbers exist ("47 views, 8 saves this week") but gate details behind upgrade. LinkedIn/Spotify playbook. | Currently free tier sees nothing → no evidence that upgrading helps. This creates FOMO. |
+| BV-4 | **QR Code Generator + Scan Tracking** | Self-service branded QR codes (link to Qwikker profile). Downloadable table tents/stickers. Track scans per location. | Physical-to-digital bridge. Table tent "Scan to unlock our Secret Menu" drives pass installs AND gives businesses tangible assets from Qwikker. |
+
+**Priority 2 — High impact, higher effort:**
+
+| # | Feature | What it does | Why it matters |
+|---|---------|-------------|----------------|
+| BV-5 | **Automated Campaigns** | Win-back ("Haven't visited in 30 days? Here's 10% off"), birthday, welcome series, seasonal triggers (Friday evening → restaurants). | Makes Spotlight genuinely irresistible — "marketing on autopilot." Most small businesses won't compose push notifications manually. |
+| BV-6 | **Social Content Generator (Social Wizard)** | AI-writes Instagram/Facebook posts from offers/menu/events. Story templates with business branding. Posting schedule suggestions. | Time-saving is the easiest value to sell. "Qwikker writes my social media posts" is tangible. Already in nav as "coming soon." |
+| BV-7 | **Competitor Benchmarking Dashboard** | Anonymous category rankings ("You're #3 of 12 restaurants"), claim rate comparisons, actionable tips ("Businesses with Secret Menu saw 40% more views"). | Creates urgency AND gives actionable guidance. Makes analytics dashboard stickier. |
+
+**Priority 3 — Medium impact, low effort:**
+
+| # | Feature | What it does | Why it matters |
+|---|---------|-------------|----------------|
+| BV-8 | **"Top Rated on Qwikker" Digital Badge** | Embeddable widget/image for website and social. Auto-generated for qualifying businesses. | Free marketing for Qwikker. Businesses display it proudly = social proof flywheel. |
+| BV-9 | **Print-Ready Promo Materials** | Auto-generated PDFs with QR code, business branding, Qwikker styling. One-click download from dashboard. | Low effort, high perceived value. Businesses love tangible collateral they can use immediately. |
+| BV-10 | **Vibe Response** | Let businesses thank or respond to positive vibes (anonymised). | Creates engagement loop. Business logs in → sees positive feedback → feels invested → stays subscribed. |
+
+**Priority 4 — UI/UX polish:**
+
+| # | Feature | What it does | Why it matters |
+|---|---------|-------------|----------------|
+| BV-11 | **Compare Plans Table** | Full comparison table below pricing cards on business settings page. Shows all features per tier in rows with tick/cross columns. | Businesses can see exactly what each tier includes at a glance. Removes ambiguity and drives informed upgrade decisions. |
+
+**Flow gap identified — the upgrade escalation ladder:**
+
+Current flow has a dead zone between "claims listing" and "upgrades":
+```
+Imported → Claims listing → Gets 1 offer, no analytics → ... silence ... → Hopefully upgrades?
+```
+
+Ideal flow with BV-1/2/3 implemented:
+```
+Imported → AI starts mentioning them → Business gets weekly email: "mentioned 23 times"
+→ Claims listing → Sees blurred analytics: "47 views — upgrade to see details"
+→ Creates 1st offer → Gets 5 claims → Gets notification for each
+→ Weekly email: "Competitors with paid plans get 4x more visibility"
+→ Upgrades to Starter → Full analytics → Secret Menu → More engagement
+→ Sees benchmarking: "#3 in category, #1 has loyalty enabled"
+→ Upgrades to Spotlight → Loyalty + Push + Priority AI + Campaigns
+```
+
+**The pitch test:** Currently the answer to "why pay £59/month?" is features. With BV-1 and BV-2 implemented, the answer becomes: "Last month, businesses on your plan averaged 67 new customer visits and £890 in estimated revenue. Your plan pays for itself by day 3."
+
+### Business Operations (BO) — May 2026
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| BO-1 | **HQ Revenue Tracking Dashboard** | PENDING | Per-city GPV (gross platform volume), business subscription counts by tier, pass holder counts, growth trends. Data already in Supabase (`business_subscriptions`, `app_users`, `franchise_crm_configs`). Build as HQ admin page. |
+| BO-2 | **Franchise Agreement Template** | PENDING | Legal template covering: territory exclusivity, fee structure lock, term length + renewal, transfer/sale clause, termination protections, revenue model lock. Get reviewed by commercial solicitor. Essential before onboarding more cities. |
+
+---
+
+### Future Innovation Features (Tier 5 — Post-Launch)
+
+Features that leverage Qwikker's unique position (wallet pass + AI + local business network) to create experiences no competitor can replicate. Not immediate priorities, but worth building towards.
+
+**Wallet Pass / Location:**
+
+| # | Feature | What it does | Technical notes |
+|---|---------|-------------|-----------------|
+| FT-1 | **Geofenced Wallet Push** | Consumer walks past a business with an active offer → pass appears on lock screen with offer text. No app needed. | Apple Wallet supports up to 10 `relevantLocations` per pass. Google Wallet has `locations` field. WalletPush API likely supports setting these. Rotate the 10 most relevant based on active offers + user preferences + proximity patterns. |
+| FT-2 | **NFC Tap for Loyalty** | NFC tag at counter. Customer taps phone → instant loyalty stamp. No camera, no scanning, 1 second. | NFC tags cost ~£0.15 each. iOS + Android support background NFC reading. Tag contains URL → hits earn endpoint. More premium feel than QR codes. |
+
+**AI-Driven Experiences:**
+
+| # | Feature | What it does | Technical notes |
+|---|---------|-------------|-----------------|
+| FT-3 | **Voice AI Concierge (Input + Output)** | User speaks to AI → AI speaks back. Full voice conversation with the city concierge. | **Input:** Web Speech API (browser-native, free) for speech-to-text. Mic button in chat UI. **Output:** OpenAI TTS API (`tts-1`, ~$0.015/1K chars, natural voices) or free browser `SpeechSynthesis` (robotic but zero cost). Layer on top of existing text chat — response text piped through TTS and auto-played. Combined with real streaming (3.5), first words arrive in ~1-2s. |
+| FT-4 | **AI Itinerary Builder** | "Plan my Saturday in Bournemouth" → AI builds a full day: brunch 10am → activity 12pm → drinks 5pm → dinner 8pm. All Qwikker businesses with live offers. Shareable link. | Extends existing AI chat. New intent detection for "plan my day/evening/weekend". Output formatted as timeline with business cards. Shareable via unique URL (organic growth). Could push itinerary stops to wallet pass as the day progresses. |
+| FT-5 | **Predictive Push Recommendations** | Time + weather + history → proactive push. "It's raining and you usually get coffee on Fridays — [Cafe] has 20% off right now." | Requires: weather API (free tier of OpenWeatherMap), visit pattern analysis from `atlas_analytics`, cron job for trigger evaluation. Push via WalletPush `Last_Message` with `push: true`. The "it just knows" moment that creates real loyalty. |
+| FT-6 | **Dynamic Flash Offers** | AI analyses a business's quiet periods and auto-suggests time-limited offers. "Tuesdays 2-4pm you average 3 visits — want to auto-run a flash offer?" Business just toggles it on. | Needs: analytics aggregation by hour-of-week, offer auto-creation API, scheduled push to relevant consumers. Businesses see it as "AI-powered marketing." |
+| FT-7 | **AI Menu Writer** | Business uploads photo of physical menu or types bullet points → AI generates polished descriptions, dietary tags, recommended pairings. | Uses OpenAI Vision API for menu photo parsing. Text generation from existing integration. Directly improves AI chat recommendations (better KB = better answers). |
+| FT-8 | **Cross-Promotion Engine** | AI identifies complementary businesses from consumer behaviour. "72% of people who visit [Coffee Shop] also visit [Bookstore] — create a joint offer?" | Needs: visit correlation analysis from `atlas_analytics` + `user_offer_claims`. Suggest pairings to businesses. Joint offers split between two businesses. Network effect — makes both businesses stickier. |
+| FT-9 | **Business AI Dashboard Copilot** | AI chat inside business dashboard. "How did I do this week vs last?", "What should I change about my offer?", "Write me an Instagram caption for my new dish." Uses their own analytics as context. | Separate system prompt with business-specific data. Reuses existing OpenAI integration. Lower stakes than consumer chat (no recommendation accuracy concerns). |
+| FT-10 | **Event Intelligence** | AI monitors local events (festivals, sports, concerts) and nudges businesses. "Music festival this weekend with 5,000 expected attendees — create a 'Festival Fuel' offer." | Requires: local event data source (public APIs, admin input, or scraping). Notification to relevant business categories. Auto-suggested offer templates. |
+
+**Engagement & Gamification:**
+
+| # | Feature | What it does | Technical notes |
+|---|---------|-------------|-----------------|
+| FT-11 | **Explorer Badges & Streaks** | Visit streaks, category completion ("Tried all 8 coffee shops"), seasonal challenges ("Summer Cocktail Trail — visit 6 bars"). Badges unlock real rewards from partner businesses. | Badge system already partially exists. Extend with streak tracking, category counters, time-limited challenges. Admin creates challenges per city. |
+| FT-12 | **City Leaderboard** | Anonymous weekly leaderboard: "Top Explorer: visited 12 places." Businesses can sponsor prizes for top explorers. | Low effort — aggregate `atlas_analytics` visits per `wallet_pass_id` per week. Display on dashboard. Opt-in (privacy). |
+| FT-13 | **Secret Menu Hunts** | Time-limited treasure hunts: "This weekend: find and unlock 5 hidden secret items across the city. Complete the hunt → win a £50 reward." | Admin creates hunts (select participating businesses + items). Track unlock progress per user. Timer + completion rewards. Drives massive foot traffic for participating businesses. |
+| FT-14 | **Group Decision Engine** | "We're 4 people, 2 vegetarian, budget-friendly, walking distance" → AI finds places that satisfy ALL constraints. Shareable group link. | Extends AI chat with multi-constraint filtering. Already has dietary data, location, pricing signals. Share via URL for group chat. Solves the "where should we eat" paralysis. |
+
+---
+
+### Admin Onboarding Training Video Plan
+
+**Target audience**: New franchise operators setting up their city from scratch. Format: Short screen-recorded walkthroughs (Loom or similar), 3-8 minutes each.
+
+**Video 1: Welcome & Platform Overview** (~5 min)
+- What Qwikker is and how the franchise model works
+- The admin dashboard layout (tabs: CRM, Setup, Import, Landing, Analytics)
+- How consumers interact (wallet pass, no app)
+- The three-tier AI visibility system (paid → claimed-free → unclaimed fallback)
+
+**Video 2: Admin Setup Wizard — Account & Details** (~4 min)
+- Step 1: Admin account (login credentials, password)
+- Step 2: Franchise details (display name, owner info, timezone, currency, tax)
+- Step 4: Integrations overview (what each one does)
+- Step 5: Activating the franchise
+
+**Video 3: Google Places API Setup** (~5 min)
+- Why it's needed (onboarding form autocomplete, import tool, rating verification)
+- Google Cloud Console walkthrough: create project, enable Places + Maps JS APIs, create API key
+- Key restrictions (HTTP referrers for production subdomain)
+- Pasting into admin setup wizard (Step 3: "Your API Services")
+- Testing: try the onboarding form, try the import tool search
+
+**Video 4: Resend Email Setup** (~4 min)
+- Why it's needed (transactional emails: approvals, rejections, welcome emails)
+- Resend dashboard: create account, verify domain (`{city}.qwikker.com`)
+- DNS records (DKIM, SPF, Return-Path) — add to Cloudflare/registrar
+- Copy API key into admin setup wizard
+- Auto-generated from-email (`no-reply@{city}.qwikker.com`)
+- Testing: approve a test business, check email arrives
+
+**Video 5: WalletPush Setup** (~6 min)
+- Why it's needed (wallet pass creation, push notifications, loyalty cards)
+- WalletPush account: create template (Apple + Google), branding (logo, strip image, colours)
+- Template ID + API key → admin setup wizard
+- Important: separate template per franchise (branding)
+- Testing: create a test pass from `/join`
+
+**Video 6: Stripe Connect** (~4 min)
+- Why it's needed (businesses pay subscription through your franchise)
+- One-click connect via admin setup wizard → Stripe onboarding
+- What happens: account ID saved, charges go directly to franchise bank account
+- Testing: trial business → upgrade → payment received
+
+**Video 7: Slack Notifications** (~3 min)
+- Create Slack workspace or channel for the franchise
+- Slack Apps → Incoming Webhooks → create webhook for channel
+- Paste URL into admin setup wizard
+- What notifications you'll receive (new signups, claims, support requests, approvals)
+
+**Video 8: The Import Tool** (~8 min)
+- What it does (bulk import businesses from Google Places as unclaimed listings)
+- Setting search radius and city centre coordinates
+- Running a search: categories, filters, radius
+- Reviewing results: duplicates, deny list, category mapping
+- Importing a batch: what happens (unclaimed, free_tier, AI fallback pool)
+- Post-import: approving for AI visibility (`admin_chat_fallback_approved`)
+- Placeholder images: how they're assigned per category
+
+**Video 9: Business Onboarding & Approval** (~6 min)
+- The two paths: fresh signup (`/onboarding`) vs claim existing (`/claim`)
+- Admin CRM queue: reviewing pending businesses
+- Google rating verification (4.4★ threshold)
+- Approving with trial vs free listing
+- What happens on approval (email sent, features unlocked, visible to consumers)
+
+**Video 10: Day-to-Day Operations** (~6 min)
+- Monitoring the CRM (active, pending, flagged businesses)
+- Managing offers & secret menu approvals
+- Checking analytics
+- Landing page editor (hero, sections, featured businesses)
+- Using the Contact Centre (support tickets from businesses)
+- Pricing card customisation
+
+**Prerequisites before recording:**
+- [ ] Stripe canonical URL fix implemented (Video 6 needs working flow)
+- [ ] Claim trial flow tested end-to-end (Video 9 demo)
+- [ ] Clean test franchise available (or use existing city in demo mode)
+
+**Existing videos (older, may need updating):**
+- User walkthrough: youtu.be/-n8up4zOkjc
+- Business walkthrough: youtu.be/pf6NQKAvIgA
+- Admin walkthrough: youtu.be/PLhVjjpShF4
+
+---
 
 ### WalletPush SDK Investigation (Backlog)
 Investigated using the Mobile Wallet SDK for automated loyalty card creation inside Qwikker.

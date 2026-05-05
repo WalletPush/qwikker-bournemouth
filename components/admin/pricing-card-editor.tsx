@@ -112,13 +112,9 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
                 annual_price: 0,
                 features: [
                   'Listed in Discover directory',
-                  'Basic business profile',
-                  'Update profile info',
-                  'Limited visibility',
-                  '❌ No AI chat visibility',
-                  '❌ No offers or events',
-                  '❌ No secret menu items',
-                  '❌ No analytics'
+                  'Basic AI chat visibility',
+                  'Up to 5 featured menu items',
+                  '1 active offer'
                 ],
                 cta_text: 'Free',
                 popular: false,
@@ -148,13 +144,9 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
                 annual_price: 0,
                 features: [
                   'Listed in Discover directory',
-                  'Basic business profile',
-                  'Update profile info',
-                  'Limited visibility',
-                  '❌ No AI chat visibility',
-                  '❌ No offers or events',
-                  '❌ No secret menu items',
-                  '❌ No analytics'
+                  'Basic AI chat visibility',
+                  'Up to 5 featured menu items',
+                  '1 active offer'
                 ],
                 cta_text: 'Free',
                 popular: false,
@@ -163,51 +155,52 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
               starter: {
                 title: 'Starter',
                 subtitle: 'Perfect for new businesses',
-                price: 29,
-                annual_price: 290,
+                price: 19.99,
+                annual_price: 199.90,
                 features: [
-                  'AI-powered discovery listings',
-                  'Menu/service indexing', 
-                  'Up to 3 active offers',
-                  'Social media welcome',
-                  'Limited Secret Menu Club',
-                  'Dashboard with support'
+                  'Carousel card in AI chat',
+                  'Full menu/service indexing',
+                  'AI-powered discovery',
+                  '3 active offers',
+                  '5 secret menu items',
+                  '3 events'
                 ],
-                cta_text: 'Upgrade to Starter',
+                cta_text: 'Get Started',
                 popular: false,
                 color_scheme: 'slate'
               },
               featured: {
                 title: 'Featured',
                 subtitle: 'Most popular choice',
-                price: 59,
-                annual_price: 590,
+                price: 49.99,
+                annual_price: 499.90,
                 features: [
-                  'Everything in Starter, plus:',
-                  'Priority AI placement',
-                  'Advanced menu indexing',
-                  'Up to 5 exclusive offers',
-                  'Social media featuring',
-                  'Full Secret Menu Club'
+                  'Higher AI ranking',
+                  'Featured badge on listing',
+                  '5 active offers',
+                  '10 secret menu items',
+                  '5 events'
                 ],
-                cta_text: 'Upgrade to Featured',
+                cta_text: 'Go Featured',
                 popular: true,
                 color_scheme: 'blue'
               },
               spotlight: {
                 title: 'Spotlight',
                 subtitle: 'Maximum visibility',
-                price: 89,
-                annual_price: 890,
+                price: 129,
+                annual_price: 1290,
                 features: [
-                  'Everything in Featured, plus:',
-                  'White-label loyalty system',
-                  'Advanced AI insights',
+                  'Qwikker Pick badge & top AI ranking',
+                  'Unlimited offers',
+                  '25 secret menu items',
+                  'Unlimited events',
+                  'White-label digital stamp card',
                   'Push notifications',
-                  'Analytics & QR stands',
-                  'Direct AI booking'
+                  'Social wizard',
+                  'Premium analytics'
                 ],
-                cta_text: 'Upgrade to Spotlight',
+                cta_text: 'Go Premium',
                 popular: false,
                 color_scheme: 'gold'
               }

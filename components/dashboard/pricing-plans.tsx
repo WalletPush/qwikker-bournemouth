@@ -224,13 +224,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
       ),
       features: [
         'Listed in Discover directory',
-        'Basic business profile',
         'Basic AI chat visibility',
-        'Up to 5 menu items',
-        '1 offer per month',
-        '❌ No priority AI recommendations',
-        '❌ No secret menu items',
-        '❌ No analytics'
+        'Up to 5 featured menu items',
+        '1 active offer'
       ],
       isFree: true
     },
@@ -239,9 +235,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
       name: dynamicPricing?.starter_title || 'Starter',
       subtitle: dynamicPricing?.starter_subtitle || 'Get started',
       cta: dynamicPricing?.starter_cta || 'Start Free Trial',
-      price: dynamicPricing?.starter_price || 29,
-      yearlyPrice: dynamicPricing?.starter_yearly || 290,
-      yearlyDiscount: Math.round((dynamicPricing?.starter_yearly || 290) * discountMultiplier),
+      price: dynamicPricing?.starter_price || 19.99,
+      yearlyPrice: dynamicPricing?.starter_yearly || 199.90,
+      yearlyDiscount: Math.round((dynamicPricing?.starter_yearly || 199.90) * discountMultiplier),
       popular: dynamicPricing?.starter_popular || false,
       icon: (
         <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -249,12 +245,12 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
         </svg>
       ),
       features: dynamicPricing?.starter_features || [
-        'AI-powered discovery listings',
-        'Menu/service indexing', 
-        'Up to 3 active offers',
-        'Social media welcome',
-        'Limited Secret Menu Club',
-        'Dashboard with support'
+        'Carousel card in AI chat',
+        'Full menu/service indexing',
+        'AI-powered discovery',
+        '3 active offers',
+        '5 secret menu items',
+        '3 events'
       ]
     },
     {
@@ -262,9 +258,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
       name: dynamicPricing?.featured_title || 'Featured',
       subtitle: dynamicPricing?.featured_subtitle || 'Most popular',
       cta: dynamicPricing?.featured_cta || 'Upgrade to Featured',
-      price: dynamicPricing?.featured_price || 59,
-      yearlyPrice: dynamicPricing?.featured_yearly || 590,
-      yearlyDiscount: Math.round((dynamicPricing?.featured_yearly || 590) * discountMultiplier),
+      price: dynamicPricing?.featured_price || 49.99,
+      yearlyPrice: dynamicPricing?.featured_yearly || 499.90,
+      yearlyDiscount: Math.round((dynamicPricing?.featured_yearly || 499.90) * discountMultiplier),
       popular: dynamicPricing?.featured_popular ?? true,
       icon: (
         <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -272,12 +268,11 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
         </svg>
       ),
       features: dynamicPricing?.featured_features || [
-        'Everything in Starter, plus:',
-        'Priority AI placement',
-        'Advanced menu indexing',
-        'Up to 5 exclusive offers',
-        'Social media featuring',
-        'Full Secret Menu Club'
+        'Higher AI ranking',
+        'Featured badge on listing',
+        '5 active offers',
+        '10 secret menu items',
+        '5 events'
       ]
     },
     {
@@ -285,9 +280,9 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
       name: dynamicPricing?.spotlight_title || 'Spotlight',
       subtitle: dynamicPricing?.spotlight_subtitle || 'Maximum visibility',
       cta: dynamicPricing?.spotlight_cta || 'Upgrade to Spotlight',
-      price: dynamicPricing?.spotlight_price || 89,
-      yearlyPrice: dynamicPricing?.spotlight_yearly || 890,
-      yearlyDiscount: Math.round((dynamicPricing?.spotlight_yearly || 890) * discountMultiplier),
+      price: dynamicPricing?.spotlight_price || 129,
+      yearlyPrice: dynamicPricing?.spotlight_yearly || 1290,
+      yearlyDiscount: Math.round((dynamicPricing?.spotlight_yearly || 1290) * discountMultiplier),
       popular: dynamicPricing?.spotlight_popular || false,
       premium: true,
       icon: (
@@ -296,12 +291,14 @@ export function PricingPlans({ currentPlan = 'starter', isFoundingMember = false
         </svg>
       ),
       features: dynamicPricing?.spotlight_features || [
-        'Everything in Featured, plus:',
-        'White-label loyalty system',
-        'Advanced AI insights',
+        'Qwikker Pick badge & top AI ranking',
+        'Unlimited offers',
+        '25 secret menu items',
+        'Unlimited events',
+        'White-label digital stamp card',
         'Push notifications',
-        'Analytics & QR stands',
-        'Direct AI booking'
+        'Social wizard',
+        'Premium analytics'
       ]
     }
   ]
