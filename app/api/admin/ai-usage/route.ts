@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('chat_messages')
         .select('id, session_id, created_at, role')
+        .eq('city', city.toLowerCase())
         .gte('created_at', since),
 
       supabase

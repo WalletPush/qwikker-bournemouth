@@ -4,9 +4,10 @@
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
-## Current Status (Updated May 2, 2026)
+## Current Status (Updated May 5, 2026)
 
 - **Tier 0:** 22/22 complete. All P0/P1 critical bugs fixed (April 2026). 0.14 (marketing pages) DONE. Remaining: 0.22 (pre-launch env vars — Stripe live keys in progress).
+- **Pricing & Tier Audit (May 5):** All business-facing pricing cards, onboarding modals, support pages, and trial upsells now use canonical `getTierFeatures()` source of truth. Prices updated to £19.99/£49.99/£129. DB migration rewrites all existing city pricing_cards. Training scripts EP1-EP6 committed.
 - **Tier 1:** 7/7 complete (subject to testing)
 - **Tier 2:** 2.1-2.4, 2.6-2.7, 2.12-2.16, 2.18-2.29 complete. 2.27 DONE. 2.5, 2.8, 2.9 partially done (code exists, needs testing/completion). **No PRE-LAUNCH BLOCKERS remaining.** Pending: 2.10 (Sentry), 2.11 (loyalty PDF sheets), 2.17 (AI regression test).
 - **Tier 3:** Intelligence plumbing complete. **3.1 COMPLETE. 3.2 COMPLETE. 3.3 COMPLETE.** 3.4 deferred post-launch. 3.5 (real AI streaming) pending.
@@ -16,6 +17,31 @@
 - **Stripe:** Live account activated (April 29). Connect Client ID available. Redirect URI, webhook, and env vars still need configuring. Security audit identified auth gaps in payment routes — fixes scoped but not yet implemented.
 - **QR Code System:** Consolidation plan created (April 24). 5 parallel systems identified, 7-step plan to unify. Full plan: `/Users/qwikker/.cursor/plans/qr_code_system_consolidation_53ea0981.plan.md`. All steps pending.
 - **New features (April 24-29):** City Partner Claims system (`/partners`), AI Management dashboard (usage tracking, KB health, config), AI usage logging (`ai_usage_logs` table), "Never recommend external platforms" AI rule, OpusReach Intake Pack.
+
+## Bournemouth Launch Strategy (Target: October 2026)
+
+**Timeline:**
+- **May-June 2026:** Finish training videos, Stripe billing, promo pack design. Platform hardening.
+- **Mid-July 2026:** Begin promo pack distribution in Bournemouth (250 packs minimum).
+- **July-September 2026:** 60-day Spotlight trial period for activated businesses. Peak summer season.
+- **October 2026:** Conversion push. Target: **10 businesses on Spotlight, 20+ on Starter/Featured, 50+ on Free.**
+
+**Promo Pack Trial Model:**
+- Each pack includes a unique QR/code for a **60-day free Spotlight trial**.
+- Businesses have **14 days from receiving the pack to activate** their trial. After 14 days the Spotlight offer expires (they can still claim a free listing).
+- This creates urgency on activation, filters out disengaged businesses, and naturally staggers trial end dates.
+- Expected activation: ~60-70% (150-175 businesses from 250 packs).
+
+**Conversion Milestones:**
+- **Day 30:** Automated check-in email — "You've had X AI mentions, Y loyalty joins. Here's what you'd lose when your trial ends."
+- **Day 45:** Sales conversation — franchise admin reaches out personally. "Pick a plan now, switch seamlessly."
+- **Day 60:** Trial expires. Business drops to Free unless they've subscribed.
+
+**Post-Launch Pricing Evaluation (November 2026):**
+- Review tier distribution. If nobody sits on Featured (Starter → Spotlight skip pattern), consider merging Starter + Featured into a single mid-tier (~£29.99-35.99). Grandfather existing Starter subscribers up for free.
+- If Featured has healthy adoption, keep 4 tiers.
+
+---
 
 ## Execution Priority (April/May 2026)
 

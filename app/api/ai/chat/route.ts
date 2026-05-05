@@ -17,7 +17,8 @@ async function persistChatMessages(
   walletPassId: string | undefined,
   userMessage: string,
   aiResponse: string,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
+  city?: string
 ): Promise<void> {
   if (!sessionId || !walletPassId) return
 
@@ -35,6 +36,7 @@ async function persistChatMessages(
           content: userMessage,
           metadata: {},
           created_at: now,
+          ...(city && { city }),
         },
         {
           session_id: sessionId,
@@ -43,6 +45,7 @@ async function persistChatMessages(
           content: aiResponse,
           metadata: metadata ?? {},
           created_at: new Date(Date.now() + 1).toISOString(),
+          ...(city && { city }),
         },
       ])
 
@@ -982,8 +985,8 @@ export async function POST(request: NextRequest) {
           // Only show Atlas CTA if THIS business has coords
           const hasCoords = !!(biz.latitude && biz.longitude)
           
-          // Persist detail-mode messages (fire-and-forget)
-          await persistChatMessages(sessionId, validatedWalletPassId, message, detailFactsBlock)
+          // Persist detail-mode messages
+          await persistChatMessages(sessionId, validatedWalletPassId, message, detailFactsBlock, undefined, city)
 
           return NextResponse.json({
             response: detailFactsBlock,
@@ -1156,7 +1159,7 @@ export async function POST(request: NextRequest) {
     await persistChatMessages(sessionId, validatedWalletPassId, message, finalResponse, {
       quickReplies,
       intent,
-    })
+    }, city)
 
     return NextResponse.json({
       response: finalResponse,
