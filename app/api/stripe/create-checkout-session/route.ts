@@ -6,6 +6,7 @@ import {
   createCheckoutSession,
   getTierPricing,
 } from '@/lib/stripe/checkout'
+import { verifyBusinessOwner } from '@/lib/utils/business-session'
 
 /**
  * POST /api/stripe/create-checkout-session
@@ -24,6 +25,11 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields: businessId, tierName, billingCycle' },
         { status: 400 }
       )
+    }
+
+    const owner = await verifyBusinessOwner(businessId)
+    if (!owner) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     if (!['monthly', 'annual'].includes(billingCycle)) {

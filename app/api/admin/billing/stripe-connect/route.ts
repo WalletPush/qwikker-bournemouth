@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripeConnectUrl } from '@/lib/stripe/config'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getAdminFromSession } from '@/lib/utils/admin-session'
+import { createHmac } from 'crypto'
 
 /**
  * POST /api/admin/billing/stripe-connect
@@ -8,6 +10,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
  */
 export async function POST(request: NextRequest) {
   try {
+    const admin = await getAdminFromSession()
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Admin authentication required' },
+        { status: 401 }
+      )
+    }
+
     // Check for required environment variables first
     if (!process.env.STRIPE_SECRET_KEY) {
       console.error('STRIPE_SECRET_KEY is not configured')
@@ -49,12 +59,15 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Create a state parameter with the city (used in callback)
-    // In production, you'd want to use a more secure state (signed JWT or encrypted)
-    const state = Buffer.from(JSON.stringify({ 
+    // Create a signed state parameter with the city (verified in callback)
+    const payload = JSON.stringify({ 
       city: city.toLowerCase(),
       timestamp: Date.now()
-    })).toString('base64')
+    })
+    const signature = createHmac('sha256', process.env.STRIPE_SECRET_KEY!)
+      .update(payload)
+      .digest('hex')
+    const state = Buffer.from(JSON.stringify({ payload, signature })).toString('base64')
     
     // Generate the Stripe Connect OAuth URL
     const connectUrl = getStripeConnectUrl(state)

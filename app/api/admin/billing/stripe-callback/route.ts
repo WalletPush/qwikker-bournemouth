@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe/config'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createHmac, timingSafeEqual } from 'crypto'
 
 /**
  * GET /api/admin/billing/stripe-callback
@@ -31,9 +32,28 @@ export async function GET(request: NextRequest) {
   }
   
   try {
-    // Decode the state to get the city
+    // Decode and verify the HMAC-signed state
     const stateData = JSON.parse(Buffer.from(state, 'base64').toString())
-    const { city } = stateData
+    const { payload, signature } = stateData
+
+    // Support both signed (new) and unsigned (legacy) state formats
+    let city: string
+    if (payload && signature) {
+      const expectedSig = createHmac('sha256', process.env.STRIPE_SECRET_KEY!)
+        .update(payload)
+        .digest('hex')
+      const sigBuffer = Buffer.from(signature, 'hex')
+      const expectedBuffer = Buffer.from(expectedSig, 'hex')
+      if (sigBuffer.length !== expectedBuffer.length || !timingSafeEqual(sigBuffer, expectedBuffer)) {
+        return NextResponse.redirect(
+          `${baseUrl}/admin?stripe_error=Invalid state signature&tab=pricing`
+        )
+      }
+      const parsed = JSON.parse(payload)
+      city = parsed.city
+    } else {
+      city = stateData.city
+    }
     
     if (!city) {
       return NextResponse.redirect(

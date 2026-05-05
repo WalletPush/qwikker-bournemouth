@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getStripeForConnectedAccount } from '@/lib/stripe/config'
 import { getFranchiseStripeConfig } from '@/lib/stripe/checkout'
+import { verifyBusinessOwner } from '@/lib/utils/business-session'
 
 /**
  * POST /api/stripe/cancel-subscription
@@ -21,6 +22,11 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required field: businessId' },
         { status: 400 }
       )
+    }
+
+    const owner = await verifyBusinessOwner(businessId)
+    if (!owner) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const supabase = createAdminClient()

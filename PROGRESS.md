@@ -14,7 +14,7 @@
 - **Tier 4:** Backlog
 - **Home Feed:** 3 bugs fixed (tonight links, loyalty display, personalized reasons). Menu item images added. Placeholder image fallback fix for imported businesses (April 29).
 - **Claim Trial Flow:** 3 critical fixes applied (April 20). **⚠️ Must test full claim-to-trial flow before recording business walkthrough video.**
-- **Stripe:** Live account activated (April 29). Connect Client ID available. Redirect URI, webhook, and env vars still need configuring. Security audit identified auth gaps in payment routes — fixes scoped but not yet implemented.
+- **Stripe:** Live account activated (April 29). Connect Client ID available. Redirect URI done (canonical city subdomain). **Security hardening DONE (May 5):** auth on all 4 business payment routes + admin Connect route, HMAC-signed OAuth state. Remaining: webhook endpoint + env vars in Vercel for live mode.
 - **QR Code System:** Consolidation plan created (April 24). 5 parallel systems identified, 7-step plan to unify. Full plan: `/Users/qwikker/.cursor/plans/qr_code_system_consolidation_53ea0981.plan.md`. All steps pending.
 - **New features (April 24-29):** City Partner Claims system (`/partners`), AI Management dashboard (usage tracking, KB health, config), AI usage logging (`ai_usage_logs` table), "Never recommend external platforms" AI rule, OpusReach Intake Pack.
 
@@ -46,7 +46,7 @@
 ## Execution Priority (April/May 2026)
 
 ### NEXT UP (Most Urgent)
-1. **Stripe Canonical URL Fix** — Small code change in `stripe-callback/route.ts`: redirect to `https://{city}.qwikker.com/admin` (from state param) instead of hardcoded `NEXT_PUBLIC_APP_URL`. Register ONE redirect URI in Stripe Dashboard: `https://qwikker.com/api/admin/billing/stripe-callback`. Set `NEXT_PUBLIC_APP_URL=https://qwikker.com` in Vercel. Sign state with HMAC. Add auth to all Stripe routes. **This unblocks all franchise billing.**
+1. ~~**Stripe Security Hardening**~~ — **DONE (May 5).** Auth added to all 4 business Stripe routes (`create-checkout-session`, `update-subscription`, `cancel-subscription`, `create-portal-session`) via `verifyBusinessOwner()`. Admin auth on `stripe-connect` route. HMAC-signed OAuth state with timing-safe verification in callback. Canonical URL redirect already in place. **Remaining:** Register redirect URI in Stripe Dashboard, set `STRIPE_WEBHOOK_SECRET` in Vercel.
 2. **Admin Onboarding Training Videos** — Screen-recorded tutorials for franchise operators covering: pass creation, admin setup wizard credentials, Google Places API, Resend email, import tool, offer/secret menu creation, loyalty setup. See "Training Video Plan" section below.
 
 ### Completed (April 2026)
@@ -147,7 +147,7 @@
 30. ~~**Home Feed Placeholder Fix (April 29)**~~ — **DONE**. `getBusinessImage` in `ranking.ts` now falls back to `getPlaceholderUrl` when `business_images` is empty. All 6 call sites in `feed-builder.ts` updated. SQL queries for offers/events now SELECT `system_category`.
 31. ~~**City Partner Claims (April 24)**~~ — **DONE**. `/partners` landing page, `partner_claims` table, claim submission with plan selection, HQ admin management UI, Slack notifications.
 32. **AI Management Dashboard (April 25)** — **BUILT, NEEDS TESTING**. Usage tracking, KB health monitoring, config management. `ai_usage_logs` table with cost/token tracking. "Never recommend external platforms" AI rule. Some data display was incorrect — needs verification.
-33. **Stripe Security Hardening** — PENDING. Auth gaps identified in 6 payment API routes. Fixes scoped: add session checks, sign OAuth state with HMAC, use canonical callback URL. See Stripe audit in conversation history.
+33. ~~**Stripe Security Hardening (May 5)**~~ — **DONE.** `verifyBusinessOwner()` helper checks Supabase Auth session + `business_profiles.user_id` ownership. HMAC state signing on Connect OAuth (backwards-compatible with unsigned legacy state). Admin auth on Connect initiation route. **⚠️ Watch for:** if a business owner's Supabase Auth session expires mid-dashboard-use, Stripe actions will return 401. The frontend should redirect to login on 401 responses from these endpoints.
 34. **QR Code System Consolidation** — PENDING. 7-step plan to unify 5 parallel QR systems into one working system. Scan tracking, deep linking, pass-installation gate, "Edit Destination" for retargeting printed QR codes. Full plan: `/Users/qwikker/.cursor/plans/qr_code_system_consolidation_53ea0981.plan.md`.
 35. **0.22 Pre-launch Env Vars** — IN PROGRESS. Stripe live keys pending (Connect Client ID available: `ca_U08l...`). Webhook endpoint needs creating. `STRIPE_SECRET_KEY`, `STRIPE_CONNECT_CLIENT_ID`, `STRIPE_WEBHOOK_SECRET` to set in Vercel.
 36. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.

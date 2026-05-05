@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getStripeForConnectedAccount } from '@/lib/stripe/config'
 import { getFranchiseStripeConfig, getTierPricing } from '@/lib/stripe/checkout'
 import { getFeaturesForTier } from '@/lib/utils/features-for-tier'
+import { verifyBusinessOwner } from '@/lib/utils/business-session'
 
 /**
  * POST /api/stripe/update-subscription
@@ -23,6 +24,11 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields: businessId, tierName, billingCycle' },
         { status: 400 }
       )
+    }
+
+    const owner = await verifyBusinessOwner(businessId)
+    if (!owner) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     if (!['monthly', 'annual'].includes(billingCycle)) {
