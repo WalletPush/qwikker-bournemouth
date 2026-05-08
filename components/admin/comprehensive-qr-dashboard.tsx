@@ -32,6 +32,7 @@ interface GeneratedQR {
   scans_7d: number
   scans_30d: number
   scans_60d: number
+  total_scans: number
 }
 
 interface ComprehensiveQRDashboardProps {
@@ -132,9 +133,9 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         generated_url: `${baseUrl}/api/qr/scan/${qr.qr_code}`,
         destination_url: qr.current_target_url || `${baseUrl}/`,
         created_at: new Date(qr.created_at).toLocaleDateString(),
-        scans_7d: 0,
-        scans_30d: 0,
-        scans_60d: 0,
+        scans_7d: qr.scans_7d || 0,
+        scans_30d: qr.scans_30d || 0,
+        scans_60d: qr.scans_60d || 0,
         total_scans: qr.total_scans || 0
       }))
       

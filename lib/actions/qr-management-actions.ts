@@ -125,6 +125,7 @@ export async function getQRCodesForCity(city: string) {
 
 /**
  * Fetch all active QR codes for admin dashboard display (bypasses RLS)
+ * Includes scan count breakdowns (7d, 30d, 60d)
  */
 export async function fetchQRCodesForAdmin(city: string) {
   const supabase = createServiceRoleClient()
@@ -142,7 +143,44 @@ export async function fetchQRCodesForAdmin(city: string) {
       return []
     }
 
-    return data || []
+    if (!data || data.length === 0) return []
+
+    // Calculate scan counts per QR code from qr_code_scans
+    const now = new Date()
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString()
+
+    const qrIds = data.map(qr => qr.id)
+
+    // Get all scans in the last 60 days for these QR codes
+    const { data: scans } = await supabase
+      .from('qr_code_scans')
+      .select('qr_code_id, scanned_at')
+      .in('qr_code_id', qrIds)
+      .gte('scanned_at', sixtyDaysAgo)
+
+    // Build count maps
+    const scanCounts: Record<string, { d7: number; d30: number; d60: number }> = {}
+    for (const qr of data) {
+      scanCounts[qr.id] = { d7: 0, d30: 0, d60: 0 }
+    }
+
+    for (const scan of scans || []) {
+      const counts = scanCounts[scan.qr_code_id]
+      if (!counts) continue
+      counts.d60++
+      if (scan.scanned_at >= thirtyDaysAgo) counts.d30++
+      if (scan.scanned_at >= sevenDaysAgo) counts.d7++
+    }
+
+    // Attach counts to QR code records
+    return data.map(qr => ({
+      ...qr,
+      scans_7d: scanCounts[qr.id]?.d7 || 0,
+      scans_30d: scanCounts[qr.id]?.d30 || 0,
+      scans_60d: scanCounts[qr.id]?.d60 || 0
+    }))
 
   } catch (error) {
     console.error('❌ Error in fetchQRCodesForAdmin:', error)
