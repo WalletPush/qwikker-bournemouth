@@ -128,7 +128,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         qr_category: qr.qr_type === 'marketing' ? 'qwikker-marketing' : 
                      qr.qr_type === 'business_dynamic' ? 'intent-routing' : 'static-business',
         qr_subtype: qr.category || qr.description || '',
-        business_name: qr.business_id ? 'Business QR' : undefined,
+        business_name: qr.business_name || undefined,
         business_id: qr.business_id || undefined,
         generated_url: `${baseUrl}/api/qr/scan/${qr.qr_code}`,
         destination_url: qr.current_target_url || `${baseUrl}/`,

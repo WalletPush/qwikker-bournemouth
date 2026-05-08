@@ -174,9 +174,25 @@ export async function fetchQRCodesForAdmin(city: string) {
       if (scan.scanned_at >= sevenDaysAgo) counts.d7++
     }
 
-    // Attach counts to QR code records
+    // Look up business names for codes linked to a business
+    const businessIds = [...new Set(data.filter(qr => qr.business_id).map(qr => qr.business_id))]
+    let businessNames: Record<string, string> = {}
+
+    if (businessIds.length > 0) {
+      const { data: businesses } = await supabase
+        .from('business_profiles')
+        .select('id, business_name')
+        .in('id', businessIds)
+
+      if (businesses) {
+        businessNames = Object.fromEntries(businesses.map(b => [b.id, b.business_name]))
+      }
+    }
+
+    // Attach counts and business names to QR code records
     return data.map(qr => ({
       ...qr,
+      business_name: qr.business_id ? businessNames[qr.business_id] || null : null,
       scans_7d: scanCounts[qr.id]?.d7 || 0,
       scans_30d: scanCounts[qr.id]?.d30 || 0,
       scans_60d: scanCounts[qr.id]?.d60 || 0
