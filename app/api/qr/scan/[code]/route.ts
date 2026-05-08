@@ -82,13 +82,14 @@ export async function GET(
       console.error('Failed to record scan:', scanError)
     }
 
-    // Pass gate: if target is a /user/* page and user has no wallet pass, 
-    // route through /join first so they install the pass, then redirect to content
+    // Pass gate: if target is a /user/* page and user has no wallet pass,
+    // route through /join to install the pass first, then redirect to content.
+    // The /join page handles returnTo and is in the (tenant) route group.
     const targetUrl = new URL(qr.current_target_url)
     const isUserPage = targetUrl.pathname.startsWith('/user/')
     
     if (isUserPage && !walletPassId) {
-      const joinUrl = new URL('/join', `https://${qr.city}.qwikker.com`)
+      const joinUrl = new URL('/join', qr.current_target_url)
       joinUrl.searchParams.set('returnTo', targetUrl.pathname + targetUrl.search)
       return NextResponse.redirect(joinUrl.toString())
     }

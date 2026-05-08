@@ -41,16 +41,10 @@ export async function getApprovedBusinessesForQR(franchiseCity: string): Promise
       console.log(`📍 Franchise ${franchiseCity} covers cities (from geography system):`, coveredCities)
     }
 
+    // Step 1: Get approved businesses
     const { data, error } = await supabase
       .from('business_profiles')
-      .select(`
-        id, business_name, business_tier, business_town, status,
-        business_subscriptions!business_subscriptions_business_id_fkey(
-          is_in_free_trial,
-          free_trial_end_date,
-          status
-        )
-      `)
+      .select('id, business_name, business_tier, business_town, status')
       .eq('status', 'approved')
       .in('business_town', coveredCities)
       .order('business_name')
@@ -60,27 +54,26 @@ export async function getApprovedBusinessesForQR(franchiseCity: string): Promise
       return []
     }
 
-    // Filter out expired free trials
-    const activeBusinesses = (data || []).filter(business => {
-      if (!business.business_subscriptions || business.business_subscriptions.length === 0) {
-        return true
-      }
-      const sub = business.business_subscriptions[0]
-      if (!sub.is_in_free_trial) return true
-      if (sub.free_trial_end_date) {
-        return new Date(sub.free_trial_end_date) >= new Date()
-      }
-      return true
-    })
+    if (!data || data.length === 0) {
+      // Fallback: try filtering by city column instead of business_town
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('business_profiles')
+        .select('id, business_name, business_tier, business_town, status')
+        .eq('status', 'approved')
+        .eq('city', franchiseCity.toLowerCase())
+        .order('business_name')
 
-    console.log(`✅ Found ${activeBusinesses.length} active businesses (filtered from ${data?.length || 0}) across ${coveredCities.join(', ')}`)
-    return activeBusinesses.map(b => ({
-      id: b.id,
-      business_name: b.business_name,
-      business_tier: b.business_tier,
-      business_town: b.business_town,
-      status: b.status
-    }))
+      if (fallbackError) {
+        console.error('❌ Fallback query error:', fallbackError)
+        return []
+      }
+
+      console.log(`✅ Found ${fallbackData?.length || 0} businesses via city column fallback`)
+      return fallbackData || []
+    }
+
+    console.log(`✅ Found ${data.length} approved businesses across ${coveredCities.join(', ')}`)
+    return data
 
   } catch (error) {
     console.error('❌ Error in getApprovedBusinessesForQR:', error)

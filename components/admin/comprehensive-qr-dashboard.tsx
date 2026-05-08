@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { getApprovedBusinessesForQR, QRBusiness } from '@/lib/actions/qr-management-actions'
-import { debugBusinessData } from '@/lib/actions/debug-businesses'
 import { QRCodeCanvas as QRCode } from 'qrcode.react'
 import { useElegantModal } from '@/components/ui/elegant-modal'
 import { Download, Search, Filter, Eye } from 'lucide-react'
@@ -92,10 +91,6 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
     try {
       console.log(`🔍 Fetching businesses for city: ${city}`)
       
-      // 🐛 DEBUG: Check what businesses actually exist
-      const debugData = await debugBusinessData()
-      console.log('🐛 DEBUG DATA:', debugData)
-      
       // Use server action to fetch businesses (bypasses RLS issues)
       const businesses = await getApprovedBusinessesForQR(city)
       
@@ -110,10 +105,6 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         setBusinesses(businesses)
       } else {
         console.log(`ℹ️ No approved businesses found for ${city}`)
-        // If no businesses found, show what we have in debug data
-        if (debugData.allBusinesses.length > 0) {
-          console.log('🔍 But we found these businesses in debug:', debugData.allBusinesses)
-        }
         setBusinesses([])
       }
     } catch (error) {
