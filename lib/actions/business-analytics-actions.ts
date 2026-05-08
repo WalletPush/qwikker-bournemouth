@@ -37,6 +37,10 @@ export interface BusinessAnalytics {
   totalVibes: number
   positiveVibePercent: number | null
 
+  // QR Scans
+  totalQRScans: number
+  qrScanTrend: number
+
   // Time-based data for charts
   dailyData: Array<{
     date: string
@@ -240,6 +244,31 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
       ? Math.round(((vibeRows?.filter(v => v.vibe_rating === 'loved_it' || v.vibe_rating === 'it_was_good').length || 0) / totalVibes) * 100)
       : null
 
+    // 6. QR SCANS (via qr_codes linked to this business)
+    const { data: businessQRCodes } = await supabase
+      .from('qr_codes')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('status', 'active')
+
+    let totalQRScans = 0
+    let qrScanTrend = 0
+
+    if (businessQRCodes && businessQRCodes.length > 0) {
+      const qrIds = businessQRCodes.map(qr => qr.id)
+      const [
+        { count: currentScans },
+        { count: previousScans },
+      ] = await Promise.all([
+        supabase.from('qr_code_scans').select('*', { count: 'exact', head: true }).in('qr_code_id', qrIds).gte('scanned_at', thirtyDaysAgo.toISOString()),
+        supabase.from('qr_code_scans').select('*', { count: 'exact', head: true }).in('qr_code_id', qrIds).gte('scanned_at', sixtyDaysAgo.toISOString()).lt('scanned_at', thirtyDaysAgo.toISOString()),
+      ])
+      totalQRScans = currentScans || 0
+      qrScanTrend = (previousScans || 0) > 0
+        ? ((totalQRScans - (previousScans || 0)) / (previousScans || 1)) * 100
+        : totalQRScans > 0 ? 100 : 0
+    }
+
     // 7. DAILY DATA (last 30 days)
     // Supabase returns timestamptz as "2026-01-27 02:07:50.473+00" (space, not T)
     const toDateKey = (ts: string) => new Date(ts).toISOString().split('T')[0]
@@ -274,6 +303,8 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
       loyaltyRedemptions,
       totalVibes,
       positiveVibePercent,
+      totalQRScans,
+      qrScanTrend,
       dailyData,
     }
 
@@ -297,6 +328,8 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
       loyaltyRedemptions: null,
       totalVibes: 0,
       positiveVibePercent: null,
+      totalQRScans: 0,
+      qrScanTrend: 0,
       dailyData: [],
     }
   }

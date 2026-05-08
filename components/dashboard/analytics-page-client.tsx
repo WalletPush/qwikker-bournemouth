@@ -227,6 +227,12 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
           value={analytics.totalVibes.toLocaleString()}
           subtitle={analytics.positiveVibePercent !== null ? `${analytics.positiveVibePercent}% positive` : 'Not enough data yet'}
         />
+        <StatCard
+          title="QR Scans"
+          value={analytics.totalQRScans.toLocaleString()}
+          trend={analytics.qrScanTrend}
+          subtitle="Scans from linked QR codes"
+        />
         {analytics.bookingClicks > 0 && (
           <StatCard
             title="Booking Clicks"
