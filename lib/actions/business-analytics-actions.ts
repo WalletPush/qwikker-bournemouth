@@ -46,6 +46,7 @@ export interface BusinessAnalytics {
     date: string
     views: number
     claims: number
+    scans: number
   }>
 }
 
@@ -273,16 +274,27 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
     // Supabase returns timestamptz as "2026-01-27 02:07:50.473+00" (space, not T)
     const toDateKey = (ts: string) => new Date(ts).toISOString().split('T')[0]
 
-    const dailyBuckets: Record<string, { views: number; claims: number }> = {}
+    const dailyBuckets: Record<string, { views: number; claims: number; scans: number }> = {}
     for (let i = 0; i < 30; i++) {
       const dateKey = new Date(now.getTime() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      dailyBuckets[dateKey] = { views: 0, claims: 0 }
+      dailyBuckets[dateKey] = { views: 0, claims: 0, scans: 0 }
     }
     views?.forEach(v => { const k = toDateKey(v.visit_date); if (dailyBuckets[k]) dailyBuckets[k].views++ })
     claims?.forEach(c => { const k = toDateKey(c.claimed_at); if (dailyBuckets[k]) dailyBuckets[k].claims++ })
 
+    // Add QR scan daily data
+    if (businessQRCodes && businessQRCodes.length > 0) {
+      const qrIds = businessQRCodes.map(qr => qr.id)
+      const { data: dailyScans } = await supabase
+        .from('qr_code_scans')
+        .select('scanned_at')
+        .in('qr_code_id', qrIds)
+        .gte('scanned_at', thirtyDaysAgo.toISOString())
+      dailyScans?.forEach(s => { const k = toDateKey(s.scanned_at); if (dailyBuckets[k]) dailyBuckets[k].scans++ })
+    }
+
     const dailyData = Object.entries(dailyBuckets)
-      .map(([date, d]) => ({ date, views: d.views, claims: d.claims }))
+      .map(([date, d]) => ({ date, views: d.views, claims: d.claims, scans: d.scans }))
       .sort((a, b) => a.date.localeCompare(b.date))
 
     return {

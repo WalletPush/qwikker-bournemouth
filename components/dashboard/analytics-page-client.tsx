@@ -13,11 +13,11 @@ interface AnalyticsPageClientProps {
 const CHART_HEIGHT = 180
 
 function DailyChart({ data }: { data: BusinessAnalytics['dailyData'] }) {
-  const maxVal = Math.max(...data.map(d => d.views + d.claims), 1)
+  const maxVal = Math.max(...data.map(d => Math.max(d.views, d.claims, d.scans)), 1)
 
   return (
     <div>
-      <div className="flex items-center gap-4 mb-3">
+      <div className="flex items-center gap-4 mb-3 flex-wrap">
         <div className="flex items-center gap-1.5 text-xs text-slate-400">
           <div className="w-3 h-3 rounded-sm bg-[#00d083]/70" />
           Profile views
@@ -26,26 +26,37 @@ function DailyChart({ data }: { data: BusinessAnalytics['dailyData'] }) {
           <div className="w-3 h-3 rounded-sm bg-blue-500/70" />
           Offer claims
         </div>
+        <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <div className="w-3 h-3 rounded-sm bg-purple-500/70" />
+          QR scans
+        </div>
       </div>
       <div className="flex items-end gap-[2px]" style={{ height: CHART_HEIGHT }}>
         {data.map((day) => {
           const viewPx = maxVal > 0 ? Math.round((day.views / maxVal) * CHART_HEIGHT) : 0
           const claimPx = maxVal > 0 ? Math.round((day.claims / maxVal) * CHART_HEIGHT) : 0
+          const scanPx = maxVal > 0 ? Math.round((day.scans / maxVal) * CHART_HEIGHT) : 0
           const label = new Date(day.date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 
           return (
             <div key={day.date} className="flex-1 flex flex-col items-end justify-end group relative">
-              {/* Hover tooltip */}
-              <div className="absolute -top-14 left-1/2 -translate-x-1/2 hidden group-hover:block z-20 pointer-events-none">
+              <div className="absolute -top-16 left-1/2 -translate-x-1/2 hidden group-hover:block z-20 pointer-events-none">
                 <div className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs whitespace-nowrap shadow-lg">
                   <p className="text-slate-400 font-medium mb-0.5">{label}</p>
                   <p className="text-[#00d083]">{day.views} {day.views === 1 ? 'view' : 'views'}</p>
                   {day.claims > 0 && <p className="text-blue-400">{day.claims} {day.claims === 1 ? 'claim' : 'claims'}</p>}
+                  {day.scans > 0 && <p className="text-purple-400">{day.scans} {day.scans === 1 ? 'scan' : 'scans'}</p>}
                 </div>
               </div>
+              {day.scans > 0 && (
+                <div
+                  className="w-full rounded-t-sm bg-purple-500/60 group-hover:bg-purple-500 transition-colors"
+                  style={{ height: Math.max(scanPx, 4) }}
+                />
+              )}
               {day.views > 0 && (
                 <div
-                  className="w-full rounded-t-sm bg-[#00d083]/60 group-hover:bg-[#00d083] transition-colors"
+                  className="w-full rounded-t-sm bg-[#00d083]/60 group-hover:bg-[#00d083] transition-colors mt-[1px]"
                   style={{ height: Math.max(viewPx, 4) }}
                 />
               )}
@@ -203,7 +214,7 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
         </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         <StatCard
           title="Profile Views"
           value={analytics.totalProfileViews.toLocaleString()}
@@ -217,6 +228,12 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
           subtitle={`${analytics.activeOffers} active offers`}
         />
         <StatCard
+          title="QR Scans"
+          value={analytics.totalQRScans.toLocaleString()}
+          trend={analytics.qrScanTrend}
+          subtitle="Scans from linked QR codes"
+        />
+        <StatCard
           title="Saves"
           value={analytics.totalSaves.toLocaleString()}
           trend={analytics.saveTrend}
@@ -226,12 +243,6 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
           title="Vibes"
           value={analytics.totalVibes.toLocaleString()}
           subtitle={analytics.positiveVibePercent !== null ? `${analytics.positiveVibePercent}% positive` : 'Not enough data yet'}
-        />
-        <StatCard
-          title="QR Scans"
-          value={analytics.totalQRScans.toLocaleString()}
-          trend={analytics.qrScanTrend}
-          subtitle="Scans from linked QR codes"
         />
         {analytics.bookingClicks > 0 && (
           <StatCard
@@ -268,10 +279,10 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white">Performance Trends</CardTitle>
-            <p className="text-xs text-slate-400">Last 30 days — profile views and offer claims</p>
+            <p className="text-xs text-slate-400">Last 30 days — views, claims, and QR scans</p>
           </CardHeader>
           <CardContent>
-            {analytics.dailyData.length > 0 && analytics.dailyData.some(d => d.views > 0 || d.claims > 0) ? (
+            {analytics.dailyData.length > 0 && analytics.dailyData.some(d => d.views > 0 || d.claims > 0 || d.scans > 0) ? (
               <DailyChart data={analytics.dailyData} />
             ) : (
               <div className="h-64 flex items-center justify-center">
