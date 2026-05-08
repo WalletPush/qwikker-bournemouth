@@ -191,7 +191,14 @@ Strategic audit of what would make Qwikker irresistible to local businesses. Fin
 | BV-9 | **Print-Ready Promo Materials** | Auto-generated PDFs with QR code, business branding, Qwikker styling. One-click download from dashboard. | Low effort, high perceived value. Businesses love tangible collateral they can use immediately. |
 | BV-10 | **Vibe Response** | Let businesses thank or respond to positive vibes (anonymised). | Creates engagement loop. Business logs in → sees positive feedback → feels invested → stays subscribed. |
 
-**Priority 4 — UI/UX polish:**
+**Priority 4 — Analytics & Value Proof:**
+
+| # | Feature | What it does | Why it matters |
+|---|---------|-------------|----------------|
+| BV-13 | **Business Value Analytics (Admin)** | Redesign Business Performance tab: per-business expandable rows showing visits, QR scans, offer claims, AI chat mentions, loyalty stamps, secret unlocks, vibes, saves, push CTR. Expandable section shows 30-day trend chart + weekly digest preview card. New `chat_business_mentions` table to track when AI recommends a business. New `/api/admin/business-value-metrics` aggregation route. Sortable columns, tier filter, time range toggle. | Proves Qwikker's value to businesses during free trial. Digest preview doubles as template for automated weekly emails (Resend + Vercel Cron). Essential for retention and reducing churn. Also feeds HQ aggregate metrics. |
+| BV-14 | **Automated Weekly Digest Emails** | Vercel Cron (Monday 9am) triggers per-business email via Resend using the same metrics API. Shows what Qwikker did for them that week. Includes upsell CTA for lower tiers. | Passive retention tool. Businesses see value without logging in. Key for trial-to-paid conversion. |
+
+**Priority 5 — UI/UX polish:**
 
 | # | Feature | What it does | Why it matters |
 |---|---------|-------------|----------------|
