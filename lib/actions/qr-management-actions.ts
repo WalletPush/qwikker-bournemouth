@@ -120,3 +120,106 @@ export async function getQRCodesForCity(city: string) {
     return []
   }
 }
+
+/**
+ * Fetch all active QR codes for admin dashboard display (bypasses RLS)
+ */
+export async function fetchQRCodesForAdmin(city: string) {
+  const supabase = createServiceRoleClient()
+
+  try {
+    const { data, error } = await supabase
+      .from('qr_codes')
+      .select('*')
+      .eq('city', city.toLowerCase())
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('❌ Error fetching QR codes:', error)
+      return []
+    }
+
+    return data || []
+
+  } catch (error) {
+    console.error('❌ Error in fetchQRCodesForAdmin:', error)
+    return []
+  }
+}
+
+export interface CreateQRCodeInput {
+  qr_code: string
+  qr_type: 'marketing' | 'business_static' | 'business_dynamic'
+  name: string
+  description: string
+  category: string
+  current_target_url: string
+  default_target_url: string
+  business_id: string | null
+  city: string
+}
+
+/**
+ * Create a new QR code record (server-side, bypasses RLS)
+ */
+export async function createQRCode(input: CreateQRCodeInput) {
+  const supabase = createServiceRoleClient()
+
+  const { data, error } = await supabase
+    .from('qr_codes')
+    .insert({
+      ...input,
+      status: 'active'
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('❌ Failed to create QR code:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, data }
+}
+
+/**
+ * Update QR code destination (server-side, bypasses RLS)
+ */
+export async function updateQRCodeTarget(id: string, newTargetUrl: string) {
+  const supabase = createServiceRoleClient()
+
+  const { error } = await supabase
+    .from('qr_codes')
+    .update({
+      current_target_url: newTargetUrl,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+
+  if (error) {
+    console.error('❌ Failed to update QR code:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+/**
+ * Delete a QR code (server-side, bypasses RLS)
+ */
+export async function deleteQRCode(id: string) {
+  const supabase = createServiceRoleClient()
+
+  const { error } = await supabase
+    .from('qr_codes')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('❌ Failed to delete QR code:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}

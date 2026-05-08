@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { getApprovedBusinessesForQR, QRBusiness } from '@/lib/actions/qr-management-actions'
+import { getApprovedBusinessesForQR, createQRCode, updateQRCodeTarget, deleteQRCode as deleteQRCodeAction, fetchQRCodesForAdmin, QRBusiness } from '@/lib/actions/qr-management-actions'
 import { QRCodeCanvas as QRCode } from 'qrcode.react'
 import { useElegantModal } from '@/components/ui/elegant-modal'
 import { Download, Search, Filter, Eye } from 'lucide-react'
@@ -117,24 +116,11 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
 
   const fetchGeneratedCodes = async () => {
     try {
-      const supabase = createClientComponentClient()
-      
-      const { data, error } = await supabase
-        .from('qr_codes')
-        .select('*')
-        .eq('city', city)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-      
-      if (error) {
-        console.error('❌ Error fetching QR codes:', error)
-        setGeneratedCodes([])
-        return
-      }
+      const data = await fetchQRCodesForAdmin(city)
       
       const baseUrl = `https://${city}.qwikker.com`
       
-      const mappedCodes: GeneratedQR[] = (data || []).map(qr => ({
+      const mappedCodes: GeneratedQR[] = (data || []).map((qr: any) => ({
         id: qr.id,
         code_name: qr.name || qr.qr_code,
         qr_type: qr.qr_type === 'marketing' ? 'other' : qr.qr_type as any,
@@ -349,46 +335,28 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         scans_60d: 0
       }
 
-      // Save to database using CORRECT table (qr_codes)
-      try {
-        const supabase = createClientComponentClient()
-        
-        // Determine QR type based on activeSection
-        let qrType: 'marketing' | 'business_static' | 'business_dynamic' = 'marketing'
-        if (activeSection === 'static-business') qrType = 'business_static'
-        if (activeSection === 'intent-routing') qrType = 'business_dynamic'
-        
-        const insertData = {
-          qr_code: codeName,
-          qr_type: qrType,
-          name: codeName.replace(/-/g, ' ').toUpperCase(),
-          description: `${qrSubtype} QR code`,
-          category: qrSubtype,
-          current_target_url: finalTargetUrl, // ACTUAL target (editable)
-          default_target_url: finalTargetUrl, // Fallback
-          business_id: selectedBusiness || null,
-          city: city,
-          status: 'active'
-        }
+      // Save to database via server action (bypasses RLS)
+      let qrType: 'marketing' | 'business_static' | 'business_dynamic' = 'marketing'
+      if (activeSection === 'static-business') qrType = 'business_static'
+      if (activeSection === 'intent-routing') qrType = 'business_dynamic'
 
-        const { data, error } = await supabase
-          .from('qr_codes')
-          .insert(insertData)
-          .select()
-          .single()
+      const result = await createQRCode({
+        qr_code: codeName,
+        qr_type: qrType,
+        name: codeName.replace(/-/g, ' ').toUpperCase(),
+        description: `${qrSubtype} QR code`,
+        category: qrSubtype,
+        current_target_url: finalTargetUrl,
+        default_target_url: finalTargetUrl,
+        business_id: selectedBusiness || null,
+        city: city,
+      })
 
-        if (error) {
-          console.error('❌ Database error:', error)
-          throw error
-        }
-
-        if (data) {
-          newQRCode.id = data.id
-          console.log('✅ QR Code saved to database:', data.qr_code)
-        }
-      } catch (dbError) {
-        console.error('❌ Failed to save QR to database:', dbError)
-        showError('QR generated but not saved to database. It will work locally only.')
+      if (!result.success) {
+        showError(`QR generated but failed to save: ${result.error}`)
+      } else if (result.data) {
+        newQRCode.id = result.data.id
+        console.log('✅ QR Code saved to database:', result.data.qr_code)
       }
 
       // Add to local state
@@ -414,23 +382,12 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
 
   const updateQRCode = async (qrCode: GeneratedQR, newUrl: string) => {
     try {
-      const supabase = createClientComponentClient()
-      
-      // Update in database first using CORRECT table and column names
-      const { error } = await supabase
-        .from('qr_codes')
-        .update({
-          current_target_url: newUrl, // CORRECT column name
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', qrCode.id)
+      const result = await updateQRCodeTarget(qrCode.id, newUrl)
 
-      if (error) {
-        console.error('❌ Database update error:', error)
-        throw error
+      if (!result.success) {
+        throw new Error(result.error)
       }
 
-      // Update local state (destination changes, scan URL stays the same)
       const updatedCodes = generatedCodes.map(code => 
         code.id === qrCode.id ? { ...code, destination_url: newUrl } : code
       )
@@ -451,19 +408,12 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
     }
 
     try {
-      const supabase = createClientComponentClient()
-      
-      const { error } = await supabase
-        .from('qr_codes')
-        .delete()
-        .eq('id', qrCode.id)
+      const result = await deleteQRCodeAction(qrCode.id)
 
-      if (error) {
-        console.error('❌ Database delete error:', error)
-        throw error
+      if (!result.success) {
+        throw new Error(result.error)
       }
 
-      // Remove from local state
       setGeneratedCodes(generatedCodes.filter(code => code.id !== qrCode.id))
       showSuccess('QR Code deleted successfully!')
       
