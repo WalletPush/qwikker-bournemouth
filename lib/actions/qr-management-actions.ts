@@ -28,9 +28,9 @@ export async function getApprovedBusinessesForQR(franchiseCity: string): Promise
     
     if (areasError || !areasData) {
       console.warn(`⚠️ Could not get areas from franchise geography system:`, areasError)
-      // Fallback to legacy hardcoded mapping
+      // Fallback to legacy hardcoded mapping (includes districts)
       const legacyMapping: Record<string, string[]> = {
-        'bournemouth': ['bournemouth', 'christchurch', 'poole'],
+        'bournemouth': ['bournemouth', 'christchurch', 'poole', 'boscombe', 'westbourne', 'winton', 'charminster', 'southbourne', 'parkstone', 'canford cliffs', 'broadstone', 'highcliffe', 'mudeford'],
         'calgary': ['calgary'],
         'london': ['london'],
       }
@@ -41,12 +41,14 @@ export async function getApprovedBusinessesForQR(franchiseCity: string): Promise
       console.log(`📍 Franchise ${franchiseCity} covers cities (from geography system):`, coveredCities)
     }
 
-    // Step 1: Get approved businesses (try business_town first, fallback to city)
+    // Step 1: Get approved businesses (case-insensitive town match)
+    // Use .or() with ilike filters since .in() is case-sensitive
+    const townFilters = coveredCities.map(c => `business_town.ilike.${c}`).join(',')
     let { data, error } = await supabase
       .from('business_profiles')
       .select('id, business_name, business_tier, business_town, status')
       .eq('status', 'approved')
-      .in('business_town', coveredCities)
+      .or(townFilters)
       .order('business_name')
 
     if (error) {
