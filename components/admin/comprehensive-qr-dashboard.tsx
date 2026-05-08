@@ -203,16 +203,15 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                 const logoX = (size - logoSize) / 2
                 const logoY = (size - logoSize) / 2
                 
-                // Draw white rounded rectangle background for logo
+                // Draw white circle background behind the logo
                 const padding = size * 0.02
                 const bgSize = logoSize + (padding * 2)
-                const bgX = (size - bgSize) / 2
-                const bgY = (size - bgSize) / 2
-                const radius = size * 0.02
+                const centerX = size / 2
+                const centerY = size / 2
                 
                 ctx.fillStyle = '#FFFFFF'
                 ctx.beginPath()
-                ctx.roundRect(bgX, bgY, bgSize, bgSize, radius)
+                ctx.arc(centerX, centerY, bgSize / 2, 0, Math.PI * 2)
                 ctx.fill()
                 
                 // Draw logo
@@ -912,10 +911,11 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                     }`}
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <div className="w-16 h-12 bg-slate-200 rounded-lg p-1 flex items-center justify-center">
+                      <div className="w-16 h-12 bg-slate-900 rounded-lg p-1 flex items-center justify-center">
                         <img src="/qwikker-logo-web.svg" alt="Qwikker Logo" className="w-full h-full object-contain" />
                       </div>
-                      <span className="text-white text-sm font-medium">Qwikker Logo</span>
+                      <span className="text-white text-sm font-medium">Full Logo</span>
+                      <span className="text-amber-400 text-[10px]">White — dark BG only</span>
                       {logoUrl === '/qwikker-logo-web.svg' && (
                         <span className="text-[#00d083] text-xs font-semibold">✓ Selected</span>
                       )}
@@ -932,10 +932,11 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                     }`}
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 bg-slate-200 rounded-lg p-1 flex items-center justify-center">
-                        <img src="/qwikker-icon.svg" alt="Qwikker Icon" className="w-full h-full object-contain" />
+                      <div className="w-12 h-12 bg-white rounded-full p-0 flex items-center justify-center overflow-hidden">
+                        <img src="/qwikker-icon.svg" alt="Qwikker Icon" className="w-full h-full object-cover" />
                       </div>
-                      <span className="text-white text-sm font-medium">Qwikker Icon</span>
+                      <span className="text-white text-sm font-medium">Q Icon</span>
+                      <span className="text-[#00d083] text-[10px]">Recommended</span>
                       {logoUrl === '/qwikker-icon.svg' && (
                         <span className="text-[#00d083] text-xs font-semibold">✓ Selected</span>
                       )}
@@ -989,8 +990,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                       includeMargin={true}
                     />
                     {logoUrl && (
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden">
-                        <img src={logoUrl} alt="Qwikker" className="w-full h-full object-contain" />
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full flex items-center justify-center shadow-lg overflow-hidden border-2 border-white">
+                        <img src={logoUrl} alt="Qwikker" className="w-full h-full object-cover" />
                       </div>
                     )}
                   </div>
