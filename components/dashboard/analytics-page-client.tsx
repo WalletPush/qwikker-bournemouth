@@ -13,11 +13,11 @@ interface AnalyticsPageClientProps {
 const CHART_HEIGHT = 180
 
 function DailyChart({ data }: { data: BusinessAnalytics['dailyData'] }) {
-  const maxVal = Math.max(...data.map(d => Math.max(d.views, d.claims, d.scans)), 1)
+  const maxVal = Math.max(...data.map(d => d.views + d.claims), 1)
 
   return (
     <div>
-      <div className="flex items-center gap-4 mb-3 flex-wrap">
+      <div className="flex items-center gap-4 mb-3">
         <div className="flex items-center gap-1.5 text-xs text-slate-400">
           <div className="w-3 h-3 rounded-sm bg-[#00d083]/70" />
           Profile views
@@ -26,37 +26,25 @@ function DailyChart({ data }: { data: BusinessAnalytics['dailyData'] }) {
           <div className="w-3 h-3 rounded-sm bg-blue-500/70" />
           Offer claims
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-slate-400">
-          <div className="w-3 h-3 rounded-sm bg-purple-500/70" />
-          QR scans
-        </div>
       </div>
       <div className="flex items-end gap-[2px]" style={{ height: CHART_HEIGHT }}>
         {data.map((day) => {
           const viewPx = maxVal > 0 ? Math.round((day.views / maxVal) * CHART_HEIGHT) : 0
           const claimPx = maxVal > 0 ? Math.round((day.claims / maxVal) * CHART_HEIGHT) : 0
-          const scanPx = maxVal > 0 ? Math.round((day.scans / maxVal) * CHART_HEIGHT) : 0
           const label = new Date(day.date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 
           return (
             <div key={day.date} className="flex-1 flex flex-col items-end justify-end group relative">
-              <div className="absolute -top-16 left-1/2 -translate-x-1/2 hidden group-hover:block z-20 pointer-events-none">
+              <div className="absolute -top-14 left-1/2 -translate-x-1/2 hidden group-hover:block z-20 pointer-events-none">
                 <div className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs whitespace-nowrap shadow-lg">
                   <p className="text-slate-400 font-medium mb-0.5">{label}</p>
                   <p className="text-[#00d083]">{day.views} {day.views === 1 ? 'view' : 'views'}</p>
                   {day.claims > 0 && <p className="text-blue-400">{day.claims} {day.claims === 1 ? 'claim' : 'claims'}</p>}
-                  {day.scans > 0 && <p className="text-purple-400">{day.scans} {day.scans === 1 ? 'scan' : 'scans'}</p>}
                 </div>
               </div>
-              {day.scans > 0 && (
-                <div
-                  className="w-full rounded-t-sm bg-purple-500/60 group-hover:bg-purple-500 transition-colors"
-                  style={{ height: Math.max(scanPx, 4) }}
-                />
-              )}
               {day.views > 0 && (
                 <div
-                  className="w-full rounded-t-sm bg-[#00d083]/60 group-hover:bg-[#00d083] transition-colors mt-[1px]"
+                  className="w-full rounded-t-sm bg-[#00d083]/60 group-hover:bg-[#00d083] transition-colors"
                   style={{ height: Math.max(viewPx, 4) }}
                 />
               )}
@@ -71,6 +59,79 @@ function DailyChart({ data }: { data: BusinessAnalytics['dailyData'] }) {
         })}
       </div>
       <div className="flex justify-between mt-6 text-[10px] text-slate-500">
+        <span>{new Date(data[0]?.date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+        <span>{new Date(data[data.length - 1]?.date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+      </div>
+    </div>
+  )
+}
+
+function QRScanAreaChart({ data }: { data: BusinessAnalytics['dailyData'] }) {
+  const maxVal = Math.max(...data.map(d => d.scans), 1)
+  const totalScans = data.reduce((sum, d) => sum + d.scans, 0)
+
+  if (totalScans === 0) {
+    return (
+      <div className="h-48 flex items-center justify-center">
+        <div className="text-center">
+          <svg className="w-10 h-10 text-gray-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+          </svg>
+          <p className="text-gray-400 text-sm">No QR scans yet</p>
+          <p className="text-gray-500 text-xs mt-1">Scans will appear when customers use your QR codes</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Build SVG area chart path
+  const width = 100
+  const height = 100
+  const points = data.map((day, i) => {
+    const x = (i / (data.length - 1)) * width
+    const y = height - (maxVal > 0 ? (day.scans / maxVal) * (height * 0.85) : 0)
+    return { x, y, scans: day.scans, date: day.date }
+  })
+
+  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+  const areaPath = `${linePath} L ${width} ${height} L 0 ${height} Z`
+
+  return (
+    <div>
+      <div className="relative" style={{ height: CHART_HEIGHT }}>
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="scanGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#a855f7" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          <path d={areaPath} fill="url(#scanGradient)" />
+          <path d={linePath} fill="none" stroke="#a855f7" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" />
+          {points.filter(p => p.scans > 0).map((p, i) => (
+            <circle key={i} cx={p.x} cy={p.y} r="1.2" fill="#a855f7" className="opacity-80" />
+          ))}
+        </svg>
+        {/* Hover overlay with tooltips */}
+        <div className="absolute inset-0 flex">
+          {data.map((day, i) => {
+            const label = new Date(day.date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+            return (
+              <div key={day.date} className="flex-1 group relative">
+                {day.scans > 0 && (
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 hidden group-hover:block z-20 pointer-events-none">
+                    <div className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs whitespace-nowrap shadow-lg">
+                      <p className="text-slate-400 font-medium">{label}</p>
+                      <p className="text-purple-400">{day.scans} {day.scans === 1 ? 'scan' : 'scans'}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      <div className="flex justify-between mt-3 text-[10px] text-slate-500">
         <span>{new Date(data[0]?.date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
         <span>{new Date(data[data.length - 1]?.date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
       </div>
@@ -279,10 +340,10 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
         <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white">Performance Trends</CardTitle>
-            <p className="text-xs text-slate-400">Last 30 days — views, claims, and QR scans</p>
+            <p className="text-xs text-slate-400">Last 30 days — profile views and offer claims</p>
           </CardHeader>
           <CardContent>
-            {analytics.dailyData.length > 0 && analytics.dailyData.some(d => d.views > 0 || d.claims > 0 || d.scans > 0) ? (
+            {analytics.dailyData.length > 0 && analytics.dailyData.some(d => d.views > 0 || d.claims > 0) ? (
               <DailyChart data={analytics.dailyData} />
             ) : (
               <div className="h-64 flex items-center justify-center">
@@ -331,6 +392,17 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
           </CardContent>
         </Card>
       </div>
+
+      {/* QR Scan Trend — Mountain Chart */}
+      <Card className="bg-slate-800/50 border-slate-700 mb-8">
+        <CardHeader>
+          <CardTitle className="text-white">QR Scan Trend</CardTitle>
+          <p className="text-xs text-slate-400">Last 30 days — scans from your linked QR codes</p>
+        </CardHeader>
+        <CardContent>
+          <QRScanAreaChart data={analytics.dailyData} />
+        </CardContent>
+      </Card>
 
       {/* Viewer & Scan Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
