@@ -41,8 +41,8 @@ export async function getApprovedBusinessesForQR(franchiseCity: string): Promise
       console.log(`📍 Franchise ${franchiseCity} covers cities (from geography system):`, coveredCities)
     }
 
-    // Step 1: Get approved businesses
-    const { data, error } = await supabase
+    // Step 1: Get approved businesses (try business_town first, fallback to city)
+    let { data, error } = await supabase
       .from('business_profiles')
       .select('id, business_name, business_tier, business_town, status')
       .eq('status', 'approved')
@@ -55,7 +55,6 @@ export async function getApprovedBusinessesForQR(franchiseCity: string): Promise
     }
 
     if (!data || data.length === 0) {
-      // Fallback: try filtering by city column instead of business_town
       const { data: fallbackData, error: fallbackError } = await supabase
         .from('business_profiles')
         .select('id, business_name, business_tier, business_town, status')
@@ -67,13 +66,27 @@ export async function getApprovedBusinessesForQR(franchiseCity: string): Promise
         console.error('❌ Fallback query error:', fallbackError)
         return []
       }
-
-      console.log(`✅ Found ${fallbackData?.length || 0} businesses via city column fallback`)
-      return fallbackData || []
+      data = fallbackData
     }
 
-    console.log(`✅ Found ${data.length} approved businesses across ${coveredCities.join(', ')}`)
-    return data
+    if (!data || data.length === 0) return []
+
+    // Step 2: Filter out expired trials by checking subscriptions
+    const businessIds = data.map(b => b.id)
+    const { data: subscriptions } = await supabase
+      .from('business_subscriptions')
+      .select('business_id, is_in_free_trial, free_trial_end_date')
+      .in('business_id', businessIds)
+
+    const expiredIds = new Set(
+      (subscriptions || [])
+        .filter(sub => sub.is_in_free_trial && sub.free_trial_end_date && new Date(sub.free_trial_end_date) < new Date())
+        .map(sub => sub.business_id)
+    )
+
+    const activeBusinesses = data.filter(b => !expiredIds.has(b.id))
+    console.log(`✅ Found ${activeBusinesses.length} active businesses (${expiredIds.size} expired trials filtered out)`)
+    return activeBusinesses
 
   } catch (error) {
     console.error('❌ Error in getApprovedBusinessesForQR:', error)
