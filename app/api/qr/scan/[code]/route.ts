@@ -3,12 +3,12 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { code: string } }
+  { params }: { params: Promise<{ code: string }> }
 ) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://bournemouth.qwikker.com'
 
   try {
-    const qrCode = params.code
+    const { code: qrCode } = await params
     
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
