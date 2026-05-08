@@ -39,7 +39,9 @@ export interface BusinessAnalytics {
 
   // QR Scans
   totalQRScans: number
+  uniqueQRScanners: number
   qrScanTrend: number
+  qrScansByTime: { morning: number; afternoon: number; evening: number; night: number }
 
   // Time-based data for charts
   dailyData: Array<{
@@ -253,21 +255,34 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
       .eq('status', 'active')
 
     let totalQRScans = 0
+    let uniqueQRScanners = 0
     let qrScanTrend = 0
+    let qrScansByTime = { morning: 0, afternoon: 0, evening: 0, night: 0 }
 
     if (businessQRCodes && businessQRCodes.length > 0) {
       const qrIds = businessQRCodes.map(qr => qr.id)
       const [
-        { count: currentScans },
+        { data: currentScanRows },
         { count: previousScans },
       ] = await Promise.all([
-        supabase.from('qr_code_scans').select('*', { count: 'exact', head: true }).in('qr_code_id', qrIds).gte('scanned_at', thirtyDaysAgo.toISOString()),
+        supabase.from('qr_code_scans').select('wallet_pass_id, scanned_at').in('qr_code_id', qrIds).gte('scanned_at', thirtyDaysAgo.toISOString()),
         supabase.from('qr_code_scans').select('*', { count: 'exact', head: true }).in('qr_code_id', qrIds).gte('scanned_at', sixtyDaysAgo.toISOString()).lt('scanned_at', thirtyDaysAgo.toISOString()),
       ])
-      totalQRScans = currentScans || 0
+
+      totalQRScans = currentScanRows?.length || 0
+      uniqueQRScanners = new Set(currentScanRows?.map(s => s.wallet_pass_id).filter(Boolean)).size
       qrScanTrend = (previousScans || 0) > 0
         ? ((totalQRScans - (previousScans || 0)) / (previousScans || 1)) * 100
         : totalQRScans > 0 ? 100 : 0
+
+      // Time-of-day breakdown
+      currentScanRows?.forEach(scan => {
+        const hour = new Date(scan.scanned_at).getHours()
+        if (hour >= 6 && hour < 12) qrScansByTime.morning++
+        else if (hour >= 12 && hour < 17) qrScansByTime.afternoon++
+        else if (hour >= 17 && hour < 22) qrScansByTime.evening++
+        else qrScansByTime.night++
+      })
     }
 
     // 7. DAILY DATA (last 30 days)
@@ -316,7 +331,9 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
       totalVibes,
       positiveVibePercent,
       totalQRScans,
+      uniqueQRScanners,
       qrScanTrend,
+      qrScansByTime,
       dailyData,
     }
 
@@ -341,7 +358,9 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
       totalVibes: 0,
       positiveVibePercent: null,
       totalQRScans: 0,
+      uniqueQRScanners: 0,
       qrScanTrend: 0,
+      qrScansByTime: { morning: 0, afternoon: 0, evening: 0, night: 0 },
       dailyData: [],
     }
   }

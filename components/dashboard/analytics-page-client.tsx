@@ -231,7 +231,7 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
           title="QR Scans"
           value={analytics.totalQRScans.toLocaleString()}
           trend={analytics.qrScanTrend}
-          subtitle="Scans from linked QR codes"
+          subtitle={`${analytics.uniqueQRScanners} unique ${analytics.uniqueQRScanners === 1 ? 'person' : 'people'}`}
         />
         <StatCard
           title="Saves"
@@ -332,23 +332,45 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
         </Card>
       </div>
 
-      {/* Viewer Breakdown */}
-      <Card className="bg-slate-800/50 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-white">Viewer Breakdown</CardTitle>
-          <p className="text-xs text-slate-400">Last 30 days</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <BreakdownBar label="Registered users" value={analytics.registeredViewers} total={analytics.totalProfileViews} color="bg-[#00d083]" />
-            <BreakdownBar label="Anonymous viewers" value={analytics.anonymousViewers} total={analytics.totalProfileViews} color="bg-slate-500" />
-            <BreakdownBar label="Unique viewers" value={analytics.uniqueViewers} total={analytics.totalProfileViews} color="bg-blue-500" />
-          </div>
-          {analytics.totalProfileViews === 0 && (
-            <p className="text-center text-slate-500 text-sm mt-6">No profile views recorded yet</p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Viewer & Scan Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white">Viewer Breakdown</CardTitle>
+            <p className="text-xs text-slate-400">Last 30 days</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <BreakdownBar label="Registered users" value={analytics.registeredViewers} total={analytics.totalProfileViews} color="bg-[#00d083]" />
+              <BreakdownBar label="Anonymous viewers" value={analytics.anonymousViewers} total={analytics.totalProfileViews} color="bg-slate-500" />
+              <BreakdownBar label="Unique viewers" value={analytics.uniqueViewers} total={analytics.totalProfileViews} color="bg-blue-500" />
+            </div>
+            {analytics.totalProfileViews === 0 && (
+              <p className="text-center text-slate-500 text-sm mt-6">No profile views recorded yet</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {analytics.totalQRScans > 0 && (
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white">QR Scan Activity</CardTitle>
+              <p className="text-xs text-slate-400">When people scan your codes — last 30 days</p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <BreakdownBar label="Morning (6am–12pm)" value={analytics.qrScansByTime.morning} total={analytics.totalQRScans} color="bg-amber-400" />
+                <BreakdownBar label="Afternoon (12–5pm)" value={analytics.qrScansByTime.afternoon} total={analytics.totalQRScans} color="bg-orange-500" />
+                <BreakdownBar label="Evening (5–10pm)" value={analytics.qrScansByTime.evening} total={analytics.totalQRScans} color="bg-purple-500" />
+                <BreakdownBar label="Night (10pm–6am)" value={analytics.qrScansByTime.night} total={analytics.totalQRScans} color="bg-indigo-500" />
+              </div>
+              <p className="text-center text-slate-500 text-xs mt-4">
+                {analytics.uniqueQRScanners} unique {analytics.uniqueQRScanners === 1 ? 'person' : 'people'} scanned your codes
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
       </div>
     </div>
   )
