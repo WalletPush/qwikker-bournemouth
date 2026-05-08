@@ -196,6 +196,7 @@ Strategic audit of what would make Qwikker irresistible to local businesses. Fin
 | # | Feature | What it does | Why it matters |
 |---|---------|-------------|----------------|
 | BV-11 | **Compare Plans Table** | Full comparison table below pricing cards on business settings page. Shows all features per tier in rows with tick/cross columns. | Businesses can see exactly what each tier includes at a glance. Removes ambiguity and drives informed upgrade decisions. |
+| BV-12 | **Bridge Content: AI Description Generator (Admin)** | "Generate Description" button on unclaimed business CRM cards. Uses OpenAI with imported Google data (category, type, rating, location, features) to produce a factual 2-3 sentence placeholder description. Admin can edit/add context before saving (e.g. "Known for..." input for local knowledge). Batch select option for multiple businesses. Stores `description_source: 'ai_generated'`. **Rules:** Must not misrepresent businesses — descriptions must be factual and generic (type, location, rating). Must not copy or paraphrase business website content (copyright). Must not invent specific menu items, awards, or claims. Descriptions are clearly bridge content until the business claims and writes their own. **Training:** Include in EP9 (Import Tool) or dedicated "Managing Unclaimed Listings" episode. | Cities feel alive from day one instead of empty directories. AI chat has natural language to match against for unclaimed businesses. Businesses see their listing already working when pitched — stronger conversion hook for promo packs. ~£0.001 per description. |
 
 **Flow gap identified — the upgrade escalation ladder:**
 
@@ -223,6 +224,21 @@ Imported → AI starts mentioning them → Business gets weekly email: "mentione
 |---|------|--------|-------|
 | BO-1 | **HQ Revenue Tracking Dashboard** | PENDING | Per-city GPV (gross platform volume), business subscription counts by tier, pass holder counts, growth trends. Data already in Supabase (`business_subscriptions`, `app_users`, `franchise_crm_configs`). Build as HQ admin page. |
 | BO-2 | **Franchise Agreement Template** | PENDING | Legal template covering: territory exclusivity, fee structure lock, term length + renewal, transfer/sale clause, termination protections, revenue model lock. Get reviewed by commercial solicitor. Essential before onboarding more cities. |
+
+---
+
+### EXIT-CRITICAL: HQ Intelligence Dashboard (Post-Revenue, 3+ Active Cities)
+
+Build once real data exists. These are the metrics that take Qwikker from "local business" to £10m+ strategic asset. Acquirers buy momentum + AI moat + retention proof.
+
+| Pillar | Metrics | Why it matters |
+|--------|---------|---------------|
+| **1. Velocity** | Shadow-to-claim conversion rate, menu refresh frequency, time-to-first-stamp | Proves growth momentum and platform pull |
+| **2. Intelligence (AI Moat)** | Query success rate, unmatched queries log (recruitment gold), intent-to-wallet conversion | Proves the AI is working AND shows exactly what businesses to recruit next |
+| **3. Retention (Wallet Real Estate)** | Pass removal/unsubscribe rate, push→refresh rate, cross-city switching | Low wallet churn = #1 valuation driver. Cross-city proves global utility |
+| **4. Unit Economics (Franchise Multiplier)** | CAC per city partner, LTV of Spotlight subscriber, partner payback period (target <6 months) | Proves infinite scalability |
+
+**Bonus features:** Real-time global heat map of AI intent queries across all cities. Data portability export (structured data for buyer's LLM/Map system — reduces integration risk, increases valuation).
 
 ---
 

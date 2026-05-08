@@ -29,6 +29,7 @@ interface GeneratedQR {
   business_name?: string
   business_id?: string
   generated_url: string
+  destination_url: string
   created_at: string
   scans_7d: number
   scans_30d: number
@@ -50,7 +51,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
   const [qrType, setQrType] = useState<'discover' | 'offers' | 'secret-menu' | 'other'>('discover')
   const [qrSubtype, setQrSubtype] = useState('')
   const [targetUrl, setTargetUrl] = useState('')
-  const [logoUrl, setLogoUrl] = useState('')
+  const [logoUrl, setLogoUrl] = useState('/qwikker-icon.svg') // Default to icon (best for QR centre)
   const [generating, setGenerating] = useState(false)
   const [generatedQrData, setGeneratedQrData] = useState<string | null>(null)
   
@@ -127,7 +128,6 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
     try {
       const supabase = createClientComponentClient()
       
-      // Fetch REAL QR codes from database
       const { data, error } = await supabase
         .from('qr_codes')
         .select('*')
@@ -141,22 +141,23 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         return
       }
       
-      console.log(`✅ Fetched ${data?.length || 0} real QR codes from database`)
+      const baseUrl = `https://${city}.qwikker.com`
       
-      // Map database data to GeneratedQR interface
       const mappedCodes: GeneratedQR[] = (data || []).map(qr => ({
         id: qr.id,
-        code_name: qr.name,
-        qr_type: qr.qr_type,
-        qr_category: qr.category as 'qwikker-marketing' | 'static-business' | 'intent-routing',
-        qr_subtype: qr.description || '',
+        code_name: qr.name || qr.qr_code,
+        qr_type: qr.qr_type === 'marketing' ? 'other' : qr.qr_type as any,
+        qr_category: qr.qr_type === 'marketing' ? 'qwikker-marketing' : 
+                     qr.qr_type === 'business_dynamic' ? 'intent-routing' : 'static-business',
+        qr_subtype: qr.category || qr.description || '',
         business_name: qr.business_id ? 'Business QR' : undefined,
         business_id: qr.business_id || undefined,
-        generated_url: qr.current_target_url,
+        generated_url: `${baseUrl}/api/qr/scan/${qr.qr_code}`,
+        destination_url: qr.current_target_url || `${baseUrl}/`,
         created_at: new Date(qr.created_at).toLocaleDateString(),
-        scans_7d: 0, // Will calculate from qr_code_scans
-        scans_30d: 0, // Will calculate from qr_code_scans  
-        scans_60d: 0, // Will calculate from qr_code_scans
+        scans_7d: 0,
+        scans_30d: 0,
+        scans_60d: 0,
         total_scans: qr.total_scans || 0
       }))
       
@@ -165,95 +166,6 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
     } catch (error) {
       console.error('❌ Failed to fetch QR codes:', error)
       setGeneratedCodes([])
-    }
-    
-    // OLD MOCK DATA - REMOVED
-    /* const mockCodes: GeneratedQR[] = [
-      {
-        id: '1',
-        code_name: 'qwikker-marketing-flyers-001',
-        qr_type: 'other',
-        qr_category: 'qwikker-marketing',
-        qr_subtype: 'flyers',
-        generated_url: 'https://bournemouth.qwikker.com/join',
-        created_at: new Date().toLocaleDateString(),
-        scans_7d: 45,
-        scans_30d: 156,
-        scans_60d: 289
-      },
-        {
-          id: '2',
-          code_name: 'fuck-cursor-offers-001',
-          qr_type: 'offers',
-          qr_category: 'intent-routing',
-          qr_subtype: 'offers',
-          business_name: "Fuck Cursor",
-          business_id: 'fuck-cursor-id',
-          generated_url: 'https://bournemouth.qwikker.com/user/offers?highlight=fuck-cursor',
-          created_at: new Date().toLocaleDateString(),
-          scans_7d: 23,
-          scans_30d: 89,
-          scans_60d: 145
-        },
-      {
-        id: '3',
-        code_name: 'static-business-window-stickers-001',
-        qr_type: 'other',
-        qr_category: 'static-business',
-        qr_subtype: 'window-stickers',
-        generated_url: 'https://bournemouth.qwikker.com/discover',
-        created_at: new Date().toLocaleDateString(),
-        scans_7d: 12,
-        scans_30d: 67,
-        scans_60d: 134
-      }
-    ] */
-    // Mock data removed - now using real database data above
-    // Fetch from database using CORRECT table name (qr_codes) - MOVED ABOVE
-    try {
-      const supabase = createClientComponentClient()
-      
-      const { data, error } = await supabase
-        .from('qr_codes')
-        .select(`
-          id,
-          qr_code,
-          name,
-          qr_type,
-          category,
-          current_target_url,
-          business_id,
-          city,
-          total_scans,
-          created_at
-        `)
-        .eq('city', city)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-      
-      if (data && data.length > 0) {
-        console.log('✅ Found QR codes in database:', data.length)
-        
-        // Transform database data to UI format
-        const transformedCodes: GeneratedQR[] = data.map(qr => ({
-          id: qr.id,
-          code_name: qr.qr_code,
-          qr_type: qr.qr_type === 'marketing' ? 'other' : qr.qr_type as any,
-          qr_category: qr.qr_type === 'marketing' ? 'qwikker-marketing' : 'static-business',
-          qr_subtype: qr.category,
-          business_id: qr.business_id || undefined,
-          generated_url: qr.current_target_url,
-          created_at: new Date(qr.created_at).toLocaleDateString(),
-          scans_7d: qr.total_scans || 0,
-          scans_30d: qr.total_scans || 0,
-          scans_60d: qr.total_scans || 0
-        }))
-        
-        setGeneratedCodes(transformedCodes)
-        return
-      }
-    } catch (error) {
-      console.error('❌ Error fetching QR codes:', error)
     }
   }
 
@@ -417,7 +329,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         
         switch (qrSubtype) {
           case 'discover':
-            finalTargetUrl = `https://${city}.qwikker.com/user/dashboard?highlight=${businessSlug}`
+            finalTargetUrl = `https://${city}.qwikker.com/user/business/${businessSlug}?highlight=true`
             break
           case 'offers':
             finalTargetUrl = `https://${city}.qwikker.com/user/offers?highlight=${businessSlug}`
@@ -426,7 +338,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
             finalTargetUrl = `https://${city}.qwikker.com/user/secret-menu?highlight=${businessSlug}`
             break
           default:
-            finalTargetUrl = `https://${city}.qwikker.com/user/dashboard?highlight=${businessSlug}`
+            finalTargetUrl = `https://${city}.qwikker.com/user/business/${businessSlug}?highlight=true`
         }
       }
 
@@ -440,6 +352,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         business_name: businessName || undefined,
         business_id: selectedBusiness || undefined,
         generated_url: generatedUrl,
+        destination_url: finalTargetUrl,
         created_at: new Date().toLocaleDateString(),
         scans_7d: 0,
         scans_30d: 0,
@@ -529,9 +442,9 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         throw error
       }
 
-      // Update local state after successful database update
+      // Update local state (destination changes, scan URL stays the same)
       const updatedCodes = generatedCodes.map(code => 
-        code.id === qrCode.id ? { ...code, generated_url: newUrl } : code
+        code.id === qrCode.id ? { ...code, destination_url: newUrl } : code
       )
       setGeneratedCodes(updatedCodes)
       setEditingCode(null)
@@ -698,7 +611,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
               <div className="space-y-2">
-                <p><strong className="text-indigo-400">Logo Upload:</strong> Add your business logo for branded QR codes (optional)</p>
+                <p><strong className="text-indigo-400">Logo Options:</strong> Choose Qwikker logo, icon, or no logo for your QR codes</p>
                 <p><strong className="text-indigo-400">Test First:</strong> Always test QR codes before printing using the "Test" button</p>
               </div>
               <div className="space-y-2">
@@ -978,18 +891,21 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                         
                         switch (qrSubtype) {
                           case 'discover':
-                            return `https://${city}.qwikker.com/user/dashboard?highlight=${businessSlug}`
+                            return `https://${city}.qwikker.com/user/business/${businessSlug}?highlight=true`
                           case 'offers':
                             return `https://${city}.qwikker.com/user/offers?highlight=${businessSlug}`
                           case 'secret-menu':
                             return `https://${city}.qwikker.com/user/secret-menu?highlight=${businessSlug}`
                           default:
-                            return `https://${city}.qwikker.com/user/dashboard?highlight=${businessSlug}`
+                            return `https://${city}.qwikker.com/user/business/${businessSlug}?highlight=true`
                         }
                       })()}
                     </p>
                     <p className="text-slate-400 text-xs mt-1">
-                      This URL will auto-scroll and highlight {businesses.find(b => b.id === selectedBusiness)?.business_name} on the user dashboard
+                      {qrSubtype === 'discover' && `Opens ${businesses.find(b => b.id === selectedBusiness)?.business_name}'s page with a highlighted hero`}
+                      {qrSubtype === 'offers' && `Scrolls to and highlights ${businesses.find(b => b.id === selectedBusiness)?.business_name}'s offer`}
+                      {qrSubtype === 'secret-menu' && `Scrolls to and highlights ${businesses.find(b => b.id === selectedBusiness)?.business_name}'s secret menu`}
+                      {!['discover', 'offers', 'secret-menu'].includes(qrSubtype) && `Opens ${businesses.find(b => b.id === selectedBusiness)?.business_name}'s page`}
                     </p>
                   </div>
                 </div>
@@ -1001,27 +917,44 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      setLogoUrl('/qwikker-logo-web.svg')
-                      console.log('✅ Qwikker logo selected for download overlay')
-                    }}
+                    onClick={() => setLogoUrl('/qwikker-logo-web.svg')}
                     className={`p-4 rounded-lg border-2 transition-all ${
-                      logoUrl
+                      logoUrl === '/qwikker-logo-web.svg'
                         ? 'border-[#00d083] bg-[#00d083]/10'
                         : 'border-slate-700 hover:border-slate-600'
                     }`}
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 bg-white rounded-lg p-2 flex items-center justify-center">
-                        <img src="/qwikker-logo-web.svg" alt="Qwikker" className="w-full h-full object-contain" />
+                      <div className="w-16 h-12 bg-slate-200 rounded-lg p-1 flex items-center justify-center">
+                        <img src="/qwikker-logo-web.svg" alt="Qwikker Logo" className="w-full h-full object-contain" />
                       </div>
                       <span className="text-white text-sm font-medium">Qwikker Logo</span>
-                      {logoUrl && (
+                      {logoUrl === '/qwikker-logo-web.svg' && (
                         <span className="text-[#00d083] text-xs font-semibold">✓ Selected</span>
                       )}
                     </div>
                   </button>
-                  
+
+                  <button
+                    type="button"
+                    onClick={() => setLogoUrl('/qwikker-icon.svg')}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      logoUrl === '/qwikker-icon.svg'
+                        ? 'border-[#00d083] bg-[#00d083]/10'
+                        : 'border-slate-700 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 bg-slate-200 rounded-lg p-1 flex items-center justify-center">
+                        <img src="/qwikker-icon.svg" alt="Qwikker Icon" className="w-full h-full object-contain" />
+                      </div>
+                      <span className="text-white text-sm font-medium">Qwikker Icon</span>
+                      {logoUrl === '/qwikker-icon.svg' && (
+                        <span className="text-[#00d083] text-xs font-semibold">✓ Selected</span>
+                      )}
+                    </div>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setLogoUrl('')}
@@ -1069,8 +1002,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                       includeMargin={true}
                     />
                     {logoUrl && (
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-lg">
-                        <img src="/qwikker-logo-web.svg" alt="Qwikker" className="w-10 h-10 object-contain" />
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                        <img src="/qwikker-icon.svg" alt="Qwikker" className="w-full h-full object-contain" />
                       </div>
                     )}
                   </div>
@@ -1099,7 +1032,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                         const filename = selectedBusinessData
                           ? `qr-${selectedBusinessData.business_name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${qrType}-print-ready`
                           : `qr-${activeSection}-${qrSubtype}-print-ready`
-                        downloadQRCode(generatedQrData, filename, 2000, logoUrl || undefined)
+                        downloadQRCode(generatedQrData, filename, 2000, logoUrl || '/qwikker-icon.svg')
                       }}
                       className="bg-[#00d083] hover:bg-[#00b570] text-white px-4 py-2 flex items-center justify-center gap-2"
                     >
@@ -1196,8 +1129,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                             const filename = code.business_name
                               ? `qr-${code.business_name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${code.qr_type}-print-ready`
                               : `qr-${code.code_name}-print-ready`
-                            // TODO: Store logo URL in database for re-download with logo
-                            downloadQRCode(code.generated_url, filename, 2000)
+                            downloadQRCode(code.generated_url, filename, 2000, '/qwikker-icon.svg')
                           }}
                           className="text-[#00d083] border-[#00d083] hover:bg-[#00d083] hover:text-white"
                         >
@@ -1206,10 +1138,10 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                         </Button>
                         <Button 
                           size="sm" 
-                          variant="outline" 
+                          variant="outline"
                           onClick={() => {
                             setEditingCode(code)
-                            setEditUrl(code.generated_url)
+                            setEditUrl(code.destination_url)
                           }}
                           className="text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black"
                         >
@@ -1263,14 +1195,19 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
               </div>
               
               <div className="space-y-2">
-                <Label className="text-slate-300">New URL</Label>
+                <Label className="text-slate-300">Current Destination</Label>
+                <p className="text-slate-500 text-xs font-mono break-all">{editingCode.destination_url}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-300">New Destination URL</Label>
                 <Input
                   type="url"
                   value={editUrl}
                   onChange={(e) => setEditUrl(e.target.value)}
                   className="bg-slate-800 border-slate-700 text-white"
-                  placeholder="https://example.com"
+                  placeholder="https://bournemouth.qwikker.com/user/offers?highlight=..."
                 />
+                <p className="text-slate-500 text-xs">The scan tracking URL stays the same — only where the user lands changes.</p>
               </div>
               
               <div className="flex gap-3 justify-end">
@@ -1286,7 +1223,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                 </Button>
                 <Button
                   onClick={() => updateQRCode(editingCode, editUrl)}
-                  disabled={!editUrl || editUrl === editingCode.generated_url}
+                  disabled={!editUrl || editUrl === editingCode.destination_url}
                   className="bg-[#00d083] hover:bg-[#00b570] text-white"
                 >
                   Update URL

@@ -8,6 +8,7 @@ import type { SystemCategory } from '@/lib/constants/system-categories'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 import { formatPrice } from '@/lib/utils/price-formatter'
@@ -40,6 +41,12 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
   const [userDistance, setUserDistance] = useState<number | null>(null)
   const [walkingTime, setWalkingTime] = useState<number | null>(null)
   const hasTrackedVisit = useRef(false)
+  
+  // QR deep link highlight
+  const searchParams = useSearchParams()
+  const isDeepLinked = searchParams.get('highlight') === 'true'
+  const [heroHighlight, setHeroHighlight] = useState(false)
+  const heroRef = useRef<HTMLDivElement>(null)
   
   // 💚 Vibe Prompt State (triggered by post-visit actions only)
   const [showVibePrompt, setShowVibePrompt] = useState(false)
@@ -97,6 +104,17 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
   // Find business by slug in the combined businesses list FIRST
   const business = businesses.find(b => b.slug === slug)
   
+  // QR deep link: highlight hero section on arrival
+  useEffect(() => {
+    if (!isDeepLinked) return
+    const timer = setTimeout(() => {
+      heroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setHeroHighlight(true)
+      setTimeout(() => setHeroHighlight(false), 3000)
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [isDeepLinked])
+
   // Calculate real distance using geolocation
   useEffect(() => {
     if (business && typeof window !== 'undefined' && navigator.geolocation && business.latitude && business.longitude) {
@@ -320,7 +338,12 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
       </div>
 
       {/* Hero Section — image with badges, text below */}
-      <div className="rounded-xl overflow-hidden">
+      <div
+        ref={heroRef}
+        className={`rounded-xl overflow-hidden transition-all duration-700 ${
+          heroHighlight ? 'ring-4 ring-[#00d083]/60 shadow-2xl shadow-[#00d083]/30' : ''
+        }`}
+      >
         {/* Image container */}
         <div className="relative h-48 md:h-72 overflow-hidden">
           {(() => {

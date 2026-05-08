@@ -97,11 +97,11 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
       setAnalytics(analyticsData)
       setTotalScans(analyticsData.reduce((sum, qr) => sum + qr.total_scans, 0))
 
-      // 4. Get daily scans for chart
+      // 4. Get daily scans for chart (join through qr_code_id → qr_codes for city filter)
       const { data: dailyData } = await supabase
         .from('qr_code_analytics')
-        .select('date, total_scans')
-        .eq('city', city)
+        .select('date, total_scans, qr_code_id')
+        .in('qr_code_id', qrIds.length > 0 ? qrIds : ['no-matches'])
         .gte('date', startDate.toISOString().split('T')[0])
         .order('date', { ascending: true })
 

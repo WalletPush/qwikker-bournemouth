@@ -34,6 +34,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   const [favoriteOffers, setFavoriteOffers] = useState<Set<string>>(new Set())
   const [claimedOffers, setClaimedOffers] = useState<Set<string>>(new Set())
   const [walletOffers, setWalletOffers] = useState<Set<string>>(new Set())
+  const [highlightedCard, setHighlightedCard] = useState<string | null>(null)
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   
   // Helper function to scroll to results after filter change
@@ -101,21 +102,18 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   useEffect(() => {
     if (highlightBusiness) {
       const scrollTimer = setTimeout(() => {
-        // Convert highlight business to slug format (same as in OfferCard)
         const businessSlug = highlightBusiness.toLowerCase().replace(/[^a-z0-9]/g, '-')
-        
-        // Find the specific business card using the ref
         const targetCard = cardRefs.current[businessSlug]
         
         if (targetCard) {
-          // Scroll to the specific business's offer card
           targetCard.scrollIntoView({ 
             behavior: 'smooth', 
             block: 'center',
             inline: 'nearest'
           })
+          setHighlightedCard(businessSlug)
+          setTimeout(() => setHighlightedCard(null), 3000)
         } else {
-          // Fallback: scroll to first offer if specific business not found
           const firstCard = document.querySelector('[data-offer-card]')
           if (firstCard) {
             firstCard.scrollIntoView({ 
@@ -125,11 +123,11 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             })
           }
         }
-      }, 300) // Slightly longer delay to ensure cards are rendered
+      }, 600)
       
       return () => clearTimeout(scrollTimer)
     }
-  }, [highlightBusiness, allOffers]) // Include allOffers to re-run when offers load
+  }, [highlightBusiness, allOffers])
   
   // Get unique categories from all offers (use businessCategory which has the fallback chain)
   const uniqueCategories = Array.from(
@@ -577,6 +575,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         className={`bg-gradient-to-br from-slate-800/60 to-slate-700/40 border-slate-700/50 hover:border-green-500/30 transition-all duration-300 overflow-hidden group h-full flex flex-col ${
           isInWallet 
             ? 'opacity-50 blur-[1px] pointer-events-none relative' 
+            : ''
+        } ${
+          highlightedCard === businessSlug
+            ? 'ring-4 ring-[#00d083]/60 shadow-2xl shadow-[#00d083]/20 scale-[1.02] border-[#00d083]/50'
             : ''
         }`}
       >
