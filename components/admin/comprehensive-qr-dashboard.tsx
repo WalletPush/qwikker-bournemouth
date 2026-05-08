@@ -189,13 +189,13 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                 const logoX = (size - logoSize) / 2
                 const logoY = (size - logoSize) / 2
                 
-                // Draw white circle background behind the logo
-                const padding = size * 0.02
+                // Draw dark circle background so white logo is visible on white QR
+                const padding = size * 0.03
                 const bgSize = logoSize + (padding * 2)
                 const centerX = size / 2
                 const centerY = size / 2
                 
-                ctx.fillStyle = '#FFFFFF'
+                ctx.fillStyle = '#1a1a2e'
                 ctx.beginPath()
                 ctx.arc(centerX, centerY, bgSize / 2, 0, Math.PI * 2)
                 ctx.fill()
@@ -940,8 +940,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                       includeMargin={true}
                     />
                     {logoUrl && (
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full flex items-center justify-center shadow-lg overflow-hidden border-2 border-white">
-                        <img src={logoUrl} alt="Qwikker" className="w-full h-full object-cover" />
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full flex items-center justify-center shadow-lg overflow-hidden bg-[#1a1a2e] p-2">
+                        <img src={logoUrl} alt="Qwikker" className="w-full h-full object-contain" />
                       </div>
                     )}
                   </div>
