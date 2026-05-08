@@ -395,7 +395,6 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         if (data) {
           newQRCode.id = data.id
           console.log('✅ QR Code saved to database:', data.qr_code)
-          showSuccess('QR Code saved to database!')
         }
       } catch (dbError) {
         console.error('❌ Failed to save QR to database:', dbError)
@@ -408,10 +407,9 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
       console.log('🎨 QR Generated with logo:', { url: generatedUrl, logoUrl, hasLogo: !!logoUrl })
       showSuccess('QR Code generated successfully!')
       
-      // Reset form
+      // Reset form (keep logo selection for next generation)
       setQrSubtype('')
       setTargetUrl('')
-      setLogoUrl('')
       if (activeSection !== 'intent-routing') {
         setSelectedBusiness('')
       }
@@ -731,7 +729,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                 <p className="text-slate-400 text-xs">
                   {activeSection === 'qwikker-marketing' && 'Flyers, Leaflets, Promo Packs, Other'}
                   {activeSection === 'static-business' && 'Window Stickers, Offers, Secret Menus, Other'}
-                  {activeSection === 'intent-routing' && 'Deep Linking, Intent Routing - Available for all tiers (Upsell opportunity for Starter/Featured)'}
+                  {activeSection === 'intent-routing' && 'Deep Linking, Intent Routing - Available for all tiers'}
                 </p>
               </div>
 
@@ -824,11 +822,9 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                             <span className="text-green-400 text-sm">
                               Selected: {businesses.find(b => b.id === selectedBusiness)?.business_name}
                             </span>
-                            {businesses.find(b => b.id === selectedBusiness)?.business_tier !== 'spotlight' && (
-                              <p className="text-yellow-400 text-xs mt-1">
-                                Note: This business is on {businesses.find(b => b.id === selectedBusiness)?.business_tier} tier - Intent Routing QR codes can be used as an upsell opportunity
-                              </p>
-                            )}
+                            <p className="text-slate-400 text-xs mt-1">
+                              Tier: {businesses.find(b => b.id === selectedBusiness)?.business_tier || 'Standard'}
+                            </p>
                           </div>
                           <Button
                             size="sm"
@@ -1003,7 +999,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                     />
                     {logoUrl && (
                       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden">
-                        <img src="/qwikker-icon.svg" alt="Qwikker" className="w-full h-full object-contain" />
+                        <img src={logoUrl} alt="Qwikker" className="w-full h-full object-contain" />
                       </div>
                     )}
                   </div>
@@ -1129,7 +1125,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                             const filename = code.business_name
                               ? `qr-${code.business_name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${code.qr_type}-print-ready`
                               : `qr-${code.code_name}-print-ready`
-                            downloadQRCode(code.generated_url, filename, 2000, '/qwikker-icon.svg')
+                            downloadQRCode(code.generated_url, filename, 2000, logoUrl || '/qwikker-icon.svg')
                           }}
                           className="text-[#00d083] border-[#00d083] hover:bg-[#00d083] hover:text-white"
                         >

@@ -43,7 +43,14 @@ export async function getApprovedBusinessesForQR(franchiseCity: string): Promise
 
     const { data, error } = await supabase
       .from('business_profiles')
-      .select('id, business_name, business_tier, business_town, status')
+      .select(`
+        id, business_name, business_tier, business_town, status,
+        business_subscriptions!business_subscriptions_business_id_fkey(
+          is_in_free_trial,
+          free_trial_end_date,
+          status
+        )
+      `)
       .eq('status', 'approved')
       .in('business_town', coveredCities)
       .order('business_name')
@@ -53,8 +60,27 @@ export async function getApprovedBusinessesForQR(franchiseCity: string): Promise
       return []
     }
 
-    console.log(`✅ Found ${data?.length || 0} approved businesses across ${coveredCities.join(', ')}`)
-    return data || []
+    // Filter out expired free trials
+    const activeBusinesses = (data || []).filter(business => {
+      if (!business.business_subscriptions || business.business_subscriptions.length === 0) {
+        return true
+      }
+      const sub = business.business_subscriptions[0]
+      if (!sub.is_in_free_trial) return true
+      if (sub.free_trial_end_date) {
+        return new Date(sub.free_trial_end_date) >= new Date()
+      }
+      return true
+    })
+
+    console.log(`✅ Found ${activeBusinesses.length} active businesses (filtered from ${data?.length || 0}) across ${coveredCities.join(', ')}`)
+    return activeBusinesses.map(b => ({
+      id: b.id,
+      business_name: b.business_name,
+      business_tier: b.business_tier,
+      business_town: b.business_town,
+      status: b.status
+    }))
 
   } catch (error) {
     console.error('❌ Error in getApprovedBusinessesForQR:', error)
